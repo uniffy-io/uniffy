@@ -1,24 +1,4 @@
-"""Per-recipient relay for ``tags:{org_id}`` events.
-
-The gateway subscribes to the org-wide tags channel and fans every
-incoming tag event out as a ``MENTION_STATE_CHANGED`` notification to
-each open client stream. The tag channel is org-wide, so per-recipient
-filtering happens here -- a listener must never observe a tag
-state-change for content they cannot view.
-
-Filtering rules
-
-- ``tag.assignment.changed``: forwarded only when the recipient can
-  view the referenced ``content_urn`` (via cached ``effective_role``).
-- ``tag.created`` / ``tag.updated``: forwarded only when the recipient
-  can currently see the tag (via :class:`TagVisibilityFilter`).
-- ``tag.deleted``: forwarded to every org member so stale frontend
-  state cleans up. The leak risk is minimal -- only a tag id, no name.
-
-Each surviving event is rewritten as a ``MENTION_STATE_CHANGED`` event
-on the tag's own URN with a denormalized ``changes`` dict the existing
-``streamChangesToLiveState`` translator merges into ``MentionLiveState``.
-"""
+"""Per-recipient projector for org-wide tag events on ``tags:{org_id}``."""
 
 from typing import Any
 from uuid import UUID
@@ -35,15 +15,7 @@ from uniffy.domains.tags.visibility import TagVisibilityFilter
 
 
 class TagEventRelay:
-    """Per-recipient filter / projector for org-wide tag events.
-
-    One instance per open ``StreamNotifications`` RPC. The instance
-    lives for the lifetime of the stream and amortises lookup cost
-    across events: it lazily opens a session, runs effective-role
-    decisions through the Valkey-cached helper, and remembers the
-    user's tag-visibility map so a follow-up event for a tag the user
-    has already seen is sub-millisecond.
-    """
+    """Per-recipient filter / projector for tag events."""
 
     def __init__(self, user_id: UUID, organization_id: UUID) -> None:
         self.user_id = user_id
@@ -51,12 +23,7 @@ class TagEventRelay:
         self._tag_visibility_cache: dict[UUID, bool] = {}
 
     async def project(self, payload: dict[str, Any]) -> list[dict[str, str]]:
-        """Return zero or more ``MENTION_STATE_CHANGED`` payloads for this event.
-
-        Each returned dict is the ``changes`` map for one tag URN. The
-        caller wraps each in a ``MentionStateChangedPayload`` proto and
-        yields it.
-        """
+        """Return zero or more ``MENTION_STATE_CHANGED`` change-maps for this event."""
         event_type = payload.get("_type", "")
         body = payload.get("payload") or {}
 
@@ -78,15 +45,6 @@ class TagEventRelay:
     async def _project_assignment_changed(
         self, body: dict[str, Any]
     ) -> list[dict[str, str]]:
-        """Project a ``tag.assignment.changed`` event for one recipient.
-
-        Emits a content-URN ``MENTION_STATE_CHANGED`` carrying the
-        ``tag_assignments_added`` / ``tag_assignments_removed`` deltas
-        so the tags slice can patch ``assignmentsByUrn`` without a
-        refetch, plus per-tag-URN events with the freshly recomputed
-        ``usage_count`` so the chip's "X items" stat updates without
-        waiting on the worker's Meili rewrite.
-        """
         content_urn = body.get("content_urn") or ""
         content_type_raw = body.get("content_type") or ""
         if not content_urn or not content_type_raw:
@@ -197,12 +155,7 @@ class TagEventRelay:
         return role is not None
 
     async def _can_view_channel(self, channel_id: UUID) -> bool:
-        """Chat channels use membership rather than the access-mode columns.
-
-        PUBLIC channels are open to every org member; PRIVATE / DIRECT /
-        GROUP_DM require an explicit membership row. Org / chat-domain
-        admins always see every channel.
-        """
+        # Chat channels use membership rather than access-mode columns.
         from uniffy.core.models.chat.channel import ChannelType, ChatChannel
         from uniffy.core.models.chat.channel_member import ChatChannelMember
 
@@ -261,9 +214,7 @@ class TagEventRelay:
 
 
 def _normalize_tag_state(state: dict[str, Any]) -> dict[str, str]:
-    """Coerce a tag-state record into the ``map<string, string>`` shape
-    the ``MentionStateChangedPayload.changes`` map expects.
-    """
+    """Coerce a tag-state record into ``MentionStateChangedPayload.changes`` shape."""
     out: dict[str, str] = {}
     for key, value in state.items():
         if value is None:
@@ -288,13 +239,8 @@ async def _load_minimal_policy(
     organization_id: UUID,
     content_id: UUID,
 ) -> tuple | None:
-    """Cheap (owner_id, access_mode, baseline_role) load for the cached
-    effective-role loader.
-
-    Chat channels are NOT routed here -- ``TagEventRelay._can_view_channel``
-    handles the membership-based check directly because chat content
-    rows do not carry the access-mode columns.
-    """
+    # Chat channels are NOT routed here - they lack access-mode columns and use
+    # membership instead (see ``TagEventRelay._can_view_channel``).
     if content_type == ContentType.NOTE:
         from uniffy.core.models.notes.note import Note
 

@@ -1,9 +1,4 @@
-"""Handlers for ``permissions.v1.MembersService``. Thin RPC layer
-that delegates to
-:class:`~uniffy.core.content.members.ContentMembersOperations`,
-which owns permission checks, audit logging, search-index sync, and
-notifications.
-"""
+"""Handlers for ``permissions.v1.MembersService``; delegate to ``ContentMembersOperations``."""
 
 from math import ceil
 from uuid import UUID
@@ -59,7 +54,6 @@ from uniffy.domains.permissions.converters import (
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
-    """Parse a UUID string or raise INVALID_ARGUMENT."""
     try:
         return UUID(value)
     except ValueError as exc:
@@ -67,7 +61,6 @@ def _parse_uuid(value: str, field: str) -> UUID:
 
 
 def _resolve_content_type(proto_type) -> ContentType:
-    """Translate proto ContentType to domain enum or raise."""
     domain_type = content_type_from_proto(proto_type)
     if domain_type is None:
         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content type")
@@ -75,7 +68,6 @@ def _resolve_content_type(proto_type) -> ContentType:
 
 
 def _resolve_subject_type(proto_type) -> SubjectType:
-    """Translate proto SubjectType to domain enum or raise."""
     domain_type = subject_type_from_proto(proto_type)
     if domain_type is None:
         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid subject type")
@@ -83,7 +75,6 @@ def _resolve_subject_type(proto_type) -> SubjectType:
 
 
 def _resolve_role(proto_role) -> ContentRole:
-    """Translate proto ContentRole to domain enum or raise."""
     role = content_role_from_proto(proto_role)
     if role is None:
         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content role")
@@ -91,7 +82,6 @@ def _resolve_role(proto_role) -> ContentRole:
 
 
 def _resolve_access_mode(proto_mode) -> AccessMode:
-    """Translate proto AccessMode to domain enum or raise."""
     mode = access_mode_from_proto(proto_mode)
     if mode is None:
         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid access mode")
@@ -99,7 +89,6 @@ def _resolve_access_mode(proto_mode) -> AccessMode:
 
 
 def _map_domain_error(exc: Exception) -> ConnectError:
-    """Convert a domain error into a ConnectError with the right code."""
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc))
     if isinstance(exc, NotFoundError):
@@ -111,14 +100,11 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class MembersHandlers:
-    """RPC handlers for ``permissions.v1.MembersService``."""
-
     async def list_members(
         self,
         request: ListMembersRequest,
         ctx: RequestContext,
     ) -> ListMembersResponse:
-        """List explicit members and the access policy of a content item."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
@@ -134,8 +120,6 @@ class MembersHandlers:
                     content_id=content_id,
                 )
 
-                # Reload via the registered loader so the response
-                # carries the access policy alongside the members.
                 loader = get_content_loader(content_type)
                 content = await loader(session, organization_id, content_id)
                 if content is None:
@@ -159,7 +143,6 @@ class MembersHandlers:
         request: AddMemberRequest,
         ctx: RequestContext,
     ) -> AddMemberResponse:
-        """Add a new explicit member to a content item."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
@@ -197,7 +180,6 @@ class MembersHandlers:
         request: UpdateMemberRoleRequest,
         ctx: RequestContext,
     ) -> UpdateMemberRoleResponse:
-        """Change the role of an existing explicit member."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
@@ -230,7 +212,6 @@ class MembersHandlers:
         request: RemoveMemberRequest,
         ctx: RequestContext,
     ) -> RemoveMemberResponse:
-        """Remove an explicit member from a content item."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
@@ -261,9 +242,8 @@ class MembersHandlers:
         request: SetAccessModeRequest,
         ctx: RequestContext,
     ) -> SetAccessModeResponse:
-        """Change the access mode and/or baseline role. Proto
-        ``ACCESS_MODE_UNSPECIFIED`` clears the per-item override and
-        the row inherits live from org defaults.
+        """Proto ``ACCESS_MODE_UNSPECIFIED`` clears the per-item override;
+        the row inherits from org defaults.
         """
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -290,7 +270,6 @@ class MembersHandlers:
                     note=request.note,
                 )
 
-                # Reload the content row to return the latest policy
                 loader = get_content_loader(content_type)
                 content = await loader(session, organization_id, content_id)
                 if content is None:
@@ -313,7 +292,6 @@ class MembersHandlers:
         request: TransferOwnershipRequest,
         ctx: RequestContext,
     ) -> TransferOwnershipResponse:
-        """Transfer ownership to another user."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
@@ -354,7 +332,6 @@ class MembersHandlers:
         request: ListMemberEventsRequest,
         ctx: RequestContext,
     ) -> ListMemberEventsResponse:
-        """List the audit log entries for a content item."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         content_id = _parse_uuid(request.content_id, "content_id")
@@ -408,8 +385,7 @@ class MembersHandlers:
                     audit_event_to_content_member_event_proto(event) for event in events
                 )
 
-                # total_count would need an extra count query;
-                # report a best-effort total derived from the page.
+                # Best-effort total derived from the page to avoid an extra count query.
                 approx_total = offset + len(events)
                 total_pages = max(1, ceil(approx_total / page_size)) if page_size else 1
                 response.pagination.CopyFrom(

@@ -10,30 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class RecurrenceException(SQLModel, table=True):
-    """
-    RecurrenceException tracks individual occurrences that are cancelled or rescheduled.
-
-    Each row represents a single exception to a recurring event series.
-    An occurrence can be cancelled (skipped) or overridden with a different event.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key.
-    event_id : UUID
-        The master recurring event this exception belongs to.
-    original_date : date
-        The specific occurrence date being modified.
-    is_cancelled : bool
-        If True, this occurrence is skipped entirely.
-    override_event_id : UUID | None
-        If set, points to a standalone CalendarEvent that replaces this occurrence.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-
-    """
+    """A cancelled or overridden occurrence within a recurring event series."""
 
     __tablename__ = "calendar_recurrence_exceptions"
 
@@ -60,7 +37,6 @@ class RecurrenceException(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation."""
         return (
             f"<RecurrenceException(id={self.id}, event_id={self.event_id}, "
             f"original_date={self.original_date}, is_cancelled={self.is_cancelled})>"

@@ -1,22 +1,8 @@
-"""Deployment-scope key-value settings.
+"""Deployment-scope key-value settings, one row per `(namespace, key)`.
 
-Identical shape to :class:`OrgSetting` but without an
-``organization_id`` -- one row per ``(namespace, key)`` for the whole
-deployment. Used for operator-editable configuration that needs to
-survive process restarts and roll across pods without baking values
-into the environment file.
-
-The first consumer is the system-wide mail config (``namespace='mail'``)
-so a self-hoster can bring up the stack with zero env, then point the
-SMTP relay at their own infrastructure from the UI. Future deployment-
-level knobs (telemetry opt-in, analytics endpoint, branding overrides,
-registration policy beyond a simple boolean, ...) land here as new
-``(namespace, key)`` rows without further migrations.
-
-Secrets are encrypted via :class:`DeploymentCipher` (singleton DEK
-wrapped by the master KEK) and stored in ``value_encrypted``. The
-exclusive CHECK constraint matches ``org_settings`` so consumers can
-treat the two stores the same way.
+Mirrors :class:`OrgSetting` minus the tenant scope. Secrets are encrypted
+with :class:`DeploymentCipher` and stored in `value_encrypted`; plaintext
+JSON lives in `value`. The CHECK constraint enforces exclusivity.
 """
 
 from datetime import UTC, datetime
@@ -52,19 +38,14 @@ class DeploymentSetting(SQLModel, table=True):
         default=None,
         sa_column=Column(JSONB(none_as_null=True), nullable=True),
         description=(
-            "Plaintext JSON value. Mutually exclusive with value_encrypted. "
-            "``none_as_null=True`` makes Python ``None`` bind to SQL NULL "
-            "(not JSON ``null``) so the check constraint sees an empty cell."
+            "Plaintext JSON value; `none_as_null=True` so Python None binds "
+            "to SQL NULL (not JSON null) and the check constraint matches."
         ),
     )
     value_encrypted: str | None = Field(
         default=None,
         sa_column=Column(Text, nullable=True),
-        description=(
-            "DeploymentCipher ciphertext 'v{n}:...'. Populated when "
-            "is_secret=true; encrypted with the deployment-singleton DEK "
-            "wrapped by the master KEK."
-        ),
+        description="DeploymentCipher ciphertext 'v{n}:...'. Set when is_secret=true.",
     )
     is_secret: bool = Field(
         default=False,

@@ -11,38 +11,11 @@ from uniffy.core.types import generate_id
 
 
 class User(SQLModel, table=True):
-    """
-    User model representing a global user in the system.
+    """Global user account; org membership is recorded via `OrganizationMember`.
 
-    A user can belong to multiple organizations through OrganizationMember.
-    This is a global user account that exists independently of organizations.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the user (primary key).
-    email : str
-        User's global email address (unique across the system).
-    username : str
-        User's global username (unique across the system).
-    full_name : str | None
-        User's full name (optional).
-    hashed_password : str | None
-        Bcrypt hashed password (nullable for SSO-only users).
-    is_active : bool
-        Whether the user account is active globally.
-    is_system_admin : bool
-        Whether the user has system-wide admin privileges (platform admin).
-    email_verified : bool
-        Whether the user's email has been verified.
-    token_version : int
-        Token version for immediate revocation. Incremented on security events
-        (deactivation, password change, etc.). Tokens with old version are rejected.
-    created_at : datetime
-        Timestamp when the user was created.
-    updated_at : datetime
-        Timestamp when the user was last updated.
-
+    `is_system_admin=True` marks platform operators (cloud); it does NOT bypass
+    `PermissionChecker` for tenant content - access requires a `SupportSession`.
+    `token_version` is bumped on security events to invalidate outstanding JWTs.
     """
 
     __tablename__ = "login_users"
@@ -91,17 +64,7 @@ class User(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """
-        Return the URN for this user.
-
-        Returns
-        -------
-        str
-            URN in format `urn:uniffy:content:USER:{id}`
-
-        """
         return f"urn:uniffy:content:USER:{self.id}"
 
     def __repr__(self) -> str:
-        """Return string representation of User."""
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"

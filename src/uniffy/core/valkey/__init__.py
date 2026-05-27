@@ -1,26 +1,12 @@
-"""Valkey package: four connection tiers, one config.
+"""Four physical Valkey clients per process, one config.
 
-The package is organised around four physical clients per process,
-each tuned for its access pattern:
-
-1. **Pubsub** (``valkey.pubsub``) -- long-lived publisher and per-call
-   subscriber connections. PUBLISH / SUBSCRIBE / PSUBSCRIBE only.
-   Tolerates retries (long-lived; reconnect is normal).
-2. **Ops** (``valkey.ops``) -- fail-fast regular-command client used
-   by cache, presence, rate-limit, mention-state, and the
-   non-blocking stream writes (XADD, HSET, DEL). Zero retries,
-   ~100ms socket timeouts, 150ms per-call deadline guard. A slow
-   Valkey is treated as a miss / no-op so callers fall through to PG.
-3. **Streams** (``valkey.streams``) -- blocking XREAD on
-   ``agent:run:{run_id}`` streams. 30s socket timeout so the inner
-   BLOCK actually blocks; no per-call guard. Used only by the agent
-   runtime subscribe loop in ``stream_xread``.
-4. **Queue** (``valkey.queue``) -- ARQ pool for background job
-   enqueue / dequeue. Owns its own connection.
-
-Domain-shaped helpers (``presence_*``, ``publish_mention_state``,
-``check_rate_limit``) sit on top of the ops client and inherit its
-fail-fast semantics.
+- **Pubsub** (``valkey.pubsub``) - long-lived PUBLISH/SUBSCRIBE.
+- **Ops** (``valkey.ops``) - fail-fast regular commands; zero retries, 150ms
+  per-call deadline. A slow Valkey returns miss/no-op and callers fall through
+  to PG.
+- **Streams** (``valkey.streams``) - blocking XREAD on agent-run streams; 30s
+  socket timeout.
+- **Queue** (``valkey.queue``) - ARQ pool for background work.
 """
 
 from uniffy.core.valkey.cache import (

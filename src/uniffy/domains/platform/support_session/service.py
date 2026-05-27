@@ -26,8 +26,6 @@ from uniffy.domains.platform.support_session.handlers import SupportSessionHandl
 
 
 class SupportServiceImpl:
-    """ConnectRPC service implementation - delegates to SupportSessionHandlers."""
-
     def __init__(self) -> None:
         self._handlers = SupportSessionHandlers()
 

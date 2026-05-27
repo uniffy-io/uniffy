@@ -11,29 +11,13 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
 from uniffy.core.types import slugify  # noqa: F401 - re-exported, used via queries.slugify
 
-# Regex pattern for inline tags in markdown: [[[tag|tagname]]]
-# Tags are stored with the "tag|" prefix to distinguish from URN mentions
+# Inline-tag syntax in markdown: ``[[[tag|tagname]]]``. The ``tag|`` prefix
+# distinguishes these from URN mentions.
 INLINE_TAG_PATTERN = re.compile(r"\[\[\[tag\|([^\]]+)\]\]\]")
 
 
 def extract_inline_tags_from_content(content: str) -> list[str]:
-    """
-    Extract all unique inline tags from markdown content.
-
-    Parses the [[[tag|tagname]]] pattern used by the editor's tag plugin
-    and returns a deduplicated, sorted list of tag names.
-
-    Parameters
-    ----------
-    content : str
-        Markdown content to parse.
-
-    Returns
-    -------
-    list[str]
-        Unique tag names found in the content (lowercase, sorted).
-
-    """
+    """Return unique inline-tag names (lowercase, sorted) from ``content``."""
     if not content:
         return []
 
@@ -47,27 +31,10 @@ def extract_inline_tags_from_content(content: str) -> list[str]:
 
 
 def extract_inline_tags_from_canvas(canvas_data: dict | str) -> list[str]:
-    """
-    Extract all unique inline tags from canvas data.
-
-    Parses the canvas structure, iterates over text nodes, and
-    calls ``extract_inline_tags_from_content()`` on each node's content.
-
-    Parameters
-    ----------
-    canvas_data : dict | str
-        Canvas state as a dict (from JSONB) or JSON string (legacy).
-
-    Returns
-    -------
-    list[str]
-        Unique tag names found in the canvas (lowercase, sorted).
-
-    """
+    """Return unique inline-tag names found across canvas text nodes."""
     if not canvas_data:
         return []
 
-    # Accept both dict (from JSONB column) and str (legacy)
     if isinstance(canvas_data, str):
         import json as _json
 
@@ -97,24 +64,6 @@ async def get_by_slug(
     slug: str,
     organization_id: UUID,
 ) -> Note | None:
-    """
-    Get a note by slug within an organization.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    slug : str
-        Note slug.
-    organization_id : UUID
-        Organization ID.
-
-    Returns
-    -------
-    Note | None
-        Note if found, None otherwise.
-
-    """
     result = await session.execute(
         select(Note).where(
             and_(
@@ -131,25 +80,7 @@ async def get_backlinks(
     note_id: UUID,
     organization_id: UUID,
 ) -> list[Note]:
-    """
-    Get notes that reference the given note via wiki-links.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    note_id : UUID
-        Target note ID.
-    organization_id : UUID
-        Organization ID.
-
-    Returns
-    -------
-    list[Note]
-        Notes that reference the target note.
-
-    """
-    # Search for notes that have the target note in their outgoing_references
+    """Return notes whose ``outgoing_references`` contains ``note_id``."""
     target_urn = f"urn:uniffy:content:NOTE:{note_id}"
     result = await session.execute(
         select(Note).where(
@@ -167,23 +98,7 @@ async def soft_delete_recursive(
     session: AsyncSession,
     note: Note,
 ) -> Note:
-    """
-    Soft delete a note and all its children recursively.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    note : Note
-        Note to delete.
-
-    Returns
-    -------
-    Note
-        Deleted note.
-
-    """
-    # First delete children if this is a folder
+    """Soft-delete ``note`` and every descendant under a folder."""
     if note.node_type == NodeType.FOLDER:
         result = await session.execute(
             select(Note).where(
@@ -195,7 +110,6 @@ async def soft_delete_recursive(
         for child in children:
             await soft_delete_recursive(session, child)
 
-    # Soft delete the note
     note.is_deleted = True
     note.deleted_at = datetime.now(UTC)
     note.updated_at = datetime.now(UTC)
@@ -209,18 +123,7 @@ async def permanent_delete_recursive(
     session: AsyncSession,
     note: Note,
 ) -> None:
-    """
-    Permanently delete a note and all its children.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    note : Note
-        Note to delete.
-
-    """
-    # First delete children if this is a folder
+    """Hard-delete ``note`` and every descendant under a folder."""
     if note.node_type == NodeType.FOLDER:
         result = await session.execute(select(Note).where(Note.parent_id == note.id))
         children = result.scalars().all()
@@ -235,23 +138,7 @@ async def empty_trash(
     session: AsyncSession,
     organization_id: UUID,
 ) -> int:
-    """
-    Permanently delete all soft-deleted notes in an organization.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    organization_id : UUID
-        Organization ID.
-
-    Returns
-    -------
-    int
-        Number of notes deleted.
-
-    """
-    # Get all soft-deleted notes
+    """Hard-delete every soft-deleted note in the org; returns the count."""
     result = await session.execute(
         select(Note).where(
             and_(
@@ -268,7 +155,7 @@ async def empty_trash(
     count = len(deleted_notes)
     deleted_ids = {note.id for note in deleted_notes}
 
-    # Unlink orphaned children (non-deleted notes with deleted parents)
+    # Re-parent live children whose parent is about to vanish.
     result = await session.execute(
         select(Note).where(
             and_(
@@ -284,7 +171,7 @@ async def empty_trash(
 
     await session.flush()
 
-    # Break FK chains within trash itself
+    # Break FK chains within trash itself before the cascade fires.
     for note in deleted_notes:
         if note.parent_id in deleted_ids:
             note.parent_id = None
@@ -292,7 +179,6 @@ async def empty_trash(
 
     await session.flush()
 
-    # Delete all trash notes
     for note in deleted_notes:
         await session.delete(note)
 

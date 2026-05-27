@@ -1,11 +1,7 @@
-"""
-Search query utilities using Meilisearch.
+"""Meilisearch search execution.
 
-This module provides search execution via Meilisearch with:
-1. Typo-tolerant fuzzy matching
-2. Permission filtering based on ``access_mode`` / ``baseline_role``
-   plus explicit ``ContentMember`` grants
-3. Type and tag filtering
+Permission filtering combines `access_mode` / `baseline_role` with explicit
+`ContentMember` grants so accessible documents are returned to the user.
 """
 
 import contextlib
@@ -19,12 +15,7 @@ from uniffy.core.search import get_meilisearch_client
 
 @dataclass
 class SearchResult:
-    """
-    Search result from Meilisearch.
-
-    Lightweight dataclass representing a search hit with all
-    necessary fields for display and navigation.
-    """
+    """Meilisearch hit with the fields used for display and navigation."""
 
     urn: str
     organization_id: UUID
@@ -41,12 +32,10 @@ class SearchResult:
     rank_score: float
     search_score: float | None  # Meilisearch ranking score
 
-    # Tombstone flag: "OK" / "DELETED". Not in Meilisearch -- set by
-    # ``SearchOperations.resolve_urns`` so the converter can pass the
-    # state through to mention chips.
+    # "OK" / "DELETED". Not in Meilisearch; resolve_urns sets it so the converter
+    # can pass tombstone state through to mention chips.
     urn_status: str | None = None
 
-    # Live state fields for mention enrichment
     status: str | None = None
     due_date: str | None = None
     assignee_name: str | None = None
@@ -102,21 +91,6 @@ class SearchResult:
 
     @classmethod
     def from_meilisearch_hit(cls, hit: dict[str, Any]) -> SearchResult:
-        """
-        Create SearchResult from Meilisearch hit document.
-
-        Parameters
-        ----------
-        hit : dict
-            Meilisearch search hit.
-
-        Returns
-        -------
-        SearchResult
-            Parsed search result.
-
-        """
-        # Parse updated_at from timestamp if present
         updated_at = None
         if hit.get("updated_at"):
             with contextlib.suppress(ValueError, TypeError):
@@ -154,40 +128,6 @@ async def execute_search(
     limit: int = 20,
     offset: int = 0,
 ) -> tuple[list[SearchResult], int]:
-    """
-    Execute a fuzzy search via Meilisearch.
-
-    Parameters
-    ----------
-    query_text : str
-        The search query string.
-    organization_id : UUID
-        Organization ID for tenant isolation.
-    user_id : UUID
-        User performing the search.
-    user_group_ids : list[UUID]
-        Group IDs the user belongs to.
-    type_filters : list[str] | None
-        Optional entity types to filter by (e.g., ['note', 'file']).
-    tag_filters : list[str] | None
-        Optional tag filters.
-    my_content_only : bool
-        If True, only return content owned by the user.
-    owner_filter : UUID | None
-        Filter by specific owner ID.
-    metadata_filters : dict[str, str] | None
-        Filter by metadata fields (e.g., channel_id, sender_id).
-    limit : int
-        Maximum number of results.
-    offset : int
-        Offset for pagination.
-
-    Returns
-    -------
-    tuple[list[SearchResult], int]
-        List of search results and estimated total hits.
-
-    """
     client = get_meilisearch_client()
 
     results = await client.search(
@@ -205,7 +145,6 @@ async def execute_search(
         offset=offset,
     )
 
-    # Convert hits to SearchResult objects
     search_results = [SearchResult.from_meilisearch_hit(hit) for hit in results.hits]
 
     return search_results, results.estimated_total_hits or len(search_results)
@@ -217,37 +156,14 @@ async def get_documents_by_urns(
     user_id: UUID | None = None,
     user_group_ids: list[UUID] | None = None,
 ) -> dict[str, SearchResult]:
-    """
-    Fetch documents by URNs from Meilisearch with optional permission filtering.
-
-    When user_id is provided, uses Meilisearch search with permission filters
-    instead of raw get_documents, so only accessible documents are returned.
-
-    Parameters
-    ----------
-    urns : list[str]
-        List of URNs to fetch.
-    organization_id : UUID
-        Organization ID.
-    user_id : UUID | None
-        If provided, filter results by this user's permissions.
-    user_group_ids : list[UUID] | None
-        Groups the user belongs to (for GROUP visibility).
-
-    Returns
-    -------
-    dict[str, SearchResult]
-        Mapping of URN to SearchResult (only accessible items).
-
-    """
+    """Fetch URNs from Meilisearch, optionally filtered by the user's permissions."""
     if not urns:
         return {}
 
     client = get_meilisearch_client()
 
     if user_id is not None:
-        # Use get_documents with permission filtering + URN filter
-        # Chunk URNs to avoid filter expression limits (max ~50 per query)
+        # Meilisearch caps filter expression size; chunk URNs to stay under ~50 per query.
         all_results: dict[str, SearchResult] = {}
         chunk_size = 50
         perm_filter = client._build_permission_filter(
@@ -275,6 +191,5 @@ async def get_documents_by_urns(
 
         return all_results
 
-    # No permission filtering - raw fetch
     docs = await client.get_documents_by_urns(urns, organization_id)
     return {urn: SearchResult.from_meilisearch_hit(doc) for urn, doc in docs.items()}

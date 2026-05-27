@@ -1,10 +1,4 @@
-"""Agent model pricing configuration.
-
-One row per ``(provider, model, effective_from)`` triple. Cost
-computation looks up the row where ``effective_from <= run.created_at``
-and ``effective_to`` is either null or in the future, so historical run
-logs keep their priced cost even after new pricing lands.
-"""
+"""Agent model pricing configuration."""
 
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -19,41 +13,8 @@ from uniffy.core.types import generate_id
 
 
 class AgentModelPricing(SQLModel, table=True):
-    """Pricing record for a single provider + model.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key (UUIDv7).
-    provider : str
-        ``anthropic``, ``openai``, ``google`` (or ``other``).
-    model : str
-        Provider-specific model id (e.g. ``claude-sonnet-4-6``).
-    kind : str
-        ``text`` or ``image``. Text models use the four per-1M-token
-        rates; image models use ``image_prices``.
-    input_per_1m : Decimal | None
-        Text: price per 1M input tokens.
-    output_per_1m : Decimal | None
-        Text: price per 1M output tokens.
-    cached_input_per_1m : Decimal | None
-        Text: discounted rate for prompt-cache reads. Null means cached
-        inputs are priced at the regular input rate.
-    thinking_per_1m : Decimal | None
-        Text: surcharge rate for extended-thinking tokens. Null means
-        thinking tokens are priced at the regular output rate.
-    image_prices : dict | None
-        Image: nested JSON like ``{"1024x1024": {"auto": 0.04}, ...}``.
-    effective_from : datetime
-        Earliest ``created_at`` that should use this row.
-    effective_to : datetime | None
-        Earliest ``created_at`` that should NOT use this row; null means
-        currently active.
-    created_at : datetime
-        When this pricing row was inserted.
-    updated_at : datetime
-        When this pricing row was last modified.
-
+    """Pricing record for a single provider + model. Versioned by
+    ``effective_from`` / ``effective_to``.
     """
 
     __tablename__ = "agents_model_pricing"
@@ -123,7 +84,6 @@ class AgentModelPricing(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentModelPricing."""
         return (
             f"<AgentModelPricing(provider={self.provider!r}, model={self.model!r}, "
             f"kind={self.kind!r}, effective_from={self.effective_from})>"

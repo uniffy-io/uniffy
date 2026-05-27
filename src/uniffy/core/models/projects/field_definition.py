@@ -10,39 +10,10 @@ from sqlmodel import Field, SQLModel
 
 
 class FieldDefinition(SQLModel, table=True):
-    """
-    Field definition for a project.
+    """System or custom field on a project.
 
-    System fields (title, status, priority, assignee, dates) are created
-    automatically when a project is created. Custom fields can be added
-    by project admins.
-
-    Uses a composite primary key (id, project_id) so that system field IDs
-    like "field_title" can be reused across projects.
-
-    Attributes
-    ----------
-    id : str
-        Field identifier (part of composite PK).
-    project_id : UUID
-        Project this field belongs to (part of composite PK).
-    name : str
-        Field display name.
-    type : str
-        Field type (text, number, single_select, etc.).
-    is_required : bool
-        Whether this field is required.
-    is_system : bool
-        Whether this is a system field (cannot be deleted).
-    sort_order : int
-        Display order.
-    config : dict[str, Any] | None
-        Field configuration (e.g., select options).
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-
+    Composite PK `(id, project_id)` lets fixed system ids like `field_title`
+    repeat across projects.
     """
 
     __tablename__ = "projects_field_definitions"

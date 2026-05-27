@@ -1,22 +1,9 @@
-"""Resolved SMTP configuration used by every send.
+"""Resolved SMTP configuration. One instance describes either the env default
+or a per-org override.
 
-A single ``MailConfig`` instance describes one effective configuration:
-the system env default (``source="env"``) or one assembled from the
-per-org rows in ``org_settings`` under ``namespace="mail"``
-(``source="org"``). The resolver returns one of these to the sender.
-
-Recognised ``mail.*`` keys (all optional except the two marked
-required):
-
-* ``from_address`` -- required
-* ``from_name``
-* ``reply_to``
-* ``smtp_host`` -- required
-* ``smtp_port``           (int, default 587)
-* ``smtp_username``
-* ``smtp_password``       (``is_secret=true``, stored encrypted)
-* ``smtp_use_tls``        (bool, default true)
-* ``rate_limit_per_min``  (int, default 100)
+Recognised ``mail.*`` keys (``from_address`` and ``smtp_host`` required, the rest optional):
+``from_name``, ``reply_to``, ``smtp_port`` (587), ``smtp_username``, ``smtp_password``
+(``is_secret=true``), ``smtp_use_tls`` (true), ``rate_limit_per_min`` (100).
 """
 
 from __future__ import annotations
@@ -29,7 +16,6 @@ from pydantic import BaseModel
 
 MAIL_NAMESPACE = "mail"
 
-# Subset of keys that hold secrets (always written to value_encrypted).
 SECRET_KEYS: frozenset[str] = frozenset({"smtp_password"})
 
 
@@ -49,11 +35,8 @@ class MailConfig(BaseModel):
 
     @classmethod
     def from_env(cls) -> MailConfig | None:
-        """Build the system-default config from environment variables.
-
-        Returns ``None`` when ``MAIL_FROM_ADDRESS`` or ``SMTP_HOST`` is
-        unset so dev environments without mail can still boot. The
-        resolver decides whether absence is fatal for the current send.
+        """System-default config from env. Returns ``None`` when
+        ``MAIL_FROM_ADDRESS``/``SMTP_HOST`` are unset so dev boots without mail.
         """
         from_address = os.getenv("MAIL_FROM_ADDRESS")
         smtp_host = os.getenv("SMTP_HOST")
@@ -78,12 +61,8 @@ class MailConfig(BaseModel):
         settings: dict[str, OrgSettingRow],
         decryptor: Callable[[str], Awaitable[str]],
     ) -> MailConfig | None:
-        """Assemble a deployment-scope config from ``deployment_settings`` rows.
-
-        Same contract as :meth:`from_org_settings` but the decryptor is
-        the :class:`DeploymentCipher` (no org id needed). Returns
-        ``None`` when ``from_address`` / ``smtp_host`` are absent so the
-        resolver can fall back to env without raising.
+        """Deployment-scope config from ``deployment_settings`` rows;
+        decryptor is :class:`DeploymentCipher`.
         """
         from_address = _plain(settings.get("from_address"))
         smtp_host = _plain(settings.get("smtp_host"))
@@ -114,14 +93,8 @@ class MailConfig(BaseModel):
         settings: dict[str, OrgSettingRow],
         decryptor: Callable[[str], Awaitable[str]],
     ) -> MailConfig | None:
-        """Assemble a per-org config from ``org_settings`` rows.
-
-        ``settings`` maps ``key -> OrgSettingRow`` for the ``mail``
-        namespace of one organization. Secrets are decrypted lazily
-        through ``decryptor`` (typically a closure over
-        ``OrgCipher.decrypt``). Returns ``None`` when the required
-        ``from_address`` / ``smtp_host`` keys are absent so the
-        resolver can fall back to env without raising.
+        """Per-org config from ``org_settings`` rows; ``decryptor`` is
+        typically a closure over ``OrgCipher.decrypt``.
         """
         from_address = _plain(settings.get("from_address"))
         smtp_host = _plain(settings.get("smtp_host"))
@@ -148,11 +121,7 @@ class MailConfig(BaseModel):
 
 
 class OrgSettingRow:
-    """Minimal protocol for ``OrgSetting`` rows fed into ``from_org_settings``.
-
-    Declared here so callers (resolver, ops) and tests share one shape
-    without importing the SQLModel into pydantic-validated code paths.
-    """
+    """Minimal protocol for ``OrgSetting`` rows fed into ``from_org_settings``."""
 
     value: Any
     value_encrypted: str | None
@@ -160,7 +129,7 @@ class OrgSettingRow:
 
 
 def _plain(row: OrgSettingRow | None) -> Any:
-    """Return the plain JSON value of a row (None if absent or secret)."""
+    """Plain JSON value of a row, ``None`` if absent or secret."""
     if row is None or row.is_secret:
         return None
     return row.value

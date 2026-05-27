@@ -1,22 +1,7 @@
-"""Two-pool ARQ queue accessor.
+"""Two ARQ pools - ``core`` (tight-SLA work) and ``egress`` (slow, I/O-bound, retry-heavy).
 
-Background work splits across two queues:
-
-- ``core`` (``uniffy:queue:core``) -- thumbnails, extraction, content
-  extraction, notifications, reminders, storage recalculation, task
-  reminders, chat mute. Default ARQ tuning, tight SLA.
-- ``egress`` (``uniffy:queue:egress``) -- agent runtime, agent
-  compaction, agent cron, future external-API integrations. I/O bound,
-  retry-heavy, slow.
-
-Each pool is its own ``ArqRedis`` connection with a distinct
-``default_queue_name`` so ``enqueue_job`` reaches the right worker
-fleet without callers passing ``_queue_name`` by hand. The two pools
-share the same Valkey instance.
-
-Lazy reconnect on pool loss is preserved: ``get_queue_safe`` rebuilds
-a dropped pool exactly once before returning ``None``. ``get_queue``
-raises immediately so critical paths surface failures.
+Each pool binds ``default_queue_name`` so plain ``enqueue_job`` lands on the
+right fleet. ``get_queue_safe`` rebuilds a dropped pool once; ``get_queue`` raises.
 """
 
 import asyncio
@@ -43,20 +28,7 @@ _reinit_locks: dict[QueueName, asyncio.Lock] = {
 
 
 async def init_queue(name: QueueName) -> ArqRedis:
-    """Initialise a named queue pool.
-
-    Parameters
-    ----------
-    name : QueueName
-        Either ``"core"`` or ``"egress"``.
-
-    Returns
-    -------
-    ArqRedis
-        Connected pool with ``default_queue_name`` bound to the named
-        queue so plain ``enqueue_job`` calls land on the right fleet.
-
-    """
+    """Initialise the ``core`` or ``egress`` pool."""
     config = ValkeyConfig.from_env()
     pool = await create_pool(
         config.to_arq_redis_settings(),
@@ -71,7 +43,7 @@ async def init_queue(name: QueueName) -> ArqRedis:
 
 
 async def close_queue(name: QueueName) -> None:
-    """Close a named queue pool. Idempotent if already closed."""
+    """Close a named pool. Idempotent."""
     pool = _pools[name]
     if pool is None:
         return
@@ -81,7 +53,6 @@ async def close_queue(name: QueueName) -> None:
 
 
 async def _try_reinit_queue(name: QueueName) -> ArqRedis | None:
-    """Attempt to re-initialise a dropped pool under a per-name lock."""
     async with _reinit_locks[name]:
         pool = _pools[name]
         if pool is not None:
@@ -101,7 +72,7 @@ async def _try_reinit_queue(name: QueueName) -> ArqRedis | None:
 
 
 def get_queue(name: QueueName) -> ArqRedis:
-    """Return the named pool. Raises ``RuntimeError`` if not initialised."""
+    """Return the named pool; raises ``RuntimeError`` if not initialised."""
     pool = _pools[name]
     if pool is None:
         raise RuntimeError(
@@ -111,10 +82,8 @@ def get_queue(name: QueueName) -> ArqRedis:
 
 
 async def get_queue_safe(name: QueueName) -> ArqRedis | None:
-    """Return the named pool, attempting one reconnect on miss.
-
-    Suitable for non-critical paths where a missing pool is logged and
-    skipped rather than raised.
+    """Return the named pool; attempts one reconnect on miss, returns
+    ``None`` on persistent failure.
     """
     pool = _pools[name]
     if pool is not None:

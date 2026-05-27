@@ -1,12 +1,4 @@
-"""
-Notes domain - note management with permissions and search.
-
-This domain handles:
-- Note CRUD operations with permission checking
-- Full-text search within notes
-- Backlinks and wiki-link tracking
-- Hierarchical organization (folders)
-"""
+"""Notes domain: CRUD, search, backlinks, folder hierarchy."""
 
 import uniffy.domains.notes.realtime_adapter  # noqa: F401 - registers NoteRealtimeAdapter on import
 from uniffy.domains.notes.converters import note_to_proto, note_to_reference

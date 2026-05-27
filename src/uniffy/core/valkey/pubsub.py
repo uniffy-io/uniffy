@@ -1,16 +1,8 @@
-"""Valkey Pub/Sub for real-time notification delivery.
+"""Valkey Pub/Sub publisher + subscriber helpers.
 
-Separate from the ARQ queue pool and from the ops client -- pub/sub
-connections enter a special mode and cannot be used for regular
-commands. This module manages the dedicated publisher and per-call
-subscriber connections.
-
-Channel naming: notifications:{user_id}
-
-Connection resilience:
-- Publisher auto-reconnects on transient failures via retry_on_error.
-- Subscriber connections use the same retry config.
-- Settings come from ``ValkeyConfig.to_pubsub_kwargs()``.
+Pub/sub connections enter a special Redis mode and cannot run regular commands,
+so the publisher and subscriber connections are separate from the ops client.
+Publisher reconnects on transient failures.
 """
 
 import asyncio
@@ -26,27 +18,23 @@ from loguru import logger
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.observability.metrics import PUBSUB_ACTIVE_SUBSCRIBERS
 
-# Hard ceiling for cleanup during shutdown / generator close.
 _CLEANUP_TIMEOUT = 3.0
 
-# Per-process publisher connection (initialised at startup).
 _pubsub_client: aioredis.Redis | None = None
 
-# Process-wide shutdown event -- set during lifespan shutdown so every
-# active subscriber generator breaks on the next poll tick (within 1s)
-# instead of waiting for granian's full graceful_timeout.
+# Set during lifespan shutdown so subscriber generators break on the next 1s poll
+# tick instead of waiting for granian's full graceful_timeout.
 _shutdown_event: asyncio.Event | None = None
 
 LOGGER_COMPONENT = "pubsub"
 
 
 def _build_client(url: str) -> aioredis.Redis:
-    """Create a Valkey client tuned for long-lived pubsub connections."""
     return aioredis.from_url(url, **ValkeyConfig.from_env().to_pubsub_kwargs())
 
 
 async def init_pubsub() -> None:
-    """Initialise the global Pub/Sub publisher connection."""
+    """Initialise the process-wide publisher connection."""
     global _pubsub_client, _shutdown_event
 
     _shutdown_event = asyncio.Event()
@@ -59,16 +47,11 @@ async def init_pubsub() -> None:
 
 
 async def close_pubsub() -> None:
-    """Close the global Pub/Sub publisher connection.
-
-    Sets the shutdown event first so all active subscriber generators
-    break within 1 second, then closes the publisher connection.
-    """
+    """Signal shutdown so subscribers break within 1s, then close the publisher."""
     global _pubsub_client, _shutdown_event
 
     signal_pubsub_shutdown()
 
-    # Give subscribers a moment to finish cleanup before closing publisher.
     if PUBSUB_ACTIVE_SUBSCRIBERS._value.get() > 0:
         await asyncio.sleep(0.1)
 
@@ -80,7 +63,7 @@ async def close_pubsub() -> None:
 
 
 def signal_pubsub_shutdown() -> None:
-    """Signal all subscriber generators to stop on the next poll tick."""
+    """Signal subscriber generators to stop on the next poll tick."""
     if _shutdown_event is not None:
         _shutdown_event.set()
         logger.info(
@@ -90,12 +73,11 @@ def signal_pubsub_shutdown() -> None:
 
 
 def _channel_name(user_id: UUID) -> str:
-    """Build the Pub/Sub channel name for a user."""
     return f"notifications:{user_id}"
 
 
 async def _ensure_publisher() -> aioredis.Redis | None:
-    """Return the publisher, attempting to reconnect if it was lost."""
+    """Return the publisher; reconnect once if the existing one is gone."""
     global _pubsub_client
 
     if _pubsub_client is None:
@@ -126,16 +108,12 @@ async def _ensure_publisher() -> aioredis.Redis | None:
 
 
 async def publish_notification(user_id: UUID, payload: dict[str, Any]) -> None:
-    """Publish a notification to a user's Pub/Sub channel."""
+    """Publish a notification on ``notifications:{user_id}``."""
     await publish_to_channel(_channel_name(user_id), payload)
 
 
 async def publish_to_channel(channel: str, payload: dict[str, Any]) -> None:
-    """Publish a JSON payload to an arbitrary Pub/Sub channel.
-
-    Used by domains that maintain their own channel naming convention
-    (realtime collaboration, perm fanout, token revocation, etc.).
-    """
+    """Publish a JSON payload to an arbitrary channel."""
     publisher = await _ensure_publisher()
     if publisher is None:
         logger.warning("publisher not available, skipping publish")
@@ -149,12 +127,8 @@ async def publish_to_channel(channel: str, payload: dict[str, Any]) -> None:
 
 
 async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]:
-    """Subscribe to a user's notification channel.
-
-    Creates a new subscriber connection per call (each streaming RPC
-    gets its own connection). Yields parsed notification payloads, or
-    None on poll timeouts (used by callers for heartbeat timing and
-    cancellation checks).
+    """Subscribe to ``notifications:{user_id}``; yields payloads, or
+    ``None`` on each 1s poll tick.
     """
     PUBSUB_ACTIVE_SUBSCRIBERS.inc()
 
@@ -197,7 +171,7 @@ async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]
 
 
 async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | None]:
-    """Subscribe to multiple Valkey Pub/Sub channels."""
+    """Subscribe to multiple channels; yields payloads, or ``None`` on each poll tick."""
     PUBSUB_ACTIVE_SUBSCRIBERS.inc()
 
     url = ValkeyConfig.from_env().to_url()
@@ -241,13 +215,10 @@ async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | 
 async def subscribe_patterns(
     *patterns: str,
 ) -> AsyncGenerator[tuple[str, dict[str, Any]] | None]:
-    """Subscribe to Valkey pubsub PATTERNS (``PSUBSCRIBE``).
+    """``PSUBSCRIBE`` yielding ``(channel, payload)`` or ``None`` on each poll tick.
 
-    Yields ``(channel, payload)`` per matched message, or ``None`` on
-    the 1s poll timeout so callers can run cancellation checks. One
-    subscriber connection per call covers any number of matched
-    channels - the realtime router relies on this to keep the total
-    connection count flat regardless of active docs.
+    One subscriber connection covers any number of matched channels - the
+    realtime router relies on this to keep the connection count flat.
     """
     PUBSUB_ACTIVE_SUBSCRIBERS.inc()
 
@@ -305,7 +276,6 @@ async def _close_psubscriber(
     subscriber: aioredis.Redis,
     patterns: tuple[str, ...],
 ) -> None:
-    """Close a pattern subscriber's Valkey connections with per-step suppression."""
     for p in patterns:
         with contextlib.suppress(BaseException):
             await pubsub.punsubscribe(p)
@@ -320,7 +290,6 @@ async def _close_subscriber_channels(
     subscriber: aioredis.Redis,
     channels: tuple[str, ...],
 ) -> None:
-    """Close a multi-channel subscriber's Valkey connections."""
     for ch in channels:
         with contextlib.suppress(BaseException):
             await pubsub.unsubscribe(ch)
@@ -335,7 +304,6 @@ async def _close_subscriber(
     subscriber: aioredis.Redis,
     channel: str,
 ) -> None:
-    """Close a subscriber's Valkey connections with per-step suppression."""
     with contextlib.suppress(BaseException):
         await pubsub.unsubscribe(channel)
     with contextlib.suppress(BaseException):

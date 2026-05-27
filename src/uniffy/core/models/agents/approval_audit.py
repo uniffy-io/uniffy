@@ -17,17 +17,7 @@ from sqlmodel import Field, SQLModel
 
 
 class AgentApprovalAudit(SQLModel, table=True):
-    """Thin durable audit of destructive tool confirmations.
-
-    Hot approval state lives in Valkey (`approval:<request_id>`, TTL 300s).
-    This table records the FINAL resolution only, written once when the
-    approval resolves (approved / denied / expired). Writes are best-effort
-    and non-blocking on the tool loop -- the audit is for analytics and
-    post-hoc forensics, not for state machine correctness.
-
-    `message_id` is a soft reference: the originating agent message may be
-    hard-deleted later and we don't want audit rows cascaded away.
-    """
+    """Durable record of the final resolution for a destructive tool confirmation."""
 
     __tablename__ = "agents_approval_audit"
     __table_args__ = (
@@ -91,7 +81,6 @@ class AgentApprovalAudit(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentApprovalAudit."""
         return (
             f"<AgentApprovalAudit(request_id={self.request_id}, "
             f"tool={self.tool_name!r}, status={self.status!r})>"

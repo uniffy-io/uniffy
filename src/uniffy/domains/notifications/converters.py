@@ -11,7 +11,6 @@ from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
 
-# Mapping from domain NotificationType to proto NotificationType
 NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.CONTENT_SHARED: ProtoNotificationType.NOTIFICATION_TYPE_CONTENT_SHARED,
     NotificationType.CONTENT_MENTIONED: ProtoNotificationType.NOTIFICATION_TYPE_CONTENT_MENTIONED,
@@ -38,45 +37,16 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.CHAT_THREAD_REPLY: (ProtoNotificationType.NOTIFICATION_TYPE_CHAT_THREAD_REPLY),
 }
 
-# Reverse mapping
 NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {
     v: k for k, v in NOTIFICATION_TYPE_TO_PROTO.items()
 }
 
 
 def notification_type_to_proto(nt: NotificationType) -> int:
-    """
-    Convert domain NotificationType to proto enum value.
-
-    Parameters
-    ----------
-    nt : NotificationType
-        Domain notification type.
-
-    Returns
-    -------
-    int
-        Proto enum value.
-
-    """
     return NOTIFICATION_TYPE_TO_PROTO.get(nt, ProtoNotificationType.NOTIFICATION_TYPE_UNSPECIFIED)
 
 
 def notification_type_from_proto(proto_val: int) -> NotificationType | None:
-    """
-    Convert proto enum value to domain NotificationType.
-
-    Parameters
-    ----------
-    proto_val : int
-        Proto notification type enum value.
-
-    Returns
-    -------
-    NotificationType | None
-        Domain notification type, or None if unspecified.
-
-    """
     return NOTIFICATION_TYPE_FROM_PROTO.get(proto_val)
 
 
@@ -85,24 +55,6 @@ def notification_to_proto(
     actor_name: str = "",
     actor_avatar_url: str = "",
 ) -> ProtoNotification:
-    """
-    Convert Notification model to proto Notification.
-
-    Parameters
-    ----------
-    notification : Notification
-        Notification model instance.
-    actor_name : str
-        Display name of the actor who triggered the notification.
-    actor_avatar_url : str
-        Avatar URL of the actor.
-
-    Returns
-    -------
-    ProtoNotification
-        Proto message.
-
-    """
     proto = ProtoNotification(
         id=str(notification.id),
         organization_id=str(notification.organization_id),

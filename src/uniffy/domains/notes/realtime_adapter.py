@@ -1,16 +1,4 @@
-"""``RealtimeContentAdapter`` for ``ContentType.NOTE``.
-
-Dispatches markdown vs canvas by ``Note.node_type``:
-
-- ``NodeType.NOTE`` / ``TEMPLATE``: a ``Y.Text`` root named ``markdown``
-  carries the canonical markdown.
-- ``NodeType.CANVAS``: ``Y.Map`` ``nodes`` + ``Y.Array`` ``order`` +
-  ``Y.Map`` ``edges`` mirror the React Flow shape.
-
-``render_and_persist`` materialises ``notes_notes.content`` (markdown)
-or ``canvas_content`` (canvas JSON) and runs the canonical save side
-effects via :meth:`NoteOperations.realtime_save`.
-"""
+"""``RealtimeContentAdapter`` for ``ContentType.NOTE``: markdown + canvas."""
 
 from typing import Any
 from uuid import UUID
@@ -28,9 +16,8 @@ from uniffy.domains.notes.operations import NoteOperations
 
 LOGGER_COMPONENT = "realtime.notes_adapter"
 
-# Text field names that live as ``Y.Text`` inside the node's ``data``
-# Y.Map. Mirrors ``NODE_TEXT_FIELDS`` in the frontend
-# ``canvasBinding.ts``; must stay in lockstep.
+# Per-node text fields stored as ``Y.Text``; mirrors ``NODE_TEXT_FIELDS``
+# in the frontend ``canvasBinding.ts`` and must stay in lockstep.
 _NODE_TEXT_FIELDS: dict[str, str] = {
     "text": "content",
     "shape": "label",
@@ -39,7 +26,7 @@ _NODE_TEXT_FIELDS: dict[str, str] = {
 
 
 class NoteRealtimeAdapter:
-    """``RealtimeContentAdapter`` implementation for notes + canvases."""
+    """Realtime adapter for notes and canvases."""
 
     content_type = ContentType.NOTE
 
@@ -120,8 +107,7 @@ class NoteRealtimeAdapter:
         if note.node_type == NodeType.CANVAS:
             content = ""
             canvas_content = _render_canvas_content(ydoc)
-            # ``None`` signals "doc has no canvas state". Persisting it
-            # would NULL ``canvas_content`` on disk and erase user data.
+            # ``None`` here would NULL ``canvas_content`` on disk; skip the write.
             if canvas_content is None:
                 logger.debug(
                     f"skipping canvas render for {content_id}: empty YDoc",
@@ -141,14 +127,7 @@ class NoteRealtimeAdapter:
 
 
 def _seed_canvas_ydoc(ydoc: pycrdt.Doc, canvas_content: dict[str, Any] | None) -> None:
-    """Stamp existing ``canvas_content`` into the doc's Y types on cold start.
-
-    On-disk shape is ``{nodes: [...], edges: [...], defaults: {...}}``
-    (matches frontend ``CanvasState``). The Y representation keys nodes
-    / edges by id and drives stable z-order via ``Y.Array("order")``.
-    Without the seed, the first snapshot flush after a viewer connect
-    would render empty maps and clobber the user's canvas on disk.
-    """
+    """Stamp existing ``canvas_content`` into the doc's Y types on cold start."""
     payload = canvas_content or {}
     raw_nodes = payload.get("nodes") or []
     raw_edges = payload.get("edges") or []
@@ -184,12 +163,8 @@ def _seed_canvas_ydoc(ydoc: pycrdt.Doc, canvas_content: dict[str, Any] | None) -
 
 
 def _build_node_map(node: dict[str, Any]) -> pycrdt.Map:
-    """Build a node ``Y.Map`` with the per-node text field wrapped as
-    ``pycrdt.Text`` so concurrent same-cell typing merges char-by-char.
-
-    Nodes with no text field (``note``, ``media``) pass ``data``
-    through unchanged.
-    """
+    # Wraps the node's text field as ``pycrdt.Text`` so concurrent typing
+    # merges char-by-char. Nodes without a text field pass ``data`` through.
     shell = dict(node)
     raw_data = shell.pop("data", None)
     node_type = node.get("type")
@@ -211,23 +186,14 @@ def _build_node_map(node: dict[str, Any]) -> pycrdt.Map:
 
 
 def _render_markdown(ydoc: pycrdt.Doc) -> str:
-    """Extract the ``markdown`` Y.Text root as a Python str.
-
-    ``ydoc.get(name, type=...)`` declares + retrieves in one step,
-    which is required when reading roots seeded purely by an inbound
-    ``apply_update`` (the root would be ``None`` until claimed).
-    """
+    # ``get(..., type=...)`` declares + retrieves so roots seeded purely via
+    # ``apply_update`` are read correctly.
     ytext = ydoc.get("markdown", type=pycrdt.Text)
     return str(ytext)
 
 
 def _render_canvas_content(ydoc: pycrdt.Doc) -> dict[str, Any] | None:
-    """Materialise canvas Y types into the on-disk ``canvas_content`` shape.
-
-    Nodes and edges are emitted as JSON arrays, with the ``order``
-    Y.Array driving the array order. Returns ``None`` when the doc has
-    no canvas state, signalling callers to skip the destructive write.
-    """
+    """Materialise canvas Y types to on-disk shape; ``None`` if doc is empty."""
     nodes = ydoc.get("nodes", type=pycrdt.Map)
     edges = ydoc.get("edges", type=pycrdt.Map)
     order = ydoc.get("order", type=pycrdt.Array)
@@ -244,11 +210,9 @@ def _render_canvas_content(ydoc: pycrdt.Doc) -> dict[str, Any] | None:
     edges_dict = edges.to_py()
     order_list = [str(node_id) for node_id in order.to_py()]
 
-    # ``order`` is the source of truth for z-order. Nodes missing from
-    # ``order`` are appended so temporary inconsistency does not drop
-    # content. Dedupe by id: a stale IDB-persisted ``Y.Array`` can
-    # merge with the server's seed and produce duplicate ids; emitting
-    # each node twice triggers React "duplicate key" warnings.
+    # ``order`` is the source of truth for z-order; missing nodes append.
+    # Dedupe by id - a stale IDB-persisted ``Y.Array`` merged with the
+    # server seed can duplicate ids and crash React's key warnings.
     seen_ids: set[str] = set()
     nodes_array: list[dict[str, Any]] = []
     for node_id in order_list:

@@ -1,8 +1,4 @@
-"""Default file filter presets seeded for every organization.
-
-This module defines the 7 built-in "Quick Filters" and provides a helper
-to insert them idempotently (ON CONFLICT DO NOTHING).
-"""
+"""Default Quick-Filter presets seeded per org via ON CONFLICT DO NOTHING."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -71,21 +67,7 @@ async def create_default_presets(
     organization_id: UUID,
     owner_user_id: UUID,
 ) -> None:
-    """Insert default filter presets for an organization.
-
-    Uses ON CONFLICT DO NOTHING on the (user_id, organization_id, name)
-    unique constraint so the operation is safe to run multiple times.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Active database session (caller manages commit).
-    organization_id : UUID
-        Organization to seed presets for.
-    owner_user_id : UUID
-        User ID to associate with the presets (typically the org owner).
-
-    """
+    """Idempotent seed of filter presets for an org (caller manages commit)."""
     now = datetime.now(UTC)
     rows = [
         {

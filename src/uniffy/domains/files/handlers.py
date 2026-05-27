@@ -1,4 +1,4 @@
-"""Files RPC handlers - thin layer delegating to operations."""
+"""Files RPC handlers."""
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -162,18 +162,11 @@ async def _resolve_folder_effective_policy(
 
 
 class FilesHandlers:
-    """Files RPC handlers."""
-
-    # ─────────────────────────────────────────────────────────────
-    # Upload handlers
-    # ─────────────────────────────────────────────────────────────
-
     async def initiate_upload(
         self,
         request: InitiateUploadRequest,
         ctx: RequestContext,
     ) -> InitiateUploadResponse:
-        """Initialize a new upload session."""
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
@@ -229,11 +222,7 @@ class FilesHandlers:
         request: UploadChunkRequest,
         ctx: RequestContext,
     ) -> UploadChunkResponse:
-        """
-        Upload a single chunk (browser-compatible unary RPC).
-
-        Call this for each chunk, then call CompleteUpload when done.
-        """
+        """Upload a single chunk; call CompleteUpload when all chunks have been sent."""
         try:
             upload_id = UUID(request.upload_id)
         except ValueError:
@@ -291,11 +280,7 @@ class FilesHandlers:
         request: CompleteUploadRequest,
         ctx: RequestContext,
     ) -> CompleteUploadResponse:
-        """
-        Complete an upload after all chunks have been sent.
-
-        Returns the completed file.
-        """
+        """Complete an upload after all chunks have been sent; returns the file."""
         try:
             upload_id = UUID(request.upload_id)
         except ValueError:
@@ -309,7 +294,6 @@ class FilesHandlers:
             async with open_session() as session:
                 ops = FileOperations(session)
 
-                # Complete the upload
                 file = await ops.complete_upload(
                     upload_id=upload_id,
                     user_id=user_id,
@@ -346,12 +330,7 @@ class FilesHandlers:
         request_iterator: AsyncIterator[UploadChunksRequest],
         ctx: RequestContext,
     ) -> UploadChunksResponse:
-        """
-        Stream file chunks from client.
-
-        This is a client streaming RPC - the client sends multiple chunks,
-        and we return the completed file when done.
-        """
+        """Client-streaming chunk upload; returns the completed file."""
         user_id = get_user_id_from_context(ctx)
         s3 = get_s3_client()
 
@@ -364,7 +343,6 @@ class FilesHandlers:
                 ops = FileOperations(session)
 
                 async for chunk in request_iterator:
-                    # First chunk - get upload info
                     if upload_id is None:
                         try:
                             upload_id = UUID(chunk.upload_id)
@@ -381,7 +359,6 @@ class FilesHandlers:
                         storage_key = upload.storage_key
                         s3_upload_id = upload.s3_upload_id
 
-                    # Upload part to S3
                     etag = await s3.upload_part(
                         key=storage_key,
                         upload_id=s3_upload_id,
@@ -389,7 +366,6 @@ class FilesHandlers:
                         data=chunk.data,
                     )
 
-                    # Record completion
                     await ops.record_chunk_completed(
                         upload_id=upload_id,
                         part_number=chunk.chunk_number,
@@ -397,7 +373,6 @@ class FilesHandlers:
                         size=len(chunk.data),
                     )
 
-                    # If last chunk, complete the upload
                     if chunk.is_last:
                         file = await ops.complete_upload(
                             upload_id=upload_id,
@@ -418,7 +393,6 @@ class FilesHandlers:
                             )
                         )
 
-                # If we get here without is_last, something went wrong
                 raise ConnectError(Code.INVALID_ARGUMENT, "Upload stream ended without is_last")
 
         except ConnectError:
@@ -432,13 +406,12 @@ class FilesHandlers:
         request: GetUploadStatusRequest,
         ctx: RequestContext,
     ) -> GetUploadStatusResponse:
-        """Get status of an in-progress upload."""
         try:
             upload_id = UUID(request.upload_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid upload_id")
 
-        get_user_id_from_context(ctx)  # Verify auth
+        get_user_id_from_context(ctx)
 
         try:
             async with open_session() as session:
@@ -498,10 +471,6 @@ class FilesHandlers:
             logger.error(f"Error aborting upload: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
-    # ─────────────────────────────────────────────────────────────
-    # Download handler (server streaming)
-    # ─────────────────────────────────────────────────────────────
-
     async def download_file(
         self,
         request: DownloadFileRequest,
@@ -524,10 +493,8 @@ class FilesHandlers:
             async with open_session() as session:
                 ops = FileOperations(session)
 
-                # Get file and check permissions
                 file = await ops.get_by_id(user_id, organization_id, file_id)
 
-                # Stream from S3
                 s3 = get_s3_client()
                 first_chunk = True
 
@@ -540,7 +507,6 @@ class FilesHandlers:
                         total_chunks=total_chunks,
                     )
 
-                    # Include metadata in first chunk
                     if first_chunk:
                         response.filename = file.filename
                         response.mime_type = file.mime_type
@@ -564,12 +530,7 @@ class FilesHandlers:
         request: StreamFileRangeRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[StreamFileRangeResponse]:
-        """
-        Stream file with byte range support for Service Worker.
-
-        This handler supports HTTP Range-like semantics, allowing media
-        players to seek within large files without downloading everything.
-        """
+        """Stream a file with HTTP-Range-like semantics so media players can seek."""
         try:
             file_id = UUID(request.file_id)
             organization_id = UUID(request.organization_id)
@@ -578,7 +539,6 @@ class FilesHandlers:
 
         user_id = get_user_id_from_context(ctx)
 
-        # Parse optional range parameters
         start_byte = request.start_byte if request.HasField("start_byte") else None
         end_byte = request.end_byte if request.HasField("end_byte") else None
 
@@ -586,10 +546,8 @@ class FilesHandlers:
             async with open_session() as session:
                 ops = FileOperations(session)
 
-                # Get file and check permissions
                 file = await ops.get_by_id(user_id, organization_id, file_id)
 
-                # Stream from S3 with range support
                 s3 = get_s3_client()
                 is_first = True
 
@@ -606,7 +564,6 @@ class FilesHandlers:
                         is_first_chunk=is_first,
                     )
 
-                    # Include metadata in first chunk
                     if is_first:
                         response.mime_type = file.mime_type
                         response.filename = file.filename
@@ -624,16 +581,11 @@ class FilesHandlers:
             logger.error(f"Error streaming file range: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
-    # ─────────────────────────────────────────────────────────────
-    # File CRUD handlers
-    # ─────────────────────────────────────────────────────────────
-
     async def get_file(
         self,
         request: GetFileRequest,
         ctx: RequestContext,
     ) -> GetFileResponse:
-        """Get a file by ID."""
         try:
             file_id = UUID(request.file_id)
             organization_id = UUID(request.organization_id)
@@ -674,11 +626,8 @@ class FilesHandlers:
         request: UpdateFileRequest,
         ctx: RequestContext,
     ) -> UpdateFileResponse:
-        """Update file metadata.
-
-        Access policy changes (access_mode, baseline_role) on the request
-        are forwarded to the MembersService set_access_mode operation
-        before applying the metadata update.
+        """Update file metadata; access_mode/baseline_role go through
+        MembersService.set_access_mode.
         """
         try:
             file_id = UUID(request.file_id)
@@ -943,10 +892,6 @@ class FilesHandlers:
         except Exception as e:
             logger.error(f"Error listing files: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
-
-    # ─────────────────────────────────────────────────────────────
-    # Folder handlers
-    # ─────────────────────────────────────────────────────────────
 
     async def create_folder(
         self,
@@ -1254,10 +1199,6 @@ class FilesHandlers:
             logger.error(f"Error getting files tree: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
-    # ─────────────────────────────────────────────────────────────
-    # Bulk operations
-    # ─────────────────────────────────────────────────────────────
-
     async def empty_trash(
         self,
         request: EmptyTrashRequest,
@@ -1436,10 +1377,6 @@ class FilesHandlers:
         except Exception as e:
             logger.error(f"Error listing file versions: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
-
-    # ─────────────────────────────────────────────────────────────
-    # Unimplemented methods
-    # ─────────────────────────────────────────────────────────────
 
     async def create_folder_tree(
         self,

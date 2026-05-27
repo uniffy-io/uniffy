@@ -24,17 +24,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentChannelBinding(SQLModel, table=True):
-    """Per-(channel, agent) configuration + counters.
-
-    One row per agent participating in a chat channel. Holds per-binding
-    tuning (context radius, rate limit, model override, tool allowlist,
-    system prompt addendum), monthly token budget + usage counters, and
-    pointers for scoped-view compaction.
-
-    Hot update columns (`tokens_used_month`, `last_compacted_at`) rely on
-    FILLFACTOR=80 + tight autovacuum tuning configured at the table level
-    in migration 049.
-    """
+    """Per-(channel, agent) configuration and usage counters."""
 
     __tablename__ = "agents_channel_bindings"
     __table_args__ = (
@@ -163,7 +153,6 @@ class AgentChannelBinding(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentChannelBinding."""
         return (
             f"<AgentChannelBinding(id={self.id}, "
             f"channel_id={self.channel_id}, agent_id={self.agent_id})>"

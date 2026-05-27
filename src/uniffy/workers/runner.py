@@ -1,6 +1,4 @@
-"""Shared ARQ worker runner with auto-restart on Valkey connection loss.
-
-"""
+"""ARQ worker runner with exponential-backoff restart on Valkey connection loss."""
 
 import asyncio
 import os
@@ -23,20 +21,7 @@ def run_worker_with_restart(
     app_name: str,
     metrics_port: int,
 ) -> None:
-    """Run an ARQ worker class under a connection-loss restart loop.
-
-    Parameters
-    ----------
-    settings_cls : type
-        ARQ ``WorkerSettings`` class (``CoreWorkerSettings`` /
-        ``EgressWorkerSettings``).
-    app_name : str
-        Observability service name (``uniffy-worker-core`` /
-        ``uniffy-worker-egress``).
-    metrics_port : int
-        Listen port for this fleet's prometheus exporter.
-
-    """
+    """Run an ARQ worker class with a connection-loss restart loop."""
     setup_observability(
         config=ObservabilityConfig(
             app_name=app_name,

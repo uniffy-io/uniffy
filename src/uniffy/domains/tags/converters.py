@@ -1,5 +1,3 @@
-"""Proto <-> domain converters for tags."""
-
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -42,29 +40,18 @@ _SOURCE_FROM_PROTO: dict[int, str | None] = {
 
 
 def sort_from_proto(value: int) -> str:
-    """Map a proto ``TagSort`` value onto the operations sort string.
-
-    ``COUNT_DESC`` / ``COUNT_ASC`` are accepted but coerced to
-    ``recent_desc``. Server-side count-based ordering across pages is
-    no longer supported because counts live in Valkey, not Postgres,
-    and re-sorting a Postgres page in Python silently breaks
-    pagination (same tag can appear on two pages or on none). Frontends
-    that need a counts view filter inside the explorer's first page.
-    """
+    # COUNT_DESC / COUNT_ASC fall back to recent_desc: counts live in Valkey, so
+    # paginating by count over a Postgres window breaks (a tag can land on two
+    # pages or none). UIs that need a counts view filter inside the first page.
     return _SORT_FROM_PROTO.get(value, "recent_desc")
 
 
 def source_from_proto(value: int) -> str | None:
-    """Map a proto ``TagSource`` to the operations source string.
-
-    Returns ``None`` when unspecified — used by ``unassign`` to mean
-    "remove regardless of source".
-    """
+    # None means "any source" - unassign() treats it as remove-regardless-of-source.
     return _SOURCE_FROM_PROTO.get(value)
 
 
 def tag_to_proto(tag: Tag, *, usage_count: int = 0) -> ProtoTag:
-    """Convert a ``Tag`` row to its proto representation."""
     proto = ProtoTag(
         id=str(tag.id),
         organization_id=str(tag.organization_id),
@@ -87,12 +74,10 @@ def tag_to_proto(tag: Tag, *, usage_count: int = 0) -> ProtoTag:
 def tags_to_proto_list(
     tags: Iterable[Tag], counts: dict[UUID, int]
 ) -> list[ProtoTag]:
-    """Convert a list of tags using a parallel id -> count map."""
     return [tag_to_proto(t, usage_count=counts.get(t.id, 0)) for t in tags]
 
 
 def assignment_to_proto(assignment: TagAssignment) -> ProtoTagAssignment:
-    """Convert a ``TagAssignment`` row to proto."""
     return ProtoTagAssignment(
         tag_id=str(assignment.tag_id),
         content_urn=assignment.content_urn,
@@ -109,17 +94,12 @@ def tagged_content_item_to_proto(
     title: str = "",
     snippet: str = "",
 ) -> ProtoTaggedContentItem:
-    """Build a ``TaggedContentItem`` for the explorer's right panel.
-
-    Title / snippet are not stored on the assignment; the caller hydrates
-    them from the search index. Phase 1 leaves them blank — the explorer
-    UI lands in Phase 5.
-    """
+    # Title/snippet are not stored on TagAssignment; callers hydrate from the search index.
     try:
         ct = ContentType(assignment.content_type)
         proto_ct = content_type_to_proto(ct)
     except ValueError:
-        proto_ct = 0  # CONTENT_TYPE_UNSPECIFIED
+        proto_ct = 0
     return ProtoTaggedContentItem(
         urn=assignment.content_urn,
         content_type=proto_ct,

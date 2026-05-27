@@ -1,11 +1,7 @@
-"""VAPID key configuration for Web Push notifications.
+"""VAPID key configuration for Web Push.
 
-Keys are auto-generated during initial DB seed and stored encrypted
-in ``application_settings``.
-
-Generate keys manually:
-
-    uv run -m uniffy.scripts.generate_vapid
+Keys are auto-generated on initial DB seed and stored encrypted in
+``application_settings``. Manual generation: ``uv run -m uniffy.scripts.generate_vapid``.
 """
 
 from dataclasses import dataclass
@@ -15,18 +11,7 @@ from loguru import logger
 
 @dataclass(frozen=True)
 class VapidConfig:
-    """VAPID credentials for Web Push.
-
-    Attributes
-    ----------
-    private_key : str
-        Base64url-encoded VAPID private key.
-    public_key : str
-        Base64url-encoded VAPID public key.
-    contact_email : str
-        Contact email for VAPID claims (mailto: URI).
-
-    """
+    """VAPID credentials for Web Push. Keys are base64url; ``contact_email`` is a mailto target."""
 
     private_key: str
     public_key: str
@@ -37,34 +22,12 @@ _vapid_config: VapidConfig | None = None
 
 
 def get_vapid_config() -> VapidConfig | None:
-    """Return the cached VAPID configuration.
-
-    Call ``load_vapid_config()`` during application startup before
-    using this function.  If no configuration has been loaded, returns
-    ``None`` (push notifications disabled).
-
-    Returns
-    -------
-    VapidConfig | None
-        The VAPID configuration, or None if not yet loaded / unavailable.
-
-    """
+    """Return the cached VAPID config, or ``None`` when push is disabled."""
     return _vapid_config
 
 
 async def load_vapid_config() -> None:
-    """Load VAPID configuration from the database.
-
-    Reads ``vapid_private_key``, ``vapid_public_key``, and
-    ``vapid_contact_email`` from the ``application_settings`` table
-    (seeded during first run).
-
-    The result is cached in module-level ``_vapid_config`` so that the
-    synchronous ``get_vapid_config()`` can return it without I/O.
-
-    This function is safe to call multiple times; it will not reload
-    once a config is cached.
-    """
+    """Load and cache VAPID settings from ``application_settings``; idempotent."""
     global _vapid_config
 
     if _vapid_config is not None:

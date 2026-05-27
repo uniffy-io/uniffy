@@ -1,5 +1,3 @@
-"""Proto <-> domain converters for settings domain."""
-
 from typing import Any
 
 from uniffy_proto.settings.v1.settings_pb2 import (
@@ -26,20 +24,6 @@ from uniffy.core.models.settings.settings_profile import SettingsProfile
 
 
 def profile_to_proto(profile: SettingsProfile) -> ProtoSettingsProfile:
-    """
-    Convert SettingsProfile model to proto SettingsProfile.
-
-    Parameters
-    ----------
-    profile : SettingsProfile
-        Settings profile model instance.
-
-    Returns
-    -------
-    ProtoSettingsProfile
-        Proto message.
-
-    """
     proto_profile = ProtoSettingsProfile(
         id=str(profile.id),
         user_id=str(profile.user_id),
@@ -64,20 +48,6 @@ def profile_to_proto(profile: SettingsProfile) -> ProtoSettingsProfile:
 
 
 def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance:
-    """
-    Convert appearance dict to proto AppearanceSettings.
-
-    Parameters
-    ----------
-    settings : dict | None
-        Appearance settings dictionary.
-
-    Returns
-    -------
-    ProtoAppearance
-        Proto message.
-
-    """
     if not settings:
         return ProtoAppearance()
 
@@ -114,20 +84,6 @@ def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance
 
 
 def keyboard_shortcuts_dict_to_proto(settings: dict[str, Any] | None) -> ProtoKeyboardShortcuts:
-    """
-    Convert keyboard shortcuts dict to proto KeyboardShortcutsSettings.
-
-    Parameters
-    ----------
-    settings : dict | None
-        Keyboard shortcuts settings dictionary.
-
-    Returns
-    -------
-    ProtoKeyboardShortcuts
-        Proto message.
-
-    """
     if not settings:
         return ProtoKeyboardShortcuts()
 
@@ -141,20 +97,6 @@ def keyboard_shortcuts_dict_to_proto(settings: dict[str, Any] | None) -> ProtoKe
 
 
 def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotifications:
-    """
-    Convert notifications dict to proto NotificationsSettings.
-
-    Parameters
-    ----------
-    settings : dict | None
-        Notifications settings dictionary.
-
-    Returns
-    -------
-    ProtoNotifications
-        Proto message.
-
-    """
     if not settings:
         return ProtoNotifications()
 
@@ -178,7 +120,6 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
     if settings.get("quiet_hours_end") is not None:
         proto.quiet_hours_end = settings["quiet_hours_end"]
 
-    # Channel overrides
     channel_overrides = settings.get("channel_overrides", {})
     for notif_type, channels in channel_overrides.items():
         pref = ProtoChannelPreference()
@@ -190,7 +131,6 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
             pref.email = channels["email"]
         proto.channel_overrides[notif_type].CopyFrom(pref)
 
-    # Default reminder intervals
     reminder_intervals = settings.get("default_reminder_intervals")
     if reminder_intervals:
         proto.default_reminder_intervals.extend(reminder_intervals)
@@ -199,20 +139,6 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
 
 
 def effective_settings_to_proto(settings: dict[str, Any]) -> ProtoEffectiveSettings:
-    """
-    Convert effective settings dict to proto EffectiveSettings.
-
-    Parameters
-    ----------
-    settings : dict
-        Effective settings with all defaults merged.
-
-    Returns
-    -------
-    ProtoEffectiveSettings
-        Proto message.
-
-    """
     return ProtoEffectiveSettings(
         appearance=appearance_dict_to_proto(settings.get("appearance")),
         keyboard_shortcuts=keyboard_shortcuts_dict_to_proto(settings.get("keyboard_shortcuts")),
@@ -221,22 +147,7 @@ def effective_settings_to_proto(settings: dict[str, Any]) -> ProtoEffectiveSetti
 
 
 def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | None:
-    """
-    Convert proto AppearanceSettings to dict.
-
-    Returns only explicitly set fields (sparse).
-
-    Parameters
-    ----------
-    proto : ProtoAppearance | None
-        Proto appearance settings.
-
-    Returns
-    -------
-    dict | None
-        Appearance settings dictionary (sparse).
-
-    """
+    # Sparse: only explicitly set fields are returned so updates stay PATCH-like.
     if not proto:
         return None
 
@@ -273,20 +184,6 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
 
 def keyboard_shortcuts_from_proto(proto: ProtoKeyboardShortcuts | None) -> dict[str, Any] | None:
-    """
-    Convert proto KeyboardShortcutsSettings to dict.
-
-    Parameters
-    ----------
-    proto : ProtoKeyboardShortcuts | None
-        Proto keyboard shortcuts settings.
-
-    Returns
-    -------
-    dict | None
-        Keyboard shortcuts dictionary.
-
-    """
     if not proto:
         return None
 
@@ -297,22 +194,7 @@ def keyboard_shortcuts_from_proto(proto: ProtoKeyboardShortcuts | None) -> dict[
 
 
 def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any] | None:
-    """
-    Convert proto NotificationsSettings to dict.
-
-    Returns only explicitly set fields (sparse).
-
-    Parameters
-    ----------
-    proto : ProtoNotifications | None
-        Proto notifications settings.
-
-    Returns
-    -------
-    dict | None
-        Notifications settings dictionary (sparse).
-
-    """
+    # Sparse: only explicitly set fields are returned so updates stay PATCH-like.
     if not proto:
         return None
 
@@ -336,7 +218,6 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
     if proto.HasField("quiet_hours_end"):
         result["quiet_hours_end"] = proto.quiet_hours_end
 
-    # Channel overrides
     if proto.channel_overrides:
         overrides: dict[str, dict[str, bool]] = {}
         for notif_type, pref in proto.channel_overrides.items():
@@ -352,7 +233,6 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
         if overrides:
             result["channel_overrides"] = overrides
 
-    # Default reminder intervals
     if proto.default_reminder_intervals:
         result["default_reminder_intervals"] = list(proto.default_reminder_intervals)
 

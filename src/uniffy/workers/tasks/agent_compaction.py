@@ -1,10 +1,7 @@
-"""ARQ task: compact an agent session asynchronously.
+"""ARQ task: compact an agent session when it crosses the token budget.
 
-Enqueued by `RuntimeOperations` when a session crosses the token budget.
-Idempotent via a Valkey ``SET NX`` lock keyed
-``compaction_lock:{session_id}`` with a 5-minute TTL: if another worker is
-already compacting the session, the job becomes a no-op so two workers
-can't race on summary insertion.
+Idempotent via a Valkey `SET NX` lock keyed `compaction_lock:{session_id}`
+(5-minute TTL) so two workers cannot race on summary insertion.
 """
 
 from typing import Any
@@ -29,7 +26,6 @@ _LOCK_KEY_TEMPLATE = "compaction_lock:{session_id}"
 
 
 async def _acquire_lock(session_id: UUID) -> bool:
-    """Try to acquire the compaction lock. Returns True on success."""
     client = _get_ops_client()
     if client is None:
         return False
@@ -65,12 +61,6 @@ async def compact_session(
     ctx: dict[str, Any],
     session_id: str,
 ) -> dict[str, Any]:
-    """Compact a single agent session.
-
-    Acquires a Valkey lock, loads the session, resolves the active provider
-    + model, and runs ``SessionOperations.compact_session_if_needed``. On
-    lock-loss the job is a no-op (another worker is handling it).
-    """
     try:
         sid = UUID(session_id)
     except ValueError:

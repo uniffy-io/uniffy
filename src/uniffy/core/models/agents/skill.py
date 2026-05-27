@@ -10,39 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentSkill(SQLModel, table=True):
-    """
-    A curated instruction set (markdown) that shapes agent behavior.
-
-    Unlike tools (which are executable functions), skills are prompt
-    content injected into the system prompt to give agents specialized
-    personas or capabilities.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID | None
-        Organization this skill belongs to. None for bundled skills.
-    name : str
-        Unique machine name within scope (max 100 chars).
-    display_name : str
-        Human-readable name (max 255 chars).
-    description : str
-        Short description of what the skill does.
-    content : str
-        Markdown instructions injected into the system prompt.
-    source : str
-        "bundled" (shipped with app), "organization" (created by admin), or "personal".
-    owner_id : UUID | None
-        Owner user ID for personal skills. None for org/bundled skills.
-    always_active : bool
-        Whether this skill is always injected regardless of agent config.
-    created_at : datetime
-        When the skill was created.
-    updated_at : datetime
-        When the skill was last updated.
-
-    """
+    """A curated markdown instruction set injected into an agent's system prompt."""
 
     __tablename__ = "agents_skills"
     __table_args__ = (
@@ -100,7 +68,6 @@ class AgentSkill(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentSkill."""
         return (
             f"<AgentSkill(id={self.id}, name={self.name!r}, "
             f"source={self.source!r}, org_id={self.organization_id})>"

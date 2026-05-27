@@ -12,12 +12,7 @@ from uniffy.core.types import generate_id
 
 
 class ChatChannelResource(SQLModel, table=True):
-    """Auto-populated tracking of content referenced in a channel via URN mentions.
-
-    Populated by parsing [[[label|urn]]] mentions from message content on send/update.
-    Decremented on message delete. Rows with mention_count = 0 are removed.
-
-    """
+    """Aggregated record of URN mentions in a channel; rows with mention_count=0 are removed."""
 
     __tablename__ = "chat_channel_resources"
     __table_args__ = (

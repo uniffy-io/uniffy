@@ -25,23 +25,7 @@ class GroupsHandlers:
         request: pb.ListGroupsRequest,
         ctx: RequestContext,
     ) -> pb.ListGroupsResponse:
-        """
-        List groups in an organization.
-
-        Parameters
-        ----------
-        request : pb.ListGroupsRequest
-            Request with organization_id and optional pagination/search.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        pb.ListGroupsResponse
-            List of groups.
-
-        """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        get_user_id_from_context(ctx)
         org_id = UUID(request.organization_id)
 
         page = 1
@@ -77,23 +61,7 @@ class GroupsHandlers:
         request: pb.GetGroupRequest,
         ctx: RequestContext,
     ) -> pb.GetGroupResponse:
-        """
-        Get a specific group.
-
-        Parameters
-        ----------
-        request : pb.GetGroupRequest
-            Request with organization_id and group_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        common.GroupInfo
-            Group info.
-
-        """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
@@ -107,22 +75,6 @@ class GroupsHandlers:
         request: pb.CreateGroupRequest,
         ctx: RequestContext,
     ) -> pb.CreateGroupResponse:
-        """
-        Create a new group.
-
-        Parameters
-        ----------
-        request : pb.CreateGroupRequest
-            Request with group details.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        common.GroupInfo
-            Created group.
-
-        """
         user_id = get_user_id_from_context(ctx)
         org_id = UUID(request.organization_id)
 
@@ -144,22 +96,6 @@ class GroupsHandlers:
         request: pb.UpdateGroupRequest,
         ctx: RequestContext,
     ) -> pb.UpdateGroupResponse:
-        """
-        Update a group.
-
-        Parameters
-        ----------
-        request : pb.UpdateGroupRequest
-            Request with group updates.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        common.GroupInfo
-            Updated group.
-
-        """
         user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
 
@@ -181,22 +117,6 @@ class GroupsHandlers:
         request: pb.DeleteGroupRequest,
         ctx: RequestContext,
     ) -> pb.DeleteGroupResponse:
-        """
-        Delete a group.
-
-        Parameters
-        ----------
-        request : pb.DeleteGroupRequest
-            Request with group_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        pb.DeleteGroupResponse
-            Success status.
-
-        """
         user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
 
@@ -211,23 +131,7 @@ class GroupsHandlers:
         request: pb.ListGroupMembersRequest,
         ctx: RequestContext,
     ) -> pb.ListGroupMembersResponse:
-        """
-        List members of a group.
-
-        Parameters
-        ----------
-        request : pb.ListGroupMembersRequest
-            Request with group_id and optional pagination.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        pb.ListGroupMembersResponse
-            List of members.
-
-        """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
 
         page = 1
@@ -264,22 +168,6 @@ class GroupsHandlers:
         request: pb.AddGroupMemberRequest,
         ctx: RequestContext,
     ) -> pb.AddGroupMemberResponse:
-        """
-        Add a member to a group.
-
-        Parameters
-        ----------
-        request : pb.AddGroupMemberRequest
-            Request with group_id, user_id, and role.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        common.GroupMemberInfo
-            Created membership.
-
-        """
         user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
@@ -293,7 +181,6 @@ class GroupsHandlers:
                 role=role,
                 actor_user_id=user_id,
             )
-            # Get user info for response
             _, user = await ops.get_member(group_id, target_user_id)
 
         return pb.AddGroupMemberResponse(member=group_member_info_to_proto(user, membership))
@@ -303,23 +190,7 @@ class GroupsHandlers:
         request: pb.UpdateGroupMemberRequest,
         ctx: RequestContext,
     ) -> pb.UpdateGroupMemberResponse:
-        """
-        Update a group member's role.
-
-        Parameters
-        ----------
-        request : pb.UpdateGroupMemberRequest
-            Request with group_id, user_id, and new role.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        common.GroupMemberInfo
-            Updated membership.
-
-        """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
@@ -331,7 +202,6 @@ class GroupsHandlers:
                 user_id=target_user_id,
                 role=role,
             )
-            # Get user info for response
             _, user = await ops.get_member(group_id, target_user_id)
 
         return pb.UpdateGroupMemberResponse(
@@ -343,22 +213,6 @@ class GroupsHandlers:
         request: pb.RemoveGroupMemberRequest,
         ctx: RequestContext,
     ) -> pb.RemoveGroupMemberResponse:
-        """
-        Remove a member from a group.
-
-        Parameters
-        ----------
-        request : pb.RemoveGroupMemberRequest
-            Request with group_id and user_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        pb.RemoveGroupMemberResponse
-            Success status.
-
-        """
         user_id = get_user_id_from_context(ctx)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
@@ -376,23 +230,7 @@ class GroupsHandlers:
         request: pb.GetUserGroupsRequest,
         ctx: RequestContext,
     ) -> pb.GetUserGroupsResponse:
-        """
-        Get all groups a user belongs to in an organization.
-
-        Parameters
-        ----------
-        request : pb.GetUserGroupsRequest
-            Request with organization_id and user_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        pb.GetUserGroupsResponse
-            List of groups.
-
-        """
-        get_user_id_from_context(ctx)  # Verify authenticated
+        get_user_id_from_context(ctx)
         org_id = UUID(request.organization_id)
         target_user_id = UUID(request.user_id)
 

@@ -1,24 +1,8 @@
-"""Valkey Pub/Sub for real-time tag state change broadcasting.
+"""Org-wide tag-event pubsub on channel ``tags:{org_id}``.
 
-Mirrors the existing ``mentions.py`` pattern: tag CRUD and assignment
-mutations publish to the org-wide ``tags:{org_id}`` channel so any
-connected client (the explorer dashboard, an open content view with
-visible tag chips, the notification stream) can refresh its in-memory
-state without polling.
-
-Channel pattern: ``tags:{org_id}``
-
-Event types
------------
-- ``tag.created``        — payload: ``{"tag": {...}}``
-- ``tag.updated``        — payload: ``{"tag": {...}}``
-- ``tag.deleted``        — payload: ``{"tag_id": str}``
-- ``tag.assignment.changed`` — payload:
-  ``{"content_urn": str, "content_type": str, "added": [tag_id, ...],
-  "removed": [tag_id, ...]}``
-
-The publish call runs under the same fail-fast deadline guard as the
-ops calls so a slow Valkey can't block a tag mutation.
+Event types: ``tag.created`` / ``tag.updated`` (payload ``{"tag": {...}}``),
+``tag.deleted`` (``{"tag_id": str}``), ``tag.assignment.changed``
+(``{"content_urn", "content_type", "added", "removed"}``).
 """
 
 import json
@@ -50,13 +34,7 @@ async def publish_tag_event(
     event_type: str,
     payload: dict[str, Any],
 ) -> None:
-    """Publish a tag event to the org-wide tags channel.
-
-    A bad event type is rejected with a debug log; the call is otherwise
-    fire-and-forget. A missing pubsub client or a Valkey timeout makes
-    the call a no-op so domain operations cannot stall on real-time
-    fan-out.
-    """
+    """Publish a tag event. Fire-and-forget; unknown ``event_type`` is rejected with a debug log."""
     if event_type not in _VALID_EVENT_TYPES:
         logger.debug(
             f"publish_tag_event: rejecting unknown event type {event_type!r}",

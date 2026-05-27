@@ -1,25 +1,12 @@
-"""In-process LRU for decrypted provider credentials and clients.
+"""In-process LRU for decrypted provider credentials and constructed clients.
 
-Every agent turn previously decrypted the Fernet-encrypted provider
-credential and rebuilt the provider client from scratch. Anthropic /
-OpenAI SDKs each carry their own ``httpx`` connection pool, so
-re-instantiating throws away the warm TLS handshakes that the next
-request would otherwise reuse.
+Keyed by ``ProviderKey.id``. A cache hit skips the Fernet decrypt AND the provider
+construction, preserving the Anthropic/OpenAI SDK ``httpx`` connection pools across
+turns. TTL 1 hour, size cap 256. Cross-pod invalidation lands via the
+``provider_keys:invalidate:{key_id}`` pubsub channel.
 
-This module exposes a process-singleton ``ProviderClientLRU`` keyed by
-``ProviderKey.id``. Entries hold the decrypted credential AND the
-constructed provider client, so a cache hit skips the Fernet decrypt and
-the provider construction. TTL: 1 hour. Size cap: 256.
-
-Cross-pod invalidation lands via the existing pubsub channel
-``provider_keys:invalidate:{key_id}`` (published by
-``invalidate_provider_metadata`` in ``domains/agents/cache.py``).
-``init_provider_invalidation_subscriber`` starts a long-lived asyncio
-task that ``PSUBSCRIBE``s to the pattern and drops the matching LRU
-entry on every received message.
-
-The LRU is in-process only: the encrypted credential never leaves PG
-and the decrypted material never enters Valkey.
+The LRU is in-process only: the encrypted credential never leaves PG and the
+decrypted material never enters Valkey.
 """
 
 from __future__ import annotations
@@ -63,12 +50,7 @@ class _CachedEntry:
 
 
 class ProviderClientLRU:
-    """Bounded TTL+LRU keyed by provider-key id.
-
-    Concurrency model: a single ``asyncio.Lock`` serialises mutations.
-    Reads are short and the cache is local to one process so the lock
-    contention is negligible compared to the cost of a Fernet decrypt.
-    """
+    """Bounded TTL+LRU keyed by provider-key id; a single asyncio.Lock serialises mutations."""
 
     def __init__(self) -> None:
         self._entries: OrderedDict[UUID, _CachedEntry] = OrderedDict()
@@ -132,11 +114,7 @@ def record_lru_miss() -> None:
 
 
 async def init_provider_invalidation_subscriber() -> None:
-    """Start the long-lived pubsub listener for provider-key invalidation.
-
-    Idempotent: a second call is a no-op while the first task is alive.
-    Mirrors the ``init_pubsub`` lifecycle pattern used elsewhere.
-    """
+    """Start the long-lived pubsub listener for provider-key invalidation. Idempotent."""
     global _subscriber_task, _subscriber_shutdown
 
     if _subscriber_task is not None and not _subscriber_task.done():
@@ -148,10 +126,7 @@ async def init_provider_invalidation_subscriber() -> None:
 
 
 async def close_provider_invalidation_subscriber() -> None:
-    """Signal shutdown and await the subscriber task.
-
-    Safe to call when no subscriber is running.
-    """
+    """Signal shutdown and await the subscriber task. Safe when no subscriber is running."""
     global _subscriber_task, _subscriber_shutdown
 
     if _subscriber_shutdown is not None:

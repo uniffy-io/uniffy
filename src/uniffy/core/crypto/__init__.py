@@ -1,20 +1,8 @@
-"""Cryptography primitives: envelope encryption for per-org secrets.
+"""Envelope encryption for per-org secrets.
 
-Public surface:
-
-- ``OrgCipher`` -- per-org encrypt / decrypt / provision / rotate.
-- ``get_master_cipher`` / ``app_encrypt`` / ``app_decrypt`` -- Fernet
-  keyed on ``APP_MASTER_KEY``. Use ``app_encrypt`` / ``app_decrypt``
-  only for genuinely app-wide secrets (VAPID); everything else is
-  per-org and goes through ``OrgCipher``.
-- DEK helpers: ``generate_dek``, ``wrap_dek``, ``unwrap_dek``.
-- Pubsub: ``publish_dek_invalidation``, ``subscribe_dek_invalidations``,
-  ``close_dek_invalidation_subscriber``.
-- ``ReEncryptingConsumer`` + ``register_consumer`` -- per-domain
-  registration so rotation can sweep every encrypted column.
-- Error hierarchy: ``CryptoError`` (base), ``MasterKeyMissingError``,
-  ``OrgDekNotFoundError``, ``OrgDekVersionMismatchError``,
-  ``CiphertextFormatError``.
+``app_encrypt`` / ``app_decrypt`` (Fernet on ``APP_MASTER_KEY``) is reserved
+for genuinely app-wide secrets like VAPID; everything else is per-org through
+``OrgCipher``.
 """
 
 from uniffy.core.crypto.cache import (

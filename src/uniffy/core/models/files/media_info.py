@@ -9,43 +9,7 @@ from sqlmodel import Field, SQLModel
 
 
 class FileMediaInfo(SQLModel, table=True):
-    """
-    Extracted media information for a file.
-
-    Attributes
-    ----------
-    file_id : UUID
-        Primary key, foreign key to files_files.id (CASCADE delete).
-    thumbnail_key : str | None
-        S3 key for the generated thumbnail.
-    thumbnail_width : int | None
-        Thumbnail width in pixels.
-    thumbnail_height : int | None
-        Thumbnail height in pixels.
-    width : int | None
-        Original media width in pixels.
-    height : int | None
-        Original media height in pixels.
-    format : str | None
-        Image/media format (e.g. JPEG, PNG).
-    color_mode : str | None
-        Color mode (e.g. RGB, RGBA).
-    duration_seconds : float | None
-        Duration for video/audio files.
-    page_count : int | None
-        Page count for PDF files.
-    bitrate : int | None
-        Audio bitrate in bits per second.
-    sample_rate : int | None
-        Audio sample rate in Hz.
-    channels : int | None
-        Number of audio channels.
-    exif : dict | None
-        EXIF metadata as JSON.
-    extraction_error : str | None
-        Error message if extraction or thumbnail generation failed.
-
-    """
+    """Extracted media metadata and thumbnail reference for a file."""
 
     __tablename__ = "files_media_info"
 

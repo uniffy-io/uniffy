@@ -1,15 +1,5 @@
-"""Valkey Pub/Sub for real-time mention state change broadcasting.
-
-Publishes mention state change events to org-wide channels when content
-that can be referenced via URN mentions is modified. Subscribers (the
-notification stream handler) relay these events to connected clients so
-MentionChip components can update in real-time.
-
-Channel pattern: mentions:{org_id}
-
-PUBLISH is a pubsub command so this module reuses the pubsub client.
-The publish call runs under the same fail-fast deadline guard as the
-ops calls so a slow Valkey can't block a content mutation.
+"""Org-wide mention-state pubsub on channel ``mentions:{org_id}``. Runs
+under the ops deadline guard.
 """
 
 import json
@@ -29,11 +19,7 @@ async def publish_mention_state(
     urn: str,
     changes: dict[str, Any],
 ) -> None:
-    """Publish a mention state change to the org-wide mentions channel.
-
-    Called by domain operations when content state changes (task status,
-    calendar event time, file processing completion, etc.).
-    """
+    """Publish a mention state change so live chips refresh in place."""
     from uniffy.core.valkey import pubsub
 
     redis = pubsub._pubsub_client

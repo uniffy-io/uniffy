@@ -33,23 +33,7 @@ class _HTMLTextExtractor(HTMLParser):
 
 
 def extract_html_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from HTML by stripping tags.
-
-    Uses stdlib html.parser to strip tags, ignoring script and style content.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw HTML file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text content.
-
-    """
+    """Strip HTML tags using stdlib parser, ignoring script and style content."""
     html_str = data.decode("utf-8", errors="replace")
     parser = _HTMLTextExtractor()
     parser.feed(html_str)
@@ -69,39 +53,21 @@ def extract_html_text(data: bytes, max_chars: int) -> ExtractionResult:
     )
 
 
-# RTF control word pattern for stripping
 _RTF_CONTROL_RE = re.compile(
-    r"\\[a-z]{1,32}(-?\d{1,10})?[ ]?"  # control words
-    r"|[{}]"  # group delimiters
-    r"|\\[\\{}]"  # escaped special chars
-    r"|\\\*\\[a-z]{1,32}"  # destination groups
-    r"|\\\'[0-9a-f]{2}",  # hex characters
+    r"\\[a-z]{1,32}(-?\d{1,10})?[ ]?"
+    r"|[{}]"
+    r"|\\[\\{}]"
+    r"|\\\*\\[a-z]{1,32}"
+    r"|\\\'[0-9a-f]{2}",
     re.IGNORECASE,
 )
 
 
 def extract_rtf_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from RTF by stripping control words.
-
-    Uses regex-based control word stripping for simple RTF extraction.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw RTF file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text content.
-
-    """
+    """Strip RTF control words with a regex pass."""
     rtf_str = data.decode("utf-8", errors="replace")
     text = _RTF_CONTROL_RE.sub("", rtf_str)
 
-    # Clean up whitespace
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
 

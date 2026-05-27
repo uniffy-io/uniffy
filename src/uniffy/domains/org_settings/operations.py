@@ -1,15 +1,9 @@
 """CRUD on the generic ``org_settings`` KV table.
 
-Domain wrappers (e.g. ``OrgMailOperations``) call into this class with
-a fixed ``namespace`` plus per-key validators. Secrets are encrypted
-through ``OrgCipher`` on write and never round-trip through the public
-read path -- ``get_namespace`` returns the ``OrgSetting`` row as-is
-(``value_encrypted`` is the ciphertext) and callers explicitly opt
-into decryption via ``get_secret``.
-
-A single ``ReEncryptingConsumer`` is registered at module import for
-``WHERE is_secret = true``; every future encrypted setting rotates
-with the per-org DEK with zero additional plumbing.
+Secrets are encrypted via ``OrgCipher`` and never returned by the
+public read path - callers opt in explicitly through ``get_secret``.
+A ``ReEncryptingConsumer`` is registered so DEK rotation re-encrypts
+every ``is_secret`` row regardless of which domain wrote it.
 """
 
 from __future__ import annotations
@@ -38,11 +32,7 @@ class OrgSettingsOperations:
         organization_id: UUID,
         namespace: str,
     ) -> dict[str, OrgSetting]:
-        """Return ``{key: OrgSetting}`` for one (org, namespace) pair.
-
-        Ciphertext is left in ``row.value_encrypted`` -- callers that
-        need the plaintext must call ``get_secret`` explicitly.
-        """
+        """Return ``{key: OrgSetting}`` for one (org, namespace); secrets stay ciphered."""
         rows = (
             await self._session.execute(
                 select(OrgSetting).where(
@@ -59,7 +49,6 @@ class OrgSettingsOperations:
         namespace: str,
         key: str,
     ) -> str | None:
-        """Return the decrypted plaintext for one secret row or ``None``."""
         row = (
             await self._session.execute(
                 select(OrgSetting).where(
@@ -83,14 +72,7 @@ class OrgSettingsOperations:
         is_secret: bool = False,
         updated_by_user_id: UUID | None = None,
     ) -> None:
-        """Upsert one row. Secrets are encrypted via ``OrgCipher``.
-
-        For ``is_secret=False`` rows the JSON-able ``value`` is stored
-        in the plaintext ``value`` JSONB column. For secrets the value
-        must be a string; it is encrypted and stored in
-        ``value_encrypted`` (the ``value`` column is left NULL to
-        satisfy the CHECK constraint).
-        """
+        """Upsert one row; secret values must be ``str`` and are encrypted."""
         plain: Any | None = None
         ciphertext: str | None = None
         if is_secret:
@@ -133,7 +115,6 @@ class OrgSettingsOperations:
         namespace: str,
         key: str,
     ) -> bool:
-        """Drop one row. Returns True when a row was deleted."""
         result = await self._session.execute(
             delete(OrgSetting).where(
                 OrgSetting.organization_id == organization_id,
@@ -149,7 +130,6 @@ class OrgSettingsOperations:
         organization_id: UUID,
         namespace: str,
     ) -> int:
-        """Drop every row for one (org, namespace) pair. Returns count."""
         result = await self._session.execute(
             delete(OrgSetting).where(
                 OrgSetting.organization_id == organization_id,
@@ -163,7 +143,6 @@ async def _list_secret_rows_for_org(
     session: AsyncSession,
     organization_id: UUID,
 ) -> AsyncIterator[OrgSetting]:
-    """Yield every ``is_secret=true`` row for one org; used by rotation."""
     result = await session.execute(
         select(OrgSetting).where(
             OrgSetting.organization_id == organization_id,

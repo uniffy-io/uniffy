@@ -1,16 +1,4 @@
-"""Operator-editable deployment flags.
-
-Today the only flag is ``public_registration``. Every flag follows the
-same chain: ``deployment_settings(namespace='system', key='<flag>')``
-row > env default > coded default. Reads return the effective value
-plus a ``source`` string ('deployment' | 'env' | 'default') so the
-admin UI can surface where the active value came from.
-
-Writes always create or update the DB row, after which the env value
-is irrelevant. Self-hosters that bring up the stack with no env see
-the coded default; cloud deploys ship an env to set the initial value;
-both can override from the UI at any point.
-"""
+"""Operator-editable deployment flags; resolution chain is DB row > env default > coded default."""
 
 from __future__ import annotations
 
@@ -31,11 +19,8 @@ _ENV_PUBLIC_REGISTRATION = "ALLOW_PUBLIC_REGISTRATION"
 
 
 class SystemFlagState(NamedTuple):
-    """Effective value of a deployment-wide flag plus its source."""
-
     enabled: bool
-    # 'deployment' | 'env' | 'default'
-    source: str
+    source: str  # 'deployment' | 'env' | 'default'
 
 
 def _parse_bool(value: object, *, default: bool) -> bool:
@@ -56,7 +41,6 @@ def _env_public_registration() -> bool | None:
 
 
 async def _resolve_public_registration(session: AsyncSession) -> SystemFlagState:
-    """Resolve effective public_registration: DB > env > coded default."""
     settings = DeploymentSettingsOperations(session)
     rows = await settings.get_namespace(_NAMESPACE)
     row = rows.get(_KEY_PUBLIC_REGISTRATION)
@@ -75,15 +59,12 @@ async def public_registration_enabled(session: AsyncSession) -> bool:
 
 
 class SystemConfigOperations:
-    """Platform-admin operations on deployment-wide flags."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._user_ops = UserOperations(session)
         self._settings = DeploymentSettingsOperations(session)
 
     async def get_state(self, *, user_id: UUID) -> dict[str, SystemFlagState]:
-        """Snapshot every known flag's effective state."""
         await self._user_ops.require_system_admin(user_id)
         return {
             _KEY_PUBLIC_REGISTRATION: await _resolve_public_registration(self._session),
@@ -95,7 +76,6 @@ class SystemConfigOperations:
         user_id: UUID,
         enabled: bool,
     ) -> dict[str, SystemFlagState]:
-        """Write the public_registration flag + audit + return refreshed state."""
         await self._user_ops.require_system_admin(user_id)
         previous = await _resolve_public_registration(self._session)
         await self._settings.set(

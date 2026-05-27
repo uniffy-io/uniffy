@@ -21,28 +21,8 @@ from uniffy.core.types import generate_id
 class OrgEncryptionKey(SQLModel, table=True):
     """Per-organization Data Encryption Key wrapped by the master KEK.
 
-    Attributes
-    ----------
-    id : UUID
-        Primary key (UUIDv7).
-    organization_id : UUID
-        Owning organization (FK to ``login_organizations``, cascading delete).
-    version : int
-        Monotonic per-org version, starts at 1. Ciphertexts carry a
-        ``v{version}:`` prefix so decryption can pick the right row.
-    wrapped_dek : str
-        Fernet token wrapping the 32-byte DEK with the master cipher.
-    is_active : bool
-        ``True`` for the version currently used to encrypt new
-        ciphertexts. A partial unique index guarantees at most one
-        active row per organization.
-    created_at : datetime
-        Row creation time.
-    created_by_user_id : UUID | None
-        User who provisioned / rotated this DEK. ``None`` for
-        system-provisioned rows.
-    retired_at : datetime | None
-        Set when the row is superseded by a newer active version.
+    Ciphertexts carry a ``v{version}:`` prefix so the right row is picked on decrypt.
+    A partial unique index enforces at most one active row per organization.
     """
 
     __tablename__ = "org_encryption_keys"

@@ -1,11 +1,4 @@
-"""Debounced snapshot writer for realtime Yjs sessions.
-
-``schedule(session)`` (re)arms a 5s per-key timer; on fire, the YDoc
-state is encoded and handed to the ``save_realtime_snapshot`` ARQ task
-which writes ``realtime_yjs_snapshots`` and invokes
-``adapter.render_and_persist`` on a worker. ``flush(session)`` runs
-synchronously and is used on idle-eviction.
-"""
+"""Debounced snapshot writer; ``schedule`` arms a 5s timer, ``flush`` runs synchronously."""
 
 import asyncio
 import base64
@@ -22,8 +15,6 @@ from uniffy.observability.metrics import (
     REALTIME_SNAPSHOT_DURATION,
 )
 
-# Short enough to feel "near-realtime" on tab reload, long enough to
-# coalesce typing bursts into one job per doc.
 DEBOUNCE_SECONDS = 5.0
 
 LOGGER_COMPONENT = "realtime.snapshot"
@@ -48,12 +39,7 @@ class SnapshotWriter:
             )
 
     async def flush(self, session: YDocSession, *, force: bool = False) -> None:
-        """Encode current state and hand it to the ARQ task.
-
-        Cancels any pending debounce timer. ``force`` is informational;
-        both paths run the same enqueue flow because the ARQ task is
-        idempotent (UPSERT).
-        """
+        """Encode current state and hand it to the ARQ task. The task is idempotent (UPSERT)."""
         del force
         content_type, content_id = session.key
         content_type_label = content_type.value
@@ -85,12 +71,10 @@ class SnapshotWriter:
             )
             return
 
-        # Dedup is keyed by the update-bytes hash, not just
-        # ``(content_type, content_id)``. ARQ stores completed-job
-        # results for ``WORKER_KEEP_RESULT`` seconds; a static id would
-        # silently drop every subsequent enqueue for that window,
-        # freezing persistence. Hashing the payload keeps same-state
-        # dedup while letting any new edit through.
+        # Dedup keyed on the payload hash, not just ``(content_type, content_id)``.
+        # ARQ caches completed-job results for ``WORKER_KEEP_RESULT`` seconds; a
+        # static id would silently drop every subsequent enqueue for that window
+        # and freeze persistence.
         content_hash = hashlib.sha256(update_bytes).hexdigest()[:16]
         await queue.enqueue_job(
             "save_realtime_snapshot",
@@ -122,7 +106,7 @@ class SnapshotWriter:
             )
 
     async def cancel(self, key: DocKey) -> None:
-        """Cancel any pending debounce timer for ``key`` (no flush)."""
+        """Cancel any pending debounce timer (no flush)."""
         async with self._lock:
             task = self._tasks.pop(key, None)
             if task is not None and not task.done():

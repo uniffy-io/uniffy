@@ -12,8 +12,6 @@ from uniffy.domains.platform.audit.handlers import PlatformAuditHandlers
 
 
 class PlatformAuditServiceImpl:
-    """ConnectRPC service implementation for the platform audit feed."""
-
     def __init__(self) -> None:
         self._handlers = PlatformAuditHandlers()
 

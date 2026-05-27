@@ -1,10 +1,8 @@
 """ARQ worker settings for the core and egress fleets.
 
-Two worker classes, two queues, one Valkey instance:
-
-Run with one of:
-    arq uniffy.workers.settings.CoreWorkerSettings
-    arq uniffy.workers.settings.EgressWorkerSettings
+Two worker classes, two queues, one Valkey instance. Run via:
+    `arq uniffy.workers.settings.CoreWorkerSettings`
+    `arq uniffy.workers.settings.EgressWorkerSettings`
 """
 
 import os
@@ -19,7 +17,6 @@ from uniffy.observability import ObservabilityConfig, setup_observability
 _environment = os.getenv("ENVIRONMENT", "development")
 _log_level = os.getenv("LOG_LEVEL", "info").upper()
 
-# TODO: Fix version inject
 setup_observability(
     config=ObservabilityConfig(
         app_name="uniffy-worker",
@@ -59,7 +56,7 @@ _health_check_interval = int(os.getenv("WORKER_HEALTH_CHECK_INTERVAL", "30"))
 
 
 class CoreWorkerSettings:
-    """ARQ settings for the ``core`` worker fleet."""
+    """Core worker fleet: short jobs + cron schedules."""
 
     queue_name = "uniffy:queue:core"
     functions = list(CORE_TASKS)
@@ -87,7 +84,7 @@ class CoreWorkerSettings:
 
 
 class EgressWorkerSettings:
-    """ARQ settings for the ``egress`` worker fleet."""
+    """Egress worker fleet: outbound LLM + slow IO jobs."""
 
     queue_name = "uniffy:queue:egress"
     functions = list(EGRESS_TASKS)

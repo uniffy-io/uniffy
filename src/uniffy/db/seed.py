@@ -18,13 +18,9 @@ if TYPE_CHECKING:
     from uniffy.core.models.files.file import File
     from uniffy.core.search.indexer import SearchIndexer
 
-# Path to docs folder in repository root
 DOCS_DIR = Path(__file__).parent.parent.parent.parent / "docs"
-
-# Path to seed_data folder next to this file
 SEED_DATA_DIR = Path(__file__).parent / "seed_data"
 
-# Mapping of file paths (relative to docs/) to note slugs for URN resolution
 FILE_PATH_TO_SLUG: dict[str, str] = {
     "ABOUT.md": "about",
     "PLANS.md": "plans",
@@ -40,40 +36,23 @@ def replace_markdown_links_with_urns(
     content: str,
     slug_to_urn: dict[str, str],
 ) -> str:
-    """
-    Replace markdown file links with URN mentions.
-
-    Converts [label](path/to/file.md) to [[[label|urn:uniffy:content:NOTE:uuid]]]
-    for internal documentation links.
-
-    Args:
-        content: The markdown content to process.
-        slug_to_urn: Mapping of note slugs to their URNs.
-
-    Returns:
-        Content with markdown links replaced by URN mentions.
-    """
-    # Pattern to match markdown links: [text](path)
+    """Rewrite internal markdown links to `[[[label|urn]]]` mentions."""
     link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
     def replace_link(match: re.Match[str]) -> str:
         label = match.group(1)
         path = match.group(2)
 
-        # Skip external links (http/https)
         if path.startswith(("http://", "https://", "#")):
             return match.group(0)
 
-        # Normalize the path (remove leading ./ if present)
         normalized_path = path.lstrip("./")
 
-        # Check if this path maps to a known note
         slug = FILE_PATH_TO_SLUG.get(normalized_path)
         if slug and slug in slug_to_urn:
             urn = slug_to_urn[slug]
             return f"[[[{label}|{urn}]]]"
 
-        # Keep original link if not a known internal doc
         return match.group(0)
 
     return link_pattern.sub(replace_link, content)
@@ -85,13 +64,10 @@ def build_note_urn(note_id: UUID) -> str:
 
 
 async def seed_initial_data() -> None:
-    """
-    Seed initial data if the database is empty.
+    """Seed the default org + docs if the database is empty.
 
-    Serialised across Granian workers / k8s replicas with the seed startup
-    advisory lock. Late workers acquire the lock after the leader finishes,
-    re-check via the existing-org query in the body, and exit cleanly. The
-    body is idempotent (the existing-org check is the gate).
+    Serialised across workers via advisory lock; the existing-org check inside
+    keeps the body idempotent for followers.
     """
     from uniffy.db.session import SEED_LOCK_ID, startup_advisory_lock
 
@@ -100,13 +76,7 @@ async def seed_initial_data() -> None:
 
 
 async def _seed_initial_data_locked() -> None:
-    """
-    Seed initial data if the database is empty.
-
-    Creates a default organization, system admin user, and seed notes from docs/.
-    Internal markdown links are converted to URN mentions.
-    """
-    # Lazy imports to avoid circular dependency with auth module
+    # Lazy imports avoid the auth-module circular dependency.
     from uniffy.core.models import (
         Note,
         Organization,
@@ -120,7 +90,6 @@ async def _seed_initial_data_locked() -> None:
     logger.info("Checking for existing data...")
 
     async with open_session() as session:
-        # Check for existing organizations
         result = await session.execute(select(Organization).limit(1))
         existing_org = result.scalar_one_or_none()
 
@@ -131,21 +100,10 @@ async def _seed_initial_data_locked() -> None:
         logger.info("No organizations found. Seeding initial data...")
 
         try:
-            # 1. Bootstrap users.
-            #
-            # Two logical roles, optionally collapsed into one identity:
-            #   - Org owner of the default organization (admin user).
-            #   - Platform operator with ``is_system_admin=True`` and NO
-            #     org membership (sysadmin user).
-            #
-            # When ``INITIAL_ADMIN_EMAIL == INITIAL_PLATFORM_ADMIN_EMAIL``
-            # (case-insensitive) we provision a single user that holds
-            # both roles -- the self-hosted single-tenant pattern where
-            # the operator IS the org owner.
-            #
-            # Otherwise we provision two users: ``admin`` owns the default
-            # org (NOT a sysadmin), ``platform`` is sysadmin-only with no
-            # org membership -- the cloud + multi-tenant pattern.
+            # Bootstrap users. When INITIAL_ADMIN_EMAIL == INITIAL_PLATFORM_ADMIN_EMAIL
+            # (case-insensitive) one user holds both roles - the self-hosted
+            # single-tenant default. Otherwise admin owns the org and a separate
+            # platform user is sysadmin-only with no org membership.
             admin_password = os.getenv("INITIAL_ADMIN_PASSWORD")
             if not admin_password:
                 logger.warning(
@@ -155,9 +113,6 @@ async def _seed_initial_data_locked() -> None:
                 admin_password = "admin"
 
             admin_email = os.getenv("INITIAL_ADMIN_EMAIL", "admin@uniffy.io")
-            # Unset platform email falls back to the admin email -- self-
-            # hosted default collapses to one combined user. Set the env
-            # to a distinct email to provision two users (cloud pattern).
             platform_email = (
                 os.getenv("INITIAL_PLATFORM_ADMIN_EMAIL", "").strip() or admin_email
             )
@@ -183,8 +138,7 @@ async def _seed_initial_data_locked() -> None:
 
             if collapsed:
                 logger.info(
-                    f"Created combined admin + platform user: {admin_user.email} "
-                    "(single identity, sysadmin AND org owner)"
+                    f"Created combined admin + platform user: {admin_user.email}"
                 )
             else:
                 logger.info(f"Created org-owner user: {admin_user.email}")
@@ -201,12 +155,9 @@ async def _seed_initial_data_locked() -> None:
                 await session.flush()
                 await session.refresh(platform_user)
                 logger.info(
-                    f"Created platform-admin-only user: {platform_user.email} "
-                    "(no org membership; can only access /platform/*)"
+                    f"Created platform-admin-only user: {platform_user.email}"
                 )
 
-            # 2. Create Default Organization
-            # (includes membership, chat, presets, permission defaults)
             from uniffy.domains.organizations.operations import OrganizationOperations
 
             org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
@@ -225,7 +176,6 @@ async def _seed_initial_data_locked() -> None:
             )
             logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
 
-            # 4. Create Uniffy root folder
             uniffy_folder = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -241,7 +191,6 @@ async def _seed_initial_data_locked() -> None:
             await session.refresh(uniffy_folder)
             logger.info("Created Uniffy root folder")
 
-            # 5. Create Docs subfolder inside Uniffy
             docs_folder = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -258,10 +207,8 @@ async def _seed_initial_data_locked() -> None:
             await session.refresh(docs_folder)
             logger.info("Created Docs subfolder inside Uniffy")
 
-            # 6. Create all notes first with placeholder content
-            # We need all note IDs before we can replace links with URNs
-
-            # About note
+            # Notes are created with empty content first so all IDs exist
+            # before markdown link rewriting resolves slugs to URNs.
             about_note = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -270,13 +217,12 @@ async def _seed_initial_data_locked() -> None:
                 baseline_role=ContentRole.EDITOR,
                 node_type=NodeType.NOTE,
                 title="About",
-                content="",  # Placeholder, will be updated
+                content="",
                 slug="about",
                 note_metadata={"system_generated": "true"},
             )
             session.add(about_note)
 
-            # Plans note
             plans_note = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -291,7 +237,6 @@ async def _seed_initial_data_locked() -> None:
             )
             session.add(plans_note)
 
-            # Transparency note
             transparency_note = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -306,7 +251,6 @@ async def _seed_initial_data_locked() -> None:
             )
             session.add(transparency_note)
 
-            # Licenses note
             licenses_note = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -321,7 +265,6 @@ async def _seed_initial_data_locked() -> None:
             )
             session.add(licenses_note)
 
-            # Searching note (in Docs subfolder)
             searching_note = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -336,7 +279,6 @@ async def _seed_initial_data_locked() -> None:
             )
             session.add(searching_note)
 
-            # Sharing note (in Docs subfolder)
             sharing_note = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -351,7 +293,6 @@ async def _seed_initial_data_locked() -> None:
             )
             session.add(sharing_note)
 
-            # Encryption note (in Docs subfolder)
             encryption_note = Note(
                 organization_id=default_org.id,
                 owner_id=admin_user.id,
@@ -366,7 +307,6 @@ async def _seed_initial_data_locked() -> None:
             )
             session.add(encryption_note)
 
-            # Flush to get all IDs
             await session.flush()
             await session.refresh(about_note)
             await session.refresh(plans_note)
@@ -377,7 +317,6 @@ async def _seed_initial_data_locked() -> None:
             await session.refresh(encryption_note)
             logger.info("Created note placeholders")
 
-            # 7. Build slug-to-URN mapping for link replacement
             slug_to_urn: dict[str, str] = {
                 "about": build_note_urn(about_note.id),
                 "plans": build_note_urn(plans_note.id),
@@ -388,8 +327,6 @@ async def _seed_initial_data_locked() -> None:
                 "encryption": build_note_urn(encryption_note.id),
             }
 
-            # 8. Read content, replace markdown links with URN mentions,
-            # and extract outgoing references for the knowledge graph
             from uniffy.core.content.references import extract_urns_from_content
 
             about_content = (DOCS_DIR / "ABOUT.md").read_text()
@@ -437,7 +374,6 @@ async def _seed_initial_data_locked() -> None:
             await session.flush()
             logger.info("Updated notes with URN-based mentions and outgoing references")
 
-            # Collect all notes for indexing
             all_notes = [
                 about_note,
                 plans_note,
@@ -448,9 +384,8 @@ async def _seed_initial_data_locked() -> None:
                 encryption_note,
             ]
 
-            # 8b. Seed shared "documentation" + "uniffy" tags and assign to
-            # every seeded folder, note, and canvas so the org-tree content
-            # comes pre-organized under the same tags new orgs filter by.
+            # Shared documentation + uniffy tags assigned to every seeded
+            # item so the org tree pre-populates the tag filters new orgs use.
             from uniffy.domains.tags.operations import TagOperations
 
             tag_ops = TagOperations(session)
@@ -476,10 +411,8 @@ async def _seed_initial_data_locked() -> None:
                 )
             logger.info("Tagged seed notes with documentation + uniffy")
 
-            # 9. Index all notes for search
             search_indexer = SearchIndexer(session)
 
-            # Index Uniffy folder
             await search_indexer.index(
                 urn=build_content_urn(ContentType.NOTE, uniffy_folder.id),
                 organization_id=default_org.id,
@@ -498,7 +431,6 @@ async def _seed_initial_data_locked() -> None:
                 tags=seed_tag_slugs,
             )
 
-            # Index Docs folder
             await search_indexer.index(
                 urn=build_content_urn(ContentType.NOTE, docs_folder.id),
                 organization_id=default_org.id,
@@ -517,7 +449,6 @@ async def _seed_initial_data_locked() -> None:
                 tags=seed_tag_slugs,
             )
 
-            # Index all notes
             for note in all_notes:
                 await search_indexer.index(
                     urn=build_content_urn(ContentType.NOTE, note.id),
@@ -537,7 +468,6 @@ async def _seed_initial_data_locked() -> None:
 
             logger.info("Indexed seed notes for search")
 
-            # 9b. Seed org logo file and welcome canvas
             await _seed_welcome_canvas(
                 session=session,
                 org=default_org,
@@ -554,13 +484,9 @@ async def _seed_initial_data_locked() -> None:
                 tag_slugs=seed_tag_slugs,
             )
 
-            # 10. Seed bundled agent skills
             await _seed_bundled_skills(session)
-
-            # 10b. Seed bundled agent prompts
             await _seed_bundled_prompts(session)
 
-            # Development-only seeding for testing
             environment = os.getenv("ENVIRONMENT", "production")
             if environment == "development":
                 from uniffy.db.seed_dev import seed_development_data
@@ -575,7 +501,6 @@ async def _seed_initial_data_locked() -> None:
                 )
                 logger.info("Development test data seeding completed")
 
-            # 11. Auto-generate VAPID keys for push notifications
             await _seed_vapid_keys(session, admin_email)
 
             await session.commit()
@@ -588,22 +513,7 @@ async def _seed_initial_data_locked() -> None:
 
 
 def _parse_simple_yaml(text: str) -> dict[str, str]:
-    """Parse simple single-level YAML key-value pairs.
-
-    Only supports ``key: value`` lines where the value is a plain string.
-    This avoids adding PyYAML as a dependency for trivial frontmatter.
-
-    Parameters
-    ----------
-    text : str
-        YAML text block to parse.
-
-    Returns
-    -------
-    dict[str, str]
-        Parsed key-value pairs.
-
-    """
+    """Parse `key: value` lines; avoids a PyYAML dep for trivial frontmatter."""
     result: dict[str, str] = {}
     for line in text.strip().splitlines():
         line = line.strip()
@@ -615,23 +525,7 @@ def _parse_simple_yaml(text: str) -> dict[str, str]:
 
 
 def _load_seed_markdown(directory: Path) -> list[dict[str, Any]]:
-    """Load seed data from markdown files with YAML frontmatter.
-
-    Each file must have a YAML frontmatter block delimited by ``---``
-    containing ``name``, ``display_name``, and ``description``.
-    Everything after the frontmatter is the ``content``.
-
-    Parameters
-    ----------
-    directory : Path
-        Directory containing ``.md`` files to load.
-
-    Returns
-    -------
-    list[dict[str, Any]]
-        List of dicts with keys: name, display_name, description, content.
-
-    """
+    """Load `*.md` files whose frontmatter holds name/display_name/description."""
     items: list[dict[str, Any]] = []
     if not directory.is_dir():
         return items
@@ -643,7 +537,6 @@ def _load_seed_markdown(directory: Path) -> list[dict[str, Any]]:
             logger.warning(f"Seed file {md_file.name} missing YAML frontmatter, skipping")
             continue
 
-        # Split on the closing --- delimiter
         parts = raw.split("---", 2)
         if len(parts) < 3:
             logger.warning(f"Seed file {md_file.name} has malformed frontmatter, skipping")
@@ -663,14 +556,7 @@ def _load_seed_markdown(directory: Path) -> list[dict[str, Any]]:
 
 
 async def _seed_bundled_skills(session: AsyncSession) -> None:
-    """Seed bundled agent skills from markdown files in seed_data/skills/.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Active database session (caller manages commit/rollback).
-
-    """
+    """Seed bundled agent skills from `seed_data/skills/`."""
     from uniffy.core.models.agents.skill import AgentSkill
 
     skills = _load_seed_markdown(SEED_DATA_DIR / "skills")
@@ -701,14 +587,7 @@ async def _seed_bundled_skills(session: AsyncSession) -> None:
 
 
 async def _seed_bundled_prompts(session: AsyncSession) -> None:
-    """Seed bundled agent prompts from markdown files in seed_data/prompts/.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Active database session (caller manages commit/rollback).
-
-    """
+    """Seed bundled agent prompts from `seed_data/prompts/`."""
     from uniffy.core.models.agents.prompt import AgentPrompt
 
     prompts = _load_seed_markdown(SEED_DATA_DIR / "prompts")
@@ -748,14 +627,10 @@ async def _seed_welcome_canvas(
     tag_ids: list[UUID],
     tag_slugs: list[str],
 ) -> None:
-    """Seed the organization logo file and a Welcome canvas note.
+    """Seed the org logo file and the Welcome canvas.
 
-    The canvas showcases Uniffy's universal linking: six domain shapes
-    around a central hub, embedded note cards for the seeded docs, an
-    inline-mention text block, a mind map, and the org logo rendered as
-    a media node. If S3 is unreachable, the logo file is skipped and
-    the canvas is built without the media node rather than aborting
-    the whole seed.
+    S3 unavailability is non-fatal: the canvas drops the media node and the
+    rest of the seed continues.
     """
     from uniffy.core.content.references import (
         extract_all_outgoing_references_from_canvas,
@@ -877,20 +752,7 @@ def _build_welcome_canvas(
     seed_notes: dict[str, Note],
     logo_file: File | None,
 ) -> dict[str, Any]:
-    """Build the canvas JSON for the seeded Welcome note.
-
-    Layout (approximate grid, coordinates in canvas units):
-
-    - Top-left:  introduction text node with inline URN mentions
-    - Top-right: logo media node (only if the logo file was seeded)
-    - Center:    "Uniffy" ellipse acting as the hub
-    - Ring:      six domain shapes (Notes / Chat / Files / Calendar /
-                 Projects / Agents) connected to the hub with labeled
-                 edges
-    - Left:      a small mind map rooted on "Uniffy is..."
-    - Bottom:    four embedded note cards (live links to the seeded
-                 About, Searching, Sharing, Plans docs)
-    """
+    """Build the canvas JSON for the seeded Welcome note."""
     about = seed_notes["about"]
     plans = seed_notes["plans"]
     searching = seed_notes["searching"]
@@ -1101,16 +963,7 @@ def _build_welcome_canvas(
 
 
 async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
-    """Generate a VAPID keypair and store it in application_settings.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Active database session (caller manages commit/rollback).
-    admin_email : str
-        Admin contact email for VAPID claims.
-
-    """
+    """Generate a VAPID keypair and store it in application_settings."""
     import base64
 
     from cryptography.hazmat.primitives.asymmetric import ec
@@ -1121,12 +974,11 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
 
     private_key = ec.generate_private_key(ec.SECP256R1())
 
-    # Raw 32-byte private scalar, base64url-encoded (no padding)
+    # VAPID requires base64url without padding (RFC 8292).
     priv_numbers = private_key.private_numbers()
     priv_bytes = priv_numbers.private_value.to_bytes(32, byteorder="big")
     priv_b64 = base64.urlsafe_b64encode(priv_bytes).rstrip(b"=").decode("ascii")
 
-    # Uncompressed public key point, base64url-encoded (no padding)
     pub_bytes = private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
     pub_b64 = base64.urlsafe_b64encode(pub_bytes).rstrip(b"=").decode("ascii")
 

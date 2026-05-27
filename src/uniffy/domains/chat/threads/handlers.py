@@ -34,7 +34,6 @@ from uniffy.domains.chat.threads.operations import ChatThreadOperations, ThreadI
 
 
 def _handle_error(e: Exception) -> None:
-    """Map domain errors to ConnectRPC errors."""
     if isinstance(e, NotFoundError):
         raise ConnectError(Code.NOT_FOUND, str(e))
     if isinstance(e, PermissionDeniedError):
@@ -44,19 +43,15 @@ def _handle_error(e: Exception) -> None:
 
 
 def _sender_ref(msg: ChatMessage) -> tuple[SenderType, UUID]:
-    """Pack (sender_type, sender_id) for SenderResolver inputs."""
     return (msg.sender_type, msg.sender_id)
 
 
 class ThreadHandlers:
-    """Thread RPC handlers."""
-
     async def get_thread(
         self,
         request: GetThreadRequest,
         ctx: RequestContext,
     ) -> GetThreadResponse:
-        """Get thread metadata."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -100,7 +95,6 @@ class ThreadHandlers:
         request: GetThreadMessagesRequest,
         ctx: RequestContext,
     ) -> GetThreadMessagesResponse:
-        """Get messages in a thread."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -158,7 +152,6 @@ class ThreadHandlers:
         request: GetThreadsInboxRequest,
         ctx: RequestContext,
     ) -> GetThreadsInboxResponse:
-        """Get threads inbox (followed threads)."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -193,14 +186,7 @@ class ThreadHandlers:
 
     @staticmethod
     def _build_inbox_item(row: ThreadInboxRow, sender_map: dict) -> ThreadInboxItem:
-        """Materialize a ``ThreadInboxItem`` from the preview-only row.
-
-        The root message proto is hand-built from the preview columns so
-        the inbox endpoint never pays the cost of fetching the full
-        ``chat_messages`` row (TOAST detoast, mention arrays, metadata).
-        Frontend only renders sender + a head-of-content blurb here; users
-        click through to load the full thread.
-        """
+        """Build a ThreadInboxItem from preview-only columns to avoid full chat_messages fetch."""
         info = sender_map.get(row.sender_id)
         sender_name = info.display_name if info else "Unknown"
         sender_avatar = info.avatar_key if info else None
@@ -234,7 +220,6 @@ class ThreadHandlers:
         request: FollowThreadRequest,
         ctx: RequestContext,
     ) -> FollowThreadResponse:
-        """Follow a thread."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -255,7 +240,6 @@ class ThreadHandlers:
         request: UnfollowThreadRequest,
         ctx: RequestContext,
     ) -> UnfollowThreadResponse:
-        """Unfollow a thread."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)

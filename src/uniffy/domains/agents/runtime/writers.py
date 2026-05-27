@@ -1,20 +1,4 @@
-"""Pluggable message writers for the streaming runtime.
-
-A writer is the persistence boundary that `stream_send_message` drives into.
-Two implementations exist:
-
-- `SessionMessageWriter` wraps `SessionOperations` and is a no-op relative
-  to pre-Phase-2 behavior. Every existing call site keeps working.
-- `ChatChannelMessageWriter` persists into `chat_messages` with
-  `sender_type=AGENT`. In Phase 2a the class is a stub; the implementation
-  lands in 2b (context) and 2c (event translation + writes).
-
-Both writers hide the backing store from the runtime. Runtime events still
-carry `AgentMessage` shapes -- the chat writer constructs lightweight
-envelope objects (not persisted to `agents_messages`) so downstream event
-handlers see a uniform type. Destination-specific consumers (the chat
-bridge, session RPC handler) interpret the envelope as needed.
-"""
+"""Pluggable message writers for the streaming runtime."""
 
 from __future__ import annotations
 
@@ -39,11 +23,7 @@ _FALLBACK_SENDER_NAME = "Unknown"
 
 
 def _metadata_kind_for(role: str, tool_call_id: str | None) -> str:
-    """Map runtime role + presence of tool_call_id to a chat `metadata.kind`.
-
-    The chat renderer uses `kind` to pick the correct message card
-    (final turn vs tool call vs tool result vs summary).
-    """
+    """Map runtime role + tool_call_id to a chat `metadata.kind`."""
     if role == "summary":
         return "summary"
     if role == "tool":
@@ -54,28 +34,20 @@ def _metadata_kind_for(role: str, tool_call_id: str | None) -> str:
 
 
 class MessageWriter(Protocol):
-    """Persistence and context contract for the streaming runtime.
-
-    All write paths and the context load go through this protocol so the
-    runtime body does not care whether it is driving an `AgentSession` or
-    a `ChatChannel`.
-    """
+    """Persistence and context contract for the streaming runtime."""
 
     @property
     def approval_scope_id(self) -> UUID:
         """Identifier under which destructive-tool approvals are keyed."""
 
     @property
-    def approval_actor_user_id(self) -> UUID | None:
-        """User whose click resolves an approval (chat path only)."""
+    def approval_actor_user_id(self) -> UUID | None: ...
 
     @property
-    def approval_agent_id(self) -> UUID | None:
-        """Agent whose tool triggered the approval (chat path only)."""
+    def approval_agent_id(self) -> UUID | None: ...
 
     @property
-    def approval_channel_id(self) -> UUID | None:
-        """Channel the approval belongs to (chat path only)."""
+    def approval_channel_id(self) -> UUID | None: ...
 
     async def add_message(
         self,
@@ -97,10 +69,8 @@ class MessageWriter(Protocol):
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
         """Insert an empty in-flight assistant row that streamed deltas patch.
 
-        Returns the envelope wrapping the new row (so the runtime can
-        announce it to subscribers via `RuntimeMessageStoredEvent`), or
-        `None` if the writer does not support per-token streaming -- in
-        that case the runtime keeps the buffer-then-write path.
+        Returns `None` when the writer does not support per-token streaming;
+        callers fall back to the buffer-then-write path.
         """
 
     async def finalize_assistant_placeholder(
@@ -112,12 +82,7 @@ class MessageWriter(Protocol):
         output_tokens: int = 0,
         model: str | None = None,
     ) -> AgentMessage:
-        """Persist the final content + token usage onto a reserved placeholder.
-
-        Clears the `metadata.streaming` flag so subscribers know the row
-        is no longer in-flight. Returns an `AgentMessage` envelope for
-        the finalized row.
-        """
+        """Persist final content + token usage onto a reserved placeholder."""
 
     async def load_context_messages(
         self,
@@ -131,20 +96,11 @@ class MessageWriter(Protocol):
         *,
         token_budget: int,
     ) -> None:
-        """Schedule async compaction when the context exceeds the budget.
-
-        Implementations enqueue an out-of-band job (or no-op when the
-        destination has its own compaction system); the runtime never
-        blocks on an LLM summarisation call here.
-        """
+        """Schedule async compaction; never block on an LLM call here."""
 
 
 class SessionMessageWriter:
-    """Session writer that persists into `agents_messages`.
-
-    Delegates to `SessionOperations` unchanged; the runtime treats every
-    call as it did before Phase 2. Approval scope is the session id.
-    """
+    """Session writer that persists into `agents_messages`."""
 
     def __init__(
         self,
@@ -177,7 +133,6 @@ class SessionMessageWriter:
 
     @property
     def session_id(self) -> UUID:
-        """Session id. Exposed for run-log creation (session path only)."""
         return self._session_id
 
     async def add_message(
@@ -215,7 +170,6 @@ class SessionMessageWriter:
         )
 
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
-        """Session writer does not stream deltas; placeholder unused."""
         return None
 
     async def finalize_assistant_placeholder(
@@ -227,7 +181,6 @@ class SessionMessageWriter:
         output_tokens: int = 0,
         model: str | None = None,
     ) -> AgentMessage:
-        """Unreachable -- session writer never returns a placeholder to finalize."""
         raise NotImplementedError(
             "SessionMessageWriter does not support placeholder reservation",
         )
@@ -256,11 +209,10 @@ class SessionMessageWriter:
 
 
 class ChatChannelMessageWriter:
-    """Phase 2a skeleton. Full implementation lands in 2b/2c/2g.
+    """Persist runtime steps into `chat_messages` as `sender_type=AGENT`.
 
-    Construction records the (channel, agent, trigger) triple and sets the
-    approval scope to the channel id so a destructive-tool approval in one
-    DM does not collide with another DM's pending approval.
+    Approval scope is the channel id so destructive-tool approvals in
+    different DMs never collide.
     """
 
     def __init__(
@@ -280,10 +232,8 @@ class ChatChannelMessageWriter:
         self._channel_id = channel_id
         self._agent_id = agent_id
         self._trigger_message_id = trigger_message_id
-        # When the trigger is a thread reply, `thread_root_id` points at the
-        # thread's root message and every agent-authored row inherits it so
-        # tool cards + tool results + the final reply all land inside the
-        # same thread instead of the channel root.
+        # Inherited by every agent-authored row so tool cards, results, and
+        # the final reply all land inside the trigger's thread.
         self._thread_root_id = thread_root_id
 
     @property
@@ -310,23 +260,13 @@ class ChatChannelMessageWriter:
     ) -> None:
         """Cache provider-reported prompt + completion sizes on the binding.
 
-        ``input_tokens`` and ``output_tokens`` come straight from the LLM
-        response and are the only accurate signal for what the model just
-        ingested + just produced. ``cache_read_input_tokens`` is the
-        share of the prompt served from Anthropic's prompt cache --
-        billed at ~10% of base input price. The chat context meter
-        reads these columns instead of re-running a heuristic.
-
-        ``last_active_token_estimate`` stores the *full* prompt size
-        (uncached input + cache hits), since both contribute to context
-        window pressure. The cache-hit count is stored separately so
-        the meter can show the savings.
-
-        The UPDATE is gated by ``last_active_token_estimate < :new_value
-        OR last_active_token_estimate IS NULL`` so when two agents in
-        the same channel commit concurrently the larger input wins
-        deterministically. Output and cache fields are written in the
-        same row so the trio stays paired with the latest turn.
+        Gated by `last_active_token_estimate < :new_value OR IS NULL` so
+        concurrent agents in the same channel race deterministically -- the
+        larger input wins. Output and cache fields are written in the same
+        row to stay paired with the latest turn. `last_active_token_estimate`
+        stores the FULL prompt size (uncached + cache hits) since both
+        contribute to context window pressure; cache hits are stored
+        separately so the meter can surface the savings.
         """
         if input_tokens <= 0 and cache_read_input_tokens <= 0:
             return
@@ -369,14 +309,10 @@ class ChatChannelMessageWriter:
     ) -> AgentMessage:
         """Persist a runtime-step message into `chat_messages`.
 
-        `role="user"` is a no-op: the triggering user message is already
-        in the channel as `trigger_message_id`. We return an envelope so
-        the runtime's `RuntimeMessageStoredEvent` flow stays uniform.
-
-        Every other role persists a `sender_type=AGENT` message in the
-        channel and returns an envelope. The `metadata.kind` field is
-        how the renderer distinguishes tool cards / tool results /
-        summaries / final turns.
+        `role="user"` is a no-op (the trigger user message is already in the
+        channel); returns an envelope to keep `RuntimeMessageStoredEvent`
+        uniform. Other roles persist a `sender_type=AGENT` row whose
+        `metadata.kind` drives the renderer card choice.
         """
         if role == "user":
             return AgentMessage(
@@ -453,12 +389,9 @@ class ChatChannelMessageWriter:
         )
 
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
-        """Insert an empty `kind=final` row flagged `streaming=true`.
-
-        The row is the anchor every AGENT_TOKEN_DELTA event will patch
-        client-side. The runtime calls this on the first non-empty token
-        of a stream so empty stop_reason="tool_use" turns do not leave
-        ghost bubbles in the channel.
+        """Insert an empty `kind=final` row flagged `streaming=true` that
+        AGENT_TOKEN_DELTA events patch client-side. Called on the first
+        non-empty token so empty `tool_use` turns leave no ghost bubble.
         """
         meta: dict = {
             "kind": "final",
@@ -498,9 +431,8 @@ class ChatChannelMessageWriter:
     ) -> AgentMessage:
         """Write final content + token usage onto a reserved placeholder.
 
-        The reservation set `metadata.streaming=true`; finalisation drops
-        it so subscribers can tell the row is settled. Falls back to a
-        fresh `add_message` if the row vanished (e.g. transient delete).
+        Clears `metadata.streaming` so subscribers know the row is settled.
+        Falls back to `add_message` if the row vanished.
         """
         chat_msg = await self._session.get(ChatMessage, message_id)
         if chat_msg is None:
@@ -561,28 +493,10 @@ class ChatChannelMessageWriter:
     ) -> tuple[list[AgentMessage], int]:
         """Return recent channel history as `AgentMessage`-shaped envelopes.
 
-        Pulls the most recent 50 non-deleted messages in the channel,
-        excluding anything tagged `metadata.visibility == 'agent_internal'`,
-        and renders them oldest-first.
-
-        Sender attribution: each USER-authored message gets its content
-        prefixed with `[{display_name}]: ` so the LLM can distinguish
-        participants in group channels. AGENT-authored messages from a
-        DIFFERENT agent than the current one are likewise prefixed AND
-        remapped to `role="user"` — from this agent's perspective, another
-        agent is an external participant. Only the current agent's own
-        history stays as `role="assistant"`, unprefixed.
-
-        Envelope mapping:
-          - USER / SYSTEM -> role="user", content prefixed
-          - AGENT (same id) + kind=="summary" -> role="summary"
-          - AGENT (same id) + kind=="tool_call" -> role="assistant" + tool_*
-          - AGENT (same id) + kind=="tool_result" -> role="tool" + tool_*
-          - AGENT (same id) otherwise -> role="assistant"
-          - AGENT (different id) -> role="user", content prefixed
-
-        The envelopes are in-memory only (session_id is a sentinel); they
-        are never added to the ORM session and never persisted.
+        From this agent's perspective, USER messages and other agents'
+        messages are both `role="user"` with `[name]:` prefixed content;
+        only the current agent's own rows stay as `role="assistant"`.
+        Envelopes are in-memory; `session_id` is a sentinel.
         """
         from uniffy.domains.chat.sender_resolver import SenderResolver
 
@@ -626,15 +540,12 @@ class ChatChannelMessageWriter:
             meta = m.message_metadata or {}
             if meta.get("visibility") == "agent_internal":
                 continue
-            # Skip stale in-flight placeholders (streaming flag never cleared
-            # because finalize failed). They carry empty content and would
-            # inject a blank assistant turn into the prompt.
+            # Stale in-flight placeholder (finalize failed); empty content
+            # would inject a blank assistant turn.
             if meta.get("streaming") is True:
                 continue
-            # Reset dividers are UI-only markers and must never enter the
-            # prompt. The `manual_reset_at` filter above already excludes any
-            # divider written by an earlier reset; this guard catches the
-            # boundary divider written exactly at `now()`.
+            # Reset dividers are UI-only markers; guard catches the boundary
+            # divider written exactly at `now()`.
             if meta.get("kind") == "context_reset":
                 continue
 
@@ -683,10 +594,6 @@ class ChatChannelMessageWriter:
         *,
         token_budget: int,
     ) -> None:
-        """No-op. Chat-channel compaction is driven separately by
-        ``ChatAgentContextOperations.compact`` in
-        ``chat_integration/context.py`` (writes a ``kind='summary'`` chat
-        row and bumps ``binding.compaction_summary_msg_ids``); the runtime
-        never enqueues that here.
-        """
+        # Chat-channel compaction is driven by ChatAgentContextOperations,
+        # not by the runtime.
         return

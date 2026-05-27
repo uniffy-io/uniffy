@@ -1,12 +1,4 @@
-"""Chat event publishing to Valkey Pub/Sub.
-
-All chat events are fanned out to per-user Valkey channels:
-  chat:user:{user_id}
-
-This eliminates per-channel Valkey subscriptions. Each user maintains
-a single persistent subscription to their own channel. The frontend
-filters events by channel_id to decide what to display.
-"""
+"""Fan out chat events to per-user Valkey channels (chat:user:{user_id})."""
 
 import json
 from typing import Any
@@ -20,13 +12,7 @@ LOGGER_COMPONENT = "chat.publisher"
 
 
 async def _publish_to_channel(channel_name: str, payload: str) -> None:
-    """Publish a pre-serialized JSON string to a Valkey channel."""
-    # Read through the module every time so `init_pubsub` rebinding
-    # `pubsub._pubsub_client` after this module has been imported is
-    # picked up. A captured-at-import-time reference would freeze the
-    # pre-init ``None`` value and silently drop every publish when the
-    # worker (which imports chat_integration eagerly) loaded publisher
-    # before init_pubsub ran.
+    # Read through the module so a post-import init_pubsub rebind is picked up.
     publisher = pubsub._pubsub_client
     if publisher is None:
         return
@@ -47,28 +33,7 @@ async def publish_channel_event_to_members(
     channel_id: UUID | None = None,
     exclude_user_id: UUID | None = None,
 ) -> None:
-    """Fan out a channel event to all members' user channels.
-
-    Serializes the payload once, then PUBLISHes to each member's
-    `chat:user:{user_id}` channel inside a single redis pipeline so the
-    whole fan-out costs one round-trip instead of N. Skips
-    ``exclude_user_id`` if set (e.g. skip the sender for typing events).
-
-    Parameters
-    ----------
-    member_ids : list[UUID]
-        Channel member user IDs to publish to.
-    event_type : str
-        Event type constant from streaming.events.
-    payload : dict
-        Event payload (message data, reaction data, etc.).
-    channel_id : UUID | None
-        Channel ID to include in the payload. If not already in payload,
-        it will be added.
-    exclude_user_id : UUID | None
-        User ID to exclude from fan-out (e.g. the sender).
-
-    """
+    """Pipelined fan-out to each member's chat:user:{user_id} so it costs one RTT, not N."""
     publisher = pubsub._pubsub_client
     if publisher is None:
         return
@@ -99,10 +64,7 @@ async def publish_user_chat_event(
     event_type: str,
     payload: dict[str, Any],
 ) -> None:
-    """Publish a user-level chat event to a single user.
-
-    Used for events that target a specific user (unread counts, mentions).
-    """
+    """User-level chat event to a single user (unread counts, mentions)."""
     if pubsub._pubsub_client is None:
         return
 

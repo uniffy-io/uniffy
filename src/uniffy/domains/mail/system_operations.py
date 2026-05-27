@@ -1,16 +1,8 @@
 """Cross-tenant mail operations for platform operators.
 
-Every method on :class:`SystemMailOperations` requires the calling
-``user_id`` to belong to a user with ``is_system_admin=true``. The
-operations are read-only except for two narrow destructive flows:
-``force_clear_org_config`` (drop one tenant's per-org mail rows) and
-``remove_global_suppression`` (drop one address from the suppression
-list). Both write an audit row before committing.
-
-No tenant secrets ever round-trip through this module -- per-org SMTP
-passwords stay encrypted in ``org_settings.value_encrypted`` and are
-never read here, only their presence is surfaced via the
-``smtp_password_set`` flag.
+Every method requires ``is_system_admin=true``. Tenant SMTP passwords
+stay encrypted in ``org_settings.value_encrypted`` and are never read
+here - presence is surfaced via ``smtp_password_set`` only.
 """
 
 from __future__ import annotations
@@ -46,8 +38,7 @@ class SystemMailConfigSummary(NamedTuple):
     """Non-secret view of the effective system mail config."""
 
     configured: bool
-    # 'deployment' | 'env' | 'none'
-    effective_source: str
+    effective_source: str  # 'deployment' | 'env' | 'none'
     from_address: str
     from_name: str
     reply_to: str
@@ -60,7 +51,6 @@ class SystemMailConfigSummary(NamedTuple):
 
 
 class OrgMailConfigRow(NamedTuple):
-    """One row in the cross-tenant mail-config listing."""
 
     organization_id: UUID
     organization_name: str
@@ -89,7 +79,6 @@ class SuppressionPage(NamedTuple):
 
 
 class DeliveryRow(NamedTuple):
-    """One mail-send audit event flattened for the platform deliveries feed."""
 
     id: UUID
     created_at: datetime
@@ -127,7 +116,6 @@ def _empty_summary() -> SystemMailConfigSummary:
 
 
 def _system_summary_from_env() -> SystemMailConfigSummary:
-    """Build the env-sourced system summary; never reads the password."""
     config = MailConfig.from_env()
     if config is None:
         return _empty_summary()
@@ -151,12 +139,8 @@ def _system_summary_from_env() -> SystemMailConfigSummary:
 def _summary_from_deployment_rows(
     rows: dict[str, DeploymentSetting],
 ) -> SystemMailConfigSummary | None:
-    """Build the summary from deployment_settings rows or return None.
-
-    Returns ``None`` when the deployment tier lacks the required keys
-    (``from_address`` + ``smtp_host``) so the caller can fall through
-    to env without raising.
-    """
+    # Returns None when ``from_address`` / ``smtp_host`` are missing so the
+    # caller can fall through to env.
     from_address = _row_str(rows.get("from_address"))
     smtp_host = _row_str(rows.get("smtp_host"))
     if not from_address or not smtp_host:
@@ -228,10 +212,7 @@ class SystemMailOperations:
         self._suppressions = SuppressionRepository(session)
 
     async def get_system_config(self, *, user_id: UUID) -> SystemMailConfigSummary:
-        """Read the effective system mail config.
-
-        Resolution: deployment_settings rows -> env defaults -> empty.
-        """
+        """Resolve deployment rows -> env -> empty."""
         await self._user_ops.require_system_admin(user_id)
         deployment_rows = await self._deployment.get_namespace(MAIL_NAMESPACE)
         if deployment_rows:
@@ -254,7 +235,6 @@ class SystemMailOperations:
         smtp_use_tls: bool,
         rate_limit_per_min: int,
     ) -> SystemMailConfigSummary:
-        """Upsert deployment-tier mail rows and return the resolved summary."""
         await self._user_ops.require_system_admin(user_id)
 
         from_address = from_address.strip()
@@ -331,7 +311,7 @@ class SystemMailOperations:
         user_id: UUID,
         reason: str,
     ) -> int:
-        """Drop every deployment-tier mail row. Reverts to env (or none)."""
+        """Drop every deployment-tier mail row; falls back to env."""
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()
         if not reason:
@@ -361,7 +341,6 @@ class SystemMailOperations:
         search: str = "",
         only_with_org_config: bool = False,
     ) -> OrgMailConfigPage:
-        """Page through every org's mail config summary."""
         await self._user_ops.require_system_admin(user_id)
         page = _safe_page(page)
         page_size = _clamp_page_size(page_size)
@@ -472,7 +451,7 @@ class SystemMailOperations:
         organization_id: UUID,
         reason: str,
     ) -> int:
-        """Drop every ``mail.*`` row for one org. Reason is recorded in audit."""
+        """Drop every ``mail.*`` row for one org; reason recorded in audit."""
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()
         if not reason:
@@ -515,7 +494,6 @@ class SystemMailOperations:
         page_size: int,
         search: str = "",
     ) -> SuppressionPage:
-        """Page through the global suppression list."""
         await self._user_ops.require_system_admin(user_id)
         page = _safe_page(page)
         page_size = _clamp_page_size(page_size)
@@ -552,7 +530,6 @@ class SystemMailOperations:
         email: str,
         reason: str,
     ) -> bool:
-        """Drop one address from the global suppression list."""
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()
         if not reason:
@@ -649,7 +626,6 @@ class SystemMailOperations:
 
 
 def _outcome_actions(outcome: str) -> list[str]:
-    """Translate the UI outcome filter into the matching audit action set."""
     normalized = outcome.strip().lower()
     if normalized == "sent":
         return [Action.MAIL_SENT]
@@ -661,7 +637,6 @@ def _outcome_actions(outcome: str) -> list[str]:
 
 
 def _flatten_delivery(event: AuditEvent, org_name: str | None) -> DeliveryRow:
-    """Project an audit event row onto the deliveries-feed shape."""
     details: dict[str, Any] = event.details or {}
     return DeliveryRow(
         id=event.id,

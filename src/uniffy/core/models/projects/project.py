@@ -12,47 +12,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class Project(SQLModel, table=True):
-    """
-    Project model representing a project/workspace for tasks.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key).
-    organization_id : UUID
-        Organization this project belongs to.
-    owner_id : UUID
-        User who created/owns the project.
-    access_mode : AccessMode
-        How access to this project is governed.
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    name : str
-        Project name (max 255 chars).
-    description : str
-        Project description (Markdown).
-    icon : str
-        Icon identifier (e.g., "rocket", "megaphone").
-    color : str
-        Hex color code (e.g., "#3b82f6").
-    slug : str
-        Short uppercase identifier used for task IDs (e.g., "UAI").
-    task_counter : int
-        Monotonically increasing counter for task number generation.
-    default_view_id : str | None
-        ID of the default view.
-    is_deleted : bool
-        Soft delete flag.
-    version : int
-        Optimistic locking version.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-    deleted_at : datetime | None
-        Soft delete timestamp.
-
-    """
+    """Org-scoped project/workspace for tasks. `slug` prefixes generated task IDs."""
 
     __tablename__ = "projects_projects"
 
@@ -106,5 +66,4 @@ class Project(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """Return the URN for this project."""
         return f"urn:uniffy:content:PROJECT:{self.id}"

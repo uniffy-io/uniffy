@@ -1,9 +1,6 @@
-"""Seed mock data for the dashboard widgets.
+"""Seed mock data so the dashboard widgets render with content on first load.
 
-Creates notes, files, folders, calendar events, projects, tasks, and bookmarks
-so the dashboard renders with realistic content on first load.
-
-Run with: uv run python -m uniffy.db.seed_dashboard
+Run with: ``uv run python -m uniffy.db.seed_dashboard``.
 """
 
 import asyncio
@@ -29,7 +26,6 @@ from uniffy.db.session import init_db, open_session
 
 
 def _rand_past(max_days: int = 14) -> datetime:
-    """Return a random datetime within the last N days."""
     return datetime.now(UTC) - timedelta(
         days=random.randint(0, max_days),
         hours=random.randint(0, 23),
@@ -38,13 +34,11 @@ def _rand_past(max_days: int = 14) -> datetime:
 
 
 def _today_at(hour: int, minute: int = 0) -> datetime:
-    """Return today's date at a specific hour (UTC)."""
     now = datetime.now(UTC)
     return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
 def _slugify(text: str) -> str:
-    """Simple slug from text."""
     return text.lower().replace(" ", "-").replace(".", "")[:500]
 
 
@@ -220,7 +214,6 @@ async def seed_dashboard() -> None:
         now = datetime.now(UTC)
         bookmark_urns: list[str] = []
 
-        # -- Notes --
         note_ids = []
         for title, content in NOTE_DATA:
             note_id = generate_id()
@@ -245,7 +238,6 @@ async def seed_dashboard() -> None:
         await session.flush()
         logger.info("Created {} notes", len(NOTE_DATA))
 
-        # -- Folders --
         folder_ids = []
         for name in FOLDER_DATA:
             folder_id = generate_id()
@@ -264,7 +256,6 @@ async def seed_dashboard() -> None:
         await session.flush()
         logger.info("Created {} folders", len(FOLDER_DATA))
 
-        # -- Files --
         file_ids = []
         for filename, mime, size in FILE_DATA:
             file_id = generate_id()
@@ -294,7 +285,6 @@ async def seed_dashboard() -> None:
         await session.flush()
         logger.info("Created {} files", len(FILE_DATA))
 
-        # -- Calendar categories --
         category_map: dict[str, Category] = {}
         for name, color, icon in CATEGORY_DATA:
             cat = Category(
@@ -311,7 +301,6 @@ async def seed_dashboard() -> None:
         await session.flush()
         logger.info("Created {} calendar categories", len(CATEGORY_DATA))
 
-        # -- Calendar (personal for primary user) --
         calendar = Calendar(
             id=generate_id(),
             organization_id=org.id,
@@ -326,7 +315,6 @@ async def seed_dashboard() -> None:
         await session.flush()
         logger.info("Created calendar for primary user")
 
-        # -- Calendar events --
         event_ids = []
         for title, day_offset, sh, sm, eh, em, all_day, cat_name, desc in EVENT_DATA:
             event_id = generate_id()
@@ -359,7 +347,6 @@ async def seed_dashboard() -> None:
         await session.flush()
         logger.info("Created {} calendar events", len(EVENT_DATA))
 
-        # -- Projects --
         project_objs: list[Project] = []
         for name, slug, color, desc in PROJECT_DATA:
             project = Project(
@@ -381,7 +368,6 @@ async def seed_dashboard() -> None:
         await session.flush()
         logger.info("Created {} projects", len(PROJECT_DATA))
 
-        # -- Tasks --
         task_counter: dict[str, int] = {}
         for title, status, priority, task_type, due_offset in TASK_DATA:
             project = random.choice(project_objs)
@@ -417,14 +403,12 @@ async def seed_dashboard() -> None:
             )
             session.add(task)
 
-        # Update project task counters
         for project in project_objs:
             project.task_counter = task_counter.get(project.slug, 0)
 
         await session.flush()
         logger.info("Created {} tasks", len(TASK_DATA))
 
-        # -- Bookmarks --
         bookmarks_created = 0
         for urn in bookmark_urns:
             existing = await session.execute(

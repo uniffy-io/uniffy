@@ -1,36 +1,12 @@
-"""Per-actor materialized visibility sets.
+"""Per-actor materialised visibility sets for tags / taggable content.
 
-Single-pass replacement for the per-row OR-of-EXISTS predicate that
-``domains/tags/visibility/predicate.py`` used to compose. The audit
-showed that on a non-admin ``list_tags(page=100)`` the planner could
-end up evaluating up to 7 EXISTS branches against ``tag_assignments``
-and the content tables for every candidate tag row, which scales
-poorly once ``tag_assignments`` grows past ~1B rows.
+The tag predicate becomes ``Tag.id.in_(visible_ids)`` against a Valkey-cached
+union of ``SELECT DISTINCT tag_id`` branches scoped to content the actor can
+access. Org admins return ``None`` ("no filter"); domain admins collapse
+the branch for their content type to a single content-type test.
 
-This module flips the cost shape:
-
-1. Compute the set of tag ids the actor can currently see, once. The
-   compute itself is a UNION of seven ``SELECT DISTINCT tag_id``
-   queries, each scoped to content the actor can access. The result
-   is bounded by the number of tags in the org (~100), not by the
-   page size.
-2. Cache the set in Valkey for 60s, tagged by org so a permission
-   event can wipe every actor's cached visibility for the org in one
-   call.
-3. The predicate becomes ``Tag.id.in_(visible_ids)`` -- a single
-   ``tags_pkey`` membership scan in the outer page query.
-
-The same pattern applies to assignment-row visibility (``list_content``
-needs to filter individual rows by the content the actor can see).
-``compute_visible_content_ids_by_type`` returns one set per content
-type so the assignment predicate can build
-``or_(and_(content_type=NOTE, urn_id IN note_ids), ...)``.
-
-Org admins short-circuit: ``compute_visible_tag_ids`` returns ``None``
-which the predicate builder treats as "no filter". Domain admins
-short-circuit per content type: their entry in the by-type dict is
-``None`` and the assignment predicate collapses that branch to a
-single content-type test.
+The same set per content type drives ``list_content`` row filtering via
+``compute_visible_content_ids_by_type``.
 """
 
 from collections.abc import Awaitable, Callable
@@ -71,12 +47,10 @@ _ALL_TAGGABLE_TYPES: tuple[ContentType, ...] = (
 
 
 def _org_tag(organization_id: UUID) -> str:
-    """Cache tag covering every visibility entry for an organization."""
     return f"perm_visible_org:{organization_id}"
 
 
 def _user_tag(user_id: UUID) -> str:
-    """Cache tag covering every visibility entry for a single user."""
     return f"perm_visible_user:{user_id}"
 
 
@@ -95,7 +69,7 @@ def _content_key(
 
 
 def _content_columns(content_type: ContentType) -> tuple:
-    """Return ``(model, id, owner, access_mode, baseline, org_id)`` columns."""
+    """``(model, id, owner, access_mode, baseline, org_id)`` columns for ``content_type``."""
     if content_type == ContentType.NOTE:
         from uniffy.core.models.notes.note import Note
 
@@ -160,20 +134,11 @@ async def compute_visible_tag_ids(
     user_id: UUID,
     organization_id: UUID,
 ) -> set[UUID] | None:
-    """Return tag ids the actor can currently see, or ``None`` for org admin.
+    """Tag ids the actor can see; ``None`` for org admin (no filter needed).
 
-    A tag is visible when the actor satisfies ANY of:
-
-    - is org OWNER / ADMIN (returns ``None`` -- no filter needed)
-    - created the tag (``tags.created_by == user_id``)
-    - is domain admin for any content type that has a tag assignment
-      (the whole branch passes without an access filter)
-    - has at least one tag-assignment pointing at content the actor
-      can view under the standard access policy
-
-    The compute is a single UNION of per-content-type
-    ``SELECT DISTINCT tag_id`` scans bounded by the actor's accessible
-    content -- not by the org's total tag count.
+    Visible = created the tag, or is domain admin for the assignment's content
+    type, or has an assignment pointing at content the actor can view under the
+    standard access policy.
     """
     from uniffy.core.models.tags.tag import Tag, TagAssignment
 
@@ -240,12 +205,7 @@ async def compute_visible_content_ids_by_type(
     organization_id: UUID,
     content_type: ContentType,
 ) -> set[UUID] | None:
-    """Return ids of ``content_type`` rows the actor can view.
-
-    Returns ``None`` when the actor short-circuits the filter for this
-    content type: org admin, or domain admin for the type. ``None`` is
-    the contract for "no filter needed -- any row of this type passes".
-    """
+    """Ids of ``content_type`` rows the actor can view; ``None`` for "no filter needed"."""
     checker = PermissionChecker(session)
     if await checker.is_org_admin(user_id, organization_id):
         return None
@@ -284,14 +244,7 @@ async def get_visible_tag_ids(
     user_id: UUID,
     organization_id: UUID,
 ) -> set[UUID] | None:
-    """Cached wrapper around :func:`compute_visible_tag_ids`.
-
-    Caches under ``perm_visible_tags:{org}:{user}`` for 60s, tagged by
-    both org and user so a permission event invalidates the right slice
-    cheaply. Stampede-protected: a cold miss on a hot user collapses
-    onto one loader. Cache returns the union as ``{"all": true}`` for
-    org admins or ``{"ids": [...]}`` otherwise.
-    """
+    """Cached + stampede-protected wrapper around :func:`compute_visible_tag_ids`."""
     payload = await cache_get_or_set_locked(
         _tags_key(organization_id, user_id),
         _make_tags_loader(session, user_id, organization_id),
@@ -308,7 +261,6 @@ async def get_visible_content_ids_by_type(
     organization_id: UUID,
     content_type: ContentType,
 ) -> set[UUID] | None:
-    """Cached wrapper around :func:`compute_visible_content_ids_by_type`."""
     payload = await cache_get_or_set_locked(
         _content_key(organization_id, user_id, content_type),
         _make_content_loader(session, user_id, organization_id, content_type),
@@ -322,7 +274,6 @@ async def invalidate_visible_sets_for_user(
     organization_id: UUID,
     user_id: UUID,
 ) -> None:
-    """Drop one user's cached visibility for every content type."""
     keys = [_tags_key(organization_id, user_id)]
     keys.extend(
         _content_key(organization_id, user_id, ct) for ct in _ALL_TAGGABLE_TYPES
@@ -331,21 +282,12 @@ async def invalidate_visible_sets_for_user(
 
 
 async def invalidate_visible_sets_for_org(organization_id: UUID) -> None:
-    """Drop every user's cached visibility for the organization.
-
-    Used on org-wide permission events (access-mode flip on a content
-    item, baseline-role change, BLOCKED grants whose affected user set
-    isn't enumerable cheaply).
-    """
+    """Drop every user's cached visibility for the org (access-mode / BLOCKED events)."""
     await cache_invalidate_by_tag(_org_tag(organization_id))
 
 
 async def invalidate_visible_sets_for_user_global(user_id: UUID) -> None:
-    """Drop a single user's cached visibility across every org.
-
-    Used on group-membership changes and other inputs that feed every
-    org-scoped role computation for the user.
-    """
+    """Drop a user's cached visibility across every org (group-membership changes)."""
     await cache_invalidate_by_tag(_user_tag(user_id))
 
 
@@ -382,29 +324,17 @@ def _make_content_loader(
 
 
 def _encode_visibility_payload(value: set[UUID] | None) -> dict[str, Any]:
-    """Serialize a visibility set for cache storage.
-
-    ``None`` becomes ``{"all": true}`` (admin-shortcut sentinel).
-    A set becomes ``{"ids": [str(uuid), ...]}``. The empty-set case is
-    preserved as ``{"ids": []}`` so callers can distinguish "nothing
-    visible" from "no filter needed".
-    """
+    """``None`` (admin) -> ``{"all": true}``; set -> ``{"ids": [...]}`` (empty preserved)."""
     if value is None:
         return {"all": True}
     return {"ids": [str(uid) for uid in value]}
 
 
 def _decode_visibility_payload(payload: dict[str, Any] | None) -> set[UUID] | None:
-    """Decode a visibility payload back to a ``set | None``.
+    """``None`` payload (Valkey degraded) is treated as the admin sentinel.
 
-    A payload of ``None`` is treated as the admin sentinel because a
-    cache miss falling through to the loader will have re-encoded the
-    real value; the only way to land here is a Valkey degradation, in
-    which case the safest answer is "no filter" (admin-equivalent) so
-    the user does not see a hard 404 storm. The caller-side fallback
-    in the predicate ultimately re-runs the predicate from scratch
-    against PG so there is no stale-allow risk in practice -- but see
-    the cache layer's fail-fast contract.
+    The predicate falls back to a fresh PG compute, so this fail-open path does
+    not produce stale-allow in practice.
     """
     if payload is None:
         return None
@@ -419,9 +349,8 @@ def _decode_visibility_payload(payload: dict[str, Any] | None) -> set[UUID] | No
 def _content_id_from_urn_expr():
     """Cast the trailing UUID segment of ``content_urn`` to ``uuid``.
 
-    Mirrors the helper in ``domains/tags/visibility/predicate`` but is
-    duplicated here to avoid an import cycle (``visibility/predicate``
-    imports this module).
+    Duplicated from ``domains/tags/visibility/predicate`` to avoid an import
+    cycle (that module imports this one).
     """
     from sqlalchemy import cast, func
     from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -440,13 +369,7 @@ def _task_branch(
     organization_id: UUID,
     domain_admin_types: set[ContentType],
 ):
-    """Return the union branch yielding tag ids visible via TASK assignments.
-
-    Tasks delegate visibility to their parent project; the branch is a
-    JOIN through ``Task -> Project`` with the project access filter.
-    Domain admin for projects or tasks collapses the branch to a
-    content-type test.
-    """
+    """Tag ids visible via TASK assignments (delegate to parent project access)."""
     from uniffy.core.models.projects.project import Project
     from uniffy.core.models.projects.task import Task
     from uniffy.core.models.tags.tag import TagAssignment
@@ -489,12 +412,7 @@ def _chat_branch(
     organization_id: UUID,
     domain_admin_types: set[ContentType],
 ):
-    """Return the union branch yielding tag ids visible via CHAT assignments.
-
-    Chat channels do not use the access-mode columns. Visibility is
-    PUBLIC channels (open to every org member) plus channels where the
-    user has a membership row.
-    """
+    """Tag ids visible via CHAT assignments: PUBLIC channels plus the user's memberships."""
     from sqlalchemy import or_
 
     from uniffy.core.models.chat.channel import ChannelType, ChatChannel
@@ -532,7 +450,7 @@ async def _accessible_task_ids(
     user_id: UUID,
     organization_id: UUID,
 ) -> set[UUID]:
-    """Return task ids visible via their parent project's access policy."""
+    """Task ids visible via the parent project's access policy."""
     from uniffy.core.models.projects.task import Task
 
     project_ids = await compute_visible_content_ids_by_type(
@@ -566,7 +484,7 @@ async def _accessible_channel_ids(
     user_id: UUID,
     organization_id: UUID,
 ) -> set[UUID]:
-    """Return channel ids visible via PUBLIC type or membership."""
+    """Channel ids visible via PUBLIC type or membership."""
     from sqlalchemy import or_
 
     from uniffy.core.models.chat.channel import ChannelType, ChatChannel

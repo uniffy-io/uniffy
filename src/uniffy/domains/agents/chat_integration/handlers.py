@@ -1,13 +1,4 @@
-"""RPC handlers for agent-in-chat interactions.
-
-Exposes `RespondToAgentConfirmation` + `GetChannelPendingApprovals` on the
-chat ConnectRPC service (mixed into `ChatServiceImpl`) so clients see one
-chat surface, even though the business logic is agent-domain.
-
-When the chat.agents_enabled flag is off we return FAILED_PRECONDITION for
-mutating calls; the pending-approvals list returns an empty response so a
-reload on a disabled org is a no-op rather than an error.
-"""
+"""RPC handlers for agent-in-chat interactions."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -43,7 +34,6 @@ _DECISION_TO_STRING = {
 
 
 def _handle_error(e: Exception) -> None:
-    """Map domain errors to ConnectRPC errors."""
     if isinstance(e, NotFoundError):
         raise ConnectError(Code.NOT_FOUND, str(e))
     if isinstance(e, PermissionDeniedError):
@@ -55,19 +45,12 @@ def _handle_error(e: Exception) -> None:
 
 
 class AgentConfirmationHandlers:
-    """Mixin providing `RespondToAgentConfirmation` on the chat service."""
-
     async def respond_to_agent_confirmation(
         self,
         request: RespondToAgentConfirmationRequest,
         ctx: RequestContext,
     ) -> RespondToAgentConfirmationResponse:
-        """Resolve a destructive-tool approval raised by an agent.
-
-        Returns the echoed decision + a server timestamp so optimistic UIs
-        can reconcile immediately. Side effects (Valkey hash update, audit
-        row) land in Phase 2; Phase 1 logs the intent.
-        """
+        """Resolve a destructive-tool approval raised by an agent."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -118,12 +101,7 @@ class AgentConfirmationHandlers:
         request: GetChannelPendingApprovalsRequest,
         ctx: RequestContext,
     ) -> GetChannelPendingApprovalsResponse:
-        """Return open destructive-tool approvals still awaiting a decision.
-
-        Frontend calls this on channel mount so synthetic confirmation cards
-        re-appear after a page reload. Requires channel view access; returns
-        an empty list when the org has not opted into agents-in-chat.
-        """
+        """Return open destructive-tool approvals awaiting a decision."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -160,11 +138,7 @@ class AgentConfirmationHandlers:
 
 
 def _pending_to_proto(row: dict) -> PendingAgentApproval:
-    """Translate an ApprovalStore pending row into the proto shape.
-
-    Missing optional fields are tolerated — the runtime only started recording
-    them when the chat destination landed, so older rows may be sparse.
-    """
+    """Translate an ApprovalStore pending row into the proto shape."""
     requested_at = Timestamp()
     if raw := row.get("requested_at"):
         try:

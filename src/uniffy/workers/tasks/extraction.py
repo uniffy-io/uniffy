@@ -1,9 +1,4 @@
-"""
-Metadata extraction tasks.
-
-Extracts metadata from files (EXIF, dimensions, etc.)
-and UPSERTs it into the files_media_info table.
-"""
+"""Image + audio metadata extraction tasks; UPSERT into `files_media_info`."""
 
 import base64
 import io
@@ -32,27 +27,7 @@ async def extract_image_metadata(
     file_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    """
-    Extract metadata from an image file.
-
-    Extracts dimensions, format, color mode, and EXIF data
-    from the image and UPSERTs it into files_media_info.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context with shared resources and job metadata.
-    file_id : str
-        File UUID as string.
-    organization_id : str
-        Organization UUID as string.
-
-    Returns
-    -------
-    dict
-        Result with status and extracted metadata.
-
-    """
+    """Extract dimensions, format, mode, and EXIF from an image."""
     log = logger.bind(task=_task, file_id=file_id)
     log.info("Started")
 
@@ -60,29 +35,22 @@ async def extract_image_metadata(
     s3 = get_s3_client()
 
     async with open_session() as session:
-        # Fetch file record
         file = await session.get(File, file_uuid)
         if not file:
             log.warning("File not found")
             return {"status": "not_found", "file_id": file_id}
 
-        # Update status to PROCESSING if not already completed
         if file.extraction_status != ExtractionStatus.COMPLETED:
             file.extraction_status = ExtractionStatus.PROCESSING
             await session.commit()
 
         try:
-            # Download image from S3
             image_bytes = await s3.download_bytes(file.storage_key)
             log.info(f"downloaded image bytes: {len(image_bytes)}")
 
-            # Extract metadata
             metadata = _extract_image_metadata(image_bytes)
-            log.info(
-                "Extracted metadata",
-            )
+            log.info("Extracted metadata")
 
-            # UPSERT only extraction columns into FileMediaInfo
             stmt = pg_insert(FileMediaInfo).values(
                 file_id=file_uuid,
                 width=metadata.get("width"),
@@ -124,12 +92,10 @@ async def extract_image_metadata(
         except Exception as e:
             log.error("Failed", error=str(e))
 
-            # Retry with backoff for transient errors
             job_try = ctx.get("job_try", 1)
             if job_try < 3:
                 raise Retry(defer=job_try * 10)
 
-            # Mark as failed after max retries
             file.extraction_status = ExtractionStatus.FAILED
             error_stmt = pg_insert(FileMediaInfo).values(
                 file_id=file_uuid,
@@ -146,20 +112,6 @@ async def extract_image_metadata(
 
 
 def _extract_image_metadata(image_bytes: bytes) -> dict[str, Any]:
-    """
-    Extract metadata from image bytes.
-
-    Parameters
-    ----------
-    image_bytes : bytes
-        Raw image data.
-
-    Returns
-    -------
-    dict
-        Extracted metadata including dimensions, format, and EXIF.
-
-    """
     with Image.open(io.BytesIO(image_bytes)) as img:
         metadata: dict[str, Any] = {
             "width": img.width,
@@ -168,18 +120,15 @@ def _extract_image_metadata(image_bytes: bytes) -> dict[str, Any]:
             "mode": img.mode,
         }
 
-        # Extract EXIF data if available
         try:
             exif = img.getexif()
             if exif:
                 exif_data: dict[str, Any] = {}
 
-                # IFD0 tags (basic: Make, Model, Orientation, etc.)
                 for tag_id, value in exif.items():
                     tag_name = TAGS.get(tag_id, str(tag_id))
                     _add_exif_value(exif_data, tag_name, value)
 
-                # EXIF IFD sub-tags (camera settings: ISO, aperture, shutter, etc.)
                 try:
                     exif_ifd = exif.get_ifd(IFD.Exif)
                     for tag_id, value in exif_ifd.items():
@@ -188,7 +137,6 @@ def _extract_image_metadata(image_bytes: bytes) -> dict[str, Any]:
                 except Exception:
                     pass
 
-                # GPS IFD sub-tags
                 try:
                     gps_ifd = exif.get_ifd(IFD.GPSInfo)
                     for tag_id, value in gps_ifd.items():
@@ -210,19 +158,7 @@ def _add_exif_value(
     tag_name: str,
     value: Any,
 ) -> None:
-    """
-    Add a single EXIF value to the dict, skipping binary data.
-
-    Parameters
-    ----------
-    exif_data : dict
-        Target dictionary to add the value to.
-    tag_name : str
-        Human-readable EXIF tag name.
-    value : Any
-        Raw EXIF value from Pillow.
-
-    """
+    """Coerce an EXIF value into JSON-serialisable form; drop raw bytes."""
     if isinstance(value, bytes):
         return
     try:
@@ -241,27 +177,7 @@ async def extract_audio_metadata(
     file_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    """
-    Extract metadata and album art from an audio file.
-
-    Uses mutagen to extract duration, bitrate, sample rate, and channels.
-    If embedded album art is found, generates a thumbnail and uploads to S3.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context with shared resources and job metadata.
-    file_id : str
-        File UUID as string.
-    organization_id : str
-        Organization UUID as string.
-
-    Returns
-    -------
-    dict
-        Result with status and extracted metadata.
-
-    """
+    """Extract audio info via mutagen; if album art is embedded, derive a thumbnail."""
     log = logger.bind(task="audio_extraction", file_id=file_id)
     log.info("Started")
 
@@ -283,7 +199,6 @@ async def extract_audio_metadata(
             audio_bytes = await s3.download_bytes(file.storage_key)
             log.info("Downloaded audio", bytes=len(audio_bytes))
 
-            # Extract metadata with mutagen
             audio = mutagen.File(io.BytesIO(audio_bytes))
             if audio is None:
                 log.warning("Mutagen could not parse audio file")
@@ -304,10 +219,8 @@ async def extract_audio_metadata(
 
             log.info("Extracted audio metadata", **metadata)
 
-            # Try to extract embedded album art
             album_art_bytes = _extract_album_art(audio)
 
-            # Build UPSERT values
             upsert_values: dict[str, Any] = {"file_id": file_uuid}
             update_set: dict[str, Any] = {}
 
@@ -320,7 +233,6 @@ async def extract_audio_metadata(
             if "channels" in metadata:
                 upsert_values["channels"] = metadata["channels"]
 
-            # Generate thumbnail from album art if found
             if album_art_bytes:
                 try:
                     thumb_bytes, thumb_w, thumb_h = _create_thumbnail(album_art_bytes)
@@ -339,7 +251,6 @@ async def extract_audio_metadata(
 
             stmt = pg_insert(FileMediaInfo).values(**upsert_values)
 
-            # Build update set from all non-file_id values
             for key in upsert_values:
                 if key != "file_id":
                     update_set[key] = getattr(stmt.excluded, key)
@@ -395,35 +306,16 @@ async def extract_audio_metadata(
 
 
 def _extract_album_art(audio: mutagen.FileType) -> bytes | None:
-    """
-    Extract embedded album art from an audio file.
-
-    Supports ID3 (MP3), Vorbis/FLAC (METADATA_BLOCK_PICTURE),
-    and MP4/M4A (covr) cover art formats.
-
-    Parameters
-    ----------
-    audio : mutagen.FileType
-        Parsed mutagen audio file.
-
-    Returns
-    -------
-    bytes | None
-        Album art image bytes, or None if not found.
-
-    """
-    # ID3 tags (MP3): APIC frames
+    """Read cover art from ID3 APIC, MP4 covr, or FLAC/Vorbis METADATA_BLOCK_PICTURE."""
     if hasattr(audio, "tags") and audio.tags:
         tags = audio.tags
 
-        # ID3 APIC (MP3)
         for key in tags:
             if key.startswith("APIC"):
                 frame = tags[key]
                 if hasattr(frame, "data") and frame.data:
                     return frame.data
 
-        # MP4/M4A: covr
         if "covr" in tags:
             covers = tags["covr"]
             if covers and len(covers) > 0:
@@ -434,13 +326,11 @@ def _extract_album_art(audio: mutagen.FileType) -> bytes | None:
                     return bytes(cover)
                 return bytes(cover)
 
-    # Vorbis/FLAC: METADATA_BLOCK_PICTURE or pictures attribute
     if hasattr(audio, "pictures") and audio.pictures:
         pic = audio.pictures[0]
         if hasattr(pic, "data") and pic.data:
             return pic.data
 
-    # Vorbis comments with base64-encoded METADATA_BLOCK_PICTURE
     if hasattr(audio, "tags") and audio.tags and "metadata_block_picture" in audio.tags:
         pictures = audio.tags["metadata_block_picture"]
         if pictures:

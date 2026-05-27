@@ -1,8 +1,6 @@
-"""Saved-filter CRUD for the unified tags explorer.
+"""Saved-filter CRUD for the tags explorer.
 
-Mirrors ``files/filters/operations.py``: per-user, per-org, named
-filter views. ``is_preset=True`` rows ship pre-seeded by the system and
-are read-only.
+is_preset=True rows are seeded by the system and are read-only for users.
 """
 
 from datetime import UTC, datetime
@@ -17,12 +15,7 @@ from uniffy.core.models.tags.saved_filter import SavedTagFilter
 
 
 class SavedTagFilterOperations:
-    """Saved-filter CRUD for ``/tags`` explorer views.
-
-    Like file filters, these are user preferences rather than content,
-    so they sidestep ``BaseContentOperations``. Visibility is per-user
-    plus org-scoped presets.
-    """
+    """User-scoped preference rows; presets are org-scoped and shared via list_filters."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session

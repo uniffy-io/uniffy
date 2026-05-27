@@ -1,13 +1,7 @@
-"""ARQ cron: flip ACTIVE/PENDING support sessions past ``expires_at``.
+"""Per-minute cron: flip ACTIVE/PENDING support sessions past `expires_at` to EXPIRED.
 
-Runs every 60 seconds. Picks rows where ``state IN (ACTIVE, PENDING)``
-and ``expires_at <= now()`` and flips them to ``EXPIRED``, drops the
-Valkey hot-cache entry, and writes an audit row.
-
-Idempotent across the worker fleet via a Valkey ``SET NX`` lock; on
-lock miss the second pod no-ops. ``sweep_expired`` is also internally
-idempotent (the WHERE clause naturally excludes rows already in a
-terminal state), so even a missed lock release is harmless.
+Idempotent via `SET NX support_session_expiry:lock`; `sweep_expired` is also
+internally idempotent so missed unlocks are harmless.
 """
 
 from __future__ import annotations
@@ -27,7 +21,6 @@ _LOCK_TTL_SECONDS = 120
 
 
 async def _acquire_lock() -> bool:
-    """Try to acquire the expiry lock. Returns True on success."""
     client = _get_ops_client()
     if client is None:
         return False
@@ -39,7 +32,6 @@ async def _acquire_lock() -> bool:
 
 
 async def _release_lock() -> None:
-    """Release the expiry lock (best-effort)."""
     client = _get_ops_client()
     if client is None:
         return

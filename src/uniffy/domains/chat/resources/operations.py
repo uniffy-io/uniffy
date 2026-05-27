@@ -1,8 +1,4 @@
-"""Chat channel resource tracking.
-
-Parses [[[label|urn]]] mentions from message content and upserts into
-chat_channel_resources for the auto-populated channel resource panel.
-"""
+"""Auto-populated channel resource tracking from [[[label|urn]]] mentions."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -26,8 +22,6 @@ LOGGER_COMPONENT = "chat.resources"
 
 
 class ChatResourceOperations:
-    """Manage auto-populated channel resource tracking."""
-
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -37,14 +31,13 @@ class ChatResourceOperations:
         content: str,
         sender_id: UUID,
     ) -> None:
-        """Parse URN mentions from message and batch-upsert resources."""
+        """Parse URN mentions and batch-upsert resources."""
         urns = extract_urns_with_types(content)
         if not urns:
             return
 
         now = datetime.now(UTC)
 
-        # Build batch values for all URNs
         rows = []
         for urn, ct in urns:
             rows.append({
@@ -84,7 +77,7 @@ class ChatResourceOperations:
         channel_id: UUID,
         content: str,
     ) -> None:
-        """Decrement mention counts on message delete. Remove rows with count 0."""
+        """Decrement mention counts on delete; drop rows that reach zero."""
         urns = extract_urns_with_types(content)
         if not urns:
             return
@@ -92,7 +85,6 @@ class ChatResourceOperations:
         urn_strings = [urn for urn, _ in urns]
 
         try:
-            # Batch decrement all URNs at once
             await self.session.execute(
                 update(ChatChannelResource)
                 .where(
@@ -102,7 +94,6 @@ class ChatResourceOperations:
                 .values(mention_count=ChatChannelResource.mention_count - 1)
             )
 
-            # Remove rows with mention_count <= 0
             await self.session.execute(
                 delete(ChatChannelResource).where(
                     ChatChannelResource.channel_id == channel_id,
@@ -127,15 +118,7 @@ class ChatResourceOperations:
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[ChatChannelResource], int]:
-        """Get channel resources with optional type filter.
-
-        When ``offset == 0`` and the requested ``limit`` fits the cached
-        head, the head is served from Valkey (mention autocomplete is the
-        hot caller). Other windows hit PG directly.
-
-        Uses a window function to get total count in a single query.
-        Returns (resources, total_count).
-        """
+        """Channel resources with optional type filter; head served from Valkey when eligible."""
         head_eligible = offset == 0 and limit <= RESOURCES_HEAD_LIMIT
         if head_eligible:
             cached = await get_cached_channel_resources_head(
@@ -203,7 +186,6 @@ class ChatResourceOperations:
 
 
 def _resource_to_payload(row: ChatChannelResource) -> dict:
-    """Serialize a ``ChatChannelResource`` for the head cache."""
     return {
         "id": str(row.id),
         "urn": row.urn,
@@ -225,7 +207,6 @@ def _resource_from_payload(
     channel_id: UUID,
     payload: dict,
 ) -> ChatChannelResource:
-    """Rebuild a transient ``ChatChannelResource`` from a cached payload."""
     return ChatChannelResource(
         id=UUID(payload["id"]),
         channel_id=channel_id,

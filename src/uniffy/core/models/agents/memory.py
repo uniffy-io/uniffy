@@ -21,19 +21,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentMemory(SQLModel, table=True):
-    """A persistent memory entry scoped by agent + (user | channel).
-
-    Memories can be scoped three ways:
-      - (agent, user)              personal across all channels
-      - (agent, channel)           channel-wide (user_id NULL)
-      - (agent, user, channel)     this user in this channel only
-
-    `organization_id` is no longer part of the uniqueness key: both
-    `agent_id` and `channel_id` are individually org-scoped, so including
-    org would be redundant. It stays on the row for observability and
-    simple org-wide cleanup. The unique constraint uses NULLS NOT DISTINCT
-    so null scope columns still participate in conflict detection.
-    """
+    """A persistent memory entry scoped by agent and (user, channel, or both)."""
 
     __tablename__ = "agents_memories"
     __table_args__ = (
@@ -98,5 +86,4 @@ class AgentMemory(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentMemory."""
         return f"<AgentMemory(id={self.id}, key={self.key!r}, category={self.category!r})>"

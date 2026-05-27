@@ -16,8 +16,6 @@ from uniffy.domains.chat.cache import fetch_channel_members
 
 
 class ChatReactionOperations:
-    """Reaction add/remove/query operations."""
-
     def __init__(self, session: AsyncSession, access: ChatAccessChecker | None = None) -> None:
         self.session = session
         self.access = access or ChatAccessChecker(session)
@@ -31,15 +29,7 @@ class ChatReactionOperations:
         emoji: str,
         display_name: str = "",
     ) -> ChatReaction:
-        """Add a reaction to a message. Idempotent (unique constraint).
-
-        Uses ``ON CONFLICT DO NOTHING RETURNING created_at`` so the inserted
-        row's authoritative timestamp is captured in one round-trip. When
-        the row already existed RETURNING yields no rows; in that case
-        ``now`` is returned as an approximate ``created_at`` to avoid the
-        extra SELECT round-trip - the value is only used for the realtime
-        payload, not stored.
-        """
+        """Idempotent reaction add via ON CONFLICT DO NOTHING RETURNING."""
         await self._verify_message_access(user_id, organization_id, channel_id, message_id)
 
         now = datetime.now(UTC)
@@ -88,7 +78,6 @@ class ChatReactionOperations:
         emoji: str,
         display_name: str = "",
     ) -> None:
-        """Remove a reaction from a message."""
         await self._verify_message_access(user_id, organization_id, channel_id, message_id)
 
         await self.session.execute(
@@ -121,11 +110,7 @@ class ChatReactionOperations:
         display_name: str,
         member_ids: list[UUID],
     ) -> None:
-        """Publish a reaction event to channel members.
-
-        Caller passes pre-fetched ``member_ids`` so reactions never re-query
-        the channel-member list per emoji-tap.
-        """
+        # Caller passes pre-fetched member_ids so reactions never re-query per emoji-tap.
         try:
             from uniffy.domains.chat.streaming.events import (
                 REACTION_ADDED,
@@ -144,14 +129,10 @@ class ChatReactionOperations:
                 channel_id=channel_id,
             )
         except Exception:
-            pass  # Non-fatal, best-effort
+            pass
 
     async def _get_channel_member_ids(self, channel_id: UUID) -> list[UUID]:
-        """Fetch USER member ids for a channel via the member-id cache.
-
-        Filters to ``subject_type=USER`` so AGENT rows whose ``user_id``
-        is NULL never leak into fan-out target lists.
-        """
+        # USER-only; AGENT rows have NULL user_id.
         members = await fetch_channel_members(self.session, channel_id)
         ids: list[UUID] = []
         for member in members:
@@ -171,11 +152,7 @@ class ChatReactionOperations:
         message_ids: list[UUID],
         current_user_id: UUID,
     ) -> dict[UUID, list[dict]]:
-        """Batch-fetch reactions grouped by message and emoji.
-
-        Uses SQL aggregation to avoid over-fetching individual user rows.
-        Returns {message_id: [{emoji, count, current_user_reacted}]}.
-        """
+        """Batch-fetch reactions grouped by (message, emoji) via SQL aggregation."""
         if not message_ids:
             return {}
 
@@ -203,8 +180,6 @@ class ChatReactionOperations:
 
         return dict(reactions_map)
 
-    # Internal helpers
-
     async def _verify_message_access(
         self,
         user_id: UUID,
@@ -212,11 +187,9 @@ class ChatReactionOperations:
         channel_id: UUID,
         message_id: UUID,
     ) -> None:
-        """Verify user can access the message's channel."""
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
-        # Verify message exists in channel
         msg_result = await self.session.execute(
             select(ChatMessage.id).where(
                 ChatMessage.id == message_id,

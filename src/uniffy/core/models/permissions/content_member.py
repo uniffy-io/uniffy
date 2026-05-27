@@ -1,20 +1,8 @@
-"""ContentMember model: explicit role grants for any content type.
+"""Explicit role grants for any content type.
 
-Each row grants a single subject (user or group) a specific role on a
-specific piece of content. Rows are the source of truth for non-baseline
-access; baseline access comes from the content item's ``access_mode`` and
-``baseline_role`` columns.
-
-Semantics:
-- ``role`` may be any value from :class:`ContentRole`, including ``BLOCKED``
-  which is an explicit deny that overrides any baseline for the subject.
-- A user may have grants via multiple paths (direct + multiple groups).
-  The permission checker picks the highest applicable role, with ``BLOCKED``
-  from any source winning.
-- ``expires_at`` is optional. Expired rows are filtered by the read path.
-- ``added_by_user_id`` is the audit actor; the full history of additions,
-  role changes, and removals lives in ``audit_events`` under
-  ``action`` values starting with ``permissions.``.
+`role=BLOCKED` is an explicit deny that overrides every other grant for
+the subject. `PermissionChecker` resolves the highest non-blocked role
+across direct + group paths; any matching BLOCKED row wins.
 """
 
 from datetime import UTC, datetime
@@ -28,37 +16,12 @@ from uniffy.core.types import generate_id
 
 
 class ContentMember(SQLModel, table=True):
-    """
-    Explicit role grant for a subject (user or group) on a content item.
+    """Explicit role grant for a subject (USER or GROUP) on one content item.
 
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID
-        Organization the grant belongs to (foreign key).
-    content_type : ContentType
-        Type of content this grant applies to.
-    content_id : UUID
-        ID of the content item. Polymorphic -- no foreign key constraint
-        because different content types live in different tables.
-    subject_type : SubjectType
-        USER or GROUP. (ORGANIZATION subjects are not used for content
-        members; org-wide access is modeled via ``access_mode=OPEN_TO_ORG``
-        on the content itself.)
-    subject_id : UUID
-        ID of the user or group. Polymorphic -- no foreign key constraint.
-    role : ContentRole
-        Role granted to the subject. May be ``BLOCKED`` for explicit deny.
-    added_by_user_id : UUID
-        User who created this grant. Full history lives in ``audit_events``.
-    added_at : datetime
-        When the grant was created.
-    updated_at : datetime
-        When the grant's role was last changed.
-    expires_at : datetime | None
-        Optional expiration time. Expired rows are ignored by read paths.
-
+    `(content_type, content_id)` and `(subject_type, subject_id)` are polymorphic;
+    no FK because the targets live in different tables. ORGANIZATION subjects
+    are NOT stored here - org-wide access uses `access_mode=OPEN_TO_ORG` on the
+    content row itself.
     """
 
     __tablename__ = "permissions_content_members"
@@ -95,7 +58,6 @@ class ContentMember(SQLModel, table=True):
     expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
     def __repr__(self) -> str:
-        """Return string representation of ContentMember."""
         return (
             f"<ContentMember(content_type={self.content_type}, "
             f"content_id={self.content_id}, subject_type={self.subject_type}, "

@@ -6,23 +6,7 @@ from uniffy.core.extraction.types import ExtractionResult
 
 
 def extract_docx_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from a DOCX document.
-
-    Extracts paragraphs and table cell contents.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw DOCX file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text content.
-
-    """
+    """Extract DOCX paragraphs and table cell contents."""
     from docx import Document
 
     doc = Document(io.BytesIO(data))
@@ -30,7 +14,6 @@ def extract_docx_text(data: bytes, max_chars: int) -> ExtractionResult:
     total_chars = 0
     truncated = False
 
-    # Extract paragraphs
     for para in doc.paragraphs:
         text = para.text.strip()
         if text:
@@ -40,7 +23,6 @@ def extract_docx_text(data: bytes, max_chars: int) -> ExtractionResult:
                 truncated = True
                 break
 
-    # Extract tables (if not already truncated)
     if not truncated:
         for table in doc.tables:
             for row in table.rows:
@@ -70,23 +52,7 @@ def extract_docx_text(data: bytes, max_chars: int) -> ExtractionResult:
 
 
 def extract_xlsx_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from an XLSX spreadsheet.
-
-    Extracts cell values per sheet, tab-separated.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw XLSX file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text with sheet names as headers.
-
-    """
+    """Extract XLSX cell values per sheet, tab-separated, with sheet name headers."""
     from openpyxl import load_workbook
 
     wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
@@ -131,23 +97,7 @@ def extract_xlsx_text(data: bytes, max_chars: int) -> ExtractionResult:
 
 
 def extract_pptx_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from a PPTX presentation.
-
-    Extracts slide text shapes and speaker notes.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw PPTX file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text with slide numbers as headers.
-
-    """
+    """Extract PPTX slide text shapes and speaker notes, with slide number headers."""
     from pptx import Presentation
 
     prs = Presentation(io.BytesIO(data))
@@ -159,7 +109,6 @@ def extract_pptx_text(data: bytes, max_chars: int) -> ExtractionResult:
         parts.append(f"--- Slide {slide_num} ---")
         total_chars += 15
 
-        # Extract text from shapes
         for shape in slide.shapes:
             if shape.has_text_frame:
                 for paragraph in shape.text_frame.paragraphs:
@@ -173,7 +122,6 @@ def extract_pptx_text(data: bytes, max_chars: int) -> ExtractionResult:
             if truncated:
                 break
 
-        # Extract speaker notes
         if not truncated and slide.has_notes_slide:
             notes_frame = slide.notes_slide.notes_text_frame
             if notes_frame:

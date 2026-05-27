@@ -13,23 +13,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class ExtractionStatus(str, Enum):
-    """
-    Status of text extraction for search indexing.
-
-    Attributes
-    ----------
-    PENDING : str
-        Queued for extraction (when background job system exists).
-    PROCESSING : str
-        Currently being processed.
-    COMPLETED : str
-        Text extracted and indexed in Meilisearch.
-    FAILED : str
-        Extraction failed (unsupported format, corrupt, etc.).
-    SKIPPED : str
-        Not applicable (binary files, images without OCR, etc.).
-
-    """
+    """Text-extraction pipeline state for full-text search indexing."""
 
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
@@ -39,27 +23,12 @@ class ExtractionStatus(str, Enum):
 
 
 class TranscodeStatus(str, Enum):
-    """Server-side transcode pipeline state.
+    """Server-side transcode state.
 
-    Drives the download-button gate. The user always sees a `.mp4`
-    filename, regardless of whether the bytes on S3 are WebM (pending
-    transcode) or MP4 (post-swap). Allowing the download while
-    `PENDING`/`PROCESSING` would deliver mismatched bytes.
-
-    Attributes
-    ----------
-    NOT_NEEDED : str
-        Default. Non-video uploads, and recordings already encoded as
-        H.264 MP4 by the browser (Safari).
-    PENDING : str
-        Enqueued by `complete_upload`; worker has not picked it up.
-    PROCESSING : str
-        Worker is holding the Valkey lock and running ffmpeg.
-    COMPLETED : str
-        Atomic swap done; `storage_key` points at the MP4.
-    FAILED : str
-        Worker errored; `storage_key` still points at the WebM. The
-        download path serves the WebM rather than blocking the user.
+    Gates the download button: the user always sees a `.mp4` filename, but
+    storage may still hold WebM until the swap. Allowing download while
+    PENDING/PROCESSING would deliver mismatched bytes. On FAILED we serve
+    the original WebM rather than block the user.
     """
 
     NOT_NEEDED = "NOT_NEEDED"
@@ -70,56 +39,7 @@ class TranscodeStatus(str, Enum):
 
 
 class File(SQLModel, table=True):
-    """
-    File model representing an uploaded file in the system.
-
-    Files are organization-scoped and support versioning, folders,
-    and the same permission model as notes.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the file (primary key).
-    organization_id : UUID
-        Organization this file belongs to (foreign key).
-    owner_id : UUID
-        User who owns the file (foreign key to login_users).
-    access_mode : AccessMode
-        How access to this file is governed (OWNER_ONLY, OPEN_TO_ORG, MEMBERS_ONLY).
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    filename : str
-        Current filename (may differ from original after rename).
-    original_filename : str
-        Original filename at upload time.
-    mime_type : str
-        MIME type of the file.
-    size_bytes : int
-        File size in bytes.
-    storage_key : str
-        S3 object key.
-    storage_bucket : str
-        S3 bucket name.
-    folder_id : UUID | None
-        Parent folder ID (nullable for root-level files).
-    description : str | None
-        Optional description for search.
-    version : int
-        Version number for optimistic locking.
-    current_version_id : UUID | None
-        Current version record ID (for version history).
-    extraction_status : ExtractionStatus
-        Status of text extraction for full-text search.
-    is_deleted : bool
-        Soft delete flag.
-    deleted_at : datetime | None
-        Timestamp when the file was soft-deleted.
-    created_at : datetime
-        Timestamp when the file was created.
-    updated_at : datetime
-        Timestamp when the file was last updated.
-
-    """
+    """Uploaded file row. Org-scoped, supports versioning and folder placement."""
 
     __tablename__ = "files_files"
 
@@ -209,11 +129,9 @@ class File(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """Get the URN for this file."""
         return f"urn:uniffy:content:FILE:{self.id}"
 
     def __repr__(self) -> str:
-        """Return string representation of File."""
         return (
             f"<File(id={self.id}, filename={self.filename!r}, "
             f"access_mode={self.access_mode}, organization_id={self.organization_id})>"

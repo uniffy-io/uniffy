@@ -1,4 +1,4 @@
-"""Chat channel RPC handlers - thin layer delegating to operations."""
+"""Chat channel RPC handlers."""
 
 import os
 from uuid import UUID
@@ -86,12 +86,7 @@ from uniffy.domains.tags import Tag, TagOperations
 
 
 def _parse_subjects(proto_subjects, user_ids_fallback: list[str]) -> list[ChatSubject]:
-    """Parse proto ChatSubject[] with legacy user_ids fallback.
-
-    When both are populated, subjects wins and user_ids are merged in as
-    USER subjects (server-side union per chat.proto:350). Unsupported
-    subject types (GROUP, ORGANIZATION) are rejected with INVALID_ARGUMENT.
-    """
+    """Parse proto ChatSubject[] plus user_ids; subjects wins, user_ids merged as USER subjects."""
     out: list[ChatSubject] = []
     seen: set[tuple[SubjectType, UUID]] = set()
 
@@ -125,12 +120,6 @@ def _parse_subjects(proto_subjects, user_ids_fallback: list[str]) -> list[ChatSu
 
 
 def _parse_tag_ids(raw_ids: list[str]) -> list[UUID]:
-    """Parse a repeated string proto field into a list of UUIDs.
-
-    Empty input returns an empty list. Invalid UUIDs raise
-    ``INVALID_ARGUMENT`` so the client gets actionable feedback before
-    the operation runs.
-    """
     out: list[UUID] = []
     for raw in raw_ids or ():
         try:
@@ -145,13 +134,7 @@ async def _hydrate_channel_tags(
     organization_id: UUID,
     channel_ids: list[UUID],
 ) -> dict[UUID, list[Tag]]:
-    """Bulk-fetch unified-tag rows for a batch of channel ids.
-
-    Single ``TagOperations.get_for_urns`` round-trip per request batch
-    (no N+1). Returns a mapping keyed on channel id with an empty list
-    for channels that have no tags. DM channels are filtered out by
-    callers before hydration since they do not carry tags.
-    """
+    """Bulk-fetch tag rows for a batch of channel ids in one TagOperations call."""
     if not channel_ids:
         return {}
     urn_to_id = {
@@ -166,7 +149,6 @@ async def _hydrate_channel_tags(
 
 
 def _handle_error(e: Exception) -> None:
-    """Map domain errors to ConnectRPC errors."""
     if isinstance(e, NotFoundError):
         raise ConnectError(Code.NOT_FOUND, str(e))
     if isinstance(e, PermissionDeniedError):
@@ -180,14 +162,11 @@ def _handle_error(e: Exception) -> None:
 
 
 class ChannelHandlers:
-    """Channel RPC handlers."""
-
     async def create_channel(
         self,
         request: CreateChannelRequest,
         ctx: RequestContext,
     ) -> CreateChannelResponse:
-        """Create a new channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -247,7 +226,6 @@ class ChannelHandlers:
                             subjects=agent_subjects,
                         )
 
-                # Fetch stats for response
                 from sqlalchemy import select
 
                 from uniffy.core.models.chat.channel import ChatChannelStats
@@ -272,7 +250,6 @@ class ChannelHandlers:
         request: GetChannelRequest,
         ctx: RequestContext,
     ) -> GetChannelResponse:
-        """Get a channel by ID."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -298,9 +275,7 @@ class ChannelHandlers:
                 membership = await access.get_membership(channel_id, user_id)
                 role = membership.role if membership else None
 
-                # Fetch DM member IDs for DM channels. Read `subject_id` so
-                # agent members surface too - `user_id` is NULL for AGENT rows.
-                # Valkey DM-peer cache short-circuits the per-channel join.
+                # Read `subject_id` so agent members surface; user_id is NULL for AGENT rows.
                 dm_ids: list[str] | None = None
                 if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
                     cached_peers = await get_cached_dm_peers(channel_id)
@@ -337,7 +312,6 @@ class ChannelHandlers:
         request: UpdateChannelRequest,
         ctx: RequestContext,
     ) -> UpdateChannelResponse:
-        """Update a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -386,7 +360,6 @@ class ChannelHandlers:
         request: CreateAgentChatRequest,
         ctx: RequestContext,
     ) -> CreateAgentChatResponse:
-        """Create a new named chat between the user and an agent."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -432,7 +405,6 @@ class ChannelHandlers:
         request: RenameAgentChatRequest,
         ctx: RequestContext,
     ) -> RenameAgentChatResponse:
-        """Set or clear the user's custom name for an agent chat."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -468,7 +440,6 @@ class ChannelHandlers:
         request: ListAgentChatsRequest,
         ctx: RequestContext,
     ) -> ListAgentChatsResponse:
-        """List the user's agent chats, optionally filtered by ``agent_id``."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -539,7 +510,6 @@ class ChannelHandlers:
         request: ArchiveChannelRequest,
         ctx: RequestContext,
     ) -> ArchiveChannelResponse:
-        """Archive a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -560,7 +530,7 @@ class ChannelHandlers:
         request: DeleteChannelRequest,
         ctx: RequestContext,
     ) -> DeleteChannelResponse:
-        """Delete a channel (soft delete)."""
+        """Soft-delete a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -581,7 +551,6 @@ class ChannelHandlers:
         request: ListChannelsRequest,
         ctx: RequestContext,
     ) -> ListChannelsResponse:
-        """List channels (user's channels or all public)."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -631,9 +600,7 @@ class ChannelHandlers:
                         tag_ids=tag_ids or None,
                     )
 
-                    # Batch-fetch member IDs for DM channels via the
-                    # DM-peer cache: one MGET against Valkey covers the
-                    # hits, and a single PG round-trip backfills the misses.
+                    # DM-peer cache MGET, with a single PG backfill for misses.
                     dm_channel_ids = [
                         ch.id
                         for ch, _, _ in rows
@@ -700,7 +667,6 @@ class ChannelHandlers:
         request: JoinChannelRequest,
         ctx: RequestContext,
     ) -> JoinChannelResponse:
-        """Self-join a public channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -740,7 +706,6 @@ class ChannelHandlers:
         request: LeaveChannelRequest,
         ctx: RequestContext,
     ) -> LeaveChannelResponse:
-        """Leave a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -761,7 +726,6 @@ class ChannelHandlers:
         request: AddMembersRequest,
         ctx: RequestContext,
     ) -> AddMembersResponse:
-        """Add members to a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -784,7 +748,6 @@ class ChannelHandlers:
         request: RemoveMembersRequest,
         ctx: RequestContext,
     ) -> RemoveMembersResponse:
-        """Remove members from a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -807,7 +770,6 @@ class ChannelHandlers:
         request: GetMembersRequest,
         ctx: RequestContext,
     ) -> GetMembersResponse:
-        """Get channel members."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -852,7 +814,6 @@ class ChannelHandlers:
         request: UpdateChannelMemberRequest,
         ctx: RequestContext,
     ) -> UpdateChannelMemberResponse:
-        """Update a channel member's preferences (mute, notification level)."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -908,7 +869,6 @@ class ChannelHandlers:
         request: SetTypingRequest,
         ctx: RequestContext,
     ) -> SetTypingResponse:
-        """Publish a typing indicator for the current user."""
         user_id = get_user_id_from_context(ctx)
         jwt_name, _ = get_sender_info_from_context(ctx)
         try:
@@ -936,9 +896,8 @@ class ChannelHandlers:
                 )
                 member_ids = [r[0] for r in member_result.all()]
 
-                # Skip typing fan-out for large channels. The N publish
-                # commands per keystroke overwhelm the stream and provide
-                # diminishing value in busy channels.
+                # Skip typing fan-out for large channels; per-keystroke
+                # N-publish overwhelms the stream.
                 limit = int(os.getenv("CHAT_TYPING_MEMBER_LIMIT", "50"))
                 if len(member_ids) > limit:
                     return SetTypingResponse()
@@ -960,7 +919,6 @@ class ChannelHandlers:
         request: MarkChannelReadRequest,
         ctx: RequestContext,
     ) -> MarkChannelReadResponse:
-        """Mark a channel as read up to a message."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -975,10 +933,7 @@ class ChannelHandlers:
             ops = ChatReadStateOperations(session)
             await ops.mark_channel_read(user_id, channel_id, message_id)
 
-            # Cascade to in-app notifications: every notification emitted
-            # for this channel (mention, DM, thread reply) carries
-            # source_urn == channel_urn, so reading the channel must
-            # clear the matching unread bell entries in one shot.
+            # Notifications for this channel carry source_urn == channel_urn; clear them in one shot.
             channel_urn = f"urn:uniffy:content:CHAT:{channel_id}"
             await NotificationOperations(session).mark_read_by_source_urn(
                 user_id=user_id,
@@ -993,7 +948,6 @@ class ChannelHandlers:
         request: MarkThreadReadRequest,
         ctx: RequestContext,
     ) -> MarkThreadReadResponse:
-        """Mark a thread as read."""
         user_id = get_user_id_from_context(ctx)
         try:
             root_id = UUID(request.root_message_id)
@@ -1012,7 +966,6 @@ class ChannelHandlers:
         request: GetUnreadCountsRequest,
         ctx: RequestContext,
     ) -> GetUnreadCountsResponse:
-        """Get unread counts for all user's channels."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -1080,7 +1033,6 @@ class ChannelHandlers:
         request: GetChannelResourcesRequest,
         ctx: RequestContext,
     ) -> GetChannelResourcesResponse:
-        """Get auto-tracked resources for a channel."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -1090,7 +1042,6 @@ class ChannelHandlers:
 
         try:
             async with open_session() as session:
-                # Verify access
                 access = ChatAccessChecker(session)
                 channel = await access.get_channel(channel_id, org_id)
                 await access.check_access(user_id, org_id, channel)
@@ -1111,7 +1062,6 @@ class ChannelHandlers:
                     offset=request.offset or 0,
                 )
 
-                # Resolve titles for mention-tracked resources (single Meilisearch call)
                 title_map = await self._resolve_resource_titles(
                     session,
                     resources,
@@ -1120,7 +1070,7 @@ class ChannelHandlers:
 
                 from uniffy_proto.chat.v1.chat_pb2 import ChatResource as ProtoChatResource
 
-                # Collect URNs from mention-tracked resources to deduplicate against attachments
+                # Collect URNs from mention-tracked resources to dedupe against inline attachments.
                 mention_urns: set[str] = set()
                 proto_resources = []
                 for r in resources:
@@ -1138,7 +1088,6 @@ class ChannelHandlers:
                         )
                     )
 
-                # Fetch inline file attachments for this channel's messages
                 if not ct_filter or ct_filter.upper() == "FILE":
                     attachment_resources = await self._get_channel_attachments(
                         session,
@@ -1161,7 +1110,7 @@ class ChannelHandlers:
         channel_id: UUID,
         exclude_urns: set[str],
     ) -> list:
-        """Fetch file attachments from channel messages, excluding already-tracked URNs."""
+        """File attachments from channel messages, excluding already-tracked URNs."""
         from uniffy.core.models.attachments.attachment import Attachment
         from uniffy.core.models.chat.message import ChatMessage
         from uniffy.core.models.files.file import File
@@ -1223,13 +1172,7 @@ class ChannelHandlers:
         resources: list,
         organization_id: UUID,
     ) -> dict[str, str]:
-        """Resolve display titles for resources via Meilisearch (single batch fetch).
-
-        All indexed content stores `title` in Meilisearch, so one call resolves
-        everything regardless of content type - no per-type PG queries needed.
-        Falls back to User table for USER type since users may not be in the
-        search index.
-        """
+        """Resolve display titles via one Meilisearch batch; falls back to PG for USER urns."""
         if not resources:
             return {}
 
@@ -1247,7 +1190,6 @@ class ChannelHandlers:
         except Exception:
             logger.warning("Meilisearch title resolve failed, skipping")
 
-        # Fallback for USER type (may not be in search index)
         user_urns = [
             r.urn for r in resources if r.content_type.value == "USER" and r.urn not in title_map
         ]

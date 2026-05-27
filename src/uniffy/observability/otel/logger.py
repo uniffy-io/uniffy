@@ -10,9 +10,6 @@ from typing import Any
 
 from loguru import logger
 
-# OTLP Handler for Loguru
-# Based on the user's provided example, adapted for this library
-
 MAX_QUEUE_SIZE = 10000
 
 
@@ -49,16 +46,14 @@ class OTLPHandler:
         service_name = self._resource.attributes.get("service.name", "unknown_service")
         self._logger = self._logger_provider.get_logger(str(service_name))
 
-        # Start worker thread
         self._worker = threading.Thread(target=self._process_queue, name="loguru_otlp_worker")
         self._worker.daemon = True
         self._worker.start()
 
-        # Register this instance
         with self._shutdown_lock:
             self.__class__._instances.append(self)
 
-        # Register shutdown handlers only once
+        # Signal + atexit handlers are global; install only once.
         if len(self._instances) == 1:
             atexit.register(self._shutdown_all_handlers)
             signal.signal(signal.SIGINT, self._signal_handler)
@@ -67,7 +62,6 @@ class OTLPHandler:
     def _get_trace_context(self) -> tuple:
         from opentelemetry import trace
 
-        """Get the current trace context."""
         span_context = trace.get_current_span().get_span_context()
         return (
             span_context.trace_id if span_context.is_valid else 0,
@@ -76,9 +70,9 @@ class OTLPHandler:
         )
 
     def _get_severity(self, level_no: int) -> tuple:
+        """Map a loguru level number to OTEL severity number + text."""
         from opentelemetry._logs import SeverityNumber
 
-        # Simplified severity mapping
         SEVERITY_MAPPING = {
             10: SeverityNumber.DEBUG,
             20: SeverityNumber.INFO,
@@ -86,7 +80,6 @@ class OTLPHandler:
             40: SeverityNumber.ERROR,
             50: SeverityNumber.FATAL,
         }
-        """Map Loguru level to OpenTelemetry severity."""
         base_level = (level_no // 10) * 10
         return (
             SEVERITY_MAPPING.get(base_level, SeverityNumber.UNSPECIFIED),
@@ -102,7 +95,6 @@ class OTLPHandler:
         )
 
     def _extract_attributes(self, record: dict[str, Any]) -> dict[str, Any]:
-        """Extract attributes from the record."""
         attributes = {
             "code.filepath": record["file"].path,
             "code.function": record["function"],
@@ -110,11 +102,9 @@ class OTLPHandler:
             "filename": record["file"].name,
         }
 
-        # Add extra attributes if present
         if extra := record.get("extra"):
             attributes.update(extra)
 
-        # Handle exception information
         if "exception" in record and record["exception"]:
             exc_type, exc_value, exc_tb = record["exception"]
             if exc_type:
@@ -134,7 +124,6 @@ class OTLPHandler:
         from opentelemetry._logs import SeverityNumber
         from opentelemetry.sdk._logs import LogRecord
 
-        """Create an OpenTelemetry LogRecord."""
         severity_number, severity_text = self._get_severity(record["level"].no)
         trace_id, span_id, trace_flags = self._get_trace_context()
 
@@ -157,7 +146,6 @@ class OTLPHandler:
 
     @classmethod
     def _shutdown_all_handlers(cls):
-        """Shutdown all handler instances safely."""
         with cls._shutdown_lock:
             if cls._is_shutting_down:
                 return
@@ -176,13 +164,11 @@ class OTLPHandler:
 
     @classmethod
     def _signal_handler(cls, signum, frame):
-        """Handle termination signals."""
         print("\nShutting down logger...", file=sys.stderr)
         cls._shutdown_all_handlers()
         sys.exit(0)
 
     def _process_queue(self) -> None:
-        """Process logs from the queue until shutdown."""
         while not self._shutdown_event.is_set() or not self._queue.empty():
             try:
                 try:
@@ -202,7 +188,6 @@ class OTLPHandler:
                 print(f"Error processing log record: {e}", file=sys.stderr)
 
     def sink(self, message) -> None:
-        """Add log message to queue."""
         if self._shutdown_event.is_set():
             return
 
@@ -212,7 +197,6 @@ class OTLPHandler:
             print("Warning: Log queue full, dropping message", file=sys.stderr)
 
     def shutdown(self) -> None:
-        """Graceful shutdown of the handler."""
         if self._shutdown_event.is_set():
             return
 
@@ -244,7 +228,7 @@ def configure_loguru_otel(
     batch_size: int = 100,
     export_interval_ms: int = 1000,
 ):
-    """Adds an OTLP handler to loguru."""
+    """Attach an OTLP log handler to loguru."""
     handler = OTLPHandler(
         resource=resource,
         exporter=exporter,

@@ -1,11 +1,8 @@
-"""MultipartPart model: one row per uploaded chunk of a multipart upload.
+"""MultipartPart: one row per uploaded chunk of a multipart upload.
 
-Replaces the old `MultipartUpload.parts_completed` JSONB column. The JSONB
-read-modify-write pattern lost chunks under concurrent appends across the
-15-20 backend instances. A separate table with `UNIQUE(upload_id, part_number)`
-makes part inserts atomic and idempotent: instances issue
-`INSERT ... ON CONFLICT (upload_id, part_number) DO UPDATE SET etag = ..., size = ...`
-and the database serialises concurrent writes for free.
+The `UNIQUE(upload_id, part_number)` constraint lets concurrent backend
+instances upsert parts atomically (`ON CONFLICT DO UPDATE`) so chunks
+aren't lost under fan-out writes.
 """
 
 from datetime import UTC, datetime
@@ -18,24 +15,7 @@ from uniffy.core.types import generate_id
 
 
 class MultipartPart(SQLModel, table=True):
-    """One uploaded chunk of a multipart upload.
-
-    Attributes
-    ----------
-    id : UUID
-        Internal unique identifier.
-    upload_id : UUID
-        FK to :class:`MultipartUpload`.
-    part_number : int
-        S3 part number (1-indexed).
-    etag : str
-        ETag returned by S3 when the part was uploaded.
-    size : int
-        Size of the part in bytes.
-    created_at : datetime
-        When the part was recorded.
-
-    """
+    """One uploaded chunk of a multipart upload."""
 
     __tablename__ = "files_multipart_parts"
     __table_args__ = (
@@ -57,5 +37,4 @@ class MultipartPart(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation."""
         return f"<MultipartPart(upload_id={self.upload_id}, part_number={self.part_number})>"

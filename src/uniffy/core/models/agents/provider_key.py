@@ -10,47 +10,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class ProviderKey(SQLModel, table=True):
-    """
-    Encrypted LLM provider credential for an organization.
-
-    Stores API keys and setup tokens for LLM providers (e.g. Anthropic).
-    Credentials are encrypted at rest via Fernet. The actual credential
-    is never exposed through the API -only a masked hint is returned.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID
-        Organization this key belongs to (FK to login_organizations).
-    provider : str
-        Provider name (e.g. "anthropic").
-    credential_type : str
-        Type of credential: "api_key" or "setup_token".
-    label : str
-        User-friendly label (e.g. "My Claude Max token").
-    encrypted_credential : str
-        Fernet-encrypted credential string.
-    key_hint : str
-        Masked hint for display (e.g. "sk-ant-oat01-...xyz").
-    is_valid : bool
-        Whether the key passed its last validation check.
-    is_enabled : bool
-        Whether the key is enabled for use.
-    last_validated_at : datetime | None
-        Timestamp of last successful or failed validation.
-    last_used_at : datetime | None
-        Timestamp of last API call using this key.
-    last_error : str | None
-        Error message from the last failed validation.
-    created_by : UUID
-        User who added this key (FK to login_users).
-    created_at : datetime
-        Timestamp when the key was created.
-    updated_at : datetime
-        Timestamp when the key was last updated.
-
-    """
+    """Encrypted LLM provider credential for an organization (Fernet at rest)."""
 
     __tablename__ = "agents_provider_keys"
     __table_args__ = (
@@ -132,7 +92,6 @@ class ProviderKey(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of ProviderKey."""
         return (
             f"<ProviderKey(id={self.id}, provider={self.provider!r}, "
             f"label={self.label!r}, org_id={self.organization_id})>"

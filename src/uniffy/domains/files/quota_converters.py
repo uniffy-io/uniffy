@@ -18,20 +18,6 @@ from uniffy.domains.files.quota_operations import UserUsageRow
 
 
 def storage_quota_to_proto(quota: StorageQuota) -> ProtoOrgStorageQuota:
-    """
-    Convert a StorageQuota model to its proto representation.
-
-    Parameters
-    ----------
-    quota : StorageQuota
-        Storage quota model instance.
-
-    Returns
-    -------
-    ProtoOrgStorageQuota
-        Proto message.
-
-    """
     proto = ProtoOrgStorageQuota(
         id=str(quota.id),
         organization_id=str(quota.organization_id),
@@ -55,20 +41,6 @@ def storage_quota_to_proto(quota: StorageQuota) -> ProtoOrgStorageQuota:
 def user_quota_override_to_proto(
     override: UserStorageQuotaOverride,
 ) -> ProtoUserStorageQuotaOverrideInfo:
-    """
-    Convert a UserStorageQuotaOverride model to its proto representation.
-
-    Parameters
-    ----------
-    override : UserStorageQuotaOverride
-        Override model instance.
-
-    Returns
-    -------
-    ProtoUserStorageQuotaOverrideInfo
-        Proto message.
-
-    """
     proto = ProtoUserStorageQuotaOverrideInfo(
         id=str(override.id),
         organization_id=str(override.organization_id),
@@ -92,24 +64,6 @@ def storage_usage_to_proto(
     effective_quota_bytes: int | None = None,
     has_override: bool = False,
 ) -> ProtoStorageUsageInfo:
-    """
-    Convert a StorageUsage model to its proto representation.
-
-    Parameters
-    ----------
-    usage : StorageUsage
-        Usage model instance.
-    effective_quota_bytes : int | None
-        Resolved effective quota for this user.
-    has_override : bool
-        Whether the user has a custom quota override.
-
-    Returns
-    -------
-    ProtoStorageUsageInfo
-        Proto message.
-
-    """
     usage_percent = 0.0
     if effective_quota_bytes is not None and effective_quota_bytes > 0:
         usage_percent = usage.used_bytes / effective_quota_bytes * 100
@@ -133,12 +87,7 @@ def storage_usage_to_proto(
 
 
 def user_usage_row_to_proto(row: UserUsageRow) -> ProtoStorageUsageInfo:
-    """Convert a ``UserUsageRow`` (admin table row) to its proto shape.
-
-    Handles zero-usage members (no ``StorageUsage`` row) and members with
-    an explicit per-user override -- the row already carries the resolved
-    ``effective_quota_bytes`` and ``has_override`` flag.
-    """
+    """Admin row to proto; row already has effective_quota_bytes and has_override resolved."""
     usage_percent = 0.0
     if row.effective_quota_bytes is not None and row.effective_quota_bytes > 0:
         usage_percent = row.used_bytes / row.effective_quota_bytes * 100

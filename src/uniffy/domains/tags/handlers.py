@@ -1,5 +1,3 @@
-"""Tags RPC handlers — thin layer mapping each RPC onto ``TagOperations``."""
-
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -74,11 +72,7 @@ def _parse_uuid(value: str, field: str) -> UUID:
 
 
 def _resolve_org(ctx: RequestContext, request_org_id: str) -> UUID:
-    """Resolve the org id, preferring the request value, fallback to JWT.
-
-    The TagsService takes ``organization_id`` on every request so a tag
-    operation is always explicit about its scope.
-    """
+    # Request value wins so every tag op is explicit about scope; JWT is the fallback.
     if request_org_id:
         return _parse_uuid(request_org_id, "organization_id")
     inferred = get_organization_id_from_context(ctx)
@@ -113,8 +107,6 @@ def _domain_error_to_connect(exc: Exception) -> ConnectError:
 
 
 class TagsHandlers:
-    """RPC handlers for ``tags.v1.TagsService``."""
-
     async def create_tag(
         self,
         request: CreateTagRequest,

@@ -31,8 +31,6 @@ from uniffy.core.types import AccessMode, ContentRole, NodeType
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
-# Domain-local enum maps; ``access_mode`` / ``content_role`` are
-# shared and live in ``core.converters.common_proto``.
 NODE_TYPE_TO_PROTO: dict[NodeType, ProtoNodeType.ValueType] = {
     NodeType.NOTE: ProtoNodeType.NODE_TYPE_NOTE,
     NodeType.FOLDER: ProtoNodeType.NODE_TYPE_FOLDER,
@@ -50,7 +48,6 @@ NODE_TYPE_FROM_PROTO: dict[ProtoNodeType.ValueType, NodeType] = {
 
 
 def node_type_from_proto(value: ProtoNodeType.ValueType) -> NodeType:
-    """Convert a proto NodeType value to the domain enum."""
     return NODE_TYPE_FROM_PROTO.get(value, NodeType.NOTE)
 
 
@@ -64,29 +61,7 @@ def note_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> ProtoNote:
-    """Convert a :class:`Note` row to its proto representation.
-
-    Parameters
-    ----------
-    note : Note
-        Note row.
-    user_role : ContentRole | None
-        Effective role of the requesting user, if known. Set this when
-        the proto will travel to the frontend so the UI can render the
-        correct affordances; omit for internal callers.
-    exclude_content : bool
-        If ``True`` the body is omitted (e.g. for tree / list views).
-    owner_info : dict | None
-        Owner display info for notes the requester does not own.
-        Expected keys: ``id``, ``name``, ``email``.
-    shared_with : list[dict] | None
-        Pre-built share-target dicts for notes the requester owns. See
-        ``NoteOperations._build_shared_with`` for the canonical shape.
-    tags : list[Tag] | None
-        Hydrated unified tags assigned to this note (manual + inline
-        sources merged). Pass ``None`` to omit; pass ``[]`` for "the
-        caller fetched and confirmed there are none".
-    """
+    """Convert a :class:`Note` to its proto."""
     resolved_mode = effective_access_mode if effective_access_mode is not None else note.access_mode
     resolved_baseline = (
         effective_baseline_role if effective_baseline_role is not None else note.baseline_role
@@ -163,19 +138,14 @@ def note_to_reference(
 
 
 def _serialize_body(note: Note) -> str:
-    """Return the proto ``content`` payload. Canvas notes serialize
-    ``canvas_content`` as JSON; everything else returns ``content``.
-    """
+    # Canvas notes serialize ``canvas_content`` as JSON; rest use ``content``.
     if note.node_type == NodeType.CANVAS and note.canvas_content:
         return json.dumps(note.canvas_content)
     return note.content
 
 
 def _build_metadata_dict(note: Note) -> dict[str, str]:
-    """Flatten ``note_metadata`` into a ``map<string, string>``-ready
-    dict. Skips ``icon`` (handled separately) and JSON-encodes any
-    non-string values.
-    """
+    # Skips ``icon`` (handled separately) and JSON-encodes non-string values.
     if not note.note_metadata:
         return {}
 
@@ -188,7 +158,6 @@ def _build_metadata_dict(note: Note) -> dict[str, str]:
 
 
 def _build_icon_proto(note: Note) -> ProtoNoteIcon | None:
-    """Extract a ``NoteIcon`` proto from ``note_metadata['icon']`` if any."""
     if not note.note_metadata:
         return None
     icon_data = note.note_metadata.get("icon")
@@ -201,7 +170,6 @@ def _build_icon_proto(note: Note) -> ProtoNoteIcon | None:
 
 
 def _share_target_to_proto(target: dict) -> ProtoNoteShareTarget:
-    """Convert a sharing-info dict (built in operations) to its proto."""
     return ProtoNoteShareTarget(
         id=str(target.get("id", "")),
         type=target.get("type", ""),
@@ -213,7 +181,6 @@ def _share_target_to_proto(target: dict) -> ProtoNoteShareTarget:
 
 
 def _role_value_to_proto(role_value: str | None) -> ContentRole.value:
-    """Translate a stored ``ContentRole.value`` string back to its proto."""
     if role_value is None:
         return content_role_to_proto(ContentRole.VIEWER)
     try:

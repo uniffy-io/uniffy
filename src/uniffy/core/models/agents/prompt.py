@@ -10,37 +10,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class AgentPrompt(SQLModel, table=True):
-    """
-    A reusable instruction template that defines agent behavior.
-
-    Unlike skills (which are injected alongside the soul prompt),
-    prompts are standalone instruction sets that can replace or
-    augment the soul prompt entirely.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID | None
-        Organization this prompt belongs to. None for bundled prompts.
-    name : str
-        Unique machine name within scope (max 100 chars).
-    display_name : str
-        Human-readable name (max 255 chars).
-    description : str
-        Short description of what the prompt does.
-    content : str
-        Markdown instructions for the system prompt.
-    source : str
-        "bundled" (shipped with app), "organization" (created by admin), or "personal".
-    owner_id : UUID | None
-        Owner user ID for personal prompts. None for org/bundled prompts.
-    created_at : datetime
-        When the prompt was created.
-    updated_at : datetime
-        When the prompt was last updated.
-
-    """
+    """A reusable instruction template that defines agent behavior."""
 
     __tablename__ = "agents_prompts"
     __table_args__ = (
@@ -126,7 +96,6 @@ class AgentPrompt(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentPrompt."""
         return (
             f"<AgentPrompt(id={self.id}, name={self.name!r}, "
             f"source={self.source!r}, org_id={self.organization_id})>"

@@ -1,19 +1,8 @@
-"""ARQ cron: warn org owners 24h before a soft-deleted workspace is purged.
+"""Daily cron: email org owners 24h before a soft-deleted workspace is purged.
 
-Daily sweep. Picks every ``login_organizations`` row whose
-``deleted_at + (PURGE_GRACE_DAYS - 1) <= now()`` and
-``purge_warning_sent_at IS NULL``. For each, fan-out a
-``platform/org_purge_warning`` email to every active org OWNER and
-stamp ``purge_warning_sent_at`` so the cron stays idempotent.
-
-The actual hard purge is intentionally not automated yet. Tenant
-content cascades touch ~20 tables (notes, files, chat, agents, ...)
-and the FK schema is not uniformly ``ON DELETE CASCADE``; an
-automated cascade would silently fail or leave orphans. Operators
-hard-delete from the platform UI after the grace window expires.
-
-Idempotency: ``purge_warning_sent_at`` is the only flag the cron
-checks, so two pods cannot double-send.
+The hard purge is operator-driven from the platform UI - tenant cascades touch
+many tables without uniform `ON DELETE CASCADE`, so automating it would orphan
+rows. Idempotent via `purge_warning_sent_at`.
 """
 
 from __future__ import annotations
@@ -45,7 +34,6 @@ _TEMPLATE = "platform/org_purge_warning"
 
 
 async def _acquire_lock() -> bool:
-    """Try to acquire the warning-cron lock. Returns True on success."""
     client = _get_ops_client()
     if client is None:
         return False
@@ -72,7 +60,6 @@ async def _enqueue_warning(
     purge_at: datetime,
     user_id: UUID,
 ) -> None:
-    """Enqueue one ``platform/org_purge_warning`` email."""
     try:
         queue = get_queue("core")
     except RuntimeError:
@@ -100,7 +87,7 @@ async def _enqueue_warning(
 
 
 async def notify_pending_org_purges(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Email org owners 24h before purge fires. Idempotent per-org."""
+    """Email org owners 24h before purge fires; idempotent per org."""
     del ctx
     if not await _acquire_lock():
         return {"status": "skipped", "reason": "lock_held"}
@@ -109,7 +96,6 @@ async def notify_pending_org_purges(ctx: dict[str, Any]) -> dict[str, Any]:
     emails_sent = 0
     try:
         now = datetime.now(UTC)
-        # Warn one day before the grace window ends.
         warn_cutoff = now - timedelta(days=PURGE_GRACE_DAYS - 1)
 
         async with open_session() as session:

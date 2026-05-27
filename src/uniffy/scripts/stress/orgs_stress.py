@@ -1,13 +1,6 @@
 """Stress seed: create many organizations with many members each.
 
-Run inside the dev backend container so it shares the same Postgres,
-Valkey, and Meilisearch as the running app:
-
-    docker compose exec uniffy-backend \
-        uv run python scripts/stress/seed_stress.py --orgs 100 --users-per-org 25
-
-Defaults to 100 orgs x 25 members. Idempotent on re-run: existing users
-and orgs (matched by email / slug) are reused, not duplicated.
+Idempotent on re-run: existing users and orgs (matched by email / slug) are reused.
 """
 
 from __future__ import annotations

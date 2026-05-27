@@ -1,11 +1,4 @@
-"""Agent budget alert dedupe model.
-
-Each row records that a specific threshold (50 / 75 / 90 / 100 percent)
-has been fired for a given organization (and optionally a specific user)
-for a given period. The unique constraint prevents re-alerting after
-every single run inside the same period; alerts reset naturally when the
-next period begins because ``period_start`` changes.
-"""
+"""Agent budget alert dedupe model."""
 
 from datetime import UTC, date, datetime
 from uuid import UUID
@@ -17,28 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentBudgetAlert(SQLModel, table=True):
-    """A fired budget alert, used purely for dedupe within a period.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    scope : str
-        ``org`` or ``user``.
-    organization_id : UUID
-        Organization context.
-    user_id : UUID | None
-        Populated only when ``scope == "user"``.
-    period_start : date
-        Day the budget period began (used as a dedupe key).
-    threshold : int
-        Percent threshold that was crossed (50, 75, 90, 100).
-    kind : str
-        ``spend`` for dollar spend, ``image_count`` for image generations.
-    fired_at : datetime
-        Wall-clock time the alert was emitted.
-
-    """
+    """A fired budget alert; the unique constraint prevents re-alerting within a period."""
 
     __tablename__ = "agents_budget_alerts"
     __table_args__ = (
@@ -79,7 +51,6 @@ class AgentBudgetAlert(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentBudgetAlert."""
         return (
             f"<AgentBudgetAlert(scope={self.scope!r}, org={self.organization_id}, "
             f"period={self.period_start}, threshold={self.threshold}, kind={self.kind!r})>"

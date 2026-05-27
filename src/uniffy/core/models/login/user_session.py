@@ -10,35 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class UserSession(SQLModel, table=True):
-    """
-    Tracks individual login sessions for a user.
-
-    Each login creates a session record. Sessions can be individually
-    revoked without affecting other sessions. This enables the user to
-    see where they are logged in and selectively terminate logins.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique session identifier (UUIDv7).
-    user_id : UUID
-        Foreign key to the user.
-    ip_address : str
-        Client IP at login time.
-    user_agent : str
-        Raw User-Agent header from the client.
-    device_label : str
-        Human-readable device description (e.g. "Chrome on macOS").
-    created_at : datetime
-        When the session was created.
-    last_activity : datetime
-        When the session was last used (updated on token refresh).
-    is_revoked : bool
-        Whether this session has been revoked.
-    revoked_at : datetime | None
-        When the session was revoked (if applicable).
-
-    """
+    """One login session for a user; revocable independently of other sessions."""
 
     __tablename__ = "login_user_sessions"
     __table_args__ = (
@@ -70,5 +42,4 @@ class UserSession(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation."""
         return f"<UserSession(id={self.id}, user_id={self.user_id}, device={self.device_label})>"

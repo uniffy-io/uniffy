@@ -1,10 +1,8 @@
-"""Background reindex when an org's permission defaults change.
+"""Reindex content when an org's permission defaults change.
 
-Every inheriting row (``access_mode IS NULL``) flips its effective
-policy, and Meilisearch indexes the *resolved* policy per document, so
-those documents need a rewrite or the search-side ACL drifts from the
-canonical permission check. Idempotent: a burst of defaults toggles
-coalesces via ARQ ``_job_id``.
+Meilisearch stores the resolved policy per document; inheriting rows
+(`access_mode IS NULL`) flip their effective policy and must be rewritten or
+the search ACL drifts. Bursts of defaults toggles coalesce via ARQ `_job_id`.
 """
 
 from typing import Any
@@ -25,12 +23,7 @@ async def reindex_org_content_for_defaults(
     organization_id: str,
     content_type_value: str,
 ) -> dict[str, Any]:
-    """Reindex every row of a content type in an org.
-
-    A wholesale rescan is cheap relative to the org defaults toggle
-    frequency, so rows with explicit overrides are reindexed too. ARQ
-    deduplicates a burst of toggles via ``_job_id``.
-    """
+    """Reindex every row of `content_type_value` in the org."""
     org_id = UUID(organization_id)
     try:
         content_type = ContentType(content_type_value)
@@ -72,11 +65,7 @@ async def reindex_org_content_for_defaults(
 
 
 def _domain_for(content_type: ContentType):
-    """Return ``(operations_cls, query_factory)`` for a content type.
-
-    Each entry sources non-deleted rows scoped to ``organization_id``.
-    ``(None, None)`` skips the type silently.
-    """
+    """Return `(operations_cls, query_factory)` for a content type, or `(None, None)`."""
     from sqlalchemy import select
 
     if content_type == ContentType.NOTE:

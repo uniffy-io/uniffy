@@ -1,8 +1,4 @@
-"""
-Projects query helpers.
-
-Helper functions for complex queries and data extraction.
-"""
+"""Projects query helpers."""
 
 import re
 from collections import defaultdict
@@ -21,22 +17,6 @@ async def get_fields_for_project(
     session: AsyncSession,
     project_id: UUID,
 ) -> list[FieldDefinition]:
-    """
-    Get all field definitions for a project.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    project_id : UUID
-        Project ID.
-
-    Returns
-    -------
-    list[FieldDefinition]
-        List of field definitions ordered by sort_order.
-
-    """
     result = await session.execute(
         select(FieldDefinition)
         .where(FieldDefinition.project_id == project_id)
@@ -49,22 +29,6 @@ async def get_views_for_project(
     session: AsyncSession,
     project_id: UUID,
 ) -> list[ViewConfig]:
-    """
-    Get all view configurations for a project.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    project_id : UUID
-        Project ID.
-
-    Returns
-    -------
-    list[ViewConfig]
-        List of view configurations.
-
-    """
     result = await session.execute(select(ViewConfig).where(ViewConfig.project_id == project_id))
     return list(result.scalars().all())
 
@@ -73,22 +37,6 @@ async def get_fields_for_projects(
     session: AsyncSession,
     project_ids: list[UUID],
 ) -> dict[str, list[FieldDefinition]]:
-    """
-    Get field definitions for multiple projects in a single query.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    project_ids : list[UUID]
-        Project IDs.
-
-    Returns
-    -------
-    dict[str, list[FieldDefinition]]
-        Mapping of project_id (as string) to its field definitions.
-
-    """
     if not project_ids:
         return {}
 
@@ -110,22 +58,6 @@ async def get_views_for_projects(
     session: AsyncSession,
     project_ids: list[UUID],
 ) -> dict[str, list[ViewConfig]]:
-    """
-    Get view configurations for multiple projects in a single query.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    project_ids : list[UUID]
-        Project IDs.
-
-    Returns
-    -------
-    dict[str, list[ViewConfig]]
-        Mapping of project_id (as string) to its view configurations.
-
-    """
     if not project_ids:
         return {}
 
@@ -143,22 +75,7 @@ async def get_subtask_counts(
     session: AsyncSession,
     parent_ids: list[UUID],
 ) -> dict[UUID, tuple[int, int]]:
-    """
-    Batch-load subtask counts for parent tasks.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    parent_ids : list[UUID]
-        Parent task IDs to load counts for.
-
-    Returns
-    -------
-    dict[UUID, tuple[int, int]]
-        Mapping of parent_id to (total_count, completed_count).
-
-    """
+    """Returns parent_id -> (total, completed)."""
     if not parent_ids:
         return {}
 
@@ -187,27 +104,6 @@ async def get_activities_for_task(
     page: int = 1,
     page_size: int = 50,
 ) -> tuple[list[TaskActivity], int]:
-    """
-    Get paginated activity log for a task.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    task_id : UUID
-        Task ID.
-    page : int
-        Page number (1-indexed).
-    page_size : int
-        Items per page.
-
-    Returns
-    -------
-    tuple[list[TaskActivity], int]
-        List of activities and total count.
-
-    """
-    # Count total
     count_result = await session.execute(
         select(func.count()).select_from(
             select(TaskActivity).where(TaskActivity.task_id == task_id).subquery()
@@ -215,7 +111,6 @@ async def get_activities_for_task(
     )
     total = count_result.scalar_one()
 
-    # Fetch paginated, ordered by timestamp descending (newest first)
     result = await session.execute(
         select(TaskActivity)
         .where(TaskActivity.task_id == task_id)
@@ -232,64 +127,28 @@ async def delete_project_cascade(
     session: AsyncSession,
     project_id: UUID,
 ) -> None:
-    """
-    Delete all data associated with a project.
-
-    This includes:
-    - All tasks (which cascades to activities via FK)
-    - All field definitions
-    - All view configurations
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    project_id : UUID
-        Project ID to delete data for.
-
-    """
-    # Delete activities for all tasks in the project
+    """Drops tasks, field definitions, view configs (and activities via FK)."""
     await session.execute(
         delete(TaskActivity).where(
             TaskActivity.task_id.in_(select(Task.id).where(Task.project_id == project_id))
         )
     )
 
-    # Delete tasks
     await session.execute(delete(Task).where(Task.project_id == project_id))
 
-    # Delete field definitions
     await session.execute(delete(FieldDefinition).where(FieldDefinition.project_id == project_id))
 
-    # Delete views
     await session.execute(delete(ViewConfig).where(ViewConfig.project_id == project_id))
 
 
 def extract_urns_from_content(content: str) -> list[str]:
-    """
-    Extract URN references from markdown content.
-
-    Matches the pattern: [[[label|urn:uniffy:content:TYPE:uuid]]]
-
-    Parameters
-    ----------
-    content : str
-        Markdown content with potential URN mentions.
-
-    Returns
-    -------
-    list[str]
-        List of unique URN strings found in the content.
-
-    """
+    """Returns unique URNs from ``[[[label|urn:...]]]`` mentions, preserving order."""
     if not content:
         return []
 
-    # Pattern matches: [[[anything|urn:uniffy:content:TYPE:uuid]]]
     pattern = r"\[\[\[.*?\|(urn:uniffy:content:\w+:[a-f0-9-]+)\]\]\]"
     matches = re.findall(pattern, content, re.IGNORECASE)
 
-    # Return unique URNs preserving order
     seen = set()
     urns = []
     for urn in matches:

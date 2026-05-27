@@ -1,23 +1,5 @@
-"""Cross-tenant organizations + users operations for platform operators.
-
-Every method on :class:`PlatformDirectoryOperations` requires the
-calling ``user_id`` to belong to a user with ``is_system_admin=true``.
-None of the methods bypass :class:`PermissionChecker` -- tenant
-content is unreachable through this slice. The fields returned here
-are metadata only (counts, status, timestamps).
-
-Destructive paths are narrow and reversible up to a point:
-
-* :meth:`suspend_organization` flips ``is_suspended`` and bumps
-  ``token_version`` on every member so existing JWTs are killed at
-  the next refresh. Reversible via :meth:`unsuspend_organization`,
-  but members must re-login.
-* :meth:`delete_organization` stamps ``deleted_at`` (soft delete).
-  An ARQ cron purges rows 30d later. Reversible via
-  :meth:`restore_organization` until the purge fires.
-* :meth:`force_logout_user` bumps ``token_version`` on one user.
-* :meth:`set_system_admin` flips ``is_system_admin``. Callers cannot
-  demote themselves.
+"""Cross-tenant org + user operations for platform operators; tenant
+content stays unreachable here (no PermissionChecker bypass).
 """
 
 from __future__ import annotations
@@ -54,12 +36,8 @@ from uniffy.domains.users.operations import UserOperations
 
 
 async def _safe_publish_token_revoke(user_id: UUID, version: int) -> None:
-    """Publish the realtime token-revoke ping with a warning on failure.
-
-    The Valkey ``min_tkv`` watermark is the authoritative gate now
-    (set before this is called); the realtime publish is a UX-only
-    nudge so live WebSockets close immediately. Surfacing the failure
-    keeps a Valkey pubsub outage visible in logs rather than silent.
+    """The Valkey ``min_tkv`` watermark is authoritative; the realtime
+    publish is a UX nudge for live WebSockets.
     """
     try:
         await publish_token_revoke(user_id, version)
@@ -76,9 +54,7 @@ DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
 PURGE_GRACE_DAYS = 30
 
-# Per-operator throughput caps on platform mutations. Cheap insurance
-# against a compromised operator account or a runaway script
-# fan-out: the limits are well above legitimate hand-driven use.
+# Per-operator throughput caps; well above legitimate hand-driven use.
 _PLATFORM_MUTATION_LIMIT = 20
 _PLATFORM_MUTATION_WINDOW_SECONDS = 60
 _PLATFORM_SUSPEND_LIMIT = 10
@@ -90,8 +66,6 @@ def _operator_mutation_key(user_id: UUID, scope: str) -> str:
 
 
 class PlatformOrgSummary(NamedTuple):
-    """One row in the cross-tenant organizations table."""
-
     id: UUID
     name: str
     slug: str
@@ -131,8 +105,6 @@ class PlatformOrgPage(NamedTuple):
 
 
 class PlatformUserSummary(NamedTuple):
-    """One row in the cross-tenant users table."""
-
     id: UUID
     email: str
     username: str
@@ -140,7 +112,7 @@ class PlatformUserSummary(NamedTuple):
     is_active: bool
     is_system_admin: bool
     email_verified: bool
-    mfa_enabled: bool  # placeholder; MFA not shipped
+    mfa_enabled: bool
     org_memberships_count: int
     last_login_at: datetime | None
     created_at: datetime
@@ -186,7 +158,7 @@ def _purge_at_from(deleted_at: datetime | None) -> datetime | None:
 
 
 class PlatformDirectoryOperations:
-    """Platform-operator org + user directory. Gated on ``is_system_admin``."""
+    """Platform-operator org + user directory; gated on ``is_system_admin``."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -202,7 +174,6 @@ class PlatformDirectoryOperations:
         include_deleted: bool = False,
         only_suspended: bool = False,
     ) -> PlatformOrgPage:
-        """Paginated cross-tenant organization list with metadata."""
         await self._user_ops.require_system_admin(user_id)
         page = _safe_page(page)
         page_size = _clamp_page_size(page_size)
@@ -278,7 +249,6 @@ class PlatformDirectoryOperations:
     async def get_organization(
         self, *, user_id: UUID, organization_id: UUID
     ) -> PlatformOrgDetail:
-        """Full detail for one org. Owners list + recent platform audit."""
         await self._user_ops.require_system_admin(user_id)
         org = await self._require_org(organization_id)
 
@@ -323,7 +293,7 @@ class PlatformDirectoryOperations:
     async def suspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
     ) -> PlatformOrgDetail:
-        """Block sign-in + revoke every member's existing JWTs."""
+        """Block sign-in and revoke every member's existing JWTs."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
             key=_operator_mutation_key(user_id, "suspend"),
@@ -376,7 +346,7 @@ class PlatformDirectoryOperations:
     async def unsuspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
     ) -> PlatformOrgDetail:
-        """Clear the suspension flag. Existing JWTs are still dead."""
+        """Clear the suspension flag; existing JWTs stay revoked."""
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()
         if not reason:
@@ -417,7 +387,7 @@ class PlatformDirectoryOperations:
         confirm_slug: str,
         reason: str,
     ) -> PlatformOrgDetail:
-        """Soft-delete: stamp ``deleted_at``. ARQ purges 30d later."""
+        """Soft-delete; ARQ purges rows after the grace window."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
             key=_operator_mutation_key(user_id, "delete_org"),
@@ -478,7 +448,7 @@ class PlatformDirectoryOperations:
     async def restore_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
     ) -> PlatformOrgDetail:
-        """Clear ``deleted_at``. Only effective pre-purge."""
+        """Only effective before purge."""
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()
         if not reason:
@@ -521,7 +491,6 @@ class PlatformDirectoryOperations:
         include_inactive: bool = False,
         only_system_admins: bool = False,
     ) -> PlatformUserPage:
-        """Paginated cross-tenant user list with metadata."""
         await self._user_ops.require_system_admin(user_id)
         page = _safe_page(page)
         page_size = _clamp_page_size(page_size)
@@ -590,7 +559,6 @@ class PlatformDirectoryOperations:
     async def get_user(
         self, *, user_id: UUID, target_user_id: UUID
     ) -> PlatformUserDetail:
-        """Full detail for one user. Profile + memberships."""
         await self._user_ops.require_system_admin(user_id)
         target = await self._require_user(target_user_id)
         memberships = await self._fetch_user_memberships(target.id)
@@ -614,7 +582,7 @@ class PlatformDirectoryOperations:
     async def force_logout_user(
         self, *, user_id: UUID, target_user_id: UUID, reason: str
     ) -> None:
-        """Bump ``token_version`` on one user. Kills every existing JWT."""
+        """Bumping ``token_version`` kills every existing JWT."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
             key=_operator_mutation_key(user_id, "force_logout"),
@@ -654,17 +622,7 @@ class PlatformDirectoryOperations:
         is_system_admin: bool,
         reason: str,
     ) -> PlatformUserDetail:
-        """Toggle ``is_system_admin``.
-
-        Two safety rails:
-
-        * Operators cannot demote themselves (locks them out instantly).
-        * The last remaining active sysadmin cannot be demoted - the
-          deployment must keep at least one operator who can manage the
-          platform surface. Without this guard, two operators racing on
-          each other's demotion can leave the platform with zero
-          sysadmins and only DB-level recovery to fix.
-        """
+        """Operators cannot demote themselves; the last active sysadmin cannot be demoted."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
             key=_operator_mutation_key(user_id, "set_system_admin"),
@@ -796,12 +754,7 @@ class PlatformDirectoryOperations:
         return {uid: int(count) for uid, count in rows}
 
     async def _fetch_mail_sources(self, org_ids: list[UUID]) -> dict[UUID, str]:
-        """Resolve effective mail config source per org.
-
-        Priority: per_org row > deployment row > env > none. Single
-        query per tier instead of a per-org probe -- works for any
-        org list size up to ``MAX_PAGE_SIZE``.
-        """
+        """Priority: per_org > deployment > env > none."""
         if not org_ids:
             return {}
         per_org_rows = (
@@ -947,7 +900,7 @@ class PlatformDirectoryOperations:
         ]
 
     async def _bump_member_token_versions(self, org_id: UUID) -> list[UUID]:
-        """Bump ``token_version`` on every active member. Return ids bumped."""
+        """Bump ``token_version`` on every active member; return ids bumped."""
         rows = (
             await self._session.execute(
                 select(OrganizationMember.user_id)
@@ -981,7 +934,6 @@ class PlatformDirectoryOperations:
     async def _enqueue_org_deleted_emails(
         self, org: Organization, reason: str
     ) -> None:
-        """Fan-out the ``platform/org_deleted`` email to every org owner."""
         if org.deleted_at is None:
             return
         purge_at = _purge_at_from(org.deleted_at)

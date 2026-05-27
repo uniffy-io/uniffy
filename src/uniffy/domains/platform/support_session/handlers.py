@@ -67,8 +67,6 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SupportSessionHandlers:
-    """Handlers for ``superadmin.v1.SupportService``."""
-
     async def request_session(
         self, request: RequestSessionRequest, ctx: RequestContext
     ) -> RequestSessionResponse:

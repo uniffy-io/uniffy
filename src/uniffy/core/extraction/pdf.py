@@ -4,24 +4,7 @@ from uniffy.core.extraction.types import ExtractionResult
 
 
 def extract_pdf_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from a PDF document.
-
-    Extracts text page by page with page headers. Stops when
-    max_chars is reached.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw PDF file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text with page_count metadata.
-
-    """
+    """Extract PDF text page by page with page headers, stopping at ``max_chars``."""
     import fitz
 
     doc = fitz.open(stream=data, filetype="pdf")

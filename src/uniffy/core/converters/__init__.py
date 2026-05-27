@@ -1,9 +1,4 @@
-"""
-Converters module for proto/model transformations.
-
-Provides utilities for converting between protobuf types and domain
-types.
-"""
+"""Proto/model conversion utilities."""
 
 from uniffy.core.converters.common_proto import (
     ACCESS_MODE_FROM_PROTO,
@@ -53,12 +48,10 @@ from uniffy.core.converters.proto import (
 )
 
 __all__ = [
-    # Proto utilities
     "datetime_to_timestamp",
     "optional_timestamp",
     "timestamp_to_datetime",
     "timestamp_to_proto",
-    # Enum mappings
     "ACCESS_MODE_TO_PROTO",
     "ACCESS_MODE_FROM_PROTO",
     "CONTENT_MEMBER_ACTION_TO_PROTO",
@@ -75,7 +68,6 @@ __all__ = [
     "ORG_ROLE_FROM_PROTO",
     "GROUP_ROLE_TO_PROTO",
     "GROUP_ROLE_FROM_PROTO",
-    # Enum converter functions
     "access_mode_to_proto",
     "access_mode_from_proto",
     "content_member_action_to_proto",
@@ -92,7 +84,6 @@ __all__ = [
     "org_role_from_proto",
     "group_role_to_proto",
     "group_role_from_proto",
-    # Message converter functions
     "domain_admin_info_to_proto",
     "user_info_to_proto",
     "org_info_to_proto",

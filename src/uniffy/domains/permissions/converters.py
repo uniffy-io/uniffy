@@ -1,11 +1,4 @@
-"""Proto <-> domain converters for the permissions members service.
-
-Wraps the canonical enum converters in ``core.converters.common_proto``
-with message-level converters for ``ContentMember`` and
-``ContentAccessPolicy``, plus an ``AuditEvent`` -> ``ContentMemberEvent``
-projection so the existing proto contract for ``ListMemberEvents``
-stays stable while the underlying storage moved to ``audit_events``.
-"""
+"""Proto <-> domain converters for the permissions members service."""
 
 from uuid import UUID
 
@@ -56,12 +49,10 @@ _ACTION_TO_AUDIT: dict[ContentMemberAction, str] = {
 
 
 def audit_action_for_member_action(action: ContentMemberAction) -> str:
-    """Map a legacy ``ContentMemberAction`` to its ``audit_events`` action."""
     return _ACTION_TO_AUDIT[action]
 
 
 def content_member_to_proto(member: ContentMember) -> ProtoContentMember:
-    """Convert a ``ContentMember`` row to its proto representation."""
     proto = ProtoContentMember(
         subject_type=subject_type_to_proto(member.subject_type),
         subject_id=str(member.subject_id),
@@ -81,11 +72,8 @@ def content_access_policy_to_proto(
     access_mode: AccessMode | None,
     baseline_role: ContentRole | None,
 ) -> ProtoContentAccessPolicy:
-    """Build a ``ContentAccessPolicy`` proto from raw access policy fields.
-
-    ``access_mode`` may be ``None`` when the row inherits from the org
-    defaults; the proto emits ``ACCESS_MODE_UNSPECIFIED`` which the
-    sharing dialog renders as "no per-item override / inherit".
+    """``access_mode=None`` means the row inherits from org defaults;
+    emitted as ``ACCESS_MODE_UNSPECIFIED``.
     """
     proto = ProtoContentAccessPolicy(
         owner_id=str(owner_id),
@@ -99,13 +87,7 @@ def content_access_policy_to_proto(
 def audit_event_to_content_member_event_proto(
     event: AuditEvent,
 ) -> ProtoContentMemberEvent:
-    """Project an ``AuditEvent`` row back into the legacy proto shape.
-
-    Unpacks the structured payload that the permissions audit helpers
-    stash in ``details``. Unknown actions raise ``KeyError`` - filtering
-    in :meth:`ContentMembersOperations.list_member_events` already
-    constrains the action namespace to ``permissions.*``.
-    """
+    """Unknown actions raise ``KeyError``; callers filter to ``permissions.*`` upstream."""
     member_action = _ACTION_FROM_AUDIT[event.action]
     details = event.details or {}
 

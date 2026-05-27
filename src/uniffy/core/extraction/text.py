@@ -7,24 +7,7 @@ from uniffy.core.extraction.types import ExtractionResult
 
 
 def extract_plain_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from a plain text file.
-
-    Handles UTF-8 with BOM detection and fallback.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text content.
-
-    """
-    # Handle BOM
+    """Decode a plain-text file as UTF-8 with BOM stripping and replacement fallback."""
     if data.startswith(b"\xef\xbb\xbf"):
         data = data[3:]
 
@@ -45,30 +28,12 @@ def extract_plain_text(data: bytes, max_chars: int) -> ExtractionResult:
 
 
 def extract_csv_text(data: bytes, max_chars: int) -> ExtractionResult:
-    """Extract text from a CSV or TSV file.
-
-    Parses using stdlib csv module, joins cells with tabs.
-
-    Parameters
-    ----------
-    data : bytes
-        Raw CSV/TSV file bytes.
-    max_chars : int
-        Maximum characters to return.
-
-    Returns
-    -------
-    ExtractionResult
-        Extracted text with tab-separated values.
-
-    """
-    # Handle BOM
+    """Parse CSV/TSV with stdlib csv and emit tab-separated rows."""
     if data.startswith(b"\xef\xbb\xbf"):
         data = data[3:]
 
     text_str = data.decode("utf-8", errors="replace")
 
-    # Detect delimiter
     sniffer = csv.Sniffer()
     try:
         dialect = sniffer.sniff(text_str[:4096])

@@ -34,8 +34,6 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SystemEncryptionHandlers:
-    """RPC handlers for ``superadmin.v1.SystemEncryptionService``."""
-
     async def get_deployment_encryption_status(
         self,
         request: GetDeploymentEncryptionStatusRequest,

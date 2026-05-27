@@ -1,5 +1,3 @@
-"""Room and booking operations."""
-
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -34,17 +32,10 @@ from uniffy.domains.rooms import queries
 
 
 class RoomOperations(BaseContentOperations[Room]):
-    """Room CRUD with permissions and search indexing."""
-
     content_type = ContentType.ROOM
     model_class = Room
 
-    def __init__(self, session: AsyncSession) -> None:
-        """Initialize room operations."""
-        super().__init__(session)
-
     def _build_search_keywords(self, model: Room) -> str:
-        """Aggregate searchable text for a room."""
         parts = [model.name]
         if model.description:
             parts.append(model.description)
@@ -59,15 +50,12 @@ class RoomOperations(BaseContentOperations[Room]):
         return " ".join(parts)
 
     def _get_search_title(self, model: Room) -> str:
-        """Return the room name for the search index."""
         return model.name
 
     def _get_url_path(self, model: Room) -> str:
-        """Return the frontend route for this room."""
         return f"/rooms/{model.id}"
 
     def _get_search_description(self, model: Room) -> str | None:
-        """Return a description or location snippet."""
         if model.description:
             return model.description[:200]
         if model.location:
@@ -75,7 +63,6 @@ class RoomOperations(BaseContentOperations[Room]):
         return None
 
     def _get_search_metadata(self, model: Room) -> dict[str, str] | None:
-        """Return room metadata for the search index."""
         metadata: dict[str, str] = {
             "room_type": model.room_type.value,
             "capacity": str(model.capacity),
@@ -101,13 +88,6 @@ class RoomOperations(BaseContentOperations[Room]):
         group_ids: list[UUID] | None = None,
         image_file_id: UUID | None = None,
     ) -> Room:
-        """Create a new room.
-
-        ``access_mode`` and ``baseline_role`` default to the org defaults
-        for ``ContentType.ROOM``. ``group_ids`` is a convenience for
-        adding initial VIEWER group members atomically through
-        :class:`ContentMembersOperations`.
-        """
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
         )
@@ -176,11 +156,7 @@ class RoomOperations(BaseContentOperations[Room]):
         status: RoomStatus | None = None,
         image_file_id: UUID | None = None,
     ) -> Room:
-        """Update an existing room.
-
-        Access-policy changes (access mode, baseline role, members) go
-        through ``permissions.v1.MembersService``, never this method.
-        """
+        # Access-policy changes go through permissions.v1.MembersService, not this method.
         room = await self.get_by_id(user_id, organization_id, room_id)
         await self._require_edit(user_id, organization_id, room)
 
@@ -249,10 +225,7 @@ class RoomOperations(BaseContentOperations[Room]):
         room_id: UUID,
         permanent: bool = False,
     ) -> None:
-        """Delete a room (soft by default).
-
-        Refuses to delete rooms with future CONFIRMED bookings.
-        """
+        # Refuses to delete rooms with future CONFIRMED bookings.
         room = await self.get_by_id(user_id, organization_id, room_id)
         await self._require_delete(user_id, organization_id, room)
 
@@ -311,7 +284,6 @@ class RoomOperations(BaseContentOperations[Room]):
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Room], int]:
-        """List rooms the user can access, with filters and pagination."""
         query = select(Room).where(
             Room.organization_id == organization_id,
             Room.is_deleted == False,  # noqa: E712
@@ -373,7 +345,6 @@ class BookingOperations:
     """Room booking operations (not content-indexed)."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize booking operations."""
         self.session = session
 
     async def create_booking(
@@ -387,7 +358,6 @@ class BookingOperations:
         notes: str = "",
         event_id: UUID | None = None,
     ) -> RoomBooking:
-        """Create a booking after access and conflict checks."""
         room_ops = RoomOperations(self.session)
         room = await room_ops.get_by_id(user_id, organization_id, room_id)
         if room.status != RoomStatus.ACTIVE:
@@ -429,7 +399,7 @@ class BookingOperations:
         organization_id: UUID,
         booking_id: UUID,
     ) -> RoomBooking:
-        """Cancel a booking (booker or org admin only)."""
+        # Booker or org admin only.
         result = await self.session.execute(
             select(RoomBooking).where(
                 and_(
@@ -462,7 +432,6 @@ class BookingOperations:
         organization_id: UUID,
         booking_id: UUID,
     ) -> RoomBooking:
-        """Get a single booking by ID."""
         result = await self.session.execute(
             select(RoomBooking).where(
                 and_(
@@ -487,7 +456,6 @@ class BookingOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[tuple[RoomBooking, str, str]], int]:
-        """List bookings (joined with room and booker names)."""
         booker = aliased(User)
 
         room_ops = RoomOperations(self.session)
@@ -540,7 +508,6 @@ class BookingOperations:
         start_date: datetime,
         end_date: datetime,
     ) -> list[dict]:
-        """Return occupied time slots for a room in a date range."""
         booking_rows = await queries.get_room_bookings_in_range(
             self.session,
             room_id,
@@ -570,7 +537,6 @@ class BookingOperations:
         amenities: list[str] | None = None,
         room_type: RoomType | None = None,
     ) -> list[Room]:
-        """Find rooms available during a specific time range."""
         return await queries.find_available_rooms(
             self.session,
             organization_id,
@@ -585,14 +551,12 @@ class BookingOperations:
         self,
         event_id: UUID,
     ) -> RoomBooking | None:
-        """Return the confirmed booking linked to a calendar event."""
         return await queries.get_booking_for_event(self.session, event_id)
 
     async def cancel_booking_for_event(
         self,
         event_id: UUID,
     ) -> None:
-        """Cancel any confirmed booking linked to a calendar event."""
         booking = await queries.get_booking_for_event(self.session, event_id)
         if booking is not None:
             booking.status = BookingStatus.CANCELLED
@@ -600,15 +564,11 @@ class BookingOperations:
             await self.session.commit()
 
 
-# Content loader registration
-
-
 async def _load_room(
     session: AsyncSession,
     organization_id: UUID,
     content_id: UUID,
 ) -> Room | None:
-    """Loader used by ``ContentMembersOperations`` to fetch a room row."""
     result = await session.execute(
         select(Room).where(
             Room.id == content_id,

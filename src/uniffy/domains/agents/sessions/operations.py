@@ -41,19 +41,9 @@ def apply_emergency_truncation(
 ) -> list[AgentMessage]:
     """Drop oldest tool rows when active context exceeds the row cap.
 
-    Compaction is async (ARQ ``compact_session``); the worker may not
-    have caught up by the time the runtime issues an LLM call. This is
-    the in-memory safety net. We have no per-row token data anymore (we
-    only trust provider-reported prompt sizes), so the cap is row-based:
-    if the active context is over ``EMERGENCY_TRUNCATION_KEEP_ROWS``,
-    drop oldest ``role="tool"`` rows until we fit. Orphaned ``tool_use``
-    blocks left on assistant messages are tolerated --
-    ``RuntimeOperations._build_llm_messages`` synthesises an
-    "interrupted" tool_result for any orphan.
-
-    Summary messages are never dropped (they are the compressed history).
-    ``token_budget`` is accepted for API compatibility but unused.
-    Returns the trimmed list. Mutates nothing in place.
+    In-memory safety net for the gap between an over-budget read and the
+    async compaction worker catching up. Summary rows are never dropped;
+    orphaned `tool_use` blocks are tolerated by the LLM message builder.
     """
     del token_budget  # unused; sizing is row-based now
     if len(context) <= EMERGENCY_TRUNCATION_KEEP_ROWS:
@@ -93,8 +83,6 @@ MAX_CONTEXT_SUMMARIES = 5
 
 @dataclass
 class CompactionResult:
-    """Result of a compaction operation."""
-
     performed: bool
     messages_compacted: int = 0
     tokens_before: int = 0
@@ -107,33 +95,15 @@ class CompactionResult:
 class _CompactionUnit:
     """Atomic group of messages that must be compacted together.
 
-    A unit is one of:
-    - A standalone user message
-    - A standalone assistant message (no tool calls)
-    - An assistant tool-call chain (assistant with tool_use + all tool
-      results + optional final assistant response)
+    A unit is one of: a standalone user message, a standalone assistant
+    message, or an assistant tool-call chain (tool_use + results + final).
     """
 
     messages: list[AgentMessage]
 
 
 def _build_compaction_units(messages: list[AgentMessage]) -> list[_CompactionUnit]:
-    """Group messages into atomic compaction units.
-
-    Tool call chains (assistant tool_use + tool results) are grouped
-    together so they are never split during compaction.
-
-    Parameters
-    ----------
-    messages : list[AgentMessage]
-        Messages ordered by created_at (oldest first).
-
-    Returns
-    -------
-    list[_CompactionUnit]
-        Ordered list of compaction units.
-
-    """
+    """Group messages into atomic compaction units; tool chains stay together."""
     units: list[_CompactionUnit] = []
     i = 0
 
@@ -165,14 +135,7 @@ def _build_compaction_units(messages: list[AgentMessage]) -> list[_CompactionUni
 
 
 class SessionOperations:
-    """Operations for managing conversation sessions.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Operations for managing conversation sessions."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -188,38 +151,7 @@ class SessionOperations:
         display_name: str | None = None,
         model_override: str | None = None,
     ) -> AgentSession:
-        """Create a new conversation session.
-
-        Always creates a new session regardless of kind.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user creating the session.
-        organization_id : UUID
-            Organization context.
-        agent_id : UUID
-            Agent to converse with.
-        kind : str
-            Session kind: "direct", "group", or "global".
-        display_name : str | None
-            Optional user-provided name.
-        model_override : str | None
-            Optional per-session model override.
-
-        Returns
-        -------
-        AgentSession
-            The created or existing session.
-
-        Raises
-        ------
-        ValidationError
-            If kind is invalid.
-        PermissionDeniedError
-            If user is not an org member.
-
-        """
+        """Create a new conversation session."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         if kind not in VALID_SESSION_KINDS:
@@ -245,32 +177,7 @@ class SessionOperations:
         organization_id: UUID,
         session_id: UUID,
     ) -> AgentSession:
-        """Fetch a session by ID.
-
-        Verifies the user owns the session or it is a global session.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to fetch.
-
-        Returns
-        -------
-        AgentSession
-            The session.
-
-        Raises
-        ------
-        NotFoundError
-            If the session does not exist.
-        PermissionDeniedError
-            If the user cannot access this session.
-
-        """
+        """Fetch a session; the user must own it or it must be a global session."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         result = await self._session.execute(
@@ -297,41 +204,9 @@ class SessionOperations:
         kind: str | None = None,
         is_archived: bool | None = None,
     ) -> tuple[list[AgentSession], int]:
-        """List sessions for a user in an organization.
-
-        Returns the user's own sessions plus any global sessions.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        page : int
-            Page number (1-based).
-        page_size : int
-            Results per page.
-        agent_id : UUID | None
-            Optional filter by agent.
-        kind : str | None
-            Optional filter by session kind.
-        is_archived : bool | None
-            Optional filter by archived status.
-
-        Returns
-        -------
-        tuple[list[AgentSession], int]
-            (sessions, total_count).
-
-        Raises
-        ------
-        PermissionDeniedError
-            If user is not an org member.
-
-        """
+        """User's own sessions plus global sessions, with optional filters."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        # User sees their own sessions + global sessions
         base_filter = and_(
             AgentSession.organization_id == organization_id,
             or_(
@@ -374,34 +249,7 @@ class SessionOperations:
         display_name: str | None = None,
         model_override: str | None = None,
     ) -> AgentSession:
-        """Update session settings.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to update.
-        display_name : str | None
-            New display name (None = no change).
-        model_override : str | None
-            New model override (None = no change).
-
-        Returns
-        -------
-        AgentSession
-            The updated session.
-
-        Raises
-        ------
-        NotFoundError
-            If the session does not exist.
-        PermissionDeniedError
-            If the user cannot modify this session.
-
-        """
+        """Update session settings; `None` arguments leave the field unchanged."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         result = await self._session.execute(
@@ -434,25 +282,7 @@ class SessionOperations:
         organization_id: UUID,
         session_id: UUID,
     ) -> None:
-        """Archive a session (soft delete).
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to archive.
-
-        Raises
-        ------
-        NotFoundError
-            If the session does not exist.
-        PermissionDeniedError
-            If the user cannot archive this session.
-
-        """
+        """Archive a session (soft delete)."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         result = await self._session.execute(
@@ -490,55 +320,7 @@ class SessionOperations:
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
     ) -> AgentMessage:
-        """Add a message to a session.
-
-        Creates the message and updates session aggregate counters
-        (token counts, message_count, last_model_used, updated_at).
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to add message to.
-        role : str
-            Message role: "user", "assistant", "tool", "system", "summary".
-        content : str | None
-            Text content (nullable for tool messages).
-        input_tokens : int
-            Input tokens consumed.
-        output_tokens : int
-            Output tokens produced.
-        model : str | None
-            Which model produced this message.
-        tool_name : str | None
-            Tool name for tool-role messages.
-        tool_call_id : str | None
-            Anthropic tool_use ID.
-        tool_args : dict | None
-            Tool call arguments.
-        tool_result : str | None
-            Tool execution result.
-        is_thinking : bool
-            Whether this is a thinking/reasoning message.
-
-        Returns
-        -------
-        AgentMessage
-            The created message.
-
-        Raises
-        ------
-        NotFoundError
-            If the session does not exist.
-        PermissionDeniedError
-            If the user cannot add messages to this session.
-        ValidationError
-            If the role is invalid.
-
-        """
+        """Add a message and update session aggregates (tokens, count, model)."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         if role not in VALID_MESSAGE_ROLES:
@@ -573,7 +355,6 @@ class SessionOperations:
         )
         self._session.add(message)
 
-        # Update session aggregates
         agent_session.total_input_tokens += input_tokens
         agent_session.total_output_tokens += output_tokens
         agent_session.message_count += 1
@@ -590,13 +371,7 @@ class SessionOperations:
         *,
         session_id: UUID,
     ) -> AgentMessage:
-        """Insert an empty assistant message marked ``was_cancelled``.
-
-        Called from the worker after the user cancels a run mid-stream so
-        the UI can show an "Agent response cancelled" placeholder that
-        survives page refreshes. Bumps ``message_count`` so future loads
-        order it correctly.
-        """
+        """Insert an empty `was_cancelled` assistant placeholder after a user cancel."""
         result = await self._session.execute(
             select(AgentSession).where(AgentSession.id == session_id)
         )
@@ -629,39 +404,9 @@ class SessionOperations:
         page_size: int = 50,
         include_compacted: bool = False,
     ) -> tuple[list[AgentMessage], int]:
-        """List messages in a session ordered by created_at.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to list messages for.
-        page : int
-            Page number (1-based).
-        page_size : int
-            Results per page.
-        include_compacted : bool
-            Whether to include compacted messages (default False).
-
-        Returns
-        -------
-        tuple[list[AgentMessage], int]
-            (messages, total_count).
-
-        Raises
-        ------
-        NotFoundError
-            If the session does not exist.
-        PermissionDeniedError
-            If the user cannot access this session.
-
-        """
+        """List session messages ordered by created_at."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        # Verify session exists and user has access
         session_result = await self._session.execute(
             select(AgentSession).where(
                 AgentSession.id == session_id,
@@ -795,16 +540,11 @@ class SessionOperations:
     async def _latest_active_prompt_tokens(
         self, session_id: UUID
     ) -> tuple[int, int, int]:
-        """Provider-reported size of the most recent active assistant turn.
+        """Return `(prompt, output, cache_read)` tokens for the latest assistant turn.
 
-        Returns ``(prompt_tokens, output_tokens, cache_read_tokens)``
-        for the latest non-compacted assistant message. ``prompt_tokens``
-        is the full prompt the model saw -- uncached input plus tokens
-        served from the prompt cache, since both count toward context
-        window pressure even though cache reads are billed at ~10%.
-        ``cache_read_tokens`` is surfaced separately so the meter can
-        show how much of the prompt was free. Returns ``(0, 0, 0)`` if
-        no assistant has replied yet.
+        `prompt` is the FULL size (uncached input + cache hits) since both
+        count toward context window pressure; cache hits are surfaced
+        separately so the meter can show the savings.
         """
         result = await self._session.execute(
             select(
@@ -838,38 +578,10 @@ class SessionOperations:
     ) -> tuple[list[AgentMessage], int]:
         """Get messages for LLM context assembly.
 
-        Returns active summaries (capped at the most recent
-        ``MAX_CONTEXT_SUMMARIES``) followed by the most recent
-        ``MAX_CONTEXT_RECENT_MESSAGES`` non-summary messages. We size
-        by row count instead of per-message token heuristic: provider-
-        reported tokens only exist on assistant messages, so any per-
-        row estimate would be a guess. The async compaction worker
-        keeps the active set bounded; ``apply_emergency_truncation`` is
-        the in-memory safety net.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to get context for.
-        token_budget : int | None
-            Accepted for API compatibility, unused (sizing is row-based).
-
-        Returns
-        -------
-        tuple[list[AgentMessage], int]
-            (context_messages, total_non_compacted_count).
-
-        Raises
-        ------
-        NotFoundError
-            If the session does not exist.
-        PermissionDeniedError
-            If the user cannot access this session.
-
+        Returns the most recent summaries followed by the most recent
+        non-summary messages. Sizing is row-based -- per-message token
+        estimates would be guesses since provider counts only exist on
+        assistant rows. The compaction worker keeps the active set bounded.
         """
         del token_budget  # unused
         await self._org_ops.require_org_member(user_id, organization_id)
@@ -930,23 +642,7 @@ class SessionOperations:
         agent_session: AgentSession,
         user_id: UUID,
     ) -> None:
-        """Verify user can access a session.
-
-        Users can access sessions they own or global sessions.
-
-        Parameters
-        ----------
-        agent_session : AgentSession
-            The session to check.
-        user_id : UUID
-            The requesting user.
-
-        Raises
-        ------
-        PermissionDeniedError
-            If access is denied.
-
-        """
+        """Owner or global session only."""
         if agent_session.user_id != user_id and agent_session.kind != "global":
             raise PermissionDeniedError("access", "AgentSession")
 
@@ -956,23 +652,6 @@ class SessionOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Verify user owns the session or is an org admin.
-
-        Parameters
-        ----------
-        agent_session : AgentSession
-            The session to check.
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context (for future admin check).
-
-        Raises
-        ------
-        PermissionDeniedError
-            If the user is not the session owner.
-
-        """
         if agent_session.user_id != user_id:
             raise PermissionDeniedError("modify", "AgentSession")
 
@@ -986,15 +665,9 @@ class SessionOperations:
     ) -> AgentMessage:
         """Edit a user message in-place and invalidate every later message.
 
-        Within ``EDIT_WINDOW_SECONDS`` of the original creation. The
-        message is preserved (not invalidated) so the timeline anchor
-        survives; everything chronologically after it is soft-deleted
-        so the runtime context loader skips them. The previous content
-        is snapshotted onto ``previous_content`` for audit / undo UX.
-
-        Refused if a run is currently in flight on the session: editing
-        the message under a live LLM call would invalidate the very
-        rows the runtime is about to write.
+        Allowed within `EDIT_WINDOW_SECONDS`. Previous content is snapshotted
+        onto `previous_content`. Refused while a run is in flight on the
+        session -- the edit would invalidate rows the runtime is about to write.
         """
         await self._org_ops.require_org_member(user_id, organization_id)
 
@@ -1045,12 +718,7 @@ class SessionOperations:
         organization_id: UUID,
         message_id: UUID,
     ) -> int:
-        """Soft-delete a single message (any role).
-
-        Returns ``1`` when the row was newly invalidated, ``0`` when it
-        was already invalidated. The session's ``updated_at`` is bumped.
-        Refused if a run is currently in flight.
-        """
+        """Soft-delete a message; returns 1 if newly invalidated, 0 if not."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         msg, agent_session = await self._load_message(
@@ -1080,16 +748,7 @@ class SessionOperations:
         organization_id: UUID,
         message_id: UUID,
     ) -> tuple[str, list[str]]:
-        """Walk back to the user message anchor and prepare it for re-send.
-
-        For a user message: returns its content and ``file_ids``,
-        invalidates everything after it. The anchor message itself is
-        preserved so the next ``add_message`` call appends to a clean
-        timeline. For an assistant message: walks back to the most
-        recent preceding user message and returns that.
-
-        Refused if a run is currently in flight.
-        """
+        """Walk back to the user anchor, invalidate everything after, return content + files."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         msg, agent_session = await self._load_message(
@@ -1164,7 +823,6 @@ class SessionOperations:
         organization_id: UUID,
         message_id: UUID,
     ) -> tuple[AgentMessage, AgentSession]:
-        """Internal: fetch a message + its session, gated on access."""
         result = await self._session.execute(
             select(AgentMessage, AgentSession)
             .join(AgentSession, AgentMessage.session_id == AgentSession.id)
@@ -1224,21 +882,9 @@ class SessionOperations:
     ) -> bool:
         """Enqueue async compaction when active context exceeds the budget.
 
-        The active-tokens probe reads provider-reported
-        ``input_tokens + output_tokens`` from the latest non-compacted
-        assistant message -- the ground truth for "how big the prompt
-        was last turn". When that exceeds ``token_budget`` an ARQ
-        ``compact_session`` job is enqueued. The worker side is
-        idempotent via a Valkey ``SET NX compaction_lock:{session_id}``
-        lock, so spamming this helper across concurrent requests does
-        not duplicate the work.
-
-        Returns
-        -------
-        bool
-            True if a job was enqueued (or attempted), False if the
-            session was under budget.
-
+        Probes provider-reported `input + output` on the latest assistant
+        row. Worker-side idempotency via a Valkey `SET NX compaction_lock`
+        so concurrent enqueues do not duplicate work.
         """
         if token_budget <= 0:
             return False
@@ -1280,34 +926,10 @@ class SessionOperations:
         context_window_tokens: int = FALLBACK_CONTEXT_WINDOW,
         force: bool = False,
     ) -> CompactionResult:
-        """Compact old messages when estimated token usage exceeds the budget.
+        """Compact oldest message units when usage exceeds the budget.
 
-        Groups messages into atomic "compaction units" (standalone messages
-        or tool-call chains) and compacts the oldest units until active
-        token usage drops below the target ratio (40% of context window).
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to compact.
-        provider : LLMProvider
-            LLM provider for generating the summary.
-        model : str
-            Model to use for summarization.
-        context_window_tokens : int
-            Model context window size in tokens.
-        force : bool
-            Force compaction regardless of token usage.
-
-        Returns
-        -------
-        CompactionResult
-            Stats about the compaction operation.
-
+        Tool-call chains stay grouped. Compacts a fraction of the oldest
+        units; the next turn re-triggers if still over.
         """
         no_op = CompactionResult(performed=False)
         token_budget = int(context_window_tokens * DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO)
@@ -1333,9 +955,7 @@ class SessionOperations:
         if len(units) < 2:
             return no_op
 
-        # Compact a fraction of the oldest units. Without per-row token
-        # data we no longer compact "until we hit a target ratio"; we
-        # compact a chunk and let the next turn re-trigger if still over.
+        # Compact a chunk of the oldest units; next turn re-triggers if still over.
         max_compactable = len(units) - 1
         units_to_drop = max(1, int(max_compactable * COMPACTION_FRACTION))
         units_to_compact = units[:units_to_drop]
@@ -1382,8 +1002,7 @@ class SessionOperations:
             max_summaries=MAX_CONTEXT_SUMMARIES,
         )
 
-        # tokens_after is unknown until the next live turn reports back
-        # via input_tokens. We report 0 here rather than estimate.
+        # tokens_after is unknown until the next live turn reports back; report 0.
         return CompactionResult(
             performed=True,
             messages_compacted=len(messages_to_compact),
@@ -1401,29 +1020,7 @@ class SessionOperations:
         model: str,
         max_summaries: int = 5,
     ) -> bool:
-        """Merge old summaries when they exceed the limit.
-
-        Keeps the most recent ``max_summaries - 1`` summaries intact
-        and consolidates all older ones into a single super-summary.
-        This prevents unbounded summary growth in long-running sessions.
-
-        Parameters
-        ----------
-        session_id : UUID
-            Session whose summaries to consolidate.
-        provider : LLMProvider
-            LLM provider for generating the consolidated summary.
-        model : str
-            Model to use for summarization.
-        max_summaries : int
-            Maximum number of summary messages to keep.
-
-        Returns
-        -------
-        bool
-            True if consolidation was performed.
-
-        """
+        """Merge old summaries into a single super-summary when over the limit."""
         summary_result = await self._session.execute(
             select(AgentMessage)
             .where(
@@ -1438,7 +1035,6 @@ class SessionOperations:
         if len(all_summaries) <= max_summaries:
             return False
 
-        # Keep the newest (max_summaries - 1), consolidate the rest
         to_merge = all_summaries[: -(max_summaries - 1)]
         merge_text = "\n\n---\n\n".join(s.content for s in to_merge if s.content)
 
@@ -1467,7 +1063,6 @@ class SessionOperations:
         if not merged_content:
             return False
 
-        # Mark old summaries as compacted
         for summary in to_merge:
             summary.is_compacted = True
 

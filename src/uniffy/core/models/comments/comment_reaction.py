@@ -10,26 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class CommentReaction(SQLModel, table=True):
-    """
-    Reaction model for comments.
-
-    Each reaction links a user + emoji to a comment. The unique constraint
-    on (comment_id, user_id, emoji) prevents duplicate reactions.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the reaction (primary key).
-    comment_id : UUID
-        Comment this reaction is on (foreign key, CASCADE delete).
-    user_id : UUID
-        User who added the reaction (foreign key).
-    emoji : str
-        Emoji character or shortcode (max 32 chars).
-    created_at : datetime
-        When the reaction was added.
-
-    """
+    """Emoji reaction on a comment; unique per (comment, user, emoji)."""
 
     __tablename__ = "comments_reactions"
 
@@ -52,7 +33,6 @@ class CommentReaction(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of CommentReaction."""
         return (
             f"<CommentReaction(id={self.id}, comment_id={self.comment_id}, "
             f"user_id={self.user_id}, emoji={self.emoji})>"

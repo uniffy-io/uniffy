@@ -1,17 +1,6 @@
-"""Background tag-index workers.
+"""Tag reindex workers: refresh per-URN `tags` arrays and per-tag entity docs.
 
-``reindex_tag_urns(org_id, urns)`` rewrites the ``tags`` array on every
-indexed content document for the given URN set. Triggered when a tag's
-slug changes; chunks the work into bulk Meili ``update_documents``
-calls so a 100k-assignment rename never blocks the rename RPC.
-
-``reindex_tag_doc(org_id, tag_id)`` refreshes the tag entity's own
-Meilisearch document plus a live ``tag.updated`` publish that drives
-chip-state patching. ARQ ``_job_id`` deduplicates a burst of writes
-touching the same tag.
-
-Both jobs are idempotent: they re-read current state and replay it,
-converging on the same answer when run twice.
+Both jobs re-read current state, so they are idempotent under retries.
 """
 
 from typing import Any
@@ -38,11 +27,7 @@ async def reindex_tag_urns(
     organization_id: str,
     content_urns: list[str],
 ) -> dict[str, Any]:
-    """Refresh the ``tags`` field on every URN in ``content_urns``.
-
-    Chunks at 500 URNs per Meilisearch round-trip. Returns a small
-    summary so the worker dashboard can graph throughput.
-    """
+    """Rewrite the `tags` array on every URN, chunked at 500 per Meilisearch call."""
     if not content_urns:
         return {"status": "skipped", "reason": "no_urns"}
 
@@ -85,14 +70,7 @@ async def reindex_tag_doc(
     organization_id: str,
     tag_id: str,
 ) -> dict[str, Any]:
-    """Refresh a single tag's Meilisearch document and broadcast its state.
-
-    Called from ``TagOperations.assign`` / ``unassign`` after the
-    underlying assignment row commits. Running here keeps the
-    assign-path latency flat regardless of how many tags the call
-    touched. Job dedup is via ARQ ``_job_id`` so a burst of writes
-    coalesces to one rewrite.
-    """
+    """Refresh a tag's Meilisearch entity doc and broadcast `tag.updated`."""
     org_id = UUID(organization_id)
     tid = UUID(tag_id)
 

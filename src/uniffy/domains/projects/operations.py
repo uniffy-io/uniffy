@@ -58,38 +58,30 @@ _SLUG_PATTERN = re.compile(r"^[A-Z][A-Z0-9]{1,4}$")
 
 
 class ProjectOperations(BaseContentOperations[Project]):
-    """Project CRUD with permissions and search."""
-
     content_type = ContentType.PROJECT
     model_class = Project
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize project operations."""
         super().__init__(session)
 
     def _build_search_keywords(self, model: Project) -> str:
-        """Aggregate searchable text from a project."""
         parts = [model.name]
         if model.description:
             parts.append(model.description)
         return " ".join(parts)
 
     def _get_search_title(self, model: Project) -> str:
-        """Return the project name for the search index."""
         return model.name
 
     def _get_url_path(self, model: Project) -> str:
-        """Return the frontend route for this project."""
         return f"/projects/{model.id}"
 
     def _get_search_description(self, model: Project) -> str | None:
-        """Return a description snippet for search results."""
         if model.description:
             return model.description[:200]
         return None
 
     async def _get_search_tags_async(self, model: Project) -> list[str] | None:
-        """Return tag slugs for a project from the unified store."""
         tag_ops = TagOperations(self.session)
         urn = build_content_urn(self.content_type, model.id)
         bulk = await tag_ops.get_for_urns(
@@ -106,10 +98,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         project: Project,
         tag_ids: list[UUID] | None,
     ) -> None:
-        """Reconcile manual tag assignments after a project write.
-
-        ``tag_ids=None`` leaves manual assignments untouched.
-        """
+        """``tag_ids=None`` leaves manual assignments untouched."""
         if tag_ids is None:
             return
         tag_ops = TagOperations(self.session)
@@ -134,12 +123,8 @@ class ProjectOperations(BaseContentOperations[Project]):
         slug: str | None = None,
         tag_ids: list[UUID] | None = None,
     ) -> Project:
-        """Create a project with default fields, views, and the owner as member.
-
-        ``access_mode`` and ``baseline_role`` default to the org defaults
-        for ``ContentType.PROJECT``. ``group_ids`` is a convenience for
-        adding initial VIEWER group members through
-        :class:`ContentMembersOperations`.
+        """``access_mode`` / ``baseline_role`` default to the org defaults
+        for ``ContentType.PROJECT``.
         """
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
@@ -200,16 +185,10 @@ class ProjectOperations(BaseContentOperations[Project]):
         project_id: UUID,
         **kwargs,
     ) -> Project:
-        """Update project metadata.
-
-        Access-policy changes (access mode, baseline role, members) go
-        through ``permissions.v1.MembersService``, never this method.
-        """
+        """Access-policy changes go through ``permissions.v1.MembersService``, never this method."""
         project = await self.get_by_id(user_id, organization_id, project_id)
         await self._require_manage(user_id, organization_id, project)
 
-        # Access-policy fields are not settable via update(); they go
-        # through MembersService.
         kwargs.pop("access_mode", None)
         kwargs.pop("baseline_role", None)
         tag_ids = kwargs.pop("tag_ids", None)
@@ -261,7 +240,6 @@ class ProjectOperations(BaseContentOperations[Project]):
         project_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        """Soft or permanent delete, cascading to tasks/fields/views."""
         project = await self.get_by_id(user_id, organization_id, project_id)
         await self._require_delete(user_id, organization_id, project)
 
@@ -304,9 +282,7 @@ class ProjectOperations(BaseContentOperations[Project]):
         await self.search_indexer.remove(
             build_content_urn(self.content_type, project_id), organization_id
         )
-        # Cascade: drop every task indexed under this project so global
-        # search stops surfacing them. ``metadata.project_id`` is
-        # filterable; populated by ``TaskOperations._get_search_metadata``.
+        # Drop tasks indexed under this project; ``metadata.project_id`` is filterable.
         await self.search_indexer.remove_by_filter(
             f'entity_type = "task" AND metadata.project_id = "{project_id}"'
         )
@@ -321,7 +297,6 @@ class ProjectOperations(BaseContentOperations[Project]):
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Project], int]:
-        """List projects the user can access."""
         query = select(Project).where(Project.organization_id == organization_id)
 
         is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
@@ -360,7 +335,6 @@ class ProjectOperations(BaseContentOperations[Project]):
         return projects, total
 
     def _generate_slug_candidate(self, name: str) -> str:
-        """Generate an uppercase slug candidate from a project name."""
         words = [w for w in name.split() if w]
         if len(words) >= 2:
             candidate = "".join(w[0] for w in words)[:5].upper()
@@ -375,7 +349,6 @@ class ProjectOperations(BaseContentOperations[Project]):
         name: str,
         requested_slug: str | None,
     ) -> str:
-        """Resolve a unique slug for a project within an organization."""
         candidate = requested_slug.upper() if requested_slug else self._generate_slug_candidate(name)
         if not _SLUG_PATTERN.match(candidate):
             raise ValidationError(
@@ -396,7 +369,6 @@ class ProjectOperations(BaseContentOperations[Project]):
         return candidate[:4] + secrets.token_hex(1).upper()
 
     async def _create_default_fields(self, project_id: UUID) -> None:
-        """Create the default system fields for a new project."""
         default_fields = [
             FieldDefinition(
                 id="field_title",
@@ -587,39 +559,30 @@ class TaskOperations(BaseContentOperations[Task]):
     model_class = Task
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize task operations."""
         super().__init__(session)
 
     def _build_search_keywords(self, model: Task) -> str:
-        """Aggregate searchable text for a task."""
         parts = [model.title]
         if model.description:
             parts.append(model.description)
         return " ".join(parts)
 
     def _get_search_title(self, model: Task) -> str:
-        """Return the task title for the search index."""
         return model.title
 
     def _get_url_path(self, model: Task) -> str:
-        """Return the frontend route for this task."""
         return f"/projects/{model.project_id}/tasks/{model.id}"
 
     def _get_search_description(self, model: Task) -> str | None:
-        """Return a description snippet for search results."""
         if model.description:
             return model.description[:200]
         return None
 
     def _get_search_metadata(self, model: Task) -> dict[str, str] | None:
-        """Index ``project_id`` so deleting a project can cascade-remove
-        every task it owned from the search index in a single filter
-        call.
-        """
+        """``project_id`` is filterable so project delete can cascade-remove tasks in one call."""
         return {"project_id": str(model.project_id)}
 
     async def _get_search_tags_async(self, model: Task) -> list[str] | None:
-        """Return tag slugs for a task from the unified store."""
         tag_ops = TagOperations(self.session)
         urn = build_content_urn(self.content_type, model.id)
         bulk = await tag_ops.get_for_urns(
@@ -636,10 +599,7 @@ class TaskOperations(BaseContentOperations[Task]):
         task: Task,
         tag_ids: list[UUID] | None,
     ) -> None:
-        """Reconcile manual tag assignments after a task write.
-
-        ``tag_ids=None`` leaves manual assignments untouched.
-        """
+        """``tag_ids=None`` leaves manual assignments untouched."""
         if tag_ids is None:
             return
         tag_ops = TagOperations(self.session)
@@ -651,7 +611,7 @@ class TaskOperations(BaseContentOperations[Task]):
         )
 
     def _tag_filter_subquery(self, tag_ids: list[UUID]):
-        """Subquery: task ids that carry every tag id in ``tag_ids`` (ALL)."""
+        """Task ids that carry every tag id (ALL)."""
         urn_prefix = "urn:uniffy:content:TASK:"
         urn_expr = func.concat(urn_prefix, cast(Task.id, String))
         return (
@@ -663,7 +623,7 @@ class TaskOperations(BaseContentOperations[Task]):
         )
 
     def _tag_any_subquery(self, tag_ids: list[UUID]):
-        """Subquery: task ids that carry at least one tag id in ``tag_ids``."""
+        """Task ids that carry at least one tag id (ANY)."""
         urn_prefix = "urn:uniffy:content:TASK:"
         urn_expr = func.concat(urn_prefix, cast(Task.id, String))
         return (
@@ -679,7 +639,7 @@ class TaskOperations(BaseContentOperations[Task]):
         organization_id: UUID,
         content: Task,
     ) -> ContentRole | None:
-        """Tasks inherit their role from the parent project."""
+        """Tasks inherit role from the parent project."""
         project = await self.session.get(Project, content.project_id)
         if project is None:
             return None
@@ -698,7 +658,7 @@ class TaskOperations(BaseContentOperations[Task]):
         model: Task,
         skip_member_lookup: bool = False,
     ) -> None:
-        """Index a task using its parent project's access policy."""
+        """Indexes the task under its parent project's access policy."""
         project = await self.session.get(Project, model.project_id)
         if project is None:
             return
@@ -709,8 +669,7 @@ class TaskOperations(BaseContentOperations[Task]):
         blocked_group_ids: list[UUID] = []
 
         if not skip_member_lookup:
-            # Tasks inherit access from the project, so index sharing
-            # metadata against the project's members.
+            # Index sharing metadata against the project's members.
             from uniffy.core.models.permissions.content_member import ContentMember
             from uniffy.core.types import SubjectType as SubjectTypeLocal
 
@@ -774,7 +733,7 @@ class TaskOperations(BaseContentOperations[Task]):
         tag_ids: list[UUID] | None = None,
         **kwargs,
     ) -> Task:
-        """Create a task (requires EDIT on the parent project)."""
+        """Requires EDIT on the parent project."""
         project_ops = ProjectOperations(self.session)
         project = await project_ops.get_by_id(user_id, organization_id, project_id)
         await project_ops._require_edit(user_id, organization_id, project)
@@ -863,7 +822,6 @@ class TaskOperations(BaseContentOperations[Task]):
         task_id: UUID,
         **kwargs,
     ) -> tuple[Task, Task | None]:
-        """Update task fields and log relevant activities."""
         task = await self.get_by_id(user_id, organization_id, task_id)
         await self._require_edit(user_id, organization_id, task)
 
@@ -1138,7 +1096,6 @@ class TaskOperations(BaseContentOperations[Task]):
         completed_task: Task,
         organization_id: UUID,
     ) -> Task | None:
-        """Spawn the next instance of a recurring task after completion."""
         config = parse_recurrence_config(completed_task.recurrence_rule)
         if not config:
             return None
@@ -1213,7 +1170,6 @@ class TaskOperations(BaseContentOperations[Task]):
         status: str,
         sort_order: int,
     ) -> tuple[Task, Task | None]:
-        """Move task to a new status/position (board drag-and-drop)."""
         return await self.update(
             user_id,
             organization_id,
@@ -1229,7 +1185,6 @@ class TaskOperations(BaseContentOperations[Task]):
         task_ids: list[str],
         **changes,
     ) -> list[Task]:
-        """Update multiple tasks in one call."""
         updated: list[Task] = []
         for task_id in task_ids:
             task, _ = await self.update(user_id, organization_id, UUID(task_id), **changes)
@@ -1243,7 +1198,6 @@ class TaskOperations(BaseContentOperations[Task]):
         task_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        """Soft or permanent delete a task."""
         task = await self.get_by_id(user_id, organization_id, task_id)
         await self._require_delete(user_id, organization_id, task)
 
@@ -1296,15 +1250,8 @@ class TaskOperations(BaseContentOperations[Task]):
         page: int = 1,
         page_size: int = 500,
     ) -> tuple[list[Task], int]:
-        """List tasks for a project.
-
-        ``tag_ids`` + ``tag_filter_mode`` (``"all"`` / ``"any"`` / ``"none"``)
-        filter against the unified ``tag_assignments`` store via JOIN on
-        the synthesised task URN.
-
-        ``in_epic_id``, ``min_depth``, and ``max_depth`` are resolved through
-        a single recursive CTE that walks each task up its parent chain. The
-        CTE is only built when at least one of those filters is active.
+        """``tag_filter_mode`` is ``all``/``any``/``none``; epic/depth
+        filters use a recursive ancestry CTE.
         """
         project_ops = ProjectOperations(self.session)
         await project_ops.get_by_id(user_id, organization_id, project_id)
@@ -1394,11 +1341,8 @@ class TaskOperations(BaseContentOperations[Task]):
         return tasks, total
 
     def _build_ancestry_cte(self, project_id: UUID, organization_id: UUID):
-        """Recursive CTE producing ``(task_id, ancestor_id, depth)`` tuples.
-
-        For every non-deleted task in the project, emits one row per ancestor
-        in its parent chain (including itself at depth 0). ``ancestor_id``
-        equal to the task's own id with ``depth == 0`` marks the task itself.
+        """Emits ``(task_id, ancestor_id, depth)`` per ancestor, with depth
+        0 marking the task itself.
         """
         task_alias = Task.__table__.alias("t_anchor")
         base = (
@@ -1443,7 +1387,6 @@ class TaskOperations(BaseContentOperations[Task]):
         task: Task,
         new_status: str,
     ) -> list[dict[str, str]]:
-        """Return any unresolved blocker tasks when completing ``task``."""
         if new_status != "status_done":
             return []
 
@@ -1476,7 +1419,6 @@ class TaskOperations(BaseContentOperations[Task]):
         task_id: UUID,
         blocked_by_task_ids: list[str],
     ) -> None:
-        """Raise if proposed blocker ids would create a cycle."""
         task_id_str = str(task_id)
         if task_id_str in blocked_by_task_ids:
             raise ValidationError("blocked_by", "A task cannot be blocked by itself")
@@ -1523,13 +1465,7 @@ class TaskOperations(BaseContentOperations[Task]):
         task_id: UUID | None,
         proposed_parent_id: UUID,
     ) -> None:
-        """Reject self-parent, parent cycles, and chains deeper than 5.
-
-        Walks up the proposed parent's ancestor chain. On the update path the
-        caller supplies ``task_id`` so we can detect cycles; on the create path
-        the task is not yet persisted, ``task_id`` is None, and only the depth
-        limit and chain-internal cycles are checked.
-        """
+        """Reject self-parent, parent cycles, and chains deeper than 5."""
         if task_id is not None and task_id == proposed_parent_id:
             raise ValidationError("parent_id", "A task cannot be its own parent")
 
@@ -1578,7 +1514,6 @@ class TaskOperations(BaseContentOperations[Task]):
         field_values: dict | None,
         task_type: str | None = None,
     ) -> None:
-        """Validate custom field values against project field definitions."""
         field_defs = await queries.get_fields_for_project(self.session, project_id)
 
         type_field_schemas = None
@@ -1602,23 +1537,6 @@ class TaskOperations(BaseContentOperations[Task]):
         status_id: str,
         priority_id: str,
     ) -> dict[str, str]:
-        """Resolve status and priority labels/colors from project field definitions.
-
-        Parameters
-        ----------
-        project_id : UUID
-            Project to look up field definitions for.
-        status_id : str
-            Status option ID (e.g., "status_todo").
-        priority_id : str
-            Priority option ID (e.g., "priority_high").
-
-        Returns
-        -------
-        dict[str, str]
-            Resolved fields: status_label, status_color, priority_label, priority_color.
-
-        """
         from uniffy.core.models.projects.field_definition import FieldDefinition
 
         stmt = select(FieldDefinition.id, FieldDefinition.config).where(
@@ -1645,7 +1563,6 @@ class TaskOperations(BaseContentOperations[Task]):
         old_assignee_ids: list[str] | None,
         new_assignee_ids: list[str] | None,
     ) -> None:
-        """Emit ``TASK_ASSIGNED`` for newly added assignees."""
         old_set = set(old_assignee_ids or [])
         new_set = set(new_assignee_ids or [])
         added = new_set - old_set
@@ -1672,7 +1589,6 @@ class TaskOperations(BaseContentOperations[Task]):
         old_references: list[str] | None,
         new_references: list[str] | None,
     ) -> None:
-        """Emit ``CONTENT_MENTIONED`` for newly mentioned users."""
         old_mentioned = extract_mentioned_user_ids(old_references)
         new_mentioned = extract_mentioned_user_ids(new_references)
         newly_mentioned = new_mentioned - old_mentioned
@@ -1698,7 +1614,6 @@ class TaskOperations(BaseContentOperations[Task]):
         actor_id: UUID,
         change_description: str,
     ) -> None:
-        """Notify watchers (except the actor) about a task change."""
         watcher_ops = WatcherOperations(self.session)
         watcher_ids = await watcher_ops.get_watcher_user_ids(task.id)
         watcher_ids = [w for w in watcher_ids if w != actor_id]
@@ -1727,7 +1642,6 @@ class TaskOperations(BaseContentOperations[Task]):
         previous_value: str | None = None,
         new_value: str | None = None,
     ) -> TaskActivity:
-        """Append an activity row for a task change."""
         activity = TaskActivity(
             task_id=task_id,
             actor_id=actor_id,
@@ -1742,27 +1656,19 @@ class TaskOperations(BaseContentOperations[Task]):
 
 
 class SprintOperations:
-    """Sprint CRUD for project iterations.
-
-    Sprints are project-scoped iteration containers and do not extend
-    :class:`BaseContentOperations`. Access is delegated to the parent
-    project.
-    """
+    """Project-scoped iteration containers; access delegates to the parent project."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize sprint operations."""
         self.session = session
 
     async def _verify_project_manage(
         self, user_id: UUID, organization_id: UUID, project_id: UUID
     ) -> None:
-        """Verify the user can manage the parent project."""
         project_ops = ProjectOperations(self.session)
         project = await project_ops.get_by_id(user_id, organization_id, project_id)
         await project_ops._require_manage(user_id, organization_id, project)
 
     async def _get_sprint(self, sprint_id: UUID, organization_id: UUID) -> Sprint:
-        """Fetch a sprint by ID within an organization."""
         result = await self.session.execute(
             select(Sprint).where(
                 Sprint.id == sprint_id,
@@ -1784,7 +1690,6 @@ class SprintOperations:
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> Sprint:
-        """Create a new sprint in the project."""
         await self._verify_project_manage(user_id, organization_id, project_id)
 
         max_result = await self.session.execute(
@@ -1823,7 +1728,7 @@ class SprintOperations:
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> Sprint:
-        """Update sprint fields. Requires manage on the parent project."""
+        """Requires manage on the parent project."""
         sprint = await self._get_sprint(sprint_id, organization_id)
         await self._verify_project_manage(user_id, organization_id, sprint.project_id)
 
@@ -1849,7 +1754,7 @@ class SprintOperations:
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> Sprint:
-        """Activate a sprint. Only one active sprint per project is allowed."""
+        """Only one active sprint per project is allowed."""
         sprint = await self._get_sprint(sprint_id, organization_id)
         await self._verify_project_manage(user_id, organization_id, sprint.project_id)
 
@@ -1878,7 +1783,6 @@ class SprintOperations:
         organization_id: UUID,
         sprint_id: UUID,
     ) -> Sprint:
-        """Mark a sprint as closed."""
         sprint = await self._get_sprint(sprint_id, organization_id)
         await self._verify_project_manage(user_id, organization_id, sprint.project_id)
 
@@ -1894,7 +1798,7 @@ class SprintOperations:
         organization_id: UUID,
         sprint_id: UUID,
     ) -> bool:
-        """Delete a sprint, moving its tasks back to the backlog."""
+        """Moves tasks back to the backlog."""
         from sqlalchemy import update as sa_update
 
         sprint = await self._get_sprint(sprint_id, organization_id)
@@ -1917,7 +1821,6 @@ class SprintOperations:
         project_id: UUID,
         include_closed: bool = False,
     ) -> list[Sprint]:
-        """List sprints for a project."""
         project_ops = ProjectOperations(self.session)
         await project_ops.get_by_id(user_id, organization_id, project_id)
 
@@ -1935,7 +1838,6 @@ class SprintOperations:
         return list(result.scalars().all())
 
     async def get_task_counts(self, sprint_ids: list[UUID]) -> dict[str, tuple[int, int]]:
-        """Return total/completed task counts per sprint id."""
         if not sprint_ids:
             return {}
 
@@ -1959,10 +1861,9 @@ class SprintOperations:
 
 
 class WatcherOperations:
-    """Task watcher operations (subscribe/unsubscribe to task updates)."""
+    """Subscribe/unsubscribe to task updates."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize watcher operations."""
         self.session = session
 
     async def toggle(
@@ -1971,7 +1872,6 @@ class WatcherOperations:
         organization_id: UUID,
         task_id: UUID,
     ) -> tuple[bool, TaskWatcher | None]:
-        """Toggle watch state for a task."""
         existing = await self._get_watcher(user_id, task_id)
         if existing:
             await self.session.delete(existing)
@@ -1989,26 +1889,22 @@ class WatcherOperations:
         return True, watcher
 
     async def is_watching(self, user_id: UUID, task_id: UUID) -> bool:
-        """Check if a user is watching a task."""
         watcher = await self._get_watcher(user_id, task_id)
         return watcher is not None
 
     async def get_watcher_user_ids(self, task_id: UUID) -> list[UUID]:
-        """Return all user IDs watching a task."""
         result = await self.session.execute(
             select(TaskWatcher.user_id).where(TaskWatcher.task_id == task_id)
         )
         return [row[0] for row in result.all()]
 
     async def get_watcher_count(self, task_id: UUID) -> int:
-        """Return the number of watchers for a task."""
         result = await self.session.execute(
             select(func.count()).where(TaskWatcher.task_id == task_id)
         )
         return result.scalar_one()
 
     async def bulk_check(self, user_id: UUID, task_ids: list[str]) -> dict[str, bool]:
-        """Return a ``{task_id: is_watching}`` mapping for a user."""
         if not task_ids:
             return {}
 
@@ -2025,7 +1921,6 @@ class WatcherOperations:
         return {tid: tid in watched for tid in task_ids}
 
     async def _get_watcher(self, user_id: UUID, task_id: UUID) -> TaskWatcher | None:
-        """Fetch a single watcher row if it exists."""
         result = await self.session.execute(
             select(TaskWatcher).where(
                 and_(
@@ -2037,15 +1932,11 @@ class WatcherOperations:
         return result.scalar_one_or_none()
 
 
-# Content loader registration
-
-
 async def _load_project(
     session: AsyncSession,
     organization_id: UUID,
     content_id: UUID,
 ) -> Project | None:
-    """Loader used by ``ContentMembersOperations`` to fetch a project row."""
     result = await session.execute(
         select(Project).where(
             Project.id == content_id,
@@ -2060,7 +1951,6 @@ async def _load_task(
     organization_id: UUID,
     content_id: UUID,
 ) -> Task | None:
-    """Loader used by ``ContentMembersOperations`` to fetch a task row."""
     result = await session.execute(
         select(Task).where(
             Task.id == content_id,
@@ -2079,7 +1969,6 @@ async def _project_attachment_cascade(
     organization_id: UUID,
     project_id: UUID,
 ) -> list[tuple[ContentType, UUID]]:
-    """Yield every task under a project as a cascade target."""
     rows = (
         await session.execute(
             select(Task.id).where(

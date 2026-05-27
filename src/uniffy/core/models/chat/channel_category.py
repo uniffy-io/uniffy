@@ -10,12 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class ChatChannelCategory(SQLModel, table=True):
-    """Admin-configurable sidebar section for organizing channels.
-
-    Categories provide visual hierarchy in the chat sidebar. Channels with
-    category_id = NULL appear in an "Uncategorized" section.
-
-    """
+    """An admin-configurable sidebar section for grouping channels."""
 
     __tablename__ = "chat_channel_categories"
     __table_args__ = (

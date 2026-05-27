@@ -1,11 +1,4 @@
-"""
-Search operations - business logic for unified search.
-
-Provides SearchOperations class that handles:
-- Fuzzy search via Meilisearch with permission filtering
-- Search result ranking
-- URN metadata resolution
-"""
+"""Unified search business logic; reads go through Meilisearch with permission filtering."""
 
 from uuid import UUID
 
@@ -36,29 +29,7 @@ from uniffy.domains.tags.visibility import TagVisibilityFilter
 
 
 class SearchOperations:
-    """
-    Unified search operations.
-
-    Provides methods for searching across all indexed content
-    with permission-based filtering via Meilisearch.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session (used for permission queries and references).
-
-    """
-
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize search operations.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session.
-
-        """
         self.session = session
         self.access_query = ContentAccessQuery(session)
         self.indexer = SearchIndexer(session)
@@ -77,42 +48,8 @@ class SearchOperations:
         limit: int = 20,
         offset: int = 0,
     ) -> tuple[list[SearchResult], int]:
-        """
-        Perform a fuzzy search across all accessible content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the search.
-        organization_id : UUID
-            Organization ID for tenant isolation.
-        query_text : str
-            Search query string.
-        type_filters : list[str] | None
-            Optional list of entity types to filter by.
-        tag_filters : list[str] | None
-            Optional list of tags to filter by.
-        my_content_only : bool
-            If True, only return content owned by the user.
-        owner_filter : UUID | None
-            Filter by specific owner ID.
-        metadata_filters : dict[str, str] | None
-            Filter by metadata fields (e.g., channel_id, sender_id).
-        limit : int
-            Maximum number of results (default 20).
-        offset : int
-            Offset for pagination.
-
-        Returns
-        -------
-        tuple[list[SearchResult], int]
-            List of SearchResult objects and estimated total hits.
-
-        """
-        # Get user's group memberships for permission filtering
         user_group_ids = await self._get_user_group_ids(user_id)
 
-        # Execute the search with permission filtering via Meilisearch
         results, total = await execute_search(
             query_text=query_text,
             organization_id=organization_id,
@@ -163,7 +100,6 @@ class SearchOperations:
         shared_user_ids: list[UUID] | None = None,
         tags: list[str] | None = None,
     ) -> None:
-        """Index or update an item in Meilisearch."""
         await self.indexer.index(
             urn=urn,
             organization_id=organization_id,
@@ -181,17 +117,6 @@ class SearchOperations:
         )
 
     async def delete_item(self, urn: str, organization_id: UUID | None = None) -> None:
-        """
-        Remove an item from Meilisearch.
-
-        Parameters
-        ----------
-        urn : str
-            Universal Resource Name to remove.
-        organization_id : UUID | None
-            If provided, only delete for this organization.
-
-        """
         await self.indexer.remove(urn, organization_id)
 
     async def get_references(
@@ -202,36 +127,10 @@ class SearchOperations:
         type_filters: list[str] | None = None,
         limit: int = 50,
     ) -> tuple[list[SearchResult], int]:
-        """
-        Get all content that references a specific URN.
-
-        Searches for content where the target URN appears in
-        outgoing_references. Currently only notes track references.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the query.
-        organization_id : UUID
-            Organization ID.
-        target_urn : str
-            URN to find references to.
-        type_filters : list[str] | None
-            Optional entity type filters.
-        limit : int
-            Maximum results.
-
-        Returns
-        -------
-        tuple[list[SearchResult], int]
-            List of referencing content and total count.
-
-        """
+        """Today only notes track outgoing references."""
         if type_filters and "note" not in type_filters:
             return [], 0
 
-        # Query notes that have the target URN in outgoing_references,
-        # filtered through the canonical access filter.
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -304,39 +203,14 @@ class SearchOperations:
         organization_id: UUID,
         urns: list[str],
     ) -> dict[str, SearchResult]:
-        """
-        Resolve metadata for a batch of URNs.
-
-        Fetches documents from Meilisearch for the given URNs and
-        enriches with live state. URNs absent from the search index
-        (deleted, never indexed, or hidden by permissions) are returned
-        as tombstone results with ``urn_status='DELETED'`` so chips can
-        render a "no longer available" state instead of a generic
-        fallback. Missing entries are never silently dropped -- the
-        caller asked for these URNs and is owed an answer for each.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the resolution.
-        organization_id : UUID
-            Organization ID for tenant isolation.
-        urns : list[str]
-            List of URNs to resolve (max 100).
-
-        Returns
-        -------
-        dict[str, SearchResult]
-            Mapping of URN -> SearchResult, one entry per input URN.
-
+        """Missing URNs return a tombstone with ``urn_status='DELETED'``;
+        callers always get one entry per input URN.
         """
         if not urns:
             return {}
 
-        # Limit to max 100 URNs
         urns = urns[:100]
 
-        # Fetch documents from Meilisearch with permission filtering
         user_group_ids = await self._get_user_group_ids(user_id)
         accessible = await get_documents_by_urns(
             urns,
@@ -345,10 +219,8 @@ class SearchOperations:
             user_group_ids,
         )
 
-        # Enrich with live state from the database
         await self._enrich_live_state(accessible, organization_id, user_id)
 
-        # Mark surviving entries as OK and synthesize tombstones for the rest
         for sr in accessible.values():
             sr.urn_status = "OK"
         for urn in urns:
@@ -364,24 +236,9 @@ class SearchOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> None:
-        """
-        Enrich resolved URN results with live state from the database.
-
-        Queries database tables for task status, file processing status,
-        and project task counts. Modifies results in place.
-
-        Parameters
-        ----------
-        results : dict[str, SearchResult]
-            Mapping of URN -> SearchResult to enrich.
-        organization_id : UUID
-            Organization scope.
-
-        """
         if not results:
             return
 
-        # Categorize URNs by type for batch queries
         task_ids: list[UUID] = []
         file_ids: list[UUID] = []
         project_ids: list[UUID] = []
@@ -451,20 +308,6 @@ class SearchOperations:
         task_ids: list[UUID],
         urn_to_id: dict[str, UUID],
     ) -> None:
-        """
-        Enrich task results with live state including status, priority,
-        project context, subtask counts, and assignee info.
-
-        Parameters
-        ----------
-        results : dict[str, SearchResult]
-            Results to enrich in place.
-        task_ids : list[UUID]
-            Task IDs to query.
-        urn_to_id : dict[str, UUID]
-            Mapping of URN to content ID.
-
-        """
         try:
             stmt = (
                 select(
@@ -577,15 +420,7 @@ class SearchOperations:
         self,
         project_ids: list[UUID],
     ) -> dict[UUID, dict[str, list[dict]]]:
-        """
-        Load status and priority SelectOption arrays from field definitions.
-
-        Returns
-        -------
-        dict[UUID, dict[str, list[dict]]]
-            Mapping of project_id -> field_id -> list of SelectOption dicts.
-
-        """
+        """Returns project_id -> field_id -> list of option dicts."""
         if not project_ids:
             return {}
 
@@ -611,15 +446,7 @@ class SearchOperations:
         self,
         parent_ids: list[UUID],
     ) -> dict[UUID, tuple[int, int]]:
-        """
-        Batch-load subtask counts (total, completed) for parent tasks.
-
-        Returns
-        -------
-        dict[UUID, tuple[int, int]]
-            Mapping of parent_id -> (total_count, completed_count).
-
-        """
+        """Returns parent_id -> (total, completed)."""
         if not parent_ids:
             return {}
 
@@ -647,19 +474,6 @@ class SearchOperations:
         file_ids: list[UUID],
         urn_to_id: dict[str, UUID],
     ) -> None:
-        """
-        Enrich file results with processing status.
-
-        Parameters
-        ----------
-        results : dict[str, SearchResult]
-            Results to enrich in place.
-        file_ids : list[UUID]
-            File IDs to query.
-        urn_to_id : dict[str, UUID]
-            Mapping of URN to content ID.
-
-        """
         try:
             stmt = select(
                 File.id,
@@ -692,23 +506,7 @@ class SearchOperations:
         urn_to_id: dict[str, UUID],
         organization_id: UUID,
     ) -> None:
-        """
-        Enrich project results with completed/total task counts.
-
-        Parameters
-        ----------
-        results : dict[str, SearchResult]
-            Results to enrich in place.
-        project_ids : list[UUID]
-            Project IDs to query.
-        urn_to_id : dict[str, UUID]
-            Mapping of URN to content ID.
-        organization_id : UUID
-            Organization scope.
-
-        """
         try:
-            # Count total and completed tasks per project
             stmt = (
                 select(
                     Task.project_id,
@@ -820,11 +618,7 @@ class SearchOperations:
         channel_ids: list[UUID],
         urn_to_id: dict[str, UUID],
     ) -> None:
-        """Chat channel live state is denormalized into the search index at
-        write time (see ``ChatChannelOperations._index_for_search``). No
-        database call needed at resolve time -- the Meilisearch document
-        already carries ``channel_type`` and ``member_count`` in metadata.
-        """
+        """Chat channel live state is denormalized at index time; no DB call here."""
         del results, channel_ids, urn_to_id
 
     async def _enrich_agents(
@@ -833,7 +627,6 @@ class SearchOperations:
         agent_ids: list[UUID],
         urn_to_id: dict[str, UUID],
     ) -> None:
-        """Enrich agent results with avatar emoji and theme color."""
         try:
             stmt = select(
                 Agent.id,
@@ -857,7 +650,6 @@ class SearchOperations:
         user_ids_list: list[UUID],
         urn_to_id: dict[str, UUID],
     ) -> None:
-        """Enrich user results with avatar URL and email."""
         try:
             stmt = select(
                 User.id,
@@ -878,7 +670,6 @@ class SearchOperations:
             logger.warning("Failed to enrich user live state", exc_info=True)
 
     async def _get_user_group_ids(self, user_id: UUID) -> list[UUID]:
-        """Return the active group ids for a user."""
         result = await self.session.execute(
             select(GroupMember.group_id).where(
                 GroupMember.user_id == user_id,
@@ -893,13 +684,8 @@ class SearchOperations:
         organization_id: UUID,
         tag_results: list[SearchResult],
     ) -> list[SearchResult]:
-        """Hydrate tag rows from PG and run them through the visibility filter.
-
-        Tag entity docs in Meilisearch only carry name / slug / color and
-        a denormalized usage breakdown -- they intentionally don't carry
-        the per-assignment data needed for the visibility predicate.
-        Hydrate from PG (one batched ``IN`` query) and delegate to
-        :class:`TagVisibilityFilter`.
+        """Tag docs in Meili lack per-assignment data; hydrate from PG and
+        delegate to ``TagVisibilityFilter``.
         """
         urn_to_tag_id: dict[str, UUID] = {}
         for sr in tag_results:
@@ -943,14 +729,8 @@ class SearchOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Drop invisible tag URNs (so they tombstone) and inject the
-        per-user ``user_assignment_count`` for the survivors.
-
-        ``user_assignment_count`` is the only tag field that cannot be
-        denormalized into the Meilisearch doc -- it's per-user and would
-        require fan-out we don't pay for. A single indexed
-        ``COUNT(*) GROUP BY tag_id WHERE assigned_by = :user`` covers
-        the whole batch.
+        """Invisible tag URNs are dropped (tombstone); per-user
+        ``user_assignment_count`` cannot be denormalized.
         """
         try:
             stmt = select(Tag).where(
@@ -999,14 +779,8 @@ class SearchOperations:
 
 
 def _build_tombstone(urn: str, organization_id: UUID) -> SearchResult:
-    """Build a placeholder ``SearchResult`` for a URN missing from the
-    search index.
-
-    The chip renders this as a "deleted / no longer available" state. We
-    deliberately do not hit the database to distinguish DELETED vs
-    NOT_FOUND vs FORBIDDEN -- "missing from index" is treated uniformly
-    as DELETED, which is the only state that makes user-facing sense
-    for a previously-typed mention.
+    """Missing-from-index is treated uniformly as DELETED; we do not
+    distinguish DELETED/NOT_FOUND/FORBIDDEN.
     """
     parts = urn.split(":")
     entity_type = parts[3].lower() if len(parts) >= 5 else ""

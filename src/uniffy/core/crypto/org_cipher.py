@@ -1,19 +1,7 @@
 """Per-organization envelope encryption.
 
-``OrgCipher`` is the public seam every consumer touches. It owns:
-
-- Loading the active DEK row for an organization.
-- Unwrapping the DEK with the master cipher (cached in the in-process
-  ``OrgDekLRU`` so the master unwrap runs once per pod per hour per
-  DEK).
-- Encrypting / decrypting payloads under the per-org Fernet, framing
-  the ciphertext as ``v{version}:{Fernet-token}`` so future decrypts
-  know which DEK to use.
-- Provisioning a v1 DEK at organization creation.
-- Rotating to a fresh DEK on demand.
-
-The class takes an ``AsyncSession`` so all DB writes share the caller's
-transaction boundary.
+Ciphertext is framed ``v{version}:{Fernet-token}`` so decrypts can pick the
+right DEK after rotation. All DB writes ride the caller's session/transaction.
 """
 
 from __future__ import annotations
@@ -46,13 +34,10 @@ from uniffy.observability.metrics import (
 
 
 class SupportSessionCipherBridgeDenied(CryptoError):
-    """Raised when a support-session actor tries to decrypt without opt-in.
+    """Default-deny when a support-session actor decrypts without
+    ``allow_support_session_bridge=True``.
 
-    Default-deny: every ``OrgCipher.decrypt`` call refuses to bridge
-    plaintext through a support session unless the caller passes
-    ``allow_support_session_bridge=True``. The exception is caught
-    by upstream layers that surface secrets as masked placeholders
-    instead of raising to the operator.
+    Upstream layers catch this and surface secrets as masked placeholders.
     """
 
 
@@ -66,11 +51,6 @@ class OrgCipher:
         self._session = session
 
     async def encrypt(self, organization_id: UUID, plaintext: str) -> str:
-        """Encrypt ``plaintext`` under the active DEK for the organization.
-
-        The returned ciphertext is framed ``v{version}:{Fernet-token}``
-        so subsequent decrypts can pick the right DEK even after rotation.
-        """
         fernet, version = await self._active_fernet(organization_id)
         token = fernet.encrypt(plaintext.encode("utf-8")).decode("ascii")
         return f"v{version}:{token}"
@@ -82,18 +62,11 @@ class OrgCipher:
         *,
         allow_support_session_bridge: bool = False,
     ) -> str:
-        """Decrypt ``ciphertext`` previously produced by ``encrypt``.
+        """Decrypt previously-produced ciphertext.
 
-        Cross-tenant ciphertexts fail loudly: the Fernet token only
-        decrypts under the DEK that produced it, and that DEK belongs
-        to exactly one organization.
-
-        When the current request runs under an active support session
-        for ``organization_id`` and the caller does not pass
-        ``allow_support_session_bridge=True``, the call raises
-        :class:`SupportSessionCipherBridgeDenied`. A bridge-attempt
-        audit row is always written (allowed or denied) so the org
-        owner sees every plaintext exposure attempt.
+        Under an active support session for ``organization_id`` the call refuses
+        unless ``allow_support_session_bridge=True``. A bridge-attempt audit row
+        is written either way so the org owner sees every exposure attempt.
         """
         from uniffy.domains.platform.support_session.context import (
             get_active_support_session,
@@ -128,13 +101,8 @@ class OrgCipher:
         organization_id: UUID,
         allowed: bool,
     ) -> None:
-        """Record a support-session bridge attempt on ``OrgCipher.decrypt``.
-
-        Uses a dedicated short-lived session that commits independently
-        of the caller's transaction. If the caller catches
-        :class:`SupportSessionCipherBridgeDenied` and rolls back, the
-        audit row still lands - the org owner sees every plaintext
-        exposure attempt without depending on the caller's commit path.
+        """Write the bridge-attempt audit row on a dedicated session so it
+        survives caller rollback.
         """
         from uniffy.core.audit import write_audit_event
         from uniffy.core.audit.actions import Action
@@ -166,12 +134,7 @@ class OrgCipher:
         organization_id: UUID,
         created_by_user_id: UUID | None,
     ) -> OrgEncryptionKey:
-        """Create the initial v1 DEK for an organization.
-
-        Idempotent against the partial unique index: a concurrent caller
-        that loses the race gets the existing row back instead of an
-        error.
-        """
+        """Create the initial v1 DEK; race-safe against the partial unique index."""
         existing = await self._load_active(organization_id)
         if existing is not None:
             return existing
@@ -200,19 +163,13 @@ class OrgCipher:
         organization_id: UUID,
         rotated_by_user_id: UUID | None,
     ) -> int:
-        """Insert a fresh active DEK; retire the previous one; sweep consumers.
+        """Insert a fresh active DEK, retire the previous one, sweep consumers.
 
-        Resumption model: if a previous ``rotate`` crashed mid-sweep
-        and left a split-version state (some consumer rows still on a
-        retired DEK), this call drains the prior sweep FIRST so the
-        current-active DEK is the single source of truth before we
-        swap. Then publishes the cross-pod invalidation BEFORE the new
-        sweep so every pod stops caching the about-to-be-retired DEK.
-        Walks every registered ``ReEncryptingConsumer`` and re-encrypts
-        each row under the new DEK. Returns the new active version.
-
-        Operators can also call :meth:`resume_reencryption` directly to
-        complete a half-rotated state without inserting another DEK.
+        Drains any prior incomplete sweep against the current active DEK FIRST
+        so the active DEK is the single source of truth before the swap. Then
+        publishes cross-pod invalidation BEFORE the new sweep. Operators can
+        run :meth:`resume_reencryption` directly to complete a half-rotated
+        state without inserting another DEK.
         """
         previous = await self._load_active(organization_id)
         if previous is None:
@@ -220,9 +177,8 @@ class OrgCipher:
                 f"Cannot rotate: organization {organization_id} has no active DEK"
             )
 
-        # Drain any prior incomplete sweep against the current active
-        # DEK. Idempotent - rows already on `previous` decrypt-and-re-
-        # encrypt under the same key with no functional change.
+        # Rows already on `previous` decrypt-and-re-encrypt under the same
+        # key with no functional change; rows on a retired DEK migrate up.
         await self._re_encrypt_all_consumers(organization_id)
 
         await self._session.execute(
@@ -251,25 +207,11 @@ class OrgCipher:
         return new_version
 
     async def resume_reencryption(self, organization_id: UUID) -> None:
-        """Re-run the consumer sweep for one organization.
-
-        Idempotent recovery path for a :meth:`rotate` that crashed
-        mid-sweep. Rows already on the active DEK are decrypted and
-        re-encrypted under the same key with no functional change;
-        rows still on a retired DEK migrate to the active one. Safe to
-        call any number of times.
-        """
+        """Idempotent recovery path for a :meth:`rotate` that crashed mid-sweep."""
         await self._re_encrypt_all_consumers(organization_id)
 
     async def _re_encrypt_all_consumers(self, organization_id: UUID) -> None:
-        """Walk every ``ReEncryptingConsumer`` and re-encrypt each row.
-
-        Each row is decrypted with the version it was written under
-        (still readable -- the retired row stays in the DB) and
-        re-encrypted under the new active DEK. Rows are committed in
-        batches of ``_REENCRYPT_BATCH_SIZE`` so a long sweep doesn't
-        balloon the transaction log.
-        """
+        """Decrypt-with-old / encrypt-with-new for every consumer row; commits every batch."""
         for consumer in CRYPTO_CONSUMERS:
             batch = 0
             async for row in consumer.list_rows(self._session, organization_id):

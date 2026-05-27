@@ -1,10 +1,4 @@
-"""Chat channel operations with membership-based permission model.
-
-Chat uses channel membership as the permission. The BaseContentOperations
-``_require_*`` helpers are overridden to delegate to ``ChatAccessChecker``.
-Channels do not participate in the generic access_mode / baseline_role
-model -- channel_type (PUBLIC / PRIVATE / DIRECT / GROUP_DM) drives access.
-"""
+"""Chat channel operations; access is membership-based, not access_mode/baseline_role."""
 
 import base64
 import json
@@ -58,17 +52,12 @@ MAX_PAGE_SIZE = 500
 
 
 def _encode_cursor(payload: dict[str, Any]) -> str:
-    """Opaque base64-url-encoded JSON cursor."""
     raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 def _decode_cursor(cursor: str) -> dict[str, Any]:
-    """Decode an opaque cursor into its payload dict.
-
-    Raises ValidationError on malformed input -- callers should let it
-    bubble up to the handler so the client sees INVALID_ARGUMENT.
-    """
+    """Decode an opaque cursor; raises ValidationError on malformed input."""
     try:
         padding = "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(cursor + padding)
@@ -78,19 +67,13 @@ def _decode_cursor(cursor: str) -> dict[str, Any]:
 
 
 def _clamp_page_size(limit: int | None) -> int:
-    """Apply default + max bounds for paginated list endpoints."""
     if limit is None or limit <= 0:
         return DEFAULT_PAGE_SIZE
     return min(limit, MAX_PAGE_SIZE)
 
 
 class ChatChannelOperations(BaseContentOperations[ChatChannel]):
-    """Channel CRUD with membership-based permission model.
-
-    Channel membership is the permission: the standard
-    ``_require_view / _require_edit / _require_delete`` helpers are
-    overridden to delegate to :class:`ChatAccessChecker`.
-    """
+    """Channel CRUD; permission gates delegate to ChatAccessChecker via _require_* overrides."""
 
     content_type = ContentType.CHAT
     model_class = ChatChannel
@@ -99,11 +82,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         super().__init__(session)
         self.access = access or ChatAccessChecker(session)
 
-    # Abstract method implementations (required by BaseContentOperations)
-
     def _build_search_keywords(self, model: ChatChannel) -> str:
-        # Include both the auto-generated name and any custom override so renamed
-        # agent chats remain findable by either label.
+        # Include both auto-name and custom override so renamed agent chats stay findable.
         if model.custom_name:
             return f"{model.custom_name} {model.name} {model.description}"
         return f"{model.name} {model.description}"
@@ -118,11 +98,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         return model.description[:200] if model.description else None
 
     async def _get_search_tags_async(self, model: ChatChannel) -> list[str] | None:
-        """Return the slug list assigned to this channel via the unified store.
-
-        DM and agent-DM channels do not carry tags, so the lookup is
-        skipped to avoid pointless round-trips against ``tag_assignments``.
-        """
+        """Tag slug list for this channel; skipped for DM/agent-DM (no tags)."""
         if model.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
             return None
         tag_ops = TagOperations(self.session)
@@ -135,12 +111,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         return slugs or None
 
     def _tag_filter_subquery(self, tag_ids: list[UUID]):
-        """Subquery: channel ids that carry every tag id in ``tag_ids``.
-
-        Logical AND across the tag set via GROUP BY + HAVING
-        COUNT(DISTINCT). Mirrors the notes / files / calendar shape so
-        the explorer's filter rail composes uniformly.
-        """
+        """Subquery returning channel ids carrying every tag in tag_ids (AND via HAVING COUNT)."""
         urn_prefix = "urn:uniffy:content:CHAT:"
         urn_expr = func.concat(urn_prefix, cast(ChatChannel.id, String))
         return (
@@ -158,12 +129,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel: ChatChannel,
         tag_ids: list[UUID] | None,
     ) -> None:
-        """Reconcile manual tag assignments after a channel write.
-
-        ``tag_ids=None`` leaves manual assignments untouched (used by
-        partial updates that did not ship tags). DMs are silently
-        skipped -- they do not participate in the unified-tag namespace.
-        """
+        # tag_ids=None leaves manual assignments untouched; DMs are skipped entirely.
         if tag_ids is None:
             return
         if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
@@ -176,15 +142,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             tag_ids=tag_ids,
         )
 
-    # Permission override - membership-based access
-
     async def _require_view(
         self,
         user_id: UUID,
         organization_id: UUID,
         content: ChatChannel,
     ) -> None:
-        """Override: check channel membership instead of the generic role model."""
         await self.access.check_access(user_id, organization_id, content)
 
     async def _require_edit(
@@ -193,7 +156,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         content: ChatChannel,
     ) -> None:
-        """Override: channel admins/owners, org admins, or chat domain admins can edit."""
+        """Channel admins/owners, org admins, or chat domain admins can edit."""
         if await self.access.is_org_admin(user_id, organization_id):
             return
         if await self.access.is_chat_domain_admin(user_id, organization_id):
@@ -208,7 +171,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         content: ChatChannel,
     ) -> None:
-        """Override: only channel owner, org admin, or chat domain admin can delete."""
+        """Only channel owner, org admin, or chat domain admin can delete."""
         if await self.access.is_org_admin(user_id, organization_id):
             return
         if await self.access.is_chat_domain_admin(user_id, organization_id):
@@ -217,28 +180,12 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if not member or member.role != ChannelRole.OWNER:
             raise PermissionDeniedError("delete", "channel")
 
-    # Search index override - derive access from membership
-
     async def _index_for_search(
         self,
         model: ChatChannel,
         skip_member_lookup: bool = False,
     ) -> None:
-        """Override: derive the search document access from membership.
-
-        Public channels index as ``OPEN_TO_ORG``. Private channels index
-        as ``EXPLICIT_MEMBERS`` with the channel member list attached.
-        Group DMs and user-user DMs are excluded entirely (privacy).
-        Named agent DMs are indexed as ``EXPLICIT_MEMBERS`` scoped to the
-        single human owner so the user can search and ``@`` mention their
-        renamed agent chats.
-
-        Live-state fields (``channel_type``, ``member_count``) are written
-        into the search document metadata so ``resolve_urns`` can serve
-        mention chips with no database round-trip. Callers that change
-        membership must re-invoke this method so the cached count stays
-        truthful.
-        """
+        """Index PUBLIC as OPEN_TO_ORG, PRIVATE/agent-DM as EXPLICIT_MEMBERS; user DMs excluded."""
         del skip_member_lookup  # membership is always the source of truth
 
         if model.channel_type == ChannelType.GROUP_DM:
@@ -273,8 +220,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
             category_name = cat_result.scalar_one_or_none() or ""
 
-        # Agent DMs surface as their own content type so the search UI can
-        # filter / icon / colour them distinctly from regular channels.
+        # Agent DMs use their own content type so search UI can filter/style them distinctly.
         urn_type = ContentType.AGENT_CHAT if model.is_agent_dm else ContentType.CHAT
         entity_type = urn_type.value
 
@@ -302,15 +248,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         )
 
     async def _refresh_channel_live_state(self, channel: ChatChannel) -> None:
-        """Re-index the channel and broadcast a mention-state change.
-
-        Called from every mutation path (rename, description edit,
-        join, leave, batch member add/remove) so the search document
-        and visible mention chips reflect the new state without a
-        page refresh. Publishes the full set of denormalized fields
-        rather than diffing inputs -- the payload is small and
-        diffing across all callers is fragile.
-        """
+        """Re-index the channel and broadcast a mention-state change so chips reflect new state."""
         if channel.channel_type == ChannelType.GROUP_DM:
             return
         if channel.channel_type == ChannelType.DIRECT and not channel.is_agent_dm:
@@ -352,8 +290,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         except Exception:
             logger.warning(f"Failed to publish mention state for channel {channel.id}")
 
-    # Channel CRUD
-
     async def create_channel(
         self,
         user_id: UUID,
@@ -370,7 +306,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         """Create a channel with stats row and initial membership."""
         slug = slugify(name)
 
-        # Check slug uniqueness
         existing = await self.session.execute(
             select(ChatChannel.id).where(
                 ChatChannel.organization_id == organization_id,
@@ -395,11 +330,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         self.session.add(channel)
         await self.session.flush()
 
-        # Create stats row
         stats = ChatChannelStats(channel_id=channel.id, member_count=1)
         self.session.add(stats)
 
-        # Add creator as OWNER
         creator_member = ChatChannelMember(
             channel_id=channel.id,
             subject_type=SubjectType.USER,
@@ -409,7 +342,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         )
         self.session.add(creator_member)
 
-        # Add additional members for DM/GROUP_DM
         if member_ids:
             count = 1
             for mid in member_ids:
@@ -448,7 +380,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             tag_ids=tag_ids,
         )
 
-        # Index for search (post-commit)
         try:
             await self._index_for_search(channel)
         except Exception:
@@ -462,11 +393,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         target_user_ids: list[UUID],
     ) -> ChatChannel:
-        """Create or find existing DM/GROUP_DM.
-
-        For 1:1 DMs, finds existing conversation between the two users.
-        For group DMs (3+ participants), always creates a new conversation.
-        """
+        """Create or find existing DM (1:1) / GROUP_DM (3+)."""
         all_user_ids = sorted(set([user_id] + target_user_ids))
 
         if len(all_user_ids) < 2:
@@ -477,7 +404,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         is_direct = len(all_user_ids) == 2
         channel_type = ChannelType.DIRECT if is_direct else ChannelType.GROUP_DM
 
-        # For 1:1 DMs, check if one already exists
         if is_direct:
             existing = await self._find_existing_dm(
                 organization_id, all_user_ids[0], all_user_ids[1]
@@ -485,7 +411,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             if existing:
                 return existing
 
-        # Build name from ALL participant display names (frontend strips current user)
+        # Name carries ALL participant names; the frontend strips the current user.
         name = await self._build_dm_name(all_user_ids)
 
         return await self.create_channel(
@@ -505,15 +431,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         limit: int = DEFAULT_PAGE_SIZE,
         tag_ids: list[UUID] | None = None,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats, ChannelRole]], str | None]:
-        """List channels the user is a member of (sidebar query).
-
-        Keyset-paginated by ``(coalesce(last_root_message_at, epoch) DESC,
-        channel_id ASC)``. Callers loop on ``next_cursor`` until ``None``.
-
-        Cursor payload: ``{"sort_ts": ISO8601, "channel_id": UUID}``.
-        Treats NULL ``last_root_message_at`` as the epoch so DESC NULLS LAST
-        ordering composes deterministically with tuple comparison.
-        """
+        # Keyset by (coalesce(last_root_message_at, epoch) DESC, channel_id ASC).
         epoch_ts = datetime(1, 1, 1, tzinfo=UTC)
         sort_ts = func.coalesce(ChatChannelStats.last_root_message_at, epoch_ts)
 
@@ -573,12 +491,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         user_id: UUID,
         organization_id: UUID,
     ) -> list[UUID]:
-        """Return every active channel ID the user is a member of.
-
-        Lightweight ID-only fetch for internal fan-out callers (unread-count
-        aggregation) that need the full set without the cost of hydrating
-        ChatChannel + ChatChannelStats rows. Same visibility filter as
-        ``list_user_channels`` (excludes deleted + archived).
+        """ID-only fan-out fetch for unread aggregation; same visibility
+        filter as list_user_channels.
         """
         result = await self.session.execute(
             select(ChatChannel.id)
@@ -603,11 +517,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         limit: int = DEFAULT_PAGE_SIZE,
         tag_ids: list[UUID] | None = None,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats]], str | None]:
-        """List all public channels for browse view.
-
-        Sorted by ``(member_count DESC, channel_id ASC)`` for a stable
-        cursor. Cursor payload: ``{"member_count": int, "channel_id": UUID}``.
-        """
+        # Keyset by (member_count DESC, channel_id ASC).
         base_query = (
             select(ChatChannel, ChatChannelStats)
             .join(
@@ -671,18 +581,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         is_default: bool | None = None,
         tag_ids: list[UUID] | None = None,
     ) -> ChatChannel:
-        """Update channel metadata. Requires elevated channel permission.
-
-        Only kwargs that are not ``None`` are applied; passing ``None`` for
-        a field leaves the existing value untouched. Renaming does NOT
-        regenerate the slug -- the slug is created at insert time and is
-        treated as a stable handle, not a derived field.
-
-        Drops the cached channel row after commit so the next read picks
-        up the new metadata. The cached member-id list mirrors only
-        membership state (no name / description / icon / is_default), so
-        it is intentionally NOT invalidated here.
-        """
+        """Update channel metadata; slug stays fixed, only non-None kwargs apply."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
         is_elevated = await self.access.require_elevated(
             user_id,
@@ -730,10 +629,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         await invalidate_cached_channel(channel.id)
 
-        # Re-index every channel type (including PUBLIC) so the search
-        # document reflects the new name / description / icon, then
-        # broadcast a mention-state change so visible chips update
-        # without a refresh.
         await self._refresh_channel_live_state(channel)
 
         return channel
@@ -815,9 +710,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             indexer = SearchIndexer(self.session)
             urn = f"urn:uniffy:content:CHAT:{channel.id}"
             await indexer.remove(urn)
-            # Cascade: drop every chat_message indexed under this channel
-            # so global search stops returning content from a deleted
-            # channel. ``metadata.channel_id`` is filterable.
+            # Cascade: drop chat_message docs under this channel so global search excludes them.
             await indexer.remove_by_filter(
                 f'entity_type = "chat_message" AND metadata.channel_id = "{channel.id}"'
             )
@@ -828,7 +721,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         self,
         channel: ChatChannel,
     ) -> None:
-        """Notify all channel members that the channel was archived or deleted."""
         try:
             from uniffy.domains.chat.streaming.events import CHANNEL_UPDATED
             from uniffy.domains.chat.streaming.publisher import (
@@ -887,13 +779,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_member_ids(channel_id)
         await invalidate_visible_sets_for_user(organization_id, user_id)
 
-        # Publish MEMBER_JOINED event to existing members
         await self._publish_member_event(channel_id, user_id, joined=True)
-
-        # Post a system message announcing the join
         await self._post_join_system_message(user_id, organization_id, channel)
-
-        # Refresh search-index member_count and notify visible mention chips
         await self._refresh_channel_live_state(channel)
 
         return channel
@@ -969,10 +856,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_member_ids(channel_id)
         await invalidate_visible_sets_for_user(organization_id, user_id)
 
-        # Publish MEMBER_LEFT event to remaining members
         await self._publish_member_event(channel_id, user_id, joined=False)
-
-        # Refresh search-index member_count and notify visible mention chips
         await self._refresh_channel_live_state(channel)
 
     async def add_members(
@@ -982,13 +866,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         member_user_ids: list[UUID],
     ) -> list[ChatChannelMember]:
-        """Add members to a channel. Requires admin/owner role.
-
-        One ``INSERT ... VALUES (...) ON CONFLICT DO NOTHING RETURNING *``
-        replaces the previous "SELECT existing + per-row session.add" loop.
-        ON CONFLICT eats existing memberships and RETURNING tells us which
-        rows actually inserted so we know who to publish MEMBER_JOINED for.
-        """
+        """Add members; one ON CONFLICT DO NOTHING RETURNING tells us who was actually inserted."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
         await self._require_edit(user_id, organization_id, channel)
 
@@ -1069,14 +947,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         member_user_ids: list[UUID],
     ) -> None:
-        """Remove members from a channel. Requires admin/owner role."""
+        """Remove members; requires admin/owner role."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
         await self._require_edit(user_id, organization_id, channel)
 
         if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
             raise ValidationError("channel", "Cannot remove members from DMs")
 
-        # Batch-fetch memberships to check roles
         members_result = await self.session.execute(
             select(ChatChannelMember).where(
                 ChatChannelMember.channel_id == channel_id,
@@ -1085,7 +962,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         )
         members = list(members_result.scalars().all())
 
-        # Filter out owners (cannot be removed)
+        # Owners can never be removed.
         removable_ids = [m.user_id for m in members if m.role != ChannelRole.OWNER]
 
         if removable_ids:
@@ -1144,17 +1021,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
     ) -> tuple[list[tuple[ChatChannelMember, User | None, Agent | None]], str | None]:
-        """Get channel members with USER or AGENT identity info.
-
-        LEFT JOINs on both User and Agent via ``subject_id``, so USER rows
-        carry a User, AGENT rows carry an Agent, and the caller decides
-        how to project.
-
-        Keyset-paginated by ``(joined_at ASC, subject_id ASC)``. Callers
-        loop on ``next_cursor`` until ``None``.
-
-        Cursor payload: ``{"joined_at": ISO8601, "subject_id": UUID}``.
-        """
+        """Channel members with USER/AGENT identity; keyset by (joined_at ASC, subject_id ASC)."""
         await self.get_by_id(user_id, organization_id, channel_id)
 
         base_query = (
@@ -1222,17 +1089,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         follow_all_threads: bool | None = None,
         badge_all_messages: bool | None = None,
     ) -> tuple[ChatChannelMember, User]:
-        """Update a channel member's preferences.
-
-        Users can update their own membership. Channel admin/owner or org admin
-        can update any member.
-
-        Parameters
-        ----------
-        muted_until
-            Sentinel-defaulted. Pass a datetime for timed mute, None to clear,
-            or omit (sentinel) to leave unchanged.
-
+        """Update a member's preferences; muted_until uses a sentinel to
+        distinguish unset vs clear.
         """
         from uniffy.core.models.chat.channel_member import ChatNotificationLevel
 
@@ -1288,10 +1146,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         user_id: UUID,
         channel: ChatChannel,
     ) -> ChatChannelMember:
-        """Verify user can send messages. Returns membership for role checks."""
         return await self.access.require_send(user_id, channel)
-
-    # Internal helpers
 
     async def _publish_member_event(
         self,
@@ -1301,14 +1156,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         joined: bool,
         member_ids: list[UUID] | None = None,
     ) -> None:
-        """Publish a MEMBER_JOINED or MEMBER_LEFT event for ONE user.
-
-        Used for self-join and leave only. Batch admin add/remove flows go
-        through ``_publish_members_changed`` so a 50-user invite costs one
-        Valkey fan-out, not 50.
-
-        ``member_ids`` may be passed by callers that already fetched the
-        list to avoid the extra round-trip; otherwise we fetch once.
+        """Publish MEMBER_JOINED/LEFT for ONE user; batch admin flows use
+        _publish_members_changed.
         """
         try:
             from uniffy.domains.chat.streaming.events import (
@@ -1348,12 +1197,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         *,
         added: bool,
     ) -> None:
-        """Publish a single batched MEMBERS_ADDED / MEMBERS_REMOVED event.
-
-        One ``_get_all_member_ids`` round-trip + one pipelined fan-out
-        replaces the previous per-affected-user loop that re-fetched the
-        channel member list every iteration.
-        """
+        """Publish one batched MEMBERS_ADDED / MEMBERS_REMOVED event."""
         if not affected_user_ids:
             return
         try:
@@ -1379,12 +1223,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             )
 
     async def _get_all_member_ids(self, channel_id: UUID) -> list[UUID]:
-        """Get all member user IDs for a channel via the member-id cache.
-
-        Returns user ids of every member row (USER + AGENT). AGENT rows
-        whose ``user_id`` is NULL are dropped so callers never publish
-        events to a missing user.
-        """
+        """Member user_ids via the cache; AGENT rows with NULL user_id are dropped."""
         members = await fetch_channel_members(self.session, channel_id)
         ids: list[UUID] = []
         for member in members:
@@ -1403,7 +1242,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         user_a: UUID,
         user_b: UUID,
     ) -> ChatChannel | None:
-        """Find an existing DM between two users using a double-JOIN."""
         from sqlalchemy.orm import aliased
 
         m1 = aliased(ChatChannelMember)
@@ -1423,16 +1261,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         return result.scalar_one_or_none()
 
     async def _build_dm_name(self, user_ids: list[UUID]) -> str:
-        """Legacy USER-only DM name. Delegates to subject-aware builder."""
         return await self._build_dm_name_from_subjects([ChatSubject.user(uid) for uid in user_ids])
 
     async def _build_dm_name_from_subjects(self, subjects: list[ChatSubject]) -> str:
-        """Build DM name for mixed USER + AGENT participants.
-
-        Routes through SenderResolver so agents pick up their display names
-        instead of falling back to "Unknown". The proto-exposed SubjectType
-        maps 1:1 to SenderType here (both are USER or AGENT at this boundary).
-        """
+        """DM name for mixed USER + AGENT participants via SenderResolver."""
         from uniffy.core.models.chat.message import SenderType
 
         resolver = SenderResolver(self.session)
@@ -1458,12 +1290,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         a: ChatSubject,
         b: ChatSubject,
     ) -> ChatChannel | None:
-        """Find an existing DIRECT channel between two polymorphic subjects.
-
-        Joins `chat_channel_members` twice on `(subject_type, subject_id)` so
-        the lookup works for (USER, USER), (USER, AGENT), or any pair. Hits
-        the polymorphic PK index directly.
-        """
+        """Existing DIRECT channel between two polymorphic subjects (USER/AGENT pair)."""
         from sqlalchemy.orm import aliased
 
         m1 = aliased(ChatChannelMember)
@@ -1498,13 +1325,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         agent_id: UUID,
     ) -> None:
-        """Gate: the actor must have VIEWER+ on the agent to add it to a channel.
-
-        Distinct from the channel MANAGE check handled by `_require_edit`;
-        this second gate enforces D4 ("actor has MANAGE on channel AND USE
-        on the agent"). Raises NotFoundError if the agent doesn't exist and
-        PermissionDeniedError if the actor lacks VIEWER role.
-        """
+        """Actor must have VIEWER+ on the agent to add it to a channel."""
         agent_row = await self.session.execute(
             select(
                 Agent.id,
@@ -1541,15 +1362,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         agent_ids: list[UUID],
         actor_user_id: UUID,
     ) -> None:
-        """Insert default `AgentChannelBinding` rows for new AGENT members.
-
-        Idempotent via the `(channel_id, agent_id)` unique constraint -- safe to
-        call on every AGENT membership write. The binding holds per-channel
-        context state (`last_compacted_at`, `last_active_token_estimate`,
-        `manual_reset_at`) consumed by the chat context bar (Phase 8d) and the
-        runtime's `load_context_messages` filter (Phase 8c). `actor_user_id` is
-        the channel owner / inviting user; the FK requires a real user.
-        """
+        """Idempotent default AgentChannelBinding rows for new AGENT members."""
         if not agent_ids:
             return
         rows = [
@@ -1570,12 +1383,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         subject: ChatSubject,
         role: ChannelRole,
     ) -> ChatChannelMember:
-        """Build a member row; mirrors user_id for USER subjects, NULL for AGENT.
-
-        `user_id` remains populated during the transition period (see 0c) so
-        the 15 legacy queries that filter by `user_id` keep returning USER
-        rows unchanged. Agent rows set user_id to NULL.
-        """
+        """Mirror subject_id into user_id for USER subjects; NULL for AGENT."""
         return ChatChannelMember(
             channel_id=channel_id,
             subject_type=subject.subject_type,
@@ -1590,13 +1398,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         subjects: list[ChatSubject],
     ) -> ChatChannel:
-        """Create / find a DM across mixed USER + AGENT subjects.
-
-        `user_id` is the actor (always a USER) and becomes the channel OWNER.
-        `subjects` must include the actor as a USER subject; additional
-        subjects may be USER or AGENT. Dedup for 1:1 DMs is by sorted subject
-        tuple, so repeat opens of the same (user, agent) pair return the
-        same channel.
+        """Create / find a DM across mixed USER + AGENT subjects; 1:1 dedup
+        by sorted subject tuple.
         """
         actor_subject = ChatSubject.user(user_id)
         dedup = {s.as_key: s for s in subjects}
@@ -1675,18 +1478,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         agent_id: UUID,
         custom_name: str | None = None,
     ) -> ChatChannel:
-        """Create a new named chat between the user and an agent.
-
-        Always creates a new channel; multiple chats per (user, agent) pair
-        are allowed. The actor is recorded as the channel OWNER, the agent is
-        added as a MEMBER, and an ``AgentChannelBinding`` row is created so
-        the runtime context-window pipeline can attach to the channel.
-
-        ``custom_name`` is optional. When unset the channel uses the agent's
-        display name; if the user already has chats with this agent, the
-        default name is suffixed with " (N)" so it remains scannable in the
-        sidebar.
-        """
+        """Create a new named (user, agent) chat; multiple chats per pair are allowed."""
         await self._require_agent_usable(user_id, organization_id, agent_id)
 
         agent_subject = ChatSubject.agent(agent_id)
@@ -1761,15 +1553,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         custom_name: str | None,
     ) -> ChatChannel:
-        """Set or clear the user's custom display name for an agent chat.
-
-        Only the human member of the chat can rename it -- domain admins do
-        not bypass this gate, since the name is a personal label on a
-        personal conversation. ``custom_name`` may be ``None`` or whitespace
-        only to clear the override; the auto-generated ``name`` stays
-        untouched in either direction so resetting always restores the
-        original label.
-        """
+        """Set/clear the user's custom display name; only the human member can rename."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
         if not channel.is_agent_dm:
             raise ValidationError("channel_id", "Channel is not an agent chat")
@@ -1797,16 +1581,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         self,
         organization_id: UUID,
     ) -> int:
-        """Re-index every active agent chat in an organization.
-
-        One-shot helper for backfilling the search index after the named-agent-
-        chat feature shipped. Drops any legacy ``urn:uniffy:content:CHAT:{id}``
-        entry the chat used to share with regular channels before re-indexing
-        under the new ``AGENT_CHAT`` URN namespace, so the index doesn't carry
-        duplicate documents pointing at the same chat.
-
-        Idempotent -- safe to run repeatedly. Returns the number of channels
-        indexed.
+        """Re-index every active agent chat in an org; drops any CHAT urn
+        before re-indexing as AGENT_CHAT.
         """
         result = await self.session.execute(
             select(ChatChannel).where(
@@ -1839,12 +1615,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
     ) -> tuple[list[tuple[ChatChannel, ChatChannelStats]], str | None]:
-        """List the user's agent chats, optionally filtered by ``agent_id``.
-
-        Same keyset shape as ``list_user_channels`` (sorted by last activity
-        DESC, channel id ASC) but restricted to channels where the caller is
-        the human member AND ``is_agent_dm`` is true.
-        """
+        """User's agent chats with same keyset as list_user_channels; restricted to is_agent_dm."""
         epoch_ts = datetime(1, 1, 1, tzinfo=UTC)
         sort_ts = func.coalesce(ChatChannelStats.last_root_message_at, epoch_ts)
 
@@ -1905,12 +1676,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         subjects: list[ChatSubject],
     ) -> list[ChatChannelMember]:
-        """Add USER or AGENT members. Actor requires channel MANAGE for all;
-        AGENT subjects additionally require actor VIEWER+ on the agent.
-
-        Single batched ``INSERT ... ON CONFLICT DO NOTHING RETURNING *`` so
-        we don't pay one round-trip per subject.
-        """
+        """Add USER/AGENT members; actor needs channel MANAGE plus VIEWER+ on each AGENT."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
         await self._require_edit(user_id, organization_id, channel)
 
@@ -1983,11 +1749,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         subjects: list[ChatSubject],
     ) -> None:
-        """Remove USER or AGENT members. Actor requires channel MANAGE.
-
-        Owners can never be removed (parity with the user-only path). Agents
-        don't hold OWNER role in practice but the filter handles both.
-        """
+        """Remove USER/AGENT members; owners cannot be removed."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
         await self._require_edit(user_id, organization_id, channel)
 
@@ -2038,7 +1800,6 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         organization_id: UUID,
         channel: ChatChannel,
     ) -> None:
-        """Post a system message when a user joins a channel."""
         try:
             from uniffy.core.models.chat.message import SenderType
             from uniffy.domains.chat.messages.operations import ChatMessageOperations

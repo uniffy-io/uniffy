@@ -11,40 +11,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class Folder(SQLModel, table=True):
-    """
-    Folder model representing a folder in the file hierarchy.
-
-    Folders are organization-scoped and support nesting via parent_id.
-    They follow the same permission model as files.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the folder (primary key).
-    organization_id : UUID
-        Organization this folder belongs to (foreign key).
-    owner_id : UUID
-        User who owns the folder (foreign key to login_users).
-    access_mode : AccessMode
-        How access to this folder is governed.
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    name : str
-        Folder name.
-    parent_id : UUID | None
-        Parent folder ID (nullable for root-level folders).
-    is_system : bool
-        System folder flag (e.g., Attachments folder). System folders cannot be deleted.
-    is_deleted : bool
-        Soft delete flag.
-    deleted_at : datetime | None
-        Timestamp when the folder was soft-deleted.
-    created_at : datetime
-        Timestamp when the folder was created.
-    updated_at : datetime
-        Timestamp when the folder was last updated.
-
-    """
+    """Folder in the org file hierarchy; nests via parent_id, shares the file permission model."""
 
     __tablename__ = "files_folders"
 
@@ -93,11 +60,9 @@ class Folder(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """Get the URN for this folder (uses FILE type for simplicity)."""
         return f"urn:uniffy:content:FILE:{self.id}"
 
     def __repr__(self) -> str:
-        """Return string representation of Folder."""
         return (
             f"<Folder(id={self.id}, name={self.name!r}, "
             f"access_mode={self.access_mode}, organization_id={self.organization_id})>"

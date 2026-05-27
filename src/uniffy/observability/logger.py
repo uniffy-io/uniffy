@@ -13,7 +13,6 @@ from .config import LogLevel
 if TYPE_CHECKING:
     from .config import ObservabilityConfig
 
-# ANSI color codes
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
 RED = "\033[31m"
@@ -23,26 +22,15 @@ RESET = "\033[0m"
 app_name = "uniffy"
 app_version = "0.0.1"
 
-# Characters that loguru interprets as markup: { } < > [ ]
-# Benchmarked approaches - simple 'in' check + replace chain is fastest
-# See tests/benchmarks/test_logger_benchmark.py for performance comparison
-
 
 def escape_loguru_markup(s: str) -> str:
-    """
-    Escape special characters that loguru interprets as markup.
+    """Escape `{}<>[]` so loguru does not parse log messages as markup.
 
-    Optimized with early return for strings without special characters,
-    which is the common case for most log messages (e.g., access logs).
-
-    Performance: ~1.8x faster than always running 6x replace() chains
-    for clean strings (the typical case).
+    Fast-paths the common case where the message contains none of those characters.
     """
-    # Fast path: most log messages don't contain special chars
     if not ("{" in s or "}" in s or "<" in s or ">" in s or "[" in s or "]" in s):
         return s
 
-    # Slow path: escape special characters
     return (
         s
         .replace("{", "{{")
@@ -54,7 +42,6 @@ def escape_loguru_markup(s: str) -> str:
     )
 
 
-# Mapping of log level strings to their corresponding `logging` module constants.
 _LOGGING_LEVEL_MAP = {
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
@@ -63,8 +50,6 @@ _LOGGING_LEVEL_MAP = {
     "CRITICAL": logging.CRITICAL,
 }
 
-# Ordered list of standard logging levels, from least severe to most severe.
-# This is used to determine the next higher level when disabling a specific level.
 _ORDERED_LOGGING_LEVELS = [
     logging.DEBUG,
     logging.INFO,
@@ -75,20 +60,7 @@ _ORDERED_LOGGING_LEVELS = [
 
 
 def disable_leveled_namespace(level_to_disable_str: str, namespace: str) -> None:
-    """
-    Sets the minimum logging level for the specified namespace to be *above*
-    the provided level_to_disable_str.
-
-    For example, calling disable_leveled_namespace("DEBUG", "kafka") will
-    set the "kafka" logger's level to INFO, effectively suppressing its
-    DEBUG messages. Any messages from "kafka" with severity INFO or higher
-    will still be processed according to their original handler configurations.
-
-    Args:
-        level_to_disable_str: The string representation of the log level
-                              to disable (e.g., "DEBUG", "INFO"). Case-insensitive.
-        namespace: The name of the logger namespace (e.g., "kafka", "sqlalchemy.engine").
-    """
+    """Suppress messages at and below `level_to_disable_str` for `namespace`."""
     normalized_level_str = level_to_disable_str.upper()
     level_to_disable_val = _LOGGING_LEVEL_MAP.get(normalized_level_str)
 
@@ -99,14 +71,11 @@ def disable_leveled_namespace(level_to_disable_str: str, namespace: str) -> None
         )
         return
 
-    new_level_val = -1  # Initialize with a value that indicates it hasn't been set
+    new_level_val = -1
 
     try:
-        # Find the index of the level we want to disable
         current_level_index = _ORDERED_LOGGING_LEVELS.index(level_to_disable_val)
-        # Set the new level to the next one in the ordered list
         if current_level_index == len(_ORDERED_LOGGING_LEVELS) - 1:
-            # If CRITICAL is being disabled, set level just above CRITICAL
             new_level_val = logging.CRITICAL + 1
         else:
             new_level_val = _ORDERED_LOGGING_LEVELS[current_level_index + 1]
@@ -119,10 +88,9 @@ def disable_leveled_namespace(level_to_disable_str: str, namespace: str) -> None
             f"Falling back to disabling all standard levels up to "
             f"CRITICAL for this namespace."
         )
-        # As a fallback, set the level very high to disable logging up to CRITICAL for the namespace.
         new_level_val = logging.CRITICAL + 1
 
-    if new_level_val == -1:  # Should have been set by the logic above.
+    if new_level_val == -1:
         logger.error(
             f"Failed to determine new log level for namespace '{namespace}' when "
             f"attempting to disable level '{normalized_level_str}'. "
@@ -134,7 +102,6 @@ def disable_leveled_namespace(level_to_disable_str: str, namespace: str) -> None
     original_effective_level = target_logger.getEffectiveLevel()
     target_logger.setLevel(new_level_val)
 
-    # logging.getLevelName might return "Level <numeric_value>" for non-standard levels.
     new_level_name = logging.getLevelName(new_level_val)
     original_level_name = logging.getLevelName(original_effective_level)
 
@@ -147,27 +114,16 @@ def disable_leveled_namespace(level_to_disable_str: str, namespace: str) -> None
 
 
 def format_extra(record: dict, color: str) -> str:
-    """
-    Format extra fields as key=value pairs like logrus.
-
-    Args:
-        record: The log record
-        color: ANSI color code for keys
-
-    Returns:
-        str: Formatted extra fields or empty string
-    """
+    """Render `record["extra"]` as space-separated `key=value` pairs (logrus style)."""
     extra = record.get("extra", {})
     if not extra:
         return ""
 
-    # Format as space-separated key=value pairs
     formatted_pairs = []
     for key, value in extra.items():
         safe_key = escape_loguru_markup(str(key))
         safe_value = escape_loguru_markup(str(value))
 
-        # Quote strings containing spaces
         if isinstance(value, str) and " " in safe_value:
             formatted_pairs.append(f'{color}{safe_key}{RESET}="{safe_value}"')
         else:
@@ -177,41 +133,34 @@ def format_extra(record: dict, color: str) -> str:
 
 
 def format_info_log(record: dict) -> str:
-    """Format INFO level log messages."""
     timestamp = record["time"].strftime("%m-%d %H:%M:%S")
     message = escape_loguru_markup(str(record["message"]))
     return f"{GREEN}INFO[{timestamp}]{RESET} {message}{format_extra(record, GREEN)}\n"
 
 
 def format_warning_log(record: dict) -> str:
-    """Format WARNING level log messages."""
     timestamp = record["time"].strftime("%m-%d %H:%M:%S")
     message = escape_loguru_markup(str(record["message"]))
     return f"{YELLOW}WARN[{timestamp}]{RESET} {message}{format_extra(record, YELLOW)}\n"
 
 
 def format_error_log(record: dict) -> str:
-    """Format ERROR and CRITICAL level log messages."""
     timestamp = record["time"].strftime("%m-%d %H:%M:%S")
     level = record["level"].name
     message = escape_loguru_markup(str(record["message"]))
 
-    # Format the base log message
     base_msg = f"{RED}{level}[{timestamp}] {message}{format_extra(record, RED)}{RESET}"
 
-    # Add exception details if present
     exception_info = record.get("exception")
     if exception_info is not None:
         exception_parts = []
 
-        # Add exception type and value
         if exception_info.type is not None:
             exc_header = f"Exception: {exception_info.type.__name__}"
             if exception_info.value:
                 exc_header += f": {escape_loguru_markup(str(exception_info.value))}"
             exception_parts.append(f"\n{RED}{exc_header}{RESET}")
 
-        # Add traceback if available
         if exception_info.traceback:
             try:
                 tb_lines = traceback.format_exception(
@@ -232,7 +181,6 @@ def format_error_log(record: dict) -> str:
 
 
 def format_debug_log(record: dict) -> str:
-    """Format DEBUG level log messages."""
     timestamp = record["time"].strftime("%m-%d %H:%M:%S")
     message = escape_loguru_markup(str(record["message"]))
     return f"{CYAN}DEBUG[{timestamp}]{RESET} {message}{format_extra(record, CYAN)}\n"
@@ -304,8 +252,7 @@ def sink(message):
 
 
 def configure_loguru(config: ObservabilityConfig) -> None:
-    """Configure loguru logger with custom format similar to golang logrus."""
-
+    """Configure loguru with a logrus-style console format (or JSON)."""
     global app_name, app_version
     app_name = config.app_name
     app_version = config.app_version
@@ -348,12 +295,11 @@ def configure_loguru(config: ObservabilityConfig) -> None:
         mod_logger.handlers = [InterceptHandler(level=level)]
         mod_logger.propagate = False
 
-    # Disable granian access logs - we have our own ConnectRPC access logging
+    # ConnectRPC interceptor already emits access logs.
     logging.getLogger("granian.access").handlers = []
     logging.getLogger("granian.access").propagate = False
 
-    # Suppress DEBUG/INFO logs from HTTP transport libraries (too noisy)
-    # These produce verbose connection-level logs that clutter output
+    # HTTP transport DEBUG/INFO is too verbose for production.
     http_loggers = ["httpx", "httpcore", "httpcore.connection", "httpcore.http11"]
     for http_logger_name in http_loggers:
         http_logger = logging.getLogger(http_logger_name)
@@ -374,7 +320,6 @@ def configure_loguru(config: ObservabilityConfig) -> None:
         just_fix_windows_console()
         loggers_config = {
             "handlers": [
-                # Info logs
                 {
                     "sink": sys.stdout,
                     "format": format_info_log,
@@ -383,7 +328,6 @@ def configure_loguru(config: ObservabilityConfig) -> None:
                     "colorize": False,
                     "diagnose": True,
                 },
-                # Warning logs
                 {
                     "sink": sys.stdout,
                     "format": format_warning_log,
@@ -392,7 +336,6 @@ def configure_loguru(config: ObservabilityConfig) -> None:
                     "colorize": False,
                     "diagnose": True,
                 },
-                # Error and Critical logs
                 {
                     "sink": sys.stderr,
                     "format": format_error_log,
@@ -406,7 +349,6 @@ def configure_loguru(config: ObservabilityConfig) -> None:
             ],
         }
 
-        # Apply the configuration
         for handler in loggers_config["handlers"]:
             logger.add(**handler)
 

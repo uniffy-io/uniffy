@@ -1,16 +1,8 @@
 """Cross-pod invalidation for the in-process DEK caches.
 
-Two long-lived listeners:
-
-* per-org: ``org_deks:invalidate:{org_id}`` -- a rotation in any pod
-  publishes once; every pod's subscriber drops the matching
-  ``OrgDekLRU`` entries.
-* deployment-singleton: ``deployment_deks:invalidate`` -- a rotation
-  drops every cached entry in ``DeploymentDekCache``.
-
-The publishers reuse the shared pubsub tier; each subscriber owns a
-long-lived ``PSUBSCRIBE`` connection with the same reconnect / shutdown
-pattern as ``ProviderClientLRU``.
+Two long-lived listeners: per-org (``org_deks:invalidate:{org_id}``) and
+deployment-singleton (``deployment_deks:invalidate``). Subscribers own a
+long-lived ``PSUBSCRIBE`` connection with reconnect / shutdown.
 """
 
 from __future__ import annotations
@@ -36,12 +28,10 @@ _POLL_TIMEOUT_SECONDS = 1.0
 
 
 def org_dek_invalidate_channel(organization_id: UUID) -> str:
-    """Pubsub channel name for a per-org DEK invalidation event."""
     return f"org_deks:invalidate:{organization_id}"
 
 
 async def publish_dek_invalidation(organization_id: UUID) -> None:
-    """Tell every pod to drop its cached DEK(s) for an organization."""
     await publish_to_channel(
         org_dek_invalidate_channel(organization_id),
         {"organization_id": str(organization_id)},
@@ -53,11 +43,7 @@ _subscriber_shutdown: asyncio.Event | None = None
 
 
 async def subscribe_dek_invalidations() -> None:
-    """Start the long-lived pubsub listener for DEK invalidation.
-
-    Idempotent: a second call is a no-op while the first task is alive.
-    Mirrors the ``init_provider_invalidation_subscriber`` lifecycle.
-    """
+    """Start the per-org listener; idempotent while the task is alive."""
     global _subscriber_task, _subscriber_shutdown
 
     if _subscriber_task is not None and not _subscriber_task.done():
@@ -69,7 +55,6 @@ async def subscribe_dek_invalidations() -> None:
 
 
 async def close_dek_invalidation_subscriber() -> None:
-    """Signal shutdown and await the subscriber task."""
     global _subscriber_task, _subscriber_shutdown
 
     if _subscriber_shutdown is not None:
@@ -89,7 +74,6 @@ async def close_dek_invalidation_subscriber() -> None:
 
 
 async def _run_subscriber() -> None:
-    """Listen on ``org_deks:invalidate:*`` and drop matching LRU entries."""
     url = ValkeyConfig.from_env().to_url()
 
     while _subscriber_shutdown is None or not _subscriber_shutdown.is_set():
@@ -159,7 +143,6 @@ async def _run_subscriber() -> None:
 
 
 async def _handle_invalidate_message(raw: object) -> None:
-    """Parse one pubsub payload and drop the matching LRU entries."""
     if raw is None:
         return
     try:
@@ -184,10 +167,7 @@ async def _handle_invalidate_message(raw: object) -> None:
         logger.debug(f"Org DEK LRU dropped {dropped} entries for {organization_id}")
 
 
-# --- Deployment-singleton DEK channel ---------------------------------
-
 async def publish_deployment_dek_invalidation() -> None:
-    """Tell every pod to drop its cached deployment DEK entries."""
     await publish_to_channel(
         _DEPLOYMENT_INVALIDATE_CHANNEL,
         {"event": "rotate"},
@@ -199,10 +179,7 @@ _deployment_subscriber_shutdown: asyncio.Event | None = None
 
 
 async def subscribe_deployment_dek_invalidations() -> None:
-    """Start the long-lived listener for deployment-DEK invalidation.
-
-    Idempotent: a second call is a no-op while the first task is alive.
-    """
+    """Start the deployment-DEK listener; idempotent while the task is alive."""
     global _deployment_subscriber_task, _deployment_subscriber_shutdown
 
     if (
@@ -217,7 +194,6 @@ async def subscribe_deployment_dek_invalidations() -> None:
 
 
 async def close_deployment_dek_invalidation_subscriber() -> None:
-    """Signal shutdown and await the subscriber task."""
     global _deployment_subscriber_task, _deployment_subscriber_shutdown
 
     if _deployment_subscriber_shutdown is not None:
@@ -239,7 +215,6 @@ async def close_deployment_dek_invalidation_subscriber() -> None:
 
 
 async def _run_deployment_subscriber() -> None:
-    """Listen on ``deployment_deks:invalidate`` and drop the cache."""
     url = ValkeyConfig.from_env().to_url()
 
     while (

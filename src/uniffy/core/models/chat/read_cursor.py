@@ -8,12 +8,7 @@ from sqlmodel import Field, SQLModel
 
 
 class ChatReadCursor(SQLModel, table=True):
-    """Per-user, per-channel read position.
-
-    Uses Valkey-first write strategy: hot path writes to Valkey, periodic ARQ job
-    flushes to this table. Falls back to this table on Valkey cache miss.
-
-    """
+    """Per-user, per-channel read position; Valkey-first, periodically flushed to PG."""
 
     __tablename__ = "chat_read_cursors"
     __table_args__ = (Index("ix_chat_read_cursors_user", "user_id"),)
@@ -29,7 +24,7 @@ class ChatReadCursor(SQLModel, table=True):
 
 
 class ChatThreadReadCursor(SQLModel, table=True):
-    """Per-user, per-thread read position. Same Valkey-first strategy as ChatReadCursor."""
+    """Per-user, per-thread read position; Valkey-first like ChatReadCursor."""
 
     __tablename__ = "chat_thread_read_cursors"
 

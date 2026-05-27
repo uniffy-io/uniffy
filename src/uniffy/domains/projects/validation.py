@@ -1,8 +1,4 @@
-"""
-Projects field validation.
-
-Validates custom field values against their field definitions.
-"""
+"""Custom-field value validation against field definitions."""
 
 import re
 from typing import Any
@@ -17,37 +13,15 @@ def validate_field_values(
     task_type: str | None = None,
     type_field_schemas: dict[str, Any] | None = None,
 ) -> list[str]:
-    """
-    Validate field values against their definitions.
-
-    Parameters
-    ----------
-    field_values : dict[str, Any]
-        Field ID to value mapping.
-    field_definitions : list[FieldDefinition]
-        Field definitions for the project.
-    task_type : str | None
-        Task type for type-aware required field checking.
-    type_field_schemas : dict[str, Any] | None
-        Per-type field schemas from the project.
-
-    Returns
-    -------
-    list[str]
-        List of error messages. Empty list means all valid.
-
-    """
-    # Build lookup by field ID
+    """Return a list of error messages; empty when valid."""
     field_map = {f.id: f for f in field_definitions}
 
     errors: list[str] = []
 
-    # Validate provided field values
     if field_values:
         for field_id, value in field_values.items():
             field_def = field_map.get(field_id)
             if not field_def:
-                # Unknown field IDs are silently ignored
                 continue
 
             if value is None or value == "":
@@ -57,7 +31,6 @@ def validate_field_values(
             if error:
                 errors.append(f"Field '{field_def.name}': {error}")
 
-    # Check required fields for this task type
     if task_type and type_field_schemas:
         schema = type_field_schemas.get(task_type)
         if schema:
@@ -78,11 +51,6 @@ def validate_field_values(
 
 
 def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None:
-    """
-    Validate a single field value against its definition.
-
-    Returns an error message string, or None if valid.
-    """
     field_type = field_def.type
     config = field_def.config or {}
 
@@ -138,19 +106,16 @@ def _validate_single_field(field_def: FieldDefinition, value: Any) -> str | None
 
 
 def _get_option_ids(config: dict) -> set[str]:
-    """Extract option IDs from field config."""
     options = config.get("options", [])
     return {str(opt.get("id", opt.get("label", ""))) for opt in options if isinstance(opt, dict)}
 
 
 def _get_option_labels(config: dict) -> list[str]:
-    """Extract option labels from field config."""
     options = config.get("options", [])
     return [opt.get("label", opt.get("id", "")) for opt in options if isinstance(opt, dict)]
 
 
 def _is_valid_uuid(value: str) -> bool:
-    """Check if a string is a valid UUID."""
     try:
         UUID(value)
         return True

@@ -12,44 +12,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentMessage(SQLModel, table=True):
-    """
-    A single message in an agent conversation session.
-
-    Messages are stored in PostgreSQL to enable search indexing,
-    permission-controlled access, and URN references.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    session_id : UUID
-        Session this message belongs to (FK to agent_sessions).
-    role : str
-        Message role: "user", "assistant", "tool", "system", or "summary".
-    content : str | None
-        Text content (nullable for tool messages with no text).
-    input_tokens : int
-        Input tokens consumed by this message.
-    output_tokens : int
-        Output tokens produced by this message.
-    model : str | None
-        Which model produced this message.
-    tool_name : str | None
-        Tool name for tool-role messages.
-    tool_call_id : str | None
-        Anthropic tool_use id for correlating calls and results.
-    tool_args : dict | None
-        Tool call arguments as JSON.
-    tool_result : str | None
-        Tool execution result text.
-    is_thinking : bool
-        Whether this is a thinking/reasoning message.
-    is_compacted : bool
-        Whether this message was replaced by a summary.
-    created_at : datetime
-        When the message was created.
-
-    """
+    """A single message in an agent conversation session."""
 
     __tablename__ = "agents_messages"
     __table_args__ = (
@@ -119,5 +82,4 @@ class AgentMessage(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentMessage."""
         return f"<AgentMessage(id={self.id}, role={self.role!r}, session_id={self.session_id})>"

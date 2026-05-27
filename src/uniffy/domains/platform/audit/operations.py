@@ -1,10 +1,5 @@
-"""Read-only audit feed scoped to platform actions.
-
-Every method gates on ``is_system_admin``. The action filter is
-enforced server-side: the proto wire field accepts a list of
-actions to narrow within the whitelist, but actions NOT in the
-whitelist are dropped silently so a frontend bug or a fiddled
-request cannot widen scope.
+"""Read-only platform audit feed; the whitelist is enforced server-side so
+a fiddled request cannot widen scope.
 """
 
 from __future__ import annotations
@@ -32,8 +27,6 @@ MAX_PAGE_SIZE = 200
 
 
 class PlatformAuditView(NamedTuple):
-    """One row in the platform audit feed (denormalised for wire)."""
-
     id: UUID
     created_at: datetime
     action: str
@@ -65,13 +58,10 @@ def _clamp_page_size(page_size: int) -> int:
 
 
 def _whitelist_or_clause():
-    """Build a SQL OR of ``action LIKE 'prefix%'`` for the whitelist."""
     return or_(*(AuditEvent.action.like(f"{p}%") for p in PLATFORM_ACTION_PREFIXES))
 
 
 class PlatformAuditOperations:
-    """Cross-tenant platform-scope audit reader."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._user_ops = UserOperations(session)
@@ -88,7 +78,6 @@ class PlatformAuditOperations:
         from_ts: datetime | None = None,
         to_ts: datetime | None = None,
     ) -> PlatformAuditPage:
-        """Page through platform-scope audit events."""
         await self._user_ops.require_system_admin(actor_user_id)
 
         page = _safe_page(page)
@@ -101,9 +90,8 @@ class PlatformAuditOperations:
             if allowed:
                 conditions.append(AuditEvent.action.in_(allowed))
             else:
-                # Request asked for actions that are all outside the
-                # whitelist -> return empty rather than ignoring the
-                # filter.
+                # All requested actions are outside the whitelist; refuse
+                # rather than ignore the filter.
                 return PlatformAuditPage(
                     events=[],
                     total_count=0,
@@ -199,6 +187,5 @@ class PlatformAuditOperations:
     async def list_actions(
         self, *, actor_user_id: UUID
     ) -> list[tuple[str, str]]:
-        """Return the whitelist as ``[(action, group), ...]``."""
         await self._user_ops.require_system_admin(actor_user_id)
         return platform_action_catalog()

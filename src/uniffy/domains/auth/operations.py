@@ -48,33 +48,16 @@ LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
 
 
 async def is_public_registration_enabled(session: AsyncSession) -> bool:
-    """Return True when the public ``Register`` RPC is allowed to create users.
+    """Return True when the public `Register` RPC is allowed to create users.
 
-    Resolution chain (in order):
-
-    1. ``deployment_settings(namespace='system', key='public_registration')`` --
-       the operator-edited row written from ``/platform/server-settings``.
-    2. Env ``ALLOW_PUBLIC_REGISTRATION`` -- used as the seed value when no
-       row exists. Operators can ship without env and set the flag from
-       the UI, or ship with env and override later.
-    3. Coded default ``False`` -- production-safe.
+    Resolution chain: deployment_settings row -> `ALLOW_PUBLIC_REGISTRATION`
+    env -> coded default `False`.
     """
     return await public_registration_enabled(session)
 
 
 class AuthOperations:
-    """Authentication operations handler."""
-
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize auth operations.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session.
-
-        """
         self._session = session
 
     async def authenticate(
@@ -84,31 +67,7 @@ class AuthOperations:
         organization_slug: str | None = None,
         user_agent: str = "",
     ) -> AuthOutcome:
-        """
-        Authenticate a user with email and password.
-
-        Parameters
-        ----------
-        email : str
-            User email.
-        password : str
-            User password.
-        organization_slug : str | None
-            Optional organization slug to authenticate into.
-        user_agent : str
-            Client User-Agent for session tracking.
-
-        Returns
-        -------
-        AuthResult
-            Authentication tokens and user info.
-
-        Raises
-        ------
-        AuthenticationError
-            If authentication fails.
-
-        """
+        """Authenticate via email + password and return tokens or an MFA challenge."""
         user: User | None = None
         organization_id: UUID | None = None
         try:
@@ -280,33 +239,7 @@ class AuthOperations:
         full_name: str | None = None,
         user_agent: str = "",
     ) -> AuthResult:
-        """
-        Register a new user.
-
-        Parameters
-        ----------
-        email : str
-            User email.
-        username : str
-            Desired username.
-        password : str
-            User password.
-        full_name : str | None
-            Optional full name.
-        user_agent : str
-            Client User-Agent for session tracking.
-
-        Returns
-        -------
-        AuthResult
-            Authentication tokens and user info.
-
-        Raises
-        ------
-        RegistrationError
-            If registration fails.
-
-        """
+        """Register a new user; refused when public registration is disabled."""
         try:
             if not await is_public_registration_enabled(self._session):
                 await write_audit_event(
@@ -323,17 +256,14 @@ class AuthOperations:
                     "Public registration is disabled. You must be invited."
                 )
 
-            # Check if email already exists
             existing_user = await self._get_user_by_email(email)
             if existing_user:
                 raise RegistrationError("Email already registered")
 
-            # Check if username already exists
             existing_username = await self._get_user_by_username(username)
             if existing_username:
                 raise RegistrationError("Username already taken")
 
-            # Hash password and create user
             hashed_password = hash_password(password)
 
             user = User(
@@ -348,10 +278,8 @@ class AuthOperations:
 
             logger.info(f"User {user.email} registered successfully")
 
-            # Create session record
             session_record = await self._create_session(user.id, user_agent)
 
-            # Create tokens with token_version and session_id
             access_token = create_access_token(
                 user.id,
                 token_version=user.token_version,
@@ -382,30 +310,7 @@ class AuthOperations:
         refresh_token: str,
         organization_slug: str | None = None,
     ) -> AuthResult:
-        """
-        Refresh an access token.
-
-        Validates that the user still exists, is active, and the token version
-        matches. Also validates the session is still active (if session_id present).
-
-        Parameters
-        ----------
-        refresh_token : str
-            Refresh token.
-        organization_slug : str | None
-            Optional organization to switch context.
-
-        Returns
-        -------
-        AuthResult
-            New authentication tokens.
-
-        Raises
-        ------
-        TokenError
-            If refresh fails (invalid token, user deactivated, or token revoked).
-
-        """
+        """Refresh an access token; validates user state, token version, and session."""
         try:
             try:
                 payload = decode_access_token(refresh_token)
@@ -419,7 +324,6 @@ class AuthOperations:
             token_version_in_jwt = payload.get("tkv")
             session_id_str = payload.get("sid")
 
-            # Verify user exists and is active (security checkpoint)
             user = await self._get_user_by_id(user_id)
             if not user:
                 raise TokenError("User not found")
@@ -427,7 +331,6 @@ class AuthOperations:
             if not user.is_active:
                 raise TokenError("User account is deactivated")
 
-            # Verify token version matches (for immediate revocation)
             if token_version_in_jwt is not None and token_version_in_jwt != user.token_version:
                 logger.warning(
                     f"Token version mismatch for user {user_id}: "
@@ -435,13 +338,11 @@ class AuthOperations:
                 )
                 raise TokenError("Token has been revoked")
 
-            # Validate session is still active (if session_id present)
             session_id: UUID | None = None
             if session_id_str:
                 session_id = UUID(session_id_str)
                 await self._validate_and_touch_session(session_id, user_id)
 
-            # Handle organization context
             organization_id = None
             organization_role = None
             domain_admin_domains: list[str] | None = None
@@ -452,7 +353,6 @@ class AuthOperations:
                     domain_admin_domains,
                 ) = await self._verify_org_membership(user_id, organization_slug)
 
-            # Create new tokens with current token_version, preserving session_id
             access_token = create_access_token(
                 user_id,
                 organization_id,
@@ -496,20 +396,7 @@ class AuthOperations:
             raise
 
     async def list_sessions(self, user_id: UUID) -> list[UserSession]:
-        """
-        List active (non-revoked) sessions for a user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-
-        Returns
-        -------
-        list[UserSession]
-            Active sessions ordered by last_activity descending.
-
-        """
+        """List active (non-revoked) sessions, ordered by last_activity desc."""
         result = await self._session.execute(
             select(UserSession)
             .where(
@@ -521,27 +408,7 @@ class AuthOperations:
         return list(result.scalars().all())
 
     async def revoke_session(self, user_id: UUID, session_id: UUID) -> bool:
-        """
-        Revoke a specific session.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID (for ownership verification).
-        session_id : UUID
-            Session to revoke.
-
-        Returns
-        -------
-        bool
-            True if the session was revoked.
-
-        Raises
-        ------
-        TokenError
-            If session not found or not owned by user.
-
-        """
+        """Revoke a session owned by `user_id`."""
         result = await self._session.execute(
             select(UserSession).where(
                 UserSession.id == session_id,
@@ -576,22 +443,7 @@ class AuthOperations:
         user_id: UUID,
         current_session_id: UUID,
     ) -> int:
-        """
-        Revoke all sessions except the current one.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-        current_session_id : UUID
-            Session to keep active.
-
-        Returns
-        -------
-        int
-            Number of sessions revoked.
-
-        """
+        """Revoke all sessions except `current_session_id`; returns the count."""
         now = datetime.now(UTC)
         result = await self._session.execute(
             update(UserSession)
@@ -603,7 +455,7 @@ class AuthOperations:
             .values(is_revoked=True, revoked_at=now)
         )
 
-        # Rotate cache_key_seed to invalidate all device caches
+        # Rotate cache_key_seed so device-side caches invalidate.
         await self._session.execute(
             update(User).where(User.id == user_id).values(cache_key_seed=os.urandom(32))
         )
@@ -632,25 +484,7 @@ class AuthOperations:
         return revoked_count
 
     async def get_cache_key_seed(self, user_id: UUID) -> bytes:
-        """
-        Return the cache_key_seed for the authenticated user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-
-        Returns
-        -------
-        bytes
-            32-byte cache key seed.
-
-        Raises
-        ------
-        AuthenticationError
-            If user not found.
-
-        """
+        """Return the 32-byte cache_key_seed for the authenticated user."""
         result = await self._session.execute(select(User.cache_key_seed).where(User.id == user_id))
         seed = result.scalar_one_or_none()
         if seed is None:
@@ -662,22 +496,7 @@ class AuthOperations:
         user_id: UUID,
         target_user_id: UUID | None = None,
     ) -> bytes:
-        """
-        Rotate cache_key_seed for a user. Generates a new 32-byte random seed.
-
-        Parameters
-        ----------
-        user_id : UUID
-            Authenticated user ID.
-        target_user_id : UUID | None
-            If set, rotate another user's seed (admin only).
-
-        Returns
-        -------
-        bytes
-            The new 32-byte cache key seed.
-
-        """
+        """Generate and store a fresh 32-byte cache_key_seed."""
         effective_user_id = target_user_id or user_id
         new_seed = os.urandom(32)
 
@@ -690,17 +509,7 @@ class AuthOperations:
         return new_seed
 
     async def logout_session(self, user_id: UUID, session_id: UUID) -> None:
-        """
-        Revoke the current session on logout.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-        session_id : UUID
-            Session to revoke.
-
-        """
+        """Revoke the current session on logout."""
         result = await self._session.execute(
             select(UserSession).where(
                 UserSession.id == session_id,

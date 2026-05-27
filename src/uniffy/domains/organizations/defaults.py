@@ -1,8 +1,4 @@
-"""Initial permission defaults seeded into ``permissions_org_defaults``
-on org creation. Each content type's row drives the default
-``access_mode`` / ``baseline_role`` for any new content of that type
-that does not carry an explicit override.
-"""
+"""Initial permission defaults seeded into ``permissions_org_defaults`` on org creation."""
 
 from typing import Any, TypedDict
 
@@ -10,8 +6,6 @@ from uniffy.core.models.shared import AccessMode, ContentRole, ContentType
 
 
 class PermissionDefaults(TypedDict):
-    """Permission defaults for a single content type."""
-
     default_access_mode: AccessMode
     default_baseline_role: ContentRole | None
 

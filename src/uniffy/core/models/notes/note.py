@@ -12,51 +12,9 @@ from uniffy.core.types import AccessMode, ContentRole, NodeType, generate_id
 
 
 class Note(SQLModel, table=True):
-    """
-    Note model representing a note in the system.
+    """Org-scoped note. Markdown content for NOTE/TEMPLATE; `canvas_content` JSONB for CANVAS.
 
-    Notes are organization-scoped and can be linked to other notes using wiki-links.
-    Supports markdown content, backlinks, and full-text search.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the note (primary key).
-    organization_id : UUID
-        Organization this note belongs to (foreign key).
-    owner_id : UUID
-        User who owns the note (foreign key to login_users).
-    access_mode : AccessMode
-        How access to this note is governed (OWNER_ONLY, OPEN_TO_ORG, MEMBERS_ONLY).
-    baseline_role : ContentRole | None
-        Default role granted by the access mode (e.g. VIEWER, EDITOR).
-    node_type : NodeType
-        Type of node (NOTE, FOLDER, TEMPLATE).
-    title : str
-        Note title (max 500 chars).
-    content : str
-        Note content in markdown format.
-    slug : str
-        URL-friendly slug, unique within organization.
-    is_deleted : bool
-        Soft delete flag.
-    version : int
-        Version number for optimistic locking and conflict resolution.
-    parent_id : UUID | None
-        Parent note ID for hierarchical organization (nullable).
-    note_metadata : dict | None
-        Additional metadata (custom fields, AI-generated summaries, etc).
-    outgoing_references : list[str] | None
-        List of URNs referenced in this note (e.g. ["urn:uniffy:file:123", ...]).
-    created_at : datetime
-        Timestamp when the note was created.
-    updated_at : datetime
-        Timestamp when the note was last updated.
-    deleted_at : datetime | None
-        Timestamp when the note was soft-deleted.
-
-    Note: Bookmark status is managed by the BookmarksService (user-scoped).
-
+    `outgoing_references` mirrors URNs found in body for backlink + mention indexing.
     """
 
     __tablename__ = "notes_notes"
@@ -117,7 +75,6 @@ class Note(SQLModel, table=True):
     deleted_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
     def __repr__(self) -> str:
-        """Return string representation of Note."""
         return (
             f"<Note(id={self.id}, title={self.title!r}, "
             f"access_mode={self.access_mode}, organization_id={self.organization_id})>"

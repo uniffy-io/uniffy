@@ -1,21 +1,4 @@
-"""Detect agent invocations on newly-sent chat messages.
-
-The hot path: `send_message` post-commit calls `detect_agent_mentions(...)`.
-It returns the list of (agent_id, rule) pairs that should fire. Phase 1
-stops there (logs only). Phase 2 enqueues ARQ jobs into the runtime.
-
-Detection rules (D8 in plan):
-  1. DM — channel is DIRECT with the agent as member AND trigger is USER
-  2. Mention — message content has `urn:uniffy:content:AGENT:<id>`
-  3. Reply — reply_to_id points at an AGENT-authored message by `agent_id`
-  4. Thread — message.root_id points at an AGENT-authored root message
-     (agent must also be a channel member)
-
-Binding-table-driven thread preferences (e.g. `respond_in_thread` off per
-binding) are still Phase 5. The root-sender rule is always on for now
-because the "agent started the thread; user replies in-thread" shape
-should continue the conversation without requiring a re-mention.
-"""
+"""Detect agent invocations on newly-sent chat messages."""
 
 from dataclasses import dataclass
 from uuid import UUID
@@ -31,12 +14,8 @@ from uniffy.core.types import SubjectType
 
 @dataclass(frozen=True, slots=True)
 class MentionDetectionResult:
-    """A single matched agent invocation, keyed by rule.
-
-    `rule` is a string token (`dm` / `mention` / `reply` / `thread`) kept
-    stable so ARQ logs and analytics can group by trigger shape.
-    """
-
+    # `rule` is a stable token (`dm` / `mention` / `reply` / `thread`)
+    # so analytics can group by trigger shape.
     agent_id: UUID
     rule: str
 
@@ -48,10 +27,8 @@ async def detect_agent_mentions(
 ) -> list[MentionDetectionResult]:
     """Return the agents that should fire in response to `message`.
 
-    Loop guard: only USER-authored messages trigger agents. Agent-authored
-    messages never invoke other agents (answered by resolved decision #3).
-    Duplicates across rules are collapsed -- one invocation per agent per
-    trigger message, rule recorded for observability.
+    Only USER-authored messages trigger agents (loop guard). Duplicates
+    across rules collapse to one invocation per agent.
     """
     if message.sender_type != SenderType.USER:
         return []
@@ -92,12 +69,9 @@ async def detect_agent_mentions(
             ):
                 matched[parent_sender_id] = "reply"
 
-    # Thread continuation: replying inside a thread whose root message was
-    # authored by an agent member triggers that agent. Plan calls this a
-    # Phase 5 binding concern, but the shape here is identical to the reply
-    # rule (just follows root_id instead of reply_to_id) and users expect it
-    # to "just work" so the conversation continues in-thread without a
-    # second mention.
+    # Thread continuation: replying inside a thread whose root was authored
+    # by an agent member triggers that agent so the conversation continues
+    # without requiring a re-mention.
     if message.root_id is not None:
         root = await session.execute(
             select(ChatMessage.sender_type, ChatMessage.sender_id).where(

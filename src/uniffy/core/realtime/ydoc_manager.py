@@ -1,9 +1,9 @@
 """In-memory YDoc cache + client-handle registry keyed by ``(content_type, content_id)``.
 
-Owns cold-start hydration, local peer fanout, snapshot debounce
-scheduling, idle eviction (15 min), the role-change decision matrix
-and the token-revoke close path. :class:`RealtimeRouter` dispatches
-Valkey payloads back here via :class:`RouterCallbacks`.
+Owns cold-start hydration, local peer fanout, snapshot debounce, 15-minute idle
+eviction, the role-change decision matrix, and the token-revoke close path.
+:class:`RealtimeRouter` dispatches Valkey payloads back here via
+:class:`RouterCallbacks`.
 """
 
 import asyncio
@@ -47,8 +47,6 @@ from uniffy.observability.metrics import (
 
 __all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", "ydoc_manager"]
 
-# Balances hot-edit latency (bouncing tabs should not re-hydrate from
-# PG) against memory pressure.
 IDLE_EVICTION_SECONDS = 15 * 60
 
 _ROLES_REQUIRING_CLOSE: frozenset[str | None] = frozenset({None, "BLOCKED"})
@@ -62,8 +60,7 @@ class YDocManager:
 
     def __init__(self) -> None:
         self._sessions: dict[DocKey, YDocSession] = {}
-        # Per-key lock guards the slow cold-start path so hydration of
-        # one doc cannot stall concurrent connects to other docs.
+        # Per-key lock so hydration of one doc cannot stall concurrent connects to others.
         self._hydration_locks: dict[DocKey, asyncio.Lock] = {}
         self._global_lock = asyncio.Lock()
         self._replica_id = replica_id()
@@ -73,7 +70,6 @@ class YDocManager:
         return self._replica_id
 
     def router_callbacks(self) -> RouterCallbacks:
-        """Bundle the router callbacks. Wired once at startup."""
         return RouterCallbacks(
             apply_remote_update=self._apply_remote_pubsub_update,
             enforce_role_change=self._enforce_role_change,
@@ -88,19 +84,13 @@ class YDocManager:
         *,
         can_edit: bool,
     ) -> tuple[YDocSession, ClientHandle]:
-        """Return the shared session and a fresh client handle.
-
-        Lazily hydrates the YDoc on first acquire; subsequent acquires
-        reuse the cached session. The handle is registered with the
-        router so cross-replica fanout reaches it.
-        """
+        """Return the shared session and a fresh handle; lazily hydrates on first acquire."""
         async with self._global_lock:
             session = self._sessions.get(key)
             if session is not None:
                 return session, self._attach_client(session, ws_session, can_edit=can_edit)
             hydration_lock = self._hydration_locks.setdefault(key, asyncio.Lock())
 
-        # Hydrate under the per-key lock, with the global lock released.
         async with hydration_lock:
             async with self._global_lock:
                 session = self._sessions.get(key)
@@ -123,7 +113,7 @@ class YDocManager:
         *,
         can_edit: bool,
     ) -> ClientHandle:
-        """Register a new client on an existing session. Caller holds ``_global_lock``."""
+        """Register a new client on an existing session; caller holds ``_global_lock``."""
         if session.eviction_task is not None:
             session.eviction_task.cancel()
             session.eviction_task = None
@@ -143,7 +133,7 @@ class YDocManager:
         return handle
 
     async def release(self, key: DocKey, conn_id: int) -> None:
-        """Drop a client handle; schedule idle eviction if no clients remain."""
+        """Drop a client handle; schedule idle eviction if the session is now empty."""
         async with self._global_lock:
             session = self._sessions.get(key)
             if session is None:
@@ -158,7 +148,7 @@ class YDocManager:
                 session.eviction_task = asyncio.create_task(self._evict_after_idle(key))
 
     async def release_all(self, ws_session: WSSession) -> None:
-        """Tear down every doc attachment owned by ``ws_session``."""
+        """Tear down every doc attachment on ``ws_session``."""
         for key in list(ws_session.doc_handles.keys()):
             await self.release(key, ws_session.conn_id)
 
@@ -169,11 +159,7 @@ class YDocManager:
         *,
         source_conn_id: int,
     ) -> None:
-        """Apply a SYNC_UPDATE / SYNC_STEP2 payload from a local client.
-
-        Fans out to every other local client AND publishes to Valkey
-        so peer replicas can apply the same update.
-        """
+        """Apply a local client's update, fan out to other local clients, and publish to Valkey."""
         content_type_label = session.key[0].value
         async with session.lock:
             session.ydoc.apply_update(update_bytes)
@@ -204,10 +190,7 @@ class YDocManager:
         *,
         source_conn_id: int,
     ) -> None:
-        """Re-broadcast an awareness frame to every peer except the source.
-
-        Awareness is ephemeral; full queues drop instead of blocking.
-        """
+        """Re-broadcast awareness to every peer except the source. Drops on full queues."""
         for cid, peer in session.clients.items():
             if cid == source_conn_id:
                 continue
@@ -218,7 +201,7 @@ class YDocManager:
         key: DocKey,
         organization_id: UUID,
     ) -> YDocSession:
-        """Create a fresh ``YDocSession`` seeded from snapshot or domain row."""
+        """Seed a fresh ``YDocSession`` from snapshot or domain row."""
         content_type, content_id = key
         ydoc = pycrdt.Doc()
         started = time.perf_counter()
@@ -255,7 +238,7 @@ class YDocManager:
         return YDocSession(key=key, ydoc=ydoc, organization_id=organization_id)
 
     async def _evict_after_idle(self, key: DocKey) -> None:
-        """Drop the session from memory if no client reconnects in the window."""
+        """Drop the session from memory if no client reconnects within ``IDLE_EVICTION_SECONDS``."""
         try:
             await asyncio.sleep(IDLE_EVICTION_SECONDS)
         except asyncio.CancelledError:
@@ -280,7 +263,7 @@ class YDocManager:
     async def _apply_remote_pubsub_update(
         self, session: YDocSession, update_bytes: bytes
     ) -> None:
-        """Apply a peer-replica update + fan out to local clients (no re-publish)."""
+        """Apply a peer-replica update and fan out to local clients without re-publishing."""
         content_type_label = session.key[0].value
         REALTIME_UPDATE_MESSAGES_TOTAL.labels(
             content_type=content_type_label, direction="pubsub_in"
@@ -306,22 +289,16 @@ class YDocManager:
         if new_role in _ROLES_VIEW_ONLY:
             handle.can_edit = False
             return
-        # COMMENTER / EDITOR / ADMIN / OWNER keep or restore edit.
         handle.can_edit = True
 
     async def _reauthorize_doc_by_key(self, key: DocKey) -> None:
-        """Router callback for content-wide perm changes.
-
-        Re-runs adapter authorize for every attached client and
-        downgrades / closes per result.
-        """
+        """Re-run authorize for every attached client; downgrade or close per result."""
         session = self._sessions.get(key)
         if session is None or not session.clients:
             return
         await self._reauthorize_all(session)
 
     async def _reauthorize_all(self, session: YDocSession) -> None:
-        """Re-resolve role for every client on a content-wide perm flip."""
         content_type, content_id = session.key
         adapter = get_realtime_adapter(content_type)
         affected = list(session.clients.values())
@@ -354,7 +331,7 @@ class YDocManager:
                 handle.can_edit = role_can_edit(role)
 
     async def _close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
-        """Close every handle for ``user_id`` whose ``token_version`` is older."""
+        """Close every handle for ``user_id`` whose ``token_version`` predates ``new_version``."""
         affected: list[ClientHandle] = []
         for session in self._sessions.values():
             for handle in session.clients.values():
@@ -377,11 +354,8 @@ class YDocManager:
 
 
 def enqueue_for_handle(handle: ClientHandle, frame: bytes, *, kind: str) -> None:
-    """Best-effort enqueue onto the owning WS's outbound queue.
-
-    Wraps ``frame`` with the docname prefix so the WS pump can drain
-    bytes directly into ``ws.send_bytes`` without further allocation.
-    Drops on full so a slow peer never blocks the broadcaster.
+    """Best-effort enqueue onto the owning WS's outbound queue. Drops on
+    full to protect the broadcaster.
     """
     if handle.ws_session is None or handle.doc_key is None:
         return

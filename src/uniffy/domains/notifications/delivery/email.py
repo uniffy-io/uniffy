@@ -1,11 +1,4 @@
-"""Email notification delivery adapter.
-
-Bridges the in-app ``NotificationEvent`` fan-out into the ``send_email``
-ARQ task. For ``email_frequency = "instant"`` users this enqueues an
-immediate per-event email; for ``"hourly"`` / ``"daily"`` users it
-returns ``True`` without enqueueing because ``send_email_digest``
-aggregates those into a periodic summary.
-"""
+"""Email delivery adapter; bridges ``NotificationEvent`` to the ``send_email`` ARQ task."""
 
 from __future__ import annotations
 
@@ -54,13 +47,7 @@ class EmailAdapter(DeliveryAdapter):
         return "email"
 
     async def startup(self) -> None:
-        """In production, fail fast if no mail config can be resolved.
-
-        Checks for a viable system env config OR at least one
-        ``org_settings`` row under ``namespace='mail'``. A deployment
-        with neither is misconfigured: the worker would silently skip
-        every email.
-        """
+        """Fail fast in production when neither env nor any per-org mail config exists."""
         if os.getenv("ENVIRONMENT", "development").lower() != "production":
             return
 
@@ -84,7 +71,7 @@ class EmailAdapter(DeliveryAdapter):
         )
 
     async def deliver(self, user_id: UUID, event: NotificationEvent) -> bool:
-        """Enqueue an instant email; skip for digest-frequency users."""
+        # Digest-frequency users are handled by ``send_email_digest``; skip them here.
         async with open_session() as session:
             frequency = await _resolve_email_frequency(session, user_id)
             if frequency != "instant":

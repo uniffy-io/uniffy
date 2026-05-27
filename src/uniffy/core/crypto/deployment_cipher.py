@@ -1,22 +1,10 @@
-"""Deployment-scope envelope encryption.
+"""Deployment-scope envelope encryption (singleton counterpart to ``OrgCipher``).
 
-:class:`DeploymentCipher` is the singleton counterpart to
-:class:`OrgCipher`. It owns one Fernet keyed off a DEK that is wrapped
-by the master KEK and stored in ``deployment_encryption_keys``.
-Exactly one row is ``is_active=true`` at any given time; rotation
-inserts a fresh version-bumped row, retires the previous one,
-publishes a cross-pod invalidation, and re-encrypts every registered
-:class:`DeploymentReEncryptingConsumer` under the new DEK.
+Self-provisions a v1 row on first use. Rotation bumps the version, publishes
+a cross-pod invalidation, then re-encrypts every registered consumer under
+the new DEK. Retired versions stay readable until the sweep finishes.
 
-The cipher self-provisions the v1 row on the first encrypt call so a
-fresh deployment doesn't need a bootstrap step. After that, every
-call shares the ``Fernet`` cached in :class:`DeploymentDekCache` --
-unwrap runs once per pod per (version, TTL) bucket. Retired versions
-stay readable so historical ciphertext keeps decrypting until the
-rotation sweep finishes re-encrypting it.
-
-Ciphertext is framed ``v{version}:{Fernet-token}`` to match
-``OrgCipher`` so the wire shape is identical between the two seams.
+Ciphertext is framed ``v{version}:{Fernet-token}`` to match ``OrgCipher``.
 """
 
 from __future__ import annotations
@@ -52,17 +40,12 @@ class DeploymentCipher:
         self._session = session
 
     async def encrypt(self, plaintext: str) -> str:
-        """Encrypt ``plaintext`` under the active deployment DEK.
-
-        Provisions the v1 DEK if the table is empty. Returns ciphertext
-        framed ``v{version}:{Fernet-token}``.
-        """
+        """Encrypt under the active deployment DEK; provisions v1 if missing."""
         fernet, version = await self._active_fernet()
         token = fernet.encrypt(plaintext.encode("utf-8")).decode("ascii")
         return f"v{version}:{token}"
 
     async def decrypt(self, ciphertext: str) -> str:
-        """Decrypt ``ciphertext`` previously produced by ``encrypt``."""
         version, payload = self._parse(ciphertext)
         fernet = await self._fernet_for(version)
         try:
@@ -73,18 +56,12 @@ class DeploymentCipher:
             ) from exc
 
     async def get_active_version(self) -> int | None:
-        """Return the active DEK version, or ``None`` if none provisioned."""
+        """Active DEK version, or ``None`` when none has been provisioned."""
         row = await self._load_active()
         return row.version if row is not None else None
 
     async def provision_if_missing(self) -> int:
-        """Ensure a v1 DEK exists. Returns the active version.
-
-        Idempotent: a deployment that already has an active DEK gets
-        its version back without writing. Called from the app lifespan
-        on boot so ``/platform/encryption`` is never in the
-        "Not provisioned" state once the backend is up.
-        """
+        """Idempotent provision call invoked from the app lifespan; returns active version."""
         existing = await self._load_active()
         if existing is not None:
             return existing.version
@@ -92,7 +69,6 @@ class DeploymentCipher:
         return row.version
 
     async def get_status(self) -> DeploymentEncryptionStatus:
-        """Snapshot the active + retired DEK rows for the admin UI."""
         rows = (
             await self._session.execute(
                 select(DeploymentEncryptionKey).order_by(
@@ -110,12 +86,9 @@ class DeploymentCipher:
     async def rotate(self) -> int:
         """Insert a fresh DEK, retire the previous one, sweep consumers.
 
-        Publishes the cross-pod invalidation BEFORE the re-encryption
-        sweep so every pod drops the retiring fernet (subsequent reads
-        reload it from the DB until the sweep finishes; the row stays
-        in the table). After publish, walks every registered
-        :class:`DeploymentReEncryptingConsumer` and re-encrypts each
-        row under the new DEK. Returns the new active version.
+        Invalidation is published BEFORE the sweep so every pod drops the
+        retiring Fernet; subsequent reads reload it from the row until the
+        sweep finishes re-encrypting under the new DEK.
         """
         previous = await self._load_active()
         if previous is None:
@@ -147,14 +120,7 @@ class DeploymentCipher:
         return new_version
 
     async def _re_encrypt_all_consumers(self) -> None:
-        """Walk every registered consumer and re-encrypt each row.
-
-        Each row is decrypted with the version it was written under
-        (the retired row stays in the DB so it is still readable) and
-        re-encrypted under the new active DEK. Rows are committed in
-        batches of ``_REENCRYPT_BATCH_SIZE`` so a long sweep doesn't
-        balloon the transaction log.
-        """
+        """Decrypt-with-old / encrypt-with-new for every consumer row; commits every batch."""
         for consumer in DEPLOYMENT_CRYPTO_CONSUMERS:
             batch = 0
             async for row in consumer.list_rows(self._session):
@@ -257,7 +223,7 @@ class DeploymentCipher:
 
 @dataclass(frozen=True)
 class DeploymentEncryptionStatus:
-    """Snapshot of deployment DEK state surfaced to the admin UI."""
+    """Deployment DEK snapshot for the admin UI."""
 
     active_version: int | None
     active_created_at: datetime | None
@@ -265,5 +231,5 @@ class DeploymentEncryptionStatus:
 
 
 async def reset_deployment_cipher_cache() -> None:
-    """Drop in-process cached DEKs. Test-only."""
+    """Test-only: drop in-process cached DEKs."""
     await get_deployment_dek_cache().invalidate_all()

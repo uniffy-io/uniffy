@@ -1,9 +1,4 @@
-"""Saved-filter RPC handlers for the unified tags explorer.
-
-Mounted on ``TagsServiceImpl`` via mixin so the explorer can colocate
-with the rest of the tags surface (``ListSavedFilters`` next to
-``ListTags`` is one less client to wire up).
-"""
+"""Saved-filter RPC handlers for the tags explorer, mixed into TagsServiceImpl."""
 
 from uuid import UUID
 
@@ -53,8 +48,6 @@ def _resolve_org(ctx: RequestContext, request_org_id: str) -> UUID:
 
 
 class SavedTagFilterHandlersMixin:
-    """RPC mixin: saved-filter CRUD on top of ``TagsService``."""
-
     async def create_saved_filter(
         self,
         request: CreateSavedFilterRequest,

@@ -1,8 +1,4 @@
-"""Notification background tasks for ARQ worker.
-
-Handles notification event processing, recipient resolution,
-preference filtering, and multi-channel delivery via adapters.
-"""
+"""Notification fan-out: resolve recipients, filter on prefs, deliver per channel."""
 
 from typing import Any
 from uuid import UUID
@@ -28,28 +24,7 @@ async def process_notification_event(
     ctx: dict[str, Any],
     event_json: str,
 ) -> dict[str, Any]:
-    """
-    Process a notification event: resolve recipients, check preferences,
-    create notification records, and fan out to delivery channels.
-
-    For each recipient the worker:
-    1. Resolves which channels are enabled (user prefs + master switches)
-    2. Delegates to each enabled DeliveryAdapter
-    3. Batch-commits DB changes and publishes real-time events
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context dictionary.
-    event_json : str
-        JSON-serialized NotificationEvent.
-
-    Returns
-    -------
-    dict
-        Processing result with status and recipient count.
-
-    """
+    """Resolve recipients for a `NotificationEvent` and fan it out to delivery channels."""
     try:
         event = event_from_json(event_json)
     except Exception as e:
@@ -58,7 +33,6 @@ async def process_notification_event(
         return {"status": "error", "reason": "invalid_event"}
 
     async with open_session() as session:
-        # Resolve recipients
         recipient_ids = await _resolve_recipients(session, event)
 
         if not recipient_ids:
@@ -66,7 +40,6 @@ async def process_notification_event(
             NOTIFICATION_EVENTS_TOTAL.labels(status="skipped").inc()
             return {"status": "skipped", "reason": "no_recipients"}
 
-        # Resolve actor name once, used by both push and in-app realtime
         actor_name = ""
         if event.actor_id:
             result = await session.execute(
@@ -76,9 +49,7 @@ async def process_notification_event(
             if row:
                 actor_name = row[0] or row[1]
 
-        # Build push event with actor-prefixed title for browser notifications.
-        # In-app notifications render the actor name separately in the UI,
-        # but browser push needs it baked into the title string.
+        # Browser push has no separate actor field, so prefix it onto the title.
         if actor_name and event.title:
             push_title = f"{actor_name} {event.title[0].lower()}{event.title[1:]}"
         else:
@@ -103,13 +74,11 @@ async def process_notification_event(
         for user_id in recipient_ids:
             channels = await _get_delivery_channels(session, user_id, event.notification_type)
 
-            # In-app: persist to DB (returns Notification, ID set after commit)
             if "in_app" in channels and isinstance(in_app_adapter, InAppAdapter):
                 notification = await in_app_adapter.deliver_with_session(session, user_id, event)
                 pending_notifications.append(notification)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="in_app").inc()
 
-            # Browser push: use actor-prefixed title
             if "browser" in channels:
                 push_adapter = DELIVERY_ADAPTERS.get("browser")
                 if isinstance(push_adapter, PushAdapter):
@@ -118,7 +87,6 @@ async def process_notification_event(
                     await push_adapter.deliver(user_id, push_event)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="browser").inc()
 
-            # Email: delegate to adapter
             if "email" in channels:
                 email_adapter = DELIVERY_ADAPTERS.get("email")
                 if email_adapter:
@@ -152,31 +120,7 @@ async def deliver_push_notification(
     body: str,
     source_urn: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Deliver a push notification to a user's registered browsers/devices.
-
-    Standalone ARQ job for retryable push delivery (enqueued by the
-    main process_notification_event when push channel is enabled).
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context dictionary.
-    user_id : str
-        Recipient user ID.
-    title : str
-        Notification title.
-    body : str
-        Notification body.
-    source_urn : str | None
-        URN of the related content.
-
-    Returns
-    -------
-    dict
-        Delivery result.
-
-    """
+    """Standalone retryable push delivery to one user's registered subscriptions."""
     push_adapter = DELIVERY_ADAPTERS.get("browser")
     if not push_adapter:
         return {"status": "skipped", "reason": "no_push_adapter"}
@@ -202,22 +146,7 @@ async def deliver_push_notification(
 
 
 async def send_email_digest(ctx: dict[str, Any]) -> dict[str, Any]:
-    """
-    Periodic cron job: aggregate unread notifications and send email digests.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context dictionary.
-
-    Returns
-    -------
-    dict
-        Digest result with status and user count.
-
-    """
-    # Phase 6: query users with email_frequency in ("hourly", "daily"),
-    # aggregate their unread notifications, render digest template, send.
+    """Aggregate unread notifications and send per-user email digests."""
     logger.debug("Email digest cron triggered (not yet implemented)")
     return {"status": "deferred", "reason": "digest_not_configured"}
 
@@ -226,31 +155,13 @@ async def _resolve_recipients(
     session: AsyncSession,
     event: NotificationEvent,
 ) -> list[UUID]:
-    """
-    Resolve the list of recipient user IDs for a notification event.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    event : NotificationEvent
-        The notification event.
-
-    Returns
-    -------
-    list[UUID]
-        List of recipient user IDs (excludes the actor).
-
-    """
+    """Resolve recipient user IDs for `event`, always excluding the actor."""
     if event.target_user_ids is not None:
-        # Explicit recipients provided -- exclude the actor
         return [uid for uid in event.target_user_ids if uid != event.actor_id]
 
-    # Automatic resolution based on notification type
     recipients: list[UUID] = []
 
     if event.notification_type == NotificationType.SYSTEM_ANNOUNCEMENT:
-        # All org members
         from uniffy.core.models.login.organization_member import OrganizationMember
 
         result = await session.execute(
@@ -261,12 +172,11 @@ async def _resolve_recipients(
         recipients = [row[0] for row in result.all()]
 
     elif event.content_type and event.content_id:
-        # Content-based resolution: notify content owner + bookmarkers
+        # Content-based: owner + bookmarkers.
         from uniffy.core.models.bookmarks.bookmark import Bookmark
 
         recipient_set: set[UUID] = set()
 
-        # Include content owner
         if event.content_type == ContentType.NOTE:
             from uniffy.core.models.notes.note import Note
 
@@ -286,7 +196,6 @@ async def _resolve_recipients(
             if organizer_id:
                 recipient_set.add(organizer_id)
 
-        # Include bookmarkers of this content
         content_urn = event.source_urn
         if content_urn:
             result = await session.execute(
@@ -297,7 +206,6 @@ async def _resolve_recipients(
 
         recipients = list(recipient_set)
 
-    # Always exclude the actor
     return [uid for uid in recipients if uid != event.actor_id]
 
 
@@ -306,38 +214,19 @@ async def _get_delivery_channels(
     user_id: UUID,
     notification_type: NotificationType,
 ) -> set[str]:
-    """
-    Resolve which channels to deliver to for a user + notification type.
+    """Return the enabled delivery channels for `user_id` + `notification_type`.
 
-    Loads user settings, merges with defaults, applies master switches.
-    Uses a Valkey cache (15-min TTL) to avoid hitting the DB on every call.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    user_id : UUID
-        Recipient user ID.
-    notification_type : NotificationType
-        The notification type.
-
-    Returns
-    -------
-    set[str]
-        Set of enabled channels: {"in_app", "browser", "email"}.
-
+    Reads `settings_profile.notifications` via the Valkey settings cache (15-min TTL).
     """
     from uniffy.core.valkey.cache import CACHE_MISS
     from uniffy.domains.notifications.cache import get_cached_settings, set_cached_settings
     from uniffy.domains.settings.defaults import get_effective_notification_channels
 
-    # Try cache first
     cached = await get_cached_settings(user_id)
 
     if cached is not CACHE_MISS:
         overrides = cached
     else:
-        # Cache miss -- query DB and populate cache
         from uniffy.core.models.settings.settings_profile import SettingsProfile
 
         result = await session.execute(

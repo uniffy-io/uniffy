@@ -1,13 +1,9 @@
-"""Process-wide Valkey dispatcher for realtime fanout.
+"""Process-wide Valkey dispatcher.
 
-Collapses per-doc / per-user Valkey subscribers onto four pattern
-subscribers per process (doc updates, perm changes, defaults, token
-revoke). ``YDocManager`` registers ``RouterCallbacks`` at startup; the
-router calls back into the manager so this module does not import
-``YDocManager`` directly (avoids a cycle with ``snapshot.py``).
-
-Lifecycle: started during the FastAPI ``lifespan`` startup, stopped on
-shutdown. Subscriber tasks reconnect with exponential backoff.
+Four pattern subscribers per process (doc updates, perm changes, defaults, token
+revoke) replace per-doc / per-user subscribers. ``YDocManager`` registers
+``RouterCallbacks`` at startup; the router calls back into the manager rather
+than importing it (cycle with ``snapshot.py``).
 """
 
 from __future__ import annotations
@@ -46,24 +42,12 @@ class RouterCallbacks:
     """Hooks the ``YDocManager`` registers to receive routed payloads."""
 
     apply_remote_update: Callable[[YDocSession, bytes], Awaitable[None]]
-    """Apply a peer's Yjs update into the local ``Y.Doc`` + fan out to
-    local clients WITHOUT re-publishing."""
-
     enforce_role_change: Callable[[ClientHandle, str | None], Awaitable[None]]
-    """Apply a targeted permission change to a single client handle
-    (downgrade ``can_edit`` or close ``4403`` per ``new_role``)."""
-
     close_stale_user_sessions: Callable[[UUID, int], Awaitable[None]]
-    """Close every handle whose ``token_version`` is older than the
-    bumped version."""
-
     reauthorize_doc: Callable[[DocKey], Awaitable[None]]
-    """Re-resolve every active client's role for a content-wide perm
-    change."""
 
 
 def _parse_doc_channel(channel: str) -> DocKey | None:
-    """``realtime:doc:NOTE:<uuid>`` -> ``(ContentType.NOTE, UUID)``."""
     parts = channel.split(":")
     if len(parts) != 4 or parts[0] != "realtime" or parts[1] != "doc":
         return None
@@ -74,7 +58,6 @@ def _parse_doc_channel(channel: str) -> DocKey | None:
 
 
 def _parse_perm_channel(channel: str) -> DocKey | None:
-    """``realtime:perm:NOTE:<uuid>`` -> ``(ContentType.NOTE, UUID)``."""
     parts = channel.split(":")
     if len(parts) != 4 or parts[0] != "realtime" or parts[1] != "perm":
         return None
@@ -85,7 +68,6 @@ def _parse_perm_channel(channel: str) -> DocKey | None:
 
 
 def _parse_revoke_channel(channel: str) -> UUID | None:
-    """``auth:revoke:<user_uuid>`` -> ``UUID``."""
     parts = channel.split(":")
     if len(parts) != 3 or parts[0] != "auth" or parts[1] != "revoke":
         return None
@@ -96,10 +78,8 @@ def _parse_revoke_channel(channel: str) -> UUID | None:
 
 
 def _observe_pubsub_latency(channel_label: str, payload: dict[str, object]) -> None:
-    """Histogram-observe ``time.time() - payload["published_at"]``.
-
-    No-op when the publisher did not stamp ``published_at``. Negative
-    deltas (clock skew) are clamped to 0.
+    """Observe publish-to-receive latency. No-op without ``published_at``;
+    negative deltas clamp to 0.
     """
     raw = payload.get("published_at")
     if not isinstance(raw, (int, float)):
@@ -111,7 +91,6 @@ def _observe_pubsub_latency(channel_label: str, payload: dict[str, object]) -> N
 
 
 def _parse_defaults_channel(channel: str) -> tuple[UUID, ContentType] | None:
-    """``realtime:defaults:<org_uuid>:<content_type>`` -> ``(UUID, ContentType)``."""
     parts = channel.split(":")
     if len(parts) != 4 or parts[0] != "realtime" or parts[1] != "defaults":
         return None
@@ -122,17 +101,11 @@ def _parse_defaults_channel(channel: str) -> tuple[UUID, ContentType] | None:
 
 
 class RealtimeRouter:
-    """Singleton process-wide dispatcher for the realtime pubsub channels.
-
-    Owned by FastAPI ``lifespan``: ``start()`` on boot, ``stop()`` on
-    shutdown. Registries are populated by ``YDocManager`` as clients
-    acquire / release docs.
-    """
+    """Singleton process-wide dispatcher for the realtime pubsub channels."""
 
     def __init__(self) -> None:
         self._callbacks: RouterCallbacks | None = None
-        # Keyed by ``conn_id`` so a client is unambiguous even though
-        # ``ClientHandle`` is non-frozen (unhashable by default).
+        # Keyed by ``conn_id`` because ``ClientHandle`` is non-frozen and unhashable.
         self._doc_handles: dict[DocKey, dict[int, ClientHandle]] = {}
         self._user_handles: dict[UUID, dict[int, ClientHandle]] = {}
         self._doc_sessions: dict[DocKey, YDocSession] = {}
@@ -141,11 +114,9 @@ class RealtimeRouter:
         self._running = False
 
     def register_callbacks(self, callbacks: RouterCallbacks) -> None:
-        """Wire up the ``YDocManager`` callbacks. Called once at boot."""
         self._callbacks = callbacks
 
     async def start(self) -> None:
-        """Spawn the pattern-subscriber tasks."""
         if self._running:
             return
         self._running = True
@@ -173,7 +144,7 @@ class RealtimeRouter:
         )
 
     async def stop(self) -> None:
-        """Cancel the subscriber tasks. Safe to call repeatedly."""
+        """Cancel the subscriber tasks. Idempotent."""
         if not self._running:
             return
         self._running = False
@@ -186,15 +157,12 @@ class RealtimeRouter:
         logger.info("realtime router stopped", component=LOGGER_COMPONENT)
 
     def register_doc_session(self, key: DocKey, session: YDocSession) -> None:
-        """Track the per-doc ``YDocSession`` for remote-update dispatch."""
         self._doc_sessions[key] = session
 
     def unregister_doc_session(self, key: DocKey) -> None:
-        """Drop the per-doc ``YDocSession`` (idle eviction)."""
         self._doc_sessions.pop(key, None)
 
     def attach_handle(self, key: DocKey, handle: ClientHandle) -> None:
-        """Register a client handle for both per-doc and per-user fanout."""
         self._doc_handles.setdefault(key, {})[handle.conn_id] = handle
         self._user_handles.setdefault(handle.user_id, {})[handle.conn_id] = handle
 
@@ -216,7 +184,7 @@ class RealtimeRouter:
         pattern: str,
         handler: Callable[[str, dict[str, object]], Awaitable[None]],
     ) -> None:
-        """Run a single pattern subscriber forever with exponential backoff."""
+        """Run a pattern subscriber with exponential-backoff reconnect."""
         delay = _RECONNECT_DELAY_INITIAL
         while self._running:
             try:
@@ -251,7 +219,6 @@ class RealtimeRouter:
 
     async def _handle_doc_message(self, channel: str, payload: dict[str, object]) -> None:
         if payload.get("origin_replica") == self._self_replica:
-            # Local apply already fanned out; drop the self-echo.
             return
         key = _parse_doc_channel(channel)
         if key is None:
@@ -275,9 +242,8 @@ class RealtimeRouter:
 
     async def _handle_perm_message(self, channel: str, payload: dict[str, object]) -> None:
         if payload.get("origin_replica") == self._self_replica:
-            # Perm changes do NOT self-fan-out in-process; the producer
-            # commits to PG and the local session waits for the pubsub
-            # bounce. Same-replica payloads must be allowed through.
+            # Same-replica perm payloads are allowed through: the producer commits to PG
+            # and the local session relies on the pubsub bounce, not in-process fan-out.
             pass
         key = _parse_perm_channel(channel)
         if key is None:
@@ -290,7 +256,6 @@ class RealtimeRouter:
         new_role = payload.get("new_role")
         new_role_str = new_role if isinstance(new_role, str) else None
         if user_id_raw is None:
-            # Content-wide change: every active session re-resolves.
             await callbacks.reauthorize_doc(key)
             return
         try:
@@ -301,7 +266,6 @@ class RealtimeRouter:
                 component=LOGGER_COMPONENT,
             )
             return
-        # Targeted change: only handles owned by this user on this doc.
         bucket = self._doc_handles.get(key)
         if not bucket:
             return
@@ -313,8 +277,7 @@ class RealtimeRouter:
     async def _handle_defaults_message(
         self, channel: str, payload: dict[str, object]
     ) -> None:
-        """Re-authorize every doc on this replica that matches
-        ``(org_id, content_type)``."""
+        """Re-authorize every doc on this replica matching ``(org_id, content_type)``."""
         parsed = _parse_defaults_channel(channel)
         if parsed is None:
             return
@@ -344,4 +307,3 @@ class RealtimeRouter:
 
 
 router = RealtimeRouter()
-"""Process singleton. Tests should construct fresh instances."""

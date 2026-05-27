@@ -1,9 +1,4 @@
-"""Task due date reminder cron task.
-
-Checks for tasks with approaching or overdue due dates every minute
-and emits TASK_DUE_SOON / TASK_OVERDUE notifications.  Uses the
-notification table to deduplicate (one notification per task per day).
-"""
+"""Per-minute cron: emit TASK_DUE_SOON / TASK_OVERDUE, deduped via the notifications table."""
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -42,25 +37,10 @@ async def _already_notified_today(
 
 
 async def _process_due_tasks(session: AsyncSession) -> int:
-    """
-    Find tasks with approaching or overdue due dates and emit notifications.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    Returns
-    -------
-    int
-        Number of notifications sent.
-
-    """
     now = datetime.now(UTC)
     today = now.strftime("%Y-%m-%d")
     tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # Query tasks with due dates that are not done and not deleted
     stmt = (
         select(Task)
         .where(
@@ -88,7 +68,6 @@ async def _process_due_tasks(session: AsyncSession) -> int:
         target_user_ids = [UUID(uid) for uid in task.assignee_ids]
 
         if task.due_date < today:
-            # Overdue
             if await _already_notified_today(session, task_urn, NotificationType.TASK_OVERDUE):
                 continue
             await emit_notification(
@@ -104,7 +83,6 @@ async def _process_due_tasks(session: AsyncSession) -> int:
             count += 1
 
         elif task.due_date == today or task.due_date == tomorrow:
-            # Due soon (today or tomorrow)
             if await _already_notified_today(session, task_urn, NotificationType.TASK_DUE_SOON):
                 continue
             label = "Due today" if task.due_date == today else "Due tomorrow"
@@ -124,23 +102,8 @@ async def _process_due_tasks(session: AsyncSession) -> int:
 
 
 async def check_task_due_dates(ctx: dict[str, Any]) -> dict[str, Any]:
-    """
-    Cron task: check for tasks with approaching or overdue due dates.
-
-    Runs every minute via ARQ cron (unique across workers by default).
-    Emits TASK_DUE_SOON (24h before) and TASK_OVERDUE notifications,
-    deduplicated to one per task per day.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ worker context.
-
-    Returns
-    -------
-    dict
-        Task result with count of notifications sent.
-
+    """ARQ cron tick: scan tasks with due dates and emit at most one
+    notification per task per day.
     """
     try:
         async with open_session() as session:

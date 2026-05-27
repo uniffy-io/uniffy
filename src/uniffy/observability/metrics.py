@@ -1,15 +1,9 @@
-"""Prometheus metrics instruments for UNIFFY.
+"""Prometheus instruments and the `/metrics` renderer.
 
-All application-level metrics are defined here. Import the instruments you need
-from this module and call `get_metrics()` to render the Prometheus text format.
-
-When PROMETHEUS_MULTIPROC_DIR is set (managed by
+When `PROMETHEUS_MULTIPROC_DIR` is set (see
 `uniffy._metrics_bootstrap.bootstrap_multiproc_metrics`), counters and
-histograms are aggregated across forked worker processes by
-prometheus_client's MultiProcessCollector. Gauges are tagged with
-`multiprocess_mode='livesum'` so the per-process value sums across live
-workers - the right semantics for "active connections", "pool checkouts",
-"jobs in progress", and similar.
+histograms aggregate across forked workers via `MultiProcessCollector`. Gauges
+use `multiprocess_mode='livesum'` so per-process values sum across live workers.
 """
 
 import atexit
@@ -99,13 +93,12 @@ _db_pool: Any = None
 
 
 def register_db_pool(pool: Any) -> None:
-    """Store a reference to the SQLAlchemy pool for lazy gauge updates."""
+    """Store the SQLAlchemy pool so its stats can be scraped lazily."""
     global _db_pool
     _db_pool = pool
 
 
 def _update_pool_gauges() -> None:
-    """Read pool stats and set gauge values. Called before each scrape."""
     if _db_pool is None:
         return
     DB_POOL_SIZE.set(_db_pool.size())
@@ -416,20 +409,13 @@ REALTIME_AUTH_FAILURES_TOTAL = Counter(
 
 
 def _build_multiproc_registry() -> CollectorRegistry:
-    """Return a fresh registry attached to a MultiProcessCollector."""
     registry = CollectorRegistry()
     multiprocess.MultiProcessCollector(registry)
     return registry
 
 
 def get_metrics() -> bytes:
-    """Render all registered Prometheus metrics in text exposition format.
-
-    In multiprocess mode (PROMETHEUS_MULTIPROC_DIR set) collects per-pid
-    files via MultiProcessCollector so the scrape returns an aggregate view
-    across every live Granian worker. Falls back to the default in-process
-    registry when the env var is unset (tests, single-proc runs).
-    """
+    """Render Prometheus metrics, aggregating across workers in multiproc mode."""
     _update_pool_gauges()
     if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
         return generate_latest(_build_multiproc_registry())
@@ -437,24 +423,10 @@ def get_metrics() -> bytes:
 
 
 def start_worker_metrics_server(port: int | None = None) -> None:
-    """Start a lightweight HTTP server exposing /metrics for the worker process.
+    """Expose `/metrics` over HTTP from a worker process.
 
-    Uses prometheus_client.start_http_server which spawns a daemon thread.
-    Non-fatal: if the port is busy or unavailable the worker continues
-    without metrics exposure.
-
-    In multiprocess mode the served registry is backed by
-    MultiProcessCollector against the worker's own multiproc directory, so
-    a scrape returns the aggregate across whatever processes share that
-    directory (today: just the ARQ worker; the backend has its own dir).
-
-    Parameters
-    ----------
-    port : int | None
-        Listen port. ``None`` falls back to ``WORKER_METRICS_PORT`` then
-        ``9091``. The core / egress entry points pass their fleet's
-        port explicitly so the two workers don't collide on one socket.
-
+    Non-fatal on bind failure - the worker keeps running without metrics. Each
+    worker fleet passes its own port to avoid socket collisions.
     """
     from prometheus_client import start_http_server
 
@@ -471,13 +443,7 @@ def start_worker_metrics_server(port: int | None = None) -> None:
 
 
 def _mark_process_dead_at_exit() -> None:
-    """Tell MultiProcessCollector this pid is gone so livesum gauges drop it.
-
-    Without this, a worker that exits leaves stale .db files behind whose
-    gauge values the collector still treats as "alive" until file cleanup.
-    Counters and histograms remain valid (they are sums over historical
-    values, not point-in-time state).
-    """
+    """Drop this pid from livesum gauges so an exited worker stops contributing."""
     if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
         return
     with contextlib.suppress(Exception):

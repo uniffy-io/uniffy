@@ -1,18 +1,4 @@
-"""
-Stress test seed script for generating large amounts of test data.
-
-Usage:
-    uv run -m uniffy.seed.stress [OPTIONS]
-
-Options:
-    --notes         Number of notes to generate (default: 1000)
-    --folders       Number of folders to generate (default: 50)
-    --max-depth     Maximum folder nesting depth (default: 4)
-    --ref-chains    Number of reference chains to create (default: 100)
-    --max-chain     Maximum chain length (default: 5)
-    --tags          Number of unique tags to use (default: 30)
-    --dry-run       Print stats without writing to database
-"""
+"""Stress test seed script for generating large amounts of test data."""
 
 import argparse
 import asyncio
@@ -26,8 +12,6 @@ from loguru import logger
 
 @dataclass
 class StressConfig:
-    """Configuration for stress test data generation."""
-
     note_count: int = 1000
     folder_count: int = 50
     max_folder_depth: int = 4
@@ -37,7 +21,6 @@ class StressConfig:
     dry_run: bool = False
 
 
-# Sample data for realistic content generation
 ADJECTIVES = [
     "Quick",
     "Lazy",
@@ -165,7 +148,6 @@ LOREM_SENTENCES = [
 
 
 def generate_tags(count: int) -> list[str]:
-    """Generate a list of unique tags."""
     base_tags = [
         "important",
         "urgent",
@@ -199,7 +181,6 @@ def generate_tags(count: int) -> list[str]:
 
 
 def generate_title(index: int) -> str:
-    """Generate a realistic note title with unique index suffix."""
     patterns = [
         lambda: f"{random.choice(ADJECTIVES)} {random.choice(NOUNS)}",
         lambda: f"{random.choice(TOPICS).title()} {random.choice(NOUNS)}",
@@ -212,7 +193,6 @@ def generate_title(index: int) -> str:
 
 
 def generate_folder_name(index: int) -> str:
-    """Generate a realistic folder name with unique index suffix."""
     suffixes = ["Docs", "Notes", "Archive", "Resources"]
     prefixes = ["Team", "Project", "Client", "Internal"]
     patterns = [
@@ -226,8 +206,6 @@ def generate_folder_name(index: int) -> str:
 
 
 def generate_slug(title: str, index: int) -> str:
-    """Generate a URL-friendly slug from title."""
-    # Remove special characters and convert to lowercase
     slug = re.sub(r"[^\w\s-]", "", title.lower())
     slug = re.sub(r"[\s_]+", "-", slug)
     slug = re.sub(r"-+", "-", slug).strip("-")
@@ -238,28 +216,15 @@ def generate_content(
     references: list[tuple[str, UUID]] | None = None,
     inline_tags: list[str] | None = None,
 ) -> str:
-    """
-    Generate realistic markdown content with optional references and inline tags.
-
-    Args:
-        references: List of (title, note_id) tuples to reference.
-        inline_tags: List of tags to include inline.
-
-    Returns:
-        Markdown content string.
-    """
     paragraphs = []
 
-    # Opening paragraph
     paragraphs.append(random.choice(LOREM_SENTENCES))
 
-    # Add some bullet points
     if random.random() > 0.5:
         bullets = random.sample(LOREM_SENTENCES, min(3, len(LOREM_SENTENCES)))
         bullet_list = "\n".join(f"- {b}" for b in bullets)
         paragraphs.append(f"\n## Key Points\n\n{bullet_list}")
 
-    # Add references as mentions
     if references:
         ref_text = "\n\n## Related Notes\n\n"
         for title, note_id in references:
@@ -267,13 +232,11 @@ def generate_content(
             ref_text += f"- See [[[{title}|{urn}]]] for more details.\n"
         paragraphs.append(ref_text)
 
-    # Add inline tags
     if inline_tags:
         tag_text = "\n\n---\n\n"
         tag_text += " ".join(f"#{tag}" for tag in inline_tags)
         paragraphs.append(tag_text)
 
-    # Add more content
     extra_sentences = random.sample(LOREM_SENTENCES, random.randint(2, 5))
     paragraphs.append("\n\n" + " ".join(extra_sentences))
 
@@ -281,24 +244,16 @@ def generate_content(
 
 
 def build_note_urn(note_id: UUID) -> str:
-    """Build a URN string for a note."""
     return f"urn:uniffy:content:NOTE:{note_id}"
 
 
 def extract_urns_from_content(content: str) -> list[str]:
-    """Extract URNs from mention patterns in content."""
     pattern = r"\[\[\[[^\|]+\|(urn:uniffy:content:[A-Z_]+:[a-f0-9-]+)\]\]\]"
     matches = re.findall(pattern, content)
     return list(set(matches))
 
 
 async def run_stress_seed(config: StressConfig) -> None:
-    """
-    Generate stress test data.
-
-    Args:
-        config: Configuration for data generation.
-    """
     from dotenv import load_dotenv
     from sqlalchemy import select
 
@@ -308,7 +263,6 @@ async def run_stress_seed(config: StressConfig) -> None:
     from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
     from uniffy.db.session import close_db, init_db, open_session
 
-    # Load environment variables
     load_dotenv()
 
     logger.info(f"Starting stress seed with config: {config}")
@@ -324,13 +278,11 @@ async def run_stress_seed(config: StressConfig) -> None:
         logger.info(f"  Using {config.tag_count} unique tags")
         return
 
-    # Initialize database and search
     await init_db()
     await init_meilisearch()
 
     try:
         async with open_session() as session:
-            # Get the default organization and admin user
             result = await session.execute(
                 select(Organization).where(Organization.slug == "default")
             )
@@ -347,7 +299,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                 logger.error("Admin user not found. Run normal seed first.")
                 return
 
-            # Check for existing stress test data
             result = await session.execute(
                 select(Note)
                 .where(
@@ -366,15 +317,12 @@ async def run_stress_seed(config: StressConfig) -> None:
             logger.info(f"Generating stress test data for org: {org.name}")
 
             try:
-                # Generate available tags
                 available_tags = generate_tags(config.tag_count)
                 logger.info(f"Using {len(available_tags)} tags: {available_tags[:10]}...")
 
-                # Phase 1: Create folder structure
                 logger.info(f"Creating {config.folder_count} folders...")
                 folders: list[Note] = []
 
-                # Create root stress folder
                 stress_root = Note(
                     organization_id=org.id,
                     owner_id=admin.id,
@@ -390,7 +338,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                 folders.append(stress_root)
                 logger.info("  Created root folder")
 
-                # Create nested folders level by level for proper hierarchy
                 current_level = [stress_root]
                 folder_idx = 0
                 remaining = config.folder_count - 1
@@ -399,7 +346,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                     if remaining <= 0:
                         break
 
-                    # Distribute ~equal folders per level, more at shallower levels
                     level_count = min(
                         remaining, max(1, remaining // (config.max_folder_depth - depth + 1))
                     )
@@ -432,7 +378,6 @@ async def run_stress_seed(config: StressConfig) -> None:
 
                 logger.info(f"Created {len(folders)} folders total")
 
-                # Phase 2: Create notes
                 logger.info(f"Creating {config.note_count} notes...")
                 notes: list[Note] = []
                 batch_size = 100
@@ -463,19 +408,16 @@ async def run_stress_seed(config: StressConfig) -> None:
                     session.add(note)
                     notes.append(note)
 
-                    # Log progress every batch_size notes
                     if (i + 1) % batch_size == 0:
                         logger.info(f"  Prepared {i + 1}/{config.note_count} notes...")
 
                 logger.info(f"  Total notes in list: {len(notes)}")
 
-                # Flush all notes
                 await session.flush()
                 logger.info(f"  Flushed all {len(notes)} notes to database")
 
                 logger.info(f"Created {len(notes)} notes")
 
-                # Phase 3: Create reference chains
                 logger.info(f"Creating {config.ref_chain_count} reference chains...")
                 notes_with_refs: set[int] = set()
 
@@ -490,7 +432,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                         available_indices, min(chain_length, len(available_indices))
                     )
 
-                    # Create chain: note[0] -> note[1] -> note[2] -> ...
                     for j in range(len(chain_indices) - 1):
                         source_idx = chain_indices[j]
                         target_idx = chain_indices[j + 1]
@@ -516,7 +457,6 @@ async def run_stress_seed(config: StressConfig) -> None:
                 logger.info(f"Created {config.ref_chain_count} reference chains")
                 logger.info(f"Notes with outgoing references: {len(notes_with_refs)}")
 
-                # Phase 4: Index all content for search
                 logger.info("Indexing content for search...")
                 search_indexer = SearchIndexer(session)
 
@@ -542,14 +482,10 @@ async def run_stress_seed(config: StressConfig) -> None:
 
                 logger.info(f"Indexed {len(all_items)} items for search")
 
-                # Commit everything
                 await session.commit()
                 logger.info("Stress seed completed successfully!")
 
-                # Print summary
-                logger.info("=" * 50)
                 logger.info("SUMMARY")
-                logger.info("=" * 50)
                 logger.info(f"Folders created: {len(folders)}")
                 logger.info(f"Notes created: {len(notes)}")
                 logger.info(f"Reference chains: {config.ref_chain_count}")
@@ -566,7 +502,6 @@ async def run_stress_seed(config: StressConfig) -> None:
 
 
 def main() -> None:
-    """Entry point for stress seed script."""
     parser = argparse.ArgumentParser(
         description="Generate stress test data for Uniffy",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

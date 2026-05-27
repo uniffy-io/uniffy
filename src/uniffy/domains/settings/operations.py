@@ -1,8 +1,4 @@
-"""Settings operations for profile management.
-
-This module handles all business logic for settings profiles including
-CRUD operations and effective settings computation.
-"""
+"""Settings profile CRUD + effective-settings computation."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -25,23 +21,9 @@ from uniffy.domains.settings.defaults import (
 
 
 class SettingsOperations:
-    """
-    Settings profile operations.
-
-    Handles CRUD operations for user settings profiles and
-    computes effective settings by merging defaults with overrides.
-    """
+    """Merges per-profile overrides on top of defaults."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize settings operations.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            SQLAlchemy async session for database operations.
-
-        """
         self.session = session
 
     async def create_profile(
@@ -53,41 +35,10 @@ class SettingsOperations:
         notifications: dict[str, Any] | None = None,
         is_default: bool = False,
     ) -> SettingsProfile:
-        """
-        Create a new settings profile for a user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID who owns this profile.
-        name : str
-            Profile name (must be unique per user).
-        appearance : dict | None
-            Appearance overrides (sparse).
-        keyboard_shortcuts : dict | None
-            Keyboard shortcut overrides (sparse).
-        notifications : dict | None
-            Notification preference overrides (sparse).
-        is_default : bool
-            Whether to set this as the default profile.
-
-        Returns
-        -------
-        SettingsProfile
-            The created profile.
-
-        Raises
-        ------
-        ValidationError
-            If a profile with the same name already exists for this user.
-
-        """
-        # Check for duplicate name
         existing = await self._get_profile_by_name(user_id, name)
         if existing:
             raise ValidationError(f"Profile with name '{name}' already exists")
 
-        # If setting as default, unset other defaults
         if is_default:
             await self._unset_default_profiles(user_id)
 
@@ -157,52 +108,15 @@ class SettingsOperations:
         notifications: dict[str, Any] | None = None,
         is_default: bool | None = None,
     ) -> SettingsProfile:
-        """
-        Update an existing settings profile.
-
-        Performs a sparse update - only provided fields are updated.
-        For JSONB fields, values are merged with existing values.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID (for authorization).
-        profile_id : UUID
-            The profile ID to update.
-        name : str | None
-            New profile name.
-        appearance : dict | None
-            Appearance overrides to merge.
-        keyboard_shortcuts : dict | None
-            Keyboard shortcut overrides to merge.
-        notifications : dict | None
-            Notification overrides to merge.
-        is_default : bool | None
-            Whether to set as default.
-
-        Returns
-        -------
-        SettingsProfile
-            The updated profile.
-
-        Raises
-        ------
-        NotFoundError
-            If the profile doesn't exist or doesn't belong to the user.
-        ValidationError
-            If the new name conflicts with an existing profile.
-
-        """
+        """Sparse update; JSONB fields merge with existing values."""
         profile = await self.get_profile(user_id, profile_id)
 
-        # Check name uniqueness if changing
         if name is not None and name != profile.name:
             existing = await self._get_profile_by_name(user_id, name)
             if existing:
                 raise ValidationError(f"Profile with name '{name}' already exists")
             profile.name = name
 
-        # Merge JSONB fields (sparse update)
         if appearance is not None:
             profile.appearance = self._merge_settings(profile.appearance, appearance)
 
@@ -214,7 +128,6 @@ class SettingsOperations:
         if notifications is not None:
             profile.notifications = self._merge_settings(profile.notifications, notifications)
 
-        # Handle default flag
         if is_default is not None:
             if is_default and not profile.is_default:
                 await self._unset_default_profiles(user_id)
@@ -237,32 +150,9 @@ class SettingsOperations:
         user_id: UUID,
         profile_id: UUID,
     ) -> bool:
-        """
-        Delete a settings profile.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID (for authorization).
-        profile_id : UUID
-            The profile ID to delete.
-
-        Returns
-        -------
-        bool
-            True if deleted successfully.
-
-        Raises
-        ------
-        NotFoundError
-            If the profile doesn't exist or doesn't belong to the user.
-        ValidationError
-            If trying to delete the only profile.
-
-        """
+        """Refuses to delete the only profile."""
         profile = await self.get_profile(user_id, profile_id)
 
-        # Check if this is the only profile
         count = await self._count_user_profiles(user_id)
         if count <= 1:
             raise ValidationError("Cannot delete the only profile. Create another profile first.")
@@ -280,20 +170,6 @@ class SettingsOperations:
         self,
         user_id: UUID,
     ) -> list[SettingsProfile]:
-        """
-        List all profiles for a user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-
-        Returns
-        -------
-        list[SettingsProfile]
-            List of profiles for the user.
-
-        """
         result = await self.session.execute(
             select(SettingsProfile)
             .where(SettingsProfile.user_id == user_id)
@@ -305,20 +181,6 @@ class SettingsOperations:
         self,
         user_id: UUID,
     ) -> SettingsProfile | None:
-        """
-        Get the default profile for a user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-
-        Returns
-        -------
-        SettingsProfile | None
-            The default profile, or None if no default is set.
-
-        """
         result = await self.session.execute(
             select(SettingsProfile).where(
                 and_(
@@ -333,29 +195,10 @@ class SettingsOperations:
         self,
         user_id: UUID,
     ) -> SettingsProfile:
-        """
-        Get or create a default profile for a user.
-
-        If no default profile exists, creates one named "Default".
-        If no profiles exist at all, creates a default profile.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-
-        Returns
-        -------
-        SettingsProfile
-            The default profile.
-
-        """
-        # Try to get existing default
         profile = await self.get_default_profile(user_id)
         if profile:
             return profile
 
-        # If no default, try to get any profile and make it default
         profiles = await self.list_profiles(user_id)
         if profiles:
             profiles[0].is_default = True
@@ -363,10 +206,7 @@ class SettingsOperations:
             await self.session.refresh(profiles[0])
             return profiles[0]
 
-        # No profiles at all, create a default one.
-        # Handle race condition: concurrent requests may both try to create
-        # the default profile simultaneously. If we lose the race, rollback
-        # and return the profile that the other request created.
+        # Concurrent callers can race here; rollback and return the winner's profile.
         try:
             return await self.create_profile(
                 user_id=user_id,
@@ -385,22 +225,6 @@ class SettingsOperations:
         user_id: UUID,
         profile_id: UUID,
     ) -> SettingsProfile:
-        """
-        Set a profile as the default for a user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-        profile_id : UUID
-            The profile ID to set as default.
-
-        Returns
-        -------
-        SettingsProfile
-            The updated profile.
-
-        """
         profile = await self.get_profile(user_id, profile_id)
 
         if not profile.is_default:
@@ -416,20 +240,6 @@ class SettingsOperations:
         self,
         profile: SettingsProfile,
     ) -> dict[str, Any]:
-        """
-        Compute effective settings by merging profile overrides with defaults.
-
-        Parameters
-        ----------
-        profile : SettingsProfile
-            The profile with user overrides.
-
-        Returns
-        -------
-        dict
-            Effective settings with all defaults filled in.
-
-        """
         return {
             "appearance": get_effective_appearance(profile.appearance),
             "keyboard_shortcuts": get_effective_keyboard_shortcuts(profile.keyboard_shortcuts),
@@ -437,31 +247,17 @@ class SettingsOperations:
         }
 
     def get_settings_schema(self) -> dict[str, Any]:
-        """
-        Get the schema of available settings with their defaults.
-
-        Returns
-        -------
-        dict
-            Settings schema with default values.
-
-        """
         return {
             "appearance_defaults": get_appearance_defaults_dict(),
             "keyboard_shortcuts_defaults": get_keyboard_shortcuts_defaults_dict(),
             "notifications_defaults": get_notifications_defaults_dict(),
         }
 
-    # ─────────────────────────────────────────────────────────────
-    # Private helper methods
-    # ─────────────────────────────────────────────────────────────
-
     async def _get_profile_by_name(
         self,
         user_id: UUID,
         name: str,
     ) -> SettingsProfile | None:
-        """Get a profile by name for a user."""
         result = await self.session.execute(
             select(SettingsProfile).where(
                 and_(
@@ -473,7 +269,6 @@ class SettingsOperations:
         return result.scalars().first()
 
     async def _unset_default_profiles(self, user_id: UUID) -> None:
-        """Unset is_default on all profiles for a user."""
         await self.session.execute(
             update(SettingsProfile)
             .where(SettingsProfile.user_id == user_id)
@@ -481,7 +276,6 @@ class SettingsOperations:
         )
 
     async def _count_user_profiles(self, user_id: UUID) -> int:
-        """Count profiles for a user."""
         from sqlalchemy import func
 
         result = await self.session.execute(
@@ -496,11 +290,7 @@ class SettingsOperations:
         existing: dict[str, Any] | None,
         updates: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Merge update values into existing settings (sparse update).
-
-        None values in updates are used to reset to defaults (remove override).
-        """
+        """``None`` values in updates remove the override (reset to default)."""
         if existing is None:
             existing = {}
 
@@ -508,10 +298,8 @@ class SettingsOperations:
 
         for key, value in updates.items():
             if value is None:
-                # Remove override to reset to default
                 result.pop(key, None)
             elif isinstance(value, dict) and isinstance(result.get(key), dict):
-                # Deep merge for nested dicts (like bindings)
                 result[key] = {**result[key], **value}
             else:
                 result[key] = value

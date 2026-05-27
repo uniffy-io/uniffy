@@ -19,7 +19,7 @@ Decorative divider comments and standalone section labels tend to add noise with
 
 **Why:** code structure is self-evident from the code itself. Class boundaries, function signatures, and import groups already group things visually. These comments add noise, fight against IDE outline views, and rot when methods move.
 
-**Applies to:** Python, TypeScript, JavaScript, Go, Rust, CSS, SQL, proto - every language. Docstring section headers like `Args:` / `Returns:` / `Raises:` in Python and JSDoc tags are not dividers and are a good fit.
+**Applies to:** Python, TypeScript, JavaScript, Go, Rust, CSS, SQL, proto - every language.
 
 ## 2. Skip process-history comments
 
@@ -41,7 +41,32 @@ Comments that reference process artifacts or history tend to rot fast.
 
 **Wire-protocol names are not process artifacts:** `SyncStep1`, `SyncStep2`, `SYNC_UPDATE`, etc. are y-protocols message types. Same for HTTP/2 frame names, TCP states, etc. Keep them.
 
-## 3. Skip process artifacts in identifiers
+## 3. Skip docstring noise
+
+Docstrings work best as a single sentence stating the WHY when that WHY is not obvious from the name and types. Anything beyond that tends to rot, duplicate the signature, or paraphrase the body.
+
+**Patterns we skip:**
+
+- numpy/Google/reStructuredText sections inside docstrings: `Args:` / `Arguments:` / `Parameters:` / `----------`, `Returns:`, `Yields:`, `Raises:`, `Attributes:`, `Examples:`. Type hints already document parameter and return shapes; SQLModel `Field(...)` declarations already document columns. Repeating them in prose adds noise that drifts out of sync.
+- Trivial docstrings that restate the identifier: `"""Get user by id."""` on `get_user_by_id`, `"""Handle request."""` on `handle_request`, `"""Convert proto to domain."""` on `proto_to_domain`. If the name + types already say it, DELETE the docstring; do not replace with a noise-tier one-liner.
+- Multi-paragraph module/class/function docstrings that narrate the implementation step by step or list every code path with bullets. One sentence stating the purpose is the ceiling; the body of the function is the source of truth for how it works.
+- Header comments that list every RPC, every cache key, every database table the module touches. That inventory rots within a release; a reader needing the inventory can grep.
+- Docstrings written purely so the IDE tooltip is populated. If hovering over the symbol would tell the reader nothing new, the docstring is not earning its keep.
+
+**Reach for instead:**
+
+- A one-line module docstring stating what the module is for (or no docstring when the filename already says it).
+- A one-or-two-line class docstring stating what the class or row represents. Skip `Attributes:` blocks for SQLModel/dataclass/Pydantic types - the field declarations carry that information.
+- A short function docstring only when the WHY isn't obvious from the name + signature. Lead with the non-obvious constraint or invariant, not a paraphrase of the parameters.
+- Inline `#` comments adjacent to the surprising line, kept terse, focused on WHY.
+
+**Reference examples in this repo:**
+
+- GOOD: `src/uniffy/_metrics_bootstrap.py` - short module docstring stating purpose; one function docstring that explains the WHY ("MUST be called before any `prometheus_client` import"). No `Args:` / `Returns:` blocks.
+- BAD: any class docstring with an `Attributes\n----------\nkey : str\n    Setting name...` block - the type-annotated field already documents that. Delete the block; keep one sentence stating what the row represents.
+- BAD: multi-paragraph module docstrings with bullet lists narrating filter rules, lifecycle, or per-RPC inventories. Collapse to one or two lines stating the module's job; the bullets belong in the code itself.
+
+## 4. Skip process artifacts in identifiers
 
 Baking process artifacts into file names, test names, function names, class names, variable names, fixture names, or any other identifier tends to make code harder to read down the line.
 
@@ -60,3 +85,9 @@ Baking process artifacts into file names, test names, function names, class name
 - Rename existing offenders on sight when you touch the file for any reason.
 
 Names work best when they describe what the thing IS or DOES, not which plan / phase / migration introduced it or what it replaced.
+
+## 5. When spawning subagents that write code
+
+Subagents do not auto-load the repo's `.claude/rules/`. When delegating code-writing work, the spawning agent is responsible for carrying this discipline into the subagent prompt - either by quoting the relevant rules inline or by pointing the subagent at this file as required reading before it edits. A prompt that just says "write the handler" tends to produce numpydoc blocks, trivial restate-the-name docstrings, and paragraph-long module headers because that is the default training-data style. Subagents that fan out in parallel each need the rule in their own prompt; one agent's adherence does not propagate to its siblings.
+
+Reference `src/uniffy/_metrics_bootstrap.py` as the in-repo "good" example and call out the docstring patterns to avoid (`Args:` / `Returns:` / `Attributes:` blocks, trivial restate-the-name docstrings, multi-paragraph module headers narrating flow). Concrete file-path anchors are more reliable than abstract style guidance.

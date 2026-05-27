@@ -12,25 +12,7 @@ async def seed_development_data(
     admin_password: str,
     search_indexer,
 ) -> None:
-    """
-    Seed additional test data for development environment.
-
-    Creates 5 test users and 2 groups for testing purposes.
-
-    Parameters
-    ----------
-    session
-        Database session.
-    default_org
-        Default organization.
-    admin_user
-        Admin user.
-    admin_password : str
-        Password to use for test users.
-    search_indexer
-        Search indexer instance.
-
-    """
+    """Seed test users, groups, provider keys, and dev agents."""
     from uniffy.core.models import Group, OrganizationMember, OrganizationRole, User
     from uniffy.core.models.login.group_member import GroupMember, GroupRole
     from uniffy.core.search.indexer import build_content_urn
@@ -39,7 +21,6 @@ async def seed_development_data(
 
     logger.info("Creating 5 test users...")
 
-    # Create 5 test users
     test_users = []
     user_data = [
         ("alice@uniffy.io", "alice", "Alice Johnson"),
@@ -68,7 +49,6 @@ async def seed_development_data(
 
     logger.info("Created 5 test users")
 
-    # Add all test users to the default organization
     for user in test_users:
         member = OrganizationMember(
             user_id=user.id,
@@ -81,7 +61,6 @@ async def seed_development_data(
     await session.flush()
     logger.info("Added test users to organization")
 
-    # Join test users to default chat channels (e.g., #general)
     from uniffy.domains.chat.channels.operations import ChatChannelOperations
 
     chat_ops = ChatChannelOperations(session)
@@ -90,7 +69,6 @@ async def seed_development_data(
     await session.flush()
     logger.info("Joined test users to default chat channels")
 
-    # Create 2 groups
     logger.info("Creating 2 test groups...")
 
     group_engineering = Group(
@@ -120,16 +98,13 @@ async def seed_development_data(
     await session.refresh(group_product)
     logger.info("Created Engineering and Product groups")
 
-    # Add users to groups
-    # Engineering: alice, bob, charlie (charlie will be in both)
-    # Product: charlie, diana, eve (charlie is in both)
     logger.info("Adding users to groups...")
 
-    # Engineering group members
+    # charlie is intentionally a member of both groups to exercise multi-group permission resolution.
     for user, role in [
-        (test_users[0], GroupRole.MEMBER),  # alice
-        (test_users[1], GroupRole.ADMIN),  # bob (admin)
-        (test_users[2], GroupRole.MEMBER),  # charlie (in both groups)
+        (test_users[0], GroupRole.MEMBER),
+        (test_users[1], GroupRole.ADMIN),
+        (test_users[2], GroupRole.MEMBER),
     ]:
         member = GroupMember(
             user_id=user.id,
@@ -139,11 +114,10 @@ async def seed_development_data(
         )
         session.add(member)
 
-    # Product group members
     for user, role in [
-        (test_users[2], GroupRole.MEMBER),  # charlie (in both groups)
-        (test_users[3], GroupRole.ADMIN),  # diana (admin)
-        (test_users[4], GroupRole.MEMBER),  # eve
+        (test_users[2], GroupRole.MEMBER),
+        (test_users[3], GroupRole.ADMIN),
+        (test_users[4], GroupRole.MEMBER),
     ]:
         member = GroupMember(
             user_id=user.id,
@@ -156,7 +130,6 @@ async def seed_development_data(
     await session.flush()
     logger.info("Added users to groups (charlie is in both groups)")
 
-    # Index test users for search
     for user in test_users:
         await search_indexer.index(
             urn=build_content_urn(ContentType.USER, user.id),
@@ -173,34 +146,13 @@ async def seed_development_data(
 
     logger.info("Indexed test users for search")
 
-    # Seed LLM provider keys from environment variables
     provider_keys = await _seed_provider_keys(session, default_org, admin_user)
 
-    # Seed dev agents (one per provider key, all tools enabled)
     await _seed_dev_agents(session, default_org, admin_user, provider_keys)
 
 
 async def _seed_provider_keys(session, default_org, admin_user) -> list:
-    """Seed LLM provider keys from environment variables.
-
-    Reads CLAUDE_API_KEY, OPENAI_API_KEY, and GOOGLE_GENAI_API_KEY
-    from the environment and creates provider key records for the default org.
-
-    Parameters
-    ----------
-    session
-        Database session.
-    default_org
-        Default organization.
-    admin_user
-        Admin user who owns the keys.
-
-    Returns
-    -------
-    list
-        List of (provider_name, ProviderKey) tuples for successfully seeded keys.
-
-    """
+    """Seed LLM provider keys for the default org from `*_API_KEY` env vars."""
     from uniffy.core.crypto import OrgCipher
     from uniffy.core.models.agents.provider_key import ProviderKey
     from uniffy.core.types import AccessMode, ContentRole
@@ -319,8 +271,8 @@ PROVIDER_AGENT_CONFIGS: dict[str, dict[str, str]] = {
     },
     "google": {
         "name": "Uniffy Google",
-        # Gemini 2.5+ required for implicit prompt caching. Older
-        # 2.0-flash always reports cached_content_token_count=0.
+        # Gemini 2.5+ required for implicit prompt caching; 2.0-flash always
+        # reports cached_content_token_count=0.
         "primary_model": "gemini-2.5-flash",
         "avatar_emoji": "G",
         "theme_color": "#4285f4",
@@ -329,20 +281,7 @@ PROVIDER_AGENT_CONFIGS: dict[str, dict[str, str]] = {
 
 
 async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list) -> None:
-    """Seed one agent per provider key with all tools enabled.
-
-    Parameters
-    ----------
-    session
-        Database session.
-    default_org
-        Default organization.
-    admin_user
-        Admin user who owns the agents.
-    provider_keys
-        List of (provider_name, ProviderKey) tuples from _seed_provider_keys.
-
-    """
+    """Seed one agent per provider key with all tools enabled."""
     from sqlalchemy import select
 
     from uniffy.core.models.agents.agent import Agent
@@ -353,7 +292,6 @@ async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list
         logger.info("No provider keys seeded, skipping dev agent creation")
         return
 
-    # Look up the bundled default prompt (seeded before dev data)
     result = await session.execute(
         select(AgentPrompt).where(
             AgentPrompt.organization_id.is_(None),

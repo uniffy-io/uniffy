@@ -10,34 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class Category(SQLModel, table=True):
-    """
-    Category model for event color coding and filtering.
-
-    Categories help users organize events by type (Meetings, Deep Work, etc.)
-    and provide visual distinction through colors.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the category (primary key).
-    organization_id : UUID
-        Organization this category belongs to (foreign key).
-    name : str
-        Category display name.
-    color : str
-        Category color (hex format).
-    icon : str | None
-        Optional icon or emoji.
-    is_default : bool
-        Whether this is a default/system category.
-    sort_order : int
-        Display order for UI sorting.
-    created_at : datetime
-        Timestamp when the category was created.
-    updated_at : datetime
-        Timestamp when the category was last updated.
-
-    """
+    """A category used to color-code and filter calendar events."""
 
     __tablename__ = "calendar_categories"
 
@@ -58,7 +31,6 @@ class Category(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Category."""
         return (
             f"<Category(id={self.id}, name={self.name!r}, "
             f"color={self.color}, organization_id={self.organization_id})>"

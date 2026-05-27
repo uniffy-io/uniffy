@@ -19,9 +19,8 @@ from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.types import ContentType
 from uniffy.db.session import open_session
 
-# Adapter registration is an import side effect. The worker process
-# runs a different import graph than the backend, so import here to
-# force registration when the task module loads.
+# Realtime adapter registration is an import side effect; the worker import
+# graph does not pull in the notes module otherwise.
 from uniffy.domains.notes import realtime_adapter as _notes_realtime_adapter  # noqa: F401
 from uniffy.observability.metrics import (
     REALTIME_SNAPSHOT_DROPPED_TOTAL,

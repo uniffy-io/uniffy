@@ -42,7 +42,6 @@ from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
-# Extraction status mapping: model -> proto
 EXTRACTION_STATUS_TO_PROTO = {
     ExtractionStatus.PENDING: ProtoExtractionStatus.EXTRACTION_STATUS_PENDING,
     ExtractionStatus.PROCESSING: ProtoExtractionStatus.EXTRACTION_STATUS_PROCESSING,
@@ -51,7 +50,6 @@ EXTRACTION_STATUS_TO_PROTO = {
     ExtractionStatus.SKIPPED: ProtoExtractionStatus.EXTRACTION_STATUS_SKIPPED,
 }
 
-# Transcode status mapping: model -> proto
 TRANSCODE_STATUS_TO_PROTO = {
     TranscodeStatus.NOT_NEEDED: ProtoTranscodeStatus.TRANSCODE_STATUS_NOT_NEEDED,
     TranscodeStatus.PENDING: ProtoTranscodeStatus.TRANSCODE_STATUS_PENDING,
@@ -60,7 +58,6 @@ TRANSCODE_STATUS_TO_PROTO = {
     TranscodeStatus.FAILED: ProtoTranscodeStatus.TRANSCODE_STATUS_FAILED,
 }
 
-# Upload status mapping: model -> proto
 UPLOAD_STATUS_TO_PROTO = {
     UploadStatus.ACTIVE: ProtoUploadStatus.UPLOAD_STATUS_ACTIVE,
     UploadStatus.COMPLETED: ProtoUploadStatus.UPLOAD_STATUS_COMPLETED,
@@ -78,29 +75,6 @@ def file_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> ProtoFile:
-    """Convert :class:`File` to its proto representation.
-
-    Parameters
-    ----------
-    file : File
-        File model instance.
-    user_role : ContentRole | None
-        Effective role of the requesting user, if known.
-    owner_info : dict | None
-        Owner information (id, name, email) if file is shared with current user.
-    group_ids : list[str] | None
-        Group ids the file is explicitly shared with (for the legacy
-        ``group_ids`` proto field).
-    tags : list[Tag] | None
-        Hydrated unified tags assigned to this file. Pass ``None`` to
-        omit; pass ``[]`` to confirm the file has no assignments.
-
-    Returns
-    -------
-    ProtoFile
-        Proto message.
-
-    """
     proto_extraction = EXTRACTION_STATUS_TO_PROTO.get(
         file.extraction_status,
         ProtoExtractionStatus.EXTRACTION_STATUS_PENDING,
@@ -165,7 +139,6 @@ def file_to_proto(
 
 
 def _build_file_metadata_from_model(info: FileMediaInfo) -> ProtoFileMetadata:
-    """Build :class:`ProtoFileMetadata` from a :class:`FileMediaInfo` row."""
     proto_meta = ProtoFileMetadata(
         has_thumbnail=info.thumbnail_key is not None,
     )
@@ -202,7 +175,6 @@ def folder_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> ProtoFolder:
-    """Convert :class:`Folder` to its proto representation."""
     resolved_mode = (
         effective_access_mode if effective_access_mode is not None else folder.access_mode
     )
@@ -232,7 +204,6 @@ def folder_to_proto(
 
 
 def file_version_to_proto(version: FileVersion) -> ProtoFileVersion:
-    """Convert a :class:`FileVersion` to its proto representation."""
     proto_version = ProtoFileVersion(
         id=str(version.id),
         file_id=str(version.file_id),
@@ -249,7 +220,6 @@ def file_version_to_proto(version: FileVersion) -> ProtoFileVersion:
 
 
 def upload_to_proto_status(upload: MultipartUpload) -> ProtoUploadStatus:
-    """Convert upload status to proto."""
     return UPLOAD_STATUS_TO_PROTO.get(
         upload.status,
         ProtoUploadStatus.UPLOAD_STATUS_ACTIVE,
@@ -261,7 +231,6 @@ def tree_node_from_file(
     child_count: int = 0,
     effective_access_mode: AccessMode | None = None,
 ) -> ProtoTreeNode:
-    """Build a :class:`ProtoTreeNode` from a :class:`File` row."""
     resolved_mode = effective_access_mode if effective_access_mode is not None else file.access_mode
     node = ProtoTreeNode(
         id=str(file.id),
@@ -285,7 +254,6 @@ def tree_node_from_folder(
     size_bytes: int | None = None,
     effective_access_mode: AccessMode | None = None,
 ) -> ProtoTreeNode:
-    """Build a :class:`ProtoTreeNode` from a :class:`Folder` row."""
     resolved_mode = (
         effective_access_mode if effective_access_mode is not None else folder.access_mode
     )

@@ -1,8 +1,5 @@
-"""Platform operator operations on the deployment-scope DEK.
-
-Every method is gated on ``User.is_system_admin``. Rotation walks the
-:data:`DEPLOYMENT_CRYPTO_CONSUMERS` registry (registered at module
-import by each owning domain) and re-encrypts every row in-place.
+"""Platform operations on the deployment DEK; rotation walks the consumer
+registry to re-encrypt rows in place.
 """
 
 from __future__ import annotations
@@ -19,25 +16,18 @@ from uniffy.domains.users.operations import UserOperations
 
 
 class SystemEncryptionOperations:
-    """System-admin gated operations on the deployment DEK."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._user_ops = UserOperations(session)
         self._cipher = DeploymentCipher(session)
 
     async def get_status(self, *, user_id: UUID) -> DeploymentEncryptionStatus:
-        """Snapshot active + retired DEK rows."""
         await self._user_ops.require_system_admin(user_id)
         return await self._cipher.get_status()
 
     async def rotate(self, *, user_id: UUID, reason: str) -> int:
-        """Rotate the deployment DEK and re-encrypt every consumer row.
-
-        Returns the new active version. The previous version stays in
-        the table so historical ciphertexts decrypt while the sweep
-        runs; the sweep itself re-encrypts each row under the new DEK,
-        so the retired row becomes unreferenced when the sweep ends.
+        """Returns the new active version; the retired DEK stays referenced
+        until the sweep completes.
         """
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()

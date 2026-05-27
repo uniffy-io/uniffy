@@ -1,5 +1,3 @@
-"""Proto <-> domain mapping for ``superadmin.v1.SystemConfigService``."""
-
 from __future__ import annotations
 
 from uniffy_proto.superadmin.v1.system_config_pb2 import (

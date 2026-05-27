@@ -1,11 +1,4 @@
-"""Invitation operations: invite, accept, revoke, resend.
-
-Two-shape flow. ``invite`` returns either ``ADDED`` (when the email
-already belongs to an active user -- we promote them to a member right
-away) or ``INVITED`` (a fresh invitation row + accept-link email).
-``accept`` consumes a token, creates the user + membership and returns
-an ``AuthResult`` so the frontend can log the user straight in.
-"""
+"""Invitation operations: invite, accept, revoke, resend."""
 
 from __future__ import annotations
 
@@ -50,25 +43,14 @@ from uniffy.domains.invitations.errors import (
 
 
 def _get_org_ops_cls():
-    """Resolve ``OrganizationOperations`` lazily.
-
-    The organizations package ``__init__`` loads its service which loads
-    handlers, and handlers import this module. A top-level import here
-    would close the loop. The lazy lookup costs one module-table read
-    per call.
-    """
+    # Lazy import: organizations -> handlers -> invitations would close the cycle.
     from uniffy.domains.organizations.operations import OrganizationOperations
 
     return OrganizationOperations
 
 
 def _auth_helpers():
-    """Lazy auth helper bundle to break the auth <-> invitations cycle.
-
-    ``auth.__init__`` re-exports the handler module which imports this
-    file. A top-level ``from uniffy.domains.auth.context import ...``
-    would close the loop on first import.
-    """
+    # Lazy import: auth.__init__ re-exports the handlers that import this module.
     from uniffy.domains.auth.context import parse_device_label
     from uniffy.domains.auth.passwords import hash_password
     from uniffy.domains.auth.tokens import create_access_token, create_refresh_token
@@ -138,16 +120,7 @@ class InvitationOperations:
         role: OrganizationRole,
         inviter_id: UUID,
     ) -> InviteResult:
-        """Invite ``email`` to ``org_id`` as ``role``.
-
-        Existing-user branch: auto-create the membership (delegating to
-        ``OrganizationOperations.add_member`` for the usual side effects)
-        and send an "added to org" notification.
-
-        New-email branch: write a pending invitation row + dispatch the
-        accept-link email. Any prior pending row for the same address is
-        revoked first so the partial unique index never trips.
-        """
+        """Invite ``email``; auto-promote if user exists, else create a pending row."""
         normalized = email.strip().lower()
         if not normalized or "@" not in normalized:
             raise ValueError("Invalid email address")
@@ -241,11 +214,7 @@ class InvitationOperations:
         org_id: UUID,
         actor_id: UUID,
     ) -> list[tuple[Invitation, User | None]]:
-        """List invitations for an org with inviter user joined.
-
-        Returns rows even when the inviting user has been deleted -- the
-        UI shows "Unknown" in that case.
-        """
+        # Outer-joins inviter so rows survive when the inviting user is deleted.
         org_ops = _get_org_ops_cls()(self._session)
         await org_ops.require_org_admin(actor_id, org_id)
         result = await self._session.execute(
@@ -354,9 +323,7 @@ class InvitationOperations:
     ) -> AuthResult:
         """Consume ``raw_token``, create user + membership, return tokens.
 
-        Email is taken from the invitation row (never from the client) so
-        a redirected accept URL cannot be used to register under a
-        different address.
+        Email is always taken from the invitation row, never the client.
         """
         invitation = await self._load_by_token(raw_token)
         normalized_username = username.strip()
@@ -477,11 +444,7 @@ class InvitationOperations:
         email: str,
         actor_id: UUID,
     ) -> None:
-        """Revoke any outstanding pending invitation for this (org, email).
-
-        Required so the partial unique index does not block a fresh invite
-        when the previous one is still pending.
-        """
+        # Required so the partial unique index does not block a fresh invite.
         result = await self._session.execute(
             select(Invitation).where(
                 Invitation.organization_id == org_id,

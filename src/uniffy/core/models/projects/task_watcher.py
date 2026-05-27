@@ -10,27 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class TaskWatcher(SQLModel, table=True):
-    """
-    TaskWatcher model representing a user watching a task.
-
-    Watchers receive notifications when the watched task changes
-    (status, assignees, completion). Each user can watch a task
-    once within an organization.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key).
-    user_id : UUID
-        User watching the task.
-    organization_id : UUID
-        Organization context.
-    task_id : UUID
-        Task being watched.
-    created_at : datetime
-        When the watch was created.
-
-    """
+    """User subscription to task changes; one row per (user, task)."""
 
     __tablename__ = "projects_task_watchers"
     __table_args__ = (UniqueConstraint("user_id", "task_id", name="uq_task_watchers_user_task"),)

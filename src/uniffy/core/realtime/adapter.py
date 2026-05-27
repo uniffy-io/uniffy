@@ -1,9 +1,4 @@
-"""``RealtimeContentAdapter`` protocol + registry.
-
-Domains self-register their adapter at module import time; the WS
-route, ``YDocManager``, and snapshot pipeline dispatch through this
-registry so they never reference any concrete domain.
-"""
+"""``RealtimeContentAdapter`` protocol + registry; domains self-register at import time."""
 
 from typing import Protocol
 from uuid import UUID
@@ -26,7 +21,7 @@ class RealtimeContentAdapter(Protocol):
         organization_id: UUID,
         content_id: UUID,
     ) -> ContentRole | None:
-        """Return the effective role on this content item, or None for no access."""
+        """Effective role on this content item, or ``None`` for no access."""
         ...
 
     async def hydrate_ydoc(
@@ -36,11 +31,7 @@ class RealtimeContentAdapter(Protocol):
         content_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Seed Y types from current domain storage on cold start.
-
-        Called once by ``YDocManager`` when the snapshot row is empty.
-        Subsequent loads come from the snapshot blob.
-        """
+        """Seed Y types from domain storage on cold start (snapshot row empty)."""
         ...
 
     async def render_and_persist(
@@ -50,11 +41,7 @@ class RealtimeContentAdapter(Protocol):
         content_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Persist the rendered domain shape on each debounced flush.
-
-        Must be idempotent: it can be invoked repeatedly with the
-        same ``ydoc`` state.
-        """
+        """Persist the rendered domain shape on each debounced flush. Must be idempotent."""
         ...
 
 
@@ -62,12 +49,10 @@ _adapters: dict[ContentType, RealtimeContentAdapter] = {}
 
 
 def register_realtime_adapter(adapter: RealtimeContentAdapter) -> None:
-    """Register a ``RealtimeContentAdapter`` for its declared content type."""
     _adapters[adapter.content_type] = adapter
 
 
 def get_realtime_adapter(content_type: ContentType) -> RealtimeContentAdapter:
-    """Return the adapter for a content type or raise ``LookupError``."""
     if content_type not in _adapters:
         raise LookupError(f"No realtime adapter registered for {content_type}")
     return _adapters[content_type]

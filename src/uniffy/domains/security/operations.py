@@ -1,18 +1,5 @@
-"""Per-org security settings.
-
-One row in ``org_settings`` per (org, key) under ``namespace='security'``:
-
-* ``password_reset_enabled`` -- bool, default ``True`` when no row exists.
-* ``mfa_required_for_members`` -- bool, default ``False``. When true,
-  every member of the org must have MFA enabled to access org content
-  (subject to the user-level grace window).
-* ``mfa_required_for_admins`` -- bool, default ``False``. Same shape,
-  but only applies to OWNER / ADMIN role memberships.
-
-Future keys land here as new entries; absence always means the documented
-default. The toggle is read on every password-reset request, so we keep
-it dirt-simple: no encryption (these are policy flags, not secrets), no
-caching beyond what ``OrgSettingsOperations`` already does.
+"""Per-org security settings under ``namespace='security'``; absence of a
+row means the documented default.
 """
 
 from __future__ import annotations
@@ -38,8 +25,6 @@ _DEFAULT_MFA_REQUIRED_FOR_ADMINS = False
 
 @dataclass(frozen=True)
 class SecuritySettings:
-    """Effective security policy for one organization."""
-
     password_reset_enabled: bool
     mfa_required_for_members: bool
     mfa_required_for_admins: bool
@@ -52,18 +37,13 @@ def _bool_or_default(row, default: bool) -> bool:
 
 
 class SecurityOperations:
-    """CRUD on per-org security policy.
-
-    Reads fall through to documented defaults when no row exists so a
-    brand-new org behaves sensibly without any seeding work.
-    """
+    """Reads fall through to documented defaults so a brand-new org needs no seeding."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._settings = OrgSettingsOperations(session)
 
     async def get(self, organization_id: UUID) -> SecuritySettings:
-        """Return the effective settings; missing keys take the default."""
         rows = await self._settings.get_namespace(organization_id, SECURITY_NAMESPACE)
         return SecuritySettings(
             password_reset_enabled=_bool_or_default(
@@ -86,7 +66,6 @@ class SecurityOperations:
         enabled: bool,
         actor_user_id: UUID,
     ) -> SecuritySettings:
-        """Toggle ``password_reset_enabled``. Audit row written same txn."""
         previous = await self.get(organization_id)
         if previous.password_reset_enabled == enabled:
             return previous
@@ -121,7 +100,6 @@ class SecurityOperations:
         required: bool,
         actor_user_id: UUID,
     ) -> SecuritySettings:
-        """Flip ``mfa_required_for_members``. Audit row written same txn."""
         return await self._set_bool_with_audit(
             organization_id=organization_id,
             actor_user_id=actor_user_id,
@@ -137,7 +115,6 @@ class SecurityOperations:
         required: bool,
         actor_user_id: UUID,
     ) -> SecuritySettings:
-        """Flip ``mfa_required_for_admins``. Audit row written same txn."""
         return await self._set_bool_with_audit(
             organization_id=organization_id,
             actor_user_id=actor_user_id,

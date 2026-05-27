@@ -1,10 +1,4 @@
-"""Per-organization agent runtime settings.
-
-Holds tunables and feature flags for the runtime: end-to-end stream
-deadline, failover toggle, resume toggle, circuit breaker thresholds.
-Absent rows fall through to module-level defaults so the runtime can
-operate on orgs that have never been configured.
-"""
+"""Per-organization agent runtime settings."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -20,35 +14,7 @@ DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS = 60
 
 
 class AgentRuntimeSettings(SQLModel, table=True):
-    """Per-org runtime knobs for the agents domain.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key (UUIDv7).
-    organization_id : UUID
-        Unique key: one row per organization.
-    send_deadline_seconds : int | None
-        End-to-end deadline for ``send_message`` / ``stream_send_message``.
-        Null means use the module-level default
-        (``DEFAULT_SEND_DEADLINE_SECONDS``).
-    failover_enabled : bool
-        When true the runtime retries on a sibling provider key after a
-        retryable provider failure. When false the runtime makes a single
-        attempt.
-    resume_enabled : bool
-        When true the runtime honors ``resume_after_seq`` on stream
-        requests and replays buffered events. When false the field is
-        ignored and the stream restarts from scratch.
-    circuit_breaker_failure_threshold : int
-        Trip a per-provider-key breaker after this many consecutive
-        failures.
-    circuit_breaker_recovery_seconds : int
-        Half-open window (in seconds) after the breaker trips.
-    created_at, updated_at : datetime
-        Row timestamps.
-
-    """
+    """Per-org runtime knobs for the agents domain. Absent rows fall through to module defaults."""
 
     __tablename__ = "agents_runtime_settings"
     __table_args__ = (
@@ -94,7 +60,6 @@ class AgentRuntimeSettings(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentRuntimeSettings."""
         return (
             f"<AgentRuntimeSettings(org={self.organization_id}, "
             f"deadline={self.send_deadline_seconds}, "

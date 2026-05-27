@@ -1,10 +1,4 @@
-"""Agent spend budget per organization.
-
-One row per organization, created on demand the first time an admin
-configures a budget. Soft limits (``hard_limit=False``) are the default:
-usage is warn-only and the runtime will never reject a request based on
-dollar spend. Admins opt into hard enforcement explicitly.
-"""
+"""Agent spend budget per organization."""
 
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -26,34 +20,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentBudget(SQLModel, table=True):
-    """Per-organization spend and image budget.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key (UUIDv7).
-    organization_id : UUID
-        Unique key: one budget row per organization.
-    monthly_limit : Decimal | None
-        Dollar cap per billing period. Null means no dollar cap.
-    image_monthly_limit : int | None
-        Count cap on image generations per billing period. Null means no
-        cap; callers fall through to per-user defaults.
-    hard_limit : bool
-        When true the runtime rejects further activity once a limit is
-        crossed. When false (default) usage is warn-only.
-    alert_thresholds : list[int]
-        Percent thresholds (of the monthly limit) at which an alert
-        notification should fire. The 100% crossing always fires even
-        when absent from this list because it coincides with hard
-        enforcement. Default ``[50, 75, 90]``.
-    reset_day : int
-        Calendar day of month when the period rolls (1..28). Values
-        beyond 28 clamp to the last day of a short month at read time.
-    created_at, updated_at : datetime
-        Row timestamps.
-
-    """
+    """Per-organization spend and image budget; soft (warn-only) unless ``hard_limit`` is set."""
 
     __tablename__ = "agents_budgets"
     __table_args__ = (
@@ -96,7 +63,6 @@ class AgentBudget(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentBudget."""
         return (
             f"<AgentBudget(org={self.organization_id}, "
             f"monthly_limit={self.monthly_limit}, "

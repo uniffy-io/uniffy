@@ -1,9 +1,5 @@
-"""Registry of valid template names.
-
-Restricting sends to a known set keeps user-supplied input out of the
-filesystem-loader path: callers pass ``template_name`` strings around
-and one of them could be attacker-controlled in a future flow. The
-registry is the allowlist.
+"""Allowlist registry of valid template names; blocks attacker-controlled
+paths into the Jinja loader.
 """
 
 from dataclasses import dataclass
@@ -13,8 +9,6 @@ from uniffy.core.mail.errors import TemplateNotFoundError
 
 @dataclass(frozen=True)
 class MailTemplate:
-    """One row in the template registry."""
-
     name: str
     description: str
 
@@ -85,7 +79,6 @@ TEMPLATES: dict[str, MailTemplate] = {
 
 
 def get_template(name: str) -> MailTemplate:
-    """Return the registry entry for ``name`` or raise."""
     try:
         return TEMPLATES[name]
     except KeyError as exc:

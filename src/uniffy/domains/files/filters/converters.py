@@ -22,20 +22,6 @@ from uniffy.core.types import AccessMode
 
 
 def saved_filter_to_proto(filter_model: SavedFileFilter) -> ProtoSavedFilter:
-    """
-    Convert SavedFileFilter model to proto.
-
-    Parameters
-    ----------
-    filter_model : SavedFileFilter
-        SavedFileFilter model instance.
-
-    Returns
-    -------
-    ProtoSavedFilter
-        Proto message.
-
-    """
     proto = ProtoSavedFilter(
         id=str(filter_model.id),
         user_id=str(filter_model.user_id),
@@ -63,20 +49,6 @@ def saved_filter_to_proto(filter_model: SavedFileFilter) -> ProtoSavedFilter:
 
 
 def icon_to_proto(icon: dict[str, str]) -> ProtoIconValue:
-    """
-    Convert icon dict to proto IconValue.
-
-    Parameters
-    ----------
-    icon : dict[str, str]
-        Icon dictionary with "type" and "value" keys.
-
-    Returns
-    -------
-    ProtoIconValue
-        Proto message.
-
-    """
     return ProtoIconValue(
         type=icon.get("type", "icon"),
         value=icon.get("value", ""),
@@ -84,20 +56,6 @@ def icon_to_proto(icon: dict[str, str]) -> ProtoIconValue:
 
 
 def icon_from_proto(proto: ProtoIconValue) -> dict[str, str]:
-    """
-    Convert proto IconValue to icon dict.
-
-    Parameters
-    ----------
-    proto : ProtoIconValue
-        Proto message.
-
-    Returns
-    -------
-    dict[str, str]
-        Icon dictionary with "type" and "value" keys.
-
-    """
     return {
         "type": proto.type,
         "value": proto.value,
@@ -105,20 +63,6 @@ def icon_from_proto(proto: ProtoIconValue) -> dict[str, str]:
 
 
 def criteria_to_proto(criteria: dict[str, Any]) -> ProtoFilterCriteria:
-    """
-    Convert criteria dict to proto FilterCriteria.
-
-    Parameters
-    ----------
-    criteria : dict[str, Any]
-        Criteria dictionary from database.
-
-    Returns
-    -------
-    ProtoFilterCriteria
-        Proto message.
-
-    """
     proto = ProtoFilterCriteria(
         extensions=criteria.get("extensions", []),
         mime_categories=criteria.get("mime_categories", []),
@@ -153,20 +97,6 @@ def criteria_to_proto(criteria: dict[str, Any]) -> ProtoFilterCriteria:
 
 
 def criteria_from_proto(proto: ProtoFilterCriteria) -> dict[str, Any]:
-    """
-    Convert proto FilterCriteria to criteria dict.
-
-    Parameters
-    ----------
-    proto : ProtoFilterCriteria
-        Proto message.
-
-    Returns
-    -------
-    dict[str, Any]
-        Criteria dictionary for database.
-
-    """
     criteria: dict[str, Any] = {}
 
     if proto.extensions:

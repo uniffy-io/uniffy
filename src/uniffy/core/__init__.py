@@ -1,18 +1,4 @@
-"""
-Core infrastructure module for UNIFFY.
-
-This module contains shared utilities, base classes, and infrastructure
-that is used across all domain modules.
-
-Submodules
-----------
-types : Shared enums (ContentRole, AccessMode, ContentType, etc.)
-errors : Custom exception classes
-auth : Authentication, authorization, and permissions
-search : Unified search indexing
-content : Base classes for content operations
-converters : Proto/model conversion utilities
-"""
+"""Shared utilities, base classes, and infrastructure used by all domains."""
 
 from uniffy.core.errors import (
     AuthenticationError,
@@ -32,7 +18,6 @@ from uniffy.core.types import (
 )
 
 __all__ = [
-    # Enums
     "AccessMode",
     "ContentMemberAction",
     "ContentRole",

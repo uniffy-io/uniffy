@@ -21,19 +21,7 @@ from uniffy.domains.comments.queries import (
 
 
 class CommentOperations:
-    """
-    Business logic for comment operations.
-
-    Follows the pattern from AttachmentsOperations -- uses PermissionChecker
-    for access control on parent content. Comments require VIEW permission
-    to add, EDIT permission to resolve/reopen.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Comments require VIEW on parent to add, EDIT to resolve/reopen."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -49,45 +37,14 @@ class CommentOperations:
         anchor_data: dict | None = None,
         parent_comment_id: UUID | None = None,
     ) -> tuple[Comment, str, str | None]:
-        """
-        Create a new comment on content.
-
-        Requires VIEW permission on the parent content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            Author's user ID.
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Type of content being commented on.
-        content_id : UUID
-            ID of the content.
-        body : str
-            Comment body in Markdown.
-        anchor_type : CommentAnchorType
-            Where the comment is anchored.
-        anchor_data : dict | None
-            Anchor-specific data.
-        parent_comment_id : UUID | None
-            Parent comment ID for replies.
-
-        Returns
-        -------
-        tuple[Comment, str, str | None]
-            Created comment, author name, and author avatar URL.
-
-        """
+        """Create a comment; requires VIEW on the parent content."""
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
-        # Validate parent comment exists if replying
         if parent_comment_id:
             parent = await self._get_comment(parent_comment_id, organization_id)
             if not parent:
                 raise NotFoundError("Comment", str(parent_comment_id))
 
-        # Get author info
         author_name, author_avatar = await self._get_user_info(user_id)
 
         comment = Comment(
@@ -115,28 +72,7 @@ class CommentOperations:
         comment_id: UUID,
         body: str,
     ) -> tuple[Comment, str, str | None]:
-        """
-        Update a comment's body.
-
-        Only the author can update their own comment.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the update.
-        organization_id : UUID
-            Organization ID.
-        comment_id : UUID
-            Comment to update.
-        body : str
-            New comment body.
-
-        Returns
-        -------
-        tuple[Comment, str, str | None]
-            Updated comment, author name, and avatar URL.
-
-        """
+        """Update a comment body; author-only."""
         comment = await self._get_comment(comment_id, organization_id)
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
@@ -159,33 +95,12 @@ class CommentOperations:
         organization_id: UUID,
         comment_id: UUID,
     ) -> bool:
-        """
-        Soft-delete a comment.
-
-        Author or content ADMIN can delete.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the delete.
-        organization_id : UUID
-            Organization ID.
-        comment_id : UUID
-            Comment to delete.
-
-        Returns
-        -------
-        bool
-            True if deleted.
-
-        """
+        """Soft-delete; author always allowed, otherwise needs EDIT on parent."""
         comment = await self._get_comment(comment_id, organization_id)
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
 
-        # Author can always delete their own comment
         if comment.author_id != user_id:
-            # Otherwise check EDIT permission on parent content
             await self._verify_content_edit(
                 user_id, organization_id, comment.content_type, comment.content_id
             )
@@ -208,40 +123,9 @@ class CommentOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[tuple[Comment, str, str | None, int, list[dict]]], int, int, int]:
-        """
-        List comments for content with author info and reaction data.
-
-        Requires VIEW permission on the parent content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the list.
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Content type filter.
-        content_id : UUID
-            Content ID filter.
-        is_resolved : bool | None
-            Filter by resolved status.
-        anchor_type : CommentAnchorType | None
-            Filter by anchor type.
-        page : int
-            Page number (1-indexed).
-        page_size : int
-            Items per page.
-
-        Returns
-        -------
-        tuple[list[tuple], int, int, int]
-            List of (comment, author_name, avatar_url, reply_count, reactions),
-            total_count, open_count, resolved_count.
-
-        """
+        """List comments with author + reactions; requires VIEW on the parent content."""
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
-        # Get counts
         total_count = (
             await self._session.execute(
                 count_comments_query(organization_id, content_type, content_id)
@@ -260,7 +144,6 @@ class CommentOperations:
             )
         ).scalar() or 0
 
-        # Get comments with author info
         query = build_comments_query(
             organization_id, content_type, content_id, is_resolved, anchor_type
         )
@@ -274,7 +157,6 @@ class CommentOperations:
             comment = row[0]
             author_name = row[1] or "Unknown"
 
-            # Get reply count
             reply_count_result = await self._session.execute(
                 select(func.count()).where(
                     Comment.parent_comment_id == comment.id,
@@ -283,7 +165,6 @@ class CommentOperations:
             )
             reply_count = reply_count_result.scalar() or 0
 
-            # Get aggregated reactions
             reactions = await aggregate_reactions(self._session, comment.id)
 
             comments_data.append((comment, author_name, None, reply_count, reactions))
@@ -296,25 +177,7 @@ class CommentOperations:
         organization_id: UUID,
         comment_id: UUID,
     ) -> tuple[Comment, str, str | None, int, list[dict], list[tuple]]:
-        """
-        Get a single comment with replies.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the comment.
-        organization_id : UUID
-            Organization ID.
-        comment_id : UUID
-            Comment to get.
-
-        Returns
-        -------
-        tuple
-            (comment, author_name, avatar_url, reply_count, reactions, replies).
-            Each reply is (comment, author_name, avatar_url, reply_count, reactions).
-
-        """
+        """Comment + replies; each reply is (comment, name, avatar, reply_count, reactions)."""
         comment = await self._get_comment(comment_id, organization_id)
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
@@ -326,7 +189,6 @@ class CommentOperations:
         author_name, author_avatar = await self._get_user_info(comment.author_id)
         reactions = await aggregate_reactions(self._session, comment.id)
 
-        # Get replies
         from sqlalchemy.orm import aliased
 
         reply_author = aliased(User)
@@ -359,26 +221,7 @@ class CommentOperations:
         organization_id: UUID,
         comment_id: UUID,
     ) -> tuple[Comment, str, str | None]:
-        """
-        Resolve a comment thread.
-
-        Requires EDIT permission on parent content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User resolving the comment.
-        organization_id : UUID
-            Organization ID.
-        comment_id : UUID
-            Comment to resolve.
-
-        Returns
-        -------
-        tuple[Comment, str, str | None]
-            Resolved comment, author name, avatar URL.
-
-        """
+        """Resolve a comment; requires EDIT on parent content."""
         comment = await self._get_comment(comment_id, organization_id)
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
@@ -404,26 +247,7 @@ class CommentOperations:
         organization_id: UUID,
         comment_id: UUID,
     ) -> tuple[Comment, str, str | None]:
-        """
-        Reopen a resolved comment thread.
-
-        Requires EDIT permission on parent content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User reopening the comment.
-        organization_id : UUID
-            Organization ID.
-        comment_id : UUID
-            Comment to reopen.
-
-        Returns
-        -------
-        tuple[Comment, str, str | None]
-            Reopened comment, author name, avatar URL.
-
-        """
+        """Reopen a resolved comment; requires EDIT on parent content."""
         comment = await self._get_comment(comment_id, organization_id)
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
@@ -450,28 +274,7 @@ class CommentOperations:
         comment_id: UUID,
         emoji: str,
     ) -> bool:
-        """
-        Add a reaction to a comment.
-
-        Requires VIEW permission on parent content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User adding the reaction.
-        organization_id : UUID
-            Organization ID.
-        comment_id : UUID
-            Comment to react to.
-        emoji : str
-            Emoji character or shortcode.
-
-        Returns
-        -------
-        bool
-            True if reaction was added.
-
-        """
+        """Add a reaction; idempotent. Requires VIEW on parent."""
         comment = await self._get_comment(comment_id, organization_id)
         if not comment:
             raise NotFoundError("Comment", str(comment_id))
@@ -480,7 +283,6 @@ class CommentOperations:
             user_id, organization_id, comment.content_type, comment.content_id
         )
 
-        # Check if reaction already exists
         existing = await self._session.execute(
             select(CommentReaction).where(
                 CommentReaction.comment_id == comment_id,
@@ -489,7 +291,7 @@ class CommentOperations:
             )
         )
         if existing.scalar_one_or_none():
-            return True  # Already reacted
+            return True
 
         reaction = CommentReaction(
             id=generate_id(),
@@ -510,28 +312,7 @@ class CommentOperations:
         comment_id: UUID,
         emoji: str,
     ) -> bool:
-        """
-        Remove a reaction from a comment.
-
-        Users can only remove their own reactions.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User removing the reaction.
-        organization_id : UUID
-            Organization ID.
-        comment_id : UUID
-            Comment to remove reaction from.
-        emoji : str
-            Emoji to remove.
-
-        Returns
-        -------
-        bool
-            True if removed.
-
-        """
+        """Remove a reaction; users can only remove their own."""
         await self._session.execute(
             delete(CommentReaction).where(
                 CommentReaction.comment_id == comment_id,
@@ -548,28 +329,10 @@ class CommentOperations:
         organization_id: UUID,
         content_refs: list[tuple[ContentType, UUID]],
     ) -> dict[str, int]:
-        """
-        Get comment counts for multiple content items.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting counts.
-        organization_id : UUID
-            Organization ID.
-        content_refs : list[tuple[ContentType, UUID]]
-            List of (content_type, content_id) tuples.
-
-        Returns
-        -------
-        dict[str, int]
-            Map of "content_type:content_id" to count.
-
-        """
+        """Returns {"content_type:content_id": count} for the requested refs."""
         if not content_refs:
             return {}
 
-        # Build conditions for each content ref
         conditions = []
         for ct, cid in content_refs:
             conditions.append(and_(Comment.content_type == ct, Comment.content_id == cid))
@@ -586,7 +349,6 @@ class CommentOperations:
                 Comment.parent_comment_id == None,  # noqa: E711
             )
             .where(
-                # OR all conditions together
                 func.bool_or(*[
                     and_(Comment.content_type == ct, Comment.content_id == cid)
                     for ct, cid in content_refs
@@ -602,7 +364,6 @@ class CommentOperations:
             key = f"{row.content_type}:{row.content_id}"
             counts[key] = row.count
 
-        # Fill in zeros for missing refs
         for ct, cid in content_refs:
             key = f"{ct.value}:{cid}"
             if key not in counts:
@@ -616,26 +377,7 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> int:
-        """
-        Delete all comments for a piece of content.
-
-        Used for cascade cleanup when parent content is deleted.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Content type.
-        content_id : UUID
-            Content ID.
-
-        Returns
-        -------
-        int
-            Number of comments deleted.
-
-        """
+        """Cascade soft-delete all comments for a piece of content."""
         result = await self._session.execute(
             update(Comment)
             .where(
@@ -648,10 +390,7 @@ class CommentOperations:
         await self._session.commit()
         return result.rowcount  # type: ignore[return-value]
 
-    # Private helpers
-
     async def _get_comment(self, comment_id: UUID, organization_id: UUID) -> Comment | None:
-        """Get a comment by ID."""
         result = await self._session.execute(
             select(Comment).where(
                 Comment.id == comment_id,
@@ -662,7 +401,6 @@ class CommentOperations:
         return result.scalar_one_or_none()
 
     async def _get_user_info(self, user_id: UUID) -> tuple[str, str | None]:
-        """Get user display name and avatar URL."""
         result = await self._session.execute(select(User.full_name).where(User.id == user_id))
         row = result.one_or_none()
         if not row:
@@ -676,11 +414,7 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> ContentRole | None:
-        """Return the user's effective role on the parent content.
-
-        Comments inherit their access policy from the parent content
-        item. Tasks delegate to their parent project.
-        """
+        """Comments inherit access from parent; tasks delegate to their project."""
         from uniffy.core.auth.permissions.checker import PermissionChecker
 
         (
@@ -708,12 +442,7 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> tuple[UUID, AccessMode, ContentRole | None, ContentType, UUID]:
-        """Load (owner_id, access_mode, baseline_role, type, id) for a parent.
-
-        Tasks are not access-controlled themselves; they defer to the
-        owning project. The returned ``(type, id)`` pair is what the
-        permission checker should use -- for tasks this is the project.
-        """
+        """Load (owner_id, access_mode, baseline_role, type, id); tasks resolve to their project."""
         if content_type == ContentType.NOTE:
             from uniffy.core.models.notes.note import Note
 
@@ -807,7 +536,6 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify the user can view the parent content."""
         role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
         if not role_can_view(role):
             raise PermissionDeniedError("access", "content")
@@ -819,7 +547,6 @@ class CommentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify the user can edit the parent content."""
         role = await self._resolve_parent_role(user_id, organization_id, content_type, content_id)
         if not role_can_edit(role):
             raise PermissionDeniedError("edit", "content")

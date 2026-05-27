@@ -1,5 +1,3 @@
-"""Room and booking RPC handlers."""
-
 from datetime import datetime
 from uuid import UUID
 
@@ -64,7 +62,6 @@ async def _resolve_room_effective_policy(
     room: Room,
     checker: PermissionChecker | None = None,
 ):
-    """Return the room's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
         organization_id, ContentType.ROOM,
@@ -75,7 +72,6 @@ async def _resolve_room_effective_policy(
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
-    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
     try:
         return UUID(value)
     except ValueError as exc:
@@ -83,7 +79,6 @@ def _parse_uuid(value: str, field: str) -> UUID:
 
 
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
-    """Translate a domain exception into the matching ``ConnectError``."""
     if isinstance(exc, NotFoundError):
         return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
     if isinstance(exc, ValidationError):
@@ -95,14 +90,11 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
 
 
 class RoomHandlers:
-    """RPC handlers for ``rooms.v1.RoomsService``."""
-
     async def create_room(
         self,
         request: CreateRoomRequest,
         ctx: RequestContext,
     ) -> CreateRoomResponse:
-        """Create a new room."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -168,7 +160,6 @@ class RoomHandlers:
         request: GetRoomRequest,
         ctx: RequestContext,
     ) -> GetRoomResponse:
-        """Get a room by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
@@ -197,7 +188,6 @@ class RoomHandlers:
         request: UpdateRoomRequest,
         ctx: RequestContext,
     ) -> UpdateRoomResponse:
-        """Update an existing room."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
@@ -253,7 +243,6 @@ class RoomHandlers:
         request: DeleteRoomRequest,
         ctx: RequestContext,
     ) -> DeleteRoomResponse:
-        """Delete a room (soft or permanent)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
@@ -279,7 +268,6 @@ class RoomHandlers:
         request: ListRoomsRequest,
         ctx: RequestContext,
     ) -> ListRoomsResponse:
-        """List rooms with filters and pagination."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -347,14 +335,11 @@ class RoomHandlers:
 
 
 class BookingHandlers:
-    """RPC handlers for ``rooms.v1.BookingsService``."""
-
     async def create_booking(
         self,
         request: CreateBookingRequest,
         ctx: RequestContext,
     ) -> CreateBookingResponse:
-        """Create a new room booking."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
@@ -392,7 +377,6 @@ class BookingHandlers:
         request: GetBookingRequest,
         ctx: RequestContext,
     ) -> GetBookingResponse:
-        """Get a booking by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         booking_id = _parse_uuid(request.booking_id, "booking_id")
@@ -415,7 +399,6 @@ class BookingHandlers:
         request: CancelBookingRequest,
         ctx: RequestContext,
     ) -> CancelBookingResponse:
-        """Cancel an existing booking."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         booking_id = _parse_uuid(request.booking_id, "booking_id")
@@ -440,7 +423,6 @@ class BookingHandlers:
         request: ListBookingsRequest,
         ctx: RequestContext,
     ) -> ListBookingsResponse:
-        """List bookings with filters and pagination."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -499,7 +481,6 @@ class BookingHandlers:
         request: CheckAvailabilityRequest,
         ctx: RequestContext,
     ) -> CheckAvailabilityResponse:
-        """Check room availability for a date range."""
         get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
@@ -542,7 +523,6 @@ class BookingHandlers:
         request: FindAvailableRoomsRequest,
         ctx: RequestContext,
     ) -> FindAvailableRoomsResponse:
-        """Find rooms available during a specific time range."""
         get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -591,7 +571,6 @@ async def _load_booking_names(
     room_id: UUID,
     booker_id: UUID,
 ) -> tuple[str, str]:
-    """Fetch the room name and booker display name for proto responses."""
     room = (await session.execute(select(Room).where(Room.id == room_id))).scalar_one_or_none()
     room_name = room.name if room else ""
 

@@ -11,42 +11,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class EventTemplate(SQLModel, table=True):
-    """
-    EventTemplate model representing a reusable template for calendar events.
-
-    Templates store default values for creating new events quickly.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the template.
-    organization_id : UUID
-        Organization this template belongs to.
-    title : str
-        Template title/name.
-    description : str
-        Template description or default event description.
-    duration_minutes : int
-        Default duration in minutes.
-    location : str
-        Default location.
-    meeting_url : str | None
-        Default meeting URL.
-    category_id : UUID | None
-        Default category.
-    tags : list[str]
-        Default tags.
-    access_mode : AccessMode
-        How access to this template is governed.
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    created_by : UUID
-        User who created the template.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-    """
+    """A reusable template that pre-fills defaults for new calendar events."""
 
     __tablename__ = "calendar_event_templates"
 

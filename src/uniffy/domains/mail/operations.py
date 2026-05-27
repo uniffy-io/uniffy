@@ -1,10 +1,4 @@
-"""Per-org mail config CRUD + test send.
-
-Delegates storage to ``OrgSettingsOperations`` under
-``namespace='mail'``. Keeps the per-key value-typing (port -> int,
-use_tls -> bool, etc.) consistent so the resolver gets the shapes it
-expects.
-"""
+"""Per-org mail config CRUD + test send."""
 
 from __future__ import annotations
 
@@ -25,7 +19,6 @@ from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 
-# Plain keys (stored in OrgSetting.value as JSONB).
 PLAIN_KEYS: tuple[str, ...] = (
     "from_address",
     "from_name",
@@ -37,10 +30,9 @@ PLAIN_KEYS: tuple[str, ...] = (
     "rate_limit_per_min",
 )
 
-# Secret keys (stored encrypted in OrgSetting.value_encrypted).
 SECRET_KEYS: tuple[str, ...] = ("smtp_password",)
 
-# Test-send metadata keys (plain, written by SendTestMail only).
+# Metadata keys written only by SendTestMail.
 META_KEYS: tuple[str, ...] = (
     "verified_at",
     "last_test_at",
@@ -70,7 +62,6 @@ class OrgMailConfigSummary(NamedTuple):
 
 
 def _plain(row: OrgSetting | None) -> Any:
-    """Return a row's plaintext JSON value (None when absent or secret)."""
     if row is None or row.is_secret:
         return None
     return row.value
@@ -110,7 +101,6 @@ def _datetime(row: OrgSetting | None) -> datetime | None:
 
 
 def _summarize(rows: dict[str, OrgSetting]) -> OrgMailConfigSummary:
-    """Map raw row dict -> OrgMailConfigSummary (no secrets surfaced)."""
     has_org_config = bool(rows)
     pw_row = rows.get("smtp_password")
     smtp_password_set = (
@@ -151,7 +141,6 @@ class OrgMailOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> OrgMailConfigSummary:
-        """Org admin / owner only. Returns a non-secret summary."""
         await self._org_ops.require_org_admin(user_id, organization_id)
         rows = await self._settings.get_namespace(organization_id, MAIL_NAMESPACE)
         return _summarize(rows)
@@ -171,7 +160,6 @@ class OrgMailOperations:
         smtp_use_tls: bool,
         rate_limit_per_min: int,
     ) -> OrgMailConfigSummary:
-        """Upsert every plain key + optionally the encrypted password."""
         await self._org_ops.require_org_admin(user_id, organization_id)
 
         existing = await self._settings.get_namespace(organization_id, MAIL_NAMESPACE)
@@ -244,7 +232,6 @@ class OrgMailOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> int:
-        """Drop every mail.* row for the org."""
         await self._org_ops.require_org_admin(user_id, organization_id)
         deleted = await self._settings.delete_namespace(
             organization_id=organization_id,
@@ -272,7 +259,7 @@ class OrgMailOperations:
         recipient_email: str,
         sender: MailSender | None = None,
     ) -> MailResult:
-        """Dispatch the admin/test template and record status on the org row."""
+        """Send the admin/test template and stamp last_test_* on the org row."""
         await self._org_ops.require_org_admin(user_id, organization_id)
         recipient = recipient_email.strip()
         if not recipient or "@" not in recipient:
@@ -281,7 +268,6 @@ class OrgMailOperations:
         sender = sender or MailSender()
         now_iso = datetime.now(UTC).isoformat()
 
-        # Resolve the org's display name for the template context.
         try:
             org = await self._org_ops.get_by_id(organization_id)
             org_name = org.name

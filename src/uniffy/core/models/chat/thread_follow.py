@@ -11,13 +11,7 @@ from uniffy.core.types import SubjectType
 
 
 class ChatThreadFollow(SQLModel, table=True):
-    """Tracks which subjects (users or agents) follow a thread.
-
-    Insert to follow, delete to unfollow. Auto-followed when subject starts
-    a thread, replies in a thread, or is @mentioned in a thread. Composite
-    PK (root_message_id, subject_type, subject_id). Legacy `user_id` column
-    stays populated for SUBJECT_TYPE_USER rows during the migration window.
-    """
+    """A follow relationship between a subject (user or agent) and a thread."""
 
     __tablename__ = "chat_thread_follows"
     __table_args__ = (Index("ix_chat_thread_follows_subject", "subject_type", "subject_id"),)

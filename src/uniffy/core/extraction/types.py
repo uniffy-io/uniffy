@@ -5,20 +5,7 @@ from dataclasses import dataclass
 
 @dataclass
 class ExtractionResult:
-    """Result of extracting text from a file.
-
-    Attributes
-    ----------
-    text : str
-        The extracted text content.
-    page_count : int | None
-        Number of pages (for paginated formats like PDF, PPTX).
-    word_count : int | None
-        Approximate word count of the extracted text.
-    truncated : bool
-        Whether the text was truncated to fit max_chars.
-
-    """
+    """Result of extracting text from a file."""
 
     text: str
     page_count: int | None = None

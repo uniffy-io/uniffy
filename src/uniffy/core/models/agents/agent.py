@@ -12,44 +12,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class Agent(SQLModel, table=True):
-    """
-    An AI agent configuration scoped to an organization.
-
-    Agents define model preferences, personality (soul prompt),
-    and tool configuration for conversations.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID
-        Organization this agent belongs to (FK to login_organizations).
-    owner_id : UUID
-        User who created this agent (FK to login_users).
-    name : str
-        Agent display name.
-    soul_prompt : str
-        Free-form personality, tone, and instruction text.
-    primary_model : str
-        Default model identifier (e.g. "claude-sonnet-4-6").
-    fallback_models : list
-        Ordered list of fallback model identifiers (JSONB).
-    enabled_tools : list
-        List of enabled tool identifiers (JSONB).
-    enabled_skills : list
-        List of enabled skill IDs (JSONB).
-    avatar_emoji : str
-        Emoji used as agent avatar.
-    theme_color : str
-        Theme color for agent UI representation.
-    is_default : bool
-        Whether this is the organization's default agent.
-    created_at : datetime
-        When the agent was created.
-    updated_at : datetime
-        When the agent was last updated.
-
-    """
+    """An AI agent configuration scoped to an organization."""
 
     __tablename__ = "agents_agents"
     __table_args__ = (
@@ -156,5 +119,4 @@ class Agent(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Agent."""
         return f"<Agent(id={self.id}, name={self.name!r}, org_id={self.organization_id})>"

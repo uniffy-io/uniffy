@@ -38,11 +38,9 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
     model_class = AgentCronTask
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize cron task operations."""
         super().__init__(session)
 
     def _build_search_keywords(self, model: AgentCronTask) -> str:
-        """Aggregate searchable text for a cron task."""
         parts = [model.name]
         if model.description:
             parts.append(model.description[:300])
@@ -51,15 +49,12 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         return " ".join(parts)
 
     def _get_search_title(self, model: AgentCronTask) -> str:
-        """Return the task name for the search index."""
         return model.name
 
     def _get_url_path(self, model: AgentCronTask) -> str:
-        """Return the frontend route for this cron task."""
         return f"/agents/{model.agent_id}/cron/{model.id}"
 
     def _get_search_description(self, model: AgentCronTask) -> str | None:
-        """Return a description snippet."""
         if model.description:
             return model.description[:200]
         return model.prompt[:200] if model.prompt else None
@@ -153,7 +148,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         """Update a cron task.
 
         Access-policy changes (access mode, baseline role, members) go
-        through ``permissions.v1.MembersService``, never this method.
+        through `permissions.v1.MembersService`, never this method.
         """
         if name is not None and not name.strip():
             raise ValidationError("name", "Task name cannot be empty")
@@ -237,10 +232,9 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
     ) -> tuple[list[AgentCronTask], int]:
         """List cron tasks the user can access.
 
-        When ``agent_id`` is provided and the user can access that agent,
-        all of its cron tasks are returned regardless of the task's own
-        access policy. Otherwise tasks are filtered via the canonical
-        ``build_accessible_filter``.
+        When `agent_id` is provided and accessible, all of its cron tasks
+        are returned regardless of the task's own access policy. Otherwise
+        tasks are filtered via the canonical `build_accessible_filter`.
         """
         query = select(AgentCronTask).where(
             AgentCronTask.organization_id == organization_id,
@@ -287,7 +281,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         return tasks, total
 
     async def get_due_tasks(self) -> list[AgentCronTask]:
-        """Return all enabled, non-deleted tasks with ``next_run_at <= now``."""
+        """Return all enabled, non-deleted tasks with `next_run_at <= now`."""
         now = datetime.now(UTC)
         result = await self.session.execute(
             select(AgentCronTask)
@@ -510,17 +504,11 @@ def _compute_next_run(
     return next_local.astimezone(UTC)
 
 
-# ---------------------------------------------------------------------
-# Content loader registration
-# ---------------------------------------------------------------------
-
-
 async def _load_cron_task(
     session: AsyncSession,
     organization_id: UUID,
     content_id: UUID,
 ) -> AgentCronTask | None:
-    """Loader used by ``ContentMembersOperations`` to fetch a cron task."""
     result = await session.execute(
         select(AgentCronTask).where(
             AgentCronTask.id == content_id,

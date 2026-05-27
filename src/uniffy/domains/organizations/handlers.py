@@ -1,4 +1,3 @@
-"""Organizations RPC handlers - thin layer delegating to operations."""
 
 from uuid import UUID
 
@@ -109,18 +108,11 @@ from uniffy.domains.security.operations import SecurityOperations
 
 
 class OrganizationsHandlers:
-    """Organizations RPC handlers."""
-
-    # ─────────────────────────────────────────────────────────────
-    # User's Organizations
-    # ─────────────────────────────────────────────────────────────
-
     async def list_my_organizations(
         self,
         request: ListMyOrganizationsRequest,
         ctx: RequestContext,
     ) -> ListMyOrganizationsResponse:
-        """List organizations the current user belongs to."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -138,16 +130,11 @@ class OrganizationsHandlers:
             logger.error(f"Error listing user organizations: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    # ─────────────────────────────────────────────────────────────
-    # Organization CRUD (System Admin)
-    # ─────────────────────────────────────────────────────────────
-
     async def list_organizations(
         self,
         request: ListOrganizationsRequest,
         ctx: RequestContext,
     ) -> ListOrganizationsResponse:
-        """List all organizations (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -198,7 +185,6 @@ class OrganizationsHandlers:
         request: GetOrganizationRequest,
         ctx: RequestContext,
     ) -> GetOrganizationResponse:
-        """Get organization by ID."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -210,7 +196,6 @@ class OrganizationsHandlers:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
 
-                # Verify user has access (is member or system admin)
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
                 user_ops = _UserOps(session)
@@ -243,7 +228,6 @@ class OrganizationsHandlers:
         request: CreateOrganizationRequest,
         ctx: RequestContext,
     ) -> CreateOrganizationResponse:
-        """Create a new organization (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         if not request.name or not request.slug:
@@ -258,12 +242,10 @@ class OrganizationsHandlers:
 
                 ops = OrganizationOperations(session)
 
-                # Check if slug already exists
                 existing = await ops.get_by_slug(request.slug)
                 if existing:
                     raise ConnectError(Code.ALREADY_EXISTS, "Organization slug already exists")
 
-                # Determine owner
                 owner_id = user_id
                 if request.HasField("owner_user_id"):
                     owner_id = UUID(request.owner_user_id)
@@ -289,7 +271,6 @@ class OrganizationsHandlers:
         request: UpdateOrganizationRequest,
         ctx: RequestContext,
     ) -> UpdateOrganizationResponse:
-        """Update organization details."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -301,7 +282,6 @@ class OrganizationsHandlers:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
 
-                # Verify user is org admin or system admin
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
                 user_ops = _UserOps(session)
@@ -331,7 +311,6 @@ class OrganizationsHandlers:
         request: DeleteOrganizationRequest,
         ctx: RequestContext,
     ) -> DeleteOrganizationResponse:
-        """Delete an organization (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -358,16 +337,11 @@ class OrganizationsHandlers:
             logger.error(f"Error deleting organization: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    # ─────────────────────────────────────────────────────────────
-    # Organization Overview (Org Admin)
-    # ─────────────────────────────────────────────────────────────
-
     async def get_organization_overview(
         self,
         request: GetOrganizationOverviewRequest,
         ctx: RequestContext,
     ) -> GetOrganizationOverviewResponse:
-        """Get organization overview (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -397,16 +371,11 @@ class OrganizationsHandlers:
             logger.error(f"Error getting organization overview: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    # ─────────────────────────────────────────────────────────────
-    # Member Management (Org Admin)
-    # ─────────────────────────────────────────────────────────────
-
     async def list_members(
         self,
         request: ListMembersRequest,
         ctx: RequestContext,
     ) -> ListMembersResponse:
-        """List organization members (available to all members)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -466,7 +435,6 @@ class OrganizationsHandlers:
         request: AddMemberRequest,
         ctx: RequestContext,
     ) -> AddMemberResponse:
-        """Add a member to the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -480,12 +448,10 @@ class OrganizationsHandlers:
                 ops = OrganizationOperations(session)
                 await ops.require_org_admin(user_id, org_id)
 
-                # Get role from proto
                 role = org_role_from_proto(request.role)
                 if role is None:
                     role = OrganizationRole.MEMBER
 
-                # Get target user
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
                 user_ops = _UserOps(session)
@@ -509,7 +475,6 @@ class OrganizationsHandlers:
         request: UpdateMemberRoleRequest,
         ctx: RequestContext,
     ) -> UpdateMemberRoleResponse:
-        """Update a member's role (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -522,7 +487,6 @@ class OrganizationsHandlers:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
 
-                # Get role from proto
                 new_role = org_role_from_proto(request.role)
                 if new_role is None:
                     raise ConnectError(Code.INVALID_ARGUMENT, "Invalid role")
@@ -550,7 +514,6 @@ class OrganizationsHandlers:
         request: RemoveMemberRequest,
         ctx: RequestContext,
     ) -> RemoveMemberResponse:
-        """Remove a member from the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -578,16 +541,11 @@ class OrganizationsHandlers:
             logger.error(f"Error removing member: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    # ─────────────────────────────────────────────────────────────
-    # Permission Defaults (Org Admin)
-    # ─────────────────────────────────────────────────────────────
-
     async def get_permission_defaults(
         self,
         request: GetPermissionDefaultsRequest,
         ctx: RequestContext,
     ) -> GetPermissionDefaultsResponse:
-        """Get permission defaults for the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -616,7 +574,6 @@ class OrganizationsHandlers:
         request: UpdatePermissionDefaultsRequest,
         ctx: RequestContext,
     ) -> UpdatePermissionDefaultsResponse:
-        """Update permission defaults for a content type (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -662,7 +619,6 @@ class OrganizationsHandlers:
         request: GetOrganizationSettingsRequest,
         ctx: RequestContext,
     ) -> GetOrganizationSettingsResponse:
-        """Get the organization settings blob (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -691,7 +647,6 @@ class OrganizationsHandlers:
         request: UpdateOrganizationSettingsRequest,
         ctx: RequestContext,
     ) -> UpdateOrganizationSettingsResponse:
-        """Merge-update the organization settings blob (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -722,16 +677,11 @@ class OrganizationsHandlers:
             logger.error(f"Error updating organization settings: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
-    # ─────────────────────────────────────────────────────────────
-    # Domain Admin Management (Org Admin)
-    # ─────────────────────────────────────────────────────────────
-
     async def grant_domain_admin(
         self,
         request: GrantDomainAdminRequest,
         ctx: RequestContext,
     ) -> GrantDomainAdminResponse:
-        """Grant domain admin to a user (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -769,7 +719,6 @@ class OrganizationsHandlers:
         request: RevokeDomainAdminRequest,
         ctx: RequestContext,
     ) -> RevokeDomainAdminResponse:
-        """Revoke domain admin from a user (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -805,7 +754,6 @@ class OrganizationsHandlers:
         request: ListDomainAdminsRequest,
         ctx: RequestContext,
     ) -> ListDomainAdminsResponse:
-        """List domain admins for the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -859,7 +807,6 @@ class OrganizationsHandlers:
         request: GetUserDomainAdminsRequest,
         ctx: RequestContext,
     ) -> GetUserDomainAdminsResponse:
-        """Get domains where a user is domain admin."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -872,7 +819,6 @@ class OrganizationsHandlers:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
 
-                # Any org member can check their own; org admin can check anyone
                 if user_id != target_user_id:
                     await ops.require_org_admin(user_id, org_id)
                 else:
@@ -895,7 +841,6 @@ class OrganizationsHandlers:
         request: RotateEncryptionKeyRequest,
         ctx: RequestContext,
     ) -> RotateEncryptionKeyResponse:
-        """Rotate the organization's Data Encryption Key (org owner only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -927,7 +872,6 @@ class OrganizationsHandlers:
         request: InviteMemberRequest,
         ctx: RequestContext,
     ) -> InviteMemberResponse:
-        """Invite an email to join the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -975,7 +919,6 @@ class OrganizationsHandlers:
         request: ListInvitationsRequest,
         ctx: RequestContext,
     ) -> ListInvitationsResponse:
-        """List invitations for the organization (org admin only)."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -1004,7 +947,6 @@ class OrganizationsHandlers:
         request: RevokeInvitationRequest,
         ctx: RequestContext,
     ) -> RevokeInvitationResponse:
-        """Revoke a pending invitation (org admin only)."""
         user_id = get_user_id_from_context(ctx)
         try:
             invitation_id = UUID(request.invitation_id)
@@ -1037,7 +979,6 @@ class OrganizationsHandlers:
         request: ResendInvitationRequest,
         ctx: RequestContext,
     ) -> ResendInvitationResponse:
-        """Regenerate the token + re-send the invitation email."""
         user_id = get_user_id_from_context(ctx)
         try:
             invitation_id = UUID(request.invitation_id)
@@ -1070,7 +1011,6 @@ class OrganizationsHandlers:
         request: GetSecuritySettingsRequest,
         ctx: RequestContext,
     ) -> GetSecuritySettingsResponse:
-        """Return the org's security policy (org admin only)."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -1101,7 +1041,6 @@ class OrganizationsHandlers:
         request: UpdateSecuritySettingsRequest,
         ctx: RequestContext,
     ) -> UpdateSecuritySettingsResponse:
-        """Update the org's security policy (org admin only)."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)

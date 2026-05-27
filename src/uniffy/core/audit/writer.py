@@ -1,11 +1,7 @@
-"""The sole sanctioned writer for ``audit_events`` rows.
+"""Sole sanctioned writer for ``audit_events`` rows.
 
-Every mutation call site that needs to record an audit event calls
-:func:`write_audit_event`. The helper adds the row to the caller's
-``AsyncSession`` without committing - the caller's surrounding
-transaction commits both its domain mutation and the audit row in
-lock-step, or rolls back both together.
-
+The row is added to the caller's session without committing, so the domain
+mutation and the audit row commit (or roll back) atomically.
 """
 
 from __future__ import annotations
@@ -47,48 +43,9 @@ async def write_audit_event(
 ) -> AuditEvent | None:
     """Add an ``AuditEvent`` row to the caller's session.
 
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session shared with the calling operation. The audit
-        row is added but not committed; the caller's next commit
-        persists it.
-    organization_id : UUID | None
-        Organization in which the action occurred. May be ``None`` for
-        truly unattributable events (login failure for unknown email,
-        cross-org system jobs).
-    actor_user_id : UUID | None
-        Human user who initiated the action. ``None`` for system-
-        driven events. For agent-initiated actions, pass the human
-        owner here and put ``{"actor_kind": "agent", "agent_id": ...}``
-        in ``details``.
-    action : str
-        Dotted action identifier from :mod:`uniffy.core.audit.actions`.
-    resource_type : str | None
-        Polymorphic resource type (free string).
-    resource_id : UUID | None
-        Identifier of the affected resource.
-    details : dict | None
-        Action-specific structured payload. ``None`` is normalised to
-        an empty dict.
-    on_behalf_of_user_id : UUID | None
-        Reserved for delegated-admin flows where actor and beneficiary
-        diverge. Stays ``None`` outside that pattern.
-    dedupe_key : str | None
-        When set, the writer acquires a Valkey ``SET NX`` lock at
-        ``audit:debounce:{action}:{dedupe_key}`` before inserting. On
-        lock miss the writer returns ``None`` and no row is added.
-        Used by spam-prone actions like ``auth.token_refreshed``.
-    dedupe_ttl_seconds : int
-        TTL for the dedupe lock. Ignored when ``dedupe_key`` is
-        ``None``.
-
-    Returns
-    -------
-    AuditEvent | None
-        The added (uncommitted) row, or ``None`` when dedupe suppressed
-        the write.
-
+    When ``dedupe_key`` is set, a Valkey ``SET NX`` lock at
+    ``audit:debounce:{action}:{dedupe_key}`` debounces spam-prone actions
+    (e.g. ``auth.token_refreshed``); on lock miss the writer returns ``None``.
     """
     if dedupe_key is not None and not await _acquire_dedupe_lock(
         action, dedupe_key, dedupe_ttl_seconds
@@ -121,22 +78,11 @@ async def write_audit_event(
 def _merge_support_session_tag(
     details: dict, organization_id: UUID | None
 ) -> None:
-    """Stamp ``actor_kind``/``support_session_id``/``scope`` when active.
+    """Stamp ``actor_kind``/``support_session_id``/``scope`` when a support session is active.
 
-    The ContextVar is populated by
-    :meth:`PermissionChecker._ensure_support_session_context` on every
-    request that touches an active session, regardless of perm-cache
-    state. Audit writes that happen elsewhere in the same request
-    inherit the tag automatically so the org owner can filter their
-    audit log for support access.
-
-    Skips silently when no session is active or when the writer targets
-    a different org than the one under session.
-
-    The ``actor_kind`` field is overwritten unconditionally: a session
-    tag is a fact about the request, not a hint the caller can elect to
-    drop. The caller's value (if any) is moved to ``actor_kind_pre`` so
-    no information is lost.
+    The ``actor_kind`` field is overwritten unconditionally - a session tag is a
+    fact about the request, not a hint the caller can drop. The caller's prior
+    value (if any) moves to ``actor_kind_pre`` so no information is lost.
     """
     from uniffy.domains.platform.support_session.context import (
         get_active_support_session,
@@ -160,14 +106,7 @@ async def _snapshot_actor_role(
     organization_id: UUID | None,
     actor_user_id: UUID | None,
 ) -> str | None:
-    """Look up the actor's current organization role.
-
-    Returns the string value of :class:`OrganizationRole` or ``None``
-    when no membership row exists (system events, deleted users, or
-    cross-org system admins acting on a foreign org). Also returns
-    ``None`` immediately when ``organization_id`` is ``None`` since
-    there is no membership scope to look up.
-    """
+    """Snapshot the actor's current org role (``None`` when there is no membership scope)."""
     if actor_user_id is None or organization_id is None:
         return None
 
@@ -193,13 +132,7 @@ async def _acquire_dedupe_lock(
     dedupe_key: str,
     ttl_seconds: int,
 ) -> bool:
-    """Try to acquire a debounce lock via Valkey ``SET NX``.
-
-    Returns ``True`` when the lock is acquired (write should proceed)
-    or when Valkey is unavailable (fail-open). Returns ``False`` only
-    when an existing lock is held and dedupe should suppress the
-    write.
-    """
+    """Acquire a debounce lock via Valkey ``SET NX``; fail-open when Valkey is unavailable."""
     client = _get_ops_client()
     if client is None:
         return True

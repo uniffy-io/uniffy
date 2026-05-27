@@ -22,12 +22,7 @@ from uniffy.core.types import DomainType
 
 @dataclass(frozen=True)
 class UserUsageRow:
-    """One row for the admin storage table.
-
-    Carries every field the admin UI displays for a single org member,
-    whether or not they have ever uploaded. Members with no
-    ``StorageUsage`` row get ``used_bytes=0`` and ``last_recalculated_at=None``.
-    """
+    """Admin storage table row; members without usage get used_bytes=0."""
 
     user_id: UUID
     organization_id: UUID
@@ -38,76 +33,27 @@ class UserUsageRow:
     last_recalculated_at: datetime | None
 
 
+@dataclass(frozen=True)
 class QuotaCheckResult:
-    """
-    Result of a quota check operation.
+    """Result of a quota check; quota_bytes=None means unlimited."""
 
-    Attributes
-    ----------
-    allowed : bool
-        Whether the operation is allowed under current quota.
-    reason : str
-        Human-readable explanation of the result.
-    usage_percent : float
-        Current usage as a percentage of quota (0-100+).
-    current_used_bytes : int
-        Bytes currently used.
-    quota_bytes : int | None
-        Quota limit in bytes (None if unlimited).
-    remaining_bytes : int | None
-        Bytes remaining before hitting quota (None if unlimited).
-
-    """
-
-    def __init__(
-        self,
-        allowed: bool,
-        reason: str,
-        usage_percent: float,
-        current_used_bytes: int,
-        quota_bytes: int | None,
-        remaining_bytes: int | None,
-    ) -> None:
-        """Initialize QuotaCheckResult."""
-        self.allowed = allowed
-        self.reason = reason
-        self.usage_percent = usage_percent
-        self.current_used_bytes = current_used_bytes
-        self.quota_bytes = quota_bytes
-        self.remaining_bytes = remaining_bytes
+    allowed: bool
+    reason: str
+    usage_percent: float
+    current_used_bytes: int
+    quota_bytes: int | None
+    remaining_bytes: int | None
 
 
 class QuotaOperations:
-    """
-    Storage quota business logic.
-
-    Manages organization-level quota configuration, per-user overrides,
-    materialized usage tracking, and quota enforcement checks.
-    All operations are async and use the shared database session patterns.
-    """
+    """Org quota config, per-user overrides, materialized usage tracking, enforcement checks."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize quota operations with a database session."""
         self.session = session
         self.permission_checker = PermissionChecker(session)
 
     async def _require_admin(self, user_id: UUID, organization_id: UUID) -> None:
-        """
-        Verify the user is an org admin, system admin, or files domain admin.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User to check.
-        organization_id : UUID
-            Organization context.
-
-        Raises
-        ------
-        PermissionDeniedError
-            If the user lacks admin privileges for storage management.
-
-        """
+        """Org admin, system admin, or files domain admin."""
         is_org_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
         if is_org_admin:
             return
@@ -121,23 +67,7 @@ class QuotaOperations:
         raise PermissionDeniedError("manage", "storage quotas")
 
     async def get_org_quota(self, organization_id: UUID) -> StorageQuota:
-        """
-        Get or create the organization quota configuration.
-
-        If no quota configuration exists for the organization, returns
-        a default configuration with unlimited quotas.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        StorageQuota
-            The organization's quota configuration.
-
-        """
+        """Get-or-create the org quota config; defaults to unlimited."""
         result = await self.session.execute(
             select(StorageQuota).where(StorageQuota.organization_id == organization_id)
         )
@@ -176,30 +106,7 @@ class QuotaOperations:
         warn_at_percent: int | None = None,
         enforce: bool | None = None,
     ) -> StorageQuota:
-        """
-        Create or update the organization quota configuration.
-
-        Parameters
-        ----------
-        user_id : UUID
-            Admin user performing the action.
-        organization_id : UUID
-            Organization ID.
-        org_quota_bytes : int | None
-            Total org storage limit (None = unlimited).
-        default_user_quota_bytes : int | None
-            Default per-user limit (None = unlimited).
-        warn_at_percent : int | None
-            Warning threshold percentage.
-        enforce : bool | None
-            Whether to enforce quotas.
-
-        Returns
-        -------
-        StorageQuota
-            Updated quota configuration.
-
-        """
+        """Upsert the org quota config; None values keep the existing field."""
         await self._require_admin(user_id, organization_id)
 
         if warn_at_percent is not None and (warn_at_percent < 1 or warn_at_percent > 100):
@@ -232,22 +139,6 @@ class QuotaOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> UserStorageQuotaOverride | None:
-        """
-        Get a specific user's quota override.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User ID.
-
-        Returns
-        -------
-        UserStorageQuotaOverride | None
-            The override if one exists, None otherwise.
-
-        """
         result = await self.session.execute(
             select(UserStorageQuotaOverride).where(
                 UserStorageQuotaOverride.organization_id == organization_id,
@@ -264,28 +155,7 @@ class QuotaOperations:
         quota_bytes: int,
         note: str | None = None,
     ) -> UserStorageQuotaOverride:
-        """
-        Create or update a per-user quota override.
-
-        Parameters
-        ----------
-        admin_user_id : UUID
-            Admin user performing the action.
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User to set override for.
-        quota_bytes : int
-            Custom storage limit in bytes.
-        note : str | None
-            Administrative note.
-
-        Returns
-        -------
-        UserStorageQuotaOverride
-            Created or updated override.
-
-        """
+        """Upsert a per-user quota override."""
         await self._require_admin(admin_user_id, organization_id)
 
         if quota_bytes < 0:
@@ -320,29 +190,7 @@ class QuotaOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> bool:
-        """
-        Remove a per-user quota override, reverting to org default.
-
-        Parameters
-        ----------
-        admin_user_id : UUID
-            Admin user performing the action.
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User whose override to remove.
-
-        Returns
-        -------
-        bool
-            True if an override was removed.
-
-        Raises
-        ------
-        NotFoundError
-            If no override exists for the user.
-
-        """
+        """Remove a per-user override, reverting to org default."""
         await self._require_admin(admin_user_id, organization_id)
 
         existing = await self.get_user_quota_override(organization_id, user_id)
@@ -358,22 +206,6 @@ class QuotaOperations:
         admin_user_id: UUID,
         organization_id: UUID,
     ) -> list[UserStorageQuotaOverride]:
-        """
-        List all per-user quota overrides for an organization.
-
-        Parameters
-        ----------
-        admin_user_id : UUID
-            Admin user requesting the list.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        list[UserStorageQuotaOverride]
-            All overrides in the organization.
-
-        """
         await self._require_admin(admin_user_id, organization_id)
 
         result = await self.session.execute(
@@ -388,24 +220,7 @@ class QuotaOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> int | None:
-        """
-        Resolve the effective quota for a user.
-
-        Priority: user override > org default > unlimited (None).
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User ID.
-
-        Returns
-        -------
-        int | None
-            Effective quota in bytes, or None if unlimited.
-
-        """
+        """Resolution: user override > org default > unlimited (None)."""
         override = await self.get_user_quota_override(organization_id, user_id)
         if override:
             return override.quota_bytes
@@ -418,22 +233,7 @@ class QuotaOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> StorageUsage:
-        """
-        Get or create a usage record for a user.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User ID.
-
-        Returns
-        -------
-        StorageUsage
-            The user's usage record.
-
-        """
+        """Get-or-create a per-user usage row."""
         result = await self.session.execute(
             select(StorageUsage).where(
                 StorageUsage.organization_id == organization_id,
@@ -456,20 +256,7 @@ class QuotaOperations:
         return usage
 
     async def get_org_usage(self, organization_id: UUID) -> tuple[int, int]:
-        """
-        Get total usage for an organization (sum of all users).
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        tuple[int, int]
-            (total_used_bytes, total_file_count)
-
-        """
+        """Returns (total_used_bytes, total_file_count) summed across users."""
         result = await self.session.execute(
             select(
                 func.coalesce(func.sum(StorageUsage.used_bytes), 0),
@@ -484,15 +271,8 @@ class QuotaOperations:
         admin_user_id: UUID,
         organization_id: UUID,
     ) -> list[UserUsageRow]:
-        """List one row per active org member with their storage usage.
-
-        Starts from ``OrganizationMember`` so members who have never
-        uploaded still appear. Joins ``StorageUsage`` and
-        ``UserStorageQuotaOverride`` to surface usage totals and the
-        effective quota. Inactive memberships are excluded.
-
-        Sort: used_bytes DESC, then user_id ASC (stable tie-break --
-        the frontend resolves user names separately).
+        """One row per active member; LEFT JOINs surface zero-usage members;
+        sort by used_bytes DESC.
         """
         await self._require_admin(admin_user_id, organization_id)
 
@@ -558,29 +338,7 @@ class QuotaOperations:
         bytes_delta: int,
         file_count_delta: int = 1,
     ) -> StorageUsage:
-        """
-        Atomically increment a user's storage usage.
-
-        Uses a database-level UPDATE with arithmetic to prevent
-        race conditions from concurrent uploads.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User ID.
-        bytes_delta : int
-            Bytes to add.
-        file_count_delta : int
-            File count to add (default 1).
-
-        Returns
-        -------
-        StorageUsage
-            Updated usage record.
-
-        """
+        """Atomic increment via SQL arithmetic to survive concurrent uploads."""
         usage = await self.get_user_usage(organization_id, user_id)
 
         await self.session.execute(
@@ -609,28 +367,7 @@ class QuotaOperations:
         bytes_delta: int,
         file_count_delta: int = 1,
     ) -> StorageUsage:
-        """
-        Atomically decrement a user's storage usage.
-
-        Ensures usage never goes below zero.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User ID.
-        bytes_delta : int
-            Bytes to subtract.
-        file_count_delta : int
-            File count to subtract (default 1).
-
-        Returns
-        -------
-        StorageUsage
-            Updated usage record.
-
-        """
+        """Atomic decrement clamped at zero via GREATEST."""
         usage = await self.get_user_usage(organization_id, user_id)
 
         await self.session.execute(
@@ -658,33 +395,13 @@ class QuotaOperations:
         user_id: UUID,
         additional_bytes: int,
     ) -> QuotaCheckResult:
-        """
-        Check whether a user can upload additional bytes.
-
-        Checks both user-level and org-level quotas.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User ID.
-        additional_bytes : int
-            Size of the proposed upload in bytes.
-
-        Returns
-        -------
-        QuotaCheckResult
-            Whether the upload is allowed and usage details.
-
-        """
+        """Gate an upload against user-level and org-level quotas."""
         org_quota = await self.get_org_quota(organization_id)
         user_usage = await self.get_user_usage(organization_id, user_id)
         effective_user_quota = await self.get_effective_user_quota(organization_id, user_id)
 
         projected_user_bytes = user_usage.used_bytes + additional_bytes
 
-        # Check user-level quota
         if effective_user_quota is not None:
             if projected_user_bytes > effective_user_quota:
                 usage_percent = (
@@ -709,7 +426,6 @@ class QuotaOperations:
                     quota=effective_user_quota,
                 )
 
-        # Check org-level quota
         if org_quota.org_quota_bytes is not None:
             org_used, _ = await self.get_org_usage(organization_id)
             projected_org_bytes = org_used + additional_bytes
@@ -736,7 +452,6 @@ class QuotaOperations:
                     quota=org_quota.org_quota_bytes,
                 )
 
-        # Calculate usage percent for response
         usage_percent = 0.0
         remaining = None
         quota_bytes = effective_user_quota
@@ -758,25 +473,7 @@ class QuotaOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> StorageUsage:
-        """
-        Full recalculation of a user's usage from the files table.
-
-        Corrects any drift between the materialized counter and
-        actual file storage.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-        user_id : UUID
-            User ID.
-
-        Returns
-        -------
-        StorageUsage
-            Recalculated usage record.
-
-        """
+        """Recalculate usage from the files table; corrects drift from the materialized counter."""
         result = await self.session.execute(
             select(
                 func.coalesce(func.sum(File.size_bytes.cast(BigInteger)), 0),
@@ -817,21 +514,7 @@ class QuotaOperations:
         self,
         organization_id: UUID,
     ) -> list[StorageUsage]:
-        """
-        Recalculate usage for all users in an organization.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        list[StorageUsage]
-            All recalculated usage records.
-
-        """
-        # Get all distinct owners in the org
+        """Recalculate usage for every owner in the org."""
         result = await self.session.execute(
             select(File.owner_id).where(File.organization_id == organization_id).distinct()
         )

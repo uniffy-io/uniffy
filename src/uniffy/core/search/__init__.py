@@ -1,9 +1,4 @@
-"""
-Search module for unified content search.
-
-Provides search indexing and querying capabilities across all content types
-using Meilisearch for full-text search with typo tolerance.
-"""
+"""Unified content search backed by Meilisearch."""
 
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.search.meilisearch import (
@@ -17,10 +12,8 @@ from uniffy.core.search.meilisearch import (
 )
 
 __all__ = [
-    # Indexer (used by BaseContentOperations)
     "SearchIndexer",
     "build_content_urn",
-    # Meilisearch client
     "MeilisearchClient",
     "MeilisearchConfig",
     "init_meilisearch",

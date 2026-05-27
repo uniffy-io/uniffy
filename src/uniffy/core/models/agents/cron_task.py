@@ -11,66 +11,7 @@ from uniffy.core.types import AccessMode, ContentRole, generate_id
 
 
 class AgentCronTask(SQLModel, table=True):
-    """A scheduled recurring task that an agent executes on behalf of a user.
-
-    Follows the ContentModel protocol for 3-layer permission checking
-    via BaseContentOperations.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID
-        Organization this task belongs to.
-    owner_id : UUID
-        User who created this task (for permission checks).
-    agent_id : UUID
-        Agent that executes this task.
-    execution_user_id : UUID
-        Identity used during execution. Initially same as owner_id,
-        changes only on explicit ownership transfer.
-    session_id : UUID | None
-        Dedicated cron session for output (created lazily on first run).
-    name : str
-        Human-readable name.
-    description : str
-        Optional longer description of what the task does.
-    prompt : str
-        The message sent to the agent on each execution.
-    cron_expression : str
-        5-field cron expression (minute hour day month weekday).
-    timezone : str
-        IANA timezone for schedule interpretation.
-    is_enabled : bool
-        Whether the task is active.
-    last_run_at : datetime | None
-        When the task last ran.
-    next_run_at : datetime | None
-        Pre-computed next run time for efficient polling.
-    last_run_status : str | None
-        Status of the last run: "success" or "error".
-    last_run_error : str | None
-        Error message from the last failed run.
-    run_count : int
-        Total number of successful executions.
-    consecutive_failures : int
-        Consecutive failure count (resets on success).
-    max_consecutive_failures : int
-        Auto-disable threshold (default 3).
-    access_mode : AccessMode
-        How access to this task is governed.
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    is_deleted : bool
-        Soft-delete flag.
-    deleted_at : datetime | None
-        When the task was soft-deleted.
-    created_at : datetime
-        When the task was created.
-    updated_at : datetime
-        When the task was last modified.
-
-    """
+    """A scheduled recurring task that an agent executes on behalf of a user."""
 
     __tablename__ = "agents_cron_tasks"
     __table_args__ = (
@@ -174,7 +115,6 @@ class AgentCronTask(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentCronTask."""
         return (
             f"<AgentCronTask(id={self.id}, name={self.name!r}, "
             f"cron={self.cron_expression!r}, enabled={self.is_enabled})>"

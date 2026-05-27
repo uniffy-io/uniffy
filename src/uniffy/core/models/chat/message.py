@@ -16,8 +16,6 @@ from uniffy.core.types import generate_id
 
 
 class SenderType(str, Enum):
-    """Type of message sender."""
-
     USER = "USER"
     AGENT = "AGENT"
     SYSTEM = "SYSTEM"
@@ -25,14 +23,8 @@ class SenderType(str, Enum):
 
 
 class ChatMessage(SQLModel, table=True):
-    """A message within a channel.
-
-    Messages are children of channels. root_id = NULL means a root-level message in the
-    channel. root_id = <some_message_id> means this is a reply in a thread.
-
-    sender_id is a soft polymorphic reference: when sender_type=USER it points to
-    login_users.id, when sender_type=AGENT it points to agents.id. The hard FK was
-    dropped in migration 047 to support dual-entity senders.
+    """A chat message in a channel; root_id IS NULL marks a root message,
+    otherwise it is a thread reply.
     """
 
     __tablename__ = "chat_messages"

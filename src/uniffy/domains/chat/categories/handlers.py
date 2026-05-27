@@ -29,7 +29,6 @@ from uniffy.domains.chat.channels.converters import category_to_proto, channel_t
 
 
 def _handle_error(e: Exception) -> None:
-    """Map domain errors to ConnectRPC errors."""
     if isinstance(e, NotFoundError):
         raise ConnectError(Code.NOT_FOUND, str(e))
     if isinstance(e, PermissionDeniedError):
@@ -41,14 +40,11 @@ def _handle_error(e: Exception) -> None:
 
 
 class CategoryHandlers:
-    """Category RPC handlers."""
-
     async def create_category(
         self,
         request: CreateCategoryRequest,
         ctx: RequestContext,
     ) -> CreateCategoryResponse:
-        """Create a channel category."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -68,7 +64,6 @@ class CategoryHandlers:
         request: UpdateCategoryRequest,
         ctx: RequestContext,
     ) -> UpdateCategoryResponse:
-        """Update a channel category."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -91,7 +86,6 @@ class CategoryHandlers:
         request: DeleteCategoryRequest,
         ctx: RequestContext,
     ) -> DeleteCategoryResponse:
-        """Delete a channel category."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -112,7 +106,6 @@ class CategoryHandlers:
         request: ListCategoriesRequest,
         ctx: RequestContext,
     ) -> ListCategoriesResponse:
-        """List channel categories."""
         try:
             org_id = UUID(request.organization_id)
         except ValueError:
@@ -128,7 +121,6 @@ class CategoryHandlers:
         request: ReorderCategoriesRequest,
         ctx: RequestContext,
     ) -> ReorderCategoriesResponse:
-        """Reorder channel categories."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -149,7 +141,6 @@ class CategoryHandlers:
         request: MoveChannelToCategoryRequest,
         ctx: RequestContext,
     ) -> MoveChannelToCategoryResponse:
-        """Move a channel to a category."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -165,7 +156,6 @@ class CategoryHandlers:
                 ops = ChatCategoryOperations(session)
                 await ops.move_channel_to_category(user_id, org_id, channel_id, cat_id)
 
-                # Fetch updated channel for response
                 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 
                 ch_ops = ChatChannelOperations(session)

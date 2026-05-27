@@ -1,20 +1,7 @@
-"""Per-user MFA state.
+"""Per-user TOTP MFA state.
 
-One row per :class:`User` that has ever begun TOTP enrollment. The row
-is created on ``BeginEnrollment`` with ``enabled=false`` and the
-encrypted TOTP secret already present; ``ConfirmEnrollment`` flips
-``enabled`` to true and stamps ``enrolled_at``.
-
-The secret is stored as :class:`DeploymentCipher` ciphertext bytes -- a
-global per-user value is not tenant-scoped, so :class:`OrgCipher` does
-not apply, and deployment-DEK rotation already has a re-encrypting
-consumer slot for new columns like this one.
-
-WebAuthn credentials, when added later, land in a sibling
-``login_user_webauthn_credentials`` table keyed on ``user_id``; a
-user's overall MFA-enabled state is ``EXISTS(login_user_mfa WHERE
-enabled) OR EXISTS(login_user_webauthn_credentials)`` -- the User row
-intentionally stays narrow.
+The TOTP secret is stored as :class:`DeploymentCipher` ciphertext: it is a
+per-user (not per-tenant) value, so :class:`OrgCipher` does not apply.
 """
 
 from datetime import UTC, datetime

@@ -1,14 +1,7 @@
 """Master Key Encryption Key (KEK) for the deployment.
 
-The master cipher is a single Fernet keyed on ``APP_MASTER_KEY``. It
-wraps every per-organization Data Encryption Key in
-``org_encryption_keys`` and encrypts app-wide secrets that have no org
-scope (VAPID private key, future webhook signing secrets).
-
-The Fernet instance is cached for the process lifetime -- the key never
-changes during a run, and Fernet itself is cheap to call once
-constructed. Tests can clear the cache via ``reset_master_cipher_cache``
-to test misconfiguration paths.
+A single Fernet on ``APP_MASTER_KEY`` wraps every per-org DEK and encrypts
+app-wide secrets (e.g. VAPID). The cipher is cached for the process lifetime.
 """
 
 from __future__ import annotations
@@ -23,12 +16,7 @@ from uniffy.core.crypto.errors import CryptoError, MasterKeyMissingError
 
 @functools.lru_cache(maxsize=1)
 def get_master_cipher() -> Fernet:
-    """Return the process-wide Fernet keyed on ``APP_MASTER_KEY``.
-
-    Raises ``MasterKeyMissingError`` if the env var is unset or fails
-    Fernet's key-format validation. The error is fatal: every encrypted
-    column in the deployment depends on this cipher.
-    """
+    """Process-wide Fernet on ``APP_MASTER_KEY``; missing / invalid is fatal."""
     raw = os.environ.get("APP_MASTER_KEY", "").strip()
     if not raw:
         raise MasterKeyMissingError(
@@ -43,32 +31,17 @@ def get_master_cipher() -> Fernet:
 
 
 def reset_master_cipher_cache() -> None:
-    """Drop the cached master cipher.
-
-    Test-only helper: every prod read goes through ``get_master_cipher``
-    which keeps the instance for the process lifetime. Tests that mutate
-    ``APP_MASTER_KEY`` call this between cases.
-    """
+    """Test-only: drop the cached master cipher between cases."""
     get_master_cipher.cache_clear()
 
 
 def app_encrypt(plaintext: str) -> str:
-    """Encrypt an app-wide (non-org-scoped) secret with the master cipher.
-
-    For org-scoped secrets use ``OrgCipher.encrypt(org_id, plaintext)``
-    instead -- this helper exists only for genuinely deployment-wide
-    values like the VAPID private key.
-    """
+    """Encrypt an app-wide (non-org-scoped) secret; use ``OrgCipher`` for org-scoped values."""
     return get_master_cipher().encrypt(plaintext.encode("utf-8")).decode("ascii")
 
 
 def app_decrypt(ciphertext: str) -> str:
-    """Reverse of ``app_encrypt``.
-
-    Raises ``CryptoError`` on tamper / wrong key. The wrapped
-    ``InvalidToken`` is suppressed so callers depend on the package's
-    error hierarchy only.
-    """
+    """Reverse of ``app_encrypt``; raises ``CryptoError`` on tamper / wrong key."""
     try:
         return (
             get_master_cipher()

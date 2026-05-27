@@ -1,9 +1,4 @@
-"""Document content extraction task.
-
-Downloads files from S3 and extracts text content using the shared
-extraction module. UPSERTs extracted_text into FileMediaInfo and
-re-indexes the file in search.
-"""
+"""Download a file, extract its text, persist to FileMediaInfo, and re-index it."""
 
 from typing import Any
 from uuid import UUID
@@ -29,7 +24,6 @@ from uniffy.domains.tags import TagOperations
 
 _task = "content_extraction"
 
-# Maximum bytes to download for extraction (50 MB)
 _MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
 
 
@@ -38,27 +32,7 @@ async def extract_document_content(
     file_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    """Extract text content from a document file.
-
-    Downloads the file from S3, extracts text using the shared extraction
-    module, stores the result in FileMediaInfo, and re-indexes the file
-    in Meilisearch with the extracted content.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context with shared resources and job metadata.
-    file_id : str
-        File UUID as string.
-    organization_id : str
-        Organization UUID as string.
-
-    Returns
-    -------
-    dict
-        Result with status and extraction metadata.
-
-    """
+    """Extract text content from a document file and re-index it for search."""
     log = logger.bind(task=_task, file_id=file_id)
     log.info("Started")
 
@@ -75,7 +49,6 @@ async def extract_document_content(
             log.warning("File not found")
             return {"status": "not_found", "file_id": file_id}
 
-        # Update status to PROCESSING if not already completed
         if file.extraction_status != ExtractionStatus.COMPLETED:
             file.extraction_status = ExtractionStatus.PROCESSING
             await session.commit()
@@ -83,14 +56,12 @@ async def extract_document_content(
         mime_type = file.mime_type or ""
 
         try:
-            # Download file from S3
             data = await s3.download_bytes(file.storage_key)
             log.info("Downloaded file", bytes=len(data))
 
             if len(data) > _MAX_DOWNLOAD_BYTES:
                 data = data[:_MAX_DOWNLOAD_BYTES]
 
-            # Extract text using shared module
             result = extract_text(data, mime_type)
             log.info(
                 "Extracted text",
@@ -100,7 +71,6 @@ async def extract_document_content(
                 truncated=result.truncated,
             )
 
-            # UPSERT extracted_text (and page_count if available) into FileMediaInfo
             upsert_values: dict[str, Any] = {
                 "file_id": file_uuid,
                 "extracted_text": result.text,
@@ -123,10 +93,8 @@ async def extract_document_content(
             file.extraction_status = ExtractionStatus.COMPLETED
             await session.commit()
 
-            # Re-index in Meilisearch with extracted text
             await _reindex_file(session, file, result.text)
 
-            # Notify frontend
             try:
                 await publish_notification(
                     file.owner_id,
@@ -160,7 +128,6 @@ async def extract_document_content(
             if job_try < 3:
                 raise Retry(defer=job_try * 10)
 
-            # Mark as failed after max retries
             file.extraction_status = ExtractionStatus.FAILED
             error_stmt = pg_insert(FileMediaInfo).values(
                 file_id=file_uuid,
@@ -177,19 +144,7 @@ async def extract_document_content(
 
 
 async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
-    """Re-index the file in Meilisearch with extracted text content.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Active DB session used to hydrate unified-tag slugs for the
-        ``tags`` array on the search document.
-    file : File
-        The file model to re-index.
-    extracted_text : str
-        Extracted text to include in search keywords.
-
-    """
+    """Re-index the file in Meilisearch with extracted text added to the keywords."""
     try:
         urn = build_content_urn(ContentType.FILE, file.id)
         parts = [file.filename, file.original_filename]
@@ -209,10 +164,7 @@ async def _reindex_file(session: Any, file: File, extracted_text: str) -> None:
         )
         tag_slugs = sorted({t.slug for t in tags_by_urn.get(urn, [])}) or None
 
-        # Surface a snippet of the extracted text as the description when the
-        # user did not write one. Mention previews render the description, so
-        # this gives users a peek at the file contents (CSV header row, first
-        # paragraph of a doc, etc) without opening the viewer.
+        # Fall back to an extracted snippet so mention previews show file content.
         description = file.description or (extracted_text[:300].strip() if extracted_text else None)
 
         default_mode, default_baseline = await resolve_content_defaults(

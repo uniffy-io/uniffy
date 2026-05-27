@@ -12,42 +12,7 @@ from uniffy.core.types import generate_id
 
 
 class Notification(SQLModel, table=True):
-    """
-    Notification model representing a notification sent to a user.
-
-    Notifications are user-scoped and organization-scoped. Each notification
-    has a type, title, body, and optional reference to the source content.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the notification (primary key).
-    organization_id : UUID
-        Organization context (foreign key to login_organizations).
-    user_id : UUID
-        Recipient user (foreign key to login_users).
-    notification_type : NotificationType
-        Type of notification.
-    title : str
-        Short notification title (max 500 chars).
-    body : str
-        Notification body content, supports Markdown with URN mentions (max 2000 chars).
-    source_urn : str | None
-        URN of the related content that triggered this notification.
-    actor_id : UUID | None
-        User who triggered the notification (foreign key to login_users).
-    is_read : bool
-        Whether the notification has been read.
-    read_at : datetime | None
-        Timestamp when the notification was read.
-    notification_metadata : dict | None
-        JSONB metadata for adapter-specific data.
-    created_at : datetime
-        Timestamp when the notification was created.
-    expires_at : datetime | None
-        Optional expiration timestamp.
-
-    """
+    """In-app notification addressed to one user within one organization."""
 
     __tablename__ = "notifications"
     __table_args__ = (
@@ -100,7 +65,6 @@ class Notification(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Notification."""
         return (
             f"<Notification(id={self.id}, user_id={self.user_id}, type={self.notification_type!r})>"
         )

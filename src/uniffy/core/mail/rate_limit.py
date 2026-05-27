@@ -1,15 +1,7 @@
-"""Per-scope mail dispatch rate limit.
+"""Per-scope mail dispatch rate limit on a fixed-minute Valkey counter.
 
-Each ``MailSender.send`` consults a Valkey token bucket keyed on
-``mail:rate:{scope}:{minute_window}`` where ``scope`` is the
-organization id (or ``"system"`` for env-sourced sends). The bucket is
-a fixed-window counter incremented atomically with INCR + EXPIRE; on
-overage ``MailRateLimitedError`` is raised so the ARQ task can re-queue
-with backoff.
-
-The implementation is fail-open: a slow or unreachable Valkey returns
-"allowed" so a Valkey outage does not stop password reset / digest
-mail from going out.
+Fail-open: a slow or unreachable Valkey returns "allowed" so an outage does not
+block password-reset / digest mail.
 """
 
 from __future__ import annotations
@@ -23,18 +15,11 @@ from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
 
 def _window() -> int:
-    """Return the current minute bucket id (UTC-aligned)."""
     return int(time.time() // 60)
 
 
 async def check_send_rate_limit(scope: str, limit_per_min: int) -> None:
-    """Increment the counter for ``scope`` and raise if over ``limit_per_min``.
-
-    ``scope`` is typically the organization UUID stringified, or
-    ``"system"`` when the send uses env config. ``limit_per_min`` comes
-    from the resolved ``MailConfig.rate_limit_per_min`` so per-org
-    overrides take effect immediately.
-    """
+    """Increment the counter for ``scope`` and raise if over ``limit_per_min``."""
     if limit_per_min <= 0:
         return
 

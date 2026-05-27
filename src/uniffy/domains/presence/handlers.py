@@ -33,31 +33,12 @@ from uniffy.domains.presence.operations import PresenceOperations
 
 
 class PresenceHandlers:
-    """RPC handlers for the presence service."""
-
     async def set_presence(
         self,
         request: SetPresenceRequest,
         ctx: RequestContext,
     ) -> SetPresenceResponse:
-        """Handle set_presence RPC call (heartbeat).
-
-        Sets the user's presence status and publishes a change event
-        if the status differs from the previous value.
-
-        Parameters
-        ----------
-        request : SetPresenceRequest
-            The request with organization_id, status, and client.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        SetPresenceResponse
-            Empty response.
-
-        """
+        """Heartbeat; publishes a change event when the status differs from the previous value."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -85,24 +66,7 @@ class PresenceHandlers:
         request: GetBulkPresenceRequest,
         ctx: RequestContext,
     ) -> GetBulkPresenceResponse:
-        """Handle get_bulk_presence RPC call.
-
-        Fetches presence state for multiple users in a single request.
-
-        Parameters
-        ----------
-        request : GetBulkPresenceRequest
-            The request with organization_id and user_ids (max 200).
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        GetBulkPresenceResponse
-            Map of user_id to UserPresence.
-
-        """
-        get_user_id_from_context(ctx)  # Auth check
+        get_user_id_from_context(ctx)
 
         try:
             organization_id = UUID(request.organization_id)
@@ -125,21 +89,18 @@ class PresenceHandlers:
 
                 response = GetBulkPresenceResponse()
                 for uid, data in results.items():
-                    # Access map entry in-place (protobuf maps
-                    # don't support direct message assignment)
+                    # Protobuf maps don't allow direct message assignment; access in-place.
                     presence = response.presences[uid]
                     presence.status = string_to_proto_status(
                         data.get("status", "offline"),
                     )
 
-                    # Set last_active timestamp
                     last_active = data.get("last_active")
                     if last_active:
                         ts = Timestamp()
                         ts.FromDatetime(datetime.fromisoformat(last_active))
                         presence.last_active.CopyFrom(ts)
 
-                    # Set custom status if present
                     custom = data.get("custom_status")
                     if custom:
                         presence.status_emoji = custom.get("emoji", "")
@@ -166,24 +127,6 @@ class PresenceHandlers:
         request: SetCustomStatusRequest,
         ctx: RequestContext,
     ) -> SetCustomStatusResponse:
-        """Handle set_custom_status RPC call.
-
-        Sets a custom status (emoji + text) on the user's default
-        settings profile.
-
-        Parameters
-        ----------
-        request : SetCustomStatusRequest
-            The request with emoji, text, and optional expires_at.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        SetCustomStatusResponse
-            Response with updated UserPresence.
-
-        """
         user_id = get_user_id_from_context(ctx)
         organization_id = get_organization_id_from_context(ctx)
 
@@ -230,23 +173,6 @@ class PresenceHandlers:
         request: ClearCustomStatusRequest,
         ctx: RequestContext,
     ) -> ClearCustomStatusResponse:
-        """Handle clear_custom_status RPC call.
-
-        Clears the custom status from the user's default settings profile.
-
-        Parameters
-        ----------
-        request : ClearCustomStatusRequest
-            Empty request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ClearCustomStatusResponse
-            Empty response.
-
-        """
         user_id = get_user_id_from_context(ctx)
         organization_id = get_organization_id_from_context(ctx)
 

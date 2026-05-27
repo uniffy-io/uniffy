@@ -1,14 +1,8 @@
-"""Render a registered mail template into ``(subject, html, text)``.
+"""Render a mail template name into ``(subject, html, text)``.
 
-Templates ship as three sibling files per name:
-
-* ``{name}.subject.j2`` -- single-line subject
-* ``{name}.html.j2``    -- inline-styled HTML body
-* ``{name}.txt.j2``     -- plaintext alternative
-
-The renderer loads all three through the singleton async environment.
-Subject newlines are stripped after render -- some MTAs reject headers
-that contain bare CRLF.
+Templates ship as three sibling files: ``{name}.subject.j2``, ``{name}.html.j2``,
+``{name}.txt.j2``. Subject newlines are stripped after render because some MTAs
+reject headers with bare CRLF.
 """
 
 from typing import Any, NamedTuple
@@ -20,20 +14,13 @@ from uniffy.core.mail.jinja_env import get_jinja_env
 
 
 class RenderedMail(NamedTuple):
-    """Output of ``render_template``."""
-
     subject: str
     html: str
     text: str
 
 
 async def render_template(template_name: str, context: dict[str, Any]) -> RenderedMail:
-    """Render the subject + html + text variants of ``template_name``.
-
-    Raises ``TemplateNotFoundError`` when any of the three files is
-    absent so a typo in a caller surfaces as a typed error instead of
-    a Jinja exception leaking through the call stack.
-    """
+    """Render all three variants. Raises ``TemplateNotFoundError`` if any file is missing."""
     env = get_jinja_env()
     try:
         subject_tpl = env.get_template(f"{template_name}.subject.j2")

@@ -1,18 +1,8 @@
-"""
-Search query parser for keyword-based filtering.
+"""Google-style keyword search parser.
 
-Parses Google-style keyword search queries into structured filters.
-
-Supported syntax:
-- Type filters: note:, file:, user:, calendar:, chat:, book:, password:, space:
-- Metadata filters: tag:, project:
-- Ownership: my: (shorthand for current user's content)
-- Quoted phrases: "exact phrase" preserved in text
-
-Examples:
-- `note: "how to" tag:work` -> ParsedSearchQuery(text="how to", types=["note"], tags=["work"])
-- `user: john` -> ParsedSearchQuery(text="john", types=["user"])
-- `my: drafts` -> ParsedSearchQuery(text="drafts", my_content_only=True)
+Syntax: `note:` / `file:` / `user:` / `calendar:` / `chat:` / `book:` /
+`password:` / `space:` for type, `tag:` / `project:` for metadata,
+`my:` for current-user content, quoted phrases preserved in the residual text.
 """
 
 import re
@@ -48,7 +38,6 @@ class ParsedSearchQuery(BaseModel):
     """Original raw query string."""
 
 
-# Mapping of type filter keywords to entity type strings
 TYPE_KEYWORD_MAP: dict[str, str] = {
     "note": "note",
     "notes": "note",
@@ -71,9 +60,7 @@ TYPE_KEYWORD_MAP: dict[str, str] = {
     "workflows": "workflow",
 }
 
-# All recognized filter prefixes
 FILTER_PREFIXES = [
-    # Type filters
     "note",
     "notes",
     "file",
@@ -93,62 +80,23 @@ FILTER_PREFIXES = [
     "spaces",
     "workflow",
     "workflows",
-    # Metadata filters
     "tag",
     "project",
-    # Ownership filters
     "my",
     "owner",
 ]
 
-# Regex pattern to match filter syntax: `keyword:value` or `keyword:"quoted value"`
+# Matches `keyword:value` or `keyword:"quoted value"`.
 FILTER_PATTERN = re.compile(
     rf'\b({"|".join(FILTER_PREFIXES)}):\s*(?:"([^"]+)"|(\S+))',
     re.IGNORECASE,
 )
 
-# Pattern to match standalone quoted phrases (not preceded by filter keywords)
-# Uses negative lookbehind to avoid matching filter values like tag:"value"
+# Negative lookbehind avoids matching filter values like tag:"value".
 PHRASE_PATTERN = re.compile(r'(?<![a-z]:)"([^"]+)"', re.IGNORECASE)
 
 
 def parse_search_query(query: str) -> ParsedSearchQuery:
-    """
-    Parse a search query string into structured filters.
-
-    Parameters
-    ----------
-    query : str
-        Raw search query string.
-
-    Returns
-    -------
-    ParsedSearchQuery
-        Parsed query with text and filters.
-
-    Examples
-    --------
-    >>> result = parse_search_query('note: "how to" tag:work')
-    >>> result.text
-    'how to'
-    >>> result.type_filters
-    ['note']
-    >>> result.tags
-    ['work']
-
-    >>> result = parse_search_query('user: john')
-    >>> result.text
-    'john'
-    >>> result.type_filters
-    ['user']
-
-    >>> result = parse_search_query('my: drafts')
-    >>> result.text
-    'drafts'
-    >>> result.my_content_only
-    True
-
-    """
     result = ParsedSearchQuery(text="", raw_query=query)
 
     if not query or not query.strip():
@@ -157,7 +105,6 @@ def parse_search_query(query: str) -> ParsedSearchQuery:
     remaining_text = query
     extracted_filters: list[tuple[str, str, str]] = []
 
-    # Extract all filter matches
     for match in FILTER_PATTERN.finditer(query):
         full_match = match.group(0)
         keyword = match.group(1).lower()
@@ -168,45 +115,38 @@ def parse_search_query(query: str) -> ParsedSearchQuery:
         if value:
             extracted_filters.append((full_match, keyword, value))
 
-    # Process extracted filters
     for full_match, keyword, value in extracted_filters:
-        # Remove the filter from remaining text
         remaining_text = remaining_text.replace(full_match, " ", 1)
 
-        # Type filters
         if keyword in TYPE_KEYWORD_MAP:
             entity_type = TYPE_KEYWORD_MAP[keyword]
             if entity_type not in result.type_filters:
                 result.type_filters.append(entity_type)
             continue
 
-        # Tag filter
         if keyword == "tag":
             if value not in result.tags:
                 result.tags.append(value)
             continue
 
-        # Project filter
         if keyword == "project":
             if value not in result.projects:
                 result.projects.append(value)
             continue
 
-        # My content filter
         if keyword == "my":
             result.my_content_only = True
             continue
 
-        # Owner filter
         if keyword == "owner":
             result.owner = value
             continue
 
-    # Clean up remaining text
     remaining_text = re.sub(r"\s+", " ", remaining_text).strip()
     result.text = remaining_text
 
-    # Extract exact-match phrases for logging/analytics (quotes stay in text for Meilisearch)
+    # Quotes stay inside the residual text so Meilisearch can use them; we only
+    # capture phrases here for analytics.
     for phrase_match in PHRASE_PATTERN.finditer(remaining_text):
         phrase = phrase_match.group(1).strip()
         if phrase and phrase not in result.exact_phrases:
@@ -216,20 +156,6 @@ def parse_search_query(query: str) -> ParsedSearchQuery:
 
 
 def has_active_filters(parsed: ParsedSearchQuery) -> bool:
-    """
-    Check if a parsed query contains any active filters.
-
-    Parameters
-    ----------
-    parsed : ParsedSearchQuery
-        Parsed search query.
-
-    Returns
-    -------
-    bool
-        True if any filters are active.
-
-    """
     return (
         len(parsed.type_filters) > 0
         or len(parsed.tags) > 0

@@ -1,12 +1,10 @@
-"""Time-bound, audited grants for platform operators into one tenant.
+"""Time-bound, audited platform-operator grant into one tenant.
 
-A :class:`SupportSession` is the only sanctioned path for a platform
-admin to read tenant content. The row carries the grant's reason,
-scope, lifecycle state, and the actors on each side. The audit
-writer reads the active session from a ContextVar and tags every
-audit event written during the session with
-``actor_kind="support"``, ``support_session_id`` and ``scope`` so
-the org owner can filter their audit log for support access.
+A `SupportSession` is the ONLY sanctioned path for a platform admin to
+read tenant content - `is_system_admin=True` alone does not bypass
+`PermissionChecker`. The audit writer reads the active session from a
+ContextVar and tags every event with `actor_kind="support"` +
+`support_session_id` so the org owner can audit operator access.
 """
 
 from datetime import UTC, datetime
@@ -20,20 +18,14 @@ from uniffy.core.types import generate_id
 
 
 class SupportSessionScope(str, Enum):
-    """Access scope granted by the session.
-
-    v1 ships READ_ONLY only. READ_WRITE is reserved for a future
-    phase that wires the cipher + audit write-path; the enum value
-    exists so the table schema does not need a migration when it
-    lands.
-    """
+    """Access scope granted; only ACTIVE READ_ONLY sessions confer read access today."""
 
     READ_ONLY = "READ_ONLY"
     READ_WRITE = "READ_WRITE"
 
 
 class SupportSessionState(str, Enum):
-    """Lifecycle state of a session row."""
+    """Lifecycle state. `PermissionChecker` only honors ACTIVE."""
 
     PENDING = "PENDING"
     ACTIVE = "ACTIVE"
@@ -43,43 +35,7 @@ class SupportSessionState(str, Enum):
 
 
 class SupportSession(SQLModel, table=True):
-    """One support session grant.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key.
-    organization_id : UUID
-        Target tenant. FK to ``login_organizations`` cascade.
-    support_user_id : UUID
-        Platform admin who will operate under this session.
-    requested_by_user_id : UUID
-        Identical to ``support_user_id`` today; reserved for future
-        delegated-request flows.
-    granted_by_user_id : UUID | None
-        Org OWNER/ADMIN who approved (OWNER_APPROVED mode). ``None``
-        for OPERATOR_JUSTIFIED rows or while PENDING.
-    revoked_by_user_id : UUID | None
-        Whoever ended the session early (org admin or the support
-        user themselves).
-    reason : str
-        Free text. Recorded in audit + surfaced on the owner banner.
-    scope : SupportSessionScope
-        READ_ONLY in v1.
-    state : SupportSessionState
-        Lifecycle position. Read by :class:`PermissionChecker` -
-        only ``ACTIVE`` confers access.
-    requested_at : datetime
-        Row creation time.
-    granted_at : datetime | None
-        When the state flipped to ACTIVE.
-    expires_at : datetime
-        Hard cap. ACTIVE sessions past this are flipped to EXPIRED
-        by the ARQ cron and refused mid-request by the permission
-        check.
-    revoked_at : datetime | None
-        Set when an admin or the support user revokes.
-    """
+    """One support session grant. `expires_at` is a hard cap enforced live + by cron."""
 
     __tablename__ = "platform_support_sessions"
 
@@ -146,7 +102,6 @@ class SupportSession(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of SupportSession."""
         return (
             f"<SupportSession(id={self.id}, org={self.organization_id}, "
             f"support_user={self.support_user_id}, state={self.state})>"

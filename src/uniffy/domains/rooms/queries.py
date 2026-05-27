@@ -1,5 +1,3 @@
-"""Room-specific database queries for booking availability and conflict detection."""
-
 from datetime import datetime
 from uuid import UUID
 
@@ -20,31 +18,6 @@ async def check_booking_conflict(
     end_time: datetime,
     exclude_booking_id: UUID | None = None,
 ) -> bool:
-    """
-    Check whether a proposed time range conflicts with existing bookings.
-
-    A conflict exists when any CONFIRMED booking on the same room overlaps
-    the given range (existing.start_time < end_time AND existing.end_time > start_time).
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    room_id : UUID
-        Room to check.
-    start_time : datetime
-        Proposed booking start time.
-    end_time : datetime
-        Proposed booking end time.
-    exclude_booking_id : UUID | None
-        Booking ID to exclude from the check (used during updates).
-
-    Returns
-    -------
-    bool
-        True if a conflict exists, False otherwise.
-
-    """
     query = select(
         exists().where(
             and_(
@@ -79,26 +52,6 @@ async def get_room_bookings_in_range(
     start_date: datetime,
     end_date: datetime,
 ) -> list[tuple[RoomBooking, str]]:
-    """
-    Get CONFIRMED bookings for a room within a date range, with booker names.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    room_id : UUID
-        Room to query bookings for.
-    start_date : datetime
-        Start of the range.
-    end_date : datetime
-        End of the range.
-
-    Returns
-    -------
-    list[tuple[RoomBooking, str]]
-        List of (booking, booker_display_name) tuples ordered by start_time.
-
-    """
     booker = aliased(User)
 
     query = (
@@ -135,36 +88,6 @@ async def find_available_rooms(
     amenities: list[str] | None = None,
     room_type: RoomType | None = None,
 ) -> list[Room]:
-    """
-    Find rooms with no conflicting CONFIRMED bookings in the time range.
-
-    Uses a NOT EXISTS subquery to exclude rooms that have any overlapping
-    confirmed booking. Additional filters narrow down by capacity, amenities,
-    and room type.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    organization_id : UUID
-        Organization scope.
-    start_time : datetime
-        Desired booking start time.
-    end_time : datetime
-        Desired booking end time.
-    min_capacity : int | None
-        Minimum room capacity (None = no filter).
-    amenities : list[str] | None
-        Required amenities; room must contain all listed (None = no filter).
-    room_type : RoomType | None
-        Required room type (None = no filter).
-
-    Returns
-    -------
-    list[Room]
-        Available rooms ordered by name.
-
-    """
     conflict_subquery = select(RoomBooking.id).where(
         and_(
             RoomBooking.room_id == Room.id,
@@ -190,7 +113,6 @@ async def find_available_rooms(
         query = query.where(Room.room_type == room_type)
 
     if amenities:
-        # JSONB @> operator: room amenities must contain all requested amenities
         query = query.where(Room.amenities.contains(amenities))
 
     query = query.order_by(Room.name.asc())
@@ -203,22 +125,6 @@ async def get_booking_for_event(
     session: AsyncSession,
     event_id: UUID,
 ) -> RoomBooking | None:
-    """
-    Find the CONFIRMED booking linked to a calendar event.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    event_id : UUID
-        Calendar event ID.
-
-    Returns
-    -------
-    RoomBooking | None
-        The booking linked to the event, or None if not found.
-
-    """
     result = await session.execute(
         select(RoomBooking).where(
             and_(

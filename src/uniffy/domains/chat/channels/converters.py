@@ -43,7 +43,6 @@ _SUBJECT_TYPE_TO_PROTO = {
     SubjectType.AGENT: ProtoSubjectType.SUBJECT_TYPE_AGENT,
 }
 
-# Channel type mappings
 CHANNEL_TYPE_TO_PROTO = {
     ChannelType.PUBLIC: ProtoChannelType.CHANNEL_TYPE_PUBLIC,
     ChannelType.PRIVATE: ProtoChannelType.CHANNEL_TYPE_PRIVATE,
@@ -58,7 +57,6 @@ CHANNEL_TYPE_FROM_PROTO = {
     ProtoChannelType.CHANNEL_TYPE_GROUP_DM: ChannelType.GROUP_DM,
 }
 
-# Channel role mappings
 CHANNEL_ROLE_TO_PROTO = {
     ChannelRole.OWNER: ProtoChannelRole.CHANNEL_ROLE_OWNER,
     ChannelRole.ADMIN: ProtoChannelRole.CHANNEL_ROLE_ADMIN,
@@ -81,7 +79,6 @@ NOTIFICATION_LEVEL_TO_PROTO = {
 def channel_type_from_proto(
     proto_type: ProtoChannelType.ValueType,
 ) -> ChannelType:
-    """Convert proto ChannelType to domain ChannelType."""
     ct = CHANNEL_TYPE_FROM_PROTO.get(proto_type)
     if ct is None:
         return ChannelType.PUBLIC
@@ -96,7 +93,6 @@ def channel_to_proto(
     dm_member_ids: list[str] | None = None,
     tags: list[Tag] | None = None,
 ) -> ProtoChatChannel:
-    """Convert ChatChannel + stats to proto ChatChannel."""
     proto = ProtoChatChannel(
         id=str(channel.id),
         organization_id=str(channel.organization_id),
@@ -127,7 +123,6 @@ def channel_to_proto(
     if channel.updated_at:
         proto.updated_at.CopyFrom(datetime_to_timestamp(channel.updated_at))
 
-    # Embed stats
     if stats:
         proto.message_count = stats.message_count
         proto.root_message_count = stats.root_message_count
@@ -159,12 +154,7 @@ def member_to_proto(
     display_name: str | None = None,
     avatar_key: str | None = None,
 ) -> ProtoChatChannelMember:
-    """Convert ChatChannelMember to proto.
-
-    `subject_type` / `subject_id` populate the polymorphic `subject` field
-    on every row. Legacy `user_id` stays populated for SUBJECT_TYPE_USER
-    rows (empty string for agents) until readers migrate.
-    """
+    # user_id stays populated for SUBJECT_TYPE_USER rows (empty for agents) until readers migrate.
     proto = ProtoChatChannelMember(
         channel_id=str(member.channel_id),
         user_id=str(member.user_id) if member.user_id is not None else "",
@@ -202,7 +192,6 @@ def member_to_proto(
 def category_to_proto(
     category: ChatChannelCategory,
 ) -> ProtoChatChannelCategory:
-    """Convert ChatChannelCategory to proto."""
     proto = ProtoChatChannelCategory(
         id=str(category.id),
         organization_id=str(category.organization_id),

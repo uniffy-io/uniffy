@@ -25,62 +25,24 @@ from uniffy.core.types import (
 )
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, supports_thumbnail
 
-# Name of the system Attachments folder
 ATTACHMENTS_FOLDER_NAME = "Attachments"
 ORG_ATTACHMENTS_FOLDER_NAME = "Organization Attachments"
 
 
 class AttachmentOperations:
-    """
-    Attachment operations for linking files to content.
-
-    Handles creating, listing, and removing attachments while managing
-    the underlying file copies in the user's Attachments folder.
-    """
+    """Link files to content; manages file copies in the Attachments folder."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize attachment operations.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session.
-
-        """
         self._session = session
         self._access_query = ContentAccessQuery(session)
         self._s3 = get_s3_client()
-
-    # ─────────────────────────────────────────────────────────────
-    # Attachments Folder Management
-    # ─────────────────────────────────────────────────────────────
 
     async def get_or_create_attachments_folder(
         self,
         user_id: UUID,
         organization_id: UUID,
     ) -> Folder:
-        """
-        Get or create the user's Attachments folder.
-
-        Each user has a protected "Attachments" folder in each organization.
-        This folder is system-managed and cannot be deleted by the user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        Folder
-            The user's Attachments folder.
-
-        """
-        # Check if folder already exists
+        """Get or create the user's protected per-org Attachments folder."""
         result = await self._session.execute(
             select(Folder).where(
                 Folder.organization_id == organization_id,
@@ -95,7 +57,6 @@ class AttachmentOperations:
         if folder:
             return folder
 
-        # Create the Attachments folder (always OWNER_ONLY).
         folder = Folder(
             organization_id=organization_id,
             owner_id=user_id,
@@ -117,10 +78,8 @@ class AttachmentOperations:
     ) -> Folder:
         """Return the per-org system Attachments folder.
 
-        Created on demand if missing (defensive - migration ``031`` seeds
-        one per org). The folder carries an explicit
-        ``OPEN_TO_ORG/EDITOR`` policy so it serves every active member
-        of the org and is immune to org Files-default flips.
+        Carries an explicit `OPEN_TO_ORG/EDITOR` policy so it serves every
+        active member regardless of org Files-default flips.
         """
         result = await self._session.execute(
             select(Folder).where(
@@ -138,10 +97,8 @@ class AttachmentOperations:
             OrganizationRole,
         )
 
-        # The folder's FK owner is nominal - access comes from the
-        # explicit OPEN_TO_ORG/EDITOR policy. Pick the highest-ranking
-        # active member so the FK survives even if the original creator
-        # is later deactivated.
+        # FK owner is nominal; pick highest-ranking active member so the
+        # FK survives deactivation of the original creator.
         members = (
             await self._session.execute(
                 select(OrganizationMember.user_id, OrganizationMember.role)
@@ -184,10 +141,7 @@ class AttachmentOperations:
         raw_access_mode: AccessMode | None,
         raw_baseline_role: ContentRole | None,
     ) -> tuple[AccessMode, ContentRole | None]:
-        """Resolve a parent row's effective ``(mode, baseline)`` for routing.
-
-        Consults the org defaults when the parent's columns are NULL.
-        """
+        """Resolve effective `(mode, baseline)` using org defaults when NULL."""
         from uniffy.core.auth.permissions import resolve_effective_policy
         from uniffy.core.auth.permissions.checker import PermissionChecker
 
@@ -204,22 +158,7 @@ class AttachmentOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> UUID | None:
-        """
-        Get the user's Attachments folder ID.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        UUID | None
-            The folder ID if it exists, None otherwise.
-
-        """
+        """Return the user's Attachments folder ID, or None when missing."""
         result = await self._session.execute(
             select(Folder.id).where(
                 Folder.organization_id == organization_id,
@@ -232,10 +171,6 @@ class AttachmentOperations:
         row = result.first()
         return row[0] if row else None
 
-    # ─────────────────────────────────────────────────────────────
-    # Attach/Detach Operations
-    # ─────────────────────────────────────────────────────────────
-
     async def attach_file(
         self,
         user_id: UUID,
@@ -244,47 +179,13 @@ class AttachmentOperations:
         content_id: UUID,
         source_file_id: UUID,
     ) -> Attachment:
-        """
-        Attach a file to content.
-
-        If the file is already in the user's Attachments folder, it will be
-        linked directly. Otherwise, a copy is created in the Attachments folder.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User attaching the file.
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Type of content to attach to (NOTE, CHAT_MESSAGE, etc.).
-        content_id : UUID
-            ID of the content to attach to.
-        source_file_id : UUID
-            ID of the file to attach.
-
-        Returns
-        -------
-        Attachment
-            The created attachment.
-
-        Raises
-        ------
-        NotFoundError
-            If the source file is not found.
-        PermissionDeniedError
-            If the user cannot access the source file or the content.
-
-        """
-        # Verify user can access the source file
+        """Attach a file to content; reuses or copies into the Attachments folder."""
         source_file = await self._get_accessible_file(user_id, organization_id, source_file_id)
         if not source_file:
             raise NotFoundError("File", str(source_file_id))
 
-        # Verify user can access the content they're attaching to
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
-        # Load parent content policy so the attachment file can inherit it.
         _, parent_mode_raw, parent_baseline_raw, parent_type, _ = (
             await self._load_parent_policy(organization_id, content_type, content_id)
         )
@@ -292,9 +193,8 @@ class AttachmentOperations:
             organization_id, parent_type, parent_mode_raw, parent_baseline_raw,
         )
 
-        # Org-wide content → org Attachments folder + OPEN_TO_ORG/EDITOR
-        # policy on the file. Otherwise the file goes to the attacher's
-        # personal Attachments folder and stays OWNER_ONLY.
+        # Org-wide parent -> org Attachments folder + OPEN_TO_ORG/EDITOR file.
+        # Otherwise -> attacher's personal folder, OWNER_ONLY.
         if parent_mode == AccessMode.OPEN_TO_ORG:
             folder = await self.get_or_create_org_attachments_folder(organization_id)
             file_access_mode = AccessMode.OPEN_TO_ORG
@@ -304,7 +204,6 @@ class AttachmentOperations:
             file_access_mode = AccessMode.OWNER_ONLY
             file_baseline_role = None
 
-        # Check if file is already in the target folder
         if source_file.folder_id == folder.id and (
             parent_mode == AccessMode.OPEN_TO_ORG or source_file.owner_id == user_id
         ):
@@ -326,7 +225,6 @@ class AttachmentOperations:
                 baseline_role=file_baseline_role,
             )
 
-        # Create the attachment link
         attachment = Attachment(
             organization_id=organization_id,
             file_id=file_to_link.id,
@@ -346,35 +244,7 @@ class AttachmentOperations:
         organization_id: UUID,
         attachment_id: UUID,
     ) -> bool:
-        """
-        Detach a file from content and delete the attachment file.
-
-        Since each attachment has its own file copy (1:1 relationship),
-        detaching also deletes the file from the Attachments folder.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User detaching the file.
-        organization_id : UUID
-            Organization ID.
-        attachment_id : UUID
-            ID of the attachment to remove.
-
-        Returns
-        -------
-        bool
-            True if successfully detached.
-
-        Raises
-        ------
-        NotFoundError
-            If the attachment is not found.
-        PermissionDeniedError
-            If the user cannot detach the file.
-
-        """
-        # Get the attachment
+        """Detach a file from content and delete the underlying file copy."""
         result = await self._session.execute(
             select(Attachment).where(
                 Attachment.id == attachment_id,
@@ -385,9 +255,7 @@ class AttachmentOperations:
         if not attachment:
             raise NotFoundError("Attachment", str(attachment_id))
 
-        # Check if user can detach (must be the one who attached or have edit access to content)
         if attachment.attached_by_user_id != user_id:
-            # Verify user has edit access to the content
             await self._verify_content_edit_access(
                 user_id,
                 organization_id,
@@ -395,15 +263,12 @@ class AttachmentOperations:
                 attachment.content_id,
             )
 
-        # Get and delete the file
         file_result = await self._session.execute(select(File).where(File.id == attachment.file_id))
         file = file_result.scalar_one_or_none()
 
         if file:
-            # Delete from S3
             await self._s3.delete_object(file.storage_key)
 
-            # Delete file versions
             versions_result = await self._session.execute(
                 select(FileVersion).where(FileVersion.file_id == file.id)
             )
@@ -412,12 +277,10 @@ class AttachmentOperations:
                     await self._s3.delete_object(version.storage_key)
                 await self._session.delete(version)
 
-            # Delete the file record
             file.current_version_id = None
             await self._session.flush()
             await self._session.delete(file)
 
-        # Delete the attachment record
         await self._session.delete(attachment)
         await self._session.flush()
 
@@ -430,29 +293,7 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> int:
-        """
-        Detach all files from a piece of content.
-
-        Called when content is deleted to clean up all attachments.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing the deletion.
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Type of content.
-        content_id : UUID
-            ID of the content.
-
-        Returns
-        -------
-        int
-            Number of attachments removed.
-
-        """
-        # Get all attachments for this content
+        """Detach all files from a piece of content; called on content delete."""
         result = await self._session.execute(
             select(Attachment).where(
                 Attachment.organization_id == organization_id,
@@ -469,10 +310,6 @@ class AttachmentOperations:
 
         return count
 
-    # ─────────────────────────────────────────────────────────────
-    # List Operations
-    # ─────────────────────────────────────────────────────────────
-
     async def list_attachments(
         self,
         user_id: UUID,
@@ -480,30 +317,9 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> list[tuple[Attachment, File, User | None]]:
-        """
-        List all attachments for a piece of content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the list.
-        organization_id : UUID
-            Organization ID.
-        content_type : ContentType
-            Type of content.
-        content_id : UUID
-            ID of the content.
-
-        Returns
-        -------
-        list[tuple[Attachment, File, User | None]]
-            List of (attachment, file, owner) tuples.
-
-        """
-        # Verify user can access the content
+        """List all attachments for a content row as `(attachment, file, owner)`."""
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
-        # Get attachments with file info
         result = await self._session.execute(
             select(Attachment, File, User)
             .join(File, Attachment.file_id == File.id)
@@ -525,18 +341,10 @@ class AttachmentOperations:
         content_type: ContentType,
         content_ids: list[UUID],
     ) -> dict[UUID, list[tuple[Attachment, File, User | None]]]:
-        """List attachments for many content rows in a single round-trip.
+        """Batched attachment list for N content rows in a single SQL round-trip.
 
-        Replaces the N+1 ``ListAttachments`` fan-out the chat client
-        used to fire when opening a channel. Returns a mapping of
-        ``content_id -> [(attachment, file, owner)]``; callers should
-        treat missing keys as "no attachments".
-
-        Verifies access per-content-row but groups the verification so
-        chat messages from the same channel only pay the membership
-        check once. Non-chat types fall back to per-row verification --
-        still O(N) permission lookups, but a single SQL round-trip
-        for the attachment join itself.
+        Chat messages share the channel access check across the batch;
+        other types fall back to per-row verification.
         """
         if not content_ids:
             return {}
@@ -607,33 +415,7 @@ class AttachmentOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[tuple[Attachment, File, User | None]], int]:
-        """
-        List attachments from content shared with the user.
-
-        Returns attachments from notes, chats, etc. that have been
-        shared with the user (not owned by them).
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting the list.
-        organization_id : UUID
-            Organization ID.
-        content_type_filter : ContentType | None
-            Optional filter by content type.
-        page : int
-            Page number (1-indexed).
-        page_size : int
-            Items per page.
-
-        Returns
-        -------
-        tuple[list[tuple[Attachment, File, User | None]], int]
-            List of (attachment, file, owner) tuples and total count.
-
-        """
-        # Build query for attachments where user is NOT the one who attached
-        # but has access via content sharing
+        """List attachments from content shared with the user (not owned by them)."""
         query = (
             select(Attachment, File, User)
             .join(File, Attachment.file_id == File.id)
@@ -647,10 +429,6 @@ class AttachmentOperations:
         if content_type_filter:
             query = query.where(Attachment.content_type == content_type_filter)
 
-        # TODO: Add content access filtering when shared content support is ready
-        # For now, this returns attachments where user is not the attacher
-
-        # Get total count
         count_query = select(func.count()).select_from(
             select(Attachment.id)
             .where(
@@ -671,7 +449,6 @@ class AttachmentOperations:
             )
         total = (await self._session.execute(count_query)).scalar() or 0
 
-        # Apply pagination
         query = query.order_by(Attachment.attached_at.desc())
         query = query.offset((page - 1) * page_size).limit(page_size)
 
@@ -680,35 +457,13 @@ class AttachmentOperations:
 
         return attachments, total
 
-    # ─────────────────────────────────────────────────────────────
-    # Permission Checking
-    # ─────────────────────────────────────────────────────────────
-
     async def can_access_attachment(
         self,
         user_id: UUID,
         organization_id: UUID,
         attachment_id: UUID,
     ) -> bool:
-        """
-        Check if user can access an attachment via parent content.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User ID.
-        organization_id : UUID
-            Organization ID.
-        attachment_id : UUID
-            Attachment ID.
-
-        Returns
-        -------
-        bool
-            True if user can access the attachment.
-
-        """
-        # Get the attachment
+        """Check if user can access an attachment via its parent content."""
         result = await self._session.execute(
             select(Attachment).where(
                 Attachment.id == attachment_id,
@@ -719,7 +474,6 @@ class AttachmentOperations:
         if not attachment:
             return False
 
-        # Check if user can access the parent content
         try:
             await self._verify_content_access(
                 user_id,
@@ -731,17 +485,13 @@ class AttachmentOperations:
         except PermissionDeniedError:
             return False
 
-    # ─────────────────────────────────────────────────────────────
-    # Private Helpers
-    # ─────────────────────────────────────────────────────────────
-
     async def _get_accessible_file(
         self,
         user_id: UUID,
         organization_id: UUID,
         file_id: UUID,
     ) -> File | None:
-        """Get a file if user has access, with media_info eager-loaded."""
+        """Return the file if accessible, with `media_info` eager-loaded."""
         result = await self._session.execute(
             select(File)
             .where(
@@ -755,7 +505,6 @@ class AttachmentOperations:
         if not file:
             return None
 
-        # Check access using the permission system
         access_filter = self._access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -787,11 +536,9 @@ class AttachmentOperations:
         baseline_role: ContentRole | None = None,
     ) -> File:
         """Copy a file to a target folder with thumbnail handling."""
-        # Generate new storage key
         new_file_id = generate_id()
         new_storage_key = f"{organization_id}/{user_id}/{new_file_id}/{source_file.filename}"
 
-        # Copy file content in S3
         await self._s3.copy_object(
             source_key=source_file.storage_key,
             destination_key=new_storage_key,
@@ -802,13 +549,11 @@ class AttachmentOperations:
         new_media_info: FileMediaInfo | None = None
         source_info = source_file.media_info
 
-        # Handle thumbnail: copy if exists, or mark for processing
         if (
             source_file.extraction_status == ExtractionStatus.COMPLETED
             and source_info
             and source_info.thumbnail_key
         ):
-            # Source has a completed thumbnail - copy it to new location
             new_thumb_key = f"{organization_id}/thumbnails/{new_file_id}.jpg"
 
             try:
@@ -817,7 +562,6 @@ class AttachmentOperations:
                     destination_key=new_thumb_key,
                     content_type="image/jpeg",
                 )
-                # Build new media info from source, with updated thumbnail key
                 new_media_info = FileMediaInfo(
                     file_id=new_file_id,
                     thumbnail_key=new_thumb_key,
@@ -834,7 +578,6 @@ class AttachmentOperations:
                 extraction_status = ExtractionStatus.COMPLETED
             except Exception as e:
                 logger.warning(f"Failed to copy thumbnail for attachment: {e}")
-                # Copy non-thumbnail metadata if available
                 if source_info and (source_info.width or source_info.exif):
                     new_media_info = FileMediaInfo(
                         file_id=new_file_id,
@@ -847,7 +590,6 @@ class AttachmentOperations:
                 if supports_thumbnail(source_file.mime_type or ""):
                     extraction_status = ExtractionStatus.PENDING
         elif source_info and (source_info.width or source_info.exif):
-            # Copy non-thumbnail metadata from source
             new_media_info = FileMediaInfo(
                 file_id=new_file_id,
                 width=source_info.width,
@@ -863,7 +605,6 @@ class AttachmentOperations:
         elif supports_thumbnail(source_file.mime_type or ""):
             extraction_status = ExtractionStatus.PENDING
 
-        # Create new file record (no search indexing for attachments)
         new_file = File(
             id=new_file_id,
             organization_id=organization_id,
@@ -883,12 +624,10 @@ class AttachmentOperations:
         self._session.add(new_file)
         await self._session.flush()
 
-        # Create FileMediaInfo row if we have data to copy
         if new_media_info:
             self._session.add(new_media_info)
             await self._session.flush()
 
-        # Create file version
         version = FileVersion(
             file_id=new_file.id,
             version_number=1,
@@ -903,22 +642,12 @@ class AttachmentOperations:
         new_file.current_version_id = version.id
         await self._session.refresh(new_file)
 
-        # Enqueue processing jobs if needed
         if extraction_status == ExtractionStatus.PENDING:
             await self._enqueue_processing_jobs(new_file)
 
         return new_file
 
     async def _enqueue_processing_jobs(self, file: File) -> None:
-        """
-        Enqueue background processing jobs for a file.
-
-        Parameters
-        ----------
-        file : File
-            The file to process.
-
-        """
         from uniffy.core.valkey import get_queue
 
         jobs = get_jobs_for_mime_type(file.mime_type or "")
@@ -935,7 +664,7 @@ class AttachmentOperations:
                 )
                 logger.debug(f"Enqueued {job_name} for attachment file {file.id}")
         except RuntimeError as e:
-            # Queue not available - non-fatal, file stays PENDING
+            # Queue not available; file stays PENDING.
             logger.warning(f"Could not enqueue jobs for attachment {file.id}: {e}")
 
     async def _verify_chat_message_access(
@@ -945,25 +674,10 @@ class AttachmentOperations:
         message_id: UUID,
         require_sender: bool = False,
     ) -> None:
-        """Verify chat access by delegating to ChatAccessChecker.
+        """Delegate chat-message access to `ChatAccessChecker`.
 
-        Chat messages use channel membership for access control, not the
-        generic access_mode/baseline_role model. This method loads the
-        parent message, resolves its channel, and checks membership.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting access.
-        organization_id : UUID
-            Organization ID.
-        message_id : UUID
-            Chat message ID.
-        require_sender : bool
-            If True, also require the user to be the message sender or
-            have an elevated channel role (admin/owner). Used for edit
-            operations like detaching files.
-
+        `require_sender=True` additionally demands sender or elevated role
+        (used for edit operations like detaching files).
         """
         from uniffy.core.models.chat.message import ChatMessage
         from uniffy.domains.chat.access import ChatAccessChecker
@@ -994,10 +708,9 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> tuple[UUID, AccessMode, ContentRole | None, ContentType, UUID]:
-        """Load (owner_id, access_mode, baseline_role, type, id) for a parent.
+        """Load `(owner_id, access_mode, baseline_role, type, id)` for a parent.
 
-        Tasks delegate to their parent project; the returned ``(type, id)``
-        pair is what the permission checker should use.
+        Tasks resolve to their parent project for the checker.
         """
         if content_type == ContentType.NOTE:
             from uniffy.core.models.notes.note import Note
@@ -1092,11 +805,9 @@ class AttachmentOperations:
             if not ch_row:
                 raise NotFoundError("ChatChannel", str(channel_id))
 
-            # PUBLIC channels: files inherit OPEN_TO_ORG so inline previews
-            # work for all org members. PRIVATE/DM: files stay OWNER_ONLY
-            # in the uploader's Attachments folder. Access for other channel
-            # members goes through the attachment system which checks channel
-            # membership via _verify_chat_message_access().
+            # PUBLIC channels inherit OPEN_TO_ORG so inline previews work for
+            # everyone; private/DM stays OWNER_ONLY and relies on channel
+            # membership via _verify_chat_message_access.
             if ch_row[1] == ChannelType.PUBLIC:
                 return (
                     ch_row[0],
@@ -1116,7 +827,6 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> ContentRole | None:
-        """Return the user's effective role on the parent content."""
         from uniffy.core.auth.permissions.checker import PermissionChecker
 
         (
@@ -1145,7 +855,6 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify the user can view the parent content."""
         if content_type == ContentType.CHAT_MESSAGE:
             await self._verify_chat_message_access(user_id, organization_id, content_id)
             return
@@ -1160,7 +869,6 @@ class AttachmentOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Verify the user can edit the parent content."""
         if content_type == ContentType.CHAT_MESSAGE:
             await self._verify_chat_message_access(
                 user_id, organization_id, content_id, require_sender=True

@@ -1,9 +1,4 @@
-"""Event bus for emitting notification events via ARQ queue.
-
-Fire-and-forget pattern: domain operations call emit_notification()
-which serializes the event and enqueues an ARQ job. If the queue is
-unavailable, the event is silently dropped (non-fatal).
-"""
+"""Fire-and-forget notification event bus over ARQ; never raises on a missing queue."""
 
 import json
 from typing import Any
@@ -15,20 +10,6 @@ from uniffy.core.valkey import get_queue
 
 
 def _event_to_json(event: NotificationEvent) -> str:
-    """
-    Serialize a NotificationEvent to JSON string.
-
-    Parameters
-    ----------
-    event : NotificationEvent
-        The notification event to serialize.
-
-    Returns
-    -------
-    str
-        JSON string representation of the event.
-
-    """
     data: dict[str, Any] = {
         "notification_type": event.notification_type.value,
         "organization_id": str(event.organization_id),
@@ -52,20 +33,6 @@ def _event_to_json(event: NotificationEvent) -> str:
 
 
 def event_from_json(json_str: str) -> NotificationEvent:
-    """
-    Deserialize a NotificationEvent from JSON string.
-
-    Parameters
-    ----------
-    json_str : str
-        JSON string to deserialize.
-
-    Returns
-    -------
-    NotificationEvent
-        Deserialized notification event.
-
-    """
     from uuid import UUID
 
     from uniffy.core.types import ContentType, NotificationType
@@ -99,18 +66,7 @@ def event_from_json(json_str: str) -> NotificationEvent:
 
 
 async def emit_notification(event: NotificationEvent) -> None:
-    """
-    Emit a notification event by enqueuing an ARQ job.
-
-    Fire-and-forget: never raises. If the queue is unavailable,
-    logs a warning and returns silently.
-
-    Parameters
-    ----------
-    event : NotificationEvent
-        The notification event to emit.
-
-    """
+    """Enqueue an ARQ job; never raises."""
     try:
         queue = get_queue("core")
         event_json = _event_to_json(event)

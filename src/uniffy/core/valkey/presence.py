@@ -1,14 +1,6 @@
-"""Valkey operations for ephemeral user presence.
+"""Per-user presence state with 120s TTL. Each heartbeat resets the TTL; expiry means offline.
 
-Stores per-user presence state (online/away/DND/offline) in Valkey with
-a 120-second TTL. Each heartbeat resets the TTL; if the client
-disconnects, the key expires naturally and the user goes offline.
-
-Key pattern: presence:{org_id}:{user_id}
-Channel pattern: presence:{org_id}  (for broadcasting state changes)
-
-Reads / writes go through the fail-fast ops client. Pubsub publishes
-go through the pubsub client because PUBLISH is a pubsub command.
+Keys ``presence:{org_id}:{user_id}``; channel ``presence:{org_id}``.
 """
 
 import json
@@ -20,7 +12,7 @@ from loguru import logger
 
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
-_PRESENCE_TTL = 120  # seconds
+_PRESENCE_TTL = 120
 _MAX_BULK_IDS = 200
 _NAMESPACE = "presence"
 
@@ -28,12 +20,10 @@ LOGGER_COMPONENT = "presence"
 
 
 def _presence_key(org_id: UUID, user_id: UUID) -> str:
-    """Build the Valkey key for a user's presence in an org."""
     return f"presence:{org_id}:{user_id}"
 
 
 def _presence_channel(org_id: UUID) -> str:
-    """Build the Pub/Sub channel name for org-wide presence changes."""
     return f"presence:{org_id}"
 
 
@@ -43,12 +33,8 @@ async def presence_set(
     status: str,
     client: str,
 ) -> str | None:
-    """Set a user's presence state in Valkey.
-
-    Returns the previous status if it changed, ``"__new__"`` if this is
-    the first heartbeat (user came online), or None when unchanged or on
-    any error / deadline trip (silent degradation -- presence is best
-    effort).
+    """Set presence; returns previous status if it changed, ``"__new__"``
+    on first heartbeat, ``None`` otherwise.
     """
     redis = _get_ops_client()
     if redis is None:
@@ -89,17 +75,7 @@ async def presence_get_bulk(
     org_id: UUID,
     user_ids: list[UUID],
 ) -> dict[str, dict[str, Any]]:
-    """Get presence state for multiple users via MGET.
-
-    Users not found in Valkey are omitted (caller should treat them as
-    offline). Returns ``{}`` on Valkey unavailability or deadline trip.
-
-    Raises
-    ------
-    ValueError
-        If more than 200 user IDs are requested.
-
-    """
+    """MGET presence for many users; absent users are omitted (treat as offline). Cap 200 ids."""
     if len(user_ids) > _MAX_BULK_IDS:
         raise ValueError(f"Maximum {_MAX_BULK_IDS} user IDs per request")
 
@@ -141,11 +117,7 @@ async def presence_publish_change(
     last_active: str,
     custom_status: dict[str, Any] | None = None,
 ) -> None:
-    """Publish a presence change event to the org-wide channel.
-
-    Uses the pubsub publisher (PUBLISH is a pubsub command) under the
-    same fail-fast deadline as the ops calls.
-    """
+    """Publish a presence change on ``presence:{org_id}`` under the ops deadline guard."""
     from uniffy.core.valkey import pubsub
 
     redis = pubsub._pubsub_client

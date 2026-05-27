@@ -1,9 +1,7 @@
-"""SMTP delivery backed by ``aiosmtplib``.
+"""SMTP delivery via ``aiosmtplib``.
 
-Stateless: one TCP connection per send. Cheap enough at v1 throughput
-and avoids a long-lived connection that an MTA might idle out between
-sends. Port 587 negotiates STARTTLS; port 465 uses implicit TLS. Other
-ports fall through with TLS disabled.
+One TCP connection per send. Port 587 negotiates STARTTLS, port 465 uses implicit
+TLS, other ports fall through with TLS disabled.
 """
 
 from __future__ import annotations
@@ -29,11 +27,8 @@ class SmtpBackend(MailBackend):
         *,
         idempotency_key: str | None = None,
     ) -> MailResult:
-        """Submit ``message`` to the SMTP server in ``self._config``.
-
-        ``idempotency_key`` is currently informational only -- SMTP has
-        no provider-side dedupe header. Callers that need at-most-once
-        delivery layer dedupe on top via Valkey locks.
+        """Submit ``message`` to the configured SMTP server.
+        ``idempotency_key`` is informational only.
         """
         if idempotency_key:
             message["X-Idempotency-Key"] = idempotency_key

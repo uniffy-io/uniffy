@@ -1,26 +1,5 @@
-"""Tag operations.
-
-Single facade owning all reads and writes against ``tags`` /
-``tag_assignments``. Domain code (notes, files, calendar, chat, agents,
-projects, the explorer) routes through this class so behaviour stays
-consistent across the application.
-
-Design choices
---------------
-- Counts are cached in Valkey (60s TTL), invalidated on writes. There
-  is no ``usage_count`` column.
-- ``assign`` enforces a hard 20-tag cap on ``source=manual``. Inline
-  syncing is exempt because note save flows must never hard-fail when
-  an author types many ``[[[tag|x]]]`` markers.
-- ``sources`` is a string array. Adding a manual assignment to a
-  previously inline-only tag adds ``"manual"`` without duplicating the
-  row. Removing one source from a row with both keeps the row alive.
-- Every write publishes a Valkey event after the DB commit so the
-  explorer dashboard, mention chips, and notification stream can react
-  in near-real-time.
-- ``merge_tags`` is one transaction: assignments fold via
-  ``ON CONFLICT DO UPDATE SET sources = ARRAY(DISTINCT ...)`` and the
-  source tag drops out cleanly.
+"""Single facade owning all reads and writes against ``tags`` /
+``tag_assignments``; manual cap is 20, inline syncing is exempt.
 """
 
 from collections.abc import Iterable
@@ -82,8 +61,6 @@ _RECENT_ASSIGNMENT_LIMIT = 5
 
 
 class TagSlugCollisionError(ConflictError):
-    """Rename / create would collide with an existing slug in the org."""
-
     def __init__(self, slug: str, existing_tag_id: UUID) -> None:
         self.slug = slug
         self.existing_tag_id = existing_tag_id
@@ -91,8 +68,6 @@ class TagSlugCollisionError(ConflictError):
 
 
 class TagLimitExceededError(UNIFFYError):
-    """Manual tag cap exceeded for a content URN."""
-
     def __init__(self, content_urn: str, limit: int = MAX_MANUAL_TAGS_PER_CONTENT) -> None:
         self.content_urn = content_urn
         self.limit = limit
@@ -126,7 +101,6 @@ def _tag_urn(tag_id: UUID) -> str:
 
 
 def _serialize_tag(tag: Tag, *, usage_count: int = 0) -> dict[str, object]:
-    """Build the realtime payload representation of a tag."""
     return {
         "id": str(tag.id),
         "organization_id": str(tag.organization_id),
@@ -144,8 +118,6 @@ def _serialize_tag(tag: Tag, *, usage_count: int = 0) -> dict[str, object]:
 
 
 class TagOperations:
-    """Business logic for the unified tags namespace."""
-
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.indexer = SearchIndexer()
@@ -159,11 +131,8 @@ class TagOperations:
         color: str | None = None,
         description: str | None = None,
     ) -> Tag:
-        """Create a tag, or return the existing row when the slug matches.
-
-        Slug is derived from ``name``. The first creator's ``name`` wins
-        for display; later callers that hit the same slug get the
-        existing row back unchanged.
+        """First creator's ``name`` wins; later callers that hit the same
+        slug get the existing row.
         """
         slug = slugify_tag(name)
         if not slug:
@@ -204,18 +173,8 @@ class TagOperations:
         color: str | None = None,
         description: str | None = None,
     ) -> tuple[Tag, bool]:
-        """Rename / recolor / re-describe a tag.
-
-        Returns ``(tag, slug_changed)``. The slug-changed flag lets the
-        caller schedule a search reindex of every tagged URN: a renamed
-        tag's ``tag:{slug}`` keyword changes on every document in the
-        index, and the rename RPC must not block on that fan-out.
-
-        Renaming may change the slug; collision raises
-        ``TagSlugCollisionError`` so the caller (UI) can offer a merge.
-        ``actor_id`` is accepted for future audit hooks but is not
-        currently persisted on the row beyond the existing
-        ``created_by`` field.
+        """Returns ``(tag, slug_changed)``; slug collisions raise
+        ``TagSlugCollisionError`` so the UI can offer a merge.
         """
         tag = await self._get_by_id(organization_id, tag_id)
         if tag is None:
@@ -266,13 +225,7 @@ class TagOperations:
         organization_id: UUID,
         tag_id: UUID,
     ) -> list[str]:
-        """Delete a tag and cascade its assignments.
-
-        Returns the list of content URNs that were assigned the tag at
-        delete time so the caller can schedule a search reindex (a
-        renamed tag changes the ``tag:{slug}`` keyword on every tagged
-        document).
-        """
+        """Returns the URNs assigned at delete time so the caller can schedule a search reindex."""
         tag = await self._get_by_id(organization_id, tag_id)
         if tag is None:
             raise NotFoundError("Tag", tag_id)
@@ -307,11 +260,8 @@ class TagOperations:
         tag_or_slug: str,
         actor_id: UUID | None = None,
     ) -> Tag:
-        """Resolve a tag by id (UUID string) or slug. Raises NotFoundError.
-
-        When ``actor_id`` is set the tag is hidden -- as ``NotFoundError`` --
-        from users who cannot prove visibility on it. Resolving to 404
-        instead of 403 prevents id / slug enumeration.
+        """Hidden tags raise ``NotFoundError`` (404 instead of 403) to
+        prevent id/slug enumeration.
         """
         try:
             tag_uuid = UUID(tag_or_slug)

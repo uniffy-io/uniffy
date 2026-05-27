@@ -1,11 +1,4 @@
-"""
-Async S3 client wrapper for file storage.
-
-Provides a high-level interface for S3 operations including:
-- Simple uploads/downloads
-- Multipart uploads for large files
-- Streaming support for ConnectRPC integration
-"""
+"""Async S3 client wrapper; simple + multipart uploads and streaming downloads."""
 
 import os
 import time
@@ -25,13 +18,13 @@ from uniffy.observability.metrics import (
     S3_OPERATIONS_TOTAL,
 )
 
-# Default chunk size: 5MB (S3 minimum for multipart)
+# S3 multipart minimum.
 DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024
 
 
 @dataclass
 class S3Config:
-    """S3 configuration from environment variables."""
+    """S3 connection configuration."""
 
     endpoint_url: str
     access_key: str
@@ -46,7 +39,6 @@ class S3Config:
 
     @classmethod
     def from_env(cls) -> S3Config:
-        """Load S3 configuration from environment variables."""
         return cls(
             endpoint_url=os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"),
             access_key=os.getenv("S3_ACCESS_KEY", "minioadmin"),
@@ -62,30 +54,18 @@ class S3Config:
 
 @dataclass
 class MultipartUploadInfo:
-    """Information about an in-progress multipart upload."""
+    """In-progress multipart upload."""
 
     upload_id: str
     bucket: str
     key: str
-    parts: list[dict]  # List of {"PartNumber": int, "ETag": str}
+    parts: list[dict]
 
 
 class S3Client:
-    """
-    Async S3 client for file storage operations.
-
-    This client wraps aioboto3 to provide async S3 operations
-    with support for streaming uploads/downloads through the backend.
-
-    Parameters
-    ----------
-    config : S3Config
-        S3 configuration.
-
-    """
+    """Async aioboto3 wrapper covering simple + streaming + multipart S3 operations."""
 
     def __init__(self, config: S3Config | None = None) -> None:
-        """Initialize S3 client with configuration."""
         self.config = config or S3Config.from_env()
         self._session = aioboto3.Session()
         self._botocore_config = BotocoreConfig(
@@ -99,7 +79,6 @@ class S3Client:
 
     @asynccontextmanager
     async def _get_client(self) -> AsyncIterator[S3ClientType]:
-        """Get an S3 client from the session with retry and timeout config."""
         async with self._session.client(
             "s3",
             endpoint_url=self.config.endpoint_url,
@@ -112,7 +91,6 @@ class S3Client:
             yield client
 
     async def ensure_bucket_exists(self) -> None:
-        """Create the bucket if it doesn't exist."""
         async with self._get_client() as client:
             try:
                 await client.head_bucket(Bucket=self.config.bucket_name)
@@ -127,24 +105,7 @@ class S3Client:
         data: bytes,
         content_type: str = "application/octet-stream",
     ) -> str:
-        """
-        Upload bytes directly to S3.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        data : bytes
-            File content.
-        content_type : str
-            MIME type of the file.
-
-        Returns
-        -------
-        str
-            The S3 object key.
-
-        """
+        """Upload bytes to ``key``; returns the key."""
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="upload_bytes").inc()
         try:
@@ -166,20 +127,6 @@ class S3Client:
             raise
 
     async def download_bytes(self, key: str) -> bytes:
-        """
-        Download a file from S3 as bytes.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-
-        Returns
-        -------
-        bytes
-            File content.
-
-        """
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="download_bytes").inc()
         try:
@@ -205,29 +152,11 @@ class S3Client:
         key: str,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
     ) -> AsyncIterator[tuple[bytes, int, int]]:
-        """
-        Stream download a file from S3.
-
-        Yields chunks of data for streaming to client via ConnectRPC.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        chunk_size : int
-            Size of each chunk in bytes.
-
-        Yields
-        ------
-        tuple[bytes, int, int]
-            (chunk_data, chunk_number, total_chunks)
-
-        """
+        """Stream ``key`` as ``(chunk, chunk_number, total_chunks)`` tuples."""
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="download_stream").inc()
         try:
             async with self._get_client() as client:
-                # Get object metadata first
                 head = await client.head_object(
                     Bucket=self.config.bucket_name,
                     Key=key,
@@ -235,7 +164,6 @@ class S3Client:
                 total_size = head["ContentLength"]
                 total_chunks = (total_size + chunk_size - 1) // chunk_size
 
-                # Stream the object
                 response = await client.get_object(
                     Bucket=self.config.bucket_name,
                     Key=key,
@@ -256,20 +184,7 @@ class S3Client:
             raise
 
     async def get_object_info(self, key: str) -> dict:
-        """
-        Get metadata about an S3 object.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-
-        Returns
-        -------
-        dict
-            Object metadata including ContentLength, ContentType, etc.
-
-        """
+        """``HEAD`` metadata for ``key`` (ContentLength, ContentType, etc.)."""
         async with self._get_client() as client:
             return await client.head_object(
                 Bucket=self.config.bucket_name,
@@ -283,50 +198,23 @@ class S3Client:
         end_byte: int | None = None,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
     ) -> AsyncIterator[tuple[bytes, int, int, int]]:
-        """
-        Download a byte range from S3.
-
-        Supports HTTP Range-like semantics for media streaming.
-        If start_byte is None, starts from beginning.
-        If end_byte is None, reads to end of file.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        start_byte : int | None
-            Start of range (inclusive). Default: 0.
-        end_byte : int | None
-            End of range (inclusive). Default: end of file.
-        chunk_size : int
-            Size of each chunk in bytes.
-
-        Yields
-        ------
-        tuple[bytes, int, int, int]
-            (chunk_data, total_size, range_start, range_end)
-
-        """
+        """HTTP-Range-style byte fetch yielding ``(chunk, total_size, range_start, range_end)``."""
         op_start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="download_range").inc()
         try:
             async with self._get_client() as client:
-                # Get object metadata for total size
                 head = await client.head_object(
                     Bucket=self.config.bucket_name,
                     Key=key,
                 )
                 total_size = head["ContentLength"]
 
-                # Calculate actual range
                 start = start_byte if start_byte is not None else 0
                 end = end_byte if end_byte is not None else total_size - 1
 
-                # Clamp values
                 start = max(0, min(start, total_size - 1))
                 end = max(start, min(end, total_size - 1))
 
-                # Build range header
                 range_header = f"bytes={start}-{end}"
 
                 response = await client.get_object(
@@ -352,22 +240,7 @@ class S3Client:
         key: str,
         content_type: str = "application/octet-stream",
     ) -> str:
-        """
-        Initiate a multipart upload.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        content_type : str
-            MIME type of the file.
-
-        Returns
-        -------
-        str
-            The S3 upload ID.
-
-        """
+        """Initiate a multipart upload; returns the upload id."""
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="create_multipart_upload").inc()
         try:
@@ -394,26 +267,7 @@ class S3Client:
         part_number: int,
         data: bytes,
     ) -> str:
-        """
-        Upload a single part of a multipart upload.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        upload_id : str
-            The multipart upload ID.
-        part_number : int
-            Part number (1-indexed).
-        data : bytes
-            Part data.
-
-        Returns
-        -------
-        str
-            The ETag of the uploaded part.
-
-        """
+        """Upload one part (1-indexed); returns the part ETag."""
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="upload_part").inc()
         try:
@@ -442,28 +296,10 @@ class S3Client:
         upload_id: str,
         parts: list[dict],
     ) -> str:
-        """
-        Complete a multipart upload.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        upload_id : str
-            The multipart upload ID.
-        parts : list[dict]
-            List of parts with {"PartNumber": int, "ETag": str}.
-
-        Returns
-        -------
-        str
-            The ETag of the completed object.
-
-        """
+        """Complete a multipart upload; returns the object ETag."""
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="complete_multipart_upload").inc()
         try:
-            # Sort parts by part number
             sorted_parts = sorted(parts, key=lambda p: p["PartNumber"])
 
             async with self._get_client() as client:
@@ -488,17 +324,7 @@ class S3Client:
         key: str,
         upload_id: str,
     ) -> None:
-        """
-        Abort a multipart upload.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        upload_id : str
-            The multipart upload ID.
-
-        """
+        """Abort an in-progress multipart upload."""
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="abort_multipart_upload").inc()
         try:
@@ -521,22 +347,7 @@ class S3Client:
         key: str,
         upload_id: str,
     ) -> list[dict]:
-        """
-        List uploaded parts for a multipart upload.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        upload_id : str
-            The multipart upload ID.
-
-        Returns
-        -------
-        list[dict]
-            List of uploaded parts with PartNumber, ETag, Size.
-
-        """
+        """List parts already uploaded for a multipart upload."""
         async with self._get_client() as client:
             response = await client.list_parts(
                 Bucket=self.config.bucket_name,
@@ -551,24 +362,7 @@ class S3Client:
         destination_key: str,
         content_type: str | None = None,
     ) -> str:
-        """
-        Copy an object within the same bucket.
-
-        Parameters
-        ----------
-        source_key : str
-            Source S3 object key.
-        destination_key : str
-            Destination S3 object key.
-        content_type : str | None
-            Optional content type override.
-
-        Returns
-        -------
-        str
-            The destination key.
-
-        """
+        """Copy ``source_key`` to ``destination_key`` within the same bucket."""
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="copy_object").inc()
         try:
@@ -596,15 +390,6 @@ class S3Client:
             raise
 
     async def delete_object(self, key: str) -> None:
-        """
-        Delete an object from S3.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-
-        """
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="delete_object").inc()
         try:
@@ -622,15 +407,7 @@ class S3Client:
             raise
 
     async def delete_objects(self, keys: list[str]) -> None:
-        """
-        Delete multiple objects from S3.
-
-        Parameters
-        ----------
-        keys : list[str]
-            List of S3 object keys.
-
-        """
+        """Delete multiple keys in one call."""
         if not keys:
             return
 
@@ -651,20 +428,6 @@ class S3Client:
             raise
 
     async def object_exists(self, key: str) -> bool:
-        """
-        Check if an object exists in S3.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-
-        Returns
-        -------
-        bool
-            True if object exists.
-
-        """
         start = time.perf_counter()
         S3_OPERATIONS_TOTAL.labels(operation="object_exists").inc()
         try:
@@ -693,24 +456,7 @@ class S3Client:
         expires_in: int = 3600,
         content_type: str | None = None,
     ) -> str:
-        """
-        Generate a presigned URL for accessing an S3 object.
-
-        Parameters
-        ----------
-        key : str
-            S3 object key.
-        expires_in : int
-            URL expiration time in seconds (default: 1 hour).
-        content_type : str | None
-            Optional content type for response.
-
-        Returns
-        -------
-        str
-            Presigned URL for accessing the object.
-
-        """
+        """Presigned ``get_object`` URL valid for ``expires_in`` seconds."""
         async with self._get_client() as client:
             params = {
                 "Bucket": self.config.bucket_name,
@@ -727,12 +473,10 @@ class S3Client:
         return url
 
 
-# Global S3 client instance
 _s3_client: S3Client | None = None
 
 
 def get_s3_client() -> S3Client:
-    """Get the global S3 client instance."""
     global _s3_client
     if _s3_client is None:
         _s3_client = S3Client()
@@ -740,14 +484,13 @@ def get_s3_client() -> S3Client:
 
 
 async def init_s3() -> None:
-    """Initialize S3 client and ensure bucket exists."""
+    """Initialize the process-singleton S3 client and ensure the bucket exists."""
     client = get_s3_client()
     await client.ensure_bucket_exists()
     logger.info("S3 storage initialized")
 
 
 async def close_s3() -> None:
-    """Close S3 client (cleanup)."""
     global _s3_client
     _s3_client = None
     logger.info("S3 storage closed")

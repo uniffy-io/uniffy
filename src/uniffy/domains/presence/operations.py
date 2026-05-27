@@ -17,16 +17,9 @@ from uniffy.core.valkey.presence import (
 
 
 class PresenceOperations:
-    """Presence operations.
-
-    Ephemeral presence state (online/away/dnd/offline) is stored in Valkey
-    with a 120s TTL. Custom statuses (emoji + text + expiry) are stored
-    on the settings_profiles table in PostgreSQL.
-
-    """
+    """Ephemeral presence in Valkey (120s TTL); custom status on ``settings_profiles``."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize with database session for custom status operations."""
         self.session = session
 
     async def set_presence(
@@ -36,23 +29,8 @@ class PresenceOperations:
         status: str,
         client: str,
     ) -> None:
-        """Set user presence state and publish change if status differs.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user setting their presence.
-        organization_id : UUID
-            Organization scope.
-        status : str
-            Presence status ("online", "away", "dnd", "offline").
-        client : str
-            Client type ("web", "mobile", "desktop").
-
-        """
         previous = await presence_set(organization_id, user_id, status, client)
         if previous is not None:
-            # Status changed or first heartbeat - publish with custom status
             custom = await self._get_custom_status(user_id)
             last_active = datetime.now(UTC).isoformat()
             await presence_publish_change(organization_id, user_id, status, last_active, custom)
@@ -62,24 +40,8 @@ class PresenceOperations:
         organization_id: UUID,
         user_ids: list[UUID],
     ) -> dict[str, dict[str, Any]]:
-        """Get presence for multiple users, merging Valkey state with custom statuses.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization scope.
-        user_ids : list[UUID]
-            User IDs to query (max 200).
-
-        Returns
-        -------
-        dict[str, dict]
-            Mapping of user_id to presence data including custom_status.
-
-        """
         valkey_data = await presence_get_bulk(organization_id, user_ids)
 
-        # Merge custom statuses for users who have presence in Valkey
         if valkey_data:
             custom_statuses = await self._get_bulk_custom_statuses([
                 UUID(uid) for uid in valkey_data
@@ -98,27 +60,6 @@ class PresenceOperations:
         text: str,
         expires_at: datetime | None,
     ) -> dict[str, Any]:
-        """Set custom status on the user's default settings profile.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user setting their custom status.
-        organization_id : UUID | None
-            Organization scope (for publishing the change).
-        emoji : str
-            Emoji character or shortcode.
-        text : str
-            Status text.
-        expires_at : datetime | None
-            Optional expiry time.
-
-        Returns
-        -------
-        dict
-            The custom status data that was set.
-
-        """
         custom_data: dict[str, Any] = {
             "emoji": emoji,
             "text": text,
@@ -145,7 +86,6 @@ class PresenceOperations:
 
         await self.session.commit()
 
-        # Publish change so other users see the update in real-time
         if organization_id:
             last_active = datetime.now(UTC).isoformat()
             await presence_publish_change(
@@ -162,16 +102,6 @@ class PresenceOperations:
         user_id: UUID,
         organization_id: UUID | None,
     ) -> None:
-        """Clear custom status from the user's default settings profile.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user clearing their custom status.
-        organization_id : UUID | None
-            Organization scope (for publishing the change).
-
-        """
         await self.session.execute(
             update(SettingsProfile)
             .where(
@@ -182,7 +112,6 @@ class PresenceOperations:
         )
         await self.session.commit()
 
-        # Publish change so other users see the cleared status
         if organization_id:
             last_active = datetime.now(UTC).isoformat()
             await presence_publish_change(
@@ -194,19 +123,6 @@ class PresenceOperations:
             )
 
     async def _get_custom_status(self, user_id: UUID) -> dict[str, Any] | None:
-        """Get custom status from the user's default settings profile.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User to query.
-
-        Returns
-        -------
-        dict | None
-            Custom status data or None if not set.
-
-        """
         result = await self.session.execute(
             select(SettingsProfile.custom_status).where(
                 SettingsProfile.user_id == user_id,
@@ -222,19 +138,6 @@ class PresenceOperations:
         self,
         user_ids: list[UUID],
     ) -> dict[str, dict[str, Any]]:
-        """Get custom statuses for multiple users in one query.
-
-        Parameters
-        ----------
-        user_ids : list[UUID]
-            User IDs to query.
-
-        Returns
-        -------
-        dict[str, dict]
-            Mapping of user_id (str) to custom status data.
-
-        """
         if not user_ids:
             return {}
 

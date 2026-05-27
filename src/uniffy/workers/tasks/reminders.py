@@ -1,9 +1,4 @@
-"""Calendar reminder cron task.
-
-Checks for due reminders every minute and emits CALENDAR_REMINDER
-notifications for each.  ARQ cron jobs are inherently unique across
-workers, so no distributed lock is needed.
-"""
+"""Per-minute cron: emit CALENDAR_REMINDER notifications for due reminders."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -23,20 +18,6 @@ from uniffy.db import open_session
 
 
 def _format_reminder_interval(minutes: int) -> str:
-    """
-    Format a minutes-before value as a human-readable string.
-
-    Parameters
-    ----------
-    minutes : int
-        Minutes before event.
-
-    Returns
-    -------
-    str
-        Human-readable interval string.
-
-    """
     if minutes < 60:
         return f"in {minutes} minutes"
     if minutes == 60:
@@ -51,23 +32,8 @@ def _format_reminder_interval(minutes: int) -> str:
 
 
 async def _process_due_reminders(session: AsyncSession) -> int:
-    """
-    Find and process all due, unsent reminders.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    Returns
-    -------
-    int
-        Number of reminders processed.
-
-    """
     now = datetime.now(UTC)
 
-    # Query unsent reminders that are due
     stmt = (
         select(EventReminder, CalendarEvent)
         .join(CalendarEvent, EventReminder.event_id == CalendarEvent.id)
@@ -90,7 +56,6 @@ async def _process_due_reminders(session: AsyncSession) -> int:
 
     processed = 0
     for reminder, event in rows:
-        # Verify attendee hasn't declined
         attendee_stmt = select(EventAttendee).where(
             and_(
                 EventAttendee.event_id == event.id,
@@ -101,12 +66,10 @@ async def _process_due_reminders(session: AsyncSession) -> int:
         attendee = attendee_result.scalar_one_or_none()
 
         if attendee and attendee.status == AttendeeStatus.DECLINED:
-            # Mark as sent without emitting notification
             reminder.sent_at = now
             processed += 1
             continue
 
-        # Emit CALENDAR_REMINDER notification
         interval_text = _format_reminder_interval(reminder.minutes_before)
         await emit_notification(
             NotificationEvent(
@@ -119,7 +82,6 @@ async def _process_due_reminders(session: AsyncSession) -> int:
             )
         )
 
-        # Mark as sent
         reminder.sent_at = now
         processed += 1
 
@@ -128,25 +90,7 @@ async def _process_due_reminders(session: AsyncSession) -> int:
 
 
 async def check_calendar_reminders(ctx: dict[str, Any]) -> dict[str, Any]:
-    """
-    Cron task: check for due calendar reminders and emit notifications.
-
-    Runs every minute via ARQ cron (unique across workers by default).
-    Queries for EventReminder rows where sent_at IS NULL and
-    scheduled_at <= NOW(), then emits CALENDAR_REMINDER notifications
-    and marks them as sent.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ worker context.
-
-    Returns
-    -------
-    dict
-        Task result with count of processed reminders.
-
-    """
+    """ARQ cron tick: emit notifications for due `EventReminder` rows and mark them sent."""
     try:
         async with open_session() as session:
             count = await _process_due_reminders(session)

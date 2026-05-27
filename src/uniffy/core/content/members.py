@@ -1,14 +1,10 @@
-"""Generic content member management.
+"""Canonical CRUD for ``ContentMember`` rows and access-policy columns.
 
-:class:`ContentMembersOperations` provides the canonical CRUD for
-``ContentMember`` rows plus the ``access_mode`` / ``baseline_role`` /
-``owner_id`` fields on any content item. It works for every content
-type through a registered loader pattern: each domain registers a
-function that loads its content rows, and this class dispatches.
+Polymorphic through a registered-loader pattern: each domain registers a
+fetcher for its content type. Mutations enforce permissions, write to the
+audit log, keep the search index in sync, and emit notifications.
 
-The class enforces role-based permissions on every mutation, writes to
-the audit log, keeps the search index in sync, and emits notifications.
-It is the one place in the backend that mutates access control state.
+This is the only place in the backend that mutates access-control state.
 """
 
 from collections.abc import Awaitable, Callable
@@ -61,9 +57,8 @@ from uniffy.core.types import (
     SubjectType,
 )
 
-# Each domain registers a loader that fetches a content row by id
-# (raw SQLModel, bypassing permission checks). The row must expose
-# id, organization_id, owner_id, access_mode, baseline_role columns.
+# Loader returns the raw SQLModel row (bypassing permission checks). The row
+# must expose id, organization_id, owner_id, access_mode, baseline_role columns.
 ContentLoader = Callable[
     [AsyncSession, UUID, UUID],  # (session, organization_id, content_id)
     Awaitable[object | None],
@@ -72,9 +67,8 @@ ContentLoader = Callable[
 _CONTENT_LOADERS: dict[ContentType, ContentLoader] = {}
 
 
-# Cascade loader: given a parent ``(content_type, content_id)``,
-# return every ``(content_type, content_id)`` whose attachments are
-# affected by an access-mode change on the parent.
+# Returns every ``(content_type, content_id)`` whose attachments are affected
+# by an access-mode change on the parent.
 AttachmentCascadeLoader = Callable[
     [AsyncSession, UUID, UUID],  # (session, organization_id, parent_content_id)
     Awaitable[list[tuple[ContentType, UUID]]],
@@ -87,23 +81,16 @@ def register_attachment_cascade_loader(
     parent_type: ContentType,
     loader: AttachmentCascadeLoader,
 ) -> None:
-    """Register a cascade loader for attachment migration on
-    access-mode change. Multiple loaders may register per parent
-    type; their results are concatenated in registration order.
-    """
+    """Multiple loaders may register per parent; results concatenate in order."""
     _attachment_cascade_loaders.setdefault(parent_type, []).append(loader)
 
 
 def register_content_loader(content_type: ContentType, loader: ContentLoader) -> None:
-    """Register a loader for a content type. Each domain calls this
-    at import time so :class:`ContentMembersOperations` can fetch
-    rows generically.
-    """
+    """Domains register at import time so this class can fetch rows generically."""
     _CONTENT_LOADERS[content_type] = loader
 
 
 def get_content_loader(content_type: ContentType) -> ContentLoader:
-    """Look up a registered loader or raise if none is registered."""
     loader = _CONTENT_LOADERS.get(content_type)
     if loader is None:
         raise ValidationError(
@@ -116,19 +103,8 @@ def get_content_loader(content_type: ContentType) -> ContentLoader:
 class ContentMembersOperations:
     """Generic CRUD for content members and access policies.
 
-    Every mutation:
-    1. Loads the content row via the registered loader.
-    2. Resolves the actor's effective role through ``PermissionChecker``.
-    3. Enforces the capability required for the action.
-    4. Performs the mutation.
-    5. Writes an ``audit_events`` row via ``write_audit_event`` (action
-       in the ``permissions.*`` namespace).
-    6. Updates the search index membership / access policy fields.
-    7. Emits a notification where appropriate.
-
-    All methods are transactional in the sense that the mutation row,
-    the audit row, and the notification are committed in the same
-    transaction.
+    Every mutation commits the row, the ``permissions.*`` audit event, the
+    search-index sync, and the notification together.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -146,13 +122,11 @@ class ContentMembersOperations:
         subject_id: UUID,
         role: ContentRole,
     ) -> None:
-        """Drop the perm cache entries affected by a member mutation.
+        """Drop perm-cache entries affected by a member mutation.
 
-        For a USER subject with a non-BLOCKED role we drop the one
-        affected key. For BLOCKED grants and GROUP subjects the
-        affected user set is not enumerable cheaply, so wipe the
-        whole ``content:{ct}:{cid}`` tag plus the tag/content
-        visibility caches.
+        USER + non-BLOCKED drops one key; BLOCKED grants and GROUP subjects wipe
+        the whole content tag because the affected user set isn't enumerable
+        cheaply.
         """
         if subject_type == SubjectType.USER and role != ContentRole.BLOCKED:
             await invalidate_perm_role(
@@ -173,7 +147,6 @@ class ContentMembersOperations:
         """Return all member rows for a content item. Requires VIEW."""
         content = await self._load_content(organization_id, content_type, content_id)
 
-        # VIEW is the floor for listing members.
         role = await self.permission_checker.effective_role(
             user_id=actor_user_id,
             organization_id=organization_id,
@@ -211,11 +184,8 @@ class ContentMembersOperations:
     ) -> ContentMember:
         """Add or upsert a ``ContentMember`` row. Requires MANAGE.
 
-        Rejects:
-        - ``role == OWNER`` (use :meth:`transfer_ownership`)
-        - Setting BLOCKED on an org admin or matching domain admin
-        - Adding a member when ``access_mode = OWNER_ONLY``
-        - Adding the current owner as a member (owner is implicit)
+        Rejects OWNER (use :meth:`transfer_ownership`), BLOCKED against org/domain
+        admins, adds under OWNER_ONLY, and adding the current owner.
         """
         content = await self._load_content(organization_id, content_type, content_id)
         _actor_role = await self._require_manage(
@@ -337,10 +307,7 @@ class ContentMembersOperations:
         new_role: ContentRole,
         note: str = "",
     ) -> ContentMember:
-        """Change an existing member's role. Requires MANAGE.
-
-        Rejects the same conditions as :meth:`add_member`.
-        """
+        """Change an existing member's role. Requires MANAGE; same rejects as ``add_member``."""
         content = await self._load_content(organization_id, content_type, content_id)
         _actor_role = await self._require_manage(
             actor_user_id, organization_id, content_type, content_id, content
@@ -388,9 +355,9 @@ class ContentMembersOperations:
         await self.session.commit()
         await self.session.refresh(existing)
 
-        # When toggling in or out of BLOCKED, drop both the single
-        # affected user's key and the content tag so previously
-        # cached group/BLOCKED-derived denials clear too.
+        # Toggling in or out of BLOCKED requires dropping both the affected
+        # user's key and the content tag so previously cached group/BLOCKED-
+        # derived denials clear.
         await self._drop_perm_cache_for_member_change(
             organization_id=organization_id,
             content_type=content_type,
@@ -499,19 +466,14 @@ class ContentMembersOperations:
         remove_members_on_narrow: bool = False,
         note: str = "",
     ) -> None:
-        """Change access mode and baseline role. Requires MANAGE.
+        """Change access mode + baseline role. Requires MANAGE.
 
-        Validation:
-        - ``new_access_mode = None`` clears the per-item override; the
-          row will inherit live from the org's defaults for the content
-          type. ``new_baseline_role`` must also be ``None`` in this case.
-        - ``new_baseline_role`` may be ``None`` under ``OPEN_TO_ORG`` to
-          mean "inherit the org default baseline".
-        - ``new_baseline_role`` must not be ``OWNER`` or ``BLOCKED``.
-        - Moving to ``OWNER_ONLY`` while member rows exist is rejected
-          unless ``remove_members_on_narrow=True``; in that case the
-          rows are deleted first and a ``MEMBER_REMOVED`` event is
-          written for each.
+        ``new_access_mode=None`` clears the override (row inherits org defaults);
+        ``new_baseline_role`` must also be ``None`` then. Under ``OPEN_TO_ORG``,
+        ``new_baseline_role=None`` means "inherit the org default baseline".
+        ``OWNER`` / ``BLOCKED`` are never valid baselines. Narrowing to
+        ``OWNER_ONLY`` while member rows exist requires ``remove_members_on_narrow=True``,
+        which deletes them and records ``MEMBER_REMOVED`` for each.
         """
         content = await self._load_content(organization_id, content_type, content_id)
         _actor_role = await self._require_manage(
@@ -599,9 +561,8 @@ class ContentMembersOperations:
 
         await self.session.commit()
 
-        # Access mode or baseline role flip changes the answer for an
-        # unbounded user set (every org member when OPEN_TO_ORG flips,
-        # every BLOCKED-derived denial when narrowed). Wipe by content tag.
+        # Access-mode or baseline-role flip changes the answer for an unbounded
+        # user set; wipe by content tag.
         await invalidate_perm_content(content_type, content_id)
         await invalidate_visible_sets_for_org(organization_id)
 
@@ -616,9 +577,9 @@ class ContentMembersOperations:
         await self._sync_search_sharing(organization_id, content_type, content_id)
         await publish_perm_change(content_type, content_id, None, None)
 
-        # Move attachments to the right folder if the effective mode
-        # crossed the OPEN_TO_ORG boundary. Inheritance changes alone
-        # don't fire this (they're handled by the org-defaults reindex).
+        # Migrate attachments only when the effective mode crosses the
+        # OPEN_TO_ORG boundary; pure inheritance changes are handled by the
+        # org-defaults reindex.
         if previous_effective_mode != new_effective_mode and (
             previous_effective_mode == AccessMode.OPEN_TO_ORG
             or new_effective_mode == AccessMode.OPEN_TO_ORG
@@ -638,7 +599,6 @@ class ContentMembersOperations:
         content_type: ContentType,
         raw_access_mode: AccessMode | None,
     ) -> AccessMode:
-        """Materialise the effective access mode for a single row."""
         if raw_access_mode is not None:
             return raw_access_mode
         mode, _ = await resolve_content_defaults(self.session, organization_id, content_type)
@@ -653,14 +613,7 @@ class ContentMembersOperations:
         new_effective_baseline: ContentRole | None,
         owner_id: UUID,
     ) -> None:
-        """Re-route a content's attachments between USER and ORG folders.
-
-        Walks the attachment list for this row (and any registered child
-        contents) and moves each file to the right folder, updating the
-        file's stored ``(access_mode, baseline_role)`` to match the new
-        effective policy. Idempotent: rows already in the right place
-        are skipped.
-        """
+        """Re-route a content's attachments between USER and ORG folders; idempotent."""
         from uniffy.core.models.attachments.attachment import Attachment
         from uniffy.core.models.files.file import File
         from uniffy.domains.attachments.operations import AttachmentOperations
@@ -732,14 +685,7 @@ class ContentMembersOperations:
         new_owner_user_id: UUID,
         note: str = "",
     ) -> None:
-        """Transfer content ownership to a different user.
-
-        - Requires OWNER (or org/domain admin bypass).
-        - Target must be an active member of the organization.
-        - Previous owner becomes ADMIN via a new ``ContentMember`` row.
-        - New owner's existing ``ContentMember`` row, if any, is deleted.
-        - Writes OWNERSHIP_TRANSFERRED + MEMBER_ADDED events.
-        """
+        """Transfer ownership; previous owner is demoted to ADMIN via a new member row."""
         content = await self._load_content(organization_id, content_type, content_id)
         _actor_role = await self._require_transfer(
             actor_user_id, organization_id, content_type, content_id, content
@@ -759,7 +705,6 @@ class ContentMembersOperations:
 
         previous_owner_id = content.owner_id
 
-        # Delete new owner's existing member row if any.
         existing_new_owner_row = await self._get_existing_member(
             organization_id,
             content_type,
@@ -770,10 +715,8 @@ class ContentMembersOperations:
         if existing_new_owner_row is not None:
             await self.session.delete(existing_new_owner_row)
 
-        # Flip ownership on the content row.
         content.owner_id = new_owner_user_id
 
-        # Previous owner becomes ADMIN via a new ContentMember row.
         previous_owner_row = ContentMember(
             organization_id=organization_id,
             content_type=content_type,
@@ -853,13 +796,7 @@ class ContentMembersOperations:
         after: datetime | None = None,
         before: datetime | None = None,
     ) -> list[AuditEvent]:
-        """List permissions audit events for a content item. Requires VIEW.
-
-        Sourced from the central ``audit_events`` table, filtered to
-        actions in the ``permissions.*`` namespace targeting this row.
-        Callers that need the ``ContentMemberEvent`` proto shape unpack
-        ``details`` via the permissions-domain converter.
-        """
+        """Permissions audit events for a content item. Requires VIEW."""
         content = await self._load_content(organization_id, content_type, content_id)
 
         role = await self.permission_checker.effective_role(
@@ -898,8 +835,6 @@ class ContentMembersOperations:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    # Internal helpers
-
     async def _load_content(
         self,
         organization_id: UUID,
@@ -920,7 +855,6 @@ class ContentMembersOperations:
         content_id: UUID,
         content,
     ) -> ContentRole:
-        """Resolve the actor's role and require MANAGE."""
         role = await self.permission_checker.effective_role(
             user_id=actor_user_id,
             organization_id=organization_id,
@@ -942,7 +876,6 @@ class ContentMembersOperations:
         content_id: UUID,
         content,
     ) -> ContentRole:
-        """Resolve the actor's role and require TRANSFER."""
         role = await self.permission_checker.effective_role(
             user_id=actor_user_id,
             organization_id=organization_id,
@@ -982,13 +915,7 @@ class ContentMembersOperations:
         subject_type: SubjectType,
         subject_id: UUID,
     ) -> None:
-        """Raise ValidationError if the subject is an org or domain admin.
-
-        Org OWNER/ADMIN roles and domain admins always bypass BLOCKED via
-        the permission checker, so blocking them is misleading. Reject at
-        the API layer with a clear error instead of letting it quietly
-        not work.
-        """
+        """Reject BLOCKED against org/domain admins since their bypass would silently win."""
         if subject_type != SubjectType.USER:
             return
 
@@ -1011,17 +938,12 @@ class ContentMembersOperations:
         new_access_mode: AccessMode | None,
         new_baseline_role: ContentRole | None,
     ) -> None:
-        """Validate the (access_mode, baseline_role) combination.
+        """Validate the (access_mode, baseline_role) pair against storage invariants.
 
-        Storage invariants:
-
-        - ``(None, None)`` is the inherit-from-org-defaults shape.
-        - ``(None, X)`` is invalid - a baseline without a mode has no
-          defined semantics.
-        - ``(OPEN_TO_ORG, None)`` is valid and means the row uses the
-          org default baseline at read time.
-        - ``(OPEN_TO_ORG, X)`` requires X to not be OWNER / BLOCKED.
-        - Any non-OPEN_TO_ORG mode requires baseline to be NULL.
+        - ``(None, None)`` inherits org defaults; ``(None, X)`` is invalid.
+        - ``(OPEN_TO_ORG, None)`` means "inherit org default baseline".
+        - ``(OPEN_TO_ORG, X)`` rejects ``OWNER`` / ``BLOCKED``.
+        - Any other mode forces baseline NULL.
         """
         if new_access_mode is None:
             if new_baseline_role is not None:
@@ -1123,7 +1045,6 @@ class ContentMembersOperations:
         subject_type: SubjectType,
         subject_id: UUID,
     ) -> list[UUID]:
-        """Resolve subject to target user IDs for notifications."""
         if subject_type == SubjectType.USER:
             return [subject_id]
 
@@ -1143,7 +1064,6 @@ class ContentMembersOperations:
         content_type: ContentType,
         content_id: UUID,
     ) -> None:
-        """Sync shared / blocked user / group lists in the search index."""
         try:
             result = await self.session.execute(
                 select(
@@ -1197,13 +1117,7 @@ class ContentMembersOperations:
         access_mode: AccessMode | None,
         baseline_role: ContentRole | None,
     ) -> None:
-        """Sync access policy fields in the search index.
-
-        Raw NULL columns inherit from the org's defaults; the index must
-        carry the effective values so the Meilisearch permission filter
-        (which matches ``access_mode = "OPEN_TO_ORG"`` literally) keeps
-        surfacing inheriting rows.
-        """
+        """Index must carry the effective values since the Meili filter matches literals."""
         try:
             default_mode, default_baseline = await resolve_content_defaults(
                 self.session, organization_id, content_type,

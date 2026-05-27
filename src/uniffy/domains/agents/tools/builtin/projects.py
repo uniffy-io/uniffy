@@ -60,8 +60,7 @@ async def _execute_create_project(ctx: ToolContext, args: dict) -> ToolResult:
 async def _execute_update_project(ctx: ToolContext, args: dict) -> ToolResult:
     """Update a project's details.
 
-    Note: access-mode / baseline-role changes go through
-    ``MembersService.SetAccessMode``; this tool ignores those fields.
+    Access-mode / baseline-role changes go through `MembersService.SetAccessMode`.
     """
     from uniffy.domains.projects.operations import ProjectOperations
 
@@ -561,8 +560,6 @@ async def _execute_move_task(ctx: ToolContext, args: dict) -> ToolResult:
         data=f"Task moved successfully: [[[{task.title}|{urn}]]] -> {task.status}",
     )
 
-
-# -- Tool definitions --------------------------------------------------------
 
 create_project = ToolDefinition(
     name="projects.create_project",

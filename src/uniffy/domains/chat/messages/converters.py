@@ -42,7 +42,6 @@ def message_to_proto(
     reply_context_sender_name: str | None = None,
     reply_context_content_preview: str | None = None,
 ) -> ProtoChatMessage:
-    """Convert ChatMessage to proto, optionally embedding thread info and reactions."""
     proto = ProtoChatMessage(
         id=str(message.id),
         channel_id=str(message.channel_id),
@@ -73,7 +72,6 @@ def message_to_proto(
     if message.created_at:
         proto.created_at.CopyFrom(datetime_to_timestamp(message.created_at))
 
-    # Embed thread info for root messages with replies
     if thread_stats and message.root_id is None:
         thread_info = ProtoThreadInfo(
             reply_count=thread_stats.reply_count,

@@ -11,55 +11,7 @@ from uniffy.core.types import AccessMode, ContentRole, RoomStatus, RoomType, gen
 
 
 class Room(SQLModel, table=True):
-    """
-    Room model representing a bookable room or resource.
-
-    Rooms are organization-scoped and support different types (meeting rooms,
-    equipment, vehicles, etc.). They use the standard permission model and
-    can be booked through the RoomBooking model.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key).
-    organization_id : UUID
-        Organization this room belongs to.
-    owner_id : UUID
-        User who created/manages the room.
-    name : str
-        Room display name.
-    description : str
-        Room description in markdown format.
-    room_type : RoomType
-        Type of room or resource.
-    status : RoomStatus
-        Operational status (ACTIVE, MAINTENANCE, RETIRED).
-    capacity : int
-        Maximum number of people (0 for non-space resources).
-    floor : str | None
-        Floor identifier.
-    building : str | None
-        Building name.
-    location : str
-        Human-readable location description.
-    amenities : list[str] | None
-        Available amenities (projector, whiteboard, etc.).
-    image_file_id : UUID | None
-        Optional photo of the room (FK to files).
-    access_mode : AccessMode
-        How access to this room is governed.
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    is_deleted : bool
-        Soft delete flag.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-    deleted_at : datetime | None
-        Soft deletion timestamp.
-
-    """
+    """Bookable room or resource (meeting room, equipment, vehicle)."""
 
     __tablename__ = "rooms_rooms"
 
@@ -135,11 +87,9 @@ class Room(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """Return the URN for this room."""
         return f"urn:uniffy:content:ROOM:{self.id}"
 
     def __repr__(self) -> str:
-        """Return string representation of Room."""
         return (
             f"<Room(id={self.id}, name={self.name!r}, "
             f"room_type={self.room_type}, organization_id={self.organization_id})>"

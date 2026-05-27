@@ -44,8 +44,6 @@ from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.tags.converters import tag_to_proto
 
-# Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
-# across every domain so they live in ``core.converters.common_proto``.
 FIELD_TYPE_TO_PROTO: dict[str, FieldType.ValueType] = {
     "text": FieldType.FIELD_TYPE_TEXT,
     "number": FieldType.FIELD_TYPE_NUMBER,
@@ -82,27 +80,22 @@ ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction.ValueType] = {
 
 
 def field_type_to_proto(field_type: str) -> FieldType.ValueType:
-    """Convert a domain field-type string to a proto FieldType value."""
     return FIELD_TYPE_TO_PROTO.get(field_type, FieldType.FIELD_TYPE_UNSPECIFIED)
 
 
 def field_type_from_proto(proto_type: FieldType.ValueType) -> str:
-    """Convert a proto FieldType value to a domain string."""
     return FIELD_TYPE_FROM_PROTO.get(proto_type, "text")
 
 
 def view_type_to_proto(view_type: str) -> ViewType.ValueType:
-    """Convert a domain view-type string to a proto ViewType value."""
     return VIEW_TYPE_TO_PROTO.get(view_type, ViewType.VIEW_TYPE_UNSPECIFIED)
 
 
 def view_type_from_proto(proto_type: ViewType.ValueType) -> str:
-    """Convert a proto ViewType value to a domain string."""
     return VIEW_TYPE_FROM_PROTO.get(proto_type, "table")
 
 
 def activity_action_to_proto(action: str) -> ActivityAction.ValueType:
-    """Convert a domain action string to a proto ActivityAction value."""
     return ACTIVITY_ACTION_TO_PROTO.get(action, ActivityAction.ACTIVITY_ACTION_UNSPECIFIED)
 
 
@@ -115,19 +108,6 @@ def project_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> ProtoProject:
-    """Convert a :class:`Project` row to its proto representation.
-
-    Parameters
-    ----------
-    project : Project
-        Project row.
-    fields : list[FieldDefinition]
-        Field definitions for the project.
-    views : list[ViewConfig]
-        View configurations for the project.
-    user_role : ContentRole | None
-        Effective role of the requesting user.
-    """
     type_schemas_proto: dict[str, ProtoTypeFieldSchema] = {}
     if project.type_field_schemas:
         for type_name, schema in project.type_field_schemas.items():
@@ -180,7 +160,6 @@ def task_to_proto(
     subtask_completed: int = 0,
     tags: list[Tag] | None = None,
 ) -> ProtoTask:
-    """Convert a :class:`Task` row to its proto representation."""
     field_values_map: dict[str, str] = {}
     if task.field_values:
         for key, value in task.field_values.items():
@@ -241,7 +220,6 @@ def task_to_proto(
 
 
 def field_to_proto(field: FieldDefinition) -> ProtoFieldDefinition:
-    """Convert a :class:`FieldDefinition` to its proto representation."""
     config_json = json.dumps(field.config) if field.config else "{}"
 
     return ProtoFieldDefinition(
@@ -259,7 +237,6 @@ def field_to_proto(field: FieldDefinition) -> ProtoFieldDefinition:
 
 
 def view_to_proto(view: ViewConfig) -> ProtoViewConfig:
-    """Convert a :class:`ViewConfig` to its proto representation."""
     config_json = json.dumps(view.config) if view.config else "{}"
 
     return ProtoViewConfig(
@@ -275,7 +252,6 @@ def view_to_proto(view: ViewConfig) -> ProtoViewConfig:
 
 
 def activity_to_proto(activity: TaskActivity) -> ProtoTaskActivity:
-    """Convert a :class:`TaskActivity` to its proto representation."""
     proto = ProtoTaskActivity(
         id=str(activity.id),
         task_id=str(activity.task_id),
@@ -298,7 +274,6 @@ def sprint_to_proto(
     task_count: int = 0,
     completed_task_count: int = 0,
 ) -> ProtoSprint:
-    """Convert a :class:`Sprint` to its proto representation."""
     proto = ProtoSprint(
         id=str(sprint.id),
         project_id=str(sprint.project_id),

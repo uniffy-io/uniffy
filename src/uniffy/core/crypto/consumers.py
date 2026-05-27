@@ -1,16 +1,8 @@
 """Registries for domains that own encrypted columns.
 
-Two parallel registries:
-
-* :data:`CRYPTO_CONSUMERS` -- per-org rotation. Each entry's
-  ``list_rows`` yields ORM rows for one organization id.
-* :data:`DEPLOYMENT_CRYPTO_CONSUMERS` -- deployment-singleton
-  rotation. Each entry's ``list_rows`` yields every encrypted row
-  across the deployment (no org dimension).
-
-Owners register at module import time so the rotation code never has
-to know about specific tables. ``get_ciphertext`` / ``set_ciphertext``
-mutate the encrypted column on a single row.
+Two parallel registries: :data:`CRYPTO_CONSUMERS` for per-org rotation and
+:data:`DEPLOYMENT_CRYPTO_CONSUMERS` for the deployment-singleton DEK. Owners
+register at import time so rotation code stays table-agnostic.
 """
 
 from __future__ import annotations
@@ -38,12 +30,7 @@ CRYPTO_CONSUMERS: list[ReEncryptingConsumer] = []
 
 
 def register_consumer(consumer: ReEncryptingConsumer) -> None:
-    """Append a per-org consumer to the global registry.
-
-    Called at import time from each owning domain's ``operations.py``.
-    Duplicate registration (same ``name``) is a no-op so re-imports
-    under test fixtures don't multiply rotation work.
-    """
+    """Append a per-org consumer; duplicate ``name`` is a no-op (test-fixture safe)."""
     for existing in CRYPTO_CONSUMERS:
         if existing.name == consumer.name:
             return
@@ -65,12 +52,7 @@ DEPLOYMENT_CRYPTO_CONSUMERS: list[DeploymentReEncryptingConsumer] = []
 
 
 def register_deployment_consumer(consumer: DeploymentReEncryptingConsumer) -> None:
-    """Append a deployment-scope consumer to the registry.
-
-    Same idempotency contract as :func:`register_consumer`. Currently
-    used by ``deployment_settings`` (``namespace='mail'`` SMTP password,
-    future deployment-scope secrets land here automatically).
-    """
+    """Append a deployment-scope consumer; same idempotency as :func:`register_consumer`."""
     for existing in DEPLOYMENT_CRYPTO_CONSUMERS:
         if existing.name == consumer.name:
             return

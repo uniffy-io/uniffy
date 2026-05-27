@@ -24,7 +24,7 @@ from uniffy.domains.mail.system_handlers import SystemMailHandlers
 
 
 class SystemMailServiceImpl:
-    """ConnectRPC service implementation - delegates to SystemMailHandlers."""
+    """ConnectRPC SystemMailService."""
 
     def __init__(self) -> None:
         self._handlers = SystemMailHandlers()

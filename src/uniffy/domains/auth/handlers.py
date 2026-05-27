@@ -276,18 +276,11 @@ class AuthHandlers:
         request: LogoutRequest,
         ctx: RequestContext,
     ) -> LogoutResponse:
-        """
-        Logout user - revoke session server-side.
-
-        If the client sends a refresh_token, we extract the session_id from it
-        and revoke that session. Otherwise we try to get session_id from the
-        access token in the Authorization header.
-        """
+        """Logout the user; revokes the session derived from refresh or access token."""
         try:
             session_id: UUID | None = None
             user_id: UUID | None = None
 
-            # Try to extract session_id from refresh_token first
             if request.HasField("refresh_token") and request.refresh_token:
                 try:
                     payload = decode_access_token(request.refresh_token)
@@ -298,7 +291,6 @@ class AuthHandlers:
                 except Exception:
                     pass
 
-            # Fallback: get from access token in context
             if not session_id:
                 session_id = get_session_id_from_context(ctx)
             if not user_id:
@@ -313,7 +305,7 @@ class AuthHandlers:
             return LogoutResponse(success=True)
         except Exception as e:
             logger.error(f"Logout error: {e}", exc_info=True)
-            # Logout should not fail from user perspective
+            # Logout never surfaces failure to the user.
             return LogoutResponse(success=True)
 
     async def list_sessions(

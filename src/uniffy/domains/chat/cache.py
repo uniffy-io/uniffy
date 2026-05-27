@@ -1,11 +1,5 @@
-"""Chat-domain Valkey cache helpers.
-
-Covers channel metadata, member-id lists, DM peer lists, pinned-message
-ids, and the channel-resources autocomplete head. Each helper hides the
-cache surface from operations: callers go through ``ChatAccessChecker``
-for reads and through the explicit invalidation helpers below on writes.
-Cache misses fall through to PG transparently; the non-fatal degradation
-in ``core.valkey.cache`` covers Valkey outage.
+"""Chat-domain Valkey cache helpers for channel metadata, member ids, DM
+peers, pinned ids, and resources head.
 """
 
 from datetime import datetime
@@ -33,16 +27,10 @@ _DM_PEERS_TTL_SECONDS = 3600
 _PINNED_TTL_SECONDS = 3600
 _RESOURCES_HEAD_TTL_SECONDS = 300
 
-# Fixed head size for the resources cache. Requests with a larger
-# limit, or any offset > 0, fall through to PG. The cache is the
-# autocomplete fast-path; deep paging is rare and not worth the sync
-# complexity of caching arbitrary windows.
+# Larger limits or offset > 0 fall through to PG; this is the autocomplete fast-path only.
 RESOURCES_HEAD_LIMIT = 50
 
-# Cap above which we refuse to cache the member list. Reading 100KB of
-# JSON to push it back through Valkey is more expensive than the original
-# PG SELECT for very large channels; the cache is most valuable for the
-# common <500-member case.
+# Above this size, caching a member-id list costs more than the original PG SELECT.
 MEMBER_LIST_CACHE_CAP = 5_000
 
 
@@ -92,12 +80,7 @@ def _serialize_channel(channel: ChatChannel) -> dict[str, Any]:
 
 
 def _deserialize_channel(payload: dict[str, Any]) -> ChatChannel:
-    """Return a transient ChatChannel built from a cached payload.
-
-    The instance is *not* attached to a session. Callers must not mutate
-    or commit it - reads through ``ChatAccessChecker.get_channel`` are
-    the only intended consumers, and they treat the row as read-only.
-    """
+    """Return a transient (session-detached, read-only) ChatChannel from a cached payload."""
     return ChatChannel(
         id=UUID(payload["id"]),
         organization_id=UUID(payload["organization_id"]),
@@ -138,12 +121,7 @@ def _deserialize_channel(payload: dict[str, Any]) -> ChatChannel:
 
 
 async def get_cached_channel(channel_id: UUID) -> ChatChannel | None:
-    """Return a transient ``ChatChannel`` from cache, or ``None`` on miss.
-
-    A cached "doesn't exist" path is intentionally NOT supported - the
-    PG ``select`` filters ``is_deleted = false``, and a brief delete
-    window must not stick around as a sentinel.
-    """
+    # No negative caching: a soft-deleted row must not stick around as a sentinel.
     cached = await cache_get(_channel_key(channel_id))
     if cached is CACHE_MISS or cached is None:
         return None
@@ -152,9 +130,7 @@ async def get_cached_channel(channel_id: UUID) -> ChatChannel | None:
 
 async def set_cached_channel(channel: ChatChannel) -> None:
     if channel.is_deleted:
-        # Don't seed the cache with a soft-deleted row; the read path
-        # filters those out and a soft-deleted entry would be served as
-        # though present.
+        # Read path filters soft-deleted rows; caching one would surface a phantom.
         return
     await cache_set(
         _channel_key(channel.id),
@@ -172,13 +148,7 @@ async def get_or_load_channel(
     channel_id: UUID,
     organization_id: UUID,
 ) -> ChatChannel | None:
-    """Stampede-protected cache-or-load for a channel row.
-
-    On miss only one caller per pod runs the loader; losers wait on the
-    short Valkey lock and re-read the cache. Soft-deleted rows are
-    skipped (the loader filters them) so the cache is never seeded with
-    a stale "deleted but visible" payload.
-    """
+    """Stampede-protected cache-or-load for a channel row."""
 
     async def _load() -> dict[str, Any] | None:
         result = await session.execute(
@@ -207,7 +177,6 @@ async def get_or_load_channel(
 async def get_cached_member_ids(
     channel_id: UUID,
 ) -> list[dict[str, Any]] | None:
-    """Return the cached member-id payload for a channel, or None."""
     cached = await cache_get(_members_key(channel_id))
     if cached is CACHE_MISS or cached is None:
         return None
@@ -221,7 +190,7 @@ async def set_cached_member_ids(
     channel_id: UUID,
     members: list[dict[str, Any]],
 ) -> None:
-    """Cache a member-id payload. No-op when the list exceeds the cap."""
+    """Cache a member-id payload; no-op when the list exceeds the cap."""
     if len(members) > MEMBER_LIST_CACHE_CAP:
         return
     await cache_set(
@@ -236,7 +205,6 @@ async def invalidate_cached_member_ids(channel_id: UUID) -> None:
 
 
 async def get_cached_dm_peers(channel_id: UUID) -> list[str] | None:
-    """Return cached DM peer subject_ids for a channel, or ``None``."""
     cached = await cache_get(_dm_peers_key(channel_id))
     if cached is CACHE_MISS or cached is None:
         return None
@@ -249,11 +217,7 @@ async def get_cached_dm_peers(channel_id: UUID) -> list[str] | None:
 async def get_cached_dm_peers_many(
     channel_ids: list[UUID],
 ) -> tuple[dict[UUID, list[str]], list[UUID]]:
-    """Bulk-read DM peer lists. Returns ``(hit_map, miss_channel_ids)``.
-
-    Misses preserve input order so callers can re-issue the PG join
-    deterministically.
-    """
+    """Bulk-read DM peer lists; misses preserve input order for a deterministic PG re-issue."""
     if not channel_ids:
         return {}, []
     keys = [_dm_peers_key(cid) for cid in channel_ids]
@@ -280,12 +244,7 @@ async def get_cached_dm_peers_many(
 
 
 async def set_cached_dm_peers(channel_id: UUID, peers: list[str]) -> None:
-    """Cache the DM peer subject_id list for a channel.
-
-    DM peer membership doesn't change after creation - rooms with a new
-    set of peers are new rooms - so the only invalidation point is
-    channel delete (handled in ``invalidate_cached_channel`` callers).
-    """
+    # DM peer set is immutable post-create; only invalidation point is channel delete.
     await cache_set(
         _dm_peers_key(channel_id),
         {"peers": list(peers)},
@@ -300,11 +259,7 @@ async def invalidate_cached_dm_peers(channel_id: UUID) -> None:
 async def get_cached_pinned_message_ids(
     channel_id: UUID,
 ) -> list[UUID] | None:
-    """Return cached pinned message ids (created_at desc), or ``None``.
-
-    The cache stores ids only; full message rows are re-fetched from PG
-    so message edits propagate without invalidation.
-    """
+    # Ids only; full message rows re-fetched from PG so edits propagate without invalidation.
     cached = await cache_get(_pinned_key(channel_id))
     if cached is CACHE_MISS or cached is None:
         return None
@@ -324,7 +279,6 @@ async def set_cached_pinned_message_ids(
     channel_id: UUID,
     message_ids: list[UUID],
 ) -> None:
-    """Cache the ordered (created_at desc) pinned-message id list."""
     await cache_set(
         _pinned_key(channel_id),
         {"ids": [str(mid) for mid in message_ids]},
@@ -340,12 +294,7 @@ async def get_cached_channel_resources_head(
     channel_id: UUID,
     content_type: str | None,
 ) -> tuple[list[dict[str, Any]], int] | None:
-    """Return cached `(resources_head, total)` or ``None`` on miss.
-
-    The resources list is the first ``RESOURCES_HEAD_LIMIT`` rows
-    ordered by ``last_mentioned_at`` desc. Callers slice the head to
-    the requested limit.
-    """
+    """Cached (head, total); head is RESOURCES_HEAD_LIMIT rows ordered by last_mentioned_at desc."""
     cached = await cache_get(_resources_key(channel_id, content_type))
     if cached is CACHE_MISS or cached is None:
         return None
@@ -362,7 +311,6 @@ async def set_cached_channel_resources_head(
     resources: list[dict[str, Any]],
     total: int,
 ) -> None:
-    """Cache the head-of-list resources payload for a channel + filter."""
     await cache_set(
         _resources_key(channel_id, content_type),
         {"resources": resources, "total": total},
@@ -374,12 +322,7 @@ async def invalidate_cached_channel_resources(
     channel_id: UUID,
     content_types: list[str] | None = None,
 ) -> None:
-    """Drop the resources head cache for a channel.
-
-    Always wipes the ``all`` bucket. ``content_types`` specifies which
-    typed buckets to additionally drop - typically the unique types
-    touched by an upsert/decrement so unaffected buckets stay warm.
-    """
+    """Drop the resources head; always wipes 'all', plus typed buckets in content_types."""
     keys = [_resources_key(channel_id, None)]
     seen: set[str] = set()
     for ct in content_types or []:
@@ -391,9 +334,7 @@ async def invalidate_cached_channel_resources(
     await cache_invalidate_many(*keys)
 
 
-# One-shot warning dedup for channels above the cache cap. Set lives for
-# the process lifetime - a channel that grows past the cap once will only
-# log on the first miss after restart, which is the right cadence.
+# One-shot warning dedup for oversize channels; set lives for process lifetime.
 _warned_oversize: set[UUID] = set()
 
 
@@ -401,26 +342,7 @@ async def fetch_channel_members(
     session: AsyncSession,
     channel_id: UUID,
 ) -> list[dict[str, Any]]:
-    """Cache-aware polymorphic member-id fetch for a channel.
-
-    Returns the full ``[{subject_type, subject_id, role, user_id}, ...]``
-    list. Callers project as needed (the send pipeline filters
-    ``subject_type == "USER"`` and drops ``None`` user_ids).
-
-    Behaviour:
-    - Cache hit: return the cached list directly.
-    - Cache miss: PG SELECT, cache the result, return.
-    - Oversize miss (>``MEMBER_LIST_CACHE_CAP``): return uncached and
-      emit a one-shot warning per channel id; subsequent misses on the
-      same channel skip the log to avoid spam under load.
-
-    Stampede protection is intentionally NOT layered here. The
-    oversize-cap branch is incompatible with ``cache_get_or_set_locked``
-    (which always caches the loader's return value), and the
-    small-channel happy path is fast enough that a herd is bearable.
-    Worth revisiting if a future channel grows past the cap and load
-    tests show stampede behaviour.
-    """
+    """Cache-aware member-id fetch; oversize channels return uncached with a one-shot warning."""
     cached = await get_cached_member_ids(channel_id)
     if cached is not None:
         return cached

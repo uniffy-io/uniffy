@@ -1,9 +1,4 @@
-"""Chat read state operations with Valkey-first write strategy.
-
-Hot path: Valkey SET (sub-millisecond).
-Cold path: PG fallback on cache miss.
-Flush: ARQ cron every 30s batches dirty cursors to PG.
-"""
+"""Chat read state operations; Valkey-first writes, PG fallback, 30s ARQ flush cron."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -19,18 +14,16 @@ _EPOCH = datetime(1, 1, 1, tzinfo=UTC)
 
 LOGGER_COMPONENT = "chat.read_state"
 
-# Valkey key patterns
 _CHANNEL_READ_KEY = "chat:read:{user_id}:{channel_id}"
 _THREAD_READ_KEY = "chat:thread_read:{user_id}:{root_message_id}"
 _DIRTY_CHANNEL_SET = "chat:dirty_read_cursors"
 _DIRTY_THREAD_SET = "chat:dirty_thread_cursors"
 
-# TTL for read cursor keys (7 days - refreshed on every write)
+# 7 days; refreshed on every write.
 _READ_CURSOR_TTL = 7 * 24 * 3600
 
 
 def _get_valkey_client():
-    """Get the Valkey ops client used for cursor SET / dirty-set adds."""
     from uniffy.core.valkey.ops import _get_ops_client
 
     return _get_ops_client()
@@ -48,11 +41,7 @@ class ChatReadStateOperations:
         channel_id: UUID,
         last_read_message_id: UUID,
     ) -> None:
-        """Mark a channel as read up to a specific message.
-
-        Writes to Valkey first (fast path), adds to dirty set for PG flush.
-        Falls back to direct PG write if Valkey is unavailable.
-        """
+        """Valkey SET then dirty-set add; falls back to direct PG upsert on Valkey outage."""
         now = datetime.now(UTC)
         value = f"{last_read_message_id}:{now.isoformat()}"
         key = _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=channel_id)
@@ -72,7 +61,6 @@ class ChatReadStateOperations:
                     component=LOGGER_COMPONENT,
                 )
 
-        # Fallback: write directly to PG
         await self._upsert_channel_cursor_pg(user_id, channel_id, last_read_message_id, now)
 
     async def mark_thread_read(
@@ -80,7 +68,6 @@ class ChatReadStateOperations:
         user_id: UUID,
         root_message_id: UUID,
     ) -> None:
-        """Mark a thread as read."""
         now = datetime.now(UTC)
         key = _THREAD_READ_KEY.format(user_id=user_id, root_message_id=root_message_id)
 
@@ -99,7 +86,6 @@ class ChatReadStateOperations:
                     component=LOGGER_COMPONENT,
                 )
 
-        # Fallback: write directly to PG
         await self._upsert_thread_cursor_pg(user_id, root_message_id, now)
 
     async def get_channel_read_cursor(
@@ -107,10 +93,7 @@ class ChatReadStateOperations:
         user_id: UUID,
         channel_id: UUID,
     ) -> tuple[UUID | None, datetime | None]:
-        """Get channel read cursor. Returns (last_read_message_id, last_read_at).
-
-        Checks Valkey first, falls back to PG on miss.
-        """
+        """Returns (last_read_message_id, last_read_at); Valkey first, PG on miss."""
         key = _CHANNEL_READ_KEY.format(user_id=user_id, channel_id=channel_id)
 
         client = _get_valkey_client()
@@ -124,7 +107,6 @@ class ChatReadStateOperations:
             except Exception:
                 pass
 
-        # Cache miss - check PG
         result = await self.session.execute(
             select(
                 ChatReadCursor.last_read_message_id,
@@ -136,7 +118,6 @@ class ChatReadStateOperations:
         )
         row = result.one_or_none()
         if row:
-            # Repopulate Valkey
             if client is not None and row[0]:
                 try:
                     value = f"{row[0]}:{row[1].isoformat() if row[1] else ''}"
@@ -152,17 +133,10 @@ class ChatReadStateOperations:
         user_id: UUID,
         channel_ids: list[UUID],
     ) -> dict[UUID, dict]:
-        """Get unread counts for multiple channels in a single batch.
-
-        Uses Valkey MGET for hot cursors, then a single SQL query for
-        counting unread messages across all channels at once.
-
-        Returns {channel_id: {unread_count, mention_count, last_read_message_id}}.
-        """
+        """Batched unread counts; Valkey MGET cursors + one SQL aggregate per request."""
         if not channel_ids:
             return {}
 
-        # Phase 1: Batch-fetch read cursors from Valkey
         cursor_map: dict[UUID, tuple[UUID | None, datetime | None]] = {}
         valkey_miss_ids: list[UUID] = []
 
@@ -187,7 +161,6 @@ class ChatReadStateOperations:
         else:
             valkey_miss_ids = list(channel_ids)
 
-        # Phase 2: Fetch PG cursors for Valkey misses
         if valkey_miss_ids:
             pg_result = await self.session.execute(
                 select(
@@ -202,7 +175,6 @@ class ChatReadStateOperations:
             for row in pg_result.all():
                 cursor_map[row[0]] = (row[1], row[2])
 
-            # Repopulate Valkey for PG hits
             if client is not None:
                 for cid in valkey_miss_ids:
                     cur = cursor_map.get(cid)
@@ -214,16 +186,8 @@ class ChatReadStateOperations:
                         except Exception:
                             pass
 
-        # Phase 3: ONE query for unread + mention counts across every channel.
-        #
-        # Joins `chat_messages` against `unnest(channel_ids, last_read_ats)`
-        # so each channel's per-user threshold is part of the same plan.
-        # PG resolves the predicate `m.channel_id = c.channel_id AND
-        # m.created_at > c.last_read_at` with a bitmap index scan over
-        # `ix_chat_messages_channel_timeline`, plus the partial GIN
-        # `ix_chat_messages_mentioned_urns` for the mention FILTER.
-        # Channels with no read cursor get the epoch threshold so every
-        # message qualifies as unread (cap of 100 still applies).
+        # One query: chat_messages joined with unnest(channel_ids, last_read_ats); mention
+        # FILTER hits the partial GIN ix_chat_messages_mentioned_urns. No cursor -> epoch.
         user_mention_urn = f"urn:uniffy:content:USER:{user_id}"
 
         ordered_channel_ids: list[UUID] = list(channel_ids)
@@ -271,9 +235,7 @@ class ChatReadStateOperations:
                 "last_read_message_id": last_read_msg_ids.get(cid),
             }
 
-        # Channels with no rows in `chat_messages` (newly created or empty)
-        # don't appear in the GROUP BY result; fill zeros so every requested
-        # channel maps to a value.
+        # Empty channels don't appear in GROUP BY; fill zeros so every requested id maps.
         for cid in ordered_channel_ids:
             if cid not in counts:
                 counts[cid] = {
@@ -289,7 +251,7 @@ class ChatReadStateOperations:
         user_id: UUID,
         root_message_ids: list[UUID],
     ) -> dict[UUID, datetime]:
-        """Get thread read cursors for multiple threads. Returns {root_message_id: last_read_at}."""
+        """Returns {root_message_id: last_read_at}; Valkey first, PG on miss."""
         if not root_message_ids:
             return {}
 
@@ -340,8 +302,6 @@ class ChatReadStateOperations:
 
         return cursor_map
 
-    # Direct PG operations (used by flush job and fallback)
-
     async def _upsert_channel_cursor_pg(
         self,
         user_id: UUID,
@@ -349,7 +309,6 @@ class ChatReadStateOperations:
         last_read_message_id: UUID,
         last_read_at: datetime,
     ) -> None:
-        """Upsert a channel read cursor directly to PG."""
         await self.session.execute(
             pg_insert(ChatReadCursor)
             .values(
@@ -374,7 +333,6 @@ class ChatReadStateOperations:
         root_message_id: UUID,
         last_read_at: datetime,
     ) -> None:
-        """Upsert a thread read cursor directly to PG."""
         await self.session.execute(
             pg_insert(ChatThreadReadCursor)
             .values(

@@ -31,22 +31,6 @@ def my_organization_to_proto(
     org: Organization,
     membership: OrganizationMember,
 ) -> MyOrganization:
-    """
-    Convert Organization and membership to MyOrganization proto.
-
-    Parameters
-    ----------
-    org : Organization
-        Organization model instance.
-    membership : OrganizationMember
-        User's membership in the organization.
-
-    Returns
-    -------
-    MyOrganization
-        Proto message.
-
-    """
     return MyOrganization(
         organization=org_info_to_proto(org),
         role=org_role_to_proto(membership.role),
@@ -59,24 +43,6 @@ def organization_detail_to_proto(
     member_count: int = 0,
     group_count: int = 0,
 ) -> OrganizationDetail:
-    """
-    Convert Organization to OrganizationDetail proto.
-
-    Parameters
-    ----------
-    org : Organization
-        Organization model instance.
-    member_count : int
-        Number of members.
-    group_count : int
-        Number of groups.
-
-    Returns
-    -------
-    OrganizationDetail
-        Proto message.
-
-    """
     return OrganizationDetail(
         organization=org_info_to_proto(org),
         member_count=member_count,
@@ -91,26 +57,6 @@ def organization_overview_to_proto(
     group_count: int,
     content_counts: list[tuple[str, int]] | None = None,
 ) -> OrganizationOverview:
-    """
-    Convert organization data to OrganizationOverview proto.
-
-    Parameters
-    ----------
-    org : Organization
-        Organization model instance.
-    member_count : int
-        Number of members.
-    group_count : int
-        Number of groups.
-    content_counts : list[tuple[str, int]] | None
-        Optional list of (content_type, count) tuples.
-
-    Returns
-    -------
-    OrganizationOverview
-        Proto message.
-
-    """
     proto_content_counts = []
     if content_counts:
         for ct_name, count in content_counts:
@@ -138,20 +84,6 @@ def organization_overview_to_proto(
 def permission_defaults_to_proto(
     defaults: OrganizationPermissionDefaults,
 ) -> ContentTypeDefaults:
-    """
-    Convert OrganizationPermissionDefaults to ContentTypeDefaults proto.
-
-    Parameters
-    ----------
-    defaults : OrganizationPermissionDefaults
-        Permission defaults model instance.
-
-    Returns
-    -------
-    ContentTypeDefaults
-        Proto message.
-
-    """
     proto = ContentTypeDefaults(
         content_type=content_type_to_proto(defaults.content_type),
         default_access_mode=access_mode_to_proto(defaults.default_access_mode),
@@ -163,10 +95,6 @@ def permission_defaults_to_proto(
 
 
 def organization_settings_to_proto(settings: dict[str, Any]) -> OrganizationSettings:
-    """Convert the Organization.settings JSONB blob into typed proto form.
-
-    Missing keys default to zero-values on the proto side.
-    """
     chat = settings.get("chat") or {}
     return OrganizationSettings(
         chat=ChatSettings(

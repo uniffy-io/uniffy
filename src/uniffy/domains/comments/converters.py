@@ -18,8 +18,6 @@ from uniffy.core.converters import (
 )
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 
-# Anchor type mappings
-
 ANCHOR_TYPE_TO_PROTO: dict[CommentAnchorType, int] = {
     CommentAnchorType.PAGE: ProtoAnchorType.COMMENT_ANCHOR_TYPE_PAGE,
     CommentAnchorType.SELECTION: ProtoAnchorType.COMMENT_ANCHOR_TYPE_SELECTION,
@@ -36,38 +34,10 @@ ANCHOR_TYPE_FROM_PROTO: dict[int, CommentAnchorType] = {
 
 
 def anchor_type_to_proto(anchor_type: CommentAnchorType) -> int:
-    """
-    Convert CommentAnchorType to proto enum value.
-
-    Parameters
-    ----------
-    anchor_type : CommentAnchorType
-        Domain anchor type.
-
-    Returns
-    -------
-    int
-        Proto enum value.
-
-    """
     return ANCHOR_TYPE_TO_PROTO.get(anchor_type, ProtoAnchorType.COMMENT_ANCHOR_TYPE_PAGE)
 
 
 def anchor_type_from_proto(proto_type: int) -> CommentAnchorType:
-    """
-    Convert proto anchor type to domain CommentAnchorType.
-
-    Parameters
-    ----------
-    proto_type : int
-        Proto enum value.
-
-    Returns
-    -------
-    CommentAnchorType
-        Domain anchor type.
-
-    """
     return ANCHOR_TYPE_FROM_PROTO.get(proto_type, CommentAnchorType.PAGE)
 
 
@@ -81,34 +51,6 @@ def comment_to_proto(
     replies: list[ProtoComment] | None = None,
     resolved_by_name: str | None = None,
 ) -> ProtoComment:
-    """
-    Convert Comment model to proto Comment message.
-
-    Parameters
-    ----------
-    comment : Comment
-        Comment model instance.
-    author_name : str
-        Author's display name.
-    author_avatar_url : str | None
-        Author's avatar URL.
-    reply_count : int
-        Number of replies to this comment.
-    reactions : list[dict]
-        Aggregated reactions with emoji, count, user_ids, current_user_reacted.
-    current_user_id : str
-        Current user's ID for reaction status.
-    replies : list[ProtoComment] | None
-        Pre-converted reply protos (for GetComment).
-    resolved_by_name : str | None
-        Name of user who resolved the comment.
-
-    Returns
-    -------
-    ProtoComment
-        Proto comment message.
-
-    """
     proto = ProtoComment(
         id=str(comment.id),
         organization_id=str(comment.organization_id),
@@ -170,26 +112,6 @@ def reaction_to_proto(
     user_ids: list[str],
     current_user_id: str,
 ) -> ProtoCommentReaction:
-    """
-    Convert aggregated reaction data to proto CommentReaction.
-
-    Parameters
-    ----------
-    emoji : str
-        Emoji character or shortcode.
-    count : int
-        Number of users who reacted.
-    user_ids : list[str]
-        IDs of users who reacted.
-    current_user_id : str
-        Current user's ID for checking own reaction.
-
-    Returns
-    -------
-    ProtoCommentReaction
-        Proto reaction message.
-
-    """
     return ProtoCommentReaction(
         emoji=emoji,
         count=count,

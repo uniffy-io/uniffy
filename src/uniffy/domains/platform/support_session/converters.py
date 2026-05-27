@@ -44,7 +44,7 @@ _CONSENT_FROM_PROTO: dict[int, ConsentMode | None] = {
 
 
 def consent_mode_from_proto(value: int) -> ConsentMode | None:
-    """UNSPECIFIED -> None (clears the override); otherwise the enum value."""
+    """UNSPECIFIED -> None (clears the override)."""
     return _CONSENT_FROM_PROTO.get(value)
 
 
@@ -91,12 +91,12 @@ _STATE_FROM_PROTO: dict[int, SupportSessionState] = {
 
 
 def scope_from_proto(value: int) -> SupportSessionScope:
-    """Map proto scope enum -> domain enum. Default READ_ONLY for UNSPECIFIED."""
+    """UNSPECIFIED defaults to READ_ONLY."""
     return _SCOPE_FROM_PROTO.get(value, SupportSessionScope.READ_ONLY)
 
 
 def state_from_proto(value: int) -> SupportSessionState | None:
-    """Map proto state enum -> domain enum. UNSPECIFIED returns None."""
+    """UNSPECIFIED returns None."""
     return _STATE_FROM_PROTO.get(value)
 
 
@@ -109,7 +109,6 @@ def _to_timestamp(value: datetime | None) -> Timestamp | None:
 
 
 def session_to_proto(view: SupportSessionView) -> SupportSessionProto:
-    """Map :class:`SupportSessionView` -> wire message."""
     msg = SupportSessionProto(
         id=str(view.id),
         organization_id=str(view.organization_id),

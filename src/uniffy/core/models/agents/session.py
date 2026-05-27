@@ -10,44 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentSession(SQLModel, table=True):
-    """
-    A conversation session between a user and an agent.
-
-    Sessions track message history, token usage, and per-session
-    configuration like model overrides.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID
-        Organization this session belongs to (FK to login_organizations).
-    agent_id : UUID
-        Agent this session is with (FK to agents).
-    user_id : UUID
-        User who owns this session (FK to login_users).
-    kind : str
-        Session kind: "direct", "group", or "global".
-    display_name : str | None
-        User-provided or auto-generated name.
-    model_override : str | None
-        Per-session model switch (overrides agent default).
-    total_input_tokens : int
-        Cumulative input tokens across all messages.
-    total_output_tokens : int
-        Cumulative output tokens across all messages.
-    message_count : int
-        Total number of messages in this session.
-    last_model_used : str | None
-        Model used for the most recent assistant response.
-    is_archived : bool
-        Whether this session has been archived.
-    created_at : datetime
-        When the session was created.
-    updated_at : datetime
-        When the session was last updated.
-
-    """
+    """A conversation session between a user and an agent."""
 
     __tablename__ = "agents_sessions"
 
@@ -84,7 +47,6 @@ class AgentSession(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentSession."""
         return (
             f"<AgentSession(id={self.id}, kind={self.kind!r}, "
             f"agent_id={self.agent_id}, user_id={self.user_id})>"

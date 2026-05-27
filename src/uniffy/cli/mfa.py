@@ -1,14 +1,6 @@
 """Break-glass MFA reset for self-hosted deployments.
 
-Last-resort recovery when every admin lost their device and even the
-peer-co-sign path cannot help (e.g. single-tenant self-host with one
-owner). Disables MFA on a user by deleting their ``UserMfa`` row and
-every ``UserRecoveryCode`` row, then bumps ``token_version`` so any
-session that was somehow still alive dies immediately.
-
-Gated by the ``ENABLE_BREAK_GLASS_CLI=1`` env var so the command is
-absent from cloud containers by default. Self-host ops guide should
-document the env toggle and the reason field as a forensic trail.
+Gated by ``ENABLE_BREAK_GLASS_CLI=1`` so it is absent from cloud containers by default.
 """
 
 from __future__ import annotations
@@ -33,7 +25,6 @@ ENV_GATE = "ENABLE_BREAK_GLASS_CLI"
 
 
 def run() -> None:
-    """Entry point for ``python -m uniffy --mfa-reset ...``."""
     if os.environ.get(ENV_GATE, "").strip() != "1":
         print(
             f"break-glass disabled: set {ENV_GATE}=1 to enable this command",
@@ -63,8 +54,6 @@ def run() -> None:
         action="store_true",
         help="Skip the confirmation prompt (for non-interactive use).",
     )
-    # argparse sees sys.argv but main.py already consumed --mfa-reset; pass
-    # everything after that flag to this subparser.
     args = parser.parse_args(_consume_mode_arg(sys.argv[1:]))
 
     if not args.yes:
@@ -81,7 +70,6 @@ def run() -> None:
 
 
 async def _reset(email: str, reason: str) -> None:
-    """Perform the disable + audit write in a single transaction."""
     async with open_session() as session:
         user = (
             await session.execute(select(User).where(User.email == email))
@@ -123,5 +111,4 @@ async def _reset(email: str, reason: str) -> None:
 
 
 def _consume_mode_arg(argv: list[str]) -> list[str]:
-    """Strip the leading ``--mfa-reset`` flag main.py used to dispatch."""
     return [a for a in argv if a != "--mfa-reset"]

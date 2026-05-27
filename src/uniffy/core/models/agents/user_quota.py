@@ -1,9 +1,4 @@
-"""Per-user agent quota within an organization.
-
-Optional. Absent rows mean the user is only governed by the org budget
-and the server-side defaults. Present rows can cap daily/monthly dollar
-spend and daily/monthly image generations for that single user.
-"""
+"""Per-user agent quota within an organization."""
 
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -25,31 +20,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentUserQuota(SQLModel, table=True):
-    """Per-user dollar and image caps within an organization.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key (UUIDv7).
-    organization_id : UUID
-        Organization scope.
-    user_id : UUID
-        Target user.
-    daily_limit : Decimal | None
-        Dollar cap per UTC day. Null means no daily dollar cap.
-    monthly_limit : Decimal | None
-        Dollar cap per billing period. Null means no monthly dollar cap.
-    daily_image_limit : int | None
-        Image-count cap per UTC day. Null means fall through to default.
-    monthly_image_limit : int | None
-        Image-count cap per billing period. Null means no monthly cap.
-    hard_limit : bool
-        When true the runtime rejects further activity once a limit is
-        crossed for this user.
-    created_at, updated_at : datetime
-        Row timestamps.
-
-    """
+    """Per-user dollar and image caps within an organization."""
 
     __tablename__ = "agents_user_quotas"
     __table_args__ = (
@@ -101,7 +72,6 @@ class AgentUserQuota(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentUserQuota."""
         return (
             f"<AgentUserQuota(org={self.organization_id}, "
             f"user={self.user_id}, hard_limit={self.hard_limit})>"

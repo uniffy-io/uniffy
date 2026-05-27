@@ -1,13 +1,4 @@
-"""Shared dataclasses for the realtime stack.
-
-One ``WSSession`` per browser WebSocket carries N ``ClientHandle``
-instances, one per attached doc. Outbound frames are docname-prefixed
-at enqueue time so the WS pump is a trivial drain loop and the
-queue's backpressure cap protects the whole socket.
-
-Kept in its own module so ``snapshot.py`` / ``ydoc_manager.py`` /
-``router.py`` can all import without cycles.
-"""
+"""Shared dataclasses for the realtime stack. Kept in its own module to break import cycles."""
 
 from __future__ import annotations
 
@@ -22,10 +13,8 @@ from uniffy.core.types import ContentType
 
 DocKey = tuple[ContentType, UUID]
 
-# Per-WS outbound frame cap. Must absorb fanout across every doc this
-# browser has attached. Slow consumers drop frames once full;
-# y-protocols state-vector resync (30s tick) recovers update frames,
-# awareness is inherently ephemeral.
+# Slow consumers drop frames once full; y-protocols state-vector resync (30s)
+# recovers update frames, awareness is inherently ephemeral.
 OUTBOUND_QUEUE_MAX = 1024
 
 
@@ -40,7 +29,7 @@ def doc_name_for(key: DocKey) -> str:
 
 
 def parse_doc_name(doc_name: str) -> DocKey | None:
-    """Inverse of :func:`doc_name_for`. ``None`` on malformed input."""
+    """Inverse of :func:`doc_name_for`; ``None`` on malformed input."""
     parts = doc_name.split(":", 1)
     if len(parts) != 2:
         return None
@@ -52,11 +41,10 @@ def parse_doc_name(doc_name: str) -> DocKey | None:
 
 @dataclass
 class WSSession:
-    """One WebSocket. Owns the outbound queue and the per-doc handles.
+    """One WebSocket; owns the outbound queue and per-doc handles.
 
-    Authentication is bound at the WS level via the subprotocol bearer
-    JWT; per-doc role resolution happens lazily on the first frame for
-    each new docname.
+    Auth binds at the WS level via the subprotocol JWT; per-doc role resolution
+    happens lazily on the first frame for each new docname.
     """
 
     user_id: UUID
@@ -73,9 +61,9 @@ class WSSession:
 class ClientHandle:
     """One WS's attachment to a single shared ``YDocSession``.
 
-    The router keys handles by ``(doc_key, conn_id)`` for fanout and by
-    ``user_id`` for token-revoke. ``can_edit`` lives on the handle so
-    perm changes can flip it in place.
+    ``can_edit`` lives on the handle so perm changes can flip it in place. The
+    router keys handles by ``(doc_key, conn_id)`` for fanout and by ``user_id``
+    for token-revoke.
     """
 
     conn_id: int
@@ -83,13 +71,10 @@ class ClientHandle:
     can_edit: bool
     token_version: int | None
     ws: WebSocket
+    # ``doc_key`` / ``ws_session`` are ``None`` only in tests that exercise
+    # gate logic without a real doc.
     doc_key: DocKey | None = None
-    """Set once attached; ``None`` only in unit tests that exercise
-    gate / close logic without a real doc."""
-
     ws_session: WSSession | None = None
-    """``None`` only in tests."""
-
     closed: bool = False
 
 

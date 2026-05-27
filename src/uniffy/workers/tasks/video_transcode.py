@@ -1,26 +1,10 @@
-"""ARQ task: transcode WebM screen recordings to H.264/AAC MP4.
+"""Transcode WebM screen recordings to H.264/AAC MP4 and atomically swap `storage_key`.
 
-Brave / Chrome / Firefox produce VP9/Opus WebM via `MediaRecorder`. The
-bytes play in the browser fine, but macOS Finder hands `.webm` to the
-default browser instead of QuickTime, iOS Files / Photos cannot preview
-WebM at all, AirDrop previews break, and older Slack clients reject it.
-Safari already produces playable MP4 directly.
-
-This task takes a WebM upload whose filename is already `.mp4` (the
-frontend commits to that label from the moment Stop is clicked), runs
-ffmpeg to produce a real H.264/AAC MP4, and atomically swaps the live
-`storage_key`. The user never sees a format change - only a download
-gate while the swap is pending.
-
-Idempotent across the worker fleet via a Valkey ``SET NX`` lock keyed
-``transcode_lock:{file_id}`` with a 5-minute TTL. Re-running on a
-``COMPLETED`` row is a no-op. The swap itself is a single PG
-transaction with ``SELECT ... FOR UPDATE`` so two workers cannot race
-to insert duplicate version rows.
-
-On failure the WebM remains the live key and ``transcode_status``
-flips to ``FAILED``; the download path then serves the WebM rather
-than blocking the user forever.
+WebM bytes play in browsers but break macOS Finder, iOS Files/Photos, AirDrop
+previews, and older Slack. The frontend already labels the upload `.mp4`; this
+task replaces the bytes. Idempotent via `SET NX transcode_lock:{file_id}` plus a
+`SELECT ... FOR UPDATE` swap. On failure the WebM stays live and
+`transcode_status` flips to FAILED so downloads keep working.
 """
 
 import os
@@ -51,7 +35,6 @@ _HW_ENCODER = os.getenv("TRANSCODE_HW_ENCODER", "").strip()
 
 
 async def _acquire_lock(file_id: UUID) -> bool:
-    """Try to acquire the transcode lock for a file id."""
     client = _get_ops_client()
     if client is None:
         return False
@@ -72,7 +55,6 @@ async def _acquire_lock(file_id: UUID) -> bool:
 
 
 async def _release_lock(file_id: UUID) -> None:
-    """Release the transcode lock (best-effort)."""
     client = _get_ops_client()
     if client is None:
         return
@@ -85,20 +67,18 @@ async def _release_lock(file_id: UUID) -> None:
 
 
 def _ffmpeg_video_codec_args() -> list[str]:
-    """Choose the H.264 encoder. Hardware encoders are opt-in via env."""
+    """Return the H.264 encoder args; hardware encoders are opt-in via `TRANSCODE_HW_ENCODER`."""
     if _HW_ENCODER in {"h264_nvenc", "h264_videotoolbox", "h264_vaapi"}:
         return ["-c:v", _HW_ENCODER, "-preset", "fast"]
     return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
 
 
 def _run_ffmpeg(input_path: Path, output_path: Path) -> None:
-    """Re-encode a WebM file to H.264/AAC MP4 with faststart.
+    """Re-encode WebM to H.264/AAC MP4 with `+faststart`.
 
-    Container-only remux is not enough: QuickTime / iOS cannot decode
-    VP9 or Opus regardless of container, so we re-encode both tracks.
-    `-movflags +faststart` moves the moov atom to the head so progressive
-    download / inline `<video>` playback starts before the file is
-    fully transferred.
+    Container-only remux is not enough: QuickTime / iOS cannot decode VP9 or
+    Opus. `+faststart` moves the moov atom to the head so inline `<video>`
+    playback starts before the byte stream finishes.
     """
     cmd = [
         "ffmpeg",
@@ -129,18 +109,7 @@ async def transcode_video_to_mp4(
     file_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    """Transcode a WebM File row to H.264/AAC MP4 and swap the storage key.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context. ``ctx["redis"]`` is the ARQ pool used to schedule
-        the delayed cleanup of the old WebM key.
-    file_id : str
-        File UUID as string.
-    organization_id : str
-        Organization UUID as string.
-    """
+    """Transcode a WebM File to MP4 and atomically swap the live `storage_key`."""
     log = logger.bind(task="transcode", file_id=file_id)
 
     try:
@@ -300,10 +269,7 @@ async def delete_s3_object(
     ctx: dict[str, Any],
     storage_key: str,
 ) -> dict[str, Any]:
-    """Delete a single S3 object. Used by the delayed cleanup of the
-    pre-transcode WebM key 24h after the swap completes. Idempotent:
-    deleting a missing key is a no-op in S3.
-    """
+    """Delete one S3 object; used 24h after a transcode swap to drop the old WebM."""
     s3 = get_s3_client()
     try:
         await s3.delete_object(storage_key)

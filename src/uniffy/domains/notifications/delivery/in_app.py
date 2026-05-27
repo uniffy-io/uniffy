@@ -1,9 +1,4 @@
-"""In-app delivery adapter.
-
-Handles two responsibilities:
-1. Persist Notification record to PostgreSQL (so it shows in the panel).
-2. Publish to Valkey Pub/Sub (so the streaming RPC pushes it in real time).
-"""
+"""In-app delivery: persist to PG and publish to Valkey Pub/Sub for streaming."""
 
 from uuid import UUID
 
@@ -18,16 +13,10 @@ from uniffy.domains.notifications.delivery.base import DeliveryAdapter
 
 
 class InAppAdapter(DeliveryAdapter):
-    """
-    In-app notification delivery.
-
-    Creates a DB record and publishes to Valkey Pub/Sub for
-    real-time streaming to connected clients.
-    """
+    """In-app delivery: writes a DB row and publishes for real-time streaming."""
 
     @property
     def channel_name(self) -> str:
-        """Return channel identifier."""
         return "in_app"
 
     async def deliver(
@@ -35,24 +24,7 @@ class InAppAdapter(DeliveryAdapter):
         user_id: UUID,
         event: NotificationEvent,
     ) -> bool:
-        """
-        Persist notification and publish to real-time stream.
-
-        Parameters
-        ----------
-        user_id : UUID
-            Recipient user ID.
-        event : NotificationEvent
-            The notification event.
-
-        Returns
-        -------
-        bool
-            True if the notification was created and published.
-
-        """
-        # This adapter requires a session, injected per-batch by the worker
-        # via deliver_with_session().
+        # Real path is ``deliver_with_session`` so multiple recipients share a tx.
         logger.warning(
             "InAppAdapter.deliver() called without session; use deliver_with_session() instead"
         )
@@ -64,28 +36,7 @@ class InAppAdapter(DeliveryAdapter):
         user_id: UUID,
         event: NotificationEvent,
     ) -> Notification:
-        """
-        Persist notification to DB.
-
-        This variant accepts a session so multiple recipients can share
-        a single transaction (batch commit). The returned Notification
-        object will have its ID populated after session.commit().
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session (caller manages commit).
-        user_id : UUID
-            Recipient user ID.
-        event : NotificationEvent
-            The notification event.
-
-        Returns
-        -------
-        Notification
-            The created notification (ID available after commit).
-
-        """
+        """Stage a ``Notification`` row on ``session``; ID is set after commit."""
         notification = Notification(
             organization_id=event.organization_id,
             user_id=user_id,
@@ -104,19 +55,7 @@ class InAppAdapter(DeliveryAdapter):
         notification: Notification,
         actor_name: str = "",
     ) -> None:
-        """
-        Publish notification to Valkey Pub/Sub for real-time delivery.
-
-        Must be called after session.commit() so notification.id is set.
-
-        Parameters
-        ----------
-        notification : Notification
-            The persisted notification (with DB-generated ID).
-        actor_name : str
-            Display name of the actor who triggered the notification.
-
-        """
+        """Publish to Valkey Pub/Sub - call after commit so ``notification.id`` is set."""
         payload = {
             "id": str(notification.id),
             "organization_id": str(notification.organization_id),

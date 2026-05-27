@@ -1,7 +1,7 @@
 """Domain-agnostic realtime collaboration primitives (Yjs / CRDT).
 
-``core/realtime`` MUST NOT import from any ``domains/*`` module --
-domains plug in via ``register_realtime_adapter``.
+``core/realtime`` MUST NOT import from ``domains/*``; domains plug in via
+``register_realtime_adapter``.
 """
 
 from uniffy.core.realtime.adapter import (

@@ -1,20 +1,9 @@
 """FastAPI WebSocket route for the multiplexed realtime channel.
 
-Single route, single WS per browser tab; every active doc is multiplexed
-onto this connection. URL: ``/api/realtime?org_id={uuid}``.
-
-Auth on upgrade enforces, in order:
-  1. Origin allowlist.
-  2. Subprotocol bearer JWT (or ``Authorization`` header for mobile).
-  3. ``payload["type"] == "access"`` (refresh tokens rejected).
-  4. Token ``org_id`` claim matches the URL ``org_id``.
-  5. Valkey ``min_tkv`` watermark - rejects tokens issued before a
-     force-logout / suspension / sysadmin demotion. The realtime
-     router also closes live sockets on a token-revoke pubsub event,
-     but that fires only AFTER connect; this check catches the
-     "connect with an already-revoked token" race.
-
-Per-doc role resolution runs lazily inside ``run_multiplexed_session``.
+One WS per browser tab, all docs multiplexed onto it. Upgrade enforces, in order:
+origin allowlist, bearer JWT, ``type==access``, ``org_id`` match, ``min_tkv``
+watermark (catches the "connect with an already-revoked token" race). Per-doc
+role resolution runs lazily inside ``run_multiplexed_session``.
 """
 
 from typing import Annotated
@@ -48,7 +37,6 @@ async def realtime(
     ws: WebSocket,
     org_id: Annotated[UUID, Query(...)],
 ) -> None:
-    """Upgrade, authenticate, then hand the socket to ``run_multiplexed_session``."""
     origin = ws.headers.get("origin")
     if not origin_is_allowed(origin, get_ws_origin_allowlist()):
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="origin_denied").inc()

@@ -12,67 +12,7 @@ from uniffy.core.types import generate_id
 
 
 class Task(SQLModel, table=True):
-    """
-    Task model representing a task within a project.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key).
-    project_id : UUID
-        Project this task belongs to.
-    organization_id : UUID
-        Organization scope.
-    owner_id : UUID
-        User who created the task.
-    title : str
-        Task title (max 500 chars).
-    description : str
-        Markdown description with URN mentions.
-    status : str
-        Status option ID (e.g., "status_todo").
-    priority : str
-        Priority option ID (e.g., "priority_high").
-    assignee_ids : list[str] | None
-        Assigned user IDs.
-    start_date : str | None
-        ISO date string (calendar date, no time).
-    due_date : str | None
-        ISO date string (calendar date, no time).
-    completed_at : datetime | None
-        When the task was completed.
-    parent_id : UUID | None
-        Parent task ID for subtasks.
-    blocked_by_task_ids : list[str] | None
-        IDs of tasks that block this task.
-    is_milestone : bool
-        Milestone flag for roadmap view.
-    recurrence_rule : str | None
-        RRULE string (RFC 5545).
-    sort_order : int
-        Ordering within status group.
-    number : int
-        Human-readable sequential number within the project.
-    task_type : str
-        Issue type: task, bug, feature, story, or epic.
-    sprint_id : UUID | None
-        Sprint this task belongs to (None means backlog).
-    field_values : dict | None
-        Custom field values as JSONB.
-    outgoing_references : list[str] | None
-        URNs referenced in description.
-    is_deleted : bool
-        Soft delete flag.
-    version : int
-        Optimistic locking version.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-    deleted_at : datetime | None
-        Soft delete timestamp.
-
-    """
+    """Task within a project. Access policy is inherited from the parent project."""
 
     __tablename__ = "projects_tasks"
 
@@ -114,5 +54,4 @@ class Task(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """Return the URN for this task."""
         return f"urn:uniffy:content:TASK:{self.id}"

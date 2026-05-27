@@ -1,18 +1,7 @@
-"""ARQ cron task: reap expired multipart uploads.
+"""Hourly cron: abort expired multipart uploads in S3 and prune the table.
 
-Runs hourly. Scans `files_multipart_uploads` for rows where
-`expires_at <= now() AND status = 'ACTIVE'`, calls S3
-`abort_multipart_upload` to free the storage allocation, and flips
-`status` to `EXPIRED`. Also reaps `ABORTED` rows whose `updated_at`
-is older than 7 days so the table doesn't grow unbounded.
-
-Idempotent across the worker fleet via a Valkey ``SET NX`` lock keyed
-``multipart_reaper:lock`` with a 5-minute TTL. If two pods schedule the
-cron at the same tick, only one acquires the lock and runs the scan.
-
-S3 ``AbortMultipartUpload`` is itself idempotent (a no-op when the
-upload id has already been aborted), so even if the lock expired
-mid-scan and another worker started, double-abort is safe.
+Idempotent via `SET NX multipart_reaper:lock` (5 min TTL); S3
+`AbortMultipartUpload` is itself a no-op after the first call.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -33,7 +22,6 @@ _ABORTED_RETENTION_DAYS = 7
 
 
 async def _acquire_lock() -> bool:
-    """Try to acquire the reaper lock. Returns True on success."""
     client = _get_ops_client()
     if client is None:
         return False
@@ -45,7 +33,6 @@ async def _acquire_lock() -> bool:
 
 
 async def _release_lock() -> None:
-    """Release the reaper lock (best-effort)."""
     client = _get_ops_client()
     if client is None:
         return
@@ -56,11 +43,7 @@ async def _release_lock() -> None:
 
 
 async def reap_expired_multipart_uploads(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Abort expired multipart uploads and free the S3 allocation.
-
-    Scoped to one worker per tick via a Valkey lock so two pods don't fight
-    over the same rows.
-    """
+    """Abort expired multipart uploads in S3 and prune long-stale rows."""
     if not await _acquire_lock():
         return {"status": "skipped", "reason": "lock_held"}
 

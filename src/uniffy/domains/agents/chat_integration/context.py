@@ -1,26 +1,4 @@
-"""Per-(channel, agent) context window operations for chat surfaces.
-
-Mirrors `agents.v1.SessionsService.GetSessionContextStats` /
-`CompactSession` for chat channels. The conversation container in chat
-is the channel; per-agent state lives on `agents_channel_bindings`.
-
-Three operations:
-
-- `get_stats(...)`: cheap binding read + chat message count, returning the
-  same shape sessions use so the frontend can reuse its meter component.
-- `reset(...)`: writes a `metadata.kind="context_reset"` divider and sets
-  `binding.manual_reset_at = now()`. The runtime's
-  `ChatChannelMessageWriter.load_context_messages` filters by that
-  timestamp on the next agent turn, so reset is immediately effective.
-- `compact(...)`: deferred to Phase 8c (extracting the summariser out of
-  `SessionOperations.compact_session_if_needed`). Until then the handler
-  raises FAILED_PRECONDITION and the UI hides the action.
-
-Permissions:
-- DM (1:1 with agent): only the human channel member can read or mutate.
-- Group channel: any channel member can read; mutations require channel
-  ADMIN/OWNER (or org/chat-domain admin via `ChatAccessChecker`).
-"""
+"""Per-(channel, agent) context window operations for chat surfaces."""
 
 from __future__ import annotations
 
@@ -65,11 +43,7 @@ def _format_chat_entry(
     senders: dict[UUID, str],
     self_agent_id: UUID,
 ) -> tuple[str, str]:
-    """Render one chat message as a `(label, content)` tuple for the summariser.
-
-    Self-agent rows surface as ASSISTANT; other agents and users get a
-    `[Display Name]` label so the summary preserves attribution.
-    """
+    """Render one chat message as a `(label, content)` tuple for the summariser."""
     meta = msg.message_metadata or {}
     kind = meta.get("kind")
     content = msg.content or ""
@@ -99,8 +73,6 @@ from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_mem
 
 @dataclass(frozen=True)
 class ContextStats:
-    """Plain shape returned to the handler; converted to proto on the edge."""
-
     total_messages: int
     active_messages: int
     compacted_messages: int
@@ -135,7 +107,7 @@ class CompactResult:
 
 
 class ChatAgentContextOperations:
-    """Stats + reset + (eventually) compact for one (channel, agent) pair."""
+    """Stats, reset, and compact for one (channel, agent) pair."""
 
     def __init__(
         self,
@@ -153,13 +125,7 @@ class ChatAgentContextOperations:
         channel_id: UUID,
         agent_id: UUID,
     ) -> ContextStats:
-        """Read binding + count chat messages. Any channel member may call.
-
-        Single-agent wrapper around `get_stats_for_agents`. Auto-creates the
-        binding row if missing -- this preserves the existing single-agent
-        semantics where the chat header meter "just works" the first time
-        an agent appears in a channel. The batch path does not auto-create.
-        """
+        """Read binding + count chat messages; auto-creates the binding row if missing."""
         channel = await self._access.get_channel(channel_id, organization_id)
         await self._require_read(user_id, organization_id, channel)
 
@@ -179,17 +145,7 @@ class ChatAgentContextOperations:
         channel_id: UUID,
         agent_ids: list[UUID],
     ) -> dict[UUID, ContextStats]:
-        """Batched stats for N (channel, agent) pairs.
-
-        One channel access check, one binding fetch, N cache-hot agent
-        loads, N cheap COUNT queries. Agents missing a binding row, soft-
-        deleted, or unreadable are dropped from the result rather than
-        aborting the batch (Slack-style "members" semantics).
-
-        Does NOT auto-create bindings -- callers passing an arbitrary
-        agent_id list get back only the agents actually bound to the
-        channel. The single-agent `get_stats` wrapper handles auto-create.
-        """
+        """Batched stats for N (channel, agent) pairs; missing bindings are skipped."""
         if len(agent_ids) > MAX_AGENT_IDS_PER_BATCH:
             raise ValidationError(
                 "agent_ids",
@@ -234,7 +190,6 @@ class ChatAgentContextOperations:
         channel_id: UUID,
         agent_ids: list[UUID],
     ) -> dict[UUID, AgentChannelBinding]:
-        """One IN-list SELECT for all (channel, agent) bindings."""
         result = await self._session.execute(
             select(AgentChannelBinding).where(
                 AgentChannelBinding.channel_id == channel_id,
@@ -251,18 +206,7 @@ class ChatAgentContextOperations:
         channel_id: UUID,
         agent_id: UUID,
     ) -> ResetResult:
-        """Drop the agent's view of pre-now history.
-
-        Two effects in one transaction:
-        1. Insert a `metadata.kind="context_reset"` divider message in the
-           channel so users see "Conversation reset by ... at ...".
-        2. Update `binding.manual_reset_at = now()` so
-           `load_context_messages` filters out everything older next turn.
-
-        The divider message is sent as `sender_type=AGENT` (the affected
-        agent), which keeps the chat row attributable in the UI without
-        needing a new sender_type.
-        """
+        """Drop the agent's view of pre-now history; inserts a divider message."""
         channel, agent, binding = await self._load_triple(
             organization_id, channel_id, agent_id
         )
@@ -311,7 +255,6 @@ class ChatAgentContextOperations:
         divider: ChatMessage,
         now: datetime,
     ) -> None:
-        """Fan MESSAGE_CREATED for the reset divider. See `_publish_chat_event`."""
         await self._publish_chat_event(channel_id, agent_name, divider, now)
 
     async def _publish_chat_event(
@@ -321,13 +264,8 @@ class ChatAgentContextOperations:
         message: ChatMessage,
         now: datetime,
     ) -> None:
-        """Fan MESSAGE_CREATED to all channel USER members.
-
-        AGENT members never have a Valkey subscription, so we filter to USER
-        rows. Failures are logged and swallowed -- the database state is the
-        source of truth; the next channel mount will load the row via
-        `GetMessages` even if the live publish dropped.
-        """
+        # USER-only fan-out: AGENT members have no Valkey subscription.
+        # Publish failures are swallowed; DB state is authoritative.
         try:
             user_ids_result = await self._session.execute(
                 select(ChatChannelMember.subject_id).where(
@@ -367,18 +305,7 @@ class ChatAgentContextOperations:
         channel_id: UUID,
         agent_id: UUID,
     ) -> CompactResult:
-        """Force compaction for one (channel, agent) pair.
-
-        Loads the agent's active window (post-`manual_reset_at`, not in
-        `compaction_summary_msg_ids`, not internal-only), summarises every
-        message older than the last `CHAT_COMPACTION_MIN_KEEP`, writes a
-        `metadata.kind="summary"` chat row authored by the agent, and bumps
-        the binding's compaction pointer + cached token estimate.
-
-        No-op (returns `compacted=false`) when the active window has fewer
-        than `CHAT_COMPACTION_MIN_KEEP + 1` messages -- nothing meaningful
-        to compact yet.
-        """
+        """Force compaction for one (channel, agent) pair."""
         channel, agent, binding = await self._load_triple(
             organization_id, channel_id, agent_id
         )
@@ -414,8 +341,7 @@ class ChatAgentContextOperations:
 
         senders_meta = await self._resolve_sender_names(to_compact)
         entries = [_format_chat_entry(m, senders_meta, agent_id) for m in to_compact]
-        # Provider-reported size of the prompt at the last agent turn.
-        # The next agent turn will overwrite this with a fresh value.
+        # Provider-reported prompt size at the last agent turn; overwritten next turn.
         tokens_before = int(binding.last_active_token_estimate or 0)
 
         summary = await summarise_conversation(
@@ -457,9 +383,7 @@ class ChatAgentContextOperations:
         new_compacted.extend(m.id for m in to_compact)
         binding.compaction_summary_msg_ids = new_compacted
         binding.last_compacted_at = now
-        # Reset the cached prompt size; the next live turn will repopulate
-        # from the provider's input_tokens / output_tokens / cache_read.
-        # No estimator.
+        # Reset the cached prompt size; next live turn repopulates from provider counts.
         binding.last_active_token_estimate = 0
         binding.last_output_token_estimate = 0
         binding.last_cache_read_token_estimate = 0
@@ -485,7 +409,6 @@ class ChatAgentContextOperations:
         channel_id: UUID,
         binding: AgentChannelBinding,
     ) -> list[ChatMessage]:
-        """Mirror of the runtime's selection: post-reset, non-compacted, real content."""
         already_compacted = set(binding.compaction_summary_msg_ids or [])
         conditions = [
             ChatMessage.channel_id == channel_id,
@@ -514,7 +437,6 @@ class ChatAgentContextOperations:
         self,
         rows: list[ChatMessage],
     ) -> dict[UUID, str]:
-        """Bulk-resolve sender display names for the summarisation prompt."""
         from uniffy.domains.chat.sender_resolver import SenderResolver
 
         resolver = SenderResolver(self._session)
@@ -525,11 +447,7 @@ class ChatAgentContextOperations:
         return {sid: info.display_name for sid, info in resolved.items()}
 
     async def _resolve_user_display_name(self, user_id: UUID) -> str:
-        """Look up a friendly display name for the divider metadata.
-
-        Falls back to a stable placeholder when the user can't be resolved --
-        the metadata is best-effort UX context, not a foreign key.
-        """
+        """Best-effort display name; falls back to a placeholder."""
         from uniffy.core.models.login.user import User
 
         result = await self._session.execute(
@@ -546,7 +464,6 @@ class ChatAgentContextOperations:
         organization_id: UUID,
         agent: Agent,
     ) -> tuple[object, str]:
-        """Resolve a usable (provider, model) pair for the summarisation call."""
         provider_ops = ProviderOperations(self._session)
         if agent.primary_provider_key_id:
             provider, _pk = await provider_ops.get_provider_for_key(
@@ -609,7 +526,7 @@ class ChatAgentContextOperations:
         agent_id: UUID,
         owner_user_id: UUID,
     ) -> AgentChannelBinding:
-        """Idempotent fetch-or-insert. Mirrors the chat ops auto-create path."""
+        """Idempotent fetch-or-insert."""
         existing = (
             await self._session.execute(
                 select(AgentChannelBinding).where(
@@ -653,7 +570,7 @@ class ChatAgentContextOperations:
         organization_id: UUID,
         channel: ChatChannel,
     ) -> None:
-        """Mutation gate: DM owner OR group channel admin OR org/domain admin."""
+        # DM members may mutate freely; group channels require elevated role.
         if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
             member = await self._access.get_membership(channel.id, user_id)
             if member is None:
@@ -668,7 +585,7 @@ class ChatAgentContextOperations:
         organization_id: UUID,
         agent: Agent,
     ) -> int:
-        """Resolve the model's context window. Falls back if no provider yet."""
+        """Resolve the model's context window; falls back when no provider is bound."""
         if not agent.primary_provider_key_id and not agent.primary_model:
             return FALLBACK_CONTEXT_WINDOW
 

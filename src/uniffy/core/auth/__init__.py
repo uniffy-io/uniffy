@@ -1,11 +1,4 @@
-"""
-Authentication and permissions module.
-
-This module contains:
-- User authentication and authorization
-- Permission checking for content access
-- Group and organization membership management
-"""
+"""Authentication and permissions."""
 
 from uniffy.core.auth.permissions import (
     ContentAccessQuery,

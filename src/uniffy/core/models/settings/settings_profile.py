@@ -12,34 +12,8 @@ from uniffy.core.types import generate_id
 
 
 class SettingsProfile(SQLModel, table=True):
-    """
-    Settings profile model representing user-specific configuration.
-
-    Each user can have multiple profiles (e.g., "Default", "Work", "Home")
-    with sparse JSONB storage - only user-overridden values are stored,
-    code defaults fill in the rest at runtime.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the profile (primary key).
-    user_id : UUID
-        User who owns this profile (foreign key to login_users).
-    name : str
-        Profile name (e.g., "Default", "Work", "Home").
-    appearance : dict | None
-        Appearance overrides (theme, accent_color, font_family, etc.).
-    keyboard_shortcuts : dict | None
-        Keyboard shortcut overrides (only user-changed bindings).
-    notifications : dict | None
-        Notification preference overrides.
-    is_default : bool
-        Whether this is the user's default profile.
-    created_at : datetime
-        Timestamp when the profile was created.
-    updated_at : datetime
-        Timestamp when the profile was last updated.
-
+    """Per-user settings profile. JSONB columns store only user-overridden
+    values; code defaults fill the rest.
     """
 
     __tablename__ = "settings_profiles"
@@ -63,7 +37,6 @@ class SettingsProfile(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of SettingsProfile."""
         return (
             f"<SettingsProfile(id={self.id}, name={self.name!r}, "
             f"user_id={self.user_id}, is_default={self.is_default})>"

@@ -11,32 +11,7 @@ from uniffy.core.types import generate_id
 
 
 class EventAttendee(SQLModel, table=True):
-    """
-    EventAttendee model representing an attendee of a calendar event.
-
-    This is a junction table linking events to users with additional
-    metadata about their attendance status and role.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the attendee record (primary key).
-    event_id : UUID
-        Event this attendee is linked to (foreign key).
-    user_id : UUID
-        User who is attending (foreign key to login_users).
-    status : AttendeeStatus
-        Response status (PENDING, ACCEPTED, TENTATIVE, DECLINED).
-    role : AttendeeRole
-        Role in the event (ORGANIZER, REQUIRED, OPTIONAL).
-    responded_at : datetime | None
-        Timestamp when the attendee responded.
-    created_at : datetime
-        Timestamp when the attendee was added.
-    updated_at : datetime
-        Timestamp when the record was last updated.
-
-    """
+    """An attendee row linking a user to a calendar event with response status and role."""
 
     __tablename__ = "calendar_event_attendees"
 
@@ -76,7 +51,6 @@ class EventAttendee(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of EventAttendee."""
         return (
             f"<EventAttendee(id={self.id}, event_id={self.event_id}, "
             f"user_id={self.user_id}, status={self.status})>"

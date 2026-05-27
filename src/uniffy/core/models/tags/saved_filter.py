@@ -12,27 +12,10 @@ from uniffy.core.types import generate_id
 
 
 class SavedTagFilter(SQLModel, table=True):
-    """Persisted filter view for the ``/tags`` explorer.
+    """Per-user saved filter preset for the tags explorer.
 
-    Mirrors ``files.saved_filter.SavedFileFilter``: per-user, per-org,
-    a ``criteria`` JSONB blob carrying the explorer's filter rail
-    state, plus an icon and sort defaults. ``is_preset=True`` rows are
-    seeded by the system and may not be edited or deleted by users.
-
-    Criteria JSONB shape (mirrors ``tags.v1.TagFilterCriteria``):
-
-    {
-        "tag_ids": [...],
-        "content_types": ["note", "file", "calendar_event"],
-        "owner_ids": [...],
-        "sources": ["manual"],
-        "created_after": "2026-01-01T00:00:00Z",
-        "created_before": null,
-        "updated_after": null,
-        "updated_before": null,
-        "access_mode": "OPEN_TO_ORG",
-        "untagged_only": false
-    }
+    `criteria` JSONB mirrors `tags.v1.TagFilterCriteria`. System-seeded
+    presets carry `is_preset=true` and are read-only for end users.
     """
 
     __tablename__ = "tags_saved_filters"

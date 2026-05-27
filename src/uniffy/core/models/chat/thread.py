@@ -43,12 +43,7 @@ class ChatThreadStats(SQLModel, table=True):
 
 
 class ChatThreadParticipant(SQLModel, table=True):
-    """Tracks which subjects (users or agents) have participated in a thread.
-
-    Append-only. Composite PK (root_message_id, subject_type, subject_id).
-    Legacy `user_id` column stays populated for SUBJECT_TYPE_USER rows
-    during the migration window (one release after Phase 4).
-    """
+    """Append-only record of subjects (users or agents) that have participated in a thread."""
 
     __tablename__ = "chat_thread_participants"
 

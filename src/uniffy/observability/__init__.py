@@ -5,10 +5,7 @@ from .logger import configure_loguru, disable_leveled_namespace
 
 
 def setup_observability(config: ObservabilityConfig):
-    """
-    Configures the observability for the application based on the provided configuration.
-    This function sets up logging and, if enabled, OpenTelemetry tracing and metrics.
-    """
+    """Configure loguru and, when enabled, OpenTelemetry traces/metrics/logs."""
     configure_loguru(config)
 
     if config.otel_enabled:

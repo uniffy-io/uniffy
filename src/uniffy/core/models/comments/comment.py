@@ -14,23 +14,7 @@ from uniffy.core.types import generate_id
 
 
 class CommentAnchorType(str, Enum):
-    """
-    Anchor type for comment positioning.
-
-    Defines where a comment is anchored within the content.
-
-    Attributes
-    ----------
-    PAGE : str
-        Page-level comment with no specific anchor.
-    SELECTION : str
-        Text selection anchor with position data.
-    BLOCK : str
-        Block-level anchor (heading, paragraph, etc.).
-    MEDIA : str
-        Media pin anchor (image region, video timestamp).
-
-    """
+    """Where a comment is anchored within its target content."""
 
     PAGE = "PAGE"
     SELECTION = "SELECTION"
@@ -39,49 +23,7 @@ class CommentAnchorType(str, Enum):
 
 
 class Comment(SQLModel, table=True):
-    """
-    Comment model for content discussions.
-
-    Each comment is attached to a piece of content (note, file, calendar event, etc.)
-    via the polymorphic content_type + content_id pattern. Comments support threading
-    via parent_comment_id, text selection anchors, and resolution tracking.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the comment (primary key).
-    organization_id : UUID
-        Organization this comment belongs to (foreign key).
-    content_type : ContentType
-        Type of content this comment is on (NOTE, FILE, etc.).
-    content_id : UUID
-        ID of the content this comment is on.
-    parent_comment_id : UUID | None
-        Parent comment ID for threaded replies (self-referential FK).
-    author_id : UUID
-        User who authored the comment (foreign key).
-    body : str
-        Comment body in Markdown with [[[label|urn]]] mention support.
-    anchor_type : CommentAnchorType
-        Where the comment is anchored within the content.
-    anchor_data : dict | None
-        Anchor-specific data (positions, coordinates, text, etc.).
-    is_resolved : bool
-        Whether the comment thread is resolved.
-    resolved_by : UUID | None
-        User who resolved the comment.
-    resolved_at : datetime | None
-        When the comment was resolved.
-    is_deleted : bool
-        Whether the comment is soft-deleted.
-    deleted_at : datetime | None
-        When the comment was soft-deleted.
-    created_at : datetime
-        When the comment was created.
-    updated_at : datetime | None
-        When the comment was last updated.
-
-    """
+    """Threaded comment attached to any content type via (content_type, content_id)."""
 
     __tablename__ = "comments_comments"
 
@@ -154,7 +96,6 @@ class Comment(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Comment."""
         return (
             f"<Comment(id={self.id}, content_type={self.content_type}, "
             f"content_id={self.content_id}, author_id={self.author_id})>"

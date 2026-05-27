@@ -1,5 +1,3 @@
-"""Users RPC handlers - thin layer delegating to operations."""
-
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -45,14 +43,11 @@ from uniffy.domains.users.operations import UserOperations
 
 
 class UsersHandlers:
-    """Users RPC handlers."""
-
     async def get_my_profile(
         self,
         request: GetMyProfileRequest,
         ctx: RequestContext,
     ) -> GetMyProfileResponse:
-        """Get current authenticated user's profile."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -71,7 +66,6 @@ class UsersHandlers:
         request: UpdateMyProfileRequest,
         ctx: RequestContext,
     ) -> UpdateMyProfileResponse:
-        """Update current user's profile."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -96,7 +90,6 @@ class UsersHandlers:
         request: UploadAvatarRequest,
         ctx: RequestContext,
     ) -> UploadAvatarResponse:
-        """Upload user avatar image."""
         user_id = get_user_id_from_context(ctx)
 
         if not request.image_data:
@@ -126,7 +119,6 @@ class UsersHandlers:
         request: DeleteAvatarRequest,
         ctx: RequestContext,
     ) -> DeleteAvatarResponse:
-        """Delete user avatar."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -145,7 +137,6 @@ class UsersHandlers:
         request: ListUsersRequest,
         ctx: RequestContext,
     ) -> ListUsersResponse:
-        """List all users (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -192,7 +183,6 @@ class UsersHandlers:
         request: GetUserRequest,
         ctx: RequestContext,
     ) -> GetUserResponse:
-        """Get user by ID (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -220,7 +210,6 @@ class UsersHandlers:
         request: CreateUserRequest,
         ctx: RequestContext,
     ) -> CreateUserResponse:
-        """Create a new user (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         if not request.email or not request.password:
@@ -231,12 +220,10 @@ class UsersHandlers:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
-                # Check if email already exists
                 existing = await ops.get_by_email(request.email)
                 if existing:
                     raise ConnectError(Code.ALREADY_EXISTS, "Email already registered")
 
-                # Generate username from email if not provided
                 if request.HasField("username"):
                     username = request.username
                 else:
@@ -265,7 +252,6 @@ class UsersHandlers:
         request: UpdateUserRequest,
         ctx: RequestContext,
     ) -> UpdateUserResponse:
-        """Update user details (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -278,7 +264,6 @@ class UsersHandlers:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
-                # Hash password if provided
                 hashed_pw = None
                 if request.HasField("password") and request.password:
                     hashed_pw = hash_password(request.password)
@@ -309,7 +294,6 @@ class UsersHandlers:
         request: DeleteUserRequest,
         ctx: RequestContext,
     ) -> DeleteUserResponse:
-        """Delete a user (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -317,7 +301,6 @@ class UsersHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid user_id")
 
-        # Prevent self-deletion
         if target_user_id == user_id:
             raise ConnectError(Code.INVALID_ARGUMENT, "Cannot delete yourself")
 
@@ -341,7 +324,6 @@ class UsersHandlers:
         request: ListUserOrganizationsRequest,
         ctx: RequestContext,
     ) -> ListUserOrganizationsResponse:
-        """List organizations for a specific user (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -374,7 +356,6 @@ class UsersHandlers:
         request: AddUserToOrganizationRequest,
         ctx: RequestContext,
     ) -> AddUserToOrganizationResponse:
-        """Add user to organization (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -388,10 +369,8 @@ class UsersHandlers:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
 
-                # Get the user to add
                 target_user = await ops.get_by_id(target_user_id)
 
-                # Convert role from proto
                 role = org_role_from_proto(request.role)
                 if role is None:
                     from uniffy.core.models.login.organization_member import OrganizationRole
@@ -417,7 +396,6 @@ class UsersHandlers:
         request: RemoveUserFromOrganizationRequest,
         ctx: RequestContext,
     ) -> RemoveUserFromOrganizationResponse:
-        """Remove user from organization (system admin only)."""
         user_id = get_user_id_from_context(ctx)
 
         try:

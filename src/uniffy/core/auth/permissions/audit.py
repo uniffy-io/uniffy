@@ -1,23 +1,8 @@
-"""Audit-log helpers for content membership and access policy changes.
+"""Audit helpers for content membership and access-policy changes.
 
-Every mutation in :class:`ContentMembersOperations` (or any other code
-path that changes a content item's access policy or its members) calls
-one of these helpers to append an immutable row to ``audit_events``
-via :func:`uniffy.core.audit.write_audit_event`.
-
-The helpers shape the central writer's call for each kind of change:
-
-- ``resource_type`` is the affected ``ContentType.value`` (e.g.
-  ``"NOTE"``).
-- ``resource_id`` is the content's id.
-- ``details`` packs the action-specific structured payload that the
-  ``permissions.v1.MembersService.ListMemberEvents`` converter unpacks
-  back into the ``ContentMemberEvent`` proto shape.
-
-Helpers take the caller's session and never commit - the audit row
-rides the surrounding transaction so history stays consistent with
-state. The actor's organization-role snapshot is captured by the
-writer itself via a per-write ``SELECT``.
+Each helper shapes the structured ``details`` payload that
+``permissions.v1.MembersService.ListMemberEvents`` unpacks back into the
+``ContentMemberEvent`` proto. The audit row rides the caller's transaction.
 """
 
 from __future__ import annotations
@@ -48,7 +33,6 @@ async def record_member_added(
     actor_user_id: UUID,
     note: str = "",
 ) -> None:
-    """Record a permissions.member_added event."""
     await write_audit_event(
         session,
         organization_id=organization_id,
@@ -78,7 +62,6 @@ async def record_member_role_changed(
     actor_user_id: UUID,
     note: str = "",
 ) -> None:
-    """Record a permissions.member_role_changed event."""
     await write_audit_event(
         session,
         organization_id=organization_id,
@@ -108,7 +91,6 @@ async def record_member_removed(
     actor_user_id: UUID,
     note: str = "",
 ) -> None:
-    """Record a permissions.member_removed event."""
     await write_audit_event(
         session,
         organization_id=organization_id,
@@ -136,7 +118,6 @@ async def record_access_mode_changed(
     actor_user_id: UUID,
     note: str = "",
 ) -> None:
-    """Record a permissions.access_mode_changed event."""
     await write_audit_event(
         session,
         organization_id=organization_id,
@@ -167,7 +148,6 @@ async def record_baseline_role_changed(
     actor_user_id: UUID,
     note: str = "",
 ) -> None:
-    """Record a permissions.baseline_role_changed event."""
     await write_audit_event(
         session,
         organization_id=organization_id,
@@ -198,12 +178,7 @@ async def record_ownership_transferred(
     actor_user_id: UUID,
     note: str = "",
 ) -> None:
-    """Record a permissions.ownership_transferred event.
-
-    ``details.subject_id`` carries the new owner's user id for
-    convenience when querying the log by subject (matches the
-    ``ContentMemberEvent`` proto convention).
-    """
+    """``details.subject_id`` carries the new owner id so the log can be queried by subject."""
     await write_audit_event(
         session,
         organization_id=organization_id,

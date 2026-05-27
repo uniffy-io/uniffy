@@ -1,12 +1,4 @@
-"""Email infrastructure: provider-agnostic SMTP sender with per-org config.
-
-Every outbound mail flows through ``MailSender.send`` -- it resolves the
-config for the caller's organization (per-org row in ``org_mail_configs``
-or the system env default), renders the named template, checks the
-global suppression list, applies a Valkey rate limit, and dispatches
-through ``SmtpBackend`` (a single backend covers Resend, SES, Postmark
-and self-hosted Postfix via SMTP submission).
-"""
+"""Provider-agnostic SMTP mail with per-org config, suppression, and rate limiting."""
 
 from uniffy.core.mail.backends.base import MailBackend, MailResult
 from uniffy.core.mail.config import MailConfig

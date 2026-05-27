@@ -1,5 +1,3 @@
-"""Proto <-> domain converters for saved tag filters."""
-
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -49,7 +47,6 @@ def _iso_to_timestamp(value: Any) -> Timestamp | None:
 
 
 def icon_to_proto(icon: dict[str, str]) -> ProtoIconValue:
-    """Convert a stored icon dict to its proto representation."""
     return ProtoIconValue(
         type=icon.get("type", "icon"),
         value=icon.get("value", ""),
@@ -57,12 +54,10 @@ def icon_to_proto(icon: dict[str, str]) -> ProtoIconValue:
 
 
 def icon_from_proto(proto: ProtoIconValue) -> dict[str, str]:
-    """Convert a proto ``IconValue`` to the stored icon dict."""
     return {"type": proto.type or "icon", "value": proto.value or ""}
 
 
 def criteria_to_proto(criteria: dict[str, Any]) -> ProtoTagFilterCriteria:
-    """Convert the JSONB ``criteria`` blob to its proto representation."""
     proto = ProtoTagFilterCriteria(
         tag_ids=list(criteria.get("tag_ids") or []),
         owner_ids=list(criteria.get("owner_ids") or []),
@@ -97,7 +92,6 @@ def criteria_to_proto(criteria: dict[str, Any]) -> ProtoTagFilterCriteria:
 
 
 def criteria_from_proto(proto: ProtoTagFilterCriteria) -> dict[str, Any]:
-    """Convert a proto ``TagFilterCriteria`` to the stored JSONB shape."""
     out: dict[str, Any] = {}
     if proto.tag_ids:
         out["tag_ids"] = list(proto.tag_ids)
@@ -139,13 +133,9 @@ async def saved_filter_to_proto(
     *,
     session: AsyncSession,
 ) -> ProtoSavedTagFilter:
-    """Convert a ``SavedTagFilter`` row to its proto representation.
-
-    Resolves dead ``tag_ids`` against the ``tags`` table so the response
-    only carries ids that still exist in the org. ``removed_tag_count``
-    tells the client how many were dropped so it can show a one-time
-    toast and persist the cleaned criteria.
-    """
+    # Dead tag_ids are stripped against the tags table; removed_tag_count tells
+    # the client how many were dropped so it can show a toast and persist the
+    # cleaned criteria.
     criteria = dict(saved_filter.criteria or {})
     raw_tag_ids = criteria.get("tag_ids") or []
     removed_count = 0

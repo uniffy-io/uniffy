@@ -1,18 +1,4 @@
-"""RPC handlers for per-(channel, agent) context management.
-
-Three RPCs on `chat.v1.ChatService`:
-
-- `GetChannelAgentContextStats` -- read binding + count chat messages.
-- `CompactChannelAgentContext` -- force compaction (deferred to Phase 8c;
-  currently raises FAILED_PRECONDITION).
-- `ResetChannelAgentContext` -- write a `kind=context_reset` divider and
-  set `binding.manual_reset_at`. The runtime's
-  `ChatChannelMessageWriter.load_context_messages` honours both.
-
-When the chat.agents_enabled flag is off all three return
-FAILED_PRECONDITION. The handlers are mixed into `ChatServiceImpl` so
-the chat service is the single front door.
-"""
+"""RPC handlers for per-(channel, agent) context management."""
 
 from uuid import UUID
 
@@ -158,7 +144,7 @@ class ChannelAgentContextHandlers:
         request: CompactChannelAgentContextRequest,
         ctx: RequestContext,
     ) -> CompactChannelAgentContextResponse:
-        """Force compaction for one (channel, agent) pair (Phase 8c)."""
+        """Force compaction for one (channel, agent) pair."""
         user_id = get_user_id_from_context(ctx)
         org_id, channel_id, agent_id = _parse_ids(
             request.organization_id, request.channel_id, request.agent_id

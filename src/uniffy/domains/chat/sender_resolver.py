@@ -1,21 +1,4 @@
-"""Polymorphic sender resolver for chat messages.
-
-`chat_messages.sender_id` is a soft reference: when `sender_type=USER`
-it points to `login_users.id`, when `sender_type=AGENT` it points to
-`agents_agents.id` (see migration 047). This resolver hides the branch
-from callers and, more importantly, collapses the per-message N+1 lookups
-that used to sprinkle `select(User.full_name)` across streaming and
-indexing code.
-
-Typical usage from an RPC or background task:
-
-    resolver = SenderResolver(session)
-    info = await resolver.resolve_one(SenderType.USER, sender_id)
-    bulk = await resolver.resolve_many([(t, i) for (t, i) in refs])
-
-The resolver keeps a per-instance cache, so looking the same sender up
-multiple times within a single request is free after the first hit.
-"""
+"""Polymorphic (USER | AGENT) sender resolver for chat messages with per-instance cache."""
 
 from dataclasses import dataclass
 from uuid import UUID
@@ -36,13 +19,7 @@ from uniffy.core.users.cache import (
 
 @dataclass(frozen=True, slots=True)
 class SenderInfo:
-    """Normalized display metadata for a USER or AGENT sender.
-
-    `avatar_key` is an S3 key usable by the thumbnails/files HTTP routes.
-    `avatar_emoji` is only populated for agents (users don't have emoji
-    avatars). Callers that only care about a display string should use
-    `display_name`.
-    """
+    """Normalized display metadata for a USER or AGENT sender."""
 
     id: UUID
     sender_type: SenderType
@@ -55,18 +32,13 @@ _FALLBACK_NAME = "Unknown"
 
 
 class SenderResolver:
-    """Bulk polymorphic lookup with per-instance cache.
-
-    Scoped to a single request / task. Cache is bounded by conversation
-    size and cleared when the resolver is garbage-collected.
-    """
+    """Bulk polymorphic lookup with per-instance cache, scoped to a single request."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._cache: dict[tuple[SenderType, UUID], SenderInfo] = {}
 
     async def resolve_one(self, sender_type: SenderType, sender_id: UUID) -> SenderInfo:
-        """Resolve a single sender; hits the cache after first lookup."""
         result = await self.resolve_many([(sender_type, sender_id)])
         return result.get(
             sender_id,
@@ -78,13 +50,7 @@ class SenderResolver:
         )
 
     async def resolve_many(self, refs: list[tuple[SenderType, UUID]]) -> dict[UUID, SenderInfo]:
-        """Resolve many senders in at most two queries (users + agents).
-
-        Returns a dict keyed by sender id. Unknown / deleted refs are
-        omitted; callers should fall back to `_FALLBACK_NAME`. Ambiguous
-        duplicate ids across types are not expected (UUIDs are globally
-        unique), so a single id in the return dict is fine.
-        """
+        """Resolve many senders in at most two queries (users + agents); unknown refs omitted."""
         missing_users: list[UUID] = []
         missing_agents: list[UUID] = []
         seen: set[tuple[SenderType, UUID]] = set()
@@ -99,7 +65,6 @@ class SenderResolver:
             elif sender_type == SenderType.AGENT:
                 missing_agents.append(sender_id)
 
-        # Try Valkey first; only the cache misses fall through to PG.
         if missing_users:
             cached_users, missing_users = await get_cached_user_profiles(
                 missing_users

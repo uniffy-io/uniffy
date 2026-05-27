@@ -1,8 +1,4 @@
-"""
-Application factory for UNIFFY.
-
-Creates and configures the FastAPI application with ConnectRPC services.
-"""
+"""FastAPI application factory wiring ConnectRPC services and HTTP routes."""
 
 import os
 from contextlib import asynccontextmanager
@@ -152,10 +148,7 @@ from uniffy.observability.otel import instrument_fastapi
 
 
 class HttpVersionMiddleware:
-    """Set the HTTP version context variable. Raw ASGI (not
-    BaseHTTPMiddleware) - BaseHTTPMiddleware's anyio channel wrapping
-    breaks long-lived server streaming.
-    """
+    """Raw ASGI: BaseHTTPMiddleware's anyio channel wrapping breaks long-lived server streaming."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -167,10 +160,7 @@ class HttpVersionMiddleware:
 
 
 class SecurityHeadersMiddleware:
-    """Add standard security response headers. Raw ASGI so it composes
-    with the long-lived streaming responses used by chat / notifications
-    / agents.
-    """
+    """Raw ASGI so it composes with long-lived streaming responses."""
 
     _STATIC_HEADERS: tuple[tuple[bytes, bytes], ...] = (
         (b"strict-transport-security", b"max-age=63072000; includeSubDomains; preload"),
@@ -205,23 +195,16 @@ class SecurityHeadersMiddleware:
 
 
 class ConnectRPCDispatcher:
-    """
-    ASGI dispatcher for ConnectRPC services.
-
-    Routes requests to the appropriate ConnectRPC service based on path prefix.
-    Handles path stripping when mounted under a prefix (e.g., /api).
-    """
+    """ASGI dispatcher routing requests to ConnectRPC services by path prefix."""
 
     def __init__(self) -> None:
         self.services: list[tuple[str, ASGIApp]] = []
         self.fallback: ASGIApp | None = None
 
     def add_service(self, prefix: str, app: ASGIApp) -> None:
-        """Add a service that handles paths starting with prefix."""
         self.services.append((prefix, app))
 
     def set_fallback(self, app: ASGIApp) -> None:
-        """Set a fallback app for non-ConnectRPC routes."""
         self.fallback = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -231,8 +214,7 @@ class ConnectRPCDispatcher:
         path = scope.get("path", "")
         root_path = scope.get("root_path", "")
 
-        # FastAPI's mount() sets root_path without stripping the
-        # prefix from path; do it ourselves before service dispatch.
+        # FastAPI's mount() sets root_path without stripping the prefix from path.
         if root_path and path.startswith(root_path):
             path = path[len(root_path) :] or "/"
 
@@ -255,11 +237,9 @@ class ConnectRPCDispatcher:
 
 
 def _setup_observability() -> None:
-    """Setup observability for the current process."""
     environment = os.getenv("ENVIRONMENT", "development")
     log_level = os.getenv("LOG_LEVEL", "info").upper()
 
-    # TODO: version inject
     setup_observability(
         config=ObservabilityConfig(
             app_name="uniffy",
@@ -271,7 +251,6 @@ def _setup_observability() -> None:
 
 
 def _get_cors_origins() -> list[str]:
-    """Get CORS origins from environment variable."""
     origins = os.getenv("CORS_ORIGINS", "*")
     if origins == "*":
         return ["*"]
@@ -280,7 +259,6 @@ def _get_cors_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifespan events (startup + shutdown)."""
     logger.info("Starting UNIFFY application...")
 
     try:
@@ -304,7 +282,6 @@ async def lifespan(app: FastAPI):
         logger.exception(f"Failed to initialize S3 storage: {e}")
         raise
 
-    # Initialize core + egress queue pools (non-blocking - app can run without them)
     try:
         await init_queue("core")
         logger.info("Core job queue initialized successfully")
@@ -317,16 +294,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Egress job queue not available: {e}")
 
-    # Initialize Pub/Sub (non-blocking - app can run without it)
     try:
         await init_pubsub()
         logger.info("Pub/Sub initialized successfully")
     except Exception as e:
         logger.warning(f"Pub/Sub not available: {e}")
 
-    # Fail-fast ops client for cache / presence / rate-limit /
-    # mention-state. Non-blocking: a Valkey outage at boot makes every
-    # cache read a miss; the app still serves.
+    # A Valkey outage at boot makes every cache read a miss; the app still serves.
     try:
         await init_ops_client()
         logger.info("Valkey ops client initialized successfully")
@@ -339,22 +313,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Valkey streams client not available: {e}")
 
-    # Provider-key invalidation: drops the in-process LRU on a peer's
-    # provider_keys:invalidate:{key_id} publish.
     try:
         await init_provider_invalidation_subscriber()
     except Exception as e:
         logger.warning(f"Provider invalidation subscriber not available: {e}")
 
-    # Per-org DEK invalidation: drops the in-process DEK LRU on a peer's
-    # org_deks:invalidate:{org_id} publish (issued on rotation).
     try:
         await subscribe_dek_invalidations()
     except Exception as e:
         logger.warning(f"Org DEK invalidation subscriber not available: {e}")
 
-    # Deployment-singleton DEK invalidation: drops the in-process
-    # DeploymentDekCache on a peer's deployment_deks:invalidate publish.
     try:
         await subscribe_deployment_dek_invalidations()
     except Exception as e:
@@ -377,7 +345,6 @@ async def lifespan(app: FastAPI):
         logger.exception(f"Failed to seed initial data: {e}")
         raise
 
-    # Ensure the deployment-singleton DEK exists so /platform/encryption
     try:
         async with open_session() as session:
             version = await DeploymentCipher(session).provision_if_missing()
@@ -385,7 +352,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Deployment DEK provisioning skipped: {e}")
 
-    # Load VAPID config from DB/env (non-blocking - push works without it)
     try:
         from uniffy.core.config.push import load_vapid_config
 
@@ -412,10 +378,8 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    """Create and configure the FastAPI application."""
     _setup_observability()
 
-    # TODO: Fix title and desc, also inject version var
     app = FastAPI(
         title="UNIFFY - Unified Work Operating System",
         description="The Operating System for Work",
@@ -454,17 +418,14 @@ def create_app() -> FastAPI:
 
 
 def _create_api_dispatcher() -> ConnectRPCDispatcher:
-    """Create the API dispatcher with all ConnectRPC services and HTTP routes."""
     logging_interceptor = LoggingInterceptor()
-    # AuthRevocationInterceptor runs FIRST so a revoked access token
-    # never reaches handler code. LoggingInterceptor still gets the
-    # access log line because ConnectRPC unwinds interceptors in
-    # reverse order on raise.
+    # AuthRevocationInterceptor runs FIRST so a revoked access token never reaches
+    # handler code. LoggingInterceptor still gets the access log line because
+    # ConnectRPC unwinds interceptors in reverse order on raise.
     auth_revocation_interceptor = AuthRevocationInterceptor()
     interceptors = [auth_revocation_interceptor, logging_interceptor]
     dispatcher = ConnectRPCDispatcher()
 
-    # ConnectRPC services
     dispatcher.add_service(
         "/auth.v1.AuthService",
         AuthServiceASGIApplication(AuthServiceImpl(), interceptors=interceptors),
@@ -662,7 +623,6 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         ),
     )
 
-    # HTTP routes (thumbnails, files, avatars) + realtime WebSocket
     http_app = FastAPI()
     setup_request_logging(http_app)
     http_app.include_router(thumbnails_router)

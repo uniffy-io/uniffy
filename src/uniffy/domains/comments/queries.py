@@ -19,33 +19,7 @@ def build_comments_query(
     anchor_type: CommentAnchorType | None = None,
     top_level_only: bool = True,
 ) -> Select:
-    """
-    Build query for comments with author info.
-
-    Returns top-level comments (no parent) by default, joined with
-    User table for author name and avatar.
-
-    Parameters
-    ----------
-    organization_id : UUID
-        Organization ID.
-    content_type : ContentType
-        Content type filter.
-    content_id : UUID
-        Content ID filter.
-    is_resolved : bool | None
-        Filter by resolved status.
-    anchor_type : CommentAnchorType | None
-        Filter by anchor type.
-    top_level_only : bool
-        If True, only return top-level comments (no parent).
-
-    Returns
-    -------
-    Select
-        SQLAlchemy select query.
-
-    """
+    """Comments joined with author User; top-level only by default."""
     author = aliased(User)
 
     query = (
@@ -72,15 +46,7 @@ def build_comments_query(
 
 
 def build_reply_count_subquery() -> Select:
-    """
-    Build a correlated subquery for reply counts.
-
-    Returns
-    -------
-    Select
-        Scalar subquery counting non-deleted replies.
-
-    """
+    """Correlated subquery counting non-deleted replies."""
     return (
         select(func.count())
         .where(
@@ -100,26 +66,6 @@ def count_comments_query(
     content_id: UUID,
     is_resolved: bool | None = None,
 ) -> Select:
-    """
-    Build a count query for comments.
-
-    Parameters
-    ----------
-    organization_id : UUID
-        Organization ID.
-    content_type : ContentType
-        Content type filter.
-    content_id : UUID
-        Content ID filter.
-    is_resolved : bool | None
-        Filter by resolved status.
-
-    Returns
-    -------
-    Select
-        Count query.
-
-    """
     query = select(func.count()).where(
         Comment.organization_id == organization_id,
         Comment.content_type == content_type,
@@ -138,22 +84,7 @@ async def aggregate_reactions(
     session,
     comment_id: UUID,
 ) -> list[dict]:
-    """
-    Aggregate reactions for a comment by emoji.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    comment_id : UUID
-        Comment ID.
-
-    Returns
-    -------
-    list[dict]
-        List of dicts with emoji, count, user_ids.
-
-    """
+    """Aggregate reactions for a comment by emoji; returns [{emoji, count, user_ids}]."""
     result = await session.execute(
         select(
             CommentReaction.emoji,

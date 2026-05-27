@@ -1,14 +1,5 @@
-"""Valkey hot cache for ``active_session_for(user_id, org_id)``.
-
-The :class:`PermissionChecker` calls this lookup on every read of
-tenant content while a support session is active. A Valkey cache
-makes the hot path single-digit-ms; the value lives only as long
-as the session itself (TTL = remaining time on the session).
-
-State changes (approve / revoke / expire) invalidate the key so
-the next request sees the new state within one Valkey round-trip.
-A `tag:user:{user_id}` membership lets a future token_version bump
-drop every cached session for a user at once.
+"""Valkey hot cache for ``active_session_for(user_id, org_id)``; TTL tracks
+remaining session time.
 """
 
 from __future__ import annotations
@@ -37,7 +28,6 @@ def _user_tag(user_id: UUID) -> str:
 
 
 def _ttl_until(expires_at: datetime) -> int:
-    """Seconds until ``expires_at``, clamped to ``_MAX_TTL_SECONDS``."""
     now = datetime.now(UTC)
     if expires_at <= now:
         return 0
@@ -48,7 +38,7 @@ def _ttl_until(expires_at: datetime) -> int:
 async def get_active_session(
     user_id: UUID, org_id: UUID
 ) -> dict[str, Any] | None | object:
-    """Return cached session payload, ``None`` for explicit-none, or CACHE_MISS."""
+    """Return cached payload, ``None`` for explicit-none, or CACHE_MISS."""
     return await cache_get(_key(user_id, org_id))
 
 
@@ -58,7 +48,6 @@ async def set_active_session(
     payload: dict[str, Any],
     expires_at: datetime,
 ) -> None:
-    """Cache an active session with TTL = remaining time on the session."""
     ttl = _ttl_until(expires_at)
     if ttl == 0:
         return
@@ -71,7 +60,6 @@ async def set_active_session(
 
 
 async def invalidate_active_session(user_id: UUID, org_id: UUID) -> None:
-    """Drop the cached row for one (user, org) pair."""
     await cache_delete(_key(user_id, org_id))
 
 

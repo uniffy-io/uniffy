@@ -1,7 +1,4 @@
-"""Saved file filters submodule.
-
-This module handles saved file filter operations, handlers, and converters.
-"""
+"""Saved file filters submodule."""
 
 from uniffy.domains.files.filters.converters import (
     criteria_from_proto,

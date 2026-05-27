@@ -14,7 +14,7 @@ from uniffy.domains.chat.access import ChatAccessChecker
 
 
 class ChatCategoryOperations:
-    """Category CRUD operations. Org admin only."""
+    """Category CRUD; org admin or chat domain admin only."""
 
     def __init__(self, session: AsyncSession, access: ChatAccessChecker | None = None) -> None:
         self.session = session
@@ -26,10 +26,8 @@ class ChatCategoryOperations:
         organization_id: UUID,
         name: str,
     ) -> ChatChannelCategory:
-        """Create a new category."""
         await self._require_org_admin(user_id, organization_id)
 
-        # Get next position
         result = await self.session.execute(
             select(ChatChannelCategory.position)
             .where(ChatChannelCategory.organization_id == organization_id)
@@ -56,7 +54,6 @@ class ChatCategoryOperations:
         category_id: UUID,
         name: str | None = None,
     ) -> ChatChannelCategory:
-        """Update a category."""
         await self._require_org_admin(user_id, organization_id)
 
         result = await self.session.execute(
@@ -77,8 +74,7 @@ class ChatCategoryOperations:
         await self.session.commit()
         await self.session.refresh(category)
 
-        # Category rename: every channel in this category carries the
-        # name in its search-index metadata, so re-index each one.
+        # Rename: each channel in this category carries the name in its search index.
         if rename:
             await self._refresh_channels_in_category(category_id)
 
@@ -90,7 +86,7 @@ class ChatCategoryOperations:
         organization_id: UUID,
         category_id: UUID,
     ) -> None:
-        """Delete a category. Channels move to uncategorized."""
+        """Delete a category; channels move to uncategorized."""
         await self._require_org_admin(user_id, organization_id)
 
         result = await self.session.execute(
@@ -103,11 +99,9 @@ class ChatCategoryOperations:
         if not category:
             raise NotFoundError("category", category_id)
 
-        # Snapshot ids before mutation -- after the UPDATE the rows no
-        # longer carry this category_id, so we cannot find them again.
+        # Snapshot ids before the UPDATE clears the category_id.
         affected_ids = await self._channel_ids_in_category(category_id)
 
-        # Move channels to uncategorized
         await self.session.execute(
             update(ChatChannel)
             .where(ChatChannel.category_id == category_id)
@@ -117,15 +111,12 @@ class ChatCategoryOperations:
         await self.session.delete(category)
         await self.session.commit()
 
-        # Re-index every previously-categorized channel so the search
-        # document reflects the empty category.
         await self._refresh_channels_by_id(affected_ids)
 
     async def list_categories(
         self,
         organization_id: UUID,
     ) -> list[ChatChannelCategory]:
-        """List all categories for an org."""
         result = await self.session.execute(
             select(ChatChannelCategory)
             .where(ChatChannelCategory.organization_id == organization_id)
@@ -139,7 +130,6 @@ class ChatCategoryOperations:
         organization_id: UUID,
         category_ids: list[UUID],
     ) -> list[ChatChannelCategory]:
-        """Reorder categories by updating positions."""
         await self._require_org_admin(user_id, organization_id)
 
         for i, cid in enumerate(category_ids):
@@ -162,7 +152,7 @@ class ChatCategoryOperations:
         channel_id: UUID,
         category_id: UUID | None,
     ) -> None:
-        """Move a channel to a category (or uncategorized)."""
+        """Move a channel to a category, or uncategorized when category_id is None."""
         await self.session.execute(
             update(ChatChannel)
             .where(
@@ -177,7 +167,6 @@ class ChatCategoryOperations:
         await self._refresh_channels_by_id([channel_id])
 
     async def _require_org_admin(self, user_id: UUID, organization_id: UUID) -> None:
-        """Verify user is org admin/owner or chat domain admin."""
         if await self.access.is_org_admin(user_id, organization_id):
             return
         if await self.access.is_chat_domain_admin(user_id, organization_id):
@@ -185,24 +174,17 @@ class ChatCategoryOperations:
         raise PermissionDeniedError("admin", "Requires org admin or chat domain admin")
 
     async def _channel_ids_in_category(self, category_id: UUID) -> list[UUID]:
-        """Return channel ids currently assigned to the given category."""
         result = await self.session.execute(
             select(ChatChannel.id).where(ChatChannel.category_id == category_id)
         )
         return list(result.scalars().all())
 
     async def _refresh_channels_in_category(self, category_id: UUID) -> None:
-        """Re-index every channel currently in the category."""
         ids = await self._channel_ids_in_category(category_id)
         await self._refresh_channels_by_id(ids)
 
     async def _refresh_channels_by_id(self, channel_ids: list[UUID]) -> None:
-        """Re-index a set of channels via ``ChatChannelOperations``.
-
-        Imported lazily to avoid a circular import between the chat
-        category and channel modules; both reach into the other's
-        models but only the category side needs the runtime hook.
-        """
+        # Lazy import: circular dep between category and channel operations.
         if not channel_ids:
             return
         from uniffy.domains.chat.channels.operations import ChatChannelOperations

@@ -59,7 +59,6 @@ class Tag(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """URN representation used by mention chips and search."""
         return f"urn:uniffy:content:TAG:{self.id}"
 
     def __repr__(self) -> str:

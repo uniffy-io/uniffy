@@ -1,7 +1,5 @@
-"""RPC handlers for ``superadmin.v1`` directory services.
-
-Parse + delegate + map. ``is_system_admin`` enforcement lives inside
-:class:`PlatformDirectoryOperations`; handlers stay parse-only.
+"""RPC handlers for ``superadmin.v1`` directory services;
+``is_system_admin`` enforcement lives in operations.
 """
 
 from __future__ import annotations
@@ -72,8 +70,6 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SystemOrganizationsHandlers:
-    """Handlers for ``superadmin.v1.SystemOrganizationsService``."""
-
     async def list_organizations(
         self, request: ListOrganizationsRequest, ctx: RequestContext
     ) -> ListOrganizationsResponse:
@@ -194,8 +190,6 @@ class SystemOrganizationsHandlers:
 
 
 class SystemUsersHandlers:
-    """Handlers for ``superadmin.v1.SystemUsersService``."""
-
     async def list_users(
         self, request: ListUsersRequest, ctx: RequestContext
     ) -> ListUsersResponse:

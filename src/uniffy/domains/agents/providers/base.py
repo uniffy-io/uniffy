@@ -7,26 +7,7 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class ModelInfo:
-    """Static model metadata from the catalog.
-
-    Attributes
-    ----------
-    id : str
-        Provider model identifier (e.g. "claude-opus-4-6").
-    display_name : str
-        Human-readable name.
-    provider : str
-        Provider name (e.g. "anthropic").
-    context_window : int
-        Maximum context window size in tokens.
-    supports_tools : bool
-        Whether the model supports tool use.
-    supports_vision : bool
-        Whether the model supports image inputs.
-    supports_thinking : bool
-        Whether the model supports extended thinking.
-
-    """
+    """Static model metadata from the catalog."""
 
     id: str
     display_name: str
@@ -39,21 +20,6 @@ class ModelInfo:
 
 @dataclass
 class ToolCall:
-    """A tool call requested by the model.
-
-    Attributes
-    ----------
-    id : str
-        Tool call identifier.
-    name : str
-        Tool function name.
-    input : dict
-        Tool input arguments.
-    metadata : dict
-        Provider-specific metadata (e.g. Google thought_signature).
-
-    """
-
     id: str
     name: str
     input: dict
@@ -64,30 +30,8 @@ class ToolCall:
 class CompletionResult:
     """Result from a non-streaming chat completion.
 
-    Attributes
-    ----------
-    content : str
-        The text content of the response.
-    model : str
-        Model identifier that generated the response.
-    input_tokens : int
-        Uncached input tokens (the only tokens charged at full input
-        price). Total prompt size = ``input_tokens +
-        cache_creation_input_tokens + cache_read_input_tokens``.
-    output_tokens : int
-        Number of output tokens generated.
-    cache_creation_input_tokens : int
-        Tokens written to the prompt cache this turn (Anthropic charges
-        ~1.25x the base input price for these). Zero on providers that
-        don't support caching.
-    cache_read_input_tokens : int
-        Tokens served from the prompt cache (~0.1x the base input
-        price). The win signal for caching -- non-zero means hit.
-    tool_calls : list[ToolCall]
-        Tool calls requested by the model.
-    stop_reason : str
-        Reason the model stopped generating.
-
+    `input_tokens` is the uncached portion; the full prompt size is
+    `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`.
     """
 
     content: str
@@ -101,15 +45,12 @@ class CompletionResult:
 
     @property
     def total_prompt_tokens(self) -> int:
-        """Real prompt size (sum of cached + uncached input)."""
+        """Real prompt size (cached + uncached input)."""
         return (
             int(self.input_tokens or 0)
             + int(self.cache_creation_input_tokens or 0)
             + int(self.cache_read_input_tokens or 0)
         )
-
-
-# Stream event hierarchy
 
 
 @dataclass
@@ -119,155 +60,61 @@ class StreamEvent:
 
 @dataclass
 class TokenEvent(StreamEvent):
-    """A text token emitted during streaming.
-
-    Attributes
-    ----------
-    text : str
-        The token text.
-
-    """
-
     text: str = ""
 
 
 @dataclass
 class ToolCallEvent(StreamEvent):
-    """A tool call emitted during streaming.
-
-    Attributes
-    ----------
-    tool_call : ToolCall
-        The tool call data.
-
-    """
-
     tool_call: ToolCall = field(default_factory=lambda: ToolCall(id="", name="", input={}))
 
 
 @dataclass
 class DoneEvent(StreamEvent):
-    """Signals completion of streaming.
-
-    Attributes
-    ----------
-    result : CompletionResult
-        Final aggregated result with token counts.
-
-    """
-
     result: CompletionResult = field(default_factory=lambda: CompletionResult(content="", model=""))
 
 
 @dataclass
 class ErrorEvent(StreamEvent):
-    """An error encountered during streaming.
-
-    Attributes
-    ----------
-    error : str
-        Error description.
-
-    """
-
     error: str = ""
 
 
 class ProviderDescriptor(ABC):
-    """Registration interface for an LLM provider.
-
-    Each provider subpackage implements this to bundle its factory,
-    model catalog, and credential validation into a single descriptor
-    that is registered with the :class:`ProviderRegistry`.
-
-    """
+    """Registration interface for an LLM provider."""
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """Return the canonical provider name (e.g. "anthropic")."""
+        """Canonical provider name (e.g. "anthropic")."""
 
     @property
     @abstractmethod
     def display_name(self) -> str:
-        """Return the human-readable provider name (e.g. "Anthropic")."""
+        """Human-readable provider name."""
 
     @property
     @abstractmethod
     def supported_credential_types(self) -> list[str]:
-        """Return credential types accepted by this provider.
-
-        Returns
-        -------
-        list[str]
-            e.g. ["api_key", "setup_token"].
-
-        """
+        """Credential types accepted by this provider."""
 
     @abstractmethod
     def create(self, credential: str, credential_type: str) -> LLMProvider:
-        """Create an LLMProvider instance for this provider.
-
-        Parameters
-        ----------
-        credential : str
-            Decrypted credential (API key or token).
-        credential_type : str
-            Credential type (e.g. "api_key").
-
-        Returns
-        -------
-        LLMProvider
-            Configured provider instance.
-
-        """
+        """Create an `LLMProvider` instance from a decrypted credential."""
 
     @abstractmethod
     def get_models(self) -> list[ModelInfo]:
-        """Return the static model catalog for this provider.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Available models.
-
-        """
+        """Return the static model catalog."""
 
     @abstractmethod
     def validate_credential(self, credential: str, credential_type: str) -> None:
-        """Validate credential format (not API validity).
-
-        Parameters
-        ----------
-        credential : str
-            Raw credential string.
-        credential_type : str
-            Credential type.
-
-        Raises
-        ------
-        ValidationError
-            If the credential format is invalid.
-
-        """
+        """Validate credential format (not API validity)."""
 
 
 class LLMProvider(ABC):
-    """Abstract base class for LLM provider integrations.
-
-    Subclasses implement provider-specific API calls (Anthropic, OpenAI, etc.).
-    """
+    """Abstract base class for LLM provider integrations."""
 
     @abstractmethod
     async def validate(self) -> tuple[bool, str | None]:
-        """Validate the credential against the provider API.
-
-        Returns
-        -------
-        tuple[bool, str | None]
-            (is_valid, error_message). error_message is None when valid.
-
-        """
+        """Validate the credential against the provider API."""
 
     @abstractmethod
     async def chat_completion(
@@ -282,30 +129,9 @@ class LLMProvider(ABC):
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request.
 
-        Parameters
-        ----------
-        messages : list[dict]
-            Conversation messages in provider-native format.
-        model : str
-            Model identifier.
-        system : str | None
-            System prompt (top-level for Anthropic API).
-        tools : list[dict] | None
-            Tool definitions for tool use.
-        stream : bool
-            Whether to return a streaming iterator.
-        cache_key : str | None
-            Stable identifier (typically agent_id) used by providers
-            that support cache-affinity routing -- OpenAI maps it to
-            ``prompt_cache_key`` so requests sharing the same prefix
-            land on the same machine and hit the cache. Anthropic and
-            Google cache transparently and ignore this value.
-
-        Returns
-        -------
-        CompletionResult | AsyncIterator[StreamEvent]
-            Non-streaming result or streaming event iterator.
-
+        `cache_key` enables cache-affinity routing on providers that
+        support it (OpenAI maps it to `prompt_cache_key`); Anthropic and
+        Google cache transparently and ignore the value.
         """
 
     async def generate_image(
@@ -316,30 +142,7 @@ class LLMProvider(ABC):
         size: str = "1024x1024",
         quality: str = "auto",
     ) -> tuple[bytes, str]:
-        """Generate an image from a text prompt.
-
-        Parameters
-        ----------
-        prompt : str
-            Text description of the desired image.
-        model : str
-            Image generation model identifier.
-        size : str
-            Image dimensions (e.g. "1024x1024").
-        quality : str
-            Image quality setting.
-
-        Returns
-        -------
-        tuple[bytes, str]
-            (image_bytes, mime_type).
-
-        Raises
-        ------
-        NotImplementedError
-            If the provider does not support image generation.
-
-        """
+        """Generate an image from a text prompt; returns `(bytes, mime_type)`."""
         raise NotImplementedError("This provider does not support image generation")
 
     @abstractmethod
@@ -348,20 +151,4 @@ class LLMProvider(ABC):
         *,
         force_refresh: bool = False,
     ) -> list[ModelInfo]:
-        """Return the list of models available from this provider.
-
-        Implementations may fetch the list from the provider API and
-        enrich it with static capability metadata.
-
-        Parameters
-        ----------
-        force_refresh : bool
-            When True, bypass any cached model list and fetch fresh
-            from the provider API.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Available models.
-
-        """
+        """List models; `force_refresh=True` bypasses any cached list."""

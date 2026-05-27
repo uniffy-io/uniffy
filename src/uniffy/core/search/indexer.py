@@ -1,15 +1,5 @@
-"""
-Search indexing utilities.
-
-Provides the :class:`SearchIndexer` class for adding, updating, and
-removing content from the unified search index using Meilisearch.
-
-The indexer mirrors the new access control model: each document stores
-``access_mode``, ``baseline_role``, ``owner_id``, the non-blocked
-``shared_user_ids`` / ``shared_group_ids`` lists, and the
-``blocked_user_ids`` / ``blocked_group_ids`` lists used for explicit
-deny. The search filter builder combines these into a single permission
-expression at query time.
+"""Meilisearch indexing facade. Documents carry the full access policy so
+query-time filters can short-circuit on permissions.
 """
 
 from uuid import UUID
@@ -18,26 +8,9 @@ from uniffy.core.types import AccessMode, ContentRole, ContentType
 
 
 class SearchIndexer:
-    """
-    Utility for indexing content in unified search.
-
-    Provides methods to add, update, and remove content from the
-    Meilisearch index with proper permission denormalization.
-
-    Note: This class no longer requires a database session since
-    indexing is done via the Meilisearch HTTP API.
-
-    """
+    """Add, update, and remove content from the Meilisearch index."""
 
     def __init__(self, session=None) -> None:
-        """Initialize the indexer.
-
-        Parameters
-        ----------
-        session : AsyncSession | None
-            Deprecated, kept for backwards compatibility. Not used.
-
-        """
         self._session = session
 
     async def index(
@@ -60,47 +33,7 @@ class SearchIndexer:
         rank_score: float = 1.0,
         metadata: dict[str, str] | None = None,
     ) -> None:
-        """Index or update content in the search index.
-
-        Parameters
-        ----------
-        urn : str
-            Universal Resource Name. Format: ``urn:uniffy:content:<type>:<id>``
-        organization_id : UUID
-            Organization scope.
-        title : str
-            Primary display and search target.
-        entity_type : str
-            Content type (``note``, ``file``, ``project``, ...).
-        url_path : str
-            Frontend route to navigate to.
-        owner_id : UUID
-            Owner of the content.
-        access_mode : AccessMode
-            Access mode value.
-        baseline_role : ContentRole | None
-            Baseline role for OPEN_TO_ORG mode, otherwise None.
-        keywords : str | None
-            Aggregated full-text content.
-        description : str | None
-            Preview snippet.
-        shared_user_ids : list[UUID] | None
-            Users with a non-BLOCKED ContentMember row.
-        shared_group_ids : list[UUID] | None
-            Groups with a non-BLOCKED ContentMember row.
-        blocked_user_ids : list[UUID] | None
-            Users with a BLOCKED ContentMember row. Used to exclude them
-            from search even when the baseline would allow access.
-        blocked_group_ids : list[UUID] | None
-            Groups with a BLOCKED ContentMember row.
-        tags : list[str] | None
-            Tags associated with the content.
-        rank_score : float
-            Relevance booster.
-        metadata : dict[str, str] | None
-            Extra key-value metadata.
-
-        """
+        """Index or update one content document."""
         from uniffy.core.search.meilisearch import get_meilisearch_client
 
         client = get_meilisearch_client()
@@ -128,9 +61,8 @@ class SearchIndexer:
         self,
         items: list[dict],
     ) -> None:
-        """Batch-index multiple documents in a single Meilisearch call.
-
-        Each item must be a dict with the same keys as :meth:`index`.
+        """Batch-index multiple documents in one Meilisearch call; items have
+        the same keys as :meth:`index`.
         """
         if not items:
             return
@@ -177,11 +109,7 @@ class SearchIndexer:
         blocked_user_ids: list[UUID] | None = None,
         blocked_group_ids: list[UUID] | None = None,
     ) -> None:
-        """Partial update of membership metadata in the search index.
-
-        Replaces the shared / blocked lists without touching any other
-        field on the document.
-        """
+        """Replace the shared / blocked lists on the document; other fields untouched."""
         from uniffy.core.search.meilisearch import get_meilisearch_client
 
         client = get_meilisearch_client()
@@ -202,7 +130,7 @@ class SearchIndexer:
         baseline_role: ContentRole | None,
         owner_id: UUID,
     ) -> None:
-        """Partial update of the access policy fields on a document."""
+        """Replace the access-policy fields on a document."""
         from uniffy.core.search.meilisearch import get_meilisearch_client
 
         client = get_meilisearch_client()
@@ -220,12 +148,7 @@ class SearchIndexer:
         organization_id: UUID,
         tags: list[str],
     ) -> None:
-        """Partial update of the ``tags`` array on an indexed document.
-
-        Used by the tag reindex worker after a rename / merge changes
-        which slugs apply to a content URN. No-op when the document is
-        not present in the index.
-        """
+        """Replace the ``tags`` array; no-op when the document is absent from the index."""
         from uniffy.core.search.meilisearch import get_meilisearch_client
 
         client = get_meilisearch_client()
@@ -240,10 +163,8 @@ class SearchIndexer:
         organization_id: UUID,
         items: list[tuple[str, list[str]]],
     ) -> None:
-        """Bulk partial-update of ``tags`` arrays on many documents.
-
-        Issues one Meilisearch ``update_documents`` HTTP call for the
-        whole batch. ``items`` is a list of ``(urn, tags)`` tuples.
+        """Bulk ``tags`` update via one ``update_documents`` call; ``items``
+        is ``(urn, tags)`` tuples.
         """
         from uniffy.core.search.meilisearch import get_meilisearch_client
 
@@ -258,30 +179,15 @@ class SearchIndexer:
         urn: str,
         organization_id: UUID | None = None,
     ) -> None:
-        """Remove content from the search index.
-
-        Parameters
-        ----------
-        urn : str
-            Universal Resource Name to remove.
-        organization_id : UUID | None
-            If provided, only remove for this organization. If None,
-            removes all entries for this URN across orgs.
-
-        """
+        """Remove a URN from the index; ``organization_id=None`` removes every org's copy."""
         from uniffy.core.search.meilisearch import get_meilisearch_client
 
         client = get_meilisearch_client()
         await client.delete_document(urn, organization_id)
 
     async def remove_by_filter(self, filter_expr: str) -> None:
-        """Bulk-remove documents matching a Meilisearch filter expression.
-
-        Used for cascade deletes -- e.g. dropping every chat_message
-        when its parent channel is deleted, or every task under a
-        deleted project. The filter must reference filterable
-        attributes only (see ``filterable_attributes`` in
-        ``meilisearch.py``).
+        """Bulk-remove documents matching a Meilisearch filter expression
+        (filterable attributes only).
         """
         from uniffy.core.search.meilisearch import get_meilisearch_client
 
@@ -300,12 +206,5 @@ class SearchIndexer:
 
 
 def build_content_urn(content_type: ContentType, content_id: UUID) -> str:
-    """Build a URN for content.
-
-    Returns
-    -------
-    str
-        URN in format ``urn:uniffy:content:<type>:<id>``
-
-    """
+    """``urn:uniffy:content:<type>:<id>``."""
     return f"urn:uniffy:content:{content_type.value}:{content_id}"

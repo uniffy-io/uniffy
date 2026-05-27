@@ -10,26 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class Bookmark(SQLModel, table=True):
-    """
-    Bookmark model representing a user's bookmarked content.
-
-    Bookmarks are user-scoped (personal) and organization-scoped.
-    Each user can bookmark any URN once within an organization.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the bookmark (primary key).
-    user_id : UUID
-        User who created the bookmark (foreign key to login_users).
-    organization_id : UUID
-        Organization context (foreign key to login_organizations).
-    urn : str
-        URN of the bookmarked content (e.g., "urn:uniffy:content:NOTE:uuid").
-    created_at : datetime
-        Timestamp when the bookmark was created.
-
-    """
+    """A user-scoped bookmark on any URN within an organization."""
 
     __tablename__ = "bookmarks"
     __table_args__ = (UniqueConstraint("user_id", "urn", name="uq_bookmarks_user_urn"),)
@@ -44,5 +25,4 @@ class Bookmark(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Bookmark."""
         return f"<Bookmark(id={self.id}, user_id={self.user_id}, urn={self.urn!r})>"

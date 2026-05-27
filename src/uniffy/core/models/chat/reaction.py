@@ -8,11 +8,7 @@ from sqlmodel import Field, SQLModel
 
 
 class ChatReaction(SQLModel, table=True):
-    """Emoji reaction on a message.
-
-    One reaction per emoji per user per message, enforced by composite PK.
-    No surrogate key - the natural key (message_id, user_id, emoji) is the PK.
-    """
+    """An emoji reaction on a message; composite PK enforces one per (message, user, emoji)."""
 
     __tablename__ = "chat_reactions"
     __table_args__ = (Index("ix_chat_reactions_message", "message_id", "emoji"),)

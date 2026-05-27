@@ -10,31 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class EventReminder(SQLModel, table=True):
-    """
-    EventReminder tracks individual reminder instances per user per event.
-
-    Each row represents a single reminder that should fire at a specific time
-    before an event starts. The scheduled_at is pre-computed as
-    event.start_time - timedelta(minutes=minutes_before).
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key.
-    event_id : UUID
-        Links to calendar_events.
-    user_id : UUID
-        Links to login_users.
-    minutes_before : int
-        Reminder interval (e.g., 15, 30, 60, 1440).
-    scheduled_at : datetime
-        Pre-computed time when the reminder should fire.
-    sent_at : datetime | None
-        Set when the reminder is actually sent (dedup guard).
-    created_at : datetime
-        Creation timestamp.
-
-    """
+    """A single pre-scheduled reminder for one user and one event."""
 
     __tablename__ = "calendar_event_reminders"
 
@@ -64,7 +40,6 @@ class EventReminder(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation."""
         return (
             f"<EventReminder(id={self.id}, event_id={self.event_id}, "
             f"user_id={self.user_id}, minutes_before={self.minutes_before})>"

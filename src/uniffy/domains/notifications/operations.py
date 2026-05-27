@@ -1,8 +1,4 @@
-"""Notification operations for CRUD and push subscription management.
-
-This module handles all business logic for notifications including
-list, mark as read, delete, and push subscription management.
-"""
+"""Notification CRUD and push subscription operations."""
 
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -16,23 +12,9 @@ from uniffy.core.models.shared import NotificationType
 
 
 class NotificationOperations:
-    """
-    Notification CRUD operations.
-
-    Notifications are user-scoped and do not use BaseContentOperations
-    because they are system-generated, not user-created content.
-    """
+    """Notification CRUD - user-scoped, not BaseContentOperations."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize notification operations.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            SQLAlchemy async session for database operations.
-
-        """
         self.session = session
 
     async def list_notifications(
@@ -44,30 +26,7 @@ class NotificationOperations:
         is_read: bool | None = None,
         notification_types: list[NotificationType] | None = None,
     ) -> tuple[list[Notification], int, int]:
-        """
-        List notifications for a user with optional filters.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The recipient user ID.
-        organization_id : UUID
-            The organization context.
-        page : int
-            Page number (1-indexed).
-        page_size : int
-            Number of notifications per page.
-        is_read : bool | None
-            Filter by read status (None for all).
-        notification_types : list[NotificationType] | None
-            Filter by notification types.
-
-        Returns
-        -------
-        tuple[list[Notification], int, int]
-            (notifications, total_count, unread_count).
-
-        """
+        """Return ``(notifications, total_count, unread_count)`` for the user."""
         base_conditions = [
             Notification.user_id == user_id,
             Notification.organization_id == organization_id,
@@ -81,11 +40,10 @@ class NotificationOperations:
 
         base_query = select(Notification).where(and_(*base_conditions))
 
-        # Count total matching
         count_query = select(func.count()).select_from(base_query.subquery())
         total_count = (await self.session.execute(count_query)).scalar() or 0
 
-        # Count unread (regardless of filters)
+        # Unread total ignores filters - the badge counts every unread row.
         unread_query = select(func.count()).where(
             and_(
                 Notification.user_id == user_id,
@@ -95,7 +53,6 @@ class NotificationOperations:
         )
         unread_count = (await self.session.execute(unread_query)).scalar() or 0
 
-        # Fetch paginated results
         query = base_query.order_by(Notification.created_at.desc())
         query = query.offset((page - 1) * page_size).limit(page_size)
 
@@ -109,22 +66,6 @@ class NotificationOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> int:
-        """
-        Get the count of unread notifications.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The recipient user ID.
-        organization_id : UUID
-            The organization context.
-
-        Returns
-        -------
-        int
-            Number of unread notifications.
-
-        """
         query = select(func.count()).where(
             and_(
                 Notification.user_id == user_id,
@@ -140,22 +81,6 @@ class NotificationOperations:
         user_id: UUID,
         notification_id: UUID,
     ) -> Notification | None:
-        """
-        Mark a single notification as read.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID (for ownership validation).
-        notification_id : UUID
-            The notification to mark as read.
-
-        Returns
-        -------
-        Notification | None
-            The updated notification, or None if not found.
-
-        """
         result = await self.session.execute(
             select(Notification).where(
                 and_(
@@ -183,22 +108,6 @@ class NotificationOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> int:
-        """
-        Mark all unread notifications as read for a user in an organization.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-        organization_id : UUID
-            The organization context.
-
-        Returns
-        -------
-        int
-            Number of notifications marked as read.
-
-        """
         now = datetime.now(UTC)
         stmt = (
             update(Notification)
@@ -220,22 +129,6 @@ class NotificationOperations:
         user_id: UUID,
         notification_id: UUID,
     ) -> bool:
-        """
-        Delete a notification.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID (for ownership validation).
-        notification_id : UUID
-            The notification to delete.
-
-        Returns
-        -------
-        bool
-            True if deleted, False if not found.
-
-        """
         result = await self.session.execute(
             select(Notification).where(
                 and_(
@@ -266,38 +159,7 @@ class NotificationOperations:
         date_to: datetime | None = None,
         actor_id: UUID | None = None,
     ) -> tuple[list[Notification], int, int]:
-        """
-        Search notifications with full-text search and advanced filters.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The recipient user ID.
-        organization_id : UUID
-            The organization context.
-        query : str
-            Free-text search query matching title and body.
-        page : int
-            Page number (1-indexed).
-        page_size : int
-            Number of notifications per page.
-        is_read : bool | None
-            Filter by read status (None for all).
-        notification_types : list[NotificationType] | None
-            Filter by notification types.
-        date_from : datetime | None
-            Start of date range filter (inclusive).
-        date_to : datetime | None
-            End of date range filter (inclusive).
-        actor_id : UUID | None
-            Filter by the actor who triggered the notification.
-
-        Returns
-        -------
-        tuple[list[Notification], int, int]
-            (notifications, total_count, unread_count).
-
-        """
+        """Search notifications by free text + filters; returns ``(rows, total, unread)``."""
         base_conditions = [
             Notification.user_id == user_id,
             Notification.organization_id == organization_id,
@@ -359,26 +221,7 @@ class NotificationOperations:
         int,
         int,
     ]:
-        """
-        Get aggregated notification statistics.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The recipient user ID.
-        organization_id : UUID
-            The organization context.
-        days : int
-            Number of days to include in stats.
-
-        Returns
-        -------
-        tuple
-            (daily_stats, type_stats, total_count, unread_count, read_count).
-            daily_stats: list of (date_str, total, unread, read).
-            type_stats: list of (notification_type, count).
-
-        """
+        """Return ``(daily_stats, type_stats, total, unread, read)`` over the last ``days``."""
         cutoff = datetime.now(UTC) - timedelta(days=days)
         base_conditions = [
             Notification.user_id == user_id,
@@ -402,7 +245,6 @@ class NotificationOperations:
         daily_result = await self.session.execute(daily_query)
         daily_stats = [(str(row.day), row.total, row.unread, row.read) for row in daily_result.all()]
 
-        # Type stats
         type_query = (
             select(
                 Notification.notification_type,
@@ -415,7 +257,6 @@ class NotificationOperations:
         type_result = await self.session.execute(type_query)
         type_stats = [(row.notification_type, row.count) for row in type_result.all()]
 
-        # Totals
         total_query = select(func.count()).where(and_(*base_conditions))
         total_count = (await self.session.execute(total_query)).scalar() or 0
 
@@ -437,28 +278,7 @@ class NotificationOperations:
         organization_id: UUID,
         source_urn: str,
     ) -> int:
-        """
-        Mark all unread notifications matching a source URN as read.
-
-        Used to cascade reads from the originating domain (e.g. when a
-        chat channel is marked read, every notification whose
-        ``source_urn`` points at that channel is cleared in one shot).
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user whose notifications to mark.
-        organization_id : UUID
-            The organization context.
-        source_urn : str
-            The URN identifying the source content. Empty string is a no-op.
-
-        Returns
-        -------
-        int
-            Number of notifications updated.
-
-        """
+        """Cascade-mark notifications whose ``source_urn`` matches as read."""
         if not source_urn:
             return 0
 
@@ -484,22 +304,6 @@ class NotificationOperations:
         user_id: UUID,
         notification_ids: list[UUID],
     ) -> int:
-        """
-        Mark multiple notifications as read.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID (for ownership validation).
-        notification_ids : list[UUID]
-            The notification IDs to mark as read.
-
-        Returns
-        -------
-        int
-            Number of notifications marked as read.
-
-        """
         if not notification_ids:
             return 0
 
@@ -524,22 +328,6 @@ class NotificationOperations:
         user_id: UUID,
         notification_ids: list[UUID],
     ) -> int:
-        """
-        Delete multiple notifications.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID (for ownership validation).
-        notification_ids : list[UUID]
-            The notification IDs to delete.
-
-        Returns
-        -------
-        int
-            Number of notifications deleted.
-
-        """
         if not notification_ids:
             return 0
 
@@ -563,20 +351,6 @@ class NotificationOperations:
         self,
         notifications: list[Notification],
     ) -> list[Notification]:
-        """
-        Batch insert notifications.
-
-        Parameters
-        ----------
-        notifications : list[Notification]
-            List of notification models to insert.
-
-        Returns
-        -------
-        list[Notification]
-            The created notifications.
-
-        """
         for notification in notifications:
             self.session.add(notification)
         await self.session.commit()
@@ -584,18 +358,9 @@ class NotificationOperations:
 
 
 class PushSubscriptionOperations:
-    """Push subscription CRUD operations."""
+    """Push subscription CRUD."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """
-        Initialize push subscription operations.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            SQLAlchemy async session for database operations.
-
-        """
         self.session = session
 
     async def register(
@@ -606,32 +371,7 @@ class PushSubscriptionOperations:
         auth_key: str,
         user_agent: str | None = None,
     ) -> PushSubscription:
-        """
-        Register or update a push subscription.
-
-        If a subscription with the same user_id and endpoint exists,
-        updates the keys. Otherwise creates a new subscription.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-        endpoint : str
-            Web Push endpoint URL.
-        p256dh_key : str
-            VAPID p256dh key.
-        auth_key : str
-            VAPID auth key.
-        user_agent : str | None
-            Browser user agent.
-
-        Returns
-        -------
-        PushSubscription
-            The registered subscription.
-
-        """
-        # Check for existing subscription
+        """Upsert a push subscription by ``(user_id, endpoint)``."""
         result = await self.session.execute(
             select(PushSubscription).where(
                 and_(
@@ -669,22 +409,6 @@ class PushSubscriptionOperations:
         user_id: UUID,
         endpoint: str,
     ) -> bool:
-        """
-        Unregister a push subscription by endpoint.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-        endpoint : str
-            Web Push endpoint URL to remove.
-
-        Returns
-        -------
-        bool
-            True if removed, False if not found.
-
-        """
         result = await self.session.execute(
             select(PushSubscription).where(
                 and_(
@@ -706,20 +430,6 @@ class PushSubscriptionOperations:
         self,
         user_id: UUID,
     ) -> list[PushSubscription]:
-        """
-        Get all push subscriptions for a user.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user ID.
-
-        Returns
-        -------
-        list[PushSubscription]
-            List of push subscriptions.
-
-        """
         result = await self.session.execute(
             select(PushSubscription).where(PushSubscription.user_id == user_id)
         )

@@ -1,15 +1,4 @@
-"""User + agent profile cache helpers.
-
-Caches the small, public profile fields that ``SenderResolver`` and
-similar lookup paths read on every request:
-
-- ``user:{user_id}:profile``  -> {display_name, avatar_key, username}, TTL 1800s
-- ``agent:{agent_id}:profile`` -> {name, avatar_key, avatar_emoji}, TTL 1800s
-
-The values are non-secret display metadata only. Profile rows mutate
-infrequently (avatar upload, name edit), so a 30-minute TTL is a
-generous cushion. Each mutation site invalidates the single key.
-"""
+"""Cached public profile fields for users and agents (display_name, avatar, username). TTL 1800s."""
 
 from typing import Any
 from uuid import UUID
@@ -35,12 +24,7 @@ def _agent_profile_key(agent_id: UUID) -> str:
 async def get_cached_user_profiles(
     user_ids: list[UUID],
 ) -> tuple[dict[UUID, dict[str, Any]], list[UUID]]:
-    """Bulk-fetch cached user profiles.
-
-    Returns ``(hit_map, miss_user_ids)``. ``hit_map`` is
-    ``user_id -> {"display_name", "avatar_key", "username"}``. The miss
-    list preserves input order so the caller can re-issue a PG query.
-    """
+    """``(hit_map, miss_user_ids)``; misses preserve input order for downstream PG."""
     if not user_ids:
         return {}, []
 
@@ -89,7 +73,7 @@ async def invalidate_user_profile(user_id: UUID) -> None:
 async def get_cached_agent_profiles(
     agent_ids: list[UUID],
 ) -> tuple[dict[UUID, dict[str, Any]], list[UUID]]:
-    """Bulk-fetch cached agent profiles."""
+    """``(hit_map, miss_agent_ids)``."""
     if not agent_ids:
         return {}, []
 

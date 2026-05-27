@@ -1,19 +1,8 @@
-"""Generic per-organization key-value settings.
+"""Per-org key-value settings, one row per `(organization_id, namespace, key)`.
 
-One row per ``(organization_id, namespace, key)`` triple. Every
-configurable per-org setting lives here regardless of which domain
-owns it -- mail config, branding overrides, feature flags, future
-billing preferences, ingest webhook secrets, etc.
-
-The row carries two value columns -- ``value`` (JSONB, plaintext) and
-``value_encrypted`` (Text, ``OrgCipher`` ciphertext framed ``v{n}:...``)
--- gated by ``is_secret``. The CHECK constraint enforces exactly one
-of them being populated per row, so consumers cannot accidentally
-write a plaintext secret or skip encryption for a secret value.
-
-Encrypted rows are picked up by a single ``ReEncryptingConsumer``
-registered for ``WHERE is_secret = true``; every future encrypted
-setting rotates with the per-org DEK without further wiring.
+`value` and `value_encrypted` are mutually exclusive (CHECK constraint);
+`is_secret=true` rows use OrgCipher and rotate via the standard
+`ReEncryptingConsumer` registered for `WHERE is_secret = true`.
 """
 
 from datetime import UTC, datetime
@@ -54,9 +43,8 @@ class OrgSetting(SQLModel, table=True):
         default=None,
         sa_column=Column(JSONB(none_as_null=True), nullable=True),
         description=(
-            "Plaintext JSON value. Mutually exclusive with value_encrypted. "
-            "``none_as_null=True`` makes Python ``None`` bind to SQL NULL "
-            "(not JSON ``null``) so the check constraint sees an empty cell."
+            "Plaintext JSON value; `none_as_null=True` so Python None binds "
+            "to SQL NULL (not JSON null) and the check constraint matches."
         ),
     )
     value_encrypted: str | None = Field(

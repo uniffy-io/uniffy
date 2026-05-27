@@ -12,8 +12,6 @@ from uniffy.core.types import generate_id
 
 
 class ChannelType(str, Enum):
-    """Type of chat channel."""
-
     PUBLIC = "PUBLIC"
     PRIVATE = "PRIVATE"
     DIRECT = "DIRECT"
@@ -21,12 +19,7 @@ class ChannelType(str, Enum):
 
 
 class ChatChannel(SQLModel, table=True):
-    """Chat channel - a persistent conversation container.
-
-    This is the primary chat content entity (bookmarkable, searchable, mentionable via URN).
-    Structural metadata only - counters and timestamps live in ChatChannelStats.
-
-    """
+    """A persistent conversation container; counters live in ChatChannelStats."""
 
     __tablename__ = "chat_channels"
     __table_args__ = (UniqueConstraint("organization_id", "slug", name="uq_chat_channels_org_slug"),)
@@ -78,12 +71,7 @@ class ChatChannel(SQLModel, table=True):
 
 
 class ChatChannelStats(SQLModel, table=True):
-    """Separated counter table for chat channels.
-
-    Every message send locks this row instead of the channel row, keeping structural
-    metadata contention-free. One row per channel, created when the channel is created.
-
-    """
+    """Per-channel counters split off so message sends do not lock the channel row."""
 
     __tablename__ = "chat_channel_stats"
 

@@ -1,15 +1,4 @@
-"""
-Core permission checking logic for all content types.
-
-Single source of truth for access decisions. Every domain operation
-ultimately calls :meth:`PermissionChecker.effective_role` (directly or
-through :class:`BaseContentOperations`) to resolve a user's role on a
-content item, then uses the ``role_can_*`` predicates in
-:mod:`uniffy.core.auth.permissions.roles` to check capabilities.
-
-The checker caches per-request state (org role, domain admin status) so
-repeated checks within a single handler do not re-query the database.
-"""
+"""Single source of truth for content access decisions."""
 
 from __future__ import annotations
 
@@ -37,9 +26,8 @@ from uniffy.core.types import (
 if TYPE_CHECKING:
     from uniffy.core.models.login.organization_member import OrganizationRole
 
-# Mapping from content type to the DomainType used by the domain-admin
-# bypass. Content types that have no matching domain admin (e.g. USER,
-# ROOM, CHAT_MESSAGE) are not in this map.
+# Content types that have no matching domain admin (USER, ROOM, etc.) are
+# absent and resolve to "not a domain admin".
 _CONTENT_TYPE_TO_DOMAIN: dict[ContentType, DomainType] = {
     ContentType.NOTE: DomainType.NOTES,
     ContentType.FILE: DomainType.FILES,
@@ -57,22 +45,7 @@ _CONTENT_TYPE_TO_DOMAIN: dict[ContentType, DomainType] = {
 
 
 class PermissionChecker:
-    """
-    Compute effective roles for users on content items.
-
-    Usage
-    -----
-    Each handler constructs one checker per request, reuses it for every
-    access decision in that request, and discards it at the end. The
-    internal caches mean repeated checks on the same user/org/content are
-    effectively free.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session (request-scoped).
-
-    """
+    """Request-scoped resolver of effective roles for users on content items."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -81,9 +54,6 @@ class PermissionChecker:
         self._org_defaults_cache: dict[
             tuple[UUID, ContentType], tuple[AccessMode | None, ContentRole | None]
         ] = {}
-        # Per-request memoization for the support-session context
-        # bootstrapper. Reset each request because PermissionChecker is
-        # request-scoped. Value is the resolved session row or None.
         self._support_ctx_seen: set[tuple[UUID, UUID]] = set()
         self._is_system_admin_cache: dict[UUID, bool] = {}
 
@@ -98,44 +68,17 @@ class PermissionChecker:
         access_mode: AccessMode,
         baseline_role: ContentRole | None,
     ) -> ContentRole | None:
-        """Compute the user's effective role on a content item.
+        """Resolve the user's effective role; ``None`` means no access.
 
-        Returns ``None`` when the user has no access. Callers map the
-        returned role to capabilities via the ``role_can_*`` helpers.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User whose access we are computing.
-        organization_id : UUID
-            Organization scope. The user must be a member of this org
-            for OPEN_TO_ORG baseline access to apply.
-        content_type : ContentType
-            Type of content. Must be one that has ``access_mode`` and
-            ``baseline_role`` columns; delegating types (TASK, COMMENT,
-            ATTACHMENT, etc.) resolve to their parent before calling.
-        content_id : UUID
-            ID of the content item.
-        owner_id : UUID
-            Owner column from the content row.
-        access_mode : AccessMode
-            Access mode column from the content row.
-        baseline_role : ContentRole | None
-            Baseline role column from the content row. Must be non-null
-            iff ``access_mode == OPEN_TO_ORG``.
-
-        Returns
-        -------
-        ContentRole | None
-            The effective role, or None if the user has no access.
-
+        Delegating types (TASK, COMMENT, ATTACHMENT) must resolve to their
+        parent before calling. ``baseline_role`` must be non-null iff
+        ``access_mode == OPEN_TO_ORG``.
         """
 
-        # Set the support-session ContextVar BEFORE consulting the
-        # cached role. Otherwise OrgCipher.decrypt and the audit-tag
-        # merger silently observe "no session" on every cache hit and
-        # the privacy contract degrades to "default-deny fires once
-        # per role TTL window".
+        # The support-session ContextVar must be populated BEFORE consulting the
+        # cached role - otherwise OrgCipher.decrypt and the audit-tag merger
+        # observe "no session" on every cache hit and the privacy contract
+        # degrades to "default-deny fires once per role TTL window".
         await self._ensure_support_session_context(user_id, organization_id)
 
         async def _compute() -> ContentRole | None:
@@ -192,12 +135,7 @@ class PermissionChecker:
         organization_id: UUID,
         content_type: ContentType,
     ) -> tuple[AccessMode | None, ContentRole | None]:
-        """Return the org's default ``(access_mode, baseline_role)`` for a content type.
-
-        Cached for the lifetime of this checker so repeated lookups within
-        the same request are free. Falls back to the static
-        ``ORG_PERMISSION_DEFAULTS`` dict, then ``(None, None)``.
-        """
+        """Return the org's default ``(access_mode, baseline_role)`` for a content type."""
         key = (organization_id, content_type)
         if key in self._org_defaults_cache:
             return self._org_defaults_cache[key]
@@ -215,7 +153,6 @@ class PermissionChecker:
         raw_access_mode: AccessMode | None,
         raw_baseline_role: ContentRole | None,
     ) -> tuple[AccessMode, ContentRole | None]:
-        """Materialise the effective ``(access_mode, baseline_role)`` for a row."""
         if raw_access_mode is not None and (
             raw_access_mode != AccessMode.OPEN_TO_ORG or raw_baseline_role is not None
         ):
@@ -230,7 +167,6 @@ class PermissionChecker:
         )
 
     async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
-        """Public accessor used by callers that need to bypass role checks."""
         return await self._is_org_admin(user_id, organization_id)
 
     async def is_domain_admin(
@@ -239,7 +175,6 @@ class PermissionChecker:
         organization_id: UUID,
         content_type: ContentType,
     ) -> bool:
-        """Public accessor for the domain-admin bypass."""
         return await self._is_domain_admin_for_content(user_id, organization_id, content_type)
 
     async def get_user_org_role(
@@ -247,10 +182,7 @@ class PermissionChecker:
         user_id: UUID,
         organization_id: UUID,
     ) -> OrganizationRole | None:
-        """Public accessor for the user's org role (used by audit logging)."""
         return await self._get_user_org_role(user_id, organization_id)
-
-    # Internal helpers
 
     async def _get_member_role(
         self,
@@ -261,16 +193,15 @@ class PermissionChecker:
     ) -> ContentRole | None:
         """Highest applicable role from direct + group-derived membership.
 
-        BLOCKED from any source wins over every other role. When multiple
-        non-BLOCKED roles apply (e.g. direct EDITOR plus group VIEWER),
-        the highest ordinal wins.
+        BLOCKED from any source wins over every other role; otherwise the
+        highest ordinal across direct + group rows wins.
         """
         from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_member import ContentMember
 
         now = datetime.now(UTC)
 
-        # Direct user grant -- at most one row due to unique constraint.
+        # At most one row due to the unique constraint on (org, ct, cid, USER, uid).
         direct_result = await self.session.execute(
             select(ContentMember.role).where(
                 ContentMember.organization_id == organization_id,
@@ -325,7 +256,6 @@ class PermissionChecker:
         user_id: UUID,
         organization_id: UUID,
     ) -> OrganizationRole | None:
-        """Get the user's role in the organization. Cached per-request."""
         from uniffy.core.models.login.organization_member import OrganizationMember
 
         key = (user_id, organization_id)
@@ -348,13 +278,6 @@ class PermissionChecker:
         user_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Return True if the user is an org OWNER or ADMIN.
-
-        Wrapped in the Valkey perm cache (TTL 600s). The local
-        per-request cache (``_org_role_cache``) still serves the inner
-        loader so the same request never goes through Valkey twice.
-        """
-
         async def _load() -> bool:
             from uniffy.core.models.login.organization_member import (
                 OrganizationRole,
@@ -370,11 +293,9 @@ class PermissionChecker:
         user_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Return True if the user has an active membership in the org."""
         return await self._get_user_org_role(user_id, organization_id) is not None
 
     async def _is_system_admin(self, user_id: UUID) -> bool:
-        """Per-request memoized ``User.is_system_admin`` probe."""
         cached = self._is_system_admin_cache.get(user_id)
         if cached is not None:
             return cached
@@ -395,13 +316,10 @@ class PermissionChecker:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Set the support-session ContextVar for ``(user, org)``.
+        """Populate the support-session ContextVar; idempotent per checker instance.
 
-        Idempotent per ``PermissionChecker`` instance: the first call
-        for a ``(user, org)`` pair queries Valkey (then PG on miss),
-        the rest are no-ops. Lives outside the cached role compute so
-        the ContextVar is populated on every request regardless of
-        whether the role itself is served from Valkey.
+        Lives outside the cached role compute so the ContextVar is set on every
+        request regardless of whether the role itself is served from Valkey.
         """
         from uniffy.domains.platform.support_session.context import (
             ActiveSupportSession,
@@ -443,20 +361,12 @@ class PermissionChecker:
         user_id: UUID,
         organization_id: UUID,
     ) -> ContentRole | None:
-        """Return the role granted by an active support session, if any.
+        """Role granted by an active support session, if any.
 
-        Only meaningful for ``is_system_admin=true`` users. The session
-        confers ``VIEWER`` (READ_ONLY) in v1; READ_WRITE is planned but
-        not wired yet. Operators with an active session sit between the
-        org/domain admin bypass and the owner_id check so existing
-        explicit grants are ignored during the session - the session is
-        the single audit-attributable access path.
-
-        The ContextVar that drives :class:`OrgCipher` and the audit
-        merger is populated by :meth:`_ensure_support_session_context`,
-        which runs unconditionally at the top of ``effective_role`` so
-        the role cache cannot mask the session from downstream
-        consumers.
+        Only meaningful for ``is_system_admin=true`` users. Operators with an
+        active session sit between the org/domain admin bypass and the owner_id
+        check so existing explicit grants are ignored during the session - the
+        session is the single audit-attributable access path.
         """
         from uniffy.core.models.platform.support_session import (
             SupportSessionScope,
@@ -485,7 +395,6 @@ class PermissionChecker:
         organization_id: UUID,
         content_type: ContentType,
     ) -> bool:
-        """Return True if the user is a domain admin for the content's domain."""
         domain = _CONTENT_TYPE_TO_DOMAIN.get(content_type)
         if domain is None:
             return False

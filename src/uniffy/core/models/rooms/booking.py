@@ -11,39 +11,9 @@ from uniffy.core.types import generate_id
 
 
 class RoomBooking(SQLModel, table=True):
-    """
-    RoomBooking model representing a reservation of a room for a time slot.
+    """Reservation of a room for a time slot. Optionally linked to a calendar event.
 
-    Bookings can be standalone or linked to a calendar event via event_id.
-    Conflict detection uses the compound index on (room_id, start_time, end_time).
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key).
-    room_id : UUID
-        The booked room (FK to rooms_rooms).
-    organization_id : UUID
-        Organization scope.
-    user_id : UUID
-        The user who made the booking.
-    event_id : UUID | None
-        Optional linked calendar event.
-    title : str
-        Booking title (for standalone bookings or override label).
-    start_time : datetime
-        Booking start time (with timezone).
-    end_time : datetime
-        Booking end time (with timezone).
-    status : BookingStatus
-        Booking status (CONFIRMED, CANCELLED).
-    notes : str
-        Additional notes for the booking.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-
+    `ix_rooms_bookings_conflict` covers overlap detection.
     """
 
     __tablename__ = "rooms_bookings"
@@ -84,7 +54,6 @@ class RoomBooking(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of RoomBooking."""
         return (
             f"<RoomBooking(id={self.id}, room_id={self.room_id}, "
             f"start={self.start_time}, end={self.end_time}, status={self.status})>"

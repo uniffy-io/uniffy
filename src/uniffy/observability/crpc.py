@@ -12,28 +12,17 @@ from loguru import logger
 
 from uniffy.observability.metrics import RPC_REQUEST_DURATION, RPC_REQUESTS_TOTAL
 
-# Auth context is imported lazily in `_extract_user_id` below: the auth
-# domain transitively imports the audit writer, which imports
-# `observability.metrics`. Importing `auth.context` at module top
-# closes the package-init cycle when the writer is imported first.
+# `auth.context` is imported lazily inside `intercept_unary` because the auth
+# domain transitively imports the audit writer, which imports this module.
+# Importing at top level closes the package-init cycle when the writer wins.
 
-# Context variable to store HTTP version from ASGI scope
 http_version_var: ContextVar[str] = ContextVar("http_version", default="unknown")
 
 
 class LoggingInterceptor:
-    """
-    ConnectRPC interceptor for logging requests and responses with loguru.
-
-    Logs the following information:
-    - Request start (method name, service name)
-    - Request completion (duration, status code)
-    - Request errors (error code, error message)
-    - Request metadata (headers, user info if available)
-    """
+    """ConnectRPC unary interceptor that emits access logs + Prometheus metrics."""
 
     def __init__(self):
-        """Initialize the logging interceptor."""
         logger.debug("LoggingInterceptor initialized")
 
     async def intercept_unary(
@@ -42,27 +31,11 @@ class LoggingInterceptor:
         request: Any,
         ctx: RequestContext,
     ) -> Any:
-        """
-        Intercept unary RPC calls.
-
-        Args:
-            call_next: The next handler in the interceptor chain.
-            request: The request message.
-            ctx: The request context containing headers and metadata.
-
-        Returns:
-            The response from the next handler.
-
-        Raises:
-            ConnectError: If the RPC call fails.
-        """
         start_time = time.time()
 
-        # Extract request metadata from context
         method_info = ctx.method()
         full_method = method_info.name if method_info else "unknown"
 
-        # Parse service and method names
         if full_method and full_method != "unknown" and "/" in full_method:
             parts = full_method.rsplit("/", 1)
             service_name = parts[0] if len(parts) > 0 else "unknown"
@@ -77,29 +50,22 @@ class LoggingInterceptor:
                 method_info.name if method_info and hasattr(method_info, "name") else full_method
             )
 
-        # Extract user info from auth context
         try:
             from uniffy.domains.auth.context import get_user_id_from_context
 
             user_id = str(get_user_id_from_context(ctx))
         except Exception:
-            # If auth fails, user is not authenticated (e.g., login/register endpoints)
+            # Unauthenticated endpoints (login, register) reach here too.
             user_id = "unauthenticated"
 
-        # Extract request ID from headers if available
-
         try:
-            # Call the next handler
             response = await call_next(request, ctx)
 
-            # Calculate duration
             duration = time.time() - start_time
 
-            # Record Prometheus metrics
             RPC_REQUESTS_TOTAL.labels(service=service_name, method=method_name, code="OK").inc()
             RPC_REQUEST_DURATION.labels(service=service_name, method=method_name).observe(duration)
 
-            # Log successful completion
             logger.info(
                 f"access {service_name}/{method_name}",
                 user_id=user_id,
@@ -109,16 +75,13 @@ class LoggingInterceptor:
             return response
 
         except ConnectError as e:
-            # Calculate duration
             duration = time.time() - start_time
 
-            # Record Prometheus metrics
             RPC_REQUESTS_TOTAL.labels(
                 service=service_name, method=method_name, code=e.code.name
             ).inc()
             RPC_REQUEST_DURATION.labels(service=service_name, method=method_name).observe(duration)
 
-            # Log error
             logger.error(
                 f"error {service_name}/{method_name}",
                 user_id=user_id,
@@ -129,10 +92,8 @@ class LoggingInterceptor:
             raise
 
         except Exception as e:
-            # Calculate duration
             duration = time.time() - start_time
 
-            # Record Prometheus metrics
             RPC_REQUESTS_TOTAL.labels(
                 service=service_name, method=method_name, code="INTERNAL"
             ).inc()

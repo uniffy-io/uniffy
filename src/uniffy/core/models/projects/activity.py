@@ -10,29 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class TaskActivity(SQLModel, table=True):
-    """
-    Activity entry for a task (changes, comments).
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key).
-    task_id : UUID
-        Task this activity belongs to.
-    actor_id : UUID
-        User who performed the action.
-    action : str
-        Action type (created, status_changed, etc.).
-    field_id : str | None
-        Field ID if this is a field update.
-    previous_value : str | None
-        Previous value for field updates.
-    new_value : str | None
-        New value for field updates.
-    timestamp : datetime
-        When this activity occurred.
-
-    """
+    """Activity entry for a task: status flips, field edits, comments."""
 
     __tablename__ = "projects_activities"
 

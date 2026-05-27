@@ -10,39 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentCronRunLog(SQLModel, table=True):
-    """A log entry recording a single cron task execution.
-
-    Captures status, token usage, timing, and a result summary
-    for observability and debugging of scheduled agent tasks.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    cron_task_id : UUID
-        The cron task that was executed.
-    organization_id : UUID
-        Organization context.
-    agent_run_log_id : UUID | None
-        Links to the agent run log for the underlying LLM call.
-    session_id : UUID
-        The cron session where messages were stored.
-    status : str
-        Execution outcome: "success", "error", or "skipped".
-    error : str | None
-        Error description when status is "error".
-    result_summary : str | None
-        First 500 characters of the agent response.
-    started_at : datetime
-        When execution began.
-    completed_at : datetime | None
-        When execution finished.
-    input_tokens : int
-        Input tokens consumed.
-    output_tokens : int
-        Output tokens produced.
-
-    """
+    """A log entry recording a single cron task execution."""
 
     __tablename__ = "agents_cron_run_logs"
     __table_args__ = (
@@ -93,7 +61,6 @@ class AgentCronRunLog(SQLModel, table=True):
     output_tokens: int = Field(default=0, nullable=False)
 
     def __repr__(self) -> str:
-        """Return string representation of AgentCronRunLog."""
         return (
             f"<AgentCronRunLog(id={self.id}, task_id={self.cron_task_id}, status={self.status!r})>"
         )

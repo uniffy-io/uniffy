@@ -35,7 +35,6 @@ from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
 
 def _handle_error(e: Exception) -> None:
-    """Map domain errors to ConnectRPC errors."""
     if isinstance(e, NotFoundError):
         raise ConnectError(Code.NOT_FOUND, str(e))
     if isinstance(e, PermissionDeniedError):
@@ -47,14 +46,11 @@ def _handle_error(e: Exception) -> None:
 
 
 class MessageHandlers:
-    """Message RPC handlers."""
-
     async def send_message(
         self,
         request: SendMessageRequest,
         ctx: RequestContext,
     ) -> SendMessageResponse:
-        """Send a message to a channel."""
         user_id = get_user_id_from_context(ctx)
         jwt_name, jwt_avatar = get_sender_info_from_context(ctx)
         try:
@@ -110,7 +106,6 @@ class MessageHandlers:
         request: GetMessagesRequest,
         ctx: RequestContext,
     ) -> GetMessagesResponse:
-        """Get messages with cursor-based pagination."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -142,7 +137,6 @@ class MessageHandlers:
                     root_only=request.root_only,
                 )
 
-                # Batch-fetch thread stats and sender info
                 proto_messages = await self._enrich_messages(session, messages, user_id)
 
                 return GetMessagesResponse(
@@ -157,7 +151,6 @@ class MessageHandlers:
         request: GetMessageRequest,
         ctx: RequestContext,
     ) -> GetMessageResponse:
-        """Get a single message."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -179,7 +172,6 @@ class MessageHandlers:
         request: UpdateMessageRequest,
         ctx: RequestContext,
     ) -> UpdateMessageResponse:
-        """Update a message."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -203,7 +195,6 @@ class MessageHandlers:
         request: DeleteMessageRequest,
         ctx: RequestContext,
     ) -> DeleteMessageResponse:
-        """Delete a message."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -225,7 +216,6 @@ class MessageHandlers:
         request: PinMessageRequest,
         ctx: RequestContext,
     ) -> PinMessageResponse:
-        """Pin a message."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -247,7 +237,6 @@ class MessageHandlers:
         request: UnpinMessageRequest,
         ctx: RequestContext,
     ) -> UnpinMessageResponse:
-        """Unpin a message."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -269,7 +258,6 @@ class MessageHandlers:
         request: GetPinnedMessagesRequest,
         ctx: RequestContext,
     ) -> GetPinnedMessagesResponse:
-        """Get pinned messages."""
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -285,15 +273,13 @@ class MessageHandlers:
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 
-    # Enrichment helpers
-
     async def _enrich_messages(
         self,
         session: AsyncSession,
         messages: list,
         user_id: UUID,
     ) -> list:
-        """Batch-enrich messages with thread stats, sender info, and reactions."""
+        """Batch-enrich messages with thread stats, sender info, reactions, and reply context."""
         from collections import defaultdict
 
         from sqlalchemy import func, select
@@ -305,12 +291,10 @@ class MessageHandlers:
         if not messages:
             return []
 
-        # Collect root message IDs that might have threads
         root_ids = [m.id for m in messages if m.root_id is None]
         message_ids = [m.id for m in messages]
         sender_ids = list({m.sender_id for m in messages})
 
-        # Batch fetch thread stats
         thread_stats_map: dict[UUID, ChatThreadStats] = {}
         thread_participants_map: dict[UUID, list[UUID]] = defaultdict(list)
         if root_ids:
@@ -320,7 +304,7 @@ class MessageHandlers:
             for ts in stats_result.scalars().all():
                 thread_stats_map[ts.root_message_id] = ts
 
-            # Batch fetch participants (limit 4 per thread) in single query
+            # First 4 participants per thread in one query (window function).
             if thread_stats_map:
                 thread_ids = list(thread_stats_map.keys())
                 rn = (
@@ -349,7 +333,6 @@ class MessageHandlers:
                 for row in p_result.all():
                     thread_participants_map[row[0]].append(row[1])
 
-        # Batch fetch sender info
         sender_map: dict[UUID, tuple[str, str | None]] = {}
         if sender_ids:
             u_result = await session.execute(
@@ -358,7 +341,6 @@ class MessageHandlers:
             for row in u_result.all():
                 sender_map[row[0]] = (row[1] or "Unknown", row[2])
 
-        # Batch fetch reply contexts
         reply_to_ids = [m.reply_to_id for m in messages if m.reply_to_id]
         reply_context_map: dict[UUID, tuple[str, str, str]] = {}
         if reply_to_ids:
@@ -370,7 +352,6 @@ class MessageHandlers:
                 ).where(ChatMessageModel.id.in_(reply_to_ids))
             )
             rto_data = {row[0]: (row[1], row[2]) for row in rto_result.all()}
-            # Resolve sender names for quoted messages (reuse already-fetched senders)
             missing_sender_ids = [sid for sid, _ in rto_data.values() if sid not in sender_map]
             if missing_sender_ids:
                 extra_result = await session.execute(
@@ -382,13 +363,11 @@ class MessageHandlers:
                 s_name = sender_map.get(sid, ("Unknown", None))[0]
                 reply_context_map[rid] = (str(rid), s_name, content[:150])
 
-        # Batch fetch reactions
         from uniffy_proto.chat.v1.chat_pb2 import ReactionGroup as ProtoReactionGroup
 
         reaction_ops = ChatReactionOperations(session)
         reactions_map = await reaction_ops.get_reactions_for_messages(message_ids, user_id)
 
-        # Batch fetch thread read cursors for the requesting user
         thread_unread_map: dict[UUID, bool] = {}
         if thread_stats_map:
             from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
@@ -401,21 +380,19 @@ class MessageHandlers:
             for tid, ts in thread_stats_map.items():
                 cursor_time = thread_cursors.get(tid)
                 if cursor_time is None:
-                    # Never opened this thread - has unread if any replies exist
+                    # Never opened: has unread if any replies exist.
                     thread_unread_map[tid] = ts.reply_count > 0
                 elif ts.last_reply_at and ts.last_reply_at > cursor_time:
                     thread_unread_map[tid] = True
                 else:
                     thread_unread_map[tid] = False
 
-        # Build proto messages
         proto_messages = []
         for msg in messages:
             ts = thread_stats_map.get(msg.id)
             participants = thread_participants_map.get(msg.id)
             sender = sender_map.get(msg.sender_id, ("Unknown", None))
 
-            # Convert reaction dicts to proto
             msg_reactions = reactions_map.get(msg.id)
             proto_reactions = None
             if msg_reactions:
@@ -428,7 +405,6 @@ class MessageHandlers:
                     for r in msg_reactions
                 ]
 
-            # Reply context
             rc = reply_context_map.get(msg.reply_to_id) if msg.reply_to_id else None
 
             proto_messages.append(

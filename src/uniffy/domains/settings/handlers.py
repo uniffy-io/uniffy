@@ -1,5 +1,3 @@
-"""Settings RPC handlers - thin layer delegating to operations."""
-
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -42,31 +40,11 @@ from uniffy.domains.settings.operations import SettingsOperations
 
 
 class SettingsHandlers:
-    """RPC handlers for settings service."""
-
     async def create_profile(
         self,
         request: CreateProfileRequest,
         ctx: RequestContext,
     ) -> CreateProfileResponse:
-        """
-        Handle create_profile RPC call.
-
-        Creates a new settings profile for the authenticated user.
-
-        Parameters
-        ----------
-        request : CreateProfileRequest
-            The create request with profile details.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ProfileResponse
-            The created profile.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -97,24 +75,6 @@ class SettingsHandlers:
         request: GetProfileRequest,
         ctx: RequestContext,
     ) -> GetProfileResponse:
-        """
-        Handle get_profile RPC call.
-
-        Gets a settings profile by ID.
-
-        Parameters
-        ----------
-        request : GetProfileRequest
-            The request with profile ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ProfileResponse
-            The requested profile.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -141,24 +101,6 @@ class SettingsHandlers:
         request: UpdateProfileRequest,
         ctx: RequestContext,
     ) -> UpdateProfileResponse:
-        """
-        Handle update_profile RPC call.
-
-        Updates an existing settings profile (sparse update).
-
-        Parameters
-        ----------
-        request : UpdateProfileRequest
-            The update request with changes.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ProfileResponse
-            The updated profile.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -170,7 +112,6 @@ class SettingsHandlers:
             async with open_session() as session:
                 ops = SettingsOperations(session)
 
-                # Extract optional fields
                 name = request.name if request.HasField("name") else None
                 is_default = request.is_default if request.HasField("is_default") else None
 
@@ -201,24 +142,6 @@ class SettingsHandlers:
         request: DeleteProfileRequest,
         ctx: RequestContext,
     ) -> DeleteProfileResponse:
-        """
-        Handle delete_profile RPC call.
-
-        Deletes a settings profile.
-
-        Parameters
-        ----------
-        request : DeleteProfileRequest
-            The delete request with profile ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        DeleteProfileResponse
-            Success response.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -247,24 +170,6 @@ class SettingsHandlers:
         request: ListProfilesRequest,
         ctx: RequestContext,
     ) -> ListProfilesResponse:
-        """
-        Handle list_profiles RPC call.
-
-        Lists all profiles for the authenticated user.
-
-        Parameters
-        ----------
-        request : ListProfilesRequest
-            The list request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListProfilesResponse
-            List of profiles.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -288,31 +193,12 @@ class SettingsHandlers:
         request: GetEffectiveSettingsRequest,
         ctx: RequestContext,
     ) -> GetEffectiveSettingsResponse:
-        """
-        Handle get_effective_settings RPC call.
-
-        Gets effective settings (defaults merged with profile overrides).
-
-        Parameters
-        ----------
-        request : GetEffectiveSettingsRequest
-            The request with optional profile ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        EffectiveSettingsResponse
-            Profile and merged effective settings.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
             async with open_session() as session:
                 ops = SettingsOperations(session)
 
-                # Get specific profile or default
                 if request.HasField("profile_id"):
                     try:
                         profile_id = UUID(request.profile_id)
@@ -322,7 +208,6 @@ class SettingsHandlers:
                 else:
                     profile = await ops.get_or_create_default_profile(user_id)
 
-                # Compute effective settings
                 effective = ops.get_effective_settings(profile)
 
                 return GetEffectiveSettingsResponse(
@@ -335,7 +220,8 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            # Check for FK violation (user doesn't exist in DB)
+            # An FK violation here means the user row vanished mid-request -
+            # surface as 401 so the client clears stale tokens.
             is_fk_error = "ForeignKeyViolationError" in str(type(e).__name__)
             if is_fk_error or "foreign key" in str(e).lower():
                 raise ConnectError(Code.UNAUTHENTICATED, "User not found. Please log in again.")
@@ -347,25 +233,6 @@ class SettingsHandlers:
         request: GetSettingsSchemaRequest,
         ctx: RequestContext,
     ) -> GetSettingsSchemaResponse:
-        """
-        Handle get_settings_schema RPC call.
-
-        Gets the schema of available settings with their defaults.
-
-        Parameters
-        ----------
-        request : GetSettingsSchemaRequest
-            The request (no parameters).
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        SettingsSchemaResponse
-            Settings schema with defaults.
-
-        """
-        # Authentication not strictly required but we verify anyway
         get_user_id_from_context(ctx)
 
         try:
@@ -394,24 +261,6 @@ class SettingsHandlers:
         request: SetDefaultProfileRequest,
         ctx: RequestContext,
     ) -> SetDefaultProfileResponse:
-        """
-        Handle set_default_profile RPC call.
-
-        Sets a profile as the default for the user.
-
-        Parameters
-        ----------
-        request : SetDefaultProfileRequest
-            The request with profile ID.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ProfileResponse
-            The updated profile.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:

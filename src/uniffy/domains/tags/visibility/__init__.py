@@ -1,12 +1,4 @@
-"""Tag visibility.
-
-Two layers of the same access rules:
-
-- ``filter`` -- ``TagVisibilityFilter``: Python-side post-query trim used
-  when rows are already in hand.
-- ``predicate`` -- SQL ``ColumnElement[bool]`` builders for inlining as
-  ``WHERE`` predicates so the planner short-circuits per row.
-"""
+"""Tag visibility: Python-side post-query trim + SQL ``WHERE`` predicate builders."""
 
 from uniffy.domains.tags.visibility.filter import TagVisibilityFilter
 from uniffy.domains.tags.visibility.predicate import (

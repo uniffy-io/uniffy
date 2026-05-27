@@ -1,10 +1,4 @@
-"""Per-organization manual currency exchange rates.
-
-Admins enter rates manually via the budgets admin page. The runtime
-consults this table when a pricing row's currency differs from the
-org's display currency. No conversion paths are inferred; if the admin
-needs both ``USD -> EUR`` and ``EUR -> USD`` they enter both rows.
-"""
+"""Per-organization manual currency exchange rates."""
 
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -17,26 +11,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentCurrencyRate(SQLModel, table=True):
-    """Manual exchange rate row scoped to a single organization.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key (UUIDv7).
-    organization_id : UUID
-        Org that owns this rate. Rates do not cross organizations.
-    from_currency : str
-        ISO 4217 source currency code (e.g. ``"USD"``).
-    to_currency : str
-        ISO 4217 target currency code (e.g. ``"EUR"``).
-    rate : Decimal
-        Multiplier applied to amounts in ``from_currency`` to get an
-        amount in ``to_currency``. Stored at 10 decimal places of
-        precision.
-    updated_at : datetime
-        Last write timestamp; surfaced in the admin UI so operators can
-        spot stale rates.
-    """
+    """Manual exchange rate row scoped to a single organization."""
 
     __tablename__ = "agents_currency_rates"
     __table_args__ = (
@@ -69,7 +44,6 @@ class AgentCurrencyRate(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentCurrencyRate."""
         return (
             f"<AgentCurrencyRate(org={self.organization_id}, "
             f"{self.from_currency}->{self.to_currency}={self.rate})>"

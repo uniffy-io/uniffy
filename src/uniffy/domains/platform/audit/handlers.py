@@ -55,8 +55,6 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class PlatformAuditHandlers:
-    """Handlers for ``superadmin.v1.PlatformAuditService``."""
-
     async def list_platform_audit(
         self, request: ListPlatformAuditRequest, ctx: RequestContext
     ) -> ListPlatformAuditResponse:

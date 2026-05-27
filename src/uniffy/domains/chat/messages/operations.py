@@ -1,9 +1,4 @@
-"""Chat message operations with two-phase transaction pattern.
-
-Messages are children of channels, not top-level content entities.
-This class does NOT extend BaseContentOperations. Permission checks
-delegate to ChatAccessChecker.
-"""
+"""Chat message operations; permission checks delegate to ChatAccessChecker."""
 
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -34,9 +29,7 @@ from uniffy.domains.chat.cache import (
     set_cached_pinned_message_ids,
 )
 
-# Maximum message content length
 MAX_MESSAGE_LENGTH = 30_000
-# Edit window in minutes
 EDIT_WINDOW_MINUTES = 2
 
 
@@ -46,8 +39,6 @@ class ChatMessageOperations:
     def __init__(self, session: AsyncSession, access: ChatAccessChecker | None = None) -> None:
         self.session = session
         self.access = access or ChatAccessChecker(session)
-
-    # Send message (two-phase transaction)
 
     async def send_message(
         self,
@@ -62,24 +53,14 @@ class ChatMessageOperations:
         sender_name: str = "",
         sender_avatar: str = "",
     ) -> tuple[ChatMessage, str, str]:
-        """Send a message to a channel.
-
-        Phase 1 (DB transaction): INSERT message, UPDATE stats, handle thread.
-        Phase 2 (post-commit): Valkey publish.
-
-        Returns (message, sender_name, sender_avatar_url).
-        Caller should pass sender_name/sender_avatar from JWT claims.
-        """
+        """Send a message; Phase 1 DB transaction, Phase 2 post-commit publish/fan-out."""
         if len(content) > MAX_MESSAGE_LENGTH:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
 
-        # Verify channel access and send permission
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.require_send(user_id, channel)
 
-        # Validate root_id if provided (thread reply). Hold onto the loaded
-        # row and pass it into `_handle_thread_reply` below so the thread
-        # bookkeeping path doesn't re-fetch the same row.
+        # Hold the loaded root row and thread it to _handle_thread_reply to avoid a re-fetch.
         root_msg: ChatMessage | None = None
         if root_id:
             root_msg = await self._get_message_by_id(root_id)
@@ -88,14 +69,12 @@ class ChatMessageOperations:
             if root_msg.root_id is not None:
                 raise ValidationError("root_id", "Cannot reply to a reply (flat threads only)")
 
-        # Validate reply_to_id if provided (inline quote reply)
         reply_to_msg: ChatMessage | None = None
         if reply_to_id:
             reply_to_msg = await self._get_message_by_id(reply_to_id)
             if not reply_to_msg or reply_to_msg.channel_id != channel_id:
                 raise NotFoundError("message", reply_to_id)
 
-        # Phase 1: DB transaction
         now = datetime.now(UTC)
         agent_mentions = sorted(extract_mentioned_agent_ids_from_content(content))
         urn_mentions = sorted(
@@ -117,9 +96,8 @@ class ChatMessageOperations:
         self.session.add(message)
         await self.session.flush()
 
-        # Update channel stats
         if root_id is None:
-            # Root message: bump both counters
+            # Root message: bump both counters.
             await self.session.execute(
                 update(ChatChannelStats)
                 .where(ChatChannelStats.channel_id == channel_id)
@@ -131,7 +109,7 @@ class ChatMessageOperations:
                 )
             )
         else:
-            # Thread reply: only bump message_count and last_message_at
+            # Thread reply: only message_count and last_message_at.
             await self.session.execute(
                 update(ChatChannelStats)
                 .where(ChatChannelStats.channel_id == channel_id)
@@ -140,14 +118,11 @@ class ChatMessageOperations:
                     last_message_at=now,
                 )
             )
-            # Handle thread creation/update. Pass the already-validated root
-            # message so the thread path doesn't re-fetch it.
             await self._handle_thread_reply(root_id, channel_id, user_id, now, root_msg)
 
         await self.session.commit()
         await self.session.refresh(message)
 
-        # Resolve reply context for streaming (before post-commit)
         reply_context: dict[str, str] | None = None
         if reply_to_msg:
             from uniffy.domains.chat.sender_resolver import SenderResolver
@@ -160,7 +135,6 @@ class ChatMessageOperations:
                 "content_preview": reply_to_msg.content[:150],
             }
 
-        # Phase 2: Post-commit (non-fatal, best-effort)
         await self._post_commit_send(
             message,
             channel,
@@ -185,17 +159,11 @@ class ChatMessageOperations:
         sender_avatar: str,
         reply_context: dict[str, str] | None = None,
     ) -> None:
-        """Post-commit actions: publish (sync), then background tasks.
-
-        Fetches member IDs once upfront, shared across real-time fan-out,
-        search indexing, unread notifications, and app notifications.
-        """
+        """Post-commit: synchronous publish, then background tasks. One member-id fetch shared."""
         import asyncio
 
-        # Fetch member IDs once - used by real-time publish, index, and notifications
         member_ids = await self._get_channel_member_ids(channel.id)
 
-        # 1. Fan out to member user channels (synchronous - essential for real-time)
         await self._publish_send_event(
             message,
             channel,
@@ -208,20 +176,11 @@ class ChatMessageOperations:
             reply_context,
         )
 
-        # 2. Agent invocation detection. Flag-gated so orgs without agents
-        # enabled pay zero runtime cost. Never raise: agent bridging failures
-        # must not break the user's send path. Runs BEFORE the background
-        # task spawn below so both session accesses stay sequential -- the
-        # backgrounded `_background_post_send` also reads `self.session` and
-        # concurrent use of the same asyncpg connection triggers an
-        # "another operation is in progress" InterfaceError on close.
+        # Agent detection runs before the background spawn: both touch self.session and
+        # concurrent use of the same asyncpg connection trips an "operation in progress" error.
         await self._maybe_trigger_agents(message, channel)
 
-        # 3-5. Background: index, resources, notifications. Spawn with a
-        # fresh session -- the request handler's `async with open_session()`
-        # block exits before the task runs, so reusing `self.session` here
-        # leaks the connection (caught by GC, surfaces as the
-        # "non-checked-in connection" SAWarning).
+        # Background opens its own session; the request handler's session is already closed.
         asyncio.create_task(
             _run_background_post_send(
                 message_id=message.id,
@@ -234,13 +193,7 @@ class ChatMessageOperations:
         )
 
     async def _maybe_trigger_agents(self, message: ChatMessage, channel: ChatChannel) -> None:
-        """Run the agent mention detector and enqueue ARQ jobs.
-
-        Phase 2 wiring: when the `chat.agents_enabled` org flag is on and
-        the detector returns matches, each match is enqueued as a
-        `respond_to_chat_message` ARQ job. Enqueue failures are
-        non-fatal - the user's send succeeds either way.
-        """
+        """Detect agent mentions and enqueue respond_to_chat_message ARQ jobs; non-fatal."""
         try:
             from uniffy.domains.agents.chat_integration import (
                 detect_agent_mentions,
@@ -289,24 +242,17 @@ class ChatMessageOperations:
         sender_name: str,
         member_ids: list[UUID],
     ) -> None:
-        """Background post-send: index, resources, notifications.
-
-        Runs as a fire-and-forget asyncio task. Each step is independent
-        and non-fatal.
+        """Background post-send: index, resources, notifications; each step
+        independent and non-fatal.
         """
         from uniffy.core.content.references import extract_mentioned_user_ids_from_content
 
-        # Extract mentions once, shared across unread notifications and app notifications
         mentioned_user_ids = extract_mentioned_user_ids_from_content(message.content)
 
-        # Index to Meilisearch. member_ids is ignored for PUBLIC channels
-        # by `_index_message` (those index with OPEN_TO_ORG visibility).
         await self._index_message(message, channel, member_ids, sender_name=sender_name)
 
-        # Update channel resources (URN mention tracking)
         await self._update_resources(channel.id, message.content, user_id)
 
-        # Fetch muted members and notification preferences for filtering
         muted_user_ids: set[UUID] = set()
         none_notification_ids: set[UUID] = set()
         mentions_only_ids: set[UUID] = set()
@@ -329,7 +275,7 @@ class ChatMessageOperations:
             for row in pref_result.all():
                 if row[0] is None:
                     continue
-                if row[1]:  # is_muted
+                if row[1]:
                     muted_user_ids.add(row[0])
                 if row[2] == ChatNotificationLevel.NONE:
                     none_notification_ids.add(row[0])
@@ -338,7 +284,6 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Failed to fetch notification preferences for channel {channel.id}")
 
-        # Notify channel members of unread count change (respecting preferences)
         await self._publish_unread_notifications(
             channel,
             user_id,
@@ -348,7 +293,6 @@ class ChatMessageOperations:
             mentions_only_ids,
         )
 
-        # Emit notifications and stream events
         await self._emit_send_notifications(
             message,
             channel,
@@ -360,15 +304,7 @@ class ChatMessageOperations:
         )
 
     async def _get_channel_member_ids(self, channel_id: UUID) -> list[UUID]:
-        """Fetch USER member ids for a channel via the member-id cache.
-
-        Filters by ``subject_type=USER`` so AGENT members (whose
-        ``user_id`` column is NULL post-migration 052) never leak
-        ``None`` into notification target lists. A ``None`` reaching
-        ``_event_to_json`` becomes the string ``"None"`` and crashes the
-        worker on deserialisation with "badly formed hexadecimal UUID
-        string".
-        """
+        # USER-only; AGENT rows have NULL user_id which would crash _event_to_json on deserialize.
         from uniffy.domains.chat.cache import fetch_channel_members
 
         members = await fetch_channel_members(self.session, channel_id)
@@ -397,7 +333,6 @@ class ChatMessageOperations:
         member_ids: list[UUID],
         reply_context: dict[str, str] | None = None,
     ) -> None:
-        """Fan out MESSAGE_CREATED and THREAD_UPDATED to all channel members."""
         try:
             from uniffy.domains.chat.streaming.events import (
                 MESSAGE_CREATED,
@@ -454,24 +389,11 @@ class ChatMessageOperations:
         member_ids: list[UUID],
         sender_name: str = "",
     ) -> None:
-        """Index message content to Meilisearch.
-
-        member_ids: pre-fetched channel member IDs. Required - the caller
-        must thread the same list it used for fan-out so we never re-query
-        on the index path. PUBLIC channels ignore the list (they index
-        with OPEN_TO_ORG visibility).
-        sender_name: display name for the sender. If empty, looked up from DB.
-        """
+        """Index message to Meilisearch; caller threads member_ids from the fan-out path."""
         if channel.is_encrypted:
             return
 
-        # Skip indexing messages whose only content is a URN mention.
-        # The mention chip already lets the reader navigate to the
-        # referenced item; indexing the message body would surface it
-        # under a search for the *referenced* item's name, which is
-        # misleading -- the message itself has no searchable content.
-        # On edit, drop any prior index entry so a "now empty" message
-        # is also removed from search.
+        # Mention-only content indexes badly (would surface under the *referenced* item's name).
         from uniffy.core.content.references import (
             is_mention_only_content,
             strip_mentions_to_labels,
@@ -493,9 +415,7 @@ class ChatMessageOperations:
 
             indexer = SearchIndexer(self.session)
 
-            # Resolve sender name if not provided (e.g. message edits).
-            # Goes through SenderResolver so AGENT-authored messages pick up
-            # the agent's display name rather than falling back to "Unknown".
+            # SenderResolver handles AGENT-authored messages too (avoids "Unknown" fallback).
             if not sender_name:
                 from uniffy.domains.chat.sender_resolver import SenderResolver
 
@@ -503,7 +423,6 @@ class ChatMessageOperations:
                 info = await resolver.resolve_one(message.sender_type, message.sender_id)
                 sender_name = info.display_name
 
-            # Strip URN mentions to plain labels for search
             plain = strip_mentions_to_labels(message.content)
 
             if channel.channel_type == ChannelType.PUBLIC:
@@ -534,14 +453,11 @@ class ChatMessageOperations:
                     "channel_type": channel.channel_type.value,
                     "sender_id": str(message.sender_id),
                     "sender_name": sender_name,
-                    # Generic breadcrumb so the shared <ParentBadge> renders
-                    # the parent channel exactly like for files/notes.
                     "parent_label": f"#{channel.name}",
                 },
             )
 
-            # Live-update visible chips on edit. Safe on first index too --
-            # there are no listeners for a brand-new URN.
+            # Safe on first index too; no listeners exist for a brand-new URN.
             try:
                 await publish_mention_state(
                     organization_id=channel.organization_id,
@@ -565,7 +481,6 @@ class ChatMessageOperations:
         content: str,
         sender_id: UUID,
     ) -> None:
-        """Update channel resource tracking from URN mentions."""
         try:
             from uniffy.domains.chat.resources.operations import ChatResourceOperations
 
@@ -583,11 +498,7 @@ class ChatMessageOperations:
         skip_user_ids: set[UUID] | None = None,
         mentions_only_ids: set[UUID] | None = None,
     ) -> None:
-        """Publish unread count change to channel members, respecting preferences.
-
-        skip_user_ids: muted or NONE notification level users - skip entirely.
-        mentions_only_ids: MENTIONS notification level users - only notify if mentioned.
-        """
+        """Publish unread count change; skip muted/NONE; MENTIONS-only users only on @mention."""
         try:
             from uniffy.domains.chat.streaming.events import UNREAD_COUNT_CHANGED
             from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
@@ -626,7 +537,7 @@ class ChatMessageOperations:
         member_ids: list[UUID],
         mentioned_user_ids: set[UUID] | None = None,
     ) -> None:
-        """Emit chat notifications and stream events: mentions, DMs, thread replies."""
+        """Emit notifications + stream events for mentions, DMs, and thread replies."""
         try:
             from uniffy.core.events.bus import emit_notification
             from uniffy.core.events.types import NotificationEvent
@@ -645,7 +556,6 @@ class ChatMessageOperations:
 
             notified_ids: set[UUID] = set()
 
-            # 1. @mentions in content (batch all mentioned users into one notification)
             mentioned_ids = mentioned_user_ids or set()
             mention_targets = [mid for mid in mentioned_ids if mid != user_id]
             if mention_targets:
@@ -663,7 +573,6 @@ class ChatMessageOperations:
                 )
                 notified_ids.update(mention_targets)
 
-            # 2. DM/GROUP_DM notifications
             if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
                 dm_recipients = [
                     mid for mid in member_ids if mid != user_id and mid not in notified_ids
@@ -683,7 +592,6 @@ class ChatMessageOperations:
                     )
                     notified_ids.update(dm_recipients)
 
-            # 3. Thread reply notifications + THREAD_ACTIVITY stream event
             if root_id:
                 result = await self.session.execute(
                     select(ChatThreadFollow.user_id).where(
@@ -693,7 +601,6 @@ class ChatMessageOperations:
                 )
                 all_followers = [r[0] for r in result.all()]
 
-                # App notifications (only to those not already notified)
                 notif_followers = [uid for uid in all_followers if uid not in notified_ids]
                 if notif_followers:
                     await emit_notification(
@@ -709,7 +616,6 @@ class ChatMessageOperations:
                         )
                     )
 
-                # THREAD_ACTIVITY stream event to all followers
                 from uniffy.domains.chat.streaming.events import THREAD_ACTIVITY
                 from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
 
@@ -725,7 +631,6 @@ class ChatMessageOperations:
                         thread_payload,
                     )
 
-            # 4. MENTION_RECEIVED stream events
             if mention_targets:
                 from uniffy.domains.chat.streaming.events import MENTION_RECEIVED
                 from uniffy.domains.chat.streaming.publisher import (
@@ -743,8 +648,6 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Notification emit failed for message {message.id}")
 
-    # Get messages (cursor-based pagination)
-
     async def get_messages(
         self,
         user_id: UUID,
@@ -756,13 +659,7 @@ class ChatMessageOperations:
         limit: int = 50,
         root_only: bool = True,
     ) -> tuple[list[ChatMessage], bool]:
-        """Get messages with cursor-based pagination.
-
-        Returns (messages, has_more).
-
-        around_id: fetch messages centered on this message (inclusive).
-        Fetches limit/2 before + the target + limit/2 after.
-        """
+        """Cursor-paginated messages; around_id fetches limit/2 before + target + limit/2 after."""
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
@@ -799,10 +696,9 @@ class ChatMessageOperations:
                 )
             query = query.order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
         else:
-            # Latest messages
             query = query.order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
 
-        # Fetch limit+1 to detect has_more
+        # +1 to detect has_more.
         query = query.limit(limit + 1)
         result = await self.session.execute(query)
         messages = list(result.scalars().all())
@@ -811,7 +707,7 @@ class ChatMessageOperations:
         if has_more:
             messages = messages[:limit]
 
-        # Reverse if we fetched in DESC order (before_id or latest)
+        # DESC fetches (before_id / latest) need a reverse.
         if not after_id:
             messages.reverse()
 
@@ -824,7 +720,6 @@ class ChatMessageOperations:
         limit: int,
         root_only: bool,
     ) -> tuple[list[ChatMessage], bool]:
-        """Fetch messages centered around a target message (inclusive)."""
         target = await self._get_message_by_id(target_id)
         if not target:
             return [], False
@@ -837,7 +732,6 @@ class ChatMessageOperations:
         if root_only:
             base_where.append(ChatMessage.root_id.is_(None))
 
-        # Messages before target (exclusive, DESC then reverse)
         before_q = (
             select(ChatMessage)
             .where(
@@ -851,7 +745,6 @@ class ChatMessageOperations:
         before_msgs = list(before_result.scalars().all())
         before_msgs.reverse()
 
-        # Messages after target (exclusive, ASC)
         after_q = (
             select(ChatMessage)
             .where(
@@ -877,7 +770,6 @@ class ChatMessageOperations:
         channel_id: UUID,
         message_id: UUID,
     ) -> ChatMessage:
-        """Get a single message by ID."""
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
@@ -885,8 +777,6 @@ class ChatMessageOperations:
         if not msg or msg.channel_id != channel_id:
             raise NotFoundError("message", message_id)
         return msg
-
-    # Update / delete / pin
 
     async def update_message(
         self,
@@ -896,7 +786,7 @@ class ChatMessageOperations:
         message_id: UUID,
         content: str,
     ) -> ChatMessage:
-        """Update a message (own messages, within edit window)."""
+        """Update a message; own messages only, within EDIT_WINDOW_MINUTES."""
         if len(content) > MAX_MESSAGE_LENGTH:
             raise ValidationError("content", f"Message exceeds {MAX_MESSAGE_LENGTH} characters")
 
@@ -921,7 +811,7 @@ class ChatMessageOperations:
         await self.session.commit()
         await self.session.refresh(msg)
 
-        # One member-id fetch covers fan-out + re-index.
+        # One fetch covers fan-out + re-index.
         member_ids = await self._get_channel_member_ids(channel_id)
 
         try:
@@ -951,11 +841,9 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Valkey publish failed for message update {msg.id}")
 
-        # Re-index in Meilisearch (channel already cached in access checker)
         channel = await self.access.get_channel(channel_id, organization_id)
         await self._index_message(msg, channel, member_ids)
 
-        # Update resource tracking
         await self._update_resources(channel_id, msg.content, msg.sender_id)
 
         return msg
@@ -967,7 +855,6 @@ class ChatMessageOperations:
         channel_id: UUID,
         message_id: UUID,
     ) -> None:
-        """Soft-delete a message."""
         await self.access.get_channel(channel_id, organization_id)
         msg = await self._get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
@@ -981,8 +868,7 @@ class ChatMessageOperations:
         msg.deleted_at = now
         msg.updated_at = now
 
-        # Admin moderation only - self-deletes carry too much volume to
-        # audit. Detected by actor == sender.
+        # Audit admin moderation only; self-deletes carry too much volume to log.
         if msg.sender_id != user_id:
             await write_audit_event(
                 self.session,
@@ -998,7 +884,6 @@ class ChatMessageOperations:
                 },
             )
 
-        # Decrement channel stats
         if msg.root_id is None:
             await self.session.execute(
                 update(ChatChannelStats)
@@ -1014,7 +899,6 @@ class ChatMessageOperations:
                 .where(ChatChannelStats.channel_id == channel_id)
                 .values(message_count=ChatChannelStats.message_count - 1)
             )
-            # Decrement thread stats
             await self.session.execute(
                 update(ChatThreadStats)
                 .where(ChatThreadStats.root_message_id == msg.root_id)
@@ -1026,7 +910,6 @@ class ChatMessageOperations:
         if was_pinned:
             await invalidate_cached_pinned_messages(channel_id)
 
-        # Post-commit: fan out to members, remove from search, decrement resources
         try:
             from uniffy.domains.chat.streaming.events import (
                 MESSAGE_DELETED,
@@ -1046,7 +929,6 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Valkey publish failed for message delete {msg.id}")
 
-        # Remove from Meilisearch
         try:
             from uniffy.core.search.indexer import SearchIndexer
 
@@ -1056,7 +938,6 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Search remove failed for message {msg.id}")
 
-        # Decrement resource tracking
         try:
             from uniffy.domains.chat.resources.operations import ChatResourceOperations
 
@@ -1065,7 +946,6 @@ class ChatMessageOperations:
         except Exception:
             logger.warning(f"Resource decrement failed for message {msg.id}")
 
-        # Clean up file attachments
         try:
             from uniffy.domains.attachments.operations import AttachmentOperations
 
@@ -1086,7 +966,7 @@ class ChatMessageOperations:
         channel_id: UUID,
         message_id: UUID,
     ) -> ChatMessage:
-        """Pin a message. Requires admin/owner role."""
+        """Pin a message; requires admin/owner role."""
         await self.access.get_channel(channel_id, organization_id)
         msg = await self._get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
@@ -1108,7 +988,7 @@ class ChatMessageOperations:
         channel_id: UUID,
         message_id: UUID,
     ) -> ChatMessage:
-        """Unpin a message. Requires admin/owner role."""
+        """Unpin a message; requires admin/owner role."""
         await self.access.get_channel(channel_id, organization_id)
         msg = await self._get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
@@ -1129,12 +1009,7 @@ class ChatMessageOperations:
         organization_id: UUID,
         channel_id: UUID,
     ) -> list[ChatMessage]:
-        """Get all pinned messages in a channel.
-
-        Cached id list short-circuits the channel scan; full rows are
-        re-fetched fresh by id so message edits propagate without
-        invalidating the pin cache.
-        """
+        # Cached id list; full rows re-fetched by id so edits propagate without invalidation.
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
@@ -1168,8 +1043,6 @@ class ChatMessageOperations:
         )
         return messages
 
-    # Thread helpers
-
     async def _handle_thread_reply(
         self,
         root_id: UUID,
@@ -1178,18 +1051,12 @@ class ChatMessageOperations:
         now: datetime,
         root_msg: ChatMessage,
     ) -> None:
-        """Handle thread creation/update on reply.
-
-        ``root_msg`` is the already-validated root message from the caller.
-        """
-        # Check if thread exists
         result = await self.session.execute(
             select(ChatThread).where(ChatThread.root_message_id == root_id)
         )
         thread = result.scalar_one_or_none()
 
         if not thread:
-            # Create thread + stats on first reply
             thread = ChatThread(
                 root_message_id=root_id,
                 channel_id=channel_id,
@@ -1205,9 +1072,7 @@ class ChatMessageOperations:
             )
             self.session.add(stats)
 
-            # Auto-follow the root message author. Today only USER senders
-            # auto-follow; agent root authors do not auto-follow themselves
-            # (agent participation is managed by AgentChatBridge).
+            # Auto-follow root author (USER only; agent participation is via AgentChatBridge).
             if (
                 root_msg.sender_id != sender_id
                 and root_msg.sender_type == SenderType.USER
@@ -1222,7 +1087,6 @@ class ChatMessageOperations:
                     )
                 )
         else:
-            # Update existing thread stats
             await self.session.execute(
                 update(ChatThreadStats)
                 .where(ChatThreadStats.root_message_id == root_id)
@@ -1232,9 +1096,7 @@ class ChatMessageOperations:
                 )
             )
 
-        # Add sender as thread participant (idempotent). Today senders are
-        # always users from this code path; agent participation is managed
-        # via AgentChatBridge and bypasses this path.
+        # Sender is always a USER from this path; agent participation goes via AgentChatBridge.
         await self.session.execute(
             pg_insert(ChatThreadParticipant)
             .values(
@@ -1259,8 +1121,6 @@ class ChatMessageOperations:
             .on_conflict_do_nothing(index_elements=["root_message_id", "subject_type", "subject_id"])
         )
 
-    # Permission helpers
-
     async def _require_message_action(
         self,
         user_id: UUID,
@@ -1269,7 +1129,6 @@ class ChatMessageOperations:
         message: ChatMessage,
         action: str,
     ) -> None:
-        """Check role-based permission for message operations."""
         is_elevated = await self.access.require_elevated(user_id, organization_id, channel_id)
 
         if action == "edit":
@@ -1287,10 +1146,7 @@ class ChatMessageOperations:
             if not is_elevated:
                 raise PermissionDeniedError("pin", "Requires channel admin")
 
-    # Internal query helpers
-
     async def _get_message_by_id(self, message_id: UUID) -> ChatMessage | None:
-        """Fetch a message by ID."""
         result = await self.session.execute(select(ChatMessage).where(ChatMessage.id == message_id))
         return result.scalar_one_or_none()
 
@@ -1304,17 +1160,7 @@ async def _run_background_post_send(
     sender_name: str,
     member_ids: list[UUID],
 ) -> None:
-    """Fire-and-forget post-send: opens its OWN session.
-
-    The send-handler's `async with open_session()` block is already closed
-    by the time this task runs, so the previous implementation's reuse of
-    `self.session` returned a closed AsyncSession to the pool via GC --
-    surfacing as "non-checked-in connection" SAWarnings under load.
-
-    Re-fetches the ORM rows in the fresh session, instantiates a transient
-    `ChatMessageOperations`, and delegates to `_background_post_send`. Any
-    failure is logged and swallowed -- the user's send already succeeded.
-    """
+    """Fire-and-forget post-send; opens its own session because the request session is closed."""
     try:
         async with open_session() as session:
             message = await session.get(ChatMessage, message_id)

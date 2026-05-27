@@ -10,36 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class Group(SQLModel, table=True):
-    """
-    Group model representing teams within an organization.
-
-    Groups are organization-scoped teams/channels (like Slack channels).
-    Each group belongs to one organization.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the group (primary key).
-    organization_id : UUID
-        Foreign key to organizations table.
-    name : str
-        Group name within the organization.
-    slug : str
-        URL-friendly slug (unique within organization).
-    description : str | None
-        Optional group description.
-    is_private : bool
-        Whether the group is private (invite-only) or public.
-    is_default : bool
-        Whether new org members auto-join this group.
-    created_by_user_id : UUID
-        User who created the group.
-    created_at : datetime
-        Timestamp when the group was created.
-    updated_at : datetime
-        Timestamp when the group was last updated.
-
-    """
+    """Org-scoped team. Used as a permission subject in `ContentMember` grants."""
 
     __tablename__ = "login_groups"
 
@@ -61,5 +32,4 @@ class Group(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Group."""
         return f"<Group(id={self.id}, name={self.name}, organization_id={self.organization_id})>"

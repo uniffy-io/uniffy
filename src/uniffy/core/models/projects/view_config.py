@@ -10,33 +10,9 @@ from sqlmodel import Field, SQLModel
 
 
 class ViewConfig(SQLModel, table=True):
-    """
-    View configuration for a project (table, board, roadmap).
+    """Named view (table, board, roadmap, etc.) on a project.
 
-    Each project can have multiple named views with different configurations.
-
-    Uses a composite primary key (id, project_id) so that default view IDs
-    like "view_table" can be reused across projects.
-
-    Attributes
-    ----------
-    id : str
-        View identifier (part of composite PK).
-    project_id : UUID
-        Project this view belongs to (part of composite PK).
-    name : str
-        View display name.
-    type : str
-        View type (table, board, roadmap).
-    is_default : bool
-        Whether this is the default view.
-    config : dict[str, Any] | None
-        View-specific configuration.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-
+    Composite PK `(id, project_id)` so fixed ids like `view_table` repeat across projects.
     """
 
     __tablename__ = "projects_views"

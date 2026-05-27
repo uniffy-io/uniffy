@@ -141,20 +141,17 @@ NOTIFICATION_TEMPLATES: list[dict] = [
 
 
 def _random_past_time(max_days_ago: int = 30) -> datetime:
-    """Generate a random timestamp within the last N days."""
     seconds_ago = random.randint(60, max_days_ago * 24 * 60 * 60)
     return datetime.now(UTC) - timedelta(seconds=seconds_ago)
 
 
 def _format_event_time() -> str:
-    """Generate a realistic upcoming event time string."""
     hour = random.choice([9, 10, 11, 13, 14, 15, 16])
     minute = random.choice([0, 15, 30, 45])
     return f"{hour}:{minute:02d} {'AM' if hour < 12 else 'PM'}"
 
 
 def _format_event_date() -> str:
-    """Generate a realistic upcoming event date string."""
     days_ahead = random.randint(1, 14)
     future = datetime.now(UTC) + timedelta(days=days_ahead)
     return future.strftime("%A, %B %d")

@@ -1,8 +1,4 @@
-"""Shared chat access checking with request-scoped caching.
-
-All chat operations classes use this to avoid duplicate membership and
-org-admin queries within the same request.
-"""
+"""Shared chat access checking with request-scoped caching."""
 
 from uuid import UUID
 
@@ -19,11 +15,7 @@ from uniffy.domains.chat.cache import get_or_load_channel
 
 
 class ChatAccessChecker:
-    """Request-scoped access checker with single-request caching.
-
-    Caches channel lookups, membership lookups, and org-admin checks so
-    that repeated calls within the same handler do not hit the database.
-    """
+    """Request-scoped access checker with single-request caching."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -33,12 +25,7 @@ class ChatAccessChecker:
         self._domain_admin_cache: dict[tuple[UUID, UUID], bool] = {}
 
     async def get_channel(self, channel_id: UUID, organization_id: UUID) -> ChatChannel:
-        """Fetch channel or raise NotFoundError.
-
-        Lookup order: request-scope cache (L0) -> Valkey channel cache
-        (L1) -> PG. The L1 path is stampede-protected so a cold-miss
-        thundering herd doesn't all run the PG loader.
-        """
+        """Fetch channel via L0 request cache -> L1 Valkey (stampede-protected) -> PG."""
         if channel_id in self._channel_cache:
             return self._channel_cache[channel_id]
 
@@ -57,12 +44,7 @@ class ChatAccessChecker:
         subject_type: SubjectType,
         subject_id: UUID,
     ) -> ChatChannelMember | None:
-        """Canonical membership lookup (works for USER and AGENT subjects).
-
-        Uses the post-M1 polymorphic PK `(channel_id, subject_type, subject_id)`
-        and hits `ix_chat_members_subject_covering` INCLUDE (channel_id, role).
-        Cached per request.
-        """
+        """Membership lookup keyed on the polymorphic PK; hits ix_chat_members_subject_covering."""
         key = (channel_id, subject_type, subject_id)
         if key in self._membership_cache:
             return self._membership_cache[key]
@@ -79,23 +61,10 @@ class ChatAccessChecker:
         return member
 
     async def get_membership(self, channel_id: UUID, user_id: UUID) -> ChatChannelMember | None:
-        """User-shape shim preserved for existing call sites.
-
-        New code should call `get_membership_by_subject` directly. Kept as a
-        shim because 4+ call sites expect the (channel_id, user_id) shape and
-        changing all of them at once expands Phase 1's blast radius without
-        gain.
-        """
         return await self.get_membership_by_subject(channel_id, SubjectType.USER, user_id)
 
     async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
-        """Check if user is org admin/owner.
-
-        Layered: request-scope cache (L0) -> Valkey perm cache (L1)
-        -> PG. The L0 cache short-circuits repeat checks within the
-        same request before Valkey is ever consulted; L1 amortises
-        across requests for the same (org, user).
-        """
+        """Check if user is org admin/owner via L0 request cache -> L1 Valkey -> PG."""
         key = (user_id, organization_id)
         if key in self._org_admin_cache:
             return self._org_admin_cache[key]
@@ -115,7 +84,6 @@ class ChatAccessChecker:
         return is_admin
 
     async def is_chat_domain_admin(self, user_id: UUID, organization_id: UUID) -> bool:
-        """Check if user is a chat domain admin. Cached per request."""
         key = (user_id, organization_id)
         if key in self._domain_admin_cache:
             return self._domain_admin_cache[key]
@@ -133,7 +101,6 @@ class ChatAccessChecker:
         organization_id: UUID,
         channel: ChatChannel,
     ) -> None:
-        """Check channel access (membership-based). Raises PermissionDeniedError."""
         if await self.is_org_admin(user_id, organization_id):
             return
         if await self.is_chat_domain_admin(user_id, organization_id):
@@ -149,7 +116,7 @@ class ChatAccessChecker:
         user_id: UUID,
         channel: ChatChannel,
     ) -> ChatChannelMember:
-        """Verify user can send messages. Returns membership for role checks."""
+        """Verify user can send messages; returns membership for role checks."""
         from uniffy.core.errors import ValidationError
 
         if channel.is_archived:
@@ -166,7 +133,7 @@ class ChatAccessChecker:
         organization_id: UUID,
         channel_id: UUID,
     ) -> bool:
-        """Check if user has elevated permissions (admin/owner of channel or org)."""
+        """User has admin/owner of the channel or org."""
         if await self.is_org_admin(user_id, organization_id):
             return True
         if await self.is_chat_domain_admin(user_id, organization_id):
@@ -182,11 +149,7 @@ class ChatAccessChecker:
         subject_type: SubjectType | None = None,
         subject_id: UUID | None = None,
     ) -> None:
-        """Invalidate a cached membership entry after mutation.
-
-        Accepts either the legacy `(channel_id, user_id)` shape or an explicit
-        `(subject_type, subject_id)` pair. The old shape resolves to USER.
-        """
+        """Invalidate a cached membership entry after mutation."""
         if subject_type is not None and subject_id is not None:
             self._membership_cache.pop((channel_id, subject_type, subject_id), None)
             return

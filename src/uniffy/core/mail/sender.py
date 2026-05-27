@@ -1,11 +1,4 @@
-"""Public entry point used by every outbound mail caller.
-
-``MailSender.send`` runs the full pipeline -- config resolution,
-suppression check, rate limit, template render, SMTP dispatch, metrics
-emission -- and is the only thing the ARQ task / admin RPCs call. The
-sender takes a session factory so the ARQ worker (which has no FastAPI
-dependency cache) can pass ``open_session`` directly.
-"""
+"""Public entry point for every outbound mail caller (ARQ task, admin RPCs)."""
 
 from __future__ import annotations
 
@@ -44,7 +37,7 @@ SessionFactory = Callable[[], AbstractAsyncContextManager[Any]]
 
 
 class MailSender:
-    """Dispatch pipeline. Hold one instance per process or per request."""
+    """Dispatch pipeline: resolve config, check suppression, rate limit, render, send, audit."""
 
     def __init__(self, session_factory: SessionFactory | None = None) -> None:
         self._session_factory: SessionFactory = session_factory or open_session
@@ -61,67 +54,13 @@ class MailSender:
     ) -> MailResult:
         """Render ``template_name`` and dispatch through the resolved backend.
 
-        Dispatch pipeline (fail-fast at every step):
+        Audit rows are the only forensics source - ``mail.sent`` on success,
+        ``mail.send_failed`` on backend rejection, ``mail.suppressed`` when the
+        recipient is suppressed. Audit writes use a fresh session because the
+        SMTP submission has already happened; failures are logged and swallowed.
 
-        1. **Resolve config** via ``MailConfigResolver``. Per-org row
-           (``org_settings`` namespace ``mail``) wins; falls back to
-           ``MailConfig.from_env()``; raises ``MailNotConfiguredError``
-           when neither exists.
-        2. **Suppression check** -- if ``recipient`` is on the global
-           ``mail_suppressions`` list, write a ``mail.suppressed`` audit
-           row and raise ``MailSuppressedError`` (terminal; ARQ task
-           returns without retry).
-        3. **Rate limit** -- Valkey fixed-window token bucket keyed on
-           ``(org_id|"system", minute_window)`` with the resolved
-           ``rate_limit_per_min``. Failure raises
-           ``MailRateLimitedError`` (ARQ task converts to ``Retry``).
-        4. **Render** the registered template into ``(subject, html, text)``;
-           unknown ``template_name`` raises ``TemplateNotFoundError``.
-        5. **Compose** an ``EmailMessage`` with HTML body + plaintext
-           alternative, ``From`` = ``"<from_name> <from_address>"``,
-           ``Reply-To`` if configured.
-        6. **Submit** via ``SmtpBackend.send``. Provider error -> raise
-           ``MailProviderError`` (ARQ task converts to ``Retry`` with
-           backoff).
-
-        Audit rows written by this method (single source of forensics --
-        there is no separate ``mail_delivery_log`` table):
-
-        * ``mail.sent`` on success, carries ``provider_message_id``.
-        * ``mail.send_failed`` on backend rejection, carries ``error``.
-        * ``mail.suppressed`` when the recipient is suppressed.
-
-        Audit writes use a fresh session opened from ``session_factory``
-        because the SMTP submission has already happened by then; a
-        failed audit write is logged and swallowed (there is nothing
-        left to undo).
-
-        Parameters
-        ----------
-        recipient_email
-            Address to send to. Lowercased before the suppression check
-            so case-only variants on the suppression list match.
-        template_name
-            Must appear in the ``TEMPLATES`` allowlist; arbitrary file
-            paths are rejected with ``TemplateNotFoundError`` -- the
-            allowlist is the input-sanitization seam.
-        context
-            Render context. Templates use ``StrictUndefined`` so a
-            missing key is a programmer error, not a silent blank.
-        organization_id
-            Drives config resolution. ``None`` forces the system env
-            config (used for pre-org password resets and platform-level
-            announcements). Pass the user's primary org for
-            org-scoped flows so per-org SMTP branding applies.
-        idempotency_key
-            Caller-supplied dedupe handle. SMTP has no provider-side
-            dedupe header, so this is currently informational and
-            audit-only -- but the contract is in place for future
-            provider-side support.
-        user_id
-            Logging + audit attribution only. The caller's domain audit
-            row is the authoritative record of who initiated the send;
-            ``mail.sent`` here is the dispatch artifact.
+        ``organization_id=None`` forces the system env config (pre-org password
+        resets, platform announcements).
         """
         recipient = _normalize(recipient_email)
         get_template(template_name)
@@ -242,12 +181,7 @@ class MailSender:
         provider_message_id: str | None = None,
         error: str | None = None,
     ) -> None:
-        """Write one ``audit_events`` row inside the caller's session.
-
-        Caller is responsible for committing; this helper just adds the
-        row so the audit + business write share a transaction when
-        possible.
-        """
+        """Add one ``audit_events`` row to the caller's session; caller commits."""
         details: dict[str, Any] = {
             "template": template,
             "recipient": recipient,
@@ -278,12 +212,7 @@ class MailSender:
         provider_message_id: str | None = None,
         error: str | None = None,
     ) -> None:
-        """Open a fresh session and persist one audit row for the send.
-
-        The SMTP submission already happened by the time this runs, so
-        a write failure here is logged-and-swallowed rather than
-        propagated -- there is nothing left to undo.
-        """
+        """Persist one audit row for the send in a fresh session; failures are swallowed."""
         try:
             async with self._session_factory() as session:
                 await self._audit(
@@ -315,7 +244,7 @@ def _compose(
     html: str,
     text: str,
 ) -> EmailMessage:
-    """Build a multi-part ``EmailMessage`` from rendered + config inputs."""
+    """Multi-part ``EmailMessage`` from rendered template and config envelope metadata."""
     message = EmailMessage()
     message["Subject"] = subject
     message["To"] = recipient

@@ -1,7 +1,4 @@
-"""Chat service wrapper for ConnectRPC mounting.
-
-Composes handlers from all chat sub-domains into a single service.
-"""
+"""Chat service wrapper for ConnectRPC mounting."""
 
 from uniffy.domains.agents.chat_integration.context_handlers import (
     ChannelAgentContextHandlers,
@@ -25,10 +22,4 @@ class ChatServiceImpl(
     AgentConfirmationHandlers,
     ChannelAgentContextHandlers,
 ):
-    """Combined chat service implementation.
-
-    Inherits from all chat handler classes to provide a single service
-    that can be mounted on ConnectRPC.
-    """
-
     pass

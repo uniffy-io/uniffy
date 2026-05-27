@@ -1,14 +1,9 @@
-"""Chat event type constants and payload builders.
-
-These constants match the ChatEventType proto enum values as strings
-for the Valkey Pub/Sub `_type` field.
-"""
+"""Chat event type constants and payload builders; strings match ChatEventType proto enum values."""
 
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-# Channel-level event types
 MESSAGE_CREATED = "message_created"
 MESSAGE_UPDATED = "message_updated"
 MESSAGE_DELETED = "message_deleted"
@@ -23,14 +18,12 @@ MEMBERS_REMOVED = "members_removed"
 CHANNEL_UPDATED = "channel_updated"
 THREAD_UPDATED = "thread_updated"
 
-# Agent runtime event types (Phase 2).
 AGENT_TYPING = "agent_typing"
 AGENT_TOKEN_DELTA = "agent_token_delta"
 AGENT_TOOL_CALL = "agent_tool_call"
 AGENT_CONFIRMATION_REQUESTED = "agent_confirmation_requested"
 AGENT_CONFIRMATION_RESOLVED = "agent_confirmation_resolved"
 
-# User-level event types
 UNREAD_COUNT_CHANGED = "unread_count_changed"
 THREAD_ACTIVITY = "thread_activity"
 MENTION_RECEIVED = "mention_received"
@@ -52,7 +45,6 @@ def build_message_payload(
     reply_to_id: UUID | None = None,
     reply_context: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Build a full message payload for MESSAGE_CREATED/UPDATED events."""
     payload: dict[str, Any] = {
         "message_id": str(message_id),
         "channel_id": str(channel_id),
@@ -80,7 +72,6 @@ def build_message_deleted_payload(
     message_id: UUID,
     deleted_at: datetime,
 ) -> dict[str, Any]:
-    """Build payload for MESSAGE_DELETED event."""
     return {
         "message_id": str(message_id),
         "deleted_at": deleted_at.isoformat(),
@@ -93,7 +84,6 @@ def build_reaction_payload(
     user_id: UUID,
     display_name: str = "",
 ) -> dict[str, Any]:
-    """Build payload for REACTION_ADDED/REMOVED events."""
     return {
         "message_id": str(message_id),
         "emoji": emoji,
@@ -106,7 +96,6 @@ def build_typing_payload(
     user_id: UUID,
     display_name: str = "",
 ) -> dict[str, Any]:
-    """Build payload for TYPING_STARTED event."""
     return {
         "user_id": str(user_id),
         "display_name": display_name,
@@ -119,7 +108,7 @@ def build_member_payload(
     avatar_url: str = "",
     role: str = "MEMBER",
 ) -> dict[str, Any]:
-    """Build payload for MEMBER_JOINED/LEFT events (single-user flows)."""
+    """Single-user MEMBER_JOINED/LEFT payload; batch flows use build_members_changed_payload."""
     return {
         "user_id": str(user_id),
         "display_name": display_name,
@@ -129,7 +118,6 @@ def build_member_payload(
 
 
 def build_members_changed_payload(user_ids: list[UUID]) -> dict[str, Any]:
-    """Build payload for batched MEMBERS_ADDED / MEMBERS_REMOVED."""
     return {"user_ids": [str(uid) for uid in user_ids]}
 
 
@@ -139,12 +127,7 @@ def build_agent_typing_payload(
     started: bool = True,
     root_id: UUID | None = None,
 ) -> dict[str, Any]:
-    """Build payload for AGENT_TYPING.
-
-    `root_id` is set when the trigger was a thread reply so the frontend
-    can scope the typing indicator to the thread panel instead of the
-    channel root.
-    """
+    """root_id set when triggered by a thread reply so the indicator scopes to the thread panel."""
     payload: dict[str, Any] = {
         "agent_id": str(agent_id),
         "display_name": display_name,
@@ -162,7 +145,6 @@ def build_agent_token_delta_payload(
     sequence: int,
     final: bool = False,
 ) -> dict[str, Any]:
-    """Build payload for AGENT_TOKEN_DELTA."""
     return {
         "message_id": str(message_id),
         "agent_id": str(agent_id),
@@ -181,7 +163,7 @@ def build_agent_tool_call_payload(
     preview: str | None = None,
     error_message: str | None = None,
 ) -> dict[str, Any]:
-    """Build payload for AGENT_TOOL_CALL. `status` is STARTED/COMPLETED/FAILED."""
+    """AGENT_TOOL_CALL payload; status is STARTED/COMPLETED/FAILED."""
     payload: dict[str, Any] = {
         "message_id": str(message_id),
         "agent_id": str(agent_id),
@@ -205,7 +187,6 @@ def build_agent_confirmation_requested_payload(
     actor_user_id: UUID,
     expires_at: datetime,
 ) -> dict[str, Any]:
-    """Build payload for AGENT_CONFIRMATION_REQUESTED."""
     return {
         "message_id": str(message_id),
         "agent_id": str(agent_id),
@@ -224,7 +205,6 @@ def build_agent_confirmation_resolved_payload(
     decided_by_user_id: UUID,
     decided_at: datetime,
 ) -> dict[str, Any]:
-    """Build payload for AGENT_CONFIRMATION_RESOLVED."""
     return {
         "message_id": str(message_id),
         "request_id": str(request_id),
@@ -240,7 +220,6 @@ def build_thread_updated_payload(
     last_reply_at: datetime,
     latest_participant_id: UUID,
 ) -> dict[str, Any]:
-    """Build payload for THREAD_UPDATED event."""
     return {
         "root_message_id": str(root_message_id),
         "reply_count": reply_count,

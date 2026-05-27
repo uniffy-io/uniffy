@@ -1,17 +1,7 @@
-"""ARQ task: drive an agent session run through a Valkey Stream.
+"""ARQ task: drive an agent session run, fanning events through a Valkey stream.
 
-Enqueued by ``RuntimeHandlers.stream_send_message`` /
-``send_message`` once per direct-agent invocation (the chat-triggered
-path uses ``respond_to_chat_message`` instead). The handler
-pre-allocates ``run_id`` so it can subscribe to ``agent:run:{run_id}``
-immediately; the worker drives the LLM turn, fans events through a
-``RunStreamPublisher``, and schedules a follow-up
-``delete_run_stream`` job to clean up after a brief reconnect grace
-window.
-
-Idempotency: ``SET NX agent_run_lock:{run_id}`` with a 5-minute TTL.
-Lock-loss is a no-op so two workers cannot race on the same run if a
-duplicate enqueue ever slips through.
+Idempotent via `SET NX agent_run_lock:{run_id}` (5 min TTL); duplicate enqueues
+become a no-op.
 """
 
 import time
@@ -55,7 +45,6 @@ _ERROR_TRUNCATE_LIMIT = 500
 
 
 async def _acquire_lock(run_id: UUID) -> bool:
-    """Try to acquire the per-run lock. Returns ``True`` on success."""
     client = _get_ops_client()
     if client is None:
         return False
@@ -74,7 +63,6 @@ async def _acquire_lock(run_id: UUID) -> bool:
 
 
 async def _release_lock(run_id: UUID) -> None:
-    """Release the per-run lock; safe even if it was never acquired."""
     client = _get_ops_client()
     if client is None:
         return
@@ -87,13 +75,7 @@ async def _release_lock(run_id: UUID) -> None:
 def _files_from_payload(
     payload: list[dict[str, Any]] | None,
 ) -> list[FileContext] | None:
-    """Rebuild ``FileContext`` instances from the JSON-safe handler payload.
-
-    The handler runs ``_load_files`` (full permission check via
-    ``FileOperations.get_by_id``) before enqueuing; the worker only
-    rebuilds the typed structs. Missing fields are a malformed handler
-    call and surface as ``KeyError``.
-    """
+    """Rebuild `FileContext`s from the JSON payload the handler already permission-checked."""
     if not payload:
         return None
     return [
@@ -120,50 +102,7 @@ async def run_agent_session(
     user_timezone: str | None,
     rerun_message_id: str | None = None,
 ) -> dict[str, Any]:
-    """Drive a single agent session run, fanning events to a per-run stream.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ worker context. ``ctx["redis"]`` is the egress pool that
-        schedules the deferred ``delete_run_stream`` cleanup job.
-    run_id : str
-        UUID pre-allocated by the RPC handler. Subscribers attach to
-        ``agent:run:{run_id}``; the worker MUST NOT mint a new one.
-    user_id : str
-        UUID of the human user who triggered the run.
-    organization_id : str
-        UUID of the organisation scope.
-    session_id : str
-        UUID of the ``AgentSession`` whose history this run extends.
-    content : str
-        The user's message text (already stripped by the handler).
-    files : list[dict] | None
-        File contexts permission-checked + JSON-serialised by the
-        handler. Each entry has the shape::
-
-            {
-                "file_id": str,
-                "media_type": str,
-                "filename": str,
-                "storage_key": str,
-                "extracted_text": str | None,
-                "extraction_status": str,
-            }
-    user_timezone : str | None
-        IANA timezone used by the system prompt's "current date/time"
-        line.
-
-    Returns
-    -------
-    dict
-        Execution summary. ``status`` is one of ``success`` / ``error``
-        / ``skipped``; on ``error`` an ``error`` field carries the
-        truncated reason. Re-raises on driver exceptions so ARQ records
-        the failure (after a synthetic ``RuntimeErrorEvent`` is
-        published so subscribers see a terminal event).
-
-    """
+    """Drive one agent run; subscribers attach to `agent:run:{run_id}` for events."""
     try:
         rid = UUID(run_id)
         uid = UUID(user_id)
@@ -237,11 +176,7 @@ async def run_agent_session(
                 if isinstance(event, RuntimeDoneEvent):
                     done_seen = True
                     break
-                # Polling between yielded events keeps the cancel
-                # window tight: the next emitted event triggers the
-                # check, so worst case we deliver one more token /
-                # tool_result before stopping. Cheap (single HGET) so
-                # we run it on every event.
+                # Polling between events keeps the cancel window tight (one HGET per event).
                 if await is_cancel_requested(rid):
                     cancelled = True
                     cancelled_msg = await session_ops.add_cancelled_placeholder(
@@ -320,13 +255,7 @@ async def delete_run_stream(
     ctx: dict[str, Any],
     run_id: str,
 ) -> dict[str, Any]:
-    """Drop a run's events stream + state hash explicitly.
-
-    Scheduled 60s after ``RuntimeDoneEvent`` so a late
-    ``SubscribeToRun`` reconnect within that window still replays the
-    full event sequence. The state-hash TTL (300s) is the safety net
-    if this task ever fails to run.
-    """
+    """Drop a run's stream + state hash 60s after completion so reconnects can still replay."""
     try:
         rid = UUID(run_id)
     except ValueError:

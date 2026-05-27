@@ -1,30 +1,9 @@
-"""
-Base operations class for all content types.
+"""Base operations class for content types with built-in access control + search indexing.
 
-Provides generic CRUD with built-in access control and search indexing.
-Every domain extends this class and inherits:
-
-- Permission checks through :meth:`PermissionChecker.effective_role` and
-  the ``role_can_*`` helpers.
-- List filtering via :class:`ContentAccessQuery.build_accessible_filter`
-  (with org-admin / domain-admin bypass).
-- Search indexing that mirrors the access model (shared + blocked member
-  lists, access_mode, baseline_role).
-
-Subclasses must define:
-
-- ``content_type``: the :class:`ContentType` value for this content.
-- ``model_class``: the SQLModel class.
-- ``_build_search_keywords(model)`` / ``_get_search_title(model)`` /
-  ``_get_url_path(model)`` for search indexing.
-
-Optional overrides:
-
-- ``_get_access_mode_column``, ``_get_baseline_role_column`` (default to
-  ``model_class.access_mode`` / ``model_class.baseline_role``).
-- ``_resolve_role(user_id, organization_id, content)`` for child content
-  types that delegate to a parent (tasks, comments, attachments, etc.).
-
+Subclasses set ``content_type`` and ``model_class`` and implement
+``_build_search_keywords`` / ``_get_search_title`` / ``_get_url_path``.
+Child content (tasks, comments, attachments) overrides ``_resolve_role`` to
+delegate to the parent's access policy.
 """
 
 from abc import ABC, abstractmethod
@@ -53,15 +32,7 @@ from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 
 
 class BaseContentOperations[TModel](ABC):
-    """
-    Base class for content CRUD operations.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Base class for content CRUD operations."""
 
     content_type: ContentType
     model_class: type[TModel]
@@ -74,42 +45,31 @@ class BaseContentOperations[TModel](ABC):
 
     @abstractmethod
     def _build_search_keywords(self, model: TModel) -> str:
-        """Return aggregated text for search indexing."""
         raise NotImplementedError
 
     @abstractmethod
     def _get_search_title(self, model: TModel) -> str:
-        """Return the title to show in search results."""
         raise NotImplementedError
 
     @abstractmethod
     def _get_url_path(self, model: TModel) -> str:
-        """Return the frontend route path for the content."""
         raise NotImplementedError
 
     def _get_search_description(self, model: TModel) -> str | None:
-        """Optional preview/description snippet for search indexing."""
         return None
 
     def _get_search_tags(self, model: TModel) -> list[str] | None:
-        """Optional tags for search indexing."""
         return None
 
     async def _get_search_tags_async(self, model: TModel) -> list[str] | None:
-        """Async tags hook called from ``_index_for_search``. Domains
-        sourcing tags from the tags store override this; default
-        delegates to the sync ``_get_search_tags``.
-        """
+        """Async tags hook; override when sourcing from the tags store."""
         return self._get_search_tags(model)
 
     def _get_search_metadata(self, model: TModel) -> dict[str, str] | None:
-        """Optional extra metadata for search indexing."""
         return None
 
     async def _get_search_metadata_async(self, model: TModel) -> dict[str, str] | None:
-        """Async metadata hook called from ``_index_for_search``.
-        Override when fetching related rows (parent folder, category, etc.).
-        """
+        """Async metadata hook; override when fetching related rows (parent folder, category)."""
         return self._get_search_metadata(model)
 
     async def get_by_id(
@@ -118,7 +78,7 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content_id: UUID,
     ) -> TModel:
-        """Fetch a content item by id, enforcing view permission."""
+        """Fetch by id, enforcing view permission."""
         content = await self._fetch_by_id(content_id, organization_id)
         if not content:
             raise NotFoundError(self.content_type.value, content_id)
@@ -132,19 +92,13 @@ class BaseContentOperations[TModel](ABC):
         include_deleted: bool = False,
         **filters: Any,
     ) -> list[TModel]:
-        """Return content items the user can see.
-
-        Org OWNER/ADMIN and domain admins bypass the access filter
-        entirely and see all content in the organization. Everyone else
-        goes through :meth:`ContentAccessQuery.build_accessible_filter`.
-        """
+        """Content items the user can see; org/domain admins bypass the access filter."""
         query = select(self.model_class).where(self._get_org_id_column() == organization_id)
 
         if not include_deleted:
             query = query.where(self._get_is_deleted_column() == False)  # noqa: E712
 
-        # Apply domain filters before access filtering so they do
-        # not interact.
+        # Apply domain filters before the access filter so they don't interact.
         query = self._apply_filters(query, **filters)
 
         if await self.permission_checker.is_org_admin(user_id, organization_id):
@@ -170,19 +124,16 @@ class BaseContentOperations[TModel](ABC):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    # ``create`` / ``update`` / ``delete`` are intentionally NOT in
-    # this base: each domain's signature differs (notes vs files vs
-    # projects). Subclasses implement them directly and reuse the
-    # ``_require_*`` / ``_index_for_search`` helpers.
+    # ``create`` / ``update`` / ``delete`` are intentionally absent: each
+    # domain's signature differs. Subclasses implement them directly and
+    # reuse the ``_require_*`` / ``_index_for_search`` helpers.
 
     async def _effective_policy(
         self,
         organization_id: UUID,
         content: TModel,
     ) -> tuple[AccessMode, ContentRole | None]:
-        """Resolve the live ``(access_mode, baseline_role)`` for a row,
-        materialising NULL columns against the org's defaults.
-        """
+        """Materialise NULL access-policy columns against the org's defaults."""
         default_mode, default_baseline = await self.permission_checker.get_org_defaults(
             organization_id, self.content_type,
         )
@@ -199,9 +150,7 @@ class BaseContentOperations[TModel](ABC):
         access_mode: AccessMode | None,
         baseline_role: ContentRole | None,
     ) -> tuple[AccessMode, ContentRole | None]:
-        """Validate the ``(access_mode, baseline)`` pair for storage,
-        binding this operations class's session and content_type.
-        """
+        """Validate ``(access_mode, baseline)`` for storage, bound to this class's session + type."""
         return await resolve_access_policy(
             self.session,
             organization_id,
@@ -216,11 +165,7 @@ class BaseContentOperations[TModel](ABC):
         organization_id: UUID,
         content: TModel,
     ) -> ContentRole | None:
-        """Resolve the user's effective role on the content.
-
-        Child content types (tasks, comments, attachments, ...) override
-        this method to delegate to their parent's access policy.
-        """
+        """Override on child types (tasks, comments, attachments) to delegate to a parent."""
         return await self.permission_checker.effective_role(
             user_id=user_id,
             organization_id=organization_id,
@@ -290,14 +235,8 @@ class BaseContentOperations[TModel](ABC):
     ) -> None:
         """Index or re-index a content item in search.
 
-        Parameters
-        ----------
-        model : TModel
-            The content row to index.
-        skip_member_lookup : bool
-            If True, skip the database lookup for shared/blocked members.
-            Set on create() when no members exist yet.
-
+        ``skip_member_lookup=True`` on create() avoids the member round-trip
+        when no members exist yet.
         """
         shared_user_ids: list[UUID] = []
         shared_group_ids: list[UUID] = []
@@ -312,9 +251,8 @@ class BaseContentOperations[TModel](ABC):
                 blocked_group_ids,
             ) = await self._get_member_id_lists(model.id)
 
-        # Resolve the live policy so Meili filters track current
-        # access; inheriting rows would otherwise carry a stale
-        # snapshot from create-time.
+        # Live policy resolution keeps Meili filters in sync; inheriting rows
+        # would otherwise carry a stale create-time snapshot.
         effective_mode, effective_baseline = await self._effective_policy(
             model.organization_id, model,
         )
@@ -342,7 +280,7 @@ class BaseContentOperations[TModel](ABC):
         self,
         content_id: UUID,
     ) -> tuple[list[UUID], list[UUID], list[UUID], list[UUID]]:
-        """Return (shared_users, shared_groups, blocked_users, blocked_groups)."""
+        """``(shared_users, shared_groups, blocked_users, blocked_groups)``."""
         from uniffy.core.models.permissions.content_member import ContentMember
 
         result = await self.session.execute(
@@ -391,7 +329,7 @@ class BaseContentOperations[TModel](ABC):
         return self.model_class.is_deleted
 
     def _apply_filters(self, query: Any, **filters: Any) -> Any:
-        """Apply domain-specific filters to the list query."""
+        """Hook for domain-specific filters."""
         return query
 
     async def _fetch_by_id(
@@ -399,7 +337,7 @@ class BaseContentOperations[TModel](ABC):
         content_id: UUID,
         organization_id: UUID,
     ) -> TModel | None:
-        """Fetch a content row by id (override for eager loading)."""
+        """Override for eager loading."""
         result = await self.session.execute(
             select(self.model_class)
             .where(self._get_id_column() == content_id)

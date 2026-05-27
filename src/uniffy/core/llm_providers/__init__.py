@@ -1,9 +1,4 @@
-"""Cross-domain LLM provider primitives.
-
-Currently houses the in-process LRU that caches decrypted credentials +
-constructed provider clients across requests so the Anthropic / OpenAI
-SDK ``httpx`` connection pools survive between turns.
-"""
+"""Cross-domain LLM provider primitives: in-process LRU for decrypted credentials and clients."""
 
 from uniffy.core.llm_providers.cache import (
     ProviderClientLRU,

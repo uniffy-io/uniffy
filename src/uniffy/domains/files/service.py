@@ -6,12 +6,4 @@ from uniffy.domains.files.quota_handlers import QuotaHandlersMixin
 
 
 class FilesServiceImpl(FilesHandlers, QuotaHandlersMixin, SavedFilterHandlersMixin):
-    """
-    Combined files service implementation.
-
-    Inherits from FilesHandlers, QuotaHandlersMixin, and
-    SavedFilterHandlersMixin to provide a single service
-    that can be mounted on ConnectRPC.
-    """
-
     pass

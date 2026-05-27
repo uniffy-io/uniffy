@@ -12,36 +12,7 @@ from uniffy.core.types import generate_id
 
 
 class Organization(SQLModel, table=True):
-    """
-    Organization model representing a workspace/tenant.
-
-    Organizations are the main multi-tenancy boundary.
-    Similar to Slack workspaces or GitHub organizations.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the organization (primary key).
-    name : str
-        Organization name (e.g., "Acme Corp").
-    slug : str
-        URL-friendly slug (e.g., "acme-corp"), globally unique.
-    domain : str | None
-        Organization email domain for auto-join or SSO (e.g., "acme.com").
-    is_active : bool
-        Whether the organization is active.
-    plan : str
-        Subscription plan (e.g., "free", "pro", "enterprise").
-    max_members : int | None
-        Maximum allowed members (None = unlimited).
-    settings : dict | None
-        JSON settings for organization preferences.
-    created_at : datetime
-        Timestamp when the organization was created.
-    updated_at : datetime
-        Timestamp when the organization was last updated.
-
-    """
+    """Tenant boundary; every content row scopes to one organization."""
 
     __tablename__ = "login_organizations"
 
@@ -80,5 +51,4 @@ class Organization(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Organization."""
         return f"<Organization(id={self.id}, name={self.name}, slug={self.slug})>"

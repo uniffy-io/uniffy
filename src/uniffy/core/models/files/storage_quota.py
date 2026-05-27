@@ -10,34 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class StorageQuota(SQLModel, table=True):
-    """
-    Organization-level storage quota configuration.
-
-    Controls storage limits for an entire organization and sets
-    the default per-user quota. Each organization can have at most
-    one quota configuration row.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key.
-    organization_id : UUID
-        Organization this quota applies to (unique).
-    org_quota_bytes : int | None
-        Total organization storage limit in bytes. None means unlimited.
-    default_user_quota_bytes : int | None
-        Default per-user storage limit in bytes. None means unlimited.
-    warn_at_percent : int
-        Percentage threshold at which to show a warning (default 80).
-    enforce : bool
-        Whether to block uploads when quota is exceeded (default True).
-        When False, only warnings are shown.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-
-    """
+    """Per-org storage quota configuration; NULL `*_bytes` means unlimited."""
 
     __tablename__ = "files_storage_quotas"
     __table_args__ = (UniqueConstraint("organization_id", name="uq_storage_quota_org"),)
@@ -67,7 +40,6 @@ class StorageQuota(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of StorageQuota."""
         return (
             f"<StorageQuota(id={self.id}, organization_id={self.organization_id}, "
             f"org_quota_bytes={self.org_quota_bytes})>"

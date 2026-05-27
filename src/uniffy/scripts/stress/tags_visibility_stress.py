@@ -1,19 +1,7 @@
 """Stress + bench for the cached tag-visibility predicate.
 
-Seeds a known dataset (notes across access modes + a tag-and-assignment
-matrix), then benches ``list_tags(actor_id=...)`` and
-``list_content(actor_id=...)`` cold vs warm to confirm the
-visible-set cache lands the predicted speedup. Also runs
-``EXPLAIN ANALYZE`` on the page query and prints the plan.
-
-Usage:
-    docker exec uniffy-dev-backend uv run python -m \\
-        uniffy.scripts.stress.tags_visibility_stress [--notes 1200] \\
-        [--tags 100] [--assignments 50] [--iterations 20]
-
-The script is idempotent in a sense: running it again skips seeding
-when the stress org already has the marker prefix in tag names. To
-re-seed, pass ``--reseed``.
+Re-runs skip seeding when the marker prefix is already present in tag names.
+Pass ``--reseed`` to wipe and reseed.
 """
 
 import argparse
@@ -37,8 +25,6 @@ SEED_NOTE_PREFIX = "Visibility stress: "
 
 @dataclass
 class StressConfig:
-    """Configuration for the visibility-cache stress run."""
-
     note_count: int = 1200
     tag_count: int = 100
     assignments_per_tag: int = 50
@@ -48,7 +34,6 @@ class StressConfig:
 
 
 async def _resolve_org_and_users(session) -> tuple[object, list[object]]:
-    """Pick the dev org plus the canonical six dev users."""
     from uniffy.core.models import Organization, User
 
     org_slug = os.environ.get("DEFAULT_ORG_SLUG")
@@ -87,7 +72,6 @@ async def _resolve_org_and_users(session) -> tuple[object, list[object]]:
 
 
 async def _wipe_seed(session, organization_id: UUID) -> None:
-    """Drop tags / notes carrying the seed marker prefix (PG + Meili)."""
     from uniffy.core.models.notes.note import Note
     from uniffy.core.models.tags.tag import Tag, TagAssignment
     from uniffy.core.search.indexer import SearchIndexer
@@ -135,7 +119,6 @@ async def _wipe_seed(session, organization_id: UUID) -> None:
 
 
 async def _seed_existing(session, organization_id: UUID) -> bool:
-    """Return True when stress seed data is already present."""
     from uniffy.core.models.tags.tag import Tag
 
     existing = (
@@ -157,16 +140,8 @@ async def _seed_notes(
     users: list,
     count: int,
 ) -> list:
-    """Create ``count`` notes spread across owners and access modes.
-
-    Distribution roughly mirrors a real org:
-    - 40% OWNER_ONLY (only owner can see)
-    - 40% OPEN_TO_ORG with VIEWER baseline (everyone in the org sees it)
-    - 20% EXPLICIT_MEMBERS with no member rows (only owner sees it)
-
-    Also indexes every note into Meilisearch so the explorer's
-    ``TagContentList`` can resolve URNs into proper chip cards (the
-    resolve path is pure-Meili by design).
+    """Seed notes spread across owners and access modes: 40% OWNER_ONLY,
+    40% OPEN_TO_ORG, 20% EXPLICIT_MEMBERS.
     """
     from uniffy.core.models.notes.note import Note
     from uniffy.core.search.indexer import SearchIndexer
@@ -233,7 +208,6 @@ async def _seed_tags_and_assignments(
     tag_count: int,
     assignments_per_tag: int,
 ) -> list[UUID]:
-    """Create ``tag_count`` tags and assign each to a random note slice."""
     from datetime import UTC, datetime
 
     from uniffy.core.models.tags.tag import Tag, TagAssignment
@@ -269,7 +243,6 @@ async def _seed_tags_and_assignments(
                     assigned_at=now,
                 )
             )
-    # Bulk insert in batches.
     batch = 500
     for start in range(0, len(assignments), batch):
         session.add_all(assignments[start : start + batch])
@@ -286,7 +259,6 @@ async def _bench_list_tags(
     label: str,
     cold: bool,
 ) -> dict[str, float]:
-    """Time ``list_tags`` ``iterations`` times. Optionally cold per call."""
     from uniffy.core.auth.permissions.visible_sets import (
         invalidate_visible_sets_for_user,
     )
@@ -318,7 +290,6 @@ async def _bench_list_content(
     label: str,
     cold: bool,
 ) -> dict[str, float]:
-    """Time ``list_content`` for a known popular tag."""
     from uniffy.core.auth.permissions.visible_sets import (
         invalidate_visible_sets_for_user,
     )
@@ -343,7 +314,6 @@ async def _bench_list_content(
 
 
 def _summarise(label: str, samples: list[float]) -> dict[str, float]:
-    """Compute p50 / p95 / p99 / mean for a sample series in ms."""
     samples_ms = sorted(s * 1000 for s in samples)
     n = len(samples_ms)
     summary = {
@@ -377,7 +347,6 @@ def _print_summary(rows: list[dict[str, float]]) -> None:
 async def _explain_inner_query(
     org_id: UUID, actor_id: UUID, visible_ids: list[UUID]
 ) -> str:
-    """Run EXPLAIN ANALYZE on the outer page query with the visible set."""
     from uniffy.db.session import open_session
 
     if not visible_ids:
@@ -398,7 +367,6 @@ async def _explain_inner_query(
 
 
 async def run_visibility_stress(config: StressConfig) -> None:
-    """End-to-end seed + bench."""
     from dotenv import load_dotenv
 
     from uniffy.core.search.meilisearch import close_meilisearch, init_meilisearch
@@ -444,7 +412,6 @@ async def run_visibility_stress(config: StressConfig) -> None:
             else:
                 logger.info("Reusing existing stress seed.")
 
-        # Pick a popular seed tag for list_content benches.
         from uniffy.core.models.tags.tag import Tag
 
         async with open_session() as session:
@@ -462,7 +429,6 @@ async def run_visibility_stress(config: StressConfig) -> None:
 
         results: list[dict[str, float]] = []
 
-        # 1. Member: list_tags cold (cache miss every iteration).
         results.append(
             await _bench_list_tags(
                 org_id,
@@ -473,7 +439,6 @@ async def run_visibility_stress(config: StressConfig) -> None:
             )
         )
 
-        # 2. Member: list_tags warm (cache hit after first iteration).
         results.append(
             await _bench_list_tags(
                 org_id,
@@ -484,7 +449,7 @@ async def run_visibility_stress(config: StressConfig) -> None:
             )
         )
 
-        # 3. Admin: list_tags warm. Should short-circuit (no predicate).
+        # Admin warm should short-circuit (no predicate).
         results.append(
             await _bench_list_tags(
                 org_id,
@@ -495,7 +460,6 @@ async def run_visibility_stress(config: StressConfig) -> None:
             )
         )
 
-        # 4. Member: list_content cold.
         results.append(
             await _bench_list_content(
                 org_id,
@@ -507,7 +471,6 @@ async def run_visibility_stress(config: StressConfig) -> None:
             )
         )
 
-        # 5. Member: list_content warm.
         results.append(
             await _bench_list_content(
                 org_id,
@@ -520,9 +483,7 @@ async def run_visibility_stress(config: StressConfig) -> None:
         )
 
         print()
-        print("=" * 80)
         print("Tag visibility cache - bench")
-        print("=" * 80)
         print(
             f"Org: {org.name} ({org_id})  "
             f"actor (member): alice  actor (admin): admin"
@@ -536,7 +497,6 @@ async def run_visibility_stress(config: StressConfig) -> None:
         _print_summary(results)
         print()
 
-        # EXPLAIN on the outer page query for transparency.
         from uniffy.core.auth.permissions.visible_sets import (
             compute_visible_tag_ids,
         )
@@ -557,7 +517,6 @@ async def run_visibility_stress(config: StressConfig) -> None:
 
 
 def main() -> None:
-    """Entry point for the visibility stress + bench script."""
     parser = argparse.ArgumentParser(
         description="Stress + bench the cached tag-visibility predicate.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

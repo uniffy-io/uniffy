@@ -1,30 +1,5 @@
-"""Lifecycle operations for platform support sessions.
-
-Gating model
-------------
-
-Operator-side (``request_session``, ``list_my_sessions``,
-``list_all_sessions``) gates on ``User.is_system_admin``.
-
-Owner-side (``approve_session``, ``reject_session``,
-``list_org_sessions``, ``set_org_consent_mode``) gates on an actual
-active OWNER/ADMIN membership in the target org via
-:meth:`_require_actual_org_admin`. Platform sysadmins do NOT bypass
-this gate - that would let an operator self-approve their own
-PENDING session and defeat the OWNER_APPROVED consent contract.
-
-``revoke_session`` is the one place that accepts either side via
-:meth:`_require_org_admin`: the support user can always end their own
-session, and an org admin (or platform sysadmin acting on behalf of
-the deployment) can always revoke. ``get_org_consent_mode`` is
-visibility-only and accepts platform sysadmins explicitly.
-
-Scope
------
-
-v1 ships READ_ONLY scope only. ``request_session`` raises
-:class:`SupportSessionScopeError` when READ_WRITE is requested so
-the wire surface is forward-compatible without the access path.
+"""Lifecycle for platform support sessions; consent-bearing methods require
+an actual org OWNER/ADMIN (sysadmin does not bypass).
 """
 
 from __future__ import annotations
@@ -83,9 +58,7 @@ from uniffy.domains.users.operations import UserOperations
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
 
-# Per-operator throughput cap on session requests. Each request fires
-# emails + in-app notifications to every owner of the target org, so
-# the cap doubles as fan-out abuse insurance.
+# Per-operator throughput cap; each request fans out to every owner of the target org.
 _REQUEST_SESSION_LIMIT = 10
 _REQUEST_SESSION_WINDOW_SECONDS = 60
 
@@ -95,8 +68,6 @@ def _clamp_duration(requested_minutes: int) -> int:
 
 
 class SupportSessionView(NamedTuple):
-    """Domain shape of one session row, denormalised for the wire."""
-
     id: UUID
     organization_id: UUID
     organization_name: str
@@ -128,8 +99,6 @@ class SupportSessionPage(NamedTuple):
 
 
 class ConsentModeView(NamedTuple):
-    """Snapshot of the consent policy for one org."""
-
     deployment: ConsentMode
     override: ConsentMode | None
     effective: ConsentMode
@@ -156,7 +125,6 @@ def _safe_page(page: int) -> int:
 
 
 def _serialize_for_cache(session: SupportSession) -> dict:
-    """Cache-friendly payload for :func:`active_session_for`."""
     return {
         "id": str(session.id),
         "organization_id": str(session.organization_id),
@@ -175,12 +143,8 @@ def _from_cache_payload(
     expected_user_id: UUID,
     expected_org_id: UUID,
 ) -> SupportSession | None:
-    """Reconstruct a transient :class:`SupportSession` from a cache hit.
-
-    Returns ``None`` when the payload is malformed, the cached row is
-    not ACTIVE, has already expired, or addresses a different
-    ``(user, org)`` than we asked for. The returned instance is not
-    attached to a session and must not be mutated.
+    """Returns a transient (not session-attached) row; ``None`` if invalid,
+    expired, or for another (user, org).
     """
     try:
         cached_state = payload.get("state")
@@ -216,8 +180,6 @@ def _from_cache_payload(
 
 
 class SupportSessionOperations:
-    """Lifecycle + lookup methods for support sessions."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._user_ops = UserOperations(session)
@@ -231,7 +193,6 @@ class SupportSessionOperations:
         scope: SupportSessionScope,
         duration_minutes: int,
     ) -> SupportSessionView:
-        """Operator opens a new session against one org."""
         await self._user_ops.require_system_admin(actor_user_id)
         await check_rate_limit(
             key=f"rl:platform:request_session:{actor_user_id}",
@@ -329,11 +290,7 @@ class SupportSessionOperations:
     async def approve_session(
         self, *, actor_user_id: UUID, session_id: UUID
     ) -> SupportSessionView:
-        """Org OWNER/ADMIN approves a PENDING session.
-
-        Strict: platform sysadmins cannot approve their own (or any)
-        session here. Consent must come from an actual org admin.
-        """
+        """Platform sysadmins cannot approve here; consent must come from an actual org admin."""
         row = await self._require_session(session_id)
         await self._require_actual_org_admin(actor_user_id, row.organization_id)
 
@@ -399,7 +356,6 @@ class SupportSessionOperations:
     async def reject_session(
         self, *, actor_user_id: UUID, session_id: UUID, reason: str
     ) -> SupportSessionView:
-        """Org OWNER/ADMIN rejects a PENDING session."""
         row = await self._require_session(session_id)
         await self._require_actual_org_admin(actor_user_id, row.organization_id)
 
@@ -424,7 +380,7 @@ class SupportSessionOperations:
     async def revoke_session(
         self, *, actor_user_id: UUID, session_id: UUID, reason: str
     ) -> SupportSessionView:
-        """Either side ends an ACTIVE or PENDING session early."""
+        """Either side may end an ACTIVE or PENDING session early."""
         row = await self._require_session(session_id)
 
         is_support_user = row.support_user_id == actor_user_id
@@ -464,7 +420,7 @@ class SupportSessionOperations:
         if was_active:
             await invalidate_active_session(row.support_user_id, row.organization_id)
         # The operator's cached VIEWER role on tenant content would
-        # otherwise outlive the revoke by up to _ROLE_TTL.
+        # otherwise outlive the revoke up to _ROLE_TTL.
         await invalidate_user_perm_cache(row.support_user_id)
 
         await self._fanout_lifecycle(
@@ -481,7 +437,6 @@ class SupportSessionOperations:
         page_size: int,
         include_inactive: bool,
     ) -> SupportSessionPage:
-        """Operator's own session history."""
         await self._user_ops.require_system_admin(actor_user_id)
         return await self._list_paged(
             extra_where=[SupportSession.support_user_id == actor_user_id],
@@ -499,11 +454,7 @@ class SupportSessionOperations:
         page_size: int,
         include_inactive: bool,
     ) -> SupportSessionPage:
-        """Org-owner view of every session targeting their org.
-
-        Sysadmins consume the cross-tenant view via ``list_all_sessions``
-        and do not get the org-owner gate here.
-        """
+        """Sysadmins use ``list_all_sessions`` and do not pass through this org-owner gate."""
         await self._require_actual_org_admin(actor_user_id, organization_id)
         return await self._list_paged(
             extra_where=[SupportSession.organization_id == organization_id],
@@ -521,7 +472,6 @@ class SupportSessionOperations:
         state: SupportSessionState | None,
         search: str,
     ) -> SupportSessionPage:
-        """Cross-tenant operator view for `/platform/sessions`."""
         await self._user_ops.require_system_admin(actor_user_id)
 
         extra_where = []
@@ -531,8 +481,6 @@ class SupportSessionOperations:
         normalized = search.strip().lower() if search else ""
         if normalized:
             pattern = f"%{normalized}%"
-            # Subquery rows by org/email substring; cheaper than a join
-            # with LIKE on the search join.
             org_ids = (
                 await self._session.execute(
                     select(Organization.id).where(
@@ -572,13 +520,8 @@ class SupportSessionOperations:
     async def active_session_for(
         self, *, user_id: UUID, organization_id: UUID
     ) -> SupportSession | None:
-        """Hot lookup used by :class:`PermissionChecker`. Cache-first.
-
-        A cache hit returns a transient :class:`SupportSession` rebuilt
-        from the payload (id + scope + state + expires_at + support
-        user id) so the caller can pass it to audit/ContextVar plumbing
-        without a PG round-trip. The transient row is NOT added to the
-        session.
+        """Hot lookup used by :class:`PermissionChecker`; cache hits return
+        a transient (unattached) row.
         """
         cached = await get_active_session(user_id, organization_id)
         if cached is not CACHE_MISS and cached is not None:
@@ -599,9 +542,7 @@ class SupportSessionOperations:
         ).scalar_one_or_none()
 
         if row is None:
-            # Cache miss + no row -> drop any stale entry so next
-            # lookup short-circuits via cache_get returning explicit
-            # None instead of going to PG.
+            # Drop stale entry so the next lookup short-circuits via cache instead of PG.
             await invalidate_active_session(user_id, organization_id)
             return None
 
@@ -619,11 +560,7 @@ class SupportSessionOperations:
         actor_user_id: UUID,
         organization_id: UUID,
     ) -> ConsentModeView:
-        """Return deployment + override + effective for one org.
-
-        Caller must be a platform admin OR an org OWNER/ADMIN of the
-        target org.
-        """
+        """Caller must be a platform admin OR an org OWNER/ADMIN of the target org."""
         from uniffy.core.models.login.user import User
 
         user = (
@@ -661,14 +598,8 @@ class SupportSessionOperations:
         organization_id: UUID,
         mode: ConsentMode | None,
     ) -> ConsentModeView:
-        """Set the per-org consent override. Only org OWNER/ADMIN.
-
-        ``mode=None`` clears the override (fall back to deployment).
-        Tighten-only is enforced at the resolver layer when sessions
-        are created; the override row itself can carry any value.
-
-        Sysadmins do not get the bypass on this surface - the override
-        belongs to the tenant.
+        """``mode=None`` clears the override; sysadmins do not bypass since
+        the override belongs to the tenant.
         """
         await self._require_actual_org_admin(actor_user_id, organization_id)
         await self._require_org(organization_id)
@@ -699,12 +630,7 @@ class SupportSessionOperations:
         )
 
     async def sweep_expired(self) -> int:
-        """ARQ cron: flip ACTIVE/PENDING rows past ``expires_at`` to EXPIRED.
-
-        Drains in batches of 500 until empty so a large backlog on a
-        single tick does not leave stale ACTIVE rows visible to the
-        operator UI. Idempotent; runs on every tick.
-        """
+        """Flip ACTIVE/PENDING rows past ``expires_at`` to EXPIRED; idempotent, drains in batches."""
         total_flipped = 0
         batch_size = 500
         while True:
@@ -780,14 +706,7 @@ class SupportSessionOperations:
     async def _require_actual_org_admin(
         self, user_id: UUID, organization_id: UUID
     ) -> OrganizationMember:
-        """Strict gate: only an active OWNER/ADMIN of the target org may proceed.
-
-        Unlike :meth:`_require_org_admin`, the platform sysadmin role
-        does NOT bypass this gate. Used by the consent-bearing methods
-        (``approve_session``, ``reject_session``, ``set_org_consent_mode``,
-        ``list_org_sessions``) so an operator cannot self-approve their
-        own request.
-        """
+        """Sysadmin does NOT bypass; consent-bearing methods refuse operator self-approval."""
         membership = (
             await self._session.execute(
                 select(OrganizationMember).where(
@@ -807,11 +726,8 @@ class SupportSessionOperations:
     async def _require_org_admin(
         self, user_id: UUID, organization_id: UUID
     ) -> OrganizationMember:
-        """OWNER/ADMIN of the org or platform sysadmin may proceed.
-
-        Reserved for actions where sysadmin bypass is intentional - today
-        that is only :meth:`revoke_session` (so an operator can always
-        end their own session).
+        """OWNER/ADMIN or platform sysadmin; reserved for actions where
+        sysadmin bypass is intentional.
         """
         user = (
             await self._session.execute(select(User).where(User.id == user_id))
@@ -819,10 +735,8 @@ class SupportSessionOperations:
         if user is None:
             raise PermissionDeniedError("Caller is not authenticated")
         if user.is_system_admin:
-            # Sysadmins always pass the org-admin gate for support
-            # session lifecycle (e.g. revoking their own session).
-            # Note: the access check for tenant CONTENT goes through
-            # active_session_for + PermissionChecker, not this gate.
+            # Access to tenant CONTENT still goes through active_session_for
+            # + PermissionChecker, not this gate.
             member = (
                 await self._session.execute(
                     select(OrganizationMember).where(
@@ -897,7 +811,6 @@ class SupportSessionOperations:
         )
 
     async def _build_view(self, row: SupportSession) -> SupportSessionView:
-        """Resolve denormalised labels (org name, user emails) for one row."""
         org_name = ""
         org_slug = ""
         org_row = (
@@ -967,13 +880,7 @@ class SupportSessionOperations:
         *,
         extra: dict | None = None,
     ) -> None:
-        """Send in-app notification + email to every active org OWNER.
-
-        ``event`` is one of ``requested``, ``started``, ``revoked``,
-        ``expired``. Recipients are every active OWNER of the target
-        org. Best-effort: never raises (a Valkey hiccup must not break
-        the lifecycle commit).
-        """
+        """Best-effort; never raises so a Valkey hiccup doesn't break the lifecycle commit."""
         owners = await self._fetch_org_owners(row.organization_id)
         if not owners:
             return
@@ -1001,7 +908,6 @@ class SupportSessionOperations:
         )
 
     async def _fetch_org_owners(self, org_id) -> list[tuple]:
-        """Return [(user_id, email, full_name)] for every active org OWNER."""
         rows = (
             await self._session.execute(
                 select(User.id, User.email, User.full_name)
@@ -1095,8 +1001,7 @@ class SupportSessionOperations:
             "requested": "support/session_requested",
             "started": "support/session_started",
             "revoked": "support/session_revoked",
-            # No email for expired - in-app notification is enough; the
-            # owner already opted into time-bounded access.
+            # No email for expired; the owner already opted into time-bounded access.
         }.get(event)
         if template is None:
             return

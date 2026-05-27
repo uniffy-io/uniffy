@@ -12,32 +12,11 @@ from uniffy.domains.auth.tokens import decode_access_token
 
 
 def get_user_id_from_context(ctx: RequestContext) -> UUID:
-    """
-    Extract user ID from request context.
+    """Extract user ID from an access-token bearer header.
 
-    Validates the JWT signature and requires ``type == "access"`` so
-    that the short-lived MFA challenge / enrollment-only tokens cannot
-    authorize normal RPCs. The cluster-wide revocation watermark is
-    checked once per RPC by :class:`AuthRevocationInterceptor`; HTTP
-    routes call :func:`uniffy.domains.auth.http_deps.get_current_user_id`
-    which performs the same check inline.
-
-    Parameters
-    ----------
-    ctx : RequestContext
-        RPC request context.
-
-    Returns
-    -------
-    UUID
-        User ID from the JWT token.
-
-    Raises
-    ------
-    ConnectError
-        If authorization token is missing, invalid, expired, or of the
-        wrong type.
-
+    Requires ``type == "access"`` so short-lived MFA challenge /
+    enrollment-only tokens cannot authorize normal RPCs. Revocation is
+    enforced once per RPC by `AuthRevocationInterceptor`.
     """
     headers = ctx.request_headers()
     auth_header = headers.get("authorization", "")
@@ -67,13 +46,7 @@ def get_user_id_from_context(ctx: RequestContext) -> UUID:
 
 
 def get_user_id_from_enrollment_context(ctx: RequestContext) -> UUID:
-    """Extract user ID from an MFA enrollment-only bearer token.
-
-    Used exclusively by the whitelisted MFA enrollment RPCs
-    (``BeginEnrollment``, ``ConfirmEnrollment``, ``GetMfaStatus``) so a
-    user who is mid-enrollment under ``EnrollmentRequired`` policy can
-    complete setup without holding a regular access token.
-    """
+    """Extract user ID from an MFA enrollment-only bearer token."""
     from uniffy.domains.auth.mfa.challenge import decode_enrollment_only_token
 
     headers = ctx.request_headers()
@@ -95,11 +68,7 @@ def get_user_id_from_enrollment_context(ctx: RequestContext) -> UUID:
 
 
 def get_sender_info_from_context(ctx: RequestContext) -> tuple[str, str]:
-    """Extract sender display name and avatar key from JWT claims.
-
-    Returns (full_name, avatar_key). Falls back to empty strings if
-    the claims are absent (e.g. tokens issued before this change).
-    """
+    """Return `(full_name, avatar_key)` from JWT claims; empties when absent."""
     headers = ctx.request_headers()
     auth_header = headers.get("authorization", "")
 
@@ -116,20 +85,7 @@ def get_sender_info_from_context(ctx: RequestContext) -> tuple[str, str]:
 
 
 def get_organization_id_from_context(ctx: RequestContext) -> UUID | None:
-    """
-    Extract organization ID from request context if present.
-
-    Parameters
-    ----------
-    ctx : RequestContext
-        RPC request context.
-
-    Returns
-    -------
-    UUID | None
-        Organization ID from the JWT token, or None if not present.
-
-    """
+    """Extract organization ID from the JWT, or None when absent."""
     headers = ctx.request_headers()
     auth_header = headers.get("authorization", "")
 
@@ -147,20 +103,7 @@ def get_organization_id_from_context(ctx: RequestContext) -> UUID | None:
 
 
 def get_session_id_from_context(ctx: RequestContext) -> UUID | None:
-    """
-    Extract session ID from the access token in request context.
-
-    Parameters
-    ----------
-    ctx : RequestContext
-        RPC request context.
-
-    Returns
-    -------
-    UUID | None
-        Session ID from the JWT token, or None if not present (old tokens).
-
-    """
+    """Extract session ID from the access token, or None when absent."""
     headers = ctx.request_headers()
     auth_header = headers.get("authorization", "")
 
@@ -178,25 +121,11 @@ def get_session_id_from_context(ctx: RequestContext) -> UUID | None:
 
 
 def get_user_agent_from_context(ctx: RequestContext) -> str:
-    """
-    Extract User-Agent header from request context.
-
-    Parameters
-    ----------
-    ctx : RequestContext
-        RPC request context.
-
-    Returns
-    -------
-    str
-        User-Agent string, or empty string if not present.
-
-    """
+    """Return the User-Agent header, or an empty string."""
     headers = ctx.request_headers()
     return headers.get("user-agent", "")
 
 
-# Pre-compiled patterns for device label parsing
 _BROWSER_PATTERNS = [
     (re.compile(r"Edg(?:e)?/([\d.]+)"), "Edge"),
     (re.compile(r"OPR/([\d.]+)"), "Opera"),
@@ -216,21 +145,7 @@ _OS_PATTERNS = [
 
 
 def parse_device_label(user_agent: str) -> str:
-    """
-    Parse User-Agent string into a human-readable device label.
-
-    Parameters
-    ----------
-    user_agent : str
-        Raw User-Agent header value.
-
-    Returns
-    -------
-    str
-        Human-readable label like "Chrome on macOS", or "Unknown device"
-        if the UA cannot be parsed.
-
-    """
+    """Parse a User-Agent into a label like "Chrome on macOS"."""
     if not user_agent:
         return "Unknown device"
 

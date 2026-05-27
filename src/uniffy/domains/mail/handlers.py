@@ -1,10 +1,4 @@
-"""RPC handlers for ``mail.v1.OrgMailService``.
-
-Thin wrappers that parse the request, delegate to
-:class:`OrgMailOperations`, and translate domain results / errors back
-to proto. Org admin / owner gating is enforced inside the operations
-class so handlers stay parse-only.
-"""
+"""RPC handlers for ``mail.v1.OrgMailService``."""
 
 from __future__ import annotations
 
@@ -62,7 +56,6 @@ class OrgMailHandlers:
         request: GetMailConfigRequest,
         ctx: RequestContext,
     ) -> GetMailConfigResponse:
-        """Read the org's effective mail config."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
@@ -83,7 +76,6 @@ class OrgMailHandlers:
         request: UpdateMailConfigRequest,
         ctx: RequestContext,
     ) -> UpdateMailConfigResponse:
-        """Upsert the org's mail config (encrypts password server-side)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
@@ -113,7 +105,6 @@ class OrgMailHandlers:
         request: ClearMailConfigRequest,
         ctx: RequestContext,
     ) -> ClearMailConfigResponse:
-        """Drop every mail.* row for the org."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
@@ -134,7 +125,6 @@ class OrgMailHandlers:
         request: SendTestMailRequest,
         ctx: RequestContext,
     ) -> SendTestMailResponse:
-        """One-shot test send via the org's resolved config."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:

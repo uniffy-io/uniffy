@@ -1,7 +1,7 @@
 """HTTP routes for user avatars.
 
-Serves avatar images via standard HTTP endpoints with caching support.
-Auth is handled via service worker token injection.
+Auth is handled via service worker token injection - <img> tags cannot send
+Authorization headers, so we rely on the SW to attach them per request.
 """
 
 from typing import Annotated
@@ -28,30 +28,6 @@ async def get_avatar(
     _current_user_id: Annotated[UUID, Depends(get_current_user_id)],
     if_none_match: Annotated[str | None, Header()] = None,
 ) -> StreamingResponse | Response:
-    """
-    Stream user avatar image with HTTP caching support.
-
-    Parameters
-    ----------
-    user_id : UUID
-        User ID whose avatar to retrieve.
-    size : str
-        Avatar size: 'sm' (32px), 'md' (64px), or 'lg' (128px).
-    _current_user_id : UUID
-        Authenticated user ID (injected by dependency, used for auth check only).
-
-    Returns
-    -------
-    StreamingResponse
-        Avatar image as WebP with cache headers.
-
-    Raises
-    ------
-    HTTPException
-        400 if invalid size.
-        404 if user or avatar not found.
-
-    """
     if size not in AVATAR_SIZES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,12 +51,10 @@ async def get_avatar(
                     detail="Avatar not available",
                 )
 
-            # Extract content hash from avatar_key for ETag
-            # Format: '{prefix}/{entity_id}/{hash}'
+            # avatar_key format: '{prefix}/{entity_id}/{hash}'. Hash is the ETag.
             content_hash = user.avatar_key.rsplit("/", 1)[-1]
             etag = f'"{content_hash}"'
 
-            # Return 304 if the client already has this version
             if if_none_match and if_none_match.strip() == etag:
                 return Response(
                     status_code=status.HTTP_304_NOT_MODIFIED,
@@ -93,7 +67,6 @@ async def get_avatar(
             s3_key = f"{user.avatar_key}/{size}.webp"
             s3 = get_s3_client()
 
-            # Get object metadata for Content-Length
             try:
                 metadata = await s3.get_object_info(s3_key)
                 content_length = metadata.get("ContentLength", 0)
@@ -107,7 +80,6 @@ async def get_avatar(
                 _s3=s3,
                 _s3_key=s3_key,
             ):
-                """Stream avatar bytes from S3."""
                 async for chunk, _, _ in _s3.download_stream(
                     key=_s3_key,
                     chunk_size=64 * 1024,
@@ -117,7 +89,6 @@ async def get_avatar(
             headers = {
                 "Content-Type": "image/webp",
                 "ETag": etag,
-                # Cache for 5 minutes, then revalidate via ETag
                 "Cache-Control": "public, max-age=600, must-revalidate",
             }
 

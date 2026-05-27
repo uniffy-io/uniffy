@@ -1,5 +1,3 @@
-"""RPC handlers for ``superadmin.v1.SystemConfigService``."""
-
 from __future__ import annotations
 
 from connectrpc.code import Code
@@ -43,8 +41,6 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SystemConfigHandlers:
-    """RPC handlers for ``superadmin.v1.SystemConfigService``."""
-
     async def get_system_config(
         self,
         request: GetSystemConfigRequest,

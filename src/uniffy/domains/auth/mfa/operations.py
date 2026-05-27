@@ -1,21 +1,4 @@
-"""Per-user MFA operations.
-
-One class, async methods, one method per RPC. All DB writes commit in
-the same session the caller passed in. Token-version bumps land
-through ``mark_token_version_revoked`` so the cluster-wide watermark
-catches up immediately.
-
-The reset RPCs (org admin, platform admin, peer co-sign,
-break-glass CLI) live here too but are stubbed for later phases. The
-six core RPCs covered now:
-
-* ``begin_enrollment``
-* ``confirm_enrollment``
-* ``verify_mfa``
-* ``disable_mfa``
-* ``regenerate_recovery_codes``
-* ``get_status``
-"""
+"""Per-user MFA operations."""
 
 from __future__ import annotations
 
@@ -71,8 +54,6 @@ TOTP_ISSUER = "Uniffy"
 
 @dataclass(frozen=True)
 class EnrollmentChallenge:
-    """Material returned by ``begin_enrollment`` (UI consumes all three)."""
-
     secret_b32: str
     provisioning_uri: str
     qr_svg_base64: str
@@ -80,8 +61,6 @@ class EnrollmentChallenge:
 
 @dataclass(frozen=True)
 class ConfirmEnrollmentResult:
-    """Recovery codes + fresh session minted on enrollment confirm."""
-
     recovery_codes: list[str]
     access_token: str
     refresh_token: str
@@ -90,8 +69,6 @@ class ConfirmEnrollmentResult:
 
 @dataclass(frozen=True)
 class VerifyMfaResult:
-    """Real auth result minted on successful login-time verify."""
-
     access_token: str
     refresh_token: str
     user_id: UUID
@@ -103,8 +80,6 @@ class VerifyMfaResult:
 
 @dataclass(frozen=True)
 class PendingPeerReset:
-    """Snapshot of one pending peer-co-sign request for the inbox panel."""
-
     request_id: UUID
     requester_user_id: UUID
     requester_email: str
@@ -117,8 +92,6 @@ class PendingPeerReset:
 
 @dataclass(frozen=True)
 class MfaStatus:
-    """Snapshot of a user's MFA state for the settings UI."""
-
     enabled: bool
     enrolled_at: datetime | None
     last_used_at: datetime | None
@@ -131,25 +104,14 @@ class MfaOperations:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    # ---------------------------------------------------------------- #
-    # Enrollment                                                       #
-    # ---------------------------------------------------------------- #
-
     async def begin_enrollment(self, user_id: UUID) -> EnrollmentChallenge:
-        """Generate (or reuse) the pending secret + return enrollment material.
+        """Generate (or reuse) the pending secret and return enrollment material.
 
-        Refuses when MFA is already enabled on the caller. A session
-        takeover would otherwise let an attacker silently overwrite the
-        TOTP secret + set ``enabled=False`` here, neutralising the
-        second factor without ever holding a current TOTP code.
-        Re-enrollment must go through ``DisableMfa`` first, which
-        requires a current code.
-
-        Idempotent: two concurrent calls (React StrictMode in dev,
-        double-clicks, network retries) cannot leave the row and the
-        returned QR out of sync. The pending secret is the source of
-        truth; whichever caller inserts the row first wins, every
-        subsequent caller reads it back and returns the same QR.
+        Refuses when MFA is already enabled; otherwise a session takeover
+        could silently overwrite the TOTP secret and set `enabled=False`
+        without ever holding a current code. Re-enrollment must go through
+        `DisableMfa` first. Idempotent: the pending secret is the source of
+        truth so concurrent callers all see the same QR.
         """
         user = await self._load_user(user_id)
         if not user.is_active:
@@ -185,11 +147,10 @@ class MfaOperations:
         code: str,
         user_agent: str = "",
     ) -> ConfirmEnrollmentResult:
-        """Verify the pending TOTP code, flip enabled, mint a session.
+        """Verify the pending TOTP code, flip enabled, mint a fresh session.
 
-        Bumps ``User.token_version`` -- every prior session of this user
-        is invalidated, and the caller gets a brand-new pair of tokens
-        in this response so they do not have to re-login.
+        Bumps `User.token_version` so every prior session dies; the caller
+        receives new tokens in the response and does not have to re-login.
         """
         user = await self._load_user(user_id)
         if not user.is_active:
@@ -253,10 +214,6 @@ class MfaOperations:
             session_id=session_record.id,
         )
 
-    # ---------------------------------------------------------------- #
-    # Login completion                                                 #
-    # ---------------------------------------------------------------- #
-
     async def verify_mfa(
         self,
         challenge_token: str,
@@ -264,12 +221,7 @@ class MfaOperations:
         method: str,
         user_agent: str = "",
     ) -> VerifyMfaResult:
-        """Validate the challenge + code, mint the real AuthResult.
-
-        Rate limiting + replay protection live in
-        ``domains.auth.mfa.rate_limit`` and are wired in here once
-        Phase 7 lands; the verify path here is the structural skeleton.
-        """
+        """Validate the challenge + code and mint the real AuthResult."""
         try:
             payload = decode_mfa_challenge_token(challenge_token)
         except Exception as exc:
@@ -381,10 +333,6 @@ class MfaOperations:
             remaining_recovery_codes=remaining,
         )
 
-    # ---------------------------------------------------------------- #
-    # Self-service                                                     #
-    # ---------------------------------------------------------------- #
-
     async def disable_mfa(self, user_id: UUID, code: str) -> None:
         """Disable MFA for the calling user. Requires a current TOTP code."""
         mfa = await self._load_mfa(user_id)
@@ -446,10 +394,6 @@ class MfaOperations:
             remaining_recovery_codes=remaining if mfa.enabled else 0,
         )
 
-    # ---------------------------------------------------------------- #
-    # Reset paths -- stubs filled in later phases                      #
-    # ---------------------------------------------------------------- #
-
     async def admin_reset_mfa(
         self,
         actor_user_id: UUID,
@@ -457,15 +401,10 @@ class MfaOperations:
         target_user_id: UUID,
         reason: str,
     ) -> None:
-        """Org admin resets MFA on a member of their org.
+        """Org OWNER/ADMIN resets MFA on a member of their org.
 
-        Cross-org isolation: the caller must be OWNER or ADMIN of the
-        target user's org. Deletes the ``UserMfa`` row + every
-        recovery code, bumps ``token_version`` to invalidate every
-        active session, emits ``auth.mfa_admin_reset``, and dispatches
-        an out-of-band notice to the target user. The mail send is
-        best-effort -- a self-host without SMTP configured falls
-        through to the in-app audit row.
+        Drops the MFA row + recovery codes, bumps `token_version`, writes
+        an audit row, and dispatches a best-effort out-of-band notice.
         """
         from uniffy.core.audit.actions import Action as _Action
         from uniffy.core.models.login.organization import Organization
@@ -530,14 +469,9 @@ class MfaOperations:
     ) -> None:
         """Platform admin resets MFA on a target with zero org memberships.
 
-        Direct reset is only allowed when the target has no tenant
-        exposure -- a lone platform admin, abandoned account, or
-        invitee that never accepted. For any user with at least one
-        ``OrganizationMember`` row the caller must instead open a
-        SupportSession with that org's owner and have them perform the
-        org-admin reset. Resetting a peer platform admin goes through
-        the co-sign flow (``RequestPlatformPeerReset`` /
-        ``ApprovePlatformPeerReset``); this RPC rejects that case too.
+        For targets with any tenant exposure the caller must open a
+        SupportSession with the org owner instead. Peer platform admins
+        must go through the co-sign flow.
         """
         from uniffy.core.models.login.organization_member import OrganizationMember
 
@@ -739,12 +673,7 @@ class MfaOperations:
         extra_details: dict | None = None,
         org_name_for_mail: str = "Uniffy",
     ) -> None:
-        """Shared reset path: delete rows, bump tkv, audit, send mail.
-
-        Used by `admin_reset_mfa` (org-tier), `platform_reset_mfa`, and
-        `approve_platform_peer_reset`. The mail dispatch is best-effort
-        and never raises -- same posture as the org-tier reset.
-        """
+        """Shared reset path: delete rows, bump tkv, audit, best-effort mail."""
         from uniffy.core.mail.errors import (
             MailNotConfiguredError,
             MailSuppressedError,
@@ -809,27 +738,18 @@ class MfaOperations:
                 error=str(exc),
             )
 
-    # ---------------------------------------------------------------- #
-    # Internals                                                        #
-    # ---------------------------------------------------------------- #
-
     async def _verify_totp(self, mfa: UserMfa, code: str) -> bool:
-        """Decrypt the secret, run pyotp verify with the documented window."""
         return await self._verify_totp_match_counter(mfa, code) is not None
 
     async def _verify_totp_match_counter(
         self, mfa: UserMfa, code: str
     ) -> int | None:
-        """Return the matched 30s step or ``None`` when no code in the
-        accepted drift window matches.
+        """Return the matched 30s step or `None` when no code matches.
 
-        ``pyotp.TOTP.verify`` only returns a bool, but the replay marker
-        needs to know which step the submitted code belongs to. Iterate
-        ``[now-window, now+window]`` and constant-time-compare each
-        expected code against the submitted one. Without this, marking
-        the current step ``N`` for a code that actually belonged to
-        step ``N+1`` lets the same code replay once the clock crosses
-        into ``N+1``.
+        Replay protection needs the exact step the code belongs to;
+        iterating `[now-window, now+window]` with constant-time compare
+        prevents the same code from replaying when the clock crosses
+        into the next step.
         """
         if mfa.totp_secret_encrypted is None:
             return None
@@ -856,13 +776,11 @@ class MfaOperations:
         return None
 
     async def _consume_recovery_code(self, user_id: UUID, code: str) -> bool:
-        """Find an active recovery code that verifies, mark it used.
+        """Find an active recovery code that verifies and mark it used.
 
-        Concurrent verify attempts with the same plaintext race on the
-        same row; the conditional ``UPDATE ... WHERE id=? AND used_at
-        IS NULL`` is atomic in PG so only one winner stamps ``used_at``.
-        A zero-rowcount UPDATE means another tx already consumed the
-        code under us and the caller must treat the verify as a miss.
+        Concurrent attempts with the same plaintext race on the same row;
+        only the winner stamps `used_at`. A zero-rowcount UPDATE means
+        another tx consumed the code and the verify is a miss.
         """
         result = await self._session.execute(
             select(UserRecoveryCode).where(
@@ -902,12 +820,8 @@ class MfaOperations:
     ) -> str:
         """Return the plaintext secret for the user's pending enrollment.
 
-        If a pending row already carries a secret, reuse it. Otherwise
-        generate a fresh one and persist it with ``ON CONFLICT DO
-        NOTHING`` so a racing caller (StrictMode double-fire) cannot
-        leave one transaction with secret A and the other with secret
-        B. After the upsert the row is re-read and the canonical secret
-        is decrypted -- whichever caller landed first wins.
+        Persisted with `ON CONFLICT DO NOTHING` so racing callers can never
+        end up with different secrets; the first writer wins.
         """
         if existing is not None and existing.totp_secret_encrypted:
             return await decrypt_totp_secret(
@@ -951,13 +865,7 @@ class MfaOperations:
         return user
 
     async def _user_active_org_ids(self, user_id: UUID) -> list[UUID]:
-        """Return the active org memberships for ``user_id``.
-
-        Used to fan an MFA self-service audit row out to every org the
-        user belongs to so each tenant's ``/admin/audit`` surface sees
-        the change. Inactive (suspended) memberships are skipped because
-        their admins should not be receiving signals on the user.
-        """
+        """Active org memberships used to fan the audit row to every tenant."""
         from uniffy.core.models.login.organization_member import OrganizationMember
 
         result = await self._session.execute(
@@ -975,16 +883,9 @@ class MfaOperations:
         action: str,
         details: dict | None = None,
     ) -> None:
-        """Write a self-service MFA audit row scoped to every org the user is in.
+        """Fan an MFA self-service audit row to every active org membership.
 
-        MFA secrets are global per user but the second factor protects
-        access to every tenant the user belongs to, so an
-        ``enroll`` / ``disable`` / ``regenerate`` event is meaningful to
-        each org admin independently. One row per active membership lets
-        the existing ``WHERE organization_id = ?`` filter on
-        ``/admin/audit`` surface the event without changing the query.
-        A user with zero active memberships (lone platform admin,
-        invitee mid-onboard) still gets a single ``organization_id=NULL``
+        Users with no active membership still get one `organization_id=NULL`
         row so the platform audit log keeps a record.
         """
         payload = dict(details or {})
@@ -1018,7 +919,7 @@ class MfaOperations:
         return result.scalar_one_or_none()
 
     async def _bump_token_version(self, user: User) -> None:
-        """Increment ``User.token_version`` so every prior session dies."""
+        """Increment `User.token_version` so every prior session dies."""
         user.token_version = (user.token_version or 1) + 1
         await self._session.execute(
             update(User)
@@ -1030,9 +931,7 @@ class MfaOperations:
 def _render_qr_svg_base64(provisioning_uri: str) -> str:
     """Render the provisioning URI as a base64-encoded SVG QR code.
 
-    Inline so the frontend renders with
-    ``<img src="data:image/svg+xml;base64,...">`` -- no CDN fetch, no
-    third-party QR service. Per CLAUDE.md rule 25.
+    Inline so the frontend can render via `data:` URL; no CDN fetch.
     """
     qr = segno.make(provisioning_uri, error="m")
     import io

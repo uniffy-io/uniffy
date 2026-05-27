@@ -1,4 +1,4 @@
-"""Comments RPC handlers - thin layer delegating to operations."""
+"""Comments RPC handlers."""
 
 from uuid import UUID
 
@@ -42,29 +42,11 @@ from uniffy.domains.comments.queries import aggregate_reactions
 
 
 class CommentsHandlers:
-    """RPC handlers for comments service."""
-
     async def create_comment(
         self,
         request: CreateCommentRequest,
         ctx: RequestContext,
     ) -> CreateCommentResponse:
-        """
-        Handle create_comment RPC call.
-
-        Parameters
-        ----------
-        request : CreateCommentRequest
-            The create request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        CreateCommentResponse
-            Response with created comment.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -87,7 +69,6 @@ class CommentsHandlers:
 
         anchor_type = anchor_type_from_proto(request.anchor_type)
 
-        # Convert Struct to dict
         anchor_data = None
         if request.HasField("anchor_data"):
             from google.protobuf.json_format import MessageToDict
@@ -136,22 +117,6 @@ class CommentsHandlers:
         request: UpdateCommentRequest,
         ctx: RequestContext,
     ) -> UpdateCommentResponse:
-        """
-        Handle update_comment RPC call.
-
-        Parameters
-        ----------
-        request : UpdateCommentRequest
-            The update request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        UpdateCommentResponse
-            Response with updated comment.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -203,22 +168,6 @@ class CommentsHandlers:
         request: DeleteCommentRequest,
         ctx: RequestContext,
     ) -> DeleteCommentResponse:
-        """
-        Handle delete_comment RPC call.
-
-        Parameters
-        ----------
-        request : DeleteCommentRequest
-            The delete request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        DeleteCommentResponse
-            Response with success flag.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -252,22 +201,6 @@ class CommentsHandlers:
         request: ListCommentsRequest,
         ctx: RequestContext,
     ) -> ListCommentsResponse:
-        """
-        Handle list_comments RPC call.
-
-        Parameters
-        ----------
-        request : ListCommentsRequest
-            The list request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListCommentsResponse
-            Response with comments list and counts.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -344,22 +277,6 @@ class CommentsHandlers:
         request: GetCommentRequest,
         ctx: RequestContext,
     ) -> GetCommentResponse:
-        """
-        Handle get_comment RPC call.
-
-        Parameters
-        ----------
-        request : GetCommentRequest
-            The get request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        GetCommentResponse
-            Response with comment and replies.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -384,7 +301,6 @@ class CommentsHandlers:
                     comment_id=comment_id,
                 )
 
-                # Convert replies to proto
                 proto_replies = []
                 for (
                     reply,
@@ -433,22 +349,6 @@ class CommentsHandlers:
         request: ResolveCommentRequest,
         ctx: RequestContext,
     ) -> ResolveCommentResponse:
-        """
-        Handle resolve_comment RPC call.
-
-        Parameters
-        ----------
-        request : ResolveCommentRequest
-            The resolve request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ResolveCommentResponse
-            Response with resolved comment.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -496,22 +396,6 @@ class CommentsHandlers:
         request: ReopenCommentRequest,
         ctx: RequestContext,
     ) -> ReopenCommentResponse:
-        """
-        Handle reopen_comment RPC call.
-
-        Parameters
-        ----------
-        request : ReopenCommentRequest
-            The reopen request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ReopenCommentResponse
-            Response with reopened comment.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -559,22 +443,6 @@ class CommentsHandlers:
         request: AddReactionRequest,
         ctx: RequestContext,
     ) -> AddReactionResponse:
-        """
-        Handle add_reaction RPC call.
-
-        Parameters
-        ----------
-        request : AddReactionRequest
-            The add reaction request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        AddReactionResponse
-            Response with success flag.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -612,22 +480,6 @@ class CommentsHandlers:
         request: RemoveReactionRequest,
         ctx: RequestContext,
     ) -> RemoveReactionResponse:
-        """
-        Handle remove_reaction RPC call.
-
-        Parameters
-        ----------
-        request : RemoveReactionRequest
-            The remove reaction request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        RemoveReactionResponse
-            Response with success flag.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -661,22 +513,6 @@ class CommentsHandlers:
         request: GetCommentCountsRequest,
         ctx: RequestContext,
     ) -> GetCommentCountsResponse:
-        """
-        Handle get_comment_counts RPC call.
-
-        Parameters
-        ----------
-        request : GetCommentCountsRequest
-            The counts request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        GetCommentCountsResponse
-            Response with counts map.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -685,7 +521,7 @@ class CommentsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
 
         content_refs = []
-        for ref in request.content_refs[:100]:  # Limit to 100
+        for ref in request.content_refs[:100]:
             try:
                 ct = content_type_from_proto(ref.content_type)
                 cid = UUID(ref.content_id)

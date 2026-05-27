@@ -1,9 +1,9 @@
 """SQLAlchemy WHERE-clause builders for content access filtering.
 
-Returns rows the user owns, has a non-BLOCKED ContentMember row on
-(direct or via group), or that are OPEN_TO_ORG with a baseline; minus
-any content the user is BLOCKED on. Does NOT apply org-admin or
-domain-admin bypass - callers skip the filter for those.
+Selects rows the user owns, has a non-BLOCKED ContentMember on (direct or
+via group), or that are OPEN_TO_ORG with a baseline; minus any content the
+user is BLOCKED on. Does NOT apply org/domain admin bypass - callers skip
+the filter entirely in that case.
 """
 
 from datetime import UTC, datetime
@@ -22,16 +22,7 @@ from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 
 
 class ContentAccessQuery:
-    """
-    Build WHERE clauses for content the user has access to.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session for sub-query construction and materialized
-        lookups.
-
-    """
+    """Build WHERE clauses for content the user has access to."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -46,17 +37,15 @@ class ContentAccessQuery:
         access_mode_column: InstrumentedAttribute,
         baseline_role_column: InstrumentedAttribute,
     ) -> Any:
-        """Return a WHERE clause selecting content accessible to the user.
+        """WHERE clause selecting content accessible to the user.
 
-        The row's stored ``access_mode`` / ``baseline_role`` may be NULL,
-        signalling that the row inherits from
-        ``permissions_org_defaults``. This filter resolves the effective
-        ``(mode, baseline)`` via a correlated scalar subquery against the
-        defaults table, scoped on the exact same
-        ``(organization_id, content_type)`` pair the caller passed in.
+        NULL ``access_mode`` / ``baseline_role`` on a row signals inheritance
+        from ``permissions_org_defaults``; this filter resolves the effective
+        ``(mode, baseline)`` via a correlated scalar subquery scoped to the
+        same ``(organization_id, content_type)`` pair.
 
-        Caller must still scope the outer query to ``organization_id`` on
-        the content table; this filter only handles the access part.
+        The caller is still responsible for scoping the outer query to
+        ``organization_id`` on the content table.
         """
         from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_member import ContentMember
@@ -68,8 +57,8 @@ class ContentAccessQuery:
             GroupMember.is_active == True,  # noqa: E712
         )
 
-        # Content IDs the user is BLOCKED on (direct or via group).
-        # These must be excluded regardless of any other grant.
+        # Content IDs the user is BLOCKED on (direct or via group). Must be
+        # excluded regardless of any other grant.
         blocked_subq = select(ContentMember.content_id).where(
             ContentMember.organization_id == organization_id,
             ContentMember.content_type == content_type,
@@ -90,7 +79,6 @@ class ContentAccessQuery:
             ),
         )
 
-        # Content IDs the user has a non-BLOCKED explicit grant on.
         explicit_member_subq = select(ContentMember.content_id).where(
             ContentMember.organization_id == organization_id,
             ContentMember.content_type == content_type,
@@ -111,10 +99,8 @@ class ContentAccessQuery:
             ),
         )
 
-        # Org-default scalar subqueries scoped to (organization_id,
-        # content_type). Both sides of the pair must be on the join
-        # predicate so a defaults row for a different content type in
-        # the same org cannot leak in.
+        # Both halves of (organization_id, content_type) must be on the
+        # predicate so a defaults row for a different content type cannot leak in.
         default_mode_scalar = (
             select(OrganizationPermissionDefaults.default_access_mode)
             .where(
@@ -132,17 +118,16 @@ class ContentAccessQuery:
             .scalar_subquery()
         )
 
-        # Effective mode: row override wins; NULL falls back to the org
-        # default; absent default falls back to OWNER_ONLY (least-privilege).
+        # Row override wins; NULL falls back to the org default; absent default
+        # falls back to OWNER_ONLY (least-privilege).
         effective_mode = func.coalesce(
             access_mode_column,
             default_mode_scalar,
             AccessMode.OWNER_ONLY,
         )
 
-        # Effective baseline: only meaningful on OPEN_TO_ORG rows. If the
-        # row carries an explicit OPEN_TO_ORG with NULL baseline, fall back
-        # to the org default baseline. Otherwise the row's baseline wins.
+        # Only meaningful on OPEN_TO_ORG rows: row's baseline wins unless it is
+        # NULL, in which case the org default fills it in.
         effective_baseline = case(
             (access_mode_column.is_(None), default_baseline_scalar),
             (
@@ -183,11 +168,7 @@ class ContentAccessQuery:
         access_mode_column: InstrumentedAttribute,
         baseline_role_column: InstrumentedAttribute,
     ) -> Any:
-        """WHERE clause for content that is shared WITH the user (not owned).
-
-        Same logic as ``build_accessible_filter`` but the user must not
-        be the owner. Useful for "Shared with me" views.
-        """
+        """``build_accessible_filter`` minus owned rows (for "Shared with me")."""
         base = self.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -209,7 +190,6 @@ class ContentAccessQuery:
         access_mode_column: InstrumentedAttribute,
         baseline_role_column: InstrumentedAttribute,
     ) -> list[UUID]:
-        """Materialize the set of content IDs the user can access."""
         filter_expr = self.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -233,7 +213,6 @@ class ContentAccessQuery:
         access_mode_column: InstrumentedAttribute,
         baseline_role_column: InstrumentedAttribute,
     ) -> Select:
-        """Apply :meth:`build_accessible_filter` to an existing query."""
         filter_expr = self.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,

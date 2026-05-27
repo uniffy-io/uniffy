@@ -1,14 +1,4 @@
-"""ARQ task: respond to a chat message as an agent.
-
-Enqueued by the chat `send_message` post-commit hook when
-`mention_detector.detect_agent_mentions` returns a match and the
-`chat.agents_enabled` org flag is on. Opens a fresh async session and
-hands off to `AgentChatBridge.respond_to_chat_message`, which drives the
-runtime and fans translated events back into the chat stream.
-
-Task name: `respond_to_chat_message` - stable and referenced by
-`_post_commit_send` in `domains/chat/messages/operations.py`.
-"""
+"""ARQ task: run an agent in response to a chat trigger (DM / mention / reply)."""
 
 from typing import Any
 from uuid import UUID
@@ -26,28 +16,6 @@ async def respond_to_chat_message(
     agent_id: str,
     trigger_rule: str,
 ) -> dict[str, Any]:
-    """Run the agent against a chat trigger.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ worker context.
-    channel_id : str
-        UUID of the chat channel.
-    trigger_message_id : str
-        UUID of the user message that triggered the invocation.
-    agent_id : str
-        UUID of the agent to invoke.
-    trigger_rule : str
-        Detection rule that matched (``dm`` / ``mention`` / ``reply``).
-        Recorded for analytics.
-
-    Returns
-    -------
-    dict
-        Execution summary.
-
-    """
     try:
         cid = UUID(channel_id)
         tmid = UUID(trigger_message_id)

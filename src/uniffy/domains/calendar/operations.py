@@ -53,14 +53,10 @@ from uniffy.domains.tags import TagAssignment, TagOperations
 
 
 def _master_event_id(event: CalendarEvent) -> UUID:
-    """Strip ``__occurrence__{date}`` from a synthetic recurring-instance id.
+    """Strip `__occurrence__{date}` from a synthetic recurring-instance id.
 
-    Tag assignments live on the master event URN. Recurring instances
-    are virtual rows produced by ``_expand_recurring_events``; their id
-    is rewritten to ``{master_uuid}__occurrence__{date}`` so the UI can
-    address an occurrence without minting a new DB row. The tag pipeline
-    must always reach the master row, regardless of which view fed it
-    the event.
+    Tag assignments live on the master event row; recurring instances are
+    virtual and must resolve to the master so the tag pipeline stays consistent.
     """
     raw = str(event.id)
     if "__occurrence__" in raw:
@@ -75,16 +71,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
     model_class = CalendarEvent
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize event operations."""
         super().__init__(session)
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
-        """Aggregate searchable text for an event.
-
-        Tag slugs are written into the dedicated ``tags`` array on the
-        search document via :meth:`_get_search_tags_async`, so they are
-        not duplicated into the keyword stream.
-        """
+        # Tag slugs land in the dedicated `tags` array via
+        # `_get_search_tags_async`; not duplicated here.
         parts = [model.title]
         if model.description:
             parts.append(model.description)
@@ -93,28 +84,18 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         return " ".join(parts)
 
     def _get_search_title(self, model: CalendarEvent) -> str:
-        """Return event title for the search index."""
         return model.title
 
     def _get_url_path(self, model: CalendarEvent) -> str:
-        """Return the frontend route for this event."""
         return f"/calendar?event={model.id}"
 
     def _get_search_description(self, model: CalendarEvent) -> str | None:
-        """Return a short description snippet."""
         if model.description:
             return model.description[:200]
         return None
 
     async def _get_search_tags_async(self, model: CalendarEvent) -> list[str] | None:
-        """Return slugs assigned to this event via the unified tag store.
-
-        Recurring instances inherit their parent's tag set: instances
-        synthesize an id like ``{master_uuid}__occurrence__{date}`` but
-        carry no per-instance assignments of their own. The lookup runs
-        against the master URN so the indexer keeps emitting consistent
-        ``tag:{slug}`` keywords across the series.
-        """
+        # Recurring instances inherit the master's tag set; resolve to master.
         urn = build_content_urn(self.content_type, _master_event_id(model))
         tag_ops = TagOperations(self.session)
         bulk = await tag_ops.get_for_urns(
@@ -139,10 +120,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         return metadata if metadata else None
 
     def _get_owner_id_column(self) -> InstrumentedAttribute:
-        """Events use ``organizer_id`` instead of ``owner_id``."""
+        """Events use `organizer_id` instead of `owner_id`."""
         return CalendarEvent.organizer_id
-
-    # Event CRUD
 
     async def create(
         self,
@@ -172,10 +151,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
     ) -> CalendarEvent:
         """Create a new calendar event.
 
-        ``access_mode`` and ``baseline_role`` default to the org defaults
-        for ``ContentType.CALENDAR_EVENT``. ``group_ids`` is a convenience
-        for adding initial VIEWER group members atomically through
-        :class:`ContentMembersOperations`.
+        `access_mode` / `baseline_role` default to the org defaults for
+        `CALENDAR_EVENT`; `group_ids` seeds VIEWER group memberships.
         """
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
@@ -350,8 +327,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
     ) -> CalendarEvent:
         """Update an existing event.
 
-        Access-policy changes (access mode, baseline role, members) go
-        through ``permissions.v1.MembersService``, never this method.
+        Access-policy changes go through `permissions.v1.MembersService`.
         """
         if recurrence_edit_scope and occurrence_date:
             if recurrence_edit_scope == "this_event":
@@ -723,10 +699,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         calendar_ids: list[UUID] | None = None,
         category_ids: list[UUID] | None = None,
     ) -> list[CalendarEvent]:
-        """Get events in a date range the user can access.
+        """Get events the user can access in a date range.
 
-        Combines the canonical accessible-filter with an attendee-based
-        bypass (users always see events they're invited to).
+        Combines the canonical accessible-filter with an attendee bypass
+        so invitees always see events they are on.
         """
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,
@@ -786,7 +762,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
     @staticmethod
     def _parse_master_event_id(event_id: UUID | str) -> UUID:
-        """Extract the real master event UUID from a (possibly synthetic) id."""
+        """Extract the real master UUID from a possibly synthetic occurrence id."""
         event_id_str = str(event_id)
         if "__occurrence__" in event_id_str:
             return UUID(event_id_str.split("__occurrence__")[0])
@@ -794,7 +770,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
     @staticmethod
     def _collect_update_kwargs(**fields: object) -> dict:
-        """Collect non-None fields into an update kwargs dict."""
         return {k: v for k, v in fields.items() if v is not None}
 
     async def _expand_recurring_events(
@@ -803,7 +778,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         range_start: datetime,
         range_end: datetime,
     ) -> list[CalendarEvent]:
-        """Expand recurring masters into virtual occurrences in the range."""
+        """Expand recurring masters into virtual occurrences."""
         recurring_ids = [
             e.id
             for e in events
@@ -908,7 +883,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         occurrence_date: date,
         **updates: object,
     ) -> CalendarEvent:
-        """Edit a single occurrence by materializing an override event."""
+        """Materialize an override event for a single recurring occurrence."""
         master = await self._fetch_by_id(event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
@@ -1000,7 +975,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         occurrence_date: date,
         **updates: object,
     ) -> CalendarEvent:
-        """Split a recurring series at ``occurrence_date`` and apply updates."""
+        """Split a recurring series at `occurrence_date` and apply updates."""
         master = await self._fetch_by_id(event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
@@ -1330,7 +1305,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         intervals: list[int],
         start_time: datetime,
     ) -> None:
-        """Create ``EventReminder`` rows for each (user, interval) pair."""
         now = datetime.now(UTC)
         for user_id in user_ids:
             for minutes in intervals:
@@ -1353,16 +1327,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         source_event_id: UUID,
         target_event_id: UUID,
     ) -> None:
-        """Copy manual tag assignments from one event URN to another.
-
-        Used when materializing a recurring-series override
-        (``edit_single_occurrence``) or splitting the series
-        (``edit_this_and_following``). Inline assignments are not a
-        concept on calendar events, so only ``source=manual`` rows
-        propagate. The new row gets its own ``tag_assignments`` rows
-        pointing at the same tag ids; if the master is later edited
-        independently, the override / new master keep their snapshot.
-        """
+        """Copy manual tag assignments from one event URN to another."""
         tag_ops = TagOperations(self.session)
         source_urn = build_content_urn(self.content_type, source_event_id)
         target_urn = build_content_urn(self.content_type, target_event_id)
@@ -1381,13 +1346,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         )
 
     def _tag_filter_subquery(self, tag_ids: list[UUID]):
-        """Subquery: event ids that carry every tag id in ``tag_ids``.
-
-        Implements logical AND across the tag set via a GROUP BY +
-        HAVING COUNT(DISTINCT) check, mirroring the notes / files
-        filter shape. Joins ``tag_assignments`` against the synthesized
-        ``urn:uniffy:content:CALENDAR_EVENT:{id}`` value.
-        """
+        """Event ids that carry every tag id in `tag_ids` (logical AND)."""
         urn_prefix = "urn:uniffy:content:CALENDAR_EVENT:"
         urn_expr = func.concat(urn_prefix, cast(CalendarEvent.id, String))
         return (
@@ -1403,7 +1362,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         event_id: UUID,
         user_ids: list[UUID] | None = None,
     ) -> None:
-        """Delete unsent reminders, optionally scoped to a list of users."""
         stmt = delete(EventReminder).where(
             and_(
                 EventReminder.event_id == event_id,
@@ -1418,7 +1376,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         self,
         attendee_ids: list[UUID],
     ) -> list[UUID]:
-        """Expand group IDs in the attendee list to individual users."""
         if not attendee_ids:
             return []
 
@@ -1461,7 +1418,6 @@ class CategoryOperations:
     """Category CRUD (no permission system; org-wide)."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize category operations."""
         self.session = session
 
     async def _verify_org_membership(
@@ -1469,7 +1425,6 @@ class CategoryOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Verify the user is an active org member."""
         result = await self.session.execute(
             select(OrganizationMember).where(
                 and_(
@@ -1492,7 +1447,6 @@ class CategoryOperations:
         color: str,
         icon: str | None = None,
     ) -> Category:
-        """Create a new category."""
         await self._verify_org_membership(user_id, organization_id)
 
         result = await self.session.execute(
@@ -1519,7 +1473,6 @@ class CategoryOperations:
         category_id: UUID,
         organization_id: UUID,
     ) -> Category:
-        """Get a category by ID."""
         await self._verify_org_membership(user_id, organization_id)
 
         result = await self.session.execute(
@@ -1545,7 +1498,6 @@ class CategoryOperations:
         icon: str | None = None,
         sort_order: int | None = None,
     ) -> Category:
-        """Update a category."""
         await self._verify_org_membership(user_id, organization_id)
 
         category = await self.get_by_id(user_id, category_id, organization_id)
@@ -1570,7 +1522,7 @@ class CategoryOperations:
         category_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Delete a category (default categories cannot be deleted)."""
+        """Delete a category; default categories cannot be deleted."""
         await self._verify_org_membership(user_id, organization_id)
 
         category = await self.get_by_id(user_id, category_id, organization_id)
@@ -1587,7 +1539,6 @@ class CategoryOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> list[Category]:
-        """List categories for the given organization."""
         await self._verify_org_membership(user_id, organization_id)
         return await queries.get_categories(self.session, organization_id)
 
@@ -1602,14 +1553,9 @@ class CategoryOperations:
 
 
 class EventTemplateOperations:
-    """EventTemplate CRUD (access_mode/baseline_role based).
-
-    Templates are org-scoped and use the same access model as other
-    content. They do not participate in search or notifications.
-    """
+    """EventTemplate CRUD. Org-scoped; not indexed for search."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize template operations."""
         self.session = session
 
     async def _verify_org_membership(
@@ -1617,7 +1563,6 @@ class EventTemplateOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Verify the user is an active org member."""
         result = await self.session.execute(
             select(OrganizationMember).where(
                 and_(
@@ -1646,7 +1591,6 @@ class EventTemplateOperations:
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
     ) -> EventTemplate:
-        """Create an event template."""
         await self._verify_org_membership(user_id, organization_id)
 
         access_mode, baseline_role = await resolve_access_policy(
@@ -1682,6 +1626,7 @@ class EventTemplateOperations:
         user_id: UUID,
     ) -> EventTemplate:
         """Get a template by ID, enforcing access policy."""
+
         await self._verify_org_membership(user_id, organization_id)
 
         query = select(EventTemplate).where(
@@ -1752,10 +1697,7 @@ class EventTemplateOperations:
         organization_id: UUID,
         user_id: UUID,
     ) -> list[EventTemplate]:
-        """List templates visible to the user.
-
-        Shows all non-OWNER_ONLY templates plus the user's own.
-        """
+        """List templates visible to the user."""
         await self._verify_org_membership(user_id, organization_id)
 
         access_filter = self.access_query.build_accessible_filter(
@@ -1776,15 +1718,11 @@ class EventTemplateOperations:
         return list(result.scalars().all())
 
 
-# Content loader registration
-
-
 async def _load_calendar_event(
     session: AsyncSession,
     organization_id: UUID,
     content_id: UUID,
 ) -> CalendarEvent | None:
-    """Loader used by ``ContentMembersOperations`` to fetch an event row."""
     result = await session.execute(
         select(CalendarEvent).where(
             CalendarEvent.id == content_id,

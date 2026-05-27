@@ -1,14 +1,4 @@
-"""Agent cron task executor.
-
-Runs every minute via ARQ cron. Finds due scheduled tasks and
-executes them by calling RuntimeOperations.send_message() with
-the stored user identity. The full 3-layer permission chain is
-enforced at execution time.
-
-Also provides ``execute_single_agent_cron_task`` for on-demand
-triggering via the "Run Now" button. Both paths share the same
-``_execute_single_cron_task`` core logic.
-"""
+"""Run agent cron tasks: scheduled via ARQ cron plus on-demand via "Run Now"."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -20,25 +10,7 @@ from uniffy.db import open_session
 
 
 async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Cron task: find and execute due agent cron tasks.
-
-    For each due task:
-    1. Verify execution_user is still active and an org member
-    2. Create or reuse a dedicated cron session
-    3. Call RuntimeOperations.send_message() with stored user identity
-    4. Log the result, update task state, notify user
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ worker context.
-
-    Returns
-    -------
-    dict
-        Summary of executed tasks.
-
-    """
+    """ARQ cron tick: execute every due agent task and update its run log."""
     executed = 0
     errors = 0
 
@@ -85,27 +57,7 @@ async def execute_single_agent_cron_task(
     task_id: str,
     run_log_id: str,
 ) -> dict[str, Any]:
-    """Execute a single cron task on demand via the worker.
-
-    Enqueued by ``CronTaskOperations.trigger_now()`` when a user
-    clicks "Run Now". Receives the ID of a pre-created "pending"
-    run log entry and updates it with the execution result.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ worker context.
-    task_id : str
-        UUID of the cron task to execute.
-    run_log_id : str
-        UUID of the pre-created "pending" run log to update with results.
-
-    Returns
-    -------
-    dict
-        Execution result summary.
-
-    """
+    """Execute a single cron task on demand and update its pre-created run log."""
     from sqlalchemy import select
 
     from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
@@ -119,7 +71,6 @@ async def execute_single_agent_cron_task(
 
     try:
         async with open_session() as session:
-            # Load task
             result = await session.execute(
                 select(AgentCronTask).where(AgentCronTask.id == task_uuid)
             )
@@ -128,7 +79,6 @@ async def execute_single_agent_cron_task(
                 logger.error(f"Cron task {task_id} not found for on-demand execution")
                 return {"status": "error", "error": "Task not found"}
 
-            # Load the pre-created run log
             log_result = await session.execute(
                 select(AgentCronRunLog).where(AgentCronRunLog.id == log_uuid)
             )
@@ -137,7 +87,6 @@ async def execute_single_agent_cron_task(
                 logger.error(f"Run log {run_log_id} not found for on-demand execution")
                 return {"status": "error", "error": "Run log not found"}
 
-            # Ensure dedicated cron session exists
             session_id = task.session_id
             if not session_id:
                 try:
@@ -166,7 +115,6 @@ async def execute_single_agent_cron_task(
                     )
                     return {"status": "error", "task_id": task_id}
 
-            # Execute via RuntimeOperations - full permission chain applies
             try:
                 runtime_ops = RuntimeOperations(session)
                 _user_msg, assistant_msg, _model = await runtime_ops.send_message(
@@ -176,7 +124,6 @@ async def execute_single_agent_cron_task(
                     content=task.prompt,
                 )
 
-                # Update run log with success
                 run_log.status = "success"
                 run_log.result_summary = (
                     assistant_msg.content[:500] if assistant_msg.content else None
@@ -187,7 +134,6 @@ async def execute_single_agent_cron_task(
                 run_log.session_id = session_id
                 await session.commit()
 
-                # Update task state
                 ops = CronTaskOperations(session)
                 await ops.mark_completed(task.id, status="success")
 
@@ -197,13 +143,11 @@ async def execute_single_agent_cron_task(
             except Exception as exc:
                 await session.rollback()
 
-                # Update run log with error
                 run_log.status = "error"
                 run_log.error = str(exc)[:1000]
                 run_log.completed_at = datetime.now(UTC)
                 await session.commit()
 
-                # Update task state
                 ops = CronTaskOperations(session)
                 await ops.mark_completed(
                     task.id,
@@ -226,24 +170,7 @@ async def execute_single_agent_cron_task(
 
 
 async def _execute_single_cron_task(session, task) -> None:
-    """Execute a single cron task with full permission chain.
-
-    Permission checks happen inside RuntimeOperations.send_message():
-    1. require_org_member(task.execution_user_id, task.organization_id)
-    2. AgentOperations.get_by_id() - 3-layer check on the agent
-    3. Each tool call uses ToolContext(user_id=task.execution_user_id)
-
-    Always creates an AgentCronRunLog entry, regardless of success or
-    failure, so execution history is always available in the UI.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    task : AgentCronTask
-        The cron task to execute.
-
-    """
+    """Execute one cron task; always writes an AgentCronRunLog row."""
     from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
     from uniffy.domains.agents.runtime.operations import RuntimeOperations
     from uniffy.domains.agents.sessions.operations import SessionOperations
@@ -251,7 +178,6 @@ async def _execute_single_cron_task(session, task) -> None:
     started_at = datetime.now(UTC)
     session_id = task.session_id
 
-    # Ensure dedicated cron session exists
     try:
         if not session_id:
             session_ops = SessionOperations(session)
@@ -263,17 +189,15 @@ async def _execute_single_cron_task(session, task) -> None:
                 display_name=f"Cron: {task.name}",
             )
             session_id = cron_session.id
-            # Store session_id on the task for future runs
             task.session_id = session_id
             await session.commit()
     except Exception as exc:
-        # Session creation failed - log it and re-raise
         await session.rollback()
         completed_at = datetime.now(UTC)
         run_log = AgentCronRunLog(
             cron_task_id=task.id,
             organization_id=task.organization_id,
-            session_id=session_id or task.id,  # fallback if no session yet
+            session_id=session_id or task.id,
             status="error",
             error=f"Session setup failed: {exc}",
             started_at=started_at,
@@ -283,7 +207,6 @@ async def _execute_single_cron_task(session, task) -> None:
         await session.commit()
         raise
 
-    # Execute via RuntimeOperations - full permission chain applies
     try:
         runtime_ops = RuntimeOperations(session)
         user_msg, assistant_msg, model = await runtime_ops.send_message(
@@ -293,8 +216,6 @@ async def _execute_single_cron_task(session, task) -> None:
             content=task.prompt,
         )
     except Exception as exc:
-        # LLM / tool execution failed - create error run log
-        # Rollback any dirty session state before writing the log
         await session.rollback()
         completed_at = datetime.now(UTC)
         error_text = str(exc)[:1000]
@@ -319,7 +240,6 @@ async def _execute_single_cron_task(session, task) -> None:
     completed_at = datetime.now(UTC)
     duration_ms = int((completed_at - started_at).total_seconds() * 1000)
 
-    # Create success run log
     run_log = AgentCronRunLog(
         cron_task_id=task.id,
         organization_id=task.organization_id,

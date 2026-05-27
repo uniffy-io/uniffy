@@ -10,33 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class UserStorageQuotaOverride(SQLModel, table=True):
-    """
-    Per-user storage quota override.
-
-    Allows administrators to set a custom storage limit for a specific
-    user that takes precedence over the organization default. For example,
-    a power user who needs more storage than the default allows.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key.
-    organization_id : UUID
-        Organization this override belongs to.
-    user_id : UUID
-        User this override applies to.
-    quota_bytes : int
-        Custom storage limit in bytes for this user.
-    note : str | None
-        Administrative note explaining why the override was set.
-    created_by : UUID
-        Admin user who created or last updated this override.
-    created_at : datetime
-        Creation timestamp.
-    updated_at : datetime
-        Last update timestamp.
-
-    """
+    """Per-user storage quota that overrides the org default."""
 
     __tablename__ = "files_user_storage_quota_overrides"
     __table_args__ = (
@@ -63,7 +37,6 @@ class UserStorageQuotaOverride(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of UserStorageQuotaOverride."""
         return (
             f"<UserStorageQuotaOverride(id={self.id}, user_id={self.user_id}, "
             f"quota_bytes={self.quota_bytes})>"

@@ -1,5 +1,3 @@
-"""Projects RPC handlers."""
-
 import json
 import secrets
 from datetime import UTC, datetime
@@ -111,7 +109,6 @@ from uniffy.domains.tags import TagOperations
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
-    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
     try:
         return UUID(value)
     except ValueError as exc:
@@ -119,7 +116,6 @@ def _parse_uuid(value: str, field: str) -> UUID:
 
 
 def _parse_tag_ids(raw_ids) -> list[UUID]:
-    """Parse a repeated string proto field into a list of UUIDs."""
     out: list[UUID] = []
     for raw in raw_ids or ():
         try:
@@ -134,7 +130,6 @@ async def _hydrate_task_tags(
     organization_id: UUID,
     task_ids: list[UUID],
 ) -> dict[UUID, list[Tag]]:
-    """Bulk-fetch unified-tag rows for a batch of task ids."""
     if not task_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.TASK, tid): tid for tid in task_ids}
@@ -151,7 +146,6 @@ async def _hydrate_project_tags(
     organization_id: UUID,
     project_ids: list[UUID],
 ) -> dict[UUID, list[Tag]]:
-    """Bulk-fetch unified-tag rows for a batch of project ids."""
     if not project_ids:
         return {}
     urn_to_id = {build_content_urn(ContentType.PROJECT, pid): pid for pid in project_ids}
@@ -169,7 +163,6 @@ async def _resolve_project_effective_policy(
     project: Project,
     checker: PermissionChecker | None = None,
 ):
-    """Return the project's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
         organization_id, ContentType.PROJECT,
@@ -180,7 +173,6 @@ async def _resolve_project_effective_policy(
 
 
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
-    """Translate a domain exception into the matching ``ConnectError``."""
     if isinstance(exc, NotFoundError):
         return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
     if isinstance(exc, ValidationError):
@@ -192,14 +184,11 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
 
 
 class ProjectsHandlers:
-    """RPC handlers for ``projects.v1.ProjectsService``."""
-
     async def create_project(
         self,
         request: CreateProjectRequest,
         ctx: RequestContext,
     ) -> CreateProjectResponse:
-        """Create a new project."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -254,7 +243,6 @@ class ProjectsHandlers:
         request: GetProjectRequest,
         ctx: RequestContext,
     ) -> GetProjectResponse:
-        """Get a project by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -293,7 +281,6 @@ class ProjectsHandlers:
         request: UpdateProjectRequest,
         ctx: RequestContext,
     ) -> UpdateProjectResponse:
-        """Update an existing project."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -361,7 +348,6 @@ class ProjectsHandlers:
         request: DeleteProjectRequest,
         ctx: RequestContext,
     ) -> DeleteProjectResponse:
-        """Delete a project."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -381,7 +367,6 @@ class ProjectsHandlers:
         request: ListProjectsRequest,
         ctx: RequestContext,
     ) -> ListProjectsResponse:
-        """List projects the user can access."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -463,7 +448,6 @@ class ProjectsHandlers:
         request: CreateTaskRequest,
         ctx: RequestContext,
     ) -> CreateTaskResponse:
-        """Create a new task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -557,7 +541,6 @@ class ProjectsHandlers:
         request: GetTaskRequest,
         ctx: RequestContext,
     ) -> GetTaskResponse:
-        """Get a task by ID."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
@@ -587,7 +570,6 @@ class ProjectsHandlers:
         request: UpdateTaskRequest,
         ctx: RequestContext,
     ) -> UpdateTaskResponse:
-        """Update an existing task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
@@ -697,7 +679,6 @@ class ProjectsHandlers:
         request: MoveTaskRequest,
         ctx: RequestContext,
     ) -> MoveTaskResponse:
-        """Move a task (board drag-and-drop)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
@@ -765,7 +746,6 @@ class ProjectsHandlers:
         request: BulkUpdateTasksRequest,
         ctx: RequestContext,
     ) -> BulkUpdateTasksResponse:
-        """Update multiple tasks in one call."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -813,7 +793,6 @@ class ProjectsHandlers:
         request: DeleteTaskRequest,
         ctx: RequestContext,
     ) -> DeleteTaskResponse:
-        """Delete a task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
@@ -833,7 +812,6 @@ class ProjectsHandlers:
         request: DeleteTasksRequest,
         ctx: RequestContext,
     ) -> DeleteTasksResponse:
-        """Delete multiple tasks (skipping any that fail)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -861,7 +839,6 @@ class ProjectsHandlers:
         request: ListTasksRequest,
         ctx: RequestContext,
     ) -> ListTasksResponse:
-        """List tasks for a project."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -979,7 +956,6 @@ class ProjectsHandlers:
         request: CreateFieldRequest,
         ctx: RequestContext,
     ) -> CreateFieldResponse:
-        """Create a custom field definition."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1023,7 +999,6 @@ class ProjectsHandlers:
         request: UpdateFieldRequest,
         ctx: RequestContext,
     ) -> UpdateFieldResponse:
-        """Update a custom field definition."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1072,7 +1047,6 @@ class ProjectsHandlers:
         request: DeleteFieldRequest,
         ctx: RequestContext,
     ) -> DeleteFieldResponse:
-        """Delete a custom field definition."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1110,7 +1084,6 @@ class ProjectsHandlers:
         request: CreateViewRequest,
         ctx: RequestContext,
     ) -> CreateViewResponse:
-        """Create a view configuration."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1152,7 +1125,6 @@ class ProjectsHandlers:
         request: UpdateViewRequest,
         ctx: RequestContext,
     ) -> UpdateViewResponse:
-        """Update a view configuration."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1198,7 +1170,6 @@ class ProjectsHandlers:
         request: DeleteViewRequest,
         ctx: RequestContext,
     ) -> DeleteViewResponse:
-        """Delete a view configuration."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1233,7 +1204,6 @@ class ProjectsHandlers:
         request: ListActivitiesRequest,
         ctx: RequestContext,
     ) -> ListActivitiesResponse:
-        """List activities for a task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
@@ -1277,14 +1247,11 @@ class ProjectsHandlers:
 
 
 class SprintHandlers:
-    """Sprint RPC handlers."""
-
     async def create_sprint(
         self,
         request: CreateSprintRequest,
         ctx: RequestContext,
     ) -> CreateSprintResponse:
-        """Create a new sprint."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1312,7 +1279,6 @@ class SprintHandlers:
         request: UpdateSprintRequest,
         ctx: RequestContext,
     ) -> UpdateSprintResponse:
-        """Update a sprint."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
@@ -1340,7 +1306,6 @@ class SprintHandlers:
         request: StartSprintRequest,
         ctx: RequestContext,
     ) -> StartSprintResponse:
-        """Start a sprint (make it active)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
@@ -1366,7 +1331,6 @@ class SprintHandlers:
         request: CompleteSprintRequest,
         ctx: RequestContext,
     ) -> CompleteSprintResponse:
-        """Complete a sprint."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
@@ -1390,7 +1354,6 @@ class SprintHandlers:
         request: DeleteSprintRequest,
         ctx: RequestContext,
     ) -> DeleteSprintResponse:
-        """Delete a sprint (tasks move back to backlog)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         sprint_id = _parse_uuid(request.sprint_id, "sprint_id")
@@ -1414,7 +1377,6 @@ class SprintHandlers:
         request: ListSprintsRequest,
         ctx: RequestContext,
     ) -> ListSprintsResponse:
-        """List sprints for a project."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         project_id = _parse_uuid(request.project_id, "project_id")
@@ -1448,14 +1410,11 @@ class SprintHandlers:
 
 
 class WatcherHandlers:
-    """Task watcher RPC handlers."""
-
     async def toggle_task_watcher(
         self,
         request: ToggleTaskWatcherRequest,
         ctx: RequestContext,
     ) -> ToggleTaskWatcherResponse:
-        """Toggle watch state for a task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
@@ -1479,7 +1438,6 @@ class WatcherHandlers:
         request: ListTaskWatchersRequest,
         ctx: RequestContext,
     ) -> ListTaskWatchersResponse:
-        """List watchers for a task."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         task_id = _parse_uuid(request.task_id, "task_id")
@@ -1507,7 +1465,6 @@ class WatcherHandlers:
         request: BulkCheckTaskWatchersRequest,
         ctx: RequestContext,
     ) -> BulkCheckTaskWatchersResponse:
-        """Check watch status for multiple tasks."""
         user_id = get_user_id_from_context(ctx)
         _parse_uuid(request.organization_id, "organization_id")
 

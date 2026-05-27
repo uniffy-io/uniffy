@@ -1,8 +1,4 @@
-"""ARQ cron job: flush dirty Valkey read cursors to PostgreSQL.
-
-Runs every 30 seconds. Collects dirty channel and thread read cursors
-from Valkey sets, batch-upserts to PG, then removes processed entries.
-"""
+"""ARQ cron: flush dirty Valkey read cursors to PostgreSQL every 30s."""
 
 import contextlib
 from datetime import datetime
@@ -15,10 +11,6 @@ LOGGER_COMPONENT = "chat.read_state.flush"
 
 
 async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Flush dirty chat read cursors from Valkey to PostgreSQL.
-
-    Called as an ARQ cron job every 30 seconds.
-    """
     from uniffy.core.valkey.ops import _get_ops_client
 
     client = _get_ops_client()
@@ -42,7 +34,6 @@ async def flush_chat_read_cursors(ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _flush_channel_cursors(client: Any) -> int:
-    """Flush dirty channel read cursors with batch MGET + batch upsert."""
     dirty_set_key = "chat:dirty_read_cursors"
 
     try:
@@ -54,7 +45,6 @@ async def _flush_channel_cursors(client: Any) -> int:
     if not members:
         return 0
 
-    # Parse member keys and build Valkey keys for MGET
     parsed: list[tuple[UUID, UUID, str]] = []  # (user_id, channel_id, valkey_key)
     for member in members:
         try:
@@ -71,7 +61,6 @@ async def _flush_channel_cursors(client: Any) -> int:
     if not parsed:
         return 0
 
-    # Batch-fetch all cursor values from Valkey
     valkey_keys = [p[2] for p in parsed]
     try:
         values = await client.mget(*valkey_keys)
@@ -79,7 +68,6 @@ async def _flush_channel_cursors(client: Any) -> int:
         logger.warning("Failed to MGET channel cursors", component=LOGGER_COMPONENT)
         return 0
 
-    # Build batch upsert data
     rows_to_upsert = []
     for i, raw in enumerate(values):
         if not raw:
@@ -101,12 +89,10 @@ async def _flush_channel_cursors(client: Any) -> int:
             continue
 
     if not rows_to_upsert:
-        # Clean up dirty set even if no valid data
         with contextlib.suppress(Exception):
             await client.srem(dirty_set_key, *members)
         return 0
 
-    # Batch upsert to PG
     from uniffy.db import open_session
 
     flushed = 0
@@ -133,7 +119,6 @@ async def _flush_channel_cursors(client: Any) -> int:
                 component=LOGGER_COMPONENT,
             )
 
-    # Remove processed entries from dirty set
     try:
         if members:
             await client.srem(dirty_set_key, *members)
@@ -147,7 +132,6 @@ async def _flush_channel_cursors(client: Any) -> int:
 
 
 async def _flush_thread_cursors(client: Any) -> int:
-    """Flush dirty thread read cursors with batch MGET + batch upsert."""
     dirty_set_key = "chat:dirty_thread_cursors"
 
     try:
@@ -159,7 +143,6 @@ async def _flush_thread_cursors(client: Any) -> int:
     if not members:
         return 0
 
-    # Parse member keys and build Valkey keys for MGET
     parsed: list[tuple[UUID, UUID, str]] = []  # (user_id, root_message_id, valkey_key)
     for member in members:
         try:
@@ -176,7 +159,6 @@ async def _flush_thread_cursors(client: Any) -> int:
     if not parsed:
         return 0
 
-    # Batch-fetch all cursor values from Valkey
     valkey_keys = [p[2] for p in parsed]
     try:
         values = await client.mget(*valkey_keys)
@@ -184,7 +166,6 @@ async def _flush_thread_cursors(client: Any) -> int:
         logger.warning("Failed to MGET thread cursors", component=LOGGER_COMPONENT)
         return 0
 
-    # Build batch upsert data
     rows_to_upsert = []
     for i, raw in enumerate(values):
         if not raw:
@@ -206,7 +187,6 @@ async def _flush_thread_cursors(client: Any) -> int:
             await client.srem(dirty_set_key, *members)
         return 0
 
-    # Batch upsert to PG
     from uniffy.db import open_session
 
     flushed = 0
@@ -230,7 +210,6 @@ async def _flush_thread_cursors(client: Any) -> int:
                 component=LOGGER_COMPONENT,
             )
 
-    # Remove processed entries from dirty set
     try:
         if members:
             await client.srem(dirty_set_key, *members)

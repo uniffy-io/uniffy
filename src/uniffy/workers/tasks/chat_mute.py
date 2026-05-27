@@ -11,22 +11,7 @@ from uniffy.db import open_session
 
 
 async def auto_unmute_channels(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Unmute channels where muted_until has expired.
-
-    Runs as an ARQ cron job every minute. Bulk-updates all expired
-    timed mutes in a single query.
-
-    Parameters
-    ----------
-    ctx : dict
-        ARQ context dictionary.
-
-    Returns
-    -------
-    dict
-        Result with unmuted count.
-
-    """
+    """Cron tick: clear `is_muted` where `muted_until` has expired."""
     now = datetime.now(UTC)
     count = 0
     async with open_session() as session:

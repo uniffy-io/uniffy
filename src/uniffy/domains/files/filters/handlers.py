@@ -1,4 +1,4 @@
-"""Saved file filter RPC handlers - thin layer delegating to operations."""
+"""Saved file filter RPC handlers."""
 
 from uuid import UUID
 
@@ -31,14 +31,11 @@ from uniffy.domains.files.filters.operations import SavedFilterOperations
 
 
 class SavedFilterHandlersMixin:
-    """Saved file filter RPC handlers mixin."""
-
     async def create_saved_filter(
         self,
         request: CreateSavedFilterRequest,
         ctx: RequestContext,
     ) -> CreateSavedFilterResponse:
-        """Create a new saved filter."""
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
@@ -85,7 +82,6 @@ class SavedFilterHandlersMixin:
         request: GetSavedFilterRequest,
         ctx: RequestContext,
     ) -> GetSavedFilterResponse:
-        """Get a saved filter by ID."""
         try:
             filter_id = UUID(request.filter_id)
             organization_id = UUID(request.organization_id)
@@ -115,7 +111,6 @@ class SavedFilterHandlersMixin:
         request: UpdateSavedFilterRequest,
         ctx: RequestContext,
     ) -> UpdateSavedFilterResponse:
-        """Update a saved filter."""
         try:
             filter_id = UUID(request.filter_id)
             organization_id = UUID(request.organization_id)
@@ -165,7 +160,6 @@ class SavedFilterHandlersMixin:
         request: DeleteSavedFilterRequest,
         ctx: RequestContext,
     ) -> DeleteSavedFilterResponse:
-        """Delete a saved filter."""
         try:
             filter_id = UUID(request.filter_id)
             organization_id = UUID(request.organization_id)
@@ -198,7 +192,6 @@ class SavedFilterHandlersMixin:
         request: ListSavedFiltersRequest,
         ctx: RequestContext,
     ) -> ListSavedFiltersResponse:
-        """List saved filters for the current user."""
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:

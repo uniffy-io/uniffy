@@ -1,33 +1,13 @@
-"""Valkey Streams helpers split across two client tiers.
+"""Valkey Streams helpers backing per-``run_id`` event streams with replay.
 
-Streams replace pubsub for runtime events: a single conceptual
-subscriber per ``run_id`` that needs replay (so a client tab reload
-mid-stream picks up where it left off). Pubsub stays the right tool
-for chat fan-out (multi-subscriber, no replay needed).
+Two client tiers: non-blocking writes/reads run on the fail-fast ops client;
+``stream_xread`` uses the streams tier (30s socket timeout) because the inner
+Valkey BLOCK must actually block. The 150ms ``ops_call`` guard is NOT applied to
+XREAD - a long block is the point.
 
-Two client tiers carry the work:
-
-- **Ops client** (fail-fast, 100ms read, 150ms ``ops_call`` guard) --
-  used by the non-blocking writes and reads: ``stream_xadd``,
-  ``stream_set_state``, ``stream_get_state``, ``stream_delete``.
-  These are sub-millisecond on a healthy node; a slow Valkey returns
-  the conservative outcome (``None`` on read, silent no-op on write).
-- **Streams client** (long socket timeout, retry-free) -- used by
-  ``stream_xread``. XREAD with ``block`` waits inside Valkey for new
-  entries; the ops client's 100ms socket timeout would abort the
-  block on every call. The streams tier owns its own connection pool
-  with a 30s socket timeout so the block actually blocks. The 150ms
-  ``ops_call`` guard is intentionally NOT applied to XREAD -- a long
-  block is the point.
-
-Run-scoped key layout:
-
-- ``agent:run:{run_id}`` -- the events stream (XADD with ``MAXLEN
-  ~200`` so a runaway publisher cannot blow the box).
-- ``agent:run:{run_id}:state`` -- a hash with run metadata: who can
-  subscribe, current status, last sequence, started/expires
-  timestamps. TTL ``RUN_STATE_TTL_SECONDS`` (300s); refreshed on
-  every publish so an active run never expires under us.
+Keys: ``agent:run:{run_id}`` (events, ``MAXLEN ~200``) and
+``agent:run:{run_id}:state`` (hash with metadata, TTL ``RUN_STATE_TTL_SECONDS``
+refreshed on every publish).
 """
 
 import asyncio
@@ -59,11 +39,8 @@ _streams_client: aioredis.Redis | None = None
 
 
 async def init_streams_client() -> None:
-    """Initialise the process-wide streams client.
-
-    Idempotent: if a healthy client already exists, the call is a
-    no-op. A bound PING verifies the connection so a misconfigured
-    host fails fast at startup rather than on the first XREAD.
+    """Initialise the process-wide streams client. Idempotent; a bound
+    PING verifies the connection.
     """
     global _streams_client
 
@@ -110,17 +87,14 @@ async def close_streams_client() -> None:
 
 
 def _get_streams_client() -> aioredis.Redis | None:
-    """Return the shared streams client, or ``None`` if not initialised."""
     return _streams_client
 
 
 def run_stream_key(run_id: UUID | str) -> str:
-    """Return the Valkey key for a run's events stream."""
     return f"agent:run:{run_id}"
 
 
 def run_state_key(run_id: UUID | str) -> str:
-    """Return the Valkey key for a run's state hash."""
     return f"agent:run:{run_id}:state"
 
 
@@ -129,14 +103,7 @@ async def stream_xadd(
     payload: dict[str, Any],
     maxlen: int = RUN_STREAM_DEFAULT_MAXLEN,
 ) -> str | None:
-    """Append a single event to ``stream_key``.
-
-    The payload is JSON-encoded under the ``"data"`` field so XADD only
-    sees a flat ``str -> str`` map (Valkey requirement). Returns the
-    Valkey-assigned message id, or ``None`` when the ops client is
-    unavailable or the per-call deadline trips (caller treats as
-    transient and moves on).
-    """
+    """Append one JSON-encoded event; returns the message id or ``None`` on a Valkey miss."""
     client = _get_ops_client()
     if client is None:
         return None
@@ -163,19 +130,8 @@ async def stream_xread(
     count: int = 100,
     block_ms: int = 5000,
 ) -> list[tuple[str, dict[str, Any]]]:
-    """Read events newer than ``last_id`` from ``stream_key``.
-
-    Blocks up to ``block_ms`` waiting for new entries. Returns a list of
-    ``(message_id, payload)`` tuples; ``payload`` is the JSON-decoded
-    ``"data"`` field. An empty list means "no new events in this round";
-    callers loop on the last seen id.
-
-    Runs on the streams-tier client (30s socket timeout) so the inner
-    Valkey BLOCK actually blocks. The 150ms ``ops_call`` deadline guard
-    is intentionally NOT applied here -- a long block is the point.
-    Redis connection / timeout errors are logged at DEBUG and converted
-    into an empty round; the caller's wall-budget loop is the real
-    stop condition.
+    """Block up to ``block_ms`` for events past ``last_id``; empty list
+    means "no events this round".
     """
     client = _get_streams_client()
     if client is None:
@@ -226,11 +182,8 @@ async def stream_set_state(
     state: dict[str, Any],
     ttl: int = RUN_STATE_TTL_SECONDS,
 ) -> None:
-    """Write or refresh a run state hash with ``ttl`` seconds.
-
-    Values are JSON-encoded so non-string fields round-trip cleanly.
-    ``HSET`` + ``EXPIRE`` run in one pipeline so the TTL never lags
-    behind the write under load.
+    """Write/refresh a run state hash; ``HSET`` + ``EXPIRE`` run in one
+    pipeline so TTL never lags.
     """
     client = _get_ops_client()
     if client is None:
@@ -250,7 +203,7 @@ async def stream_set_state(
 
 
 async def stream_get_state(state_key: str) -> dict[str, Any] | None:
-    """Read a run state hash. ``None`` if the key is absent or unreadable."""
+    """Read a run state hash; ``None`` when absent or unreadable."""
     client = _get_ops_client()
     if client is None:
         return None
@@ -277,12 +230,7 @@ async def stream_get_state(state_key: str) -> dict[str, Any] | None:
 
 
 async def stream_delete(stream_key: str, state_key: str) -> None:
-    """Drop a run's stream and state hash explicitly.
-
-    The TTL on the state hash is the safety net; this is the primary
-    cleanup path called once the worker is finished and any reconnect
-    grace window has elapsed.
-    """
+    """Explicit cleanup of a run's stream and state hash; the state-hash TTL is the safety net."""
     client = _get_ops_client()
     if client is None:
         return
@@ -311,11 +259,8 @@ async def set_run_state(
     started_at: datetime | None = None,
     ttl: int = RUN_STATE_TTL_SECONDS,
 ) -> None:
-    """Write the canonical state hash for a run.
-
-    The full snapshot is rewritten on every status transition so a
-    reader that lands mid-stream sees a consistent view (``status`` and
-    ``last_seq`` together) without partial-update races.
+    """Write the canonical state hash. The full snapshot is rewritten so
+    readers see a consistent view.
     """
     started = started_at or datetime.now(UTC)
     expires_at = started + timedelta(seconds=ttl)
@@ -334,30 +279,20 @@ async def set_run_state(
 
 
 async def get_run_state(run_id: UUID) -> dict[str, Any] | None:
-    """Read the run state hash for ``run_id``. ``None`` if expired."""
+    """Run state hash for ``run_id``; ``None`` if expired."""
     return await stream_get_state(run_state_key(run_id))
 
 
 def session_active_runs_key(session_id: UUID | str) -> str:
-    """Return the Valkey set key tracking active runs for a session.
-
-    The set holds ``run_id`` values for runs in ``queued`` / ``running``
-    state. SessionOperations consults it to refuse mutations
-    (edit/delete/retry) while a run is in flight. Cancel + the run
-    lifecycle in ``run_agent_session`` keep it in sync; the set TTL is
-    the same 300s window as the run-state hash so a crashed worker
-    cannot pin the session forever.
+    """Set key tracking ``queued`` / ``running`` runs for a session; TTL
+    matches the run-state hash.
     """
     return f"agent:session:{session_id}:active_runs"
 
 
 async def session_active_run_add(session_id: UUID, run_id: UUID) -> None:
-    """Mark ``run_id`` as active for ``session_id``.
-
-    Best-effort: a Valkey hiccup means the inflight guard sees an empty
-    set, the request goes through, and any concurrent edit races a
-    short window. The egress task lock + run-state hash still keep the
-    actual run safe.
+    """Mark ``run_id`` active for ``session_id``. Best-effort - the egress
+    lock + state hash are the real guard.
     """
     client = _get_ops_client()
     if client is None:
@@ -379,7 +314,6 @@ async def session_active_run_add(session_id: UUID, run_id: UUID) -> None:
 
 
 async def session_active_run_remove(session_id: UUID, run_id: UUID) -> None:
-    """Remove ``run_id`` from the session's active set."""
     client = _get_ops_client()
     if client is None:
         return
@@ -396,12 +330,8 @@ async def session_active_run_remove(session_id: UUID, run_id: UUID) -> None:
 
 
 async def session_has_active_run(session_id: UUID) -> bool:
-    """Return True if any run is currently active for ``session_id``.
-
-    A False return on a Valkey error is intentional: edit/delete are
-    permission-checked + audit-logged anyway, and the worst case of a
-    stale "no active run" verdict is a downstream-invalidation event
-    racing a streaming response, which the client tolerates.
+    """True iff any run is active for ``session_id``. Returns ``False`` on
+    Valkey error (caller is also gated by audit + permission checks).
     """
     client = _get_ops_client()
     if client is None:
@@ -421,13 +351,7 @@ async def session_has_active_run(session_id: UUID) -> bool:
 
 
 async def request_run_cancel(run_id: UUID) -> bool:
-    """Set the ``cancel_requested`` flag on a run-state hash.
-
-    The egress task observes the flag between tool iterations and
-    exits with a synthetic Error event. Returns True if the flag was
-    written (run was active), False if the run no longer exists or
-    Valkey was unavailable.
-    """
+    """Set the ``cancel_requested`` flag; the egress task observes it between tool iterations."""
     state = await get_run_state(run_id)
     if state is None:
         return False
@@ -457,7 +381,7 @@ async def request_run_cancel(run_id: UUID) -> bool:
 
 
 async def is_cancel_requested(run_id: UUID) -> bool:
-    """Return True if a cancel has been requested on ``run_id``."""
+    """True iff a cancel has been requested on ``run_id``."""
     state = await get_run_state(run_id)
     if state is None:
         return False

@@ -12,34 +12,19 @@ from uniffy.core.types import SubjectType
 
 
 class ChannelRole(str, Enum):
-    """Role of a member within a chat channel."""
-
     OWNER = "OWNER"
     ADMIN = "ADMIN"
     MEMBER = "MEMBER"
 
 
 class ChatNotificationLevel(str, Enum):
-    """Per-channel notification preference."""
-
     ALL = "ALL"
     MENTIONS = "MENTIONS"
     NONE = "NONE"
 
 
 class ChatChannelMember(SQLModel, table=True):
-    """Tracks channel membership and notification preferences.
-
-    Composite primary key (channel_id, subject_type, subject_id). Members may
-    be users or agents; subject_type discriminates. The legacy user_id column
-    stays populated for SUBJECT_TYPE_USER rows during the migration window
-    (one release after Phase 4) so existing readers continue to work; new
-    code should read subject_type / subject_id directly.
-
-    Cold structural data: changes only on join, leave, role change, or
-    notification preference edit. Hot writes happen on chat_messages and
-    chat_channel_stats.
-    """
+    """Channel membership row keyed on (channel_id, subject_type, subject_id) for users or agents."""
 
     __tablename__ = "chat_channel_members"
     __table_args__ = (

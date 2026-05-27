@@ -1,9 +1,4 @@
-"""
-Meilisearch client wrapper for unified search.
-
-Provides an async client for indexing and searching content in Meilisearch.
-Uses meilisearch-python-sdk for async support with FastAPI/asyncio.
-"""
+"""Async Meilisearch client wrapper."""
 
 import os
 import time
@@ -29,7 +24,6 @@ from uniffy.observability.metrics import (
     SEARCH_OPERATIONS_TOTAL,
 )
 
-# Index name for all Uniffy content
 UNIFFY_INDEX_NAME = "uniffy"
 
 
@@ -44,21 +38,7 @@ class MeilisearchConfig:
 
     @classmethod
     def from_env(cls) -> MeilisearchConfig:
-        """
-        Create config from environment variables.
-
-        Environment Variables
-        ---------------------
-        MEILISEARCH_URL : str
-            Meilisearch server URL (default: http://localhost:7700)
-        MEILISEARCH_MASTER_KEY : str
-            Master API key for authentication (default: uniffy-dev-master-key)
-        MEILISEARCH_INDEX_NAME : str
-            Index name (default: uniffy)
-        MEILISEARCH_TIMEOUT : int
-            HTTP request timeout in seconds (default: 30)
-
-        """
+        """Read ``MEILISEARCH_URL`` / ``_MASTER_KEY`` / ``_INDEX_NAME`` / ``_TIMEOUT``."""
         return cls(
             url=os.getenv("MEILISEARCH_URL", "http://localhost:7700"),
             master_key=os.getenv("MEILISEARCH_MASTER_KEY", "uniffy-dev-master-key"),
@@ -67,18 +47,15 @@ class MeilisearchConfig:
         )
 
 
-# Index settings for optimal search experience
 INDEX_SETTINGS = MeilisearchSettings(
-    # Fields to search in, ordered by importance
     searchable_attributes=[
-        "title",  # Highest priority
-        "content",  # Full text content
-        "tags",  # Tags
-        "description",  # Preview snippet
+        "title",
+        "content",
+        "tags",
+        "description",
     ],
-    # Fields available for filtering
     filterable_attributes=[
-        "urn",  # For batch URN lookups (mention previews)
+        "urn",
         "organization_id",
         "entity_type",
         "access_mode",
@@ -89,127 +66,65 @@ INDEX_SETTINGS = MeilisearchSettings(
         "blocked_user_ids",
         "blocked_group_ids",
         "tags",
-        "updated_at",  # Time-bounded searches (e.g., "modified this week")
-        "metadata.channel_id",  # Chat message scoping by channel
-        "metadata.sender_id",  # Chat message filtering by sender
-        "metadata.project_id",  # Cascade-remove tasks when project is deleted
-        "metadata.folder_id",  # Cascade-remove files when folder is deleted
+        "updated_at",
+        "metadata.channel_id",
+        "metadata.sender_id",
+        "metadata.project_id",
+        "metadata.folder_id",
     ],
-    # Fields available for sorting
     sortable_attributes=[
         "updated_at",
         "rank_score",
         "title",
     ],
-    # Ranking rules (Meilisearch default order is good)
     ranking_rules=[
-        "words",  # Number of matching words
-        "typo",  # Fewer typos = better
-        "proximity",  # Words closer together = better
-        "attribute",  # Match in title > content > tags
-        "sort",  # Custom sorting
-        "exactness",  # Exact matches > prefix matches
+        "words",
+        "typo",
+        "proximity",
+        "attribute",
+        "sort",
+        "exactness",
     ],
-    # Typo tolerance settings
     typo_tolerance=TypoTolerance(
         enabled=True,
         min_word_size_for_typos=MinWordSizeForTypos(
-            one_typo=4,  # Allow 1 typo for words >= 4 chars
-            two_typos=8,  # Allow 2 typos for words >= 8 chars
+            one_typo=4,
+            two_typos=8,
         ),
     ),
-    # Faceting for aggregations
     faceting=Faceting(max_values_per_facet=100),
-    # Pagination limits
     pagination=Pagination(max_total_hits=1000),
 )
 
 
 def build_document_id(urn: str, organization_id: UUID) -> str:
+    """Build a Meilisearch document id ``{safe_urn}__{organization_id}``.
+
+    Meilisearch document ids only allow alphanumerics, hyphens, and underscores,
+    so colons in the URN are replaced with hyphens.
     """
-    Build a Meilisearch document ID from URN and organization.
-
-    Meilisearch requires a single string primary key, so we combine
-    URN and organization_id with a delimiter. Colons in URNs are replaced
-    with hyphens since Meilisearch only allows alphanumeric, hyphens, and
-    underscores in document IDs.
-
-    Parameters
-    ----------
-    urn : str
-        Universal Resource Name (e.g., urn:uniffy:content:NOTE:uuid).
-    organization_id : UUID
-        Organization ID.
-
-    Returns
-    -------
-    str
-        Document ID in format `{urn_with_hyphens}__{organization_id}`
-
-    """
-    # Replace colons with hyphens for Meilisearch compatibility
     safe_urn = urn.replace(":", "-")
     return f"{safe_urn}__{organization_id}"
 
 
 def parse_document_id(doc_id: str) -> tuple[str, str]:
-    """
-    Parse a Meilisearch document ID back to URN and organization_id.
-
-    Reverses the transformation done by build_document_id, converting
-    hyphens back to colons in the URN prefix.
-
-    Parameters
-    ----------
-    doc_id : str
-        Document ID in format `{safe_urn}__{organization_id}`
-
-    Returns
-    -------
-    tuple[str, str]
-        (urn, organization_id)
-
-    """
+    """Inverse of :func:`build_document_id`."""
     parts = doc_id.rsplit("__", 1)
     if len(parts) != 2:
         raise ValueError(f"Invalid document ID format: {doc_id}")
     safe_urn, org_id = parts
-    # Restore colons in the URN prefix (urn-uniffy-content-TYPE -> urn:uniffy:content:TYPE)
-    # Only restore the first 4 hyphens which correspond to the URN structure
     urn = safe_urn.replace("urn-uniffy-content-", "urn:uniffy:content:", 1)
     return urn, org_id
 
 
 class MeilisearchClient:
-    """
-    Async Meilisearch client wrapper for Uniffy search.
-
-    Provides high-level methods for indexing and searching content
-    with multi-tenancy support via organization_id filtering.
-
-    Parameters
-    ----------
-    config : MeilisearchConfig
-        Connection configuration.
-
-    Example
-    -------
-    ```python
-    config = MeilisearchConfig.from_env()
-    async with MeilisearchClient(config) as client:
-        await client.index_document(...)
-        results = await client.search(...)
-    ```
-
-    """
+    """Async Meilisearch client; multi-tenancy enforced via ``organization_id`` filtering."""
 
     def __init__(self, config: MeilisearchConfig | None = None) -> None:
-        """Initialize the Meilisearch client."""
         self.config = config or MeilisearchConfig.from_env()
         self._client: AsyncClient | None = None
 
     async def __aenter__(self) -> MeilisearchClient:
-        """Async context manager entry."""
         self._client = AsyncClient(
             self.config.url,
             self.config.master_key,
@@ -218,14 +133,12 @@ class MeilisearchClient:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Async context manager exit."""
         if self._client:
             await self._client.aclose()
             self._client = None
 
     @property
     def client(self) -> AsyncClient:
-        """Get the underlying async client."""
         if self._client is None:
             raise RuntimeError(
                 "MeilisearchClient not initialized. Use 'async with' context manager."
@@ -233,15 +146,8 @@ class MeilisearchClient:
         return self._client
 
     async def ensure_index(self) -> None:
-        """
-        Ensure the Uniffy index exists with correct settings.
-
-        Creates the index if it doesn't exist and updates settings.
-        Should be called on application startup.
-
-        """
+        """Create the index if missing, then apply ``INDEX_SETTINGS``."""
         start = time.perf_counter()
-        # Try to get existing index
         try:
             index = await self.client.get_index(self.config.index_name)
             elapsed_ms = (time.perf_counter() - start) * 1000
@@ -250,7 +156,6 @@ class MeilisearchClient:
                 ms=f"{elapsed_ms:.1f}",
             )
         except Exception:
-            # Index doesn't exist, create it with settings
             index = await self.client.create_index(
                 self.config.index_name,
                 primary_key="id",
@@ -261,9 +166,8 @@ class MeilisearchClient:
                 f"Meilisearch: create_index '{self.config.index_name}'",
                 ms=f"{elapsed_ms:.1f}",
             )
-            return  # Settings already applied during creation
+            return
 
-        # Update settings on existing index
         settings_start = time.perf_counter()
         await index.update_settings(INDEX_SETTINGS)
         elapsed_ms = (time.perf_counter() - settings_start) * 1000
@@ -292,47 +196,7 @@ class MeilisearchClient:
         rank_score: float = 1.0,
         metadata: dict[str, str] | None = None,
     ) -> None:
-        """Index or update a document in Meilisearch.
-
-        Parameters
-        ----------
-        urn : str
-            Universal Resource Name.
-        organization_id : UUID
-            Organization ID for multi-tenancy.
-        title : str
-            Document title (primary search field).
-        entity_type : str
-            Type of content (``note``, ``file``, ``project``, ...).
-        url_path : str
-            Frontend route to navigate to.
-        owner_id : UUID
-            Owner of the content.
-        access_mode : str
-            Access mode (``OWNER_ONLY`` / ``EXPLICIT_MEMBERS`` /
-            ``OPEN_TO_ORG``).
-        baseline_role : str | None
-            Baseline role for OPEN_TO_ORG, otherwise None.
-        content : str | None
-            Full searchable content.
-        description : str | None
-            Short preview snippet.
-        shared_user_ids : list[UUID] | None
-            User subjects with a non-BLOCKED ContentMember row.
-        shared_group_ids : list[UUID] | None
-            Group subjects with a non-BLOCKED ContentMember row.
-        blocked_user_ids : list[UUID] | None
-            User subjects with a BLOCKED ContentMember row.
-        blocked_group_ids : list[UUID] | None
-            Group subjects with a BLOCKED ContentMember row.
-        tags : list[str] | None
-            Content tags.
-        rank_score : float
-            Relevance booster (default 1.0).
-        metadata : dict[str, str] | None
-            Extra key-value metadata (e.g. mime_type, start_time).
-
-        """
+        """Index or update one document."""
         doc_id = build_document_id(urn, organization_id)
 
         document = {
@@ -373,18 +237,8 @@ class MeilisearchClient:
         self,
         documents: list[dict[str, Any]],
     ) -> None:
-        """
-        Index multiple documents in a single Meilisearch call.
-
-        Each document dict must contain all required fields (id, urn,
-        organization_id, title, entity_type, etc.). Use build_document_id()
-        to generate the id field.
-
-        Parameters
-        ----------
-        documents : list[dict]
-            List of document dicts ready for Meilisearch.
-
+        """Index multiple documents in one call; each must carry an ``id``
+        from :func:`build_document_id`.
         """
         if not documents:
             return
@@ -405,22 +259,8 @@ class MeilisearchClient:
         urn: str,
         organization_id: UUID | None = None,
     ) -> None:
-        """
-        Delete a document from Meilisearch.
-
-        Awaits the Meilisearch task so the deletion is observable as
-        soon as this call returns. Without the wait, the user can still
-        see the doc in search for a few hundred ms after delete --
-        Meilisearch deletes are async by default.
-
-        Parameters
-        ----------
-        urn : str
-            Universal Resource Name to delete.
-        organization_id : UUID | None
-            If provided, only delete for this organization.
-            If None, deletes all entries for this URN across all orgs.
-
+        """Delete by URN and wait for the task; without the wait the doc
+        stays searchable for a few hundred ms.
         """
         start = time.perf_counter()
         index = self.client.index(self.config.index_name)
@@ -450,18 +290,7 @@ class MeilisearchClient:
             )
 
     async def _await_task(self, task: object | None) -> None:
-        """Block until a Meilisearch task settles.
-
-        Meilisearch's update API queues work and returns a ``TaskInfo``
-        immediately. For *deletes* we want the caller to observe a
-        consistent index when the call returns -- without this wait,
-        global search keeps returning a doc the user just deleted for
-        a few hundred ms (or longer under load).
-
-        Errors are swallowed: a slow-or-down Meilisearch must not crash
-        the calling delete path. The DB row is already gone; the index
-        will catch up.
-        """
+        """Block until a Meilisearch task settles; errors are swallowed (DB row is already gone)."""
         if task is None:
             return
         task_uid = getattr(task, "task_uid", None) or getattr(task, "taskUid", None)
@@ -473,15 +302,7 @@ class MeilisearchClient:
             logger.warning("Meilisearch: wait_for_task failed", task_uid=task_uid)
 
     async def delete_documents_by_filter_expr(self, filter_expr: str) -> None:
-        """Delete every document matching an arbitrary Meilisearch filter.
-
-        Awaits the Meilisearch task so the cascade is observable when
-        the call returns. The filter must reference attributes declared
-        in ``filterable_attributes``; Meilisearch rejects expressions
-        that touch non-filterable fields with a 400 error, which we
-        surface as a logged warning rather than crashing the calling
-        delete path.
-        """
+        """Delete every document matching ``filter_expr`` (filterable attributes only)."""
         start = time.perf_counter()
         index = self.client.index(self.config.index_name)
         try:
@@ -518,43 +339,9 @@ class MeilisearchClient:
         limit: int = 20,
         offset: int = 0,
     ) -> SearchResults:
-        """
-        Search for documents with permission filtering.
-
-        Parameters
-        ----------
-        query : str
-            Search query text.
-        organization_id : UUID
-            Organization to search within.
-        user_id : UUID
-            User performing the search (for permission filtering).
-        user_group_ids : list[UUID] | None
-            Groups the user belongs to.
-        type_filters : list[str] | None
-            Filter by entity types (e.g., ['note', 'file']).
-        tag_filters : list[str] | None
-            Filter by tags.
-        my_content_only : bool
-            Only return content owned by the user.
-        owner_filter : UUID | None
-            Filter by specific owner.
-        metadata_filters : dict[str, str] | None
-            Filter by metadata fields (e.g., channel_id, sender_id).
-        limit : int
-            Maximum results to return.
-        offset : int
-            Offset for pagination.
-
-        Returns
-        -------
-        SearchResults
-            Meilisearch search results.
-
-        """
+        """Search with permission filtering applied as a Meilisearch filter expression."""
         index = self.client.index(self.config.index_name)
 
-        # Build filter expression
         filters = self._build_permission_filter(
             organization_id=organization_id,
             user_id=user_id,
@@ -563,29 +350,24 @@ class MeilisearchClient:
             owner_filter=owner_filter,
         )
 
-        # Add type filters
         if type_filters:
             type_filter = " OR ".join(f'entity_type = "{t}"' for t in type_filters)
             filters = f"({filters}) AND ({type_filter})"
 
-        # Add type exclusion filters
         if exclude_type_filters:
             exclude_filter = " AND ".join(f'entity_type != "{t}"' for t in exclude_type_filters)
             filters = f"({filters}) AND ({exclude_filter})"
 
-        # Add tag filters (AND - all tags must match)
         if tag_filters:
             tag_conditions = " AND ".join(f'tags = "{tag}"' for tag in tag_filters)
             filters = f"({filters}) AND ({tag_conditions})"
 
-        # Add metadata filters (e.g., channel_id, sender_id for chat)
         if metadata_filters:
             meta_conditions = " AND ".join(
                 f'metadata.{key} = "{value}"' for key, value in metadata_filters.items()
             )
             filters = f"({filters}) AND ({meta_conditions})"
 
-        # Execute search
         start = time.perf_counter()
         results = await index.search(
             query=query if query else None,
@@ -614,22 +396,8 @@ class MeilisearchClient:
         my_content_only: bool = False,
         owner_filter: UUID | None = None,
     ) -> str:
-        """Build a Meilisearch filter that mirrors ``effective_role``.
-
-        A user sees a document iff:
-
-        - it belongs to their organization, AND
-        - they are NOT in ``blocked_user_ids``, AND
-        - NONE of their groups are in ``blocked_group_ids``, AND
-        - at least one of the following is true:
-          - they are the owner,
-          - their id is in ``shared_user_ids``,
-          - one of their groups is in ``shared_group_ids``,
-          - the document has ``access_mode = OPEN_TO_ORG`` with a
-            non-null ``baseline_role``.
-
-        ``my_content_only`` and ``owner_filter`` short-circuit the
-        permission branch to just an ownership check.
+        """Build a filter that mirrors ``effective_role``: org match, not
+        blocked, and an allow condition.
         """
         org_filter = f'organization_id = "{organization_id}"'
 
@@ -639,7 +407,6 @@ class MeilisearchClient:
         if owner_filter:
             return f'{org_filter} AND owner_id = "{owner_filter}"'
 
-        # Permission conditions (allow when any of these is true)
         permission_conditions = [
             f'owner_id = "{user_id}"',
             f'shared_user_ids = "{user_id}"',
@@ -650,7 +417,6 @@ class MeilisearchClient:
             permission_conditions.append(f"({group_allow})")
         permission_filter = " OR ".join(permission_conditions)
 
-        # Block conditions (deny when any of these is true)
         block_conditions = [f'NOT blocked_user_ids = "{user_id}"']
         if user_group_ids:
             block_conditions.extend(f'NOT blocked_group_ids = "{gid}"' for gid in user_group_ids)
@@ -667,27 +433,7 @@ class MeilisearchClient:
         blocked_user_ids: list[UUID] | None = None,
         blocked_group_ids: list[UUID] | None = None,
     ) -> None:
-        """Partial update of membership metadata on an existing document.
-
-        Uses Meilisearch's update_documents which merges fields into the
-        existing document without replacing other fields.
-
-        Parameters
-        ----------
-        urn : str
-            Universal Resource Name.
-        organization_id : UUID
-            Organization ID.
-        shared_user_ids : list[UUID]
-            Current list of user subjects with a non-BLOCKED grant.
-        shared_group_ids : list[UUID]
-            Current list of group subjects with a non-BLOCKED grant.
-        blocked_user_ids : list[UUID] | None
-            Current list of user subjects with a BLOCKED grant.
-        blocked_group_ids : list[UUID] | None
-            Current list of group subjects with a BLOCKED grant.
-
-        """
+        """Merge new membership lists into the document via ``update_documents``."""
         doc_id = build_document_id(urn, organization_id)
         partial = {
             "id": doc_id,
@@ -720,7 +466,7 @@ class MeilisearchClient:
         baseline_role: str | None,
         owner_id: UUID,
     ) -> None:
-        """Partial update of the access policy fields on a document."""
+        """Merge access-policy fields into the document."""
         doc_id = build_document_id(urn, organization_id)
         partial = {
             "id": doc_id,
@@ -747,7 +493,7 @@ class MeilisearchClient:
         organization_id: UUID,
         tags: list[str],
     ) -> None:
-        """Partial update of the ``tags`` array on an indexed document."""
+        """Merge the ``tags`` array into the document."""
         doc_id = build_document_id(urn, organization_id)
         partial = {"id": doc_id, "tags": tags}
 
@@ -768,10 +514,7 @@ class MeilisearchClient:
         organization_id: UUID,
         items: list[tuple[str, list[str]]],
     ) -> None:
-        """Partial update of ``tags`` arrays on many documents in one HTTP call.
-
-        Empty input is a no-op.
-        """
+        """Bulk ``tags`` update in one HTTP call. Empty input is a no-op."""
         if not items:
             return
         partials = [
@@ -793,22 +536,7 @@ class MeilisearchClient:
         )
 
     async def get_document(self, urn: str, organization_id: UUID) -> dict[str, Any] | None:
-        """
-        Get a single document by URN and organization.
-
-        Parameters
-        ----------
-        urn : str
-            Universal Resource Name.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        dict | None
-            Document if found, None otherwise.
-
-        """
+        """One document by ``(urn, organization_id)`` or ``None``."""
         start = time.perf_counter()
         index = self.client.index(self.config.index_name)
         doc_id = build_document_id(urn, organization_id)
@@ -841,25 +569,7 @@ class MeilisearchClient:
         urns: list[str],
         organization_id: UUID,
     ) -> dict[str, dict[str, Any]]:
-        """
-        Get multiple documents by URNs.
-
-        Uses filter-based lookup since Meilisearch doesn't support
-        fetching multiple documents by ID directly.
-
-        Parameters
-        ----------
-        urns : list[str]
-            List of URNs to fetch.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        dict[str, dict]
-            Mapping of URN to document.
-
-        """
+        """Map ``urn -> document`` for the requested URNs in one org via chunked filter lookups."""
         if not urns:
             return {}
 
@@ -867,7 +577,7 @@ class MeilisearchClient:
         index = self.client.index(self.config.index_name)
         org_filter = f'organization_id = "{organization_id}"'
 
-        # Chunk URNs to avoid filter expression complexity limits
+        # Chunk to stay under Meilisearch's filter complexity limits.
         result: dict[str, dict[str, Any]] = {}
         chunk_size = 50
 
@@ -905,15 +615,6 @@ class MeilisearchClient:
             return {}
 
     async def health_check(self) -> bool:
-        """
-        Check if Meilisearch is healthy.
-
-        Returns
-        -------
-        bool
-            True if healthy, False otherwise.
-
-        """
         start = time.perf_counter()
         try:
             health = await self.client.health()
@@ -934,22 +635,11 @@ class MeilisearchClient:
             return False
 
 
-# Global client instance (initialized on app startup)
 _meilisearch_client: MeilisearchClient | None = None
 
 
 async def init_meilisearch() -> MeilisearchClient:
-    """
-    Initialize the global Meilisearch client.
-
-    Should be called during application startup.
-
-    Returns
-    -------
-    MeilisearchClient
-        Initialized client.
-
-    """
+    """Initialize the process-singleton Meilisearch client. Called during app startup."""
     global _meilisearch_client
 
     config = MeilisearchConfig.from_env()
@@ -960,7 +650,6 @@ async def init_meilisearch() -> MeilisearchClient:
         timeout=config.timeout,
     )
 
-    # Ensure index exists with correct settings
     await _meilisearch_client.ensure_index()
 
     logger.info(f"Meilisearch client initialized: {config.url}")
@@ -968,12 +657,7 @@ async def init_meilisearch() -> MeilisearchClient:
 
 
 async def close_meilisearch() -> None:
-    """
-    Close the global Meilisearch client.
-
-    Should be called during application shutdown.
-
-    """
+    """Close the process-singleton client. Called during app shutdown."""
     global _meilisearch_client
 
     if _meilisearch_client and _meilisearch_client._client:
@@ -983,20 +667,6 @@ async def close_meilisearch() -> None:
 
 
 def get_meilisearch_client() -> MeilisearchClient:
-    """
-    Get the global Meilisearch client.
-
-    Returns
-    -------
-    MeilisearchClient
-        The initialized client.
-
-    Raises
-    ------
-    RuntimeError
-        If client not initialized.
-
-    """
     if _meilisearch_client is None:
         raise RuntimeError("Meilisearch client not initialized. Call init_meilisearch() first.")
     return _meilisearch_client

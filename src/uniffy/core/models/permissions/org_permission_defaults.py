@@ -1,11 +1,4 @@
-"""Organization permission defaults model for default content access.
-
-Stores per-(organization, content_type) templates used when new content
-of that type is created. The defaults determine what ``access_mode`` and
-``baseline_role`` a new item gets on creation; they are templates, not
-ongoing ceilings. A user can change an individual content item's access
-policy freely after creation (subject to their permissions on that item).
-"""
+"""Per-org defaults seeded onto new content; not an ongoing ceiling."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -18,40 +11,10 @@ from uniffy.core.types import generate_id
 
 
 class OrganizationPermissionDefaults(SQLModel, table=True):
-    """
-    Default content access settings per content type within an organization.
+    """Default `access_mode` + `baseline_role` applied when new content is created.
 
-    When a user creates a new content item of a given type, the backend
-    reads these defaults and applies them to the new item's ``access_mode``
-    and ``baseline_role`` columns. Org OWNER/ADMIN roles always have full
-    access regardless of these settings; that behavior is hardcoded in
-    :class:`PermissionChecker`.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for this defaults record (primary key).
-    organization_id : UUID
-        Organization these defaults apply to (foreign key).
-    content_type : ContentType
-        Content type these defaults apply to.
-    default_access_mode : AccessMode
-        Default access mode for newly created content of this type.
-    default_baseline_role : ContentRole | None
-        Default baseline role for newly created content of this type.
-        Must be NULL unless ``default_access_mode == OPEN_TO_ORG``. Must
-        not be ``OWNER`` or ``BLOCKED`` (those are not valid baselines).
-    updated_by_user_id : UUID
-        User who last updated these defaults.
-    updated_at : datetime
-        When these defaults were last updated.
-
-    Notes
-    -----
-    - One row per (organization_id, content_type) combination.
-    - Org OWNER/ADMIN always bypass these defaults via the permission
-      checker's top-level admin bypass.
-
+    `default_baseline_role` MUST be NULL unless `default_access_mode == OPEN_TO_ORG`,
+    and must never be `OWNER` or `BLOCKED` (not valid baselines).
     """
 
     __tablename__ = "permissions_org_defaults"
@@ -71,7 +34,6 @@ class OrganizationPermissionDefaults(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of OrganizationPermissionDefaults."""
         return (
             f"<OrganizationPermissionDefaults(org={self.organization_id}, "
             f"type={self.content_type}, mode={self.default_access_mode}, "

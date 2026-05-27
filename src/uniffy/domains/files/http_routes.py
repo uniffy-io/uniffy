@@ -1,9 +1,4 @@
-"""
-HTTP routes for files domain.
-
-These are standard FastAPI HTTP endpoints (not ConnectRPC) for efficient
-resource delivery like thumbnails that benefit from HTTP caching semantics.
-"""
+"""FastAPI HTTP endpoints for thumbnails and file streaming with HTTP-cache semantics."""
 
 from typing import Annotated
 from uuid import UUID
@@ -27,13 +22,7 @@ _TOO_EARLY_RETRY_AFTER_SECONDS = 60
 
 
 def _too_early_response() -> StreamingResponse:
-    """Return ``425 Too Early`` while a transcode is pending.
-
-    The frontend reads ``transcode_status`` directly from the File proto
-    and disables the Download button before the request even fires; this
-    is the belt-and-braces guard for direct-link downloads and any
-    middleware-driven retry.
-    """
+    """425 Too Early while a transcode is pending; guards direct-link downloads."""
 
     async def _empty_body():
         yield b""
@@ -52,20 +41,7 @@ def _too_early_response() -> StreamingResponse:
 async def get_organization_id_from_token(
     authorization: Annotated[str | None, Header()] = None,
 ) -> UUID | None:
-    """
-    Extract organization ID from Authorization header if present.
-
-    Parameters
-    ----------
-    authorization : str | None
-        Authorization header value (Bearer token).
-
-    Returns
-    -------
-    UUID | None
-        Organization ID from token, or None if not present.
-
-    """
+    """Extract organization ID from a Bearer token if present."""
     if not authorization or not authorization.startswith("Bearer "):
         return None
 
@@ -85,44 +61,13 @@ async def get_thumbnail(
     file_id: UUID,
     user_id: Annotated[UUID, Depends(get_current_user_id)],
 ) -> StreamingResponse:
-    """
-    Stream thumbnail image with HTTP caching support.
-
-    This endpoint provides efficient thumbnail delivery with:
-    - Proper HTTP cache headers (Cache-Control, ETag)
-    - Streaming response (memory efficient)
-    - Browser-native lazy loading support via standard <img> tags
-
-    Parameters
-    ----------
-    organization_id : UUID
-        Organization ID (from URL path).
-    file_id : UUID
-        File ID to get thumbnail for.
-    user_id : UUID
-        Authenticated user ID (injected by dependency).
-
-    Returns
-    -------
-    StreamingResponse
-        Thumbnail image with appropriate headers.
-
-    Raises
-    ------
-    HTTPException
-        401 if not authenticated.
-        403 if user lacks permission to access file.
-        404 if file or thumbnail not found.
-
-    """
+    """Stream a thumbnail with HTTP cache headers."""
     try:
         async with open_session() as session:
             ops = FileOperations(session)
 
-            # Get file and check permissions (this validates access)
             file = await ops.get_by_id(user_id, organization_id, file_id)
 
-            # Check if thumbnail exists in media_info
             if not file.media_info or not file.media_info.thumbnail_key:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -131,16 +76,13 @@ async def get_thumbnail(
 
             thumbnail_key = file.media_info.thumbnail_key
 
-            # Get S3 client and stream the thumbnail
             s3 = get_s3_client()
 
-            # Get object metadata for ETag and Content-Length
             try:
                 metadata = await s3.get_object_info(thumbnail_key)
                 etag = metadata.get("ETag", "").strip('"')
                 content_length = metadata.get("ContentLength", 0)
             except Exception:
-                # If we can't get metadata, proceed without caching headers
                 etag = None
                 content_length = None
 
@@ -148,17 +90,14 @@ async def get_thumbnail(
                 _s3=s3,
                 _thumbnail_key=thumbnail_key,
             ):
-                """Stream thumbnail bytes from S3."""
                 async for chunk, _, _ in _s3.download_stream(
                     key=_thumbnail_key,
-                    chunk_size=64 * 1024,  # 64KB chunks for thumbnails
+                    chunk_size=64 * 1024,
                 ):
                     yield chunk
 
-            # Build response headers
             headers = {
                 "Content-Type": "image/jpeg",
-                # Cache for 1 day, allow CDN caching
                 "Cache-Control": "public, max-age=86400, immutable",
             }
 
@@ -200,60 +139,20 @@ async def stream_file(
     file_id: UUID,
     user_id: Annotated[UUID, Depends(get_current_user_id)],
 ) -> StreamingResponse:
-    """
-    Stream full file content with HTTP caching support.
-
-    This endpoint provides efficient file delivery with:
-    - Proper HTTP cache headers (Cache-Control, ETag)
-    - Streaming response (memory efficient)
-    - Correct MIME type from file metadata
-
-    Used for serving images and other files embedded in notes.
-
-    Parameters
-    ----------
-    organization_id : UUID
-        Organization ID (from URL path).
-    file_id : UUID
-        File ID to stream.
-    user_id : UUID
-        Authenticated user ID (injected by dependency).
-
-    Returns
-    -------
-    StreamingResponse
-        File content with appropriate headers.
-
-    Raises
-    ------
-    HTTPException
-        401 if not authenticated.
-        403 if user lacks permission to access file.
-        404 if file not found.
-
-    """
+    """Stream file content with HTTP cache headers; used for images embedded in notes."""
     try:
         async with open_session() as session:
             ops = FileOperations(session)
 
-            # Get file and check permissions (this validates access)
             file = await ops.get_by_id(user_id, organization_id, file_id)
 
-            # Get the S3 key from file
             if not file.storage_key:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="File content not available",
                 )
 
-            # Gate the download while a server-side transcode is in flight.
-            # The user-visible filename is `.mp4` from the moment Stop is
-            # clicked even though the bytes on S3 may still be WebM. Serving
-            # the WebM under that name would hand the user an unplayable
-            # file in QuickTime / Finder / iOS, so block until the swap is
-            # done. FAILED falls back to serving whatever is on the live
-            # storage_key (the WebM) - playback in-browser still works and
-            # blocking forever is worse than mismatched extensions.
+            # Gate while transcode is in flight: filename says .mp4 but bytes may still be WebM.
             if file.transcode_status in (
                 TranscodeStatus.PENDING,
                 TranscodeStatus.PROCESSING,
@@ -263,14 +162,9 @@ async def stream_file(
             s3_key = file.storage_key
             mime_type = file.mime_type or "application/octet-stream"
 
-            # Get S3 client and stream the file
             s3 = get_s3_client()
 
-            # Get object metadata for Content-Length only. The ETag we send
-            # to clients is derived from `File.version` so it changes on the
-            # transcode swap (which moves storage_key without changing the
-            # File row id). The S3 ETag belongs to the underlying object
-            # and would mask the swap from intermediate caches.
+            # ETag derives from File.version so transcode swap invalidates intermediate caches.
             try:
                 metadata = await s3.get_object_info(s3_key)
                 content_length = metadata.get("ContentLength", 0)
@@ -284,19 +178,15 @@ async def stream_file(
                 _s3=s3,
                 _s3_key=s3_key,
             ):
-                """Stream file bytes from S3."""
                 async for chunk, _, _ in _s3.download_stream(
                     key=_s3_key,
-                    chunk_size=256 * 1024,  # 256KB chunks for files
+                    chunk_size=256 * 1024,
                 ):
                     yield chunk
 
             headers = {
                 "Content-Type": mime_type,
-                # 5-minute revalidation so the post-transcode swap becomes
-                # visible to clients without a hard refresh. The version-
-                # derived ETag lets browsers / SW skip the body when the
-                # underlying File row hasn't changed.
+                # 5-minute revalidation so post-transcode swap propagates without hard refresh.
                 "Cache-Control": "public, max-age=300, must-revalidate",
                 "ETag": f'"{file_id}.v{file_version}"',
                 "Content-Disposition": f'inline; filename="{file_filename}"',
@@ -331,5 +221,4 @@ async def stream_file(
         )
 
 
-# Keep backward compatibility with the old `router` name
 router = thumbnails_router

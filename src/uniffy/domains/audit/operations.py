@@ -1,8 +1,6 @@
-"""Read-only operations over the central ``audit_events`` table.
+"""Read-only operations over the central `audit_events` table.
 
-Writes are forbidden here - they go through
-:func:`uniffy.core.audit.write_audit_event` at the mutation call site.
-This domain only reads.
+Writes go through `uniffy.core.audit.write_audit_event` at mutation sites.
 """
 
 from __future__ import annotations
@@ -30,16 +28,12 @@ MAX_PAGE_SIZE = 500
 
 
 class SortOrder(enum.Enum):
-    """Server-side sort direction for the audit-events list query."""
-
     TIME_DESC = "time_desc"
     TIME_ASC = "time_asc"
 
 
 @dataclass(frozen=True)
 class ListEventsFilter:
-    """Server-side filter for :meth:`AuditOperations.list_events`."""
-
     organization_id: UUID
     actor_user_id: UUID | None = None
     actions: tuple[str, ...] = ()
@@ -54,8 +48,6 @@ class ListEventsFilter:
 
 @dataclass(frozen=True)
 class ListEventsPage:
-    """Result of a paginated list call."""
-
     events: list[AuditEvent]
     next_page_token: str | None
 
@@ -71,13 +63,7 @@ class AuditOperations:
         actor_user_id: UUID,
         filters: ListEventsFilter,
     ) -> ListEventsPage:
-        """List audit events scoped to a single organization.
-
-        Authorization: the actor must be an org ``OWNER`` / ``ADMIN``
-        of ``filters.organization_id``, OR carry the global
-        ``User.is_system_admin`` flag (system admin can query any org).
-        Regular members are denied.
-        """
+        """List audit events for one organization; requires OWNER/ADMIN or system admin."""
         await self.require_audit_view(actor_user_id, filters.organization_id)
 
         page_size = max(1, min(filters.page_size or DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE))
@@ -148,7 +134,7 @@ class AuditOperations:
         actor_user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Enforce org admin scope or global system-admin override."""
+        """Require org OWNER/ADMIN or global system-admin."""
         is_system_admin = await self.session.execute(
             select(User.is_system_admin).where(User.id == actor_user_id)
         )
@@ -168,7 +154,6 @@ class AuditOperations:
 
 
 def _encode_cursor(created_at: datetime, event_id: UUID) -> str:
-    """Encode a (created_at, id) pair into an opaque base64 cursor."""
     payload = json.dumps(
         {"t": created_at.isoformat(), "i": str(event_id)},
         separators=(",", ":"),
@@ -177,7 +162,6 @@ def _encode_cursor(created_at: datetime, event_id: UUID) -> str:
 
 
 def _decode_cursor(token: str) -> tuple[datetime, UUID]:
-    """Decode a cursor previously produced by :func:`_encode_cursor`."""
     try:
         padding = "=" * (-len(token) % 4)
         payload = base64.urlsafe_b64decode((token + padding).encode("ascii"))

@@ -1,29 +1,15 @@
-"""Generic cascading sharing for content with references.
+"""Single-level cascading VIEWER grants for content references plus rename propagation.
 
-When a subject gains an explicit role on a piece of content, this module
-propagates a VIEWER grant to each piece of content the original item
-references (URN mentions in ``outgoing_references``, plus files linked
-via the attachments table). The cascade is single-level only
-(non-recursive) to avoid unbounded propagation and is capped at
-``MAX_CASCADE_REFERENCES`` references per call.
+Rules:
+- Only explicit member additions trigger a cascade; access-mode changes do not.
+- Each cascaded grant is VIEWER regardless of the source role.
+- The granting user must have MANAGE on each referenced item; others are skipped.
+- References come from ``outgoing_references`` JSONB and the attachments table;
+  free-form text is not re-parsed.
+- Each reference runs in its own savepoint so partial failures stay isolated.
 
-Key rules:
-
-- Only explicit member additions trigger a cascade. Access mode changes
-  (``OWNER_ONLY`` / ``EXPLICIT_MEMBERS`` / ``OPEN_TO_ORG``) do NOT
-  cascade -- they are local decisions about the content itself.
-- Each cascaded grant uses role ``VIEWER`` regardless of the subject's
-  role on the source content.
-- The granting user must have MANAGE on each referenced item; refs the
-  user cannot manage are silently skipped.
-- Free-form text is NOT re-parsed. References come from the stored
-  ``outgoing_references`` JSONB field and the attachments table only.
-- Each reference is processed in its own savepoint so partial failures
-  do not corrupt the overall transaction.
-
-This module also hosts the rename-propagation helpers that rewrite
-``[[[label|urn]]]`` mentions when a note or file is renamed. Those
-helpers do not touch access control.
+The rename-propagation helpers rewrite ``[[[label|urn]]]`` mentions and do not
+touch access control.
 """
 
 from datetime import UTC, datetime
@@ -43,8 +29,7 @@ from uniffy.core.content.references import (
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 
-# Maximum number of references to cascade per operation.
-# Prevents unbounded DB queries when content has many references.
+# Hard cap to keep cascade work bounded on heavily-referenced content.
 MAX_CASCADE_REFERENCES = 50
 
 
@@ -54,14 +39,9 @@ async def collect_referenced_content(
     content_id: UUID,
     organization_id: UUID,
 ) -> list[tuple[ContentType, UUID]]:
-    """Collect content referenced by a given content item.
+    """Collect referenced content from ``outgoing_references`` + attachments.
 
-    Sources:
-    1. ``outgoing_references`` JSONB field (URN list, set at save time).
-    2. Attachments table (file links).
-
-    USER URNs are excluded (users do not need permission cascade).
-    Results are capped at ``MAX_CASCADE_REFERENCES``.
+    USER URNs are excluded; results are capped at ``MAX_CASCADE_REFERENCES``.
     """
     refs: set[tuple[ContentType, UUID]] = set()
 
@@ -74,7 +54,6 @@ async def collect_referenced_content(
             if parsed and parsed[0] != ContentType.USER:
                 refs.add(parsed)
 
-    # Attachments (org-scoped)
     from uniffy.core.models.attachments.attachment import Attachment
 
     result = await session.execute(
@@ -119,17 +98,7 @@ async def cascade_member_grant(
     subject_type: SubjectType,
     subject_id: UUID,
 ) -> None:
-    """Cascade a VIEWER grant to content referenced by an item.
-
-    Called after a non-BLOCKED ``ContentMember`` row is created on any
-    content type. For each referenced item, checks whether the granting
-    user can manage it and, if so, upserts a VIEWER ``ContentMember``
-    for the same subject on the referenced item.
-
-    Each reference is processed in its own savepoint to ensure partial
-    failures do not roll back grants on other references. BLOCKED does
-    not cascade (it is not called from BLOCKED grants anyway).
-    """
+    """Cascade a VIEWER grant to referenced content where the actor can manage."""
     refs = await collect_referenced_content(session, content_type, content_id, organization_id)
     if not refs:
         return
@@ -213,18 +182,10 @@ async def propagate_rename(
     target_urn: str,
     new_label: str,
 ) -> int:
-    """Propagate a rename to all content that mentions the target URN.
+    """Rewrite ``[[[label|urn]]]`` mention labels across notes, events and tasks.
 
-    When a file or note is renamed, this updates the label in all
-    ``[[[old_label|urn]]]`` mentions across Notes, CalendarEvents, and
-    Tasks that reference the renamed item.
-
-    Only processes items whose ``outgoing_references`` JSONB column
-    contains the target URN. Canvas notes have their text nodes updated
-    via ``replace_mention_label_in_canvas``.
-
-    This is a system-initiated change: ``updated_at`` is bumped but
-    ``version`` is NOT incremented to avoid conflict with user edits.
+    System-initiated: ``updated_at`` bumps but ``version`` does NOT increment,
+    to avoid conflict with concurrent user edits.
     """
     updated_notes = await _propagate_rename_notes(
         session,
@@ -269,16 +230,12 @@ async def propagate_rename(
     return updated_count
 
 
-# Private helpers
-
-
 async def _fetch_outgoing_references(
     session: AsyncSession,
     content_type: ContentType,
     content_id: UUID,
     organization_id: UUID,
 ) -> list[str] | None:
-    """Fetch the ``outgoing_references`` JSONB field for a content item."""
     if content_type == ContentType.NOTE:
         from uniffy.core.models.notes.note import Note
 
@@ -321,10 +278,7 @@ async def _fetch_content_access_policy(
     content_id: UUID,
     organization_id: UUID,
 ) -> tuple[UUID, AccessMode, ContentRole | None] | None:
-    """Fetch owner_id, access_mode, baseline_role for a content item.
-
-    Returns None if the content is not found in the organization.
-    """
+    """``(owner_id, access_mode, baseline_role)`` or ``None`` when not found."""
     if content_type == ContentType.NOTE:
         from uniffy.core.models.notes.note import Note
 
@@ -386,8 +340,7 @@ async def _fetch_content_access_policy(
         return None
 
     if content_type == ContentType.TASK:
-        # Tasks delegate to their parent project: fetch the project's
-        # access policy via the task's project_id.
+        # Tasks delegate to the parent project's access policy.
         from uniffy.core.models.projects.project import Project
         from uniffy.core.models.projects.task import Task
 
@@ -420,11 +373,7 @@ async def _upsert_view_member(
     subject_id: UUID,
     granted_by: UUID,
 ) -> bool:
-    """Create a VIEWER ``ContentMember`` row if one does not exist.
-
-    Returns True if a new row was created, False if the subject already
-    had a non-expired row of any role.
-    """
+    """Create a VIEWER row if the subject has no non-expired row of any role."""
     from uniffy.core.models.permissions.content_member import ContentMember
 
     now = datetime.now(UTC)
@@ -462,11 +411,7 @@ async def _sync_search_sharing_batch(
     organization_id: UUID,
     items: list[tuple[ContentType, UUID]],
 ) -> None:
-    """Sync search sharing metadata for a batch of cascaded content items.
-
-    Reads the current ``ContentMember`` rows for each item and updates
-    Meilisearch's ``shared_*`` / ``blocked_*`` fields accordingly.
-    """
+    """Refresh Meilisearch ``shared_*`` / ``blocked_*`` fields for cascaded items."""
     from uniffy.core.models.permissions.content_member import ContentMember
 
     indexer = SearchIndexer()
@@ -525,9 +470,6 @@ async def _sync_search_sharing_batch(
             )
 
 
-# Rename propagation (no permission involvement)
-
-
 async def _propagate_rename_notes(
     session: AsyncSession,
     organization_id: UUID,
@@ -536,7 +478,6 @@ async def _propagate_rename_notes(
     replace_fn: object,
     replace_canvas_fn: object,
 ) -> list:
-    """Update mention labels in notes that reference ``target_urn``."""
     from uniffy.core.models.notes.note import Note
     from uniffy.core.models.shared import NodeType
 
@@ -585,7 +526,6 @@ async def _propagate_rename_calendar_events(
     new_label: str,
     replace_fn: object,
 ) -> list:
-    """Update mention labels in calendar events that reference ``target_urn``."""
     from uniffy.core.models.calendar.event import CalendarEvent
 
     result = await session.execute(
@@ -619,7 +559,6 @@ async def _propagate_rename_tasks(
     new_label: str,
     replace_fn: object,
 ) -> list:
-    """Update mention labels in tasks that reference ``target_urn``."""
     from uniffy.core.models.projects.task import Task
 
     result = await session.execute(
@@ -652,11 +591,7 @@ async def _reindex_renamed_content(
     events: list,
     tasks: list,
 ) -> None:
-    """Re-index updated content in search after mention label replacement.
-
-    Uses each domain's operations class to rebuild search keywords and
-    re-index the updated models. Failures are logged but non-fatal.
-    """
+    """Re-index updated content after rename propagation; failures are non-fatal."""
     if notes:
         try:
             from uniffy.domains.notes.operations import NoteOperations

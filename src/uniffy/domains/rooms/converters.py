@@ -1,5 +1,3 @@
-"""Proto <-> domain converters for the rooms domain."""
-
 from datetime import datetime
 from uuid import UUID
 
@@ -31,8 +29,6 @@ from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
 from uniffy.core.types import AccessMode, BookingStatus, ContentRole, RoomStatus, RoomType
 
-# Domain-local enum maps. ``access_mode`` and ``content_role`` are shared
-# across every domain so they live in ``core.converters.common_proto``.
 ROOM_TYPE_TO_PROTO: dict[RoomType, ProtoRoomType.ValueType] = {
     RoomType.MEETING_ROOM: ProtoRoomType.ROOM_TYPE_MEETING_ROOM,
     RoomType.CONFERENCE_ROOM: ProtoRoomType.ROOM_TYPE_CONFERENCE_ROOM,
@@ -74,12 +70,10 @@ BOOKING_STATUS_FROM_PROTO: dict[ProtoBookingStatus.ValueType, BookingStatus] = {
 
 
 def room_type_from_proto(proto_type: ProtoRoomType.ValueType) -> RoomType:
-    """Convert a proto RoomType to the domain enum."""
     return ROOM_TYPE_FROM_PROTO.get(proto_type, RoomType.MEETING_ROOM)
 
 
 def room_status_from_proto(proto_status: ProtoRoomStatus.ValueType) -> RoomStatus:
-    """Convert a proto RoomStatus to the domain enum."""
     return ROOM_STATUS_FROM_PROTO.get(proto_status, RoomStatus.ACTIVE)
 
 
@@ -88,7 +82,6 @@ def room_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> ProtoRoom:
-    """Convert a :class:`Room` row to its proto representation."""
     proto_room_type = ROOM_TYPE_TO_PROTO.get(
         room.room_type,
         ProtoRoomType.ROOM_TYPE_MEETING_ROOM,
@@ -137,7 +130,6 @@ def booking_to_proto(
     room_name: str = "",
     booker_name: str = "",
 ) -> ProtoRoomBooking:
-    """Convert a :class:`RoomBooking` to its proto representation."""
     proto_status = BOOKING_STATUS_TO_PROTO.get(
         booking.status,
         ProtoBookingStatus.BOOKING_STATUS_CONFIRMED,
@@ -173,7 +165,6 @@ def time_slot_to_proto(
     event_title: str = "",
     booker_name: str = "",
 ) -> ProtoTimeSlot:
-    """Convert availability-slot data to a ``TimeSlot`` proto."""
     proto_slot = ProtoTimeSlot(
         start_time=datetime_to_timestamp(start_time),
         end_time=datetime_to_timestamp(end_time),

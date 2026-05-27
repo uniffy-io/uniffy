@@ -1,20 +1,8 @@
-"""Canonical catalogue of audit action identifiers.
-
-Every row in ``audit_events`` carries a dotted-string ``action`` value
-drawn from this module. New mutation call sites must add their action
-constant here before emitting events - the enum is the source of truth
-for the front-end filter UI and for retention / export tooling.
-
-"""
+"""Canonical catalogue of audit action identifiers."""
 
 
 class Action:
-    """Dotted-string audit-action identifiers.
-
-    Class-as-namespace pattern: ``Action.PERMISSIONS_MEMBER_ADDED``
-    reads naturally at call sites and the constants live in one place
-    for the actions enum / filter UI to enumerate.
-    """
+    """Dotted-string audit-action identifiers used as the ``action`` column in ``audit_events``."""
 
     # Auth
     AUTH_LOGIN_SUCCESS = "auth.login_success"

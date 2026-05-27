@@ -11,9 +11,9 @@ _final_resource = None
 
 
 def add_resource(attributes: dict):
+    """Register extra OTEL resource attributes. Must run before `setup_otel`."""
     from opentelemetry.sdk.resources import Resource
 
-    """Adds resource attributes. Must be called before setup_otel."""
     with _otel_setup_lock:
         if _otel_setup_done:
             logging.warning("add_resource called after setup_otel; attributes will be ignored.")
@@ -29,18 +29,7 @@ def setup_otel(
     sample_rate: float = 1.0,
     traces_enabled: bool = True,
 ):
-    """
-    Setupups the OpenTelemetry SDK.
-
-    Args:
-        attributes: Resource attributes.
-        endpoint: OpenTelemetry endpoint.
-        protocol: OpenTelemetry protocol.
-        timeout: OpenTelemetry timeout.
-        sample_rate: OpenTelemetry sample rate.
-        traces_enabled: Enable traces.
-
-    """
+    """Configure the OpenTelemetry SDK (idempotent across threads)."""
     from opentelemetry import metrics, trace
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
@@ -72,11 +61,9 @@ def setup_otel(
         if _otel_setup_done:
             return _final_resource
 
-        # Create a temporary provider to get the default resource, which includes
-        # attributes from environment variables.
+        # Materialise env-derived resource attributes via a throwaway provider.
         default_resource = TracerProvider().resource
 
-        # Merge with programmatically added resources
         resource = default_resource
         for res in _additional_resources:
             resource = resource.merge(res)
@@ -114,10 +101,7 @@ def setup_otel(
 
 
 def instrument_sqlalchemy(engine):
-    """
-    Instruments a SQLAlchemy engine for OpenTelemetry tracing.
-    Must be called after setup_otel.
-    """
+    """Instrument a SQLAlchemy engine. Must run after `setup_otel`."""
     if not _otel_setup_done:
         logger.warning("SQLAlchemy instrumentation called before setup_otel.")
         return
@@ -133,10 +117,7 @@ def instrument_sqlalchemy(engine):
 
 
 def instrument_fastapi(app, exclude_paths: list[str] = None):
-    """
-    Instruments a FastAPI app for OpenTelemetry tracing.
-    Must be called after setup_otel.
-    """
+    """Instrument a FastAPI app. Must run after `setup_otel`."""
     if not _otel_setup_done:
         logger.warning("FastAPI instrumentation called before setup_otel.")
         return
@@ -154,12 +135,7 @@ def instrument_fastapi(app, exclude_paths: list[str] = None):
 
 
 def instrument_aiokafka():
-    """
-    https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/aiokafka/aiokafka.html
-
-    Instruments a AIOKafka app for OpenTelemetry tracing.
-    Must be called after setup_otel.
-    """
+    """Instrument aiokafka. Must run after `setup_otel`."""
     if not _otel_setup_done:
         logger.warning("AIOKafka instrumentation called before setup_otel.")
         return
@@ -175,12 +151,7 @@ def instrument_aiokafka():
 
 
 def instrument_openai():
-    """
-    https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/openai/openai.html
-
-    Instruments a OpenAI app for OpenTelemetry tracing.
-    Must be called after setup_otel.
-    """
+    """Instrument the OpenAI client. Must run after `setup_otel`."""
     if not _otel_setup_done:
         logger.warning("OpenAI instrumentation called before setup_otel.")
         return
@@ -196,16 +167,7 @@ def instrument_openai():
 
 
 def instrument_asyncio(coroutines_to_trace: list[str] = None):
-    """
-    https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/asyncio/asyncio.html
-
-    Instruments a AsyncIO app for OpenTelemetry tracing.
-    Must be called after setup_otel.
-
-    Args:
-        coroutines_to_trace: List of coroutine names to trace.
-        If not provided, all coroutines will be traced.
-    """
+    """Instrument asyncio. Must run after `setup_otel`."""
     if coroutines_to_trace:
         os.environ["OTEL_PYTHON_ASYNCIO_COROUTINE_NAMES_TO_TRACE"] = ",".join(coroutines_to_trace)
 
@@ -224,12 +186,7 @@ def instrument_asyncio(coroutines_to_trace: list[str] = None):
 
 
 def instrument_system_metrics():
-    """
-    https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/system_metrics/system_metrics.html
-
-    Instruments a system metrics for OpenTelemetry tracing.
-    Must be called after setup_otel.
-    """
+    """Emit host + process metrics via OpenTelemetry. Must run after `setup_otel`."""
     if not _otel_setup_done:
         logger.warning("System metrics instrumentation called before setup_otel.")
         return
@@ -269,12 +226,7 @@ def instrument_system_metrics():
 
 
 def instrument_all_aiohttp_client_sessions():
-    """
-    https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/aiohttp_client/aiohttp_client.html
-
-    Instruments a AIOHTTP app for OpenTelemetry tracing.
-    Must be called after setup_otel.
-    """
+    """Instrument every aiohttp client session. Must run after `setup_otel`."""
     if not _otel_setup_done:
         logger.warning("AIOHTTP instrumentation called before setup_otel.")
         return

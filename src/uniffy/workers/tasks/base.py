@@ -1,22 +1,8 @@
-"""Worker lifecycle hooks for the core and egress fleets.
+"""Lifecycle hooks for the core + egress worker fleets.
 
-Two fleets, two startup profiles:
-
-- **Core** (``thumbnails`` / ``extraction`` / ``notifications`` /
-  ``reminders`` / ``storage_recalculation`` / ``chat_mute``) loads
-  the shared resources plus VAPID config (web-push delivery is
-  core's job).
-- **Egress** (``run_agent_session`` / ``compact_session`` /
-  ``agent_chat`` / ``agent_cron``) loads the shared resources plus
-  the provider-key invalidation subscriber (only relevant when
-  agents are running, so core stays out of it).
-
-Neither fleet opens the streams client -- ``stream_xread`` is the
-only XREAD caller in the codebase and lives on the web pod's
-handler. Workers only XADD via the ops client.
-
-The ``ctx["queue"]`` field is set on startup so per-job metrics can
-split by queue.
+Core owns short jobs and VAPID push delivery. Egress owns LLM / agent jobs and
+the provider-key invalidation subscriber. Workers only XADD via the ops client;
+XREAD lives on the web pod.
 """
 
 import time
@@ -124,12 +110,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
 
 
 async def core_on_startup(ctx: dict[str, Any]) -> None:
-    """Startup hook for the core worker fleet.
-
-    Loads the shared stack plus VAPID config so push notifications
-    can be delivered. The provider-invalidation subscriber is NOT
-    started here -- core never instantiates a provider client.
-    """
+    """Startup hook for the core fleet (shared stack + VAPID for push)."""
     await _on_startup_shared(ctx, "core")
 
     try:
@@ -155,18 +136,11 @@ async def core_on_startup(ctx: dict[str, Any]) -> None:
 
 
 async def core_on_shutdown(ctx: dict[str, Any]) -> None:
-    """Shutdown hook for the core worker fleet."""
     await _on_shutdown_shared(ctx)
 
 
 async def egress_on_startup(ctx: dict[str, Any]) -> None:
-    """Startup hook for the egress worker fleet.
-
-    Loads the shared stack plus the provider-key invalidation
-    subscriber so the in-process ``ProviderClientLRU`` stays in
-    lockstep with web pods on key updates / revocations. VAPID is
-    NOT loaded here -- egress never sends push notifications.
-    """
+    """Startup hook for the egress fleet (shared stack + provider-key invalidation)."""
     await _on_startup_shared(ctx, "egress")
 
     try:
@@ -177,7 +151,6 @@ async def egress_on_startup(ctx: dict[str, Any]) -> None:
 
 
 async def egress_on_shutdown(ctx: dict[str, Any]) -> None:
-    """Shutdown hook for the egress worker fleet."""
     try:
         await close_provider_invalidation_subscriber()
     except Exception as exc:
@@ -186,7 +159,6 @@ async def egress_on_shutdown(ctx: dict[str, Any]) -> None:
 
 
 async def on_job_start(ctx: dict[str, Any]) -> None:
-    """Record per-queue job-start metrics and log the job."""
     queue_name = ctx.get("queue", "core")
     job_name = ctx.get("job_name", "unknown")
     WORKER_JOBS_STARTED_TOTAL.labels(queue=queue_name, job_name=job_name).inc()
@@ -200,7 +172,6 @@ async def on_job_start(ctx: dict[str, Any]) -> None:
 
 
 async def on_job_end(ctx: dict[str, Any]) -> None:
-    """Record per-queue job-end metrics and log completion."""
     queue_name = ctx.get("queue", "core")
     job_name = ctx.get("job_name", "unknown")
     WORKER_JOBS_IN_PROGRESS.labels(queue=queue_name, job_name=job_name).dec()

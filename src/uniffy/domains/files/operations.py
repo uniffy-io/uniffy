@@ -40,30 +40,21 @@ from uniffy.domains.files.quota_operations import QuotaOperations
 from uniffy.domains.tags import TagAssignment, TagOperations
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
 
-# Chunk size constants (in bytes)
-MIN_CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB (S3 minimum)
-SMALL_CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB for files < 50 MB
-MEDIUM_CHUNK_SIZE = 10 * 1024 * 1024  # 10 MB for files 50-500 MB
-LARGE_CHUNK_SIZE = 25 * 1024 * 1024  # 25 MB for files 500 MB - 2 GB
-XLARGE_CHUNK_SIZE = 50 * 1024 * 1024  # 50 MB for files > 2 GB
+MIN_CHUNK_SIZE = 5 * 1024 * 1024  # S3 minimum.
+SMALL_CHUNK_SIZE = 5 * 1024 * 1024
+MEDIUM_CHUNK_SIZE = 10 * 1024 * 1024
+LARGE_CHUNK_SIZE = 25 * 1024 * 1024
+XLARGE_CHUNK_SIZE = 50 * 1024 * 1024
 
-# Size thresholds for adaptive chunking
-THRESHOLD_MEDIUM = 50 * 1024 * 1024  # 50 MB
-THRESHOLD_LARGE = 500 * 1024 * 1024  # 500 MB
-THRESHOLD_XLARGE = 2 * 1024 * 1024 * 1024  # 2 GB
+THRESHOLD_MEDIUM = 50 * 1024 * 1024
+THRESHOLD_LARGE = 500 * 1024 * 1024
+THRESHOLD_XLARGE = 2 * 1024 * 1024 * 1024
 
-# Default upload expiry: 24 hours
 DEFAULT_UPLOAD_EXPIRY_HOURS = int(os.getenv("UPLOAD_EXPIRY_HOURS", 24))
 
 
 def _file_uploaded_audit_enabled() -> bool:
-    """Feature flag gate for the high-volume ``file.uploaded`` audit row.
-
-    Default off because every successful upload writes one row; the
-    volume swamps the audit table on storage-heavy deployments. Set
-    ``AUDIT_EVENTS_FILE_UPLOADED=true`` to opt in once storage volume
-    has been characterised in production.
-    """
+    # Default off; one row per upload swamps the audit table on storage-heavy deployments.
     return os.getenv("AUDIT_EVENTS_FILE_UPLOADED", "false").lower() in {
         "1",
         "true",
@@ -72,29 +63,7 @@ def _file_uploaded_audit_enabled() -> bool:
 
 
 def calculate_chunk_size(total_size: int) -> int:
-    """
-    Calculate optimal chunk size based on file size.
-
-    Uses larger chunks for bigger files to reduce the number of HTTP requests
-    while maintaining reasonable progress granularity.
-
-    Parameters
-    ----------
-    total_size : int
-        Total file size in bytes.
-
-    Returns
-    -------
-    int
-        Optimal chunk size in bytes.
-
-    Examples
-    --------
-    - 10 MB file -> 5 MB chunks (2 chunks)
-    - 100 MB file -> 10 MB chunks (10 chunks)
-    - 1 GB file -> 25 MB chunks (40 chunks)
-    - 3 GB file -> 50 MB chunks (60 chunks)
-    """
+    """Pick the chunk size that keeps part count reasonable for total_size."""
     if total_size >= THRESHOLD_XLARGE:
         return XLARGE_CHUNK_SIZE
     elif total_size >= THRESHOLD_LARGE:
@@ -106,32 +75,17 @@ def calculate_chunk_size(total_size: int) -> int:
 
 
 class FileOperations(BaseContentOperations[File]):
-    """
-    File CRUD operations with permissions and search.
-
-    Extends BaseContentOperations to provide file-specific functionality
-    including upload handling, versioning, and S3 integration.
-    """
+    """File CRUD with permissions, search indexing, multipart upload, and S3 integration."""
 
     content_type = ContentType.FILE
     model_class = File
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize file operations."""
         super().__init__(session)
         self.s3 = get_s3_client()
 
-    # ─────────────────────────────────────────────────────────────
-    # Abstract method implementations
-    # ─────────────────────────────────────────────────────────────
-
     def _build_search_keywords(self, model: File) -> str:
-        """Build search keywords from file metadata.
-
-        Tag slugs are written into the dedicated ``tags`` array on the
-        search document via :meth:`_get_search_tags_async`, so they are
-        not duplicated into the keyword stream.
-        """
+        # Tag slugs go through _get_search_tags_async; don't duplicate them into keywords.
         parts = [model.filename, model.original_filename]
         if model.description:
             parts.append(model.description)
@@ -142,19 +96,13 @@ class FileOperations(BaseContentOperations[File]):
         return " ".join(filter(None, parts))
 
     def _get_search_title(self, model: File) -> str:
-        """Get filename for search."""
         return model.filename
 
     def _get_url_path(self, model: File) -> str:
-        """Get URL path for file."""
         return f"/files/{model.id}"
 
     def _get_search_description(self, model: File) -> str | None:
-        """Get search description from file metadata.
-
-        Falls back to a snippet of the extracted text when the user did not
-        provide a description, so mention previews can show file contents.
-        """
+        """Description or a snippet of extracted text for mention previews."""
         if model.description:
             return model.description
         if model.media_info and model.media_info.extracted_text:
@@ -162,7 +110,6 @@ class FileOperations(BaseContentOperations[File]):
         return None
 
     async def _get_search_tags_async(self, model: File) -> list[str] | None:
-        """Return slugs assigned to this file via the unified tag store."""
         tag_ops = TagOperations(self.session)
         urn = build_content_urn(self.content_type, model.id)
         bulk = await tag_ops.get_for_urns(
@@ -173,14 +120,7 @@ class FileOperations(BaseContentOperations[File]):
         return slugs or None
 
     def _get_search_metadata(self, model: File) -> dict[str, str] | None:
-        """Sync metadata path -- MIME type and parent folder id.
-
-        ``folder_id`` lets folder deletion cascade-remove every file
-        it contained from the search index in a single filter call.
-        ``parent_label`` (folder name) is added in
-        :meth:`_get_search_metadata_async` so the lookup against the
-        folders table can run with the session.
-        """
+        # folder_id lets folder delete cascade-remove search entries with one filter.
         meta: dict[str, str] = {}
         if model.mime_type:
             meta["mime_type"] = model.mime_type
@@ -207,24 +147,7 @@ class FileOperations(BaseContentOperations[File]):
         content_id: UUID,
         organization_id: UUID,
     ) -> File | None:
-        """
-        Fetch file by ID with eager-loaded media_info.
-
-        Overrides base to add selectinload for the media_info relationship.
-
-        Parameters
-        ----------
-        content_id : UUID
-            File ID.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        File | None
-            The file with media_info loaded, or None.
-
-        """
+        """Override to eager-load media_info via selectinload."""
         result = await self.session.execute(
             select(File)
             .where(File.id == content_id)
@@ -232,10 +155,6 @@ class FileOperations(BaseContentOperations[File]):
             .options(selectinload(File.media_info))
         )
         return result.scalar_one_or_none()
-
-    # ─────────────────────────────────────────────────────────────
-    # Upload initiation
-    # ─────────────────────────────────────────────────────────────
 
     async def initiate_upload(
         self,
@@ -248,39 +167,7 @@ class FileOperations(BaseContentOperations[File]):
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
     ) -> MultipartUpload:
-        """
-        Initiate a new file upload.
-
-        Creates a :class:`MultipartUpload` record (with the access policy
-        the resulting :class:`File` will inherit) and starts the S3
-        multipart upload.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User initiating the upload.
-        organization_id : UUID
-            Organization ID.
-        filename : str
-            Target filename.
-        mime_type : str
-            MIME type of the file.
-        total_size : int
-            Expected total size in bytes.
-        folder_id : UUID | None
-            Target folder ID (None for root).
-        access_mode : AccessMode | None
-            Access mode the resulting file should use. If ``None``, the
-            org default for ``ContentType.FILE`` is resolved.
-        baseline_role : ContentRole | None
-            Baseline role when ``access_mode == OPEN_TO_ORG``.
-
-        Returns
-        -------
-        MultipartUpload
-            The created upload record with S3 upload ID.
-
-        """
+        """Start an S3 multipart upload and record the access policy for the resulting File."""
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
         )
@@ -338,7 +225,6 @@ class FileOperations(BaseContentOperations[File]):
         return upload
 
     async def get_upload_status(self, upload_id: UUID) -> MultipartUpload | None:
-        """Get an upload by ID."""
         result = await self.session.execute(
             select(MultipartUpload).where(MultipartUpload.id == upload_id)
         )
@@ -351,34 +237,7 @@ class FileOperations(BaseContentOperations[File]):
         etag: str,
         size: int,
     ) -> MultipartUpload:
-        """Record that a chunk has been uploaded to S3.
-
-        Concurrency-safe under HA: 15-20 backend instances may all be writing
-        parts for the same upload. The previous JSONB read-modify-write pattern
-        lost parts. We now insert into the dedicated `files_multipart_parts`
-        table, where `UNIQUE(upload_id, part_number)` lets us upsert idempotently
-        with `INSERT ... ON CONFLICT DO UPDATE`.
-
-        Refuses to record parts for non-ACTIVE uploads to keep
-        `complete_upload` and `abort_upload` from racing with late chunks.
-
-        Parameters
-        ----------
-        upload_id : UUID
-            Upload ID.
-        part_number : int
-            Part number (1-indexed).
-        etag : str
-            ETag returned by S3.
-        size : int
-            Size of the part in bytes.
-
-        Returns
-        -------
-        MultipartUpload
-            The upload record (unchanged; the part is stored in `multipart_parts`).
-
-        """
+        """Idempotent UPSERT into files_multipart_parts so concurrent backends don't lose parts."""
         upload = await self.get_upload_status(upload_id)
         if not upload:
             raise NotFoundError("Upload", upload_id)
@@ -406,11 +265,7 @@ class FileOperations(BaseContentOperations[File]):
         return upload
 
     async def list_completed_part_numbers(self, upload_id: UUID) -> list[int]:
-        """Return the sorted list of part numbers already uploaded.
-
-        Reads from `files_multipart_parts`. Used by handlers and by client
-        resume flows.
-        """
+        """Sorted part numbers already uploaded; used by handlers and client resume flows."""
         result = await self.session.execute(
             select(MultipartPart.part_number)
             .where(MultipartPart.upload_id == upload_id)
@@ -425,24 +280,7 @@ class FileOperations(BaseContentOperations[File]):
         group_ids: list[UUID] | None = None,
         tag_ids: list[UUID] | None = None,
     ) -> File:
-        """
-        Complete a multipart upload and create the File record.
-
-        Parameters
-        ----------
-        upload_id : UUID
-            Upload ID.
-        user_id : UUID
-            User completing the upload.
-        group_ids : list[UUID] | None
-            Group IDs if visibility is GROUP.
-
-        Returns
-        -------
-        File
-            The created file.
-
-        """
+        """Complete a multipart upload and create the File row + initial version."""
         upload_row = await self.session.execute(
             select(MultipartUpload)
             .where(MultipartUpload.id == upload_id)
@@ -516,13 +354,11 @@ class FileOperations(BaseContentOperations[File]):
             ],
         )
 
-        # Determine extraction status based on mime type
         extraction_status = self._get_initial_extraction_status(upload.mime_type)
         transcode_status = self._get_initial_transcode_status(
             upload.mime_type, upload.filename
         )
 
-        # Create file record
         file = File(
             organization_id=upload.organization_id,
             owner_id=upload.user_id,
@@ -542,7 +378,6 @@ class FileOperations(BaseContentOperations[File]):
         self.session.add(file)
         await self.session.flush()
 
-        # Create initial version
         version = FileVersion(
             file_id=file.id,
             version_number=1,
@@ -554,11 +389,9 @@ class FileOperations(BaseContentOperations[File]):
         self.session.add(version)
         await self.session.flush()
 
-        # Update file with current version
         file.current_version_id = version.id
 
-        # Optional convenience: add explicit group ContentMember rows.
-        # Canonical path is the MembersService AddMember RPC.
+        # Optional convenience; canonical path is MembersService.AddMember.
         if group_ids:
             for gid in group_ids:
                 self.session.add(
@@ -573,7 +406,6 @@ class FileOperations(BaseContentOperations[File]):
                     )
                 )
 
-        # Mark upload as completed
         upload.status = UploadStatus.COMPLETED
         upload.updated_at = datetime.now(UTC)
 
@@ -604,7 +436,6 @@ class FileOperations(BaseContentOperations[File]):
                 tag_ids=tag_ids,
             )
 
-        # Increment storage usage tracking
         try:
             quota_ops = QuotaOperations(self.session)
             await quota_ops.increment_usage(
@@ -620,32 +451,19 @@ class FileOperations(BaseContentOperations[File]):
                 exc_info=True,
             )
 
-        # Index for search
         await self._index_for_search(
             model=file,
             skip_member_lookup=not group_ids,
         )
         await self.session.commit()
 
-        # Enqueue background jobs for processing (thumbnails, metadata extraction)
         if file.extraction_status == ExtractionStatus.PENDING:
             await self._enqueue_processing_jobs(file)
 
         return file
 
     async def _enqueue_processing_jobs(self, file: File) -> None:
-        """
-        Enqueue background processing jobs for the file.
-
-        Determines which jobs to run based on MIME type and
-        enqueues them to the job queue. Non-fatal if queue unavailable.
-
-        Parameters
-        ----------
-        file : File
-            The file to process.
-
-        """
+        """Enqueue MIME-type-driven processing jobs; non-fatal if queue unavailable."""
         from loguru import logger
 
         try:
@@ -663,28 +481,12 @@ class FileOperations(BaseContentOperations[File]):
                 logger.debug(f"Enqueued {job_name} for file {file.id}")
 
         except RuntimeError:
-            # Queue not initialized (e.g., in tests or if Valkey unavailable)
             from loguru import logger
 
             logger.warning(f"Queue unavailable, skipping job enqueue for file {file.id}")
 
     async def abort_upload(self, upload_id: UUID, user_id: UUID) -> bool:
-        """
-        Abort an in-progress upload.
-
-        Parameters
-        ----------
-        upload_id : UUID
-            Upload ID.
-        user_id : UUID
-            User aborting the upload.
-
-        Returns
-        -------
-        bool
-            True if aborted successfully.
-
-        """
+        """Abort an in-progress upload."""
         upload = await self.get_upload_status(upload_id)
         if not upload:
             raise NotFoundError("Upload", upload_id)
@@ -692,13 +494,11 @@ class FileOperations(BaseContentOperations[File]):
         if upload.user_id != user_id:
             raise PermissionDeniedError("abort", "upload")
 
-        # Abort S3 multipart upload
         await self.s3.abort_multipart_upload(
             key=upload.storage_key,
             upload_id=upload.s3_upload_id,
         )
 
-        # Mark upload as aborted
         upload.status = UploadStatus.ABORTED
         upload.updated_at = datetime.now(UTC)
 
@@ -708,15 +508,7 @@ class FileOperations(BaseContentOperations[File]):
     def _get_initial_transcode_status(
         self, mime_type: str, filename: str
     ) -> TranscodeStatus:
-        """Decide whether to enqueue the WebM -> MP4 transcode.
-
-        Recordings are uploaded with `mime_type='video/webm'` but with a
-        filename already labelled `.mp4` (the frontend commits to that
-        from the moment the user clicks Stop). This combination is the
-        signal that a transcode is required. Drag-and-drop WebM uploads
-        keep their `.webm` filename and are left at `NOT_NEEDED` so the
-        user gets exactly the bytes they uploaded.
-        """
+        # video/webm with .mp4 filename = screen recording; transcode required.
         if (
             mime_type == "video/webm"
             and filename.lower().endswith(".mp4")
@@ -725,31 +517,11 @@ class FileOperations(BaseContentOperations[File]):
         return TranscodeStatus.NOT_NEEDED
 
     def _get_initial_extraction_status(self, mime_type: str) -> ExtractionStatus:
-        """
-        Determine initial extraction status based on MIME type.
-
-        Returns PENDING for file types that support background processing
-        (thumbnails, metadata extraction), SKIPPED for unsupported types.
-
-        Parameters
-        ----------
-        mime_type : str
-            MIME type of the file.
-
-        Returns
-        -------
-        ExtractionStatus
-            PENDING if background jobs will process this file, SKIPPED otherwise.
-
-        """
+        """PENDING if MIME has background jobs; otherwise SKIPPED."""
         processable = get_processable_mime_types()
         if mime_type in processable:
             return ExtractionStatus.PENDING
         return ExtractionStatus.SKIPPED
-
-    # ─────────────────────────────────────────────────────────────
-    # File CRUD
-    # ─────────────────────────────────────────────────────────────
 
     async def update(
         self,
@@ -760,36 +532,8 @@ class FileOperations(BaseContentOperations[File]):
         tag_ids: list[UUID] | None = None,
         description: str | None = None,
     ) -> File:
-        """
-        Update file metadata.
-
-        Access policy changes (access mode, baseline role, members) go
-        through the MembersService, not this method.
-
-        ``tag_ids=None`` leaves manual tags untouched (partial update);
-        an empty list clears every manual assignment. Inline-source
-        assignments are not exposed for files (no markdown surface).
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing update.
-        organization_id : UUID
-            Organization ID.
-        file_id : UUID
-            File to update.
-        filename : str | None
-            New filename.
-        tag_ids : list[UUID] | None
-            Replacement set of manual tag ids.
-        description : str | None
-            New description.
-
-        Returns
-        -------
-        File
-            Updated file.
-
+        """Metadata update; tag_ids=None preserves manual tags, [] clears
+        them. Members via MembersService.
         """
         file = await self._fetch_by_id(file_id, organization_id)
         if not file:
@@ -823,7 +567,6 @@ class FileOperations(BaseContentOperations[File]):
         await self._index_for_search(model=file)
         await self.session.commit()
 
-        # Propagate filename change to mention labels in referencing content
         if filename_changed:
             try:
                 file_urn = build_content_urn(self.content_type, file.id)
@@ -850,26 +593,7 @@ class FileOperations(BaseContentOperations[File]):
         file_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        """
-        Delete a file (soft or permanent).
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing delete.
-        organization_id : UUID
-            Organization ID.
-        file_id : UUID
-            File to delete.
-        permanent : bool
-            If True, permanently delete including S3 objects.
-
-        Returns
-        -------
-        bool
-            True if deleted successfully.
-
-        """
+        """Soft-delete or permanently delete (including S3 objects)."""
         file = await self._fetch_by_id(file_id, organization_id)
         if not file:
             raise NotFoundError("File", file_id)
@@ -881,11 +605,10 @@ class FileOperations(BaseContentOperations[File]):
             file_owner = file.owner_id
             file_org = file.organization_id
 
-            # Break FK: clear current_version_id
+            # Break FK before deleting versions.
             file.current_version_id = None
             await self.session.flush()
 
-            # Delete all versions (S3 + DB)
             versions = await self._get_file_versions(file_id)
             for v in versions:
                 await self.s3.delete_object(v.storage_key)
@@ -955,24 +678,7 @@ class FileOperations(BaseContentOperations[File]):
         organization_id: UUID,
         file_id: UUID,
     ) -> File:
-        """
-        Restore a soft-deleted file.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing restore.
-        organization_id : UUID
-            Organization ID.
-        file_id : UUID
-            File to restore.
-
-        Returns
-        -------
-        File
-            Restored file.
-
-        """
+        """Restore a soft-deleted file."""
         file = await self._fetch_by_id(file_id, organization_id)
         if not file:
             raise NotFoundError("File", file_id)
@@ -996,7 +702,6 @@ class FileOperations(BaseContentOperations[File]):
         await self.session.commit()
         await self.session.refresh(file)
 
-        # Re-index for search
         await self._index_for_search(model=file)
         await self.session.commit()
 
@@ -1007,19 +712,7 @@ class FileOperations(BaseContentOperations[File]):
         user_id: UUID,
         organization_id: UUID,
     ) -> tuple[list[File], list[Folder]]:
-        """
-        List all soft-deleted files and folders owned by the user in an organization.
-
-        Returns a flat list of both. The caller decides which are shown at the
-        "trash root" (items whose parent is not itself deleted) and which are
-        shown as children when navigating into a trashed folder.
-
-        Returns
-        -------
-        tuple[list[File], list[Folder]]
-            (deleted_files, deleted_folders)
-
-        """
+        """Flat (files, folders) of soft-deleted items owned by the user."""
         files_result = await self.session.execute(
             select(File).where(
                 File.organization_id == organization_id,
@@ -1056,45 +749,7 @@ class FileOperations(BaseContentOperations[File]):
         sort_by: str = "updated_at",
         sort_order: str = "desc",
     ) -> tuple[list[File], int]:
-        """
-        List files with filters and permission checking.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User requesting list.
-        organization_id : UUID
-            Organization ID.
-        folder_id : UUID | None | str
-            Folder filter (None=root, "all"=all files, UUID=specific folder).
-        access_mode : AccessMode | None
-            Optional access-mode filter.
-        group_id : UUID | None
-            Filter to files where the given group is an explicit member.
-        personal_only : bool
-            Only files owned by the requester.
-        shared_only : bool
-            Only files the requester does not own but has access to via
-            an explicit ContentMember row (any non-blocked role).
-        include_deleted : bool
-            Include trash.
-        tag_ids : list[UUID] | None
-            Filter to files carrying every tag id (logical AND).
-        page : int
-            Page number.
-        page_size : int
-            Items per page.
-        sort_by : str
-            Sort column.
-        sort_order : str
-            Sort direction (asc/desc).
-
-        Returns
-        -------
-        tuple[list[File], int]
-            List of files and total count.
-
-        """
+        """List files with filters; folder_id 'all' means cross-folder; tag_ids AND-joined."""
         query = select(File).where(File.organization_id == organization_id)
 
         if personal_only:
@@ -1245,23 +900,9 @@ class FileOperations(BaseContentOperations[File]):
         user_id: UUID,
         organization_id: UUID,
     ) -> tuple[int, int]:
+        """Permanently delete every trashed file and folder; returns
+        (files_deleted, folders_deleted).
         """
-        Permanently delete all trash files and folders in organization.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing action.
-        organization_id : UUID
-            Organization ID.
-
-        Returns
-        -------
-        tuple[int, int]
-            (files_deleted, folders_deleted)
-
-        """
-        # Get all deleted files
         files_result = await self.session.execute(
             select(File).where(
                 File.organization_id == organization_id,
@@ -1506,40 +1147,13 @@ class FolderOperations:
         permanent: bool = False,
         recursive: bool = False,
     ) -> tuple[int, int]:
-        """
-        Delete a folder.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User performing delete.
-        organization_id : UUID
-            Organization ID.
-        folder_id : UUID
-            Folder to delete.
-        permanent : bool
-            If True, permanently delete.
-        recursive : bool
-            If True, also delete contents.
-
-        Returns
-        -------
-        tuple[int, int]
-            (files_deleted, folders_deleted)
-
-        Raises
-        ------
-        NotFoundError
-            If folder not found.
-        PermissionDeniedError
-            If user cannot delete the folder or if it's a system folder.
-
+        """Delete a folder; system folders are protected. Returns
+        (files_deleted, folders_deleted).
         """
         folder = await self.get_by_id(folder_id, organization_id)
         if not folder:
             raise NotFoundError("Folder", folder_id)
 
-        # System folders cannot be deleted
         if folder.is_system:
             raise PermissionDeniedError("delete_system", "folder")
 
@@ -1550,13 +1164,11 @@ class FolderOperations:
         folders_deleted = 0
 
         if recursive:
-            # Recursively delete contents
             files_deleted, folders_deleted = await self._delete_contents(
                 folder_id, organization_id, user_id, permanent
             )
 
         if permanent:
-            # Clean up any multipart uploads referencing this folder
             uploads_result = await self.session.execute(
                 select(MultipartUpload).where(MultipartUpload.folder_id == folder_id)
             )
@@ -1769,33 +1381,7 @@ class FolderOperations:
         access_mode: AccessMode | None = None,
         baseline_role: ContentRole | None = None,
     ) -> list[dict]:
-        """
-        Create a folder tree in a single transaction.
-
-        Recursively creates folders preserving the directory structure.
-        All folders are created with the same access mode.
-
-        Parameters
-        ----------
-        user_id : UUID
-            User creating the folders.
-        organization_id : UUID
-            Organization ID.
-        tree : list[dict]
-            List of ``{"name": str, "children": list}`` nodes.
-        parent_id : UUID | None
-            Parent folder ID for the root of the tree.
-        access_mode : AccessMode | None
-            Access mode for all created folders.
-        baseline_role : ContentRole | None
-            Baseline role when access_mode is OPEN_TO_ORG.
-
-        Returns
-        -------
-        list[dict]
-            Flat list of created folders with id, name, path, parent_id.
-
-        """
+        """Create a folder tree in one transaction; returns flat [{id, name, path, parent_id}]."""
         access_mode, baseline_role = await resolve_access_policy(
             self.session,
             organization_id,

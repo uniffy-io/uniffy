@@ -10,40 +10,7 @@ from uniffy.core.types import AccessMode, CalendarType, ContentRole, generate_id
 
 
 class Calendar(SQLModel, table=True):
-    """
-    Calendar model representing a user's calendar.
-
-    Users can have multiple calendars (Personal, Work, Team, etc.)
-    that organize their events.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the calendar (primary key).
-    organization_id : UUID
-        Organization this calendar belongs to (foreign key).
-    owner_id : UUID
-        User who owns the calendar (foreign key to login_users).
-    name : str
-        Calendar display name.
-    color : str
-        Color for calendar events (hex format).
-    is_visible : bool
-        Whether calendar is visible in the grid.
-    is_default : bool
-        Whether this is the default calendar for new events.
-    calendar_type : CalendarType
-        Type of calendar (PERSONAL, WORK, TEAM, SHARED).
-    access_mode : AccessMode
-        How access to this calendar is governed.
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    created_at : datetime
-        Timestamp when the calendar was created.
-    updated_at : datetime
-        Timestamp when the calendar was last updated.
-
-    """
+    """A user calendar that groups events (Personal, Work, Team, Shared)."""
 
     __tablename__ = "calendar_calendars"
 
@@ -101,7 +68,6 @@ class Calendar(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of Calendar."""
         return (
             f"<Calendar(id={self.id}, name={self.name!r}, "
             f"type={self.calendar_type}, owner_id={self.owner_id})>"

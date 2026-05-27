@@ -1,5 +1,3 @@
-"""ConnectRPC service binding for ``superadmin.v1.SystemConfigService``."""
-
 from connectrpc.request import RequestContext
 from uniffy_proto.superadmin.v1.system_config_pb2 import (
     GetMfaPolicyRequest,
@@ -16,8 +14,6 @@ from uniffy.domains.system_config.handlers import SystemConfigHandlers
 
 
 class SystemConfigServiceImpl:
-    """ConnectRPC service - delegates to SystemConfigHandlers."""
-
     def __init__(self) -> None:
         self._handlers = SystemConfigHandlers()
 

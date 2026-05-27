@@ -1,13 +1,4 @@
-"""Chat streaming RPC handler.
-
-StreamStreamUserChatEventsResponses: unified stream delivering both user-level events
-(unread counts, thread activity, mentions) and channel-level events
-(messages, typing, reactions) through a single persistent connection.
-
-Channel events are fanned out at publish time to each member's
-`chat:user:{user_id}` Valkey channel, so no per-channel subscription
-is needed. The frontend filters by channel_id.
-"""
+"""Unified chat event stream over a single `chat:user:{user_id}` subscription."""
 
 import json
 import time
@@ -56,22 +47,17 @@ from uniffy.domains.chat.streaming import events as evt
 from uniffy.domains.notifications.middleware import get_disconnect_event
 
 LOGGER_COMPONENT = "chat.stream"
-HEARTBEAT_INTERVAL = 30  # seconds
+HEARTBEAT_INTERVAL = 30
 
 
 def _now_ts() -> Timestamp:
-    """Create a protobuf Timestamp for now."""
     ts = Timestamp()
     ts.FromDatetime(datetime.now(UTC))
     return ts
 
 
 def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
-    """Convert a Valkey payload dict to a ChatEvent proto.
-
-    Every ChatEvent carries channel_id so the frontend can filter
-    events for the active channel.
-    """
+    """Valkey payload -> ChatEvent proto; every event carries channel_id for client filtering."""
     event_type = payload.get("_type")
     cid = payload.get("channel_id", "")
 
@@ -318,7 +304,6 @@ _SENDER_TYPE_STR_TO_PROTO = {
 
 
 def _build_message_proto(payload: dict) -> ProtoChatMessage:
-    """Build a ChatMessage proto from a Valkey payload."""
     msg = ProtoChatMessage(
         id=payload.get("message_id", ""),
         channel_id=payload.get("channel_id", ""),
@@ -359,12 +344,7 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
         ts.FromDatetime(datetime.fromisoformat(payload["edited_at"]))
         msg.edited_at.CopyFrom(ts)
 
-    # Copy metadata (map<string, string>) so agent `kind` dispatch works on
-    # the first MESSAGE_CREATED event. Dropping it here caused agent tool
-    # calls / tool results / summaries to transiently render as plain
-    # markdown until a subsequent GetMessages refetch pulled metadata from
-    # the DB. Values are stringified since the proto map only accepts
-    # strings; the frontend renderer already treats them as opaque.
+    # Copy metadata so agent kind dispatch works on the first MESSAGE_CREATED event.
     meta = payload.get("metadata")
     if isinstance(meta, dict):
         for k, v in meta.items():
@@ -374,7 +354,6 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
 
 
 def _payload_to_user_event(payload: dict) -> StreamUserChatEventsResponse | None:
-    """Convert a Valkey payload dict to a StreamUserChatEventsResponse proto."""
     event_type = payload.get("_type")
 
     if event_type == evt.UNREAD_COUNT_CHANGED:
@@ -422,7 +401,6 @@ def _payload_to_user_event(payload: dict) -> StreamUserChatEventsResponse | None
     return None
 
 
-# Channel-level event types that arrive via fan-out on chat:user:{user_id}
 _CHANNEL_EVENT_TYPES = {
     evt.MESSAGE_CREATED,
     evt.MESSAGE_UPDATED,
@@ -446,22 +424,12 @@ _CHANNEL_EVENT_TYPES = {
 
 
 class ChatStreamHandlers:
-    """Chat streaming RPC handlers."""
-
     async def stream_user_chat_events(
         self,
         request: StreamUserChatEventsRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[StreamUserChatEventsResponse]:
-        """Unified chat event stream.
-
-        Subscribes to the user's single Valkey channel `chat:user:{user_id}`.
-        All events (user-level and channel-level) arrive here because the
-        publisher fans out channel events to each member's user channel.
-
-        The frontend filters channel events by channel_id to display only
-        the active channel's events.
-        """
+        """Subscribe to chat:user:{user_id}; channel events arrive via publisher fan-out."""
         user_id = get_user_id_from_context(ctx)
 
         logger.info(
@@ -491,7 +459,6 @@ class ChatStreamHandlers:
 
                     event_type = payload.get("_type")
 
-                    # Channel-level event (fanned out from publisher)
                     if event_type in _CHANNEL_EVENT_TYPES:
                         channel_event = _payload_to_channel_event(payload)
                         if channel_event:
@@ -503,7 +470,6 @@ class ChatStreamHandlers:
                             last_send = now
                         continue
 
-                    # User-level event
                     user_event = _payload_to_user_event(payload)
                     if user_event:
                         yield user_event

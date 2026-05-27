@@ -31,8 +31,6 @@ from uniffy.domains.platform.directory.handlers import (
 
 
 class SystemOrganizationsServiceImpl:
-    """ConnectRPC service implementation for cross-tenant org directory."""
-
     def __init__(self) -> None:
         self._handlers = SystemOrganizationsHandlers()
 
@@ -68,8 +66,6 @@ class SystemOrganizationsServiceImpl:
 
 
 class SystemUsersServiceImpl:
-    """ConnectRPC service implementation for cross-tenant user directory."""
-
     def __init__(self) -> None:
         self._handlers = SystemUsersHandlers()
 

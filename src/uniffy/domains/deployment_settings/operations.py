@@ -1,11 +1,5 @@
-"""CRUD on the generic ``deployment_settings`` KV table.
-
-Wraps :class:`DeploymentSetting` with the same shape as
-:class:`OrgSettingsOperations` but with no organization scoping.
-Secrets are encrypted through :class:`DeploymentCipher` (singleton DEK
-wrapped by the master KEK) on write and never round-trip through the
-public read path: ``get_namespace`` returns rows as-is and callers
-explicitly opt into decryption via ``get_secret``.
+"""CRUD on deployment_settings KV table; secrets encrypted via
+DeploymentCipher, opt-in decryption.
 """
 
 from __future__ import annotations
@@ -34,11 +28,7 @@ class DeploymentSettingsOperations:
         self._cipher = DeploymentCipher(session)
 
     async def get_namespace(self, namespace: str) -> dict[str, DeploymentSetting]:
-        """Return ``{key: DeploymentSetting}`` for one namespace.
-
-        Ciphertext is left in ``row.value_encrypted`` -- callers that
-        need plaintext must call ``get_secret`` explicitly.
-        """
+        """Returns {key: row} with ciphertext intact; plaintext requires get_secret."""
         rows = (
             await self._session.execute(
                 select(DeploymentSetting).where(
@@ -49,7 +39,7 @@ class DeploymentSettingsOperations:
         return {row.key: row for row in rows}
 
     async def get_secret(self, namespace: str, key: str) -> str | None:
-        """Return the decrypted plaintext for one secret row or ``None``."""
+        """Decrypted plaintext for one secret row, or None."""
         row = (
             await self._session.execute(
                 select(DeploymentSetting).where(
@@ -71,14 +61,7 @@ class DeploymentSettingsOperations:
         is_secret: bool = False,
         updated_by_user_id: UUID | None = None,
     ) -> None:
-        """Upsert one row. Secrets are encrypted via :class:`DeploymentCipher`.
-
-        For ``is_secret=False`` rows the JSON-able ``value`` is stored
-        in the plaintext ``value`` JSONB column. For secrets the value
-        must be a string; it is encrypted and stored in
-        ``value_encrypted`` (the ``value`` column is left NULL to
-        satisfy the CHECK constraint).
-        """
+        """Upsert one row; secrets encrypted into value_encrypted, plain JSON into value."""
         plain: Any | None = None
         ciphertext: str | None = None
         if is_secret:
@@ -114,7 +97,6 @@ class DeploymentSettingsOperations:
         await self._session.execute(stmt)
 
     async def delete_key(self, *, namespace: str, key: str) -> bool:
-        """Drop one row. Returns True when a row was deleted."""
         result = await self._session.execute(
             delete(DeploymentSetting).where(
                 DeploymentSetting.namespace == namespace,
@@ -124,7 +106,6 @@ class DeploymentSettingsOperations:
         return (result.rowcount or 0) > 0
 
     async def delete_namespace(self, namespace: str) -> int:
-        """Drop every row for one namespace. Returns count."""
         result = await self._session.execute(
             delete(DeploymentSetting).where(
                 DeploymentSetting.namespace == namespace
@@ -136,7 +117,7 @@ class DeploymentSettingsOperations:
 async def _list_deployment_secret_rows(
     session: AsyncSession,
 ) -> AsyncIterator[DeploymentSetting]:
-    """Yield every ``is_secret=true`` row; used by deployment-DEK rotation."""
+    # Used by deployment-DEK rotation.
     result = await session.execute(
         select(DeploymentSetting).where(
             DeploymentSetting.is_secret == True  # noqa: E712

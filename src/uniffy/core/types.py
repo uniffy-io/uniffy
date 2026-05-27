@@ -1,30 +1,18 @@
-"""
-Shared enums and utility types used across all UNIFFY modules.
-
-This module is dependency-free (stdlib only) so it can be safely
-imported by any other module without risking circular imports.
-Everything that needs a shared enum imports it from here.
-"""
+"""Shared enums and utility types. Stdlib-only to stay circular-import-safe."""
 
 import re
 from enum import Enum
 from uuid import uuid7
 
-# Central ID generator for all models. Using UUIDv7 (time-ordered, RFC 9562).
-# Change this single binding if the ID generation strategy ever changes.
+# UUIDv7 keeps IDs time-ordered (RFC 9562).
 generate_id = uuid7
 
 
-# Access control
-
-
 class ContentRole(str, Enum):
-    """
-    Role a subject has on a piece of content.
+    """Role a subject has on a piece of content.
 
-    Higher in the list = more privilege. ``BLOCKED`` is an explicit deny
-    that overrides any baseline access. Use ``BLOCKED`` to remove a
-    specific user from otherwise open content.
+    Order is OWNER > ADMIN > EDITOR > COMMENTER > VIEWER. ``BLOCKED`` is an
+    explicit deny that overrides any baseline access.
     """
 
     OWNER = "OWNER"
@@ -36,12 +24,7 @@ class ContentRole(str, Enum):
 
 
 class AccessMode(str, Enum):
-    """
-    Baseline access mode for a piece of content.
-
-    Explicit :class:`ContentMember` rows always override the baseline
-    (in either direction -- higher or ``BLOCKED``).
-    """
+    """Baseline access mode for content. Explicit ContentMember rows override the baseline."""
 
     OWNER_ONLY = "OWNER_ONLY"
     EXPLICIT_MEMBERS = "EXPLICIT_MEMBERS"
@@ -49,12 +32,7 @@ class AccessMode(str, Enum):
 
 
 class ContentMemberAction(str, Enum):
-    """Wire-level action label for permissions audit events.
-
-    Mapped to ``audit_events.action`` strings of the form
-    ``permissions.*`` by the permissions converter; this enum stays
-    because the ``permissions.v1`` proto contract still exposes it.
-    """
+    """Wire-level action label for permissions audit events (exposed via permissions.v1 proto)."""
 
     MEMBER_ADDED = "MEMBER_ADDED"
     MEMBER_ROLE_CHANGED = "MEMBER_ROLE_CHANGED"
@@ -65,12 +43,7 @@ class ContentMemberAction(str, Enum):
 
 
 class ContentType(str, Enum):
-    """
-    Types of content in the system.
-
-    Used for polymorphic references in access control, search,
-    attachments, and related tables.
-    """
+    """Content types referenced polymorphically by access control, search, attachments, etc."""
 
     NOTE = "NOTE"
     FILE = "FILE"
@@ -91,10 +64,7 @@ class ContentType(str, Enum):
 
 
 class SubjectType(str, Enum):
-    """
-    Types of subjects that can have a role on content or be a participant
-    in a chat channel/thread.
-    """
+    """Subjects that can hold a role on content or participate in a chat channel/thread."""
 
     USER = "USER"
     GROUP = "GROUP"
@@ -103,13 +73,7 @@ class SubjectType(str, Enum):
 
 
 class DomainType(str, Enum):
-    """
-    Application domains that support domain-level admins.
-
-    A user can be granted admin status for a specific domain, giving
-    them elevated access within that domain without being a full org
-    admin.
-    """
+    """Application domains that support per-domain admins (elevated access without org admin)."""
 
     CHAT = "CHAT"
     FILES = "FILES"

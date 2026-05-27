@@ -1,12 +1,4 @@
-"""Agent rate limit configuration model.
-
-Rows in this table override the default per-user / per-org / per-agent /
-per-image-generation rate limits for a single organization. Absent rows
-fall back to the module-level defaults declared in
-``core.valkey.rate_limit``. The writable RPC surface is
-``agents.v1.RateLimitsService``; direct writes from other domains are not
-expected.
-"""
+"""Agent rate limit configuration model."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -18,27 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class AgentRateLimitConfig(SQLModel, table=True):
-    """Per-organization rate limit override for the agents domain.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier (primary key, UUIDv7).
-    organization_id : UUID
-        Organization the override applies to.
-    limit_kind : str
-        One of ``AGENT_MSG_USER``, ``AGENT_MSG_ORG``, ``AGENT_MSG_AGENT``,
-        ``IMAGE_GEN_USER``, ``IMAGE_GEN_ORG``.
-    limit : int
-        Maximum allowed requests in the window.
-    window_seconds : int
-        Window size in seconds.
-    created_at : datetime
-        When the override was created.
-    updated_at : datetime
-        When the override was last modified.
-
-    """
+    """Per-organization rate limit override for the agents domain."""
 
     __tablename__ = "agents_rate_limits"
     __table_args__ = (
@@ -74,7 +46,6 @@ class AgentRateLimitConfig(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of AgentRateLimitConfig."""
         return (
             f"<AgentRateLimitConfig(org={self.organization_id}, "
             f"kind={self.limit_kind!r}, limit={self.limit}/{self.window_seconds}s)>"

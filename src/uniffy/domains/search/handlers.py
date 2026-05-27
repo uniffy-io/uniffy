@@ -1,5 +1,3 @@
-"""Search RPC handlers - thin layer delegating to operations."""
-
 import contextlib
 from uuid import UUID
 
@@ -33,24 +31,11 @@ from uniffy.domains.search.parser import parse_search_query
 
 
 class SearchHandlers:
-    """Search RPC handlers."""
-
     async def search(
         self,
         request: SearchRequest,
         ctx: RequestContext,
     ) -> SearchResponse:
-        """
-        Perform a global fuzzy search with keyword filters.
-
-        Supports Google-style filter syntax in the query:
-        - Type filters: note:, file:, user:, calendar:
-        - Tag filters: tag:work
-        - Project filters: project:xyz
-        - Ownership: my: (current user's content)
-
-        Returns content the user has permission to see, ranked by relevance.
-        """
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
@@ -58,13 +43,9 @@ class SearchHandlers:
 
         user_id = get_user_id_from_context(ctx)
 
-        # Parse the query to extract filters
         parsed = parse_search_query(request.query)
-
-        # Get the free text portion (after removing filter keywords)
         query_text = parsed.text
 
-        # Check if we have any search criteria (text or filters)
         has_filters = (
             parsed.type_filters
             or parsed.tags
@@ -76,11 +57,9 @@ class SearchHandlers:
             or request.owner_filter
         )
 
-        # If no query text and no filters, return empty
         if not query_text and not has_filters:
             return SearchResponse(items=[])
 
-        # Merge type filters from parsed query and explicit request
         type_filters: list[str] = []
         if parsed.type_filters:
             type_filters.extend(parsed.type_filters)
@@ -90,25 +69,20 @@ class SearchHandlers:
                 if entity_type and entity_type not in type_filters:
                     type_filters.append(entity_type)
 
-        # Merge tag filters
         tag_filters: list[str] = list(parsed.tags)
         if request.tag_filters:
             for tag in request.tag_filters:
                 if tag not in tag_filters:
                     tag_filters.append(tag)
 
-        # Ownership filters
         my_content_only = parsed.my_content_only or request.my_content_only
 
-        # Owner filter (parsed owner username would need lookup, for now use explicit)
         owner_filter: UUID | None = None
         if request.owner_filter:
-            # Owner filter might be a username - would need user lookup
-            # For now, skip invalid UUIDs
+            # Owner filter accepts a UUID today; username resolution is not wired yet.
             with contextlib.suppress(ValueError):
                 owner_filter = UUID(request.owner_filter)
 
-        # Build exclude type filters
         exclude_type_filters: list[str] = []
         if request.exclude_types:
             for et in request.exclude_types:
@@ -116,10 +90,8 @@ class SearchHandlers:
                 if entity_type and entity_type not in exclude_type_filters:
                     exclude_type_filters.append(entity_type)
 
-        # Set limit with bounds
         limit = min(max(request.limit or 20, 1), 100)
 
-        # Metadata filters (e.g., channel_id, sender_id for chat)
         metadata_filters: dict[str, str] | None = None
         if request.metadata_filters:
             metadata_filters = dict(request.metadata_filters)
@@ -140,7 +112,6 @@ class SearchHandlers:
                     limit=limit,
                 )
 
-                # Convert to proto (score is in SearchResult.search_score)
                 items = [search_result_to_proto(item) for item in results]
 
                 return SearchResponse(items=items)
@@ -156,18 +127,11 @@ class SearchHandlers:
         request: IndexItemRequest,
         ctx: RequestContext,
     ) -> IndexItemResponse:
-        """
-        Index an item in the search index.
-
-        This is typically called internally by other services
-        when content is created or updated.
-        """
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        # Validate required fields
         if not request.urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "URN is required")
         if not request.title:
@@ -180,8 +144,6 @@ class SearchHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid entity type")
 
         try:
-            # For internal indexing, we need owner info from metadata
-            # This RPC is mainly for external/manual indexing
             owner_id_str = request.metadata.get("owner_id")
             if not owner_id_str:
                 raise ConnectError(Code.INVALID_ARGUMENT, "owner_id required in metadata")
@@ -220,11 +182,6 @@ class SearchHandlers:
         request: DeleteItemRequest,
         ctx: RequestContext,
     ) -> DeleteItemResponse:
-        """
-        Remove an item from the search index.
-
-        Called when content is permanently deleted.
-        """
         if not request.urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "URN is required")
 
@@ -244,12 +201,7 @@ class SearchHandlers:
         request: GetReferencesRequest,
         ctx: RequestContext,
     ) -> GetReferencesResponse:
-        """
-        Get all content that references a specific URN.
-
-        Returns content items that have the target URN in their
-        outgoing_references, effectively providing universal backlinks.
-        """
+        # Universal backlinks: returns content whose outgoing_references contain target_urn.
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
@@ -260,7 +212,6 @@ class SearchHandlers:
 
         user_id = get_user_id_from_context(ctx)
 
-        # Parse type filters
         type_filters: list[str] | None = None
         if request.type_filters:
             type_filters = [
@@ -269,7 +220,6 @@ class SearchHandlers:
                 if (entity_type := proto_to_entity_type(tf)) is not None
             ]
 
-        # Set limit with bounds
         limit = min(max(request.limit or 50, 1), 100)
 
         try:
@@ -283,7 +233,6 @@ class SearchHandlers:
                     limit=limit,
                 )
 
-                # Convert to proto
                 items = [search_result_to_proto(item, 1.0) for item in results]
 
                 return GetReferencesResponse(items=items, total_count=total)
@@ -299,18 +248,13 @@ class SearchHandlers:
         request: ResolveUrnsRequest,
         ctx: RequestContext,
     ) -> ResolveUrnsResponse:
-        """
-        Resolve metadata for a batch of URNs.
-
-        Returns metadata for URNs the user has permission to view.
-        Missing or inaccessible URNs are omitted from the response.
-        """
+        # URNs the user cannot view or that are missing are returned as tombstones
+        # by SearchOperations.resolve_urns so chip rendering can show a deleted state.
         try:
             organization_id = UUID(request.organization_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
 
-        # Validate URNs list
         if not request.urns:
             return ResolveUrnsResponse(resolved={})
 
@@ -328,7 +272,6 @@ class SearchHandlers:
                     urns=list(request.urns),
                 )
 
-                # Convert to proto map
                 resolved = {
                     urn: search_result_to_urn_metadata(item) for urn, item in results.items()
                 }

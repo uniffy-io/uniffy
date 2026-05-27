@@ -19,29 +19,7 @@ class OrganizationRole(str, Enum):
 
 
 class OrganizationMember(SQLModel, table=True):
-    """
-    Link table between Users and Organizations.
-
-    Represents a user's membership in an organization with a specific role.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the membership (primary key).
-    user_id : UUID
-        Foreign key to users table.
-    organization_id : UUID
-        Foreign key to organizations table.
-    role : OrganizationRole
-        User's role within this organization.
-    is_active : bool
-        Whether the membership is active (for soft suspension).
-    joined_at : datetime
-        Timestamp when the user joined the organization.
-    updated_at : datetime
-        Timestamp when the membership was last updated.
-
-    """
+    """User membership in an organization with an `OrganizationRole`."""
 
     __tablename__ = "login_organization_members"
 
@@ -60,7 +38,6 @@ class OrganizationMember(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of OrganizationMember."""
         return (
             f"<OrganizationMember(user_id={self.user_id}, "
             f"organization_id={self.organization_id}, role={self.role})>"

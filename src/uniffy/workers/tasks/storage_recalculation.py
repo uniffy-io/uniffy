@@ -1,9 +1,4 @@
-"""Background task for periodic storage usage recalculation.
-
-Runs nightly to correct any drift between materialized usage
-counters and actual file storage. This ensures quota enforcement
-remains accurate even if increment/decrement operations fail.
-"""
+"""Nightly storage-usage recalculation to correct drift in quota counters."""
 
 from typing import Any
 
@@ -16,23 +11,7 @@ from uniffy.domains.files.quota_operations import QuotaOperations
 
 
 async def recalculate_all_storage_usage(ctx: dict[str, Any]) -> dict[str, Any]:
-    """
-    Recalculate storage usage for all organizations.
-
-    Iterates over every organization and recalculates per-user
-    usage from the files table. Logs any drift corrections.
-
-    Parameters
-    ----------
-    ctx : dict[str, Any]
-        ARQ worker context.
-
-    Returns
-    -------
-    dict[str, Any]
-        Summary of recalculation results.
-
-    """
+    """Recalculate per-user storage usage from the `files` table for every org."""
     logger.info("Starting storage usage recalculation for all organizations")
     total_orgs = 0
     total_users = 0

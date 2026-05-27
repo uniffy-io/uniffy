@@ -1,9 +1,7 @@
 """Streaming export of audit events in CSV or NDJSON.
 
-Reuses ``ListEventsFilter`` so the export filter shape matches the
-admin-page filter exactly. The handler streams chunks of ~32KB so very
-large exports do not balloon server memory; a pre-flight row count
-rejects requests that would exceed :data:`MAX_EXPORT_ROWS`.
+Reuses `ListEventsFilter`; streams in ~32KB chunks and rejects exports
+larger than `MAX_EXPORT_ROWS` pre-flight.
 """
 
 from __future__ import annotations
@@ -53,19 +51,12 @@ CSV_COLUMNS = (
 
 @dataclass(frozen=True)
 class ExportFilter:
-    """Inputs to :meth:`ExportOperations.stream_export`."""
-
     filter: ListEventsFilter
     format: ExportFormat
 
 
 class ExportOperations:
-    """Server-streaming export of audit events.
-
-    Authorization mirrors :class:`AuditOperations` exactly - the read
-    helper is reused so org-admin scope and system-admin cross-org
-    behaviour stay consistent.
-    """
+    """Server-streaming export of audit events; authorization mirrors `AuditOperations`."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -76,7 +67,7 @@ class ExportOperations:
         actor_user_id: UUID,
         export: ExportFilter,
     ) -> AsyncIterator[bytes]:
-        """Yield CSV / NDJSON chunks for every row matching the filter."""
+        """Yield CSV / NDJSON chunks for rows matching the filter."""
         await self._read_ops.require_audit_view(
             actor_user_id, export.filter.organization_id
         )
@@ -91,7 +82,6 @@ class ExportOperations:
                 yield chunk
 
     async def _enforce_row_cap(self, filters: ListEventsFilter) -> None:
-        """Reject the export if the filter would produce too many rows."""
         query = select(func.count()).select_from(AuditEvent).where(
             AuditEvent.organization_id == filters.organization_id
         )
@@ -120,7 +110,6 @@ class ExportOperations:
         self,
         filters: ListEventsFilter,
     ) -> AsyncIterator[bytes]:
-        """Stream the filtered rows as RFC 4180 CSV (header row first)."""
         buffer = io.StringIO()
         writer = csv.writer(buffer, lineterminator="\n")
         writer.writerow(CSV_COLUMNS)
@@ -138,7 +127,6 @@ class ExportOperations:
         self,
         filters: ListEventsFilter,
     ) -> AsyncIterator[bytes]:
-        """Stream the filtered rows as newline-delimited JSON."""
         pending = bytearray()
         async for row, emails in self._stream_rows(filters):
             payload = _format_ndjson_row(row, emails)
@@ -155,7 +143,7 @@ class ExportOperations:
         self,
         filters: ListEventsFilter,
     ) -> AsyncIterator[tuple[AuditEvent, dict[UUID, str]]]:
-        """Iterate every row matching the filter in newest-first batches."""
+        """Iterate matching rows newest-first in batches of `ROW_BATCH`."""
         cursor: tuple[datetime, UUID] | None = None
         while True:
             query = (
@@ -203,7 +191,6 @@ class ExportOperations:
         self,
         rows: list[AuditEvent],
     ) -> dict[UUID, str]:
-        """Batch-fetch emails for the actor / on-behalf ids in this batch."""
         user_ids: set[UUID] = set()
         for row in rows:
             if row.actor_user_id is not None:
@@ -223,7 +210,6 @@ def _format_csv_row(
     event: AuditEvent,
     emails: dict[UUID, str],
 ) -> tuple[str, ...]:
-    """Build the ordered CSV cell tuple for a single audit row."""
     return (
         event.created_at.isoformat() if event.created_at else "",
         str(event.organization_id) if event.organization_id else "",
@@ -247,7 +233,6 @@ def _format_ndjson_row(
     event: AuditEvent,
     emails: dict[UUID, str],
 ) -> str:
-    """Build the JSON line payload for a single audit row."""
     return json.dumps(
         {
             "timestamp_utc": event.created_at.isoformat() if event.created_at else None,

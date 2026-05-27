@@ -1,18 +1,8 @@
 """In-process caches for Data Encryption Keys.
 
-Decryption is hot: every secret read goes through one of the cipher
-seams (per-org or deployment-singleton). Without a cache each read
-would unwrap the wrapped DEK with the master cipher on every call.
-The caches keep the constructed ``Fernet`` per ``(scope, version)``
-so subsequent decrypts skip the master unwrap.
-
-Cross-pod invalidation lands via the
-``org_deks:invalidate:{org_id}`` channel for the per-org LRU and
-``deployment_deks:invalidate`` for the deployment-singleton cache
-(``core/crypto/pubsub.py``). A rotation in any pod publishes once;
-every pod's subscriber drops the matching entries.
-
-Both caches are in-process only -- DEK plaintext never enters Valkey.
+Caches the constructed ``Fernet`` per ``(scope, version)`` so secret reads
+skip the master unwrap. Cross-pod invalidation rides Valkey pubsub
+(``core/crypto/pubsub.py``). DEK plaintext never enters Valkey.
 """
 
 from __future__ import annotations
@@ -39,19 +29,13 @@ class _CachedDek:
 
 
 class OrgDekLRU:
-    """Bounded TTL + LRU keyed on ``(organization_id, version)``.
-
-    Concurrency: a single ``asyncio.Lock`` serialises mutations.
-    Contention is negligible (the loaded ``Fernet`` is the expensive
-    part; LRU mutations are constant-time).
-    """
+    """Bounded TTL + LRU keyed on ``(organization_id, version)``."""
 
     def __init__(self) -> None:
         self._entries: OrderedDict[tuple[UUID, int], _CachedDek] = OrderedDict()
         self._lock = asyncio.Lock()
 
     async def get(self, organization_id: UUID, version: int) -> Fernet | None:
-        """Return the cached Fernet or ``None`` if absent / expired."""
         async with self._lock:
             entry = self._entries.get((organization_id, version))
             if entry is None:
@@ -68,7 +52,6 @@ class OrgDekLRU:
         version: int,
         fernet: Fernet,
     ) -> None:
-        """Cache the Fernet for ``(organization_id, version)``."""
         async with self._lock:
             key = (organization_id, version)
             self._entries[key] = _CachedDek(fernet=fernet, cached_at=time.time())
@@ -77,10 +60,7 @@ class OrgDekLRU:
                 self._entries.popitem(last=False)
 
     async def invalidate(self, organization_id: UUID) -> int:
-        """Drop every cached version for the given organization.
-
-        Returns the number of entries removed.
-        """
+        """Drop every cached version for the org; returns the count removed."""
         async with self._lock:
             to_drop = [
                 key for key in self._entries if key[0] == organization_id
@@ -90,12 +70,11 @@ class OrgDekLRU:
             return len(to_drop)
 
     async def clear(self) -> None:
-        """Drop every entry. Test-only convenience."""
+        """Test-only: drop every entry."""
         async with self._lock:
             self._entries.clear()
 
     async def size(self) -> int:
-        """Return the current entry count."""
         async with self._lock:
             return len(self._entries)
 
@@ -104,7 +83,6 @@ _lru: OrgDekLRU | None = None
 
 
 def get_org_dek_lru() -> OrgDekLRU:
-    """Return the process-singleton LRU, lazily initialised."""
     global _lru
     if _lru is None:
         _lru = OrgDekLRU()
@@ -112,13 +90,11 @@ def get_org_dek_lru() -> OrgDekLRU:
 
 
 class DeploymentDekCache:
-    """Bounded TTL cache for the deployment-singleton DEK.
+    """Bounded TTL cache for the deployment-singleton DEK; keyed only on version.
 
-    Keyed only on ``version`` because the deployment cipher has no
-    organization dimension. Old versions stay readable after rotation
-    so historical ciphertexts decrypt; rotation publishes an
-    invalidation message so every pod drops the soon-to-be-retired
-    version before the re-encrypt sweep starts.
+    Old versions stay readable so historical ciphertexts decrypt; rotation
+    publishes an invalidation so every pod drops the retiring version before
+    the re-encrypt sweep starts.
     """
 
     def __init__(self) -> None:
@@ -144,14 +120,12 @@ class DeploymentDekCache:
                 self._entries.popitem(last=False)
 
     async def invalidate_all(self) -> int:
-        """Drop every cached version. Returns the count removed."""
         async with self._lock:
             dropped = len(self._entries)
             self._entries.clear()
             return dropped
 
     async def invalidate_version(self, version: int) -> bool:
-        """Drop one cached version. Returns True if a row was removed."""
         async with self._lock:
             return self._entries.pop(version, None) is not None
 
@@ -164,7 +138,6 @@ _deployment_cache: DeploymentDekCache | None = None
 
 
 def get_deployment_dek_cache() -> DeploymentDekCache:
-    """Return the process-singleton deployment-DEK cache."""
     global _deployment_cache
     if _deployment_cache is None:
         _deployment_cache = DeploymentDekCache()

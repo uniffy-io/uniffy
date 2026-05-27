@@ -12,28 +12,9 @@ from uniffy.core.types import generate_id
 
 
 class DomainAdmin(SQLModel, table=True):
-    """
-    Domain admin assignment.
+    """Grants a user admin-level access within one domain (chat, files, etc.) of an org.
 
-    Grants a user elevated (admin-level) access within a specific
-    application domain (chat, files, calendar, etc.) in an organization.
-    Binary: the row exists or it does not.
-
-    Attributes
-    ----------
-    id : UUID
-        Primary key.
-    user_id : UUID
-        User granted domain admin (FK to login_users).
-    organization_id : UUID
-        Organization context (FK to login_organizations).
-    domain : DomainType
-        The application domain (CHAT, FILES, NOTES, etc.).
-    granted_by : UUID
-        Org admin who granted this (FK to login_users).
-    granted_at : datetime
-        When the grant was made.
-
+    Binary: row exists or it does not. Sits between regular member and org ADMIN/OWNER.
     """
 
     __tablename__ = "permissions_domain_admins"

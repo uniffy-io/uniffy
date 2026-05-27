@@ -1,9 +1,4 @@
-"""RPC handlers for ``superadmin.v1.SystemMailService``.
-
-Parse + delegate + map. ``is_system_admin`` enforcement lives inside
-:class:`SystemMailOperations`; handlers stay parse-only so the gate
-cannot be skipped by a future caller that bypasses the handler layer.
-"""
+"""RPC handlers for ``superadmin.v1.SystemMailService``."""
 
 from __future__ import annotations
 
@@ -83,7 +78,6 @@ class SystemMailHandlers:
         request: GetSystemMailConfigRequest,
         ctx: RequestContext,
     ) -> GetSystemMailConfigResponse:
-        """Read the effective system mail config (deployment-tier then env)."""
         del request
         user_id = get_user_id_from_context(ctx)
         try:
@@ -102,7 +96,6 @@ class SystemMailHandlers:
         request: UpdateSystemMailConfigRequest,
         ctx: RequestContext,
     ) -> UpdateSystemMailConfigResponse:
-        """Upsert deployment-tier system mail config."""
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
@@ -129,7 +122,6 @@ class SystemMailHandlers:
         request: ClearSystemMailConfigRequest,
         ctx: RequestContext,
     ) -> ClearSystemMailConfigResponse:
-        """Drop deployment-tier mail rows, reverting to env."""
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
@@ -148,7 +140,6 @@ class SystemMailHandlers:
         request: ListOrgMailConfigsRequest,
         ctx: RequestContext,
     ) -> ListOrgMailConfigsResponse:
-        """Page through every org's mail config summary."""
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
@@ -175,7 +166,6 @@ class SystemMailHandlers:
         request: ForceClearOrgConfigRequest,
         ctx: RequestContext,
     ) -> ForceClearOrgConfigResponse:
-        """Drop one org's mail config rows."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         try:
@@ -196,7 +186,6 @@ class SystemMailHandlers:
         request: ListGlobalSuppressionsRequest,
         ctx: RequestContext,
     ) -> ListGlobalSuppressionsResponse:
-        """Page through the global suppression list."""
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
@@ -222,7 +211,6 @@ class SystemMailHandlers:
         request: RemoveGlobalSuppressionRequest,
         ctx: RequestContext,
     ) -> RemoveGlobalSuppressionResponse:
-        """Drop one address from the global suppression list."""
         user_id = get_user_id_from_context(ctx)
         try:
             async with open_session() as session:
@@ -242,7 +230,6 @@ class SystemMailHandlers:
         request: ListGlobalDeliveriesRequest,
         ctx: RequestContext,
     ) -> ListGlobalDeliveriesResponse:
-        """Cross-tenant feed of mail-send audit events."""
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_optional_uuid(request.organization_id, "organization_id")
         try:

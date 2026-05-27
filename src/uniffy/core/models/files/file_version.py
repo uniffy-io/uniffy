@@ -10,34 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class FileVersion(SQLModel, table=True):
-    """
-    FileVersion model representing a historical version of a file.
-
-    Each time a file is updated (re-uploaded), a new version record
-    is created to preserve the history.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for this version (primary key).
-    file_id : UUID
-        The file this version belongs to (foreign key).
-    version_number : int
-        Sequential version number (1, 2, 3, ...).
-    size_bytes : int
-        File size for this version.
-    storage_key : str
-        S3 object key for this version's content.
-    storage_bucket : str
-        S3 bucket name.
-    checksum_sha256 : str | None
-        SHA256 checksum of the file content.
-    uploaded_by : UUID
-        User who uploaded this version (foreign key).
-    created_at : datetime
-        Timestamp when this version was created.
-
-    """
+    """Historical version of a file; one row per re-upload."""
 
     __tablename__ = "files_file_versions"
 
@@ -55,7 +28,6 @@ class FileVersion(SQLModel, table=True):
     )
 
     def __repr__(self) -> str:
-        """Return string representation of FileVersion."""
         return (
             f"<FileVersion(id={self.id}, file_id={self.file_id}, "
             f"version={self.version_number}, size={self.size_bytes})>"

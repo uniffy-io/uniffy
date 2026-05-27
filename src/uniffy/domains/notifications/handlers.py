@@ -1,4 +1,4 @@
-"""Notifications RPC handlers - thin layer delegating to operations."""
+"""Notifications RPC handlers."""
 
 import asyncio
 import time
@@ -76,22 +76,6 @@ class NotificationsHandlers:
         request: ListNotificationsRequest,
         ctx: RequestContext,
     ) -> ListNotificationsResponse:
-        """
-        Handle list_notifications RPC call.
-
-        Parameters
-        ----------
-        request : ListNotificationsRequest
-            The list request with filters and pagination.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        ListNotificationsResponse
-            List of notifications with counts.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -103,12 +87,10 @@ class NotificationsHandlers:
         page_size = request.page_size if request.page_size > 0 else 20
         page_size = min(page_size, 100)
 
-        # Parse optional is_read filter
         is_read = None
         if request.HasField("is_read"):
             is_read = request.is_read
 
-        # Parse notification type filters
         notification_types = None
         if request.notification_types:
             notification_types = []
@@ -129,7 +111,6 @@ class NotificationsHandlers:
                     notification_types=notification_types,
                 )
 
-                # Resolve actor display names
                 actor_ids = {n.actor_id for n in notifications if n.actor_id}
                 actor_map: dict[UUID, str] = {}
                 if actor_ids:
@@ -162,22 +143,6 @@ class NotificationsHandlers:
         request: GetUnreadCountRequest,
         ctx: RequestContext,
     ) -> GetUnreadCountResponse:
-        """
-        Handle get_unread_count RPC call.
-
-        Parameters
-        ----------
-        request : GetUnreadCountRequest
-            The request with organization_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        GetUnreadCountResponse
-            Unread count.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -202,22 +167,6 @@ class NotificationsHandlers:
         request: MarkAsReadRequest,
         ctx: RequestContext,
     ) -> MarkAsReadResponse:
-        """
-        Handle mark_as_read RPC call.
-
-        Parameters
-        ----------
-        request : MarkAsReadRequest
-            The request with notification_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        MarkAsReadResponse
-            The updated notification.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -248,22 +197,6 @@ class NotificationsHandlers:
         request: MarkAllAsReadRequest,
         ctx: RequestContext,
     ) -> MarkAllAsReadResponse:
-        """
-        Handle mark_all_as_read RPC call.
-
-        Parameters
-        ----------
-        request : MarkAllAsReadRequest
-            The request with organization_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        MarkAllAsReadResponse
-            Count of updated notifications.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -288,22 +221,6 @@ class NotificationsHandlers:
         request: DeleteNotificationRequest,
         ctx: RequestContext,
     ) -> DeleteNotificationResponse:
-        """
-        Handle delete_notification RPC call.
-
-        Parameters
-        ----------
-        request : DeleteNotificationRequest
-            The request with notification_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        DeleteNotificationResponse
-            Success flag.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -332,22 +249,6 @@ class NotificationsHandlers:
         request: RegisterPushSubscriptionRequest,
         ctx: RequestContext,
     ) -> RegisterPushSubscriptionResponse:
-        """
-        Handle register_push_subscription RPC call.
-
-        Parameters
-        ----------
-        request : RegisterPushSubscriptionRequest
-            The push subscription details.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        RegisterPushSubscriptionResponse
-            The subscription ID.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         if not request.endpoint:
@@ -380,22 +281,6 @@ class NotificationsHandlers:
         request: UnregisterPushSubscriptionRequest,
         ctx: RequestContext,
     ) -> UnregisterPushSubscriptionResponse:
-        """
-        Handle unregister_push_subscription RPC call.
-
-        Parameters
-        ----------
-        request : UnregisterPushSubscriptionRequest
-            The endpoint to unregister.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        UnregisterPushSubscriptionResponse
-            Success flag.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         if not request.endpoint:
@@ -418,26 +303,7 @@ class NotificationsHandlers:
         request: GetVapidPublicKeyRequest,
         ctx: RequestContext,
     ) -> GetVapidPublicKeyResponse:
-        """
-        Handle get_vapid_public_key RPC call.
-
-        Returns the server's VAPID public key so the browser can subscribe
-        to push notifications. Does not require authentication so the
-        subscription flow can start before full context is loaded.
-
-        Parameters
-        ----------
-        request : GetVapidPublicKeyRequest
-            Empty request.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        GetVapidPublicKeyResponse
-            The base64url-encoded VAPID public key.
-
-        """
+        """Return the server's VAPID public key (no auth required for subscribe flow)."""
         config = get_vapid_config()
         if not config:
             raise ConnectError(
@@ -451,22 +317,6 @@ class NotificationsHandlers:
         request: SearchNotificationsRequest,
         ctx: RequestContext,
     ) -> SearchNotificationsResponse:
-        """
-        Handle search_notifications RPC call.
-
-        Parameters
-        ----------
-        request : SearchNotificationsRequest
-            The search request with query and filters.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        SearchNotificationsResponse
-            List of matching notifications with counts.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -553,22 +403,6 @@ class NotificationsHandlers:
         request: GetNotificationStatsRequest,
         ctx: RequestContext,
     ) -> GetNotificationStatsResponse:
-        """
-        Handle get_notification_stats RPC call.
-
-        Parameters
-        ----------
-        request : GetNotificationStatsRequest
-            The stats request with organization_id and days.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        GetNotificationStatsResponse
-            Aggregated notification statistics.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -627,22 +461,6 @@ class NotificationsHandlers:
         request: BulkMarkAsReadRequest,
         ctx: RequestContext,
     ) -> BulkMarkAsReadResponse:
-        """
-        Handle bulk_mark_as_read RPC call.
-
-        Parameters
-        ----------
-        request : BulkMarkAsReadRequest
-            The request with notification IDs.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        BulkMarkAsReadResponse
-            Count of updated notifications.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         notification_ids = []
@@ -672,22 +490,6 @@ class NotificationsHandlers:
         request: BulkDeleteNotificationsRequest,
         ctx: RequestContext,
     ) -> BulkDeleteNotificationsResponse:
-        """
-        Handle bulk_delete_notifications RPC call.
-
-        Parameters
-        ----------
-        request : BulkDeleteNotificationsRequest
-            The request with notification IDs.
-        ctx : RequestContext
-            RPC request context.
-
-        Returns
-        -------
-        BulkDeleteNotificationsResponse
-            Count of deleted notifications.
-
-        """
         user_id = get_user_id_from_context(ctx)
 
         notification_ids = []
@@ -717,31 +519,7 @@ class NotificationsHandlers:
         request: StreamNotificationsRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[StreamNotificationsResponse]:
-        """
-        Handle stream_notifications server streaming RPC.
-
-        Subscribes to the user's Valkey Pub/Sub channel and yields
-        StreamNotificationsResponse messages as they arrive. Sends periodic
-        heartbeats to detect stale connections.
-
-        The subscriber yields None on each poll timeout (1s), which we
-        use to track heartbeat intervals. This eliminates the need for a
-        separate heartbeat task and makes the entire loop cleanly
-        cancellable -- no leaked tasks or connections.
-
-        Parameters
-        ----------
-        request : StreamNotificationsRequest
-            The streaming request with organization_id.
-        ctx : RequestContext
-            RPC request context.
-
-        Yields
-        ------
-        StreamNotificationsResponse
-            Notification events or heartbeats.
-
-        """
+        """Stream notification events plus periodic heartbeats for the user."""
         user_id = get_user_id_from_context(ctx)
 
         try:
@@ -771,7 +549,6 @@ class NotificationsHandlers:
                 last_send = time.monotonic()
 
                 async for payload in subscriber:
-                    # Check if the client disconnected (set by middleware)
                     if disconnect and disconnect.is_set():
                         logger.info(
                             f"stream client disconnected, stopping for {user_id}",
@@ -782,7 +559,7 @@ class NotificationsHandlers:
                     now = time.monotonic()
 
                     if payload is None:
-                        # Poll timeout tick -- send heartbeat if interval elapsed
+                        # Poll timeout tick - send heartbeat if interval elapsed.
                         if now - last_send >= heartbeat_interval:
                             ts = Timestamp()
                             ts.FromDatetime(datetime.now(UTC))
@@ -793,7 +570,6 @@ class NotificationsHandlers:
                             last_send = now
                         continue
 
-                    # File update event (from worker tasks)
                     if payload.get("_type") == "file_updated":
                         yield StreamNotificationsResponse(
                             event_type=StreamNotificationsResponse.EVENT_TYPE_FILE_UPDATED,
@@ -805,7 +581,6 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
-                    # Presence state changed (from presence:{org_id} channel)
                     if payload.get("_type") == "presence_changed":
                         ts = Timestamp()
                         ts.FromDatetime(datetime.fromisoformat(payload["last_active"]))
@@ -829,7 +604,6 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
-                    # Permissions changed (domain admin granted/revoked)
                     if payload.get("_type") == "permissions_changed":
                         yield StreamNotificationsResponse(
                             event_type=StreamNotificationsResponse.EVENT_TYPE_PERMISSIONS_CHANGED,
@@ -837,7 +611,6 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
-                    # Mention state changed (from mentions:{org_id} channel)
                     if payload.get("_type") == "mention_state_changed":
                         mention_payload = MentionStateChangedPayload(
                             urn=payload.get("urn", ""),
@@ -850,9 +623,8 @@ class NotificationsHandlers:
                         last_send = now
                         continue
 
-                    # Tag events (from tags:{org_id} channel) -- per-recipient
-                    # filter then re-emit as MENTION_STATE_CHANGED so the
-                    # existing chip-state pipeline picks them up unchanged.
+                    # Per-recipient filter; re-emitted as MENTION_STATE_CHANGED
+                    # so the chip-state pipeline picks them up unchanged.
                     if payload.get("_type", "").startswith("tag."):
                         relayed = await tag_relay.project(payload)
                         for changes in relayed:
@@ -869,7 +641,6 @@ class NotificationsHandlers:
                             last_send = now
                         continue
 
-                    # Real notification payload
                     logger.debug(
                         f"delivering notification {payload.get('id', '?')} to user {user_id}",
                         component="notifications handler",

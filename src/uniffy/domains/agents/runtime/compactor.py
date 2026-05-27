@@ -1,15 +1,4 @@
-"""Reusable conversation summariser shared by session + chat compaction.
-
-Phase 8c extraction. The summary prompt + provider call lived inside
-`SessionOperations.compact_session_if_needed`; the chat path
-(`ChatAgentContextOperations.compact`) needs the same primitive.
-
-The helper is deliberately format-agnostic. Callers shape the message
-list into `(speaker_label, content)` tuples (e.g. "USER", "ASSISTANT",
-"[Tool: notes.search]") so the summariser's prompt stays uniform across
-both surfaces. The model + provider are passed in so the caller controls
-provider/model resolution against the agent config.
-"""
+"""Reusable conversation summariser shared by session + chat compaction."""
 
 from __future__ import annotations
 
@@ -30,18 +19,12 @@ _SUMMARY_USER_PROMPT_TEMPLATE = (
 
 @dataclass(frozen=True)
 class SummaryResult:
-    """Outcome of a single summarisation call."""
-
     content: str
     input_tokens: int
     output_tokens: int
 
 
 def format_conversation_lines(entries: list[tuple[str, str]]) -> str:
-    """Render `(label, content)` tuples into the conversation block text.
-
-    Empty contents are skipped (matches the pre-extraction behaviour).
-    """
     rendered = [f"{label}: {body}" for label, body in entries if body]
     return "\n".join(rendered)
 
@@ -52,13 +35,7 @@ async def summarise_conversation(
     model: str,
     entries: list[tuple[str, str]],
 ) -> SummaryResult | None:
-    """Run the LLM summariser over the conversation entries.
-
-    Returns `None` when the rendered conversation is empty (nothing to
-    summarise) or the provider produced empty content. Errors are logged
-    and re-raised so the caller can decide whether the parent operation
-    should fail or no-op.
-    """
+    """Run the LLM summariser; returns None when there is nothing to summarise."""
     body = format_conversation_lines(entries)
     if not body:
         return None

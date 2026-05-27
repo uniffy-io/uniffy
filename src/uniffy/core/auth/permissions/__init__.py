@@ -1,15 +1,4 @@
-"""
-Permission checking utilities for content access control.
-
-This submodule provides:
-- :class:`PermissionChecker`: core role resolution (``effective_role``)
-- :class:`ContentAccessQuery`: filter builders for list endpoints
-- ``role_can_*`` helpers that map a :class:`ContentRole` to capabilities
-- ``require_*`` helpers that raise :class:`PermissionDeniedError` when
-  the required capability is not granted
-- ``record_*`` helpers that append audit events to
-  ``permissions_content_member_events``
-"""
+"""Permission checking utilities for content access control."""
 
 from uniffy.core.auth.permissions.audit import (
     record_access_mode_changed,

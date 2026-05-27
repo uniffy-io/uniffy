@@ -12,64 +12,7 @@ from uniffy.core.types import AccessMode, ContentRole, RecurrencePattern, genera
 
 
 class CalendarEvent(SQLModel, table=True):
-    """
-    CalendarEvent model representing a calendar event.
-
-    Events are organization-scoped and can be linked to notes, files, and chats
-    using the URN system. Supports recurrence, attendees, and markdown descriptions.
-
-    Attributes
-    ----------
-    id : UUID
-        Unique identifier for the event (primary key).
-    organization_id : UUID
-        Organization this event belongs to (foreign key).
-    organizer_id : UUID
-        User who created/organizes the event (foreign key to login_users).
-    calendar_id : UUID
-        Calendar this event belongs to (foreign key).
-    category_id : UUID | None
-        Category for color coding (foreign key).
-    title : str
-        Event title.
-    description : str
-        Event description in markdown format (supports URN mentions).
-    start_time : datetime
-        Event start time (with timezone).
-    end_time : datetime
-        Event end time (with timezone).
-    is_all_day : bool
-        Whether this is an all-day event.
-    timezone : str
-        Timezone identifier (e.g., 'America/New_York').
-    location : str
-        Event location (physical or virtual).
-    meeting_url : str | None
-        Meeting URL (Zoom, Google Meet, etc.).
-    access_mode : AccessMode
-        How access to this event is governed.
-    baseline_role : ContentRole | None
-        Default role granted by the access mode.
-    is_focus_time : bool
-        Whether this event is marked as focus/deep work time.
-    is_deleted : bool
-        Soft delete flag.
-    linked_resources : list[dict] | None
-        Linked resources (URN, type, name, url).
-    outgoing_references : list[str] | None
-        URNs referenced in this event's description.
-    recurrence_pattern : RecurrencePattern
-        Recurrence pattern (NONE, DAILY, WEEKLY, etc.).
-    recurrence_config : dict | None
-        Full recurrence configuration (interval, days, end date, etc.).
-    created_at : datetime
-        Timestamp when the event was created.
-    updated_at : datetime
-        Timestamp when the event was last updated.
-    deleted_at : datetime | None
-        Timestamp when the event was soft-deleted.
-
-    """
+    """A calendar event with optional recurrence, attendees, and markdown description."""
 
     __tablename__ = "calendar_events"
 
@@ -143,16 +86,14 @@ class CalendarEvent(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        """Return the URN for this calendar event."""
         return f"urn:uniffy:content:CALENDAR_EVENT:{self.id}"
 
     @property
     def owner_id(self) -> UUID:
-        """Return owner_id (alias for organizer_id) for BaseContentOperations compatibility."""
+        """Alias for organizer_id used by BaseContentOperations."""
         return self.organizer_id
 
     def __repr__(self) -> str:
-        """Return string representation of CalendarEvent."""
         return (
             f"<CalendarEvent(id={self.id}, title={self.title!r}, "
             f"start_time={self.start_time}, organization_id={self.organization_id})>"

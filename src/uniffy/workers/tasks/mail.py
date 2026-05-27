@@ -1,16 +1,7 @@
-"""ARQ task that dispatches one transactional email.
+"""Dispatch one transactional email; the single funnel for all outbound mail.
 
-Every outbound mail flows through this task. Domain code enqueues
-``send_email`` with the template name and a JSON-encoded render
-context; the worker resolves the org's ``MailConfig``, renders, and
-hands off to ``SmtpBackend``.
-
-Retry semantics:
-
-* ``MailRateLimitedError`` -> ``Retry(defer=job_try * 30s)``
-* ``MailProviderError``    -> ``Retry(defer=job_try * 60s)``
-* ``MailSuppressedError`` / ``MailNotConfiguredError`` -> terminal,
-  no retry (surfaced as ``{"status": "...", ...}``).
+Retries: rate-limit defers by `30s * job_try`, provider error by `60s * job_try`;
+suppression and "not configured" are terminal.
 """
 
 from __future__ import annotations
@@ -34,7 +25,7 @@ _sender: MailSender | None = None
 
 
 def _get_sender() -> MailSender:
-    """Return the process-wide ``MailSender`` (lazy so workers without mail boot)."""
+    """Lazily-built process-wide `MailSender` so mail-less workers still boot."""
     global _sender
     if _sender is None:
         _sender = MailSender()
@@ -51,25 +42,7 @@ async def send_email(
     idempotency_key: str | None = None,
     user_id: str | None = None,
 ) -> dict[str, Any]:
-    """Render and dispatch one email via ``MailSender``.
-
-    Parameters
-    ----------
-    recipient_email
-        Address to send to.
-    template_name
-        Must appear in the ``TEMPLATES`` registry.
-    context_json
-        JSON-encoded render context dict. ARQ only accepts JSON-safe
-        arguments, so callers serialise once and the worker decodes.
-    organization_id
-        Stringified UUID. ``None`` forces the system env config.
-    idempotency_key
-        Caller-supplied dedupe handle. Currently informational only
-        (SMTP has no provider-side dedupe header).
-    user_id
-        Stringified UUID, used only for log breadcrumbs.
-    """
+    """Render `template_name` with `context_json` and send via `MailSender`."""
     try:
         context = json.loads(context_json)
     except json.JSONDecodeError:

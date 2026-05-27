@@ -155,26 +155,7 @@ async def _gather_read_tool_results(
 
 @dataclass
 class FileContext:
-    """Context for a file loaded from the database for LLM processing.
-
-    Attributes
-    ----------
-    file_id : str
-        UUID of the file.
-    media_type : str
-        MIME type of the file.
-    filename : str
-        Display filename.
-    storage_key : str
-        S3 storage key for downloading.
-    extracted_text : str | None
-        Pre-extracted text content (from worker pipeline). Readers gate on
-        truthiness so ``None`` and ``""`` are interchangeable; the handler
-        normalises empty/missing extraction output to ``None`` at load time.
-    extraction_status : str
-        Current extraction status.
-
-    """
+    """Context for a file loaded from the database for LLM processing."""
 
     file_id: str
     media_type: str
@@ -185,27 +166,7 @@ class FileContext:
 
 
 def _file_context_to_content_block(f: FileContext) -> dict:
-    """Convert a FileContext to a canonical content block for LLM messages.
-
-    Returns a provider-agnostic block that provider converters
-    transform into their native format.
-
-    - Images: ``{"type": "image", "media_type": ..., "storage_key": ...}``
-    - PDFs: ``{"type": "document", "media_type": ..., "storage_key": ..., "filename": ...}``
-    - Extractable text: ``{"type": "text", "text": "--- File: ... ---\\n..."}``
-    - Unsupported: ``{"type": "text", "text": "[Attached file: ...]"}``
-
-    Parameters
-    ----------
-    f : FileContext
-        The file context to convert.
-
-    Returns
-    -------
-    dict
-        A canonical content block.
-
-    """
+    """Convert a FileContext to a provider-agnostic LLM content block."""
     media_type = f.media_type
 
     if media_type.startswith("image/"):
@@ -223,18 +184,15 @@ def _file_context_to_content_block(f: FileContext) -> dict:
             "filename": f.filename,
         }
 
-    # Use extracted text if available, or indicate extraction pending
     if f.extracted_text:
         return {
             "type": "text",
             "text": (f"--- File: {f.filename} ---\n{f.extracted_text}\n--- End of {f.filename} ---"),
         }
 
-    # Check if we can extract on-demand
     from uniffy.core.extraction import can_extract
 
     if can_extract(media_type):
-        # Mark for on-demand extraction (handlers will download from S3)
         return {
             "type": "text_pending_extraction",
             "media_type": media_type,
@@ -249,12 +207,10 @@ def _file_context_to_content_block(f: FileContext) -> dict:
 
 
 def _file_urn(file_id: str) -> str:
-    """Build a URN for a file ID."""
     return f"urn:uniffy:content:FILE:{file_id}"
 
 
 def _file_mention(f: FileContext) -> str:
-    """Build a mention chip string for a file."""
     return f"[[[{f.filename}|{_file_urn(f.file_id)}]]]"
 
 
@@ -262,26 +218,7 @@ def _build_stored_content(
     content: str,
     files: list[FileContext] | None,
 ) -> str:
-    """Build the stored message content, enriching it with file text.
-
-    Each attached file is referenced using the ``[[[label|urn]]]``
-    mention syntax so the UI renders interactive file chips. For files
-    with extracted text, the text is also embedded so the LLM retains
-    context on subsequent turns.
-
-    Parameters
-    ----------
-    content : str
-        The user's original message text.
-    files : list[FileContext] | None
-        Attached files, if any.
-
-    Returns
-    -------
-    str
-        Enriched content with file mentions and extracted text.
-
-    """
+    """Enrich the user message with `[[[label|urn]]]` mentions and extracted text."""
     if not files:
         return content
 
@@ -307,16 +244,8 @@ def _build_stored_content(
 async def _resolve_pending_content_blocks(messages: list[dict]) -> None:
     """Resolve content blocks that need S3 downloads or on-demand extraction.
 
-    Modifies the messages list in place. Handles:
-    - ``type: "image"`` with ``storage_key``: downloads from S3, base64 encodes
-    - ``type: "document"`` with ``storage_key``: downloads from S3, base64 encodes
-    - ``type: "text_pending_extraction"``: downloads from S3, extracts text
-
-    Parameters
-    ----------
-    messages : list[dict]
-        LLM messages array. Modified in place.
-
+    Mutates `messages` in place: image/document blocks get base64 data,
+    `text_pending_extraction` blocks become inline extracted text.
     """
     from uniffy.core.storage import get_s3_client
 
@@ -385,22 +314,7 @@ async def _resolve_pending_content_blocks(messages: list[dict]) -> None:
 
 
 async def _get_model_context_window(provider, model: str) -> int:
-    """Look up the context window size (in tokens) for a model.
-
-    Parameters
-    ----------
-    provider : LLMProvider
-        The active LLM provider.
-    model : str
-        The resolved model identifier.
-
-    Returns
-    -------
-    int
-        Context window size in tokens, or FALLBACK_CONTEXT_WINDOW if
-        the model is not found in the catalog.
-
-    """
+    """Look up context-window tokens; falls back to `FALLBACK_CONTEXT_WINDOW`."""
     try:
         available = await provider.get_available_models()
         for m in available:
@@ -412,14 +326,7 @@ async def _get_model_context_window(provider, model: str) -> int:
 
 
 class RuntimeOperations:
-    """Operations for agent runtime message execution.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Operations for agent runtime message execution."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -440,69 +347,26 @@ class RuntimeOperations:
         files: list[FileContext] | None = None,
         user_timezone: str | None = None,
     ) -> tuple[AgentMessage, AgentMessage, str]:
-        """Execute the full send-message flow with tool use loop.
-
-        1. Verify org membership
-        2. Get session and agent config
-        3. Build system prompt (with tool descriptions)
-        4. Get conversation context
-        5. Resolve model
-        6. Store user message
-        7. Call LLM (with tool schemas if agent has tools)
-        8. Loop: if LLM requests tools, execute them, store messages, re-invoke
-        9. Store final assistant message
-        10. Return both messages and the model used
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user sending the message.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to send message in.
-        content : str
-            The user's message content.
-
-        Returns
-        -------
-        tuple[AgentMessage, AgentMessage, str]
-            (user_message, assistant_message, model_used).
-
-        Raises
-        ------
-        NotFoundError
-            If session, agent, or provider key not found.
-        PermissionDeniedError
-            If user cannot access the session.
-        ValidationError
-            If no model can be resolved or tool loop exceeds max iterations.
-
-        """
-        # 1. Verify org membership
+        """Execute the full send-message flow with tool use loop."""
         membership = await self._org_ops.require_org_member(user_id, organization_id)
 
-        # 2. Get session (rate limits already enforced in the handler preflight)
         agent_session = await self._session_ops.get_session(
             user_id=user_id,
             organization_id=organization_id,
             session_id=session_id,
         )
 
-        # 3. Get agent config (Valkey-cached, perm-checked)
         agent = await self._agent_ops.get_for_runtime(
             user_id,
             organization_id,
             agent_session.agent_id,
         )
 
-        # 4. Get org name and user info for prompt context
         org = await self._org_ops.get_by_id(organization_id)
         user = await self._user_ops.get_by_id(user_id)
         role = membership.role
         user_role = role.value if hasattr(role, "value") else str(role)
 
-        # 5. Determine target model and get the correct provider
         target_model = agent_session.model_override or agent.primary_model
         provider_key_id: UUID | None = None
 
@@ -518,12 +382,10 @@ class RuntimeOperations:
                 model_id=target_model,
             )
 
-        # 6. Resolve tool registry and schemas
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
         tool_schemas = registry.get_anthropic_schemas(enabled_tools) or None
 
-        # 6b. Fetch skill contents for the agent (Valkey-cached)
         skills = await fetch_agent_skills(
             self._skill_ops,
             agent_id=agent.id,
@@ -532,21 +394,18 @@ class RuntimeOperations:
         )
         skill_contents = [s.content for s in skills if s.content]
 
-        # 6c. Fetch relevant memories for context
         memory_context = await self._fetch_memory_context(
             agent_id=agent_session.agent_id,
             user_id=user_id,
             organization_id=organization_id,
         )
 
-        # 6d. Resolve prompt template if set on agent (Valkey-cached)
         prompt_content = await fetch_agent_prompt(
             self._session,
             agent_id=agent.id,
             prompt_id=agent.prompt_id,
         )
 
-        # 7. Build system prompt (includes tool descriptions when tools enabled)
         system_prompt = build_system_prompt(
             agent_name=agent.name,
             soul_prompt=agent.soul_prompt,

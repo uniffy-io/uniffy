@@ -1,36 +1,12 @@
-"""Resolve the effective ``MailConfig`` for a given organization.
+"""Resolve the effective ``MailConfig`` for an organization.
 
-Lookup order:
+Lookup order: per-org ``org_settings`` -> deployment ``deployment_settings`` ->
+``MailConfig.from_env()`` -> ``MailNotConfiguredError``.
 
-1. ``org_settings`` rows for ``organization_id`` under
-   ``namespace='mail'``. If the assembled config satisfies the
-   required keys (``from_address`` + ``smtp_host``), use it.
-2. ``deployment_settings`` rows under ``namespace='mail'`` -- the
-   operator-editable system-wide config. Same key shape as the org
-   tier; secrets are unwrapped via :class:`DeploymentCipher`.
-3. ``MailConfig.from_env()`` (env-default, set at deploy time).
-4. ``MailNotConfiguredError``.
-
-The deployment tier lets a self-hoster ship the stack with zero mail
-env vars and configure SMTP from the platform UI after first boot --
-matching the landing-page promise that mail is post-install editable.
-
-Caching
--------
-
-Non-secret fields are cached in Valkey under
-``mail:cfg:{org_id|"system"}`` for 60 seconds together with the
-provenance of the password (``org`` / ``deployment`` / ``env`` /
-``none``). The plaintext password is NEVER written to Valkey - on a
-cache hit the password is re-resolved from PG (per-org row or
-deployment row) through the matching cipher, or read from env. This
-preserves the bulk of the PG-avoidance the cache exists for while
-keeping decrypted secrets out of shared infra.
-
-Writes through any of the three tiers call
-``MailConfigResolver.invalidate`` (org_id for the org tier,
-``invalidate_system`` for the deployment tier) so admin edits take
-effect immediately.
+Non-secret fields are cached in Valkey under ``mail:cfg:{org_id|"system"}`` for
+60 seconds with the password's provenance. The plaintext password is NEVER
+written to Valkey - on a cache hit it is re-resolved from PG (org or deployment
+row) through the matching cipher, or read from env.
 """
 
 from __future__ import annotations
@@ -66,25 +42,20 @@ def _cache_tag(scope: str) -> str:
 
 
 def _password_source_for(config: MailConfig) -> str:
-    """Map an unresolved ``MailConfig`` to the tier its password lives in.
-
-    Returned values: ``"org"`` / ``"deployment"`` / ``"env"`` / ``"none"``.
-    A config with ``smtp_password=None`` records ``"none"`` so the
-    cache hit short-circuits the re-resolve.
-    """
+    """Tier the password lives in: ``"org"`` / ``"deployment"`` / ``"env"`` / ``"none"``."""
     if config.smtp_password is None or config.smtp_password == "":
         return "none"
     return config.source
 
 
 class MailConfigResolver:
-    """Per-request resolver. Hold one instance per ``AsyncSession``."""
+    """Per-request resolver. One instance per ``AsyncSession``."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def resolve(self, organization_id: UUID | None) -> MailConfig:
-        """Return the effective config for ``organization_id`` or raise."""
+        """Effective config for ``organization_id`` or raise."""
         scope = str(organization_id) if organization_id is not None else "system"
         cached = await cache_get(_cache_key(scope))
         if cached is not CACHE_MISS and cached is not None:
@@ -97,8 +68,7 @@ class MailConfigResolver:
         config = await self._load(organization_id)
         password_source = _password_source_for(config)
         payload = config.model_dump(mode="json")
-        # Plaintext SMTP password must never enter Valkey. Strip it
-        # and record where the cache hit should fetch it from.
+        # Plaintext SMTP password must never enter Valkey.
         payload["smtp_password"] = None
         payload[_PASSWORD_SOURCE_KEY] = password_source
         await cache_set(
@@ -115,14 +85,7 @@ class MailConfigResolver:
         organization_id: UUID | None,
         password_source: str,
     ) -> MailConfig:
-        """Re-fetch the SMTP password for a cached config or raise.
-
-        ``password_source`` is one of ``"org"``, ``"deployment"``,
-        ``"env"``, ``"none"``. When the underlying row no longer exists
-        (race with a concurrent edit that has already invalidated the
-        cache key in a tight enough window) we fall through to a fresh
-        ``_load`` so the caller never sees an inconsistent config.
-        """
+        """Re-fetch the SMTP password for a cached config; fall through to ``_load`` on row miss."""
         if password_source == "none":
             return config
         if password_source == "env":
@@ -222,26 +185,14 @@ class MailConfigResolver:
 
     @staticmethod
     async def invalidate(organization_id: UUID | None) -> None:
-        """Drop the cached org entry so the next resolve hits the DB.
-
-        Call after every write to ``org_settings`` under the ``mail``
-        namespace so the new value is visible cluster-wide within one
-        Valkey round-trip.
-        """
+        """Drop the cached org entry. Call after every org-tier mail-settings write."""
         scope = str(organization_id) if organization_id is not None else "system"
         await cache_delete(_cache_key(scope))
 
     @staticmethod
     async def invalidate_system() -> None:
-        """Drop every cached entry across the deployment.
-
-        Deployment-tier config edits affect every org that resolves
-        through the deployment fallback. The simplest correct behavior
-        is to drop the cached ``"system"`` key (used when callers resolve
-        without an org) and let the per-org entries naturally expire
-        within ``_CACHE_TTL_SECONDS`` -- per-org rows still win
-        precedence, so the at-most-60s lag affects only orgs that have
-        no per-org row and therefore inherit the deployment config.
+        """Drop the cached ``"system"`` entry. Per-org entries expire within
+        ``_CACHE_TTL_SECONDS``.
         """
         await cache_delete(_cache_key("system"))
 

@@ -1,12 +1,4 @@
-"""Uniffy process entrypoint.
-
-A single CLI dispatches the three long-running processes:
-
-    python -m uniffy --backend
-    python -m uniffy --worker-core
-    python -m uniffy --worker-egress
-    python -m uniffy --mfa-reset
-"""
+"""Uniffy process entrypoint."""
 
 import argparse
 import os
@@ -16,7 +8,6 @@ from dotenv import load_dotenv
 
 
 def _run_backend() -> None:
-    """Run the FastAPI application via Granian."""
     from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
 
     bootstrap_multiproc_metrics("backend")
@@ -53,7 +44,6 @@ def _run_backend() -> None:
 
 
 def _run_worker_core() -> None:
-    """Run the core ARQ worker fleet (``uniffy:queue:core``)."""
     from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
 
     bootstrap_multiproc_metrics("worker-core")
@@ -70,7 +60,6 @@ def _run_worker_core() -> None:
 
 
 def _run_worker_egress() -> None:
-    """Run the egress ARQ worker fleet (``uniffy:queue:egress``)."""
     from uniffy._metrics_bootstrap import bootstrap_multiproc_metrics
 
     bootstrap_multiproc_metrics("worker-egress")
@@ -94,7 +83,6 @@ _MODES = {
 
 
 def main() -> None:
-    """Parse the mode flag and run the matching process."""
     load_dotenv()
 
     if "--mfa-reset" in sys.argv:

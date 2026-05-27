@@ -61,10 +61,7 @@ async def _resolve_user_role(
     note: Note,
     checker: PermissionChecker | None = None,
 ) -> ContentRole | None:
-    """Resolve the caller's effective role on ``note`` for outbound
-    proto. Pass a shared ``checker`` from list endpoints to avoid
-    re-loading org role / domain admin per row.
-    """
+    # Share the ``checker`` across rows in list endpoints to amortise lookups.
     permission_checker = checker or PermissionChecker(session)
     return await permission_checker.effective_role(
         user_id=user_id,
@@ -83,7 +80,6 @@ async def _resolve_effective_policy(
     note: Note,
     checker: PermissionChecker | None = None,
 ):
-    """Return the note's effective ``(access_mode, baseline_role)`` for proto emission."""
     permission_checker = checker or PermissionChecker(session)
     default_mode, default_baseline = await permission_checker.get_org_defaults(
         organization_id, ContentType.NOTE,
@@ -94,7 +90,6 @@ async def _resolve_effective_policy(
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
-    """Parse a UUID string or raise ``INVALID_ARGUMENT``."""
     try:
         return UUID(value)
     except ValueError as exc:
@@ -102,15 +97,11 @@ def _parse_uuid(value: str, field: str) -> UUID:
 
 
 def _parse_tag_id_list(values: list[str]) -> list[UUID]:
-    """Parse a list of tag id strings, raising ``INVALID_ARGUMENT`` on any miss."""
     return [_parse_uuid(value, "tag_id") for value in values]
 
 
 def _parse_canvas_content(content: str | None) -> dict | None:
-    """Interpret ``content`` as a JSON canvas dict. Canvas notes ship
-    the canvas state as a JSON string in the ``content`` field;
-    returns ``None`` if empty or unparseable.
-    """
+    # Canvas notes ship JSON canvas state in the ``content`` field.
     if not content:
         return None
     try:
@@ -121,7 +112,6 @@ def _parse_canvas_content(content: str | None) -> dict | None:
 
 
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
-    """Translate a domain exception into the matching ``ConnectError``."""
     if isinstance(exc, NotFoundError):
         return ConnectError(Code.NOT_FOUND, "Note not found")
     if isinstance(exc, ValidationError):
@@ -142,7 +132,6 @@ class NotesHandlers:
         request: CreateNoteRequest,
         ctx: RequestContext,
     ) -> CreateNoteResponse:
-        """Create a new note."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -164,7 +153,6 @@ class NotesHandlers:
                 "value": request.icon.value,
             }
 
-        # Canvas notes ship the JSON canvas state in the `content` field.
         canvas_content = None
         content = request.content
         if node_type == NodeType.CANVAS:
@@ -219,7 +207,6 @@ class NotesHandlers:
         request: GetNoteRequest,
         ctx: RequestContext,
     ) -> GetNoteResponse:
-        """Get a single note (with sharing info for the UI)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         note_id = _parse_uuid(request.note_id, "note_id")
@@ -258,7 +245,6 @@ class NotesHandlers:
         request: UpdateNoteRequest,
         ctx: RequestContext,
     ) -> UpdateNoteResponse:
-        """Update note metadata and/or body."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         note_id = _parse_uuid(request.note_id, "note_id")
@@ -326,7 +312,6 @@ class NotesHandlers:
         request: DeleteNoteRequest,
         ctx: RequestContext,
     ) -> DeleteNoteResponse:
-        """Delete a note (soft or permanent)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         note_id = _parse_uuid(request.note_id, "note_id")
@@ -352,7 +337,6 @@ class NotesHandlers:
         request: RestoreNoteRequest,
         ctx: RequestContext,
     ) -> RestoreNoteResponse:
-        """Restore a soft-deleted note."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         note_id = _parse_uuid(request.note_id, "note_id")
@@ -388,7 +372,6 @@ class NotesHandlers:
         request: ListNotesRequest,
         ctx: RequestContext,
     ) -> ListNotesResponse:
-        """List notes with filters and pagination."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -435,8 +418,7 @@ class NotesHandlers:
                     organization_id=organization_id,
                     content_urns=[urn_for(n) for n in notes],
                 )
-                # Share one PermissionChecker so org-role / domain-admin
-                # cache hits once per page instead of per row.
+                # Share one checker so org-role / domain-admin caches hit once per page.
                 checker = PermissionChecker(session)
                 default_mode, default_baseline = await checker.get_org_defaults(
                     organization_id, ContentType.NOTE,
@@ -481,7 +463,6 @@ class NotesHandlers:
         request: GetBacklinksRequest,
         ctx: RequestContext,
     ) -> GetBacklinksResponse:
-        """Return notes that reference the target note (the user can see)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         note_id = _parse_uuid(request.note_id, "note_id")
@@ -504,7 +485,6 @@ class NotesHandlers:
         request: EmptyTrashRequest,
         ctx: RequestContext,
     ) -> EmptyTrashResponse:
-        """Permanently delete every soft-deleted note in the org."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -523,7 +503,6 @@ class NotesHandlers:
             raise _map_domain_error("empty_trash", exc) from exc
 
     async def move_note(self, request, ctx: RequestContext) -> MoveNoteResponse:
-        """Change a note's access mode (and optional baseline role / groups)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         note_id = _parse_uuid(request.note_id, "note_id")

@@ -21,7 +21,6 @@ from uniffy.domains.chat.reactions.operations import ChatReactionOperations
 
 
 def _handle_error(e: Exception) -> None:
-    """Map domain errors to ConnectRPC errors."""
     if isinstance(e, NotFoundError):
         raise ConnectError(Code.NOT_FOUND, str(e))
     if isinstance(e, PermissionDeniedError):
@@ -31,14 +30,11 @@ def _handle_error(e: Exception) -> None:
 
 
 class ReactionHandlers:
-    """Reaction RPC handlers."""
-
     async def add_reaction(
         self,
         request: AddReactionRequest,
         ctx: RequestContext,
     ) -> AddReactionResponse:
-        """Add a reaction to a message."""
         user_id = get_user_id_from_context(ctx)
         jwt_name, _ = get_sender_info_from_context(ctx)
         try:
@@ -60,7 +56,6 @@ class ReactionHandlers:
                     display_name=jwt_name,
                 )
 
-                # Build reaction group for response
                 reactions = await ops.get_reactions_for_messages([message_id], user_id)
                 groups = reactions.get(message_id, [])
                 for g in groups:
@@ -88,7 +83,6 @@ class ReactionHandlers:
         request: RemoveReactionRequest,
         ctx: RequestContext,
     ) -> RemoveReactionResponse:
-        """Remove a reaction from a message."""
         user_id = get_user_id_from_context(ctx)
         jwt_name, _ = get_sender_info_from_context(ctx)
         try:

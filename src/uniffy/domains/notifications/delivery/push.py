@@ -1,8 +1,4 @@
-"""Web Push delivery adapter.
-
-Sends browser push notifications via the Web Push protocol (VAPID).
-Requires pywebpush and VAPID keys configured in environment variables.
-"""
+"""Web Push (VAPID) delivery adapter."""
 
 import json
 from datetime import UTC, datetime
@@ -20,17 +16,10 @@ from uniffy.domains.notifications.delivery.base import DeliveryAdapter
 
 
 class PushAdapter(DeliveryAdapter):
-    """
-    Web Push notification delivery via VAPID.
-
-    Queries the user's PushSubscription records and sends a push
-    payload to each registered browser/device endpoint.
-    Stale subscriptions (410 Gone) are automatically removed.
-    """
+    """Web Push delivery via VAPID; 410 endpoints are pruned on send."""
 
     @property
     def channel_name(self) -> str:
-        """Return channel identifier."""
         return "browser"
 
     async def deliver(
@@ -38,25 +27,7 @@ class PushAdapter(DeliveryAdapter):
         user_id: UUID,
         event: NotificationEvent,
     ) -> bool:
-        """
-        Send push notification to all registered endpoints for a user.
-
-        This variant has no DB session, so it cannot query subscriptions.
-        The worker always uses deliver_with_session() instead.
-
-        Parameters
-        ----------
-        user_id : UUID
-            Recipient user ID.
-        event : NotificationEvent
-            The notification event.
-
-        Returns
-        -------
-        bool
-            Always False -- use deliver_with_session() for actual delivery.
-
-        """
+        # No DB session - real path is ``deliver_with_session``.
         logger.debug(f"Push deliver() called without session: user={user_id} title={event.title}")
         return False
 
@@ -66,27 +37,7 @@ class PushAdapter(DeliveryAdapter):
         user_id: UUID,
         event: NotificationEvent,
     ) -> bool:
-        """
-        Send push notification using a shared DB session.
-
-        Fetches push subscriptions, sends to each endpoint via pywebpush,
-        and cleans up stale subscriptions.
-
-        Parameters
-        ----------
-        session : AsyncSession
-            Database session for subscription queries.
-        user_id : UUID
-            Recipient user ID.
-        event : NotificationEvent
-            The notification event.
-
-        Returns
-        -------
-        bool
-            True if at least one push was sent.
-
-        """
+        """Send push to every registered endpoint and prune stale (410) rows."""
         vapid_config = get_vapid_config()
         if not vapid_config:
             logger.debug("Push skipped: VAPID not configured")
@@ -141,7 +92,6 @@ class PushAdapter(DeliveryAdapter):
             except Exception as e:
                 logger.warning(f"Push delivery error for {sub.endpoint[:60]}: {e}")
 
-        # Remove stale subscriptions (e.g., 410 Gone)
         for sub in stale:
             await session.delete(sub)
 

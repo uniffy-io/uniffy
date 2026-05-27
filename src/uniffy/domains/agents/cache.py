@@ -1,33 +1,14 @@
 """Agents-domain Valkey cache helpers.
 
-Caches the read-heavy pieces of the agent runtime pre-flight phase:
+Caches the read-heavy runtime pre-flight rows (agent, skills, prompt,
+provider-key metadata). Reverse-index sets `tag:skill:{id}` and
+`tag:prompt:{id}` hold agent ids that depend on each shared row so a
+mutation can SMEMBERS + bulk-DEL the dependent agent caches.
 
-- ``agent:{agent_id}``           -> serialized Agent row, TTL 900s
-- ``agent:{agent_id}:skills``    -> resolved skill list, TTL 900s
-- ``agent:{agent_id}:prompt``    -> resolved prompt content, TTL 900s
-- ``provider:key:{key_id}``      -> non-secret provider metadata, TTL 3600s
-
-Plus reverse-index sets used to invalidate dependent agent caches when a
-shared row (skill, prompt) mutates:
-
-- ``tag:skill:{skill_id}``       -> ``{agent_id, ...}`` (Valkey set)
-- ``tag:prompt:{prompt_id}``     -> ``{agent_id, ...}`` (Valkey set)
-
-The reverse-index sets share the ``tag:`` namespace with
-``cache_invalidate_by_tag``-style tag entries but contain agent ids
-rather than cache keys; we never call ``cache_invalidate_by_tag`` on
-them. ``invalidate_agents_by_skill`` / ``invalidate_agents_by_prompt``
-do the SMEMBERS -> bulk DEL dance manually.
-
-Provider-key metadata is the **non-secret** routing data only:
-``provider``, ``credential_type``, ``is_valid``, ``is_enabled``, and the
-list of model ids exposed by the key. The encrypted credential is
-deliberately NOT cached - decryption stays per-request and the
-in-process provider-client LRU lives elsewhere.
-
-A pubsub channel ``provider_keys:invalidate:{key_id}`` is published on
-provider-key invalidation so an in-process subscriber can drop its
-decrypted-client LRU entry on the same signal that wipes Valkey.
+Provider-key entries hold non-secret routing metadata only; decrypted
+credentials live in the in-process provider-client LRU. The pubsub
+channel `provider_keys:invalidate:{key_id}` mirrors the Valkey wipe so
+every pod drops its LRU entry on the same signal.
 """
 
 import json
@@ -84,19 +65,11 @@ def _prompt_tag_key(prompt_id: UUID) -> str:
 
 
 def _org_skills_tag(organization_id: UUID) -> str:
-    """Tag attached to every agent's skills cache entry in an org.
-
-    Always-active skills are injected for every agent regardless of
-    enabled_skills, so the per-skill reverse index can't see the agents
-    that depend on them. The org tag covers that gap: any always-active
-    skill mutation drops every agent's skills cache in the org in one
-    shot.
-    """
+    """Org-wide tag covering always-active skills (per-skill index can't see them)."""
     return f"org_skills:{organization_id}"
 
 
 def provider_key_invalidate_channel(key_id: UUID) -> str:
-    """Pubsub channel name for provider-key invalidation events."""
     return f"provider_keys:invalidate:{key_id}"
 
 
@@ -147,12 +120,7 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
 
 
 def _deserialize_agent(payload: dict[str, Any]) -> Agent:
-    """Return a transient ``Agent`` rebuilt from a cached payload.
-
-    The instance is detached from any session. Callers must treat it as
-    read-only - the runtime pre-flight phase reads agent fields and never
-    mutates the row.
-    """
+    """Return a detached, read-only `Agent` rebuilt from a cached payload."""
     return Agent(
         id=UUID(payload["id"]),
         organization_id=UUID(payload["organization_id"]),
@@ -240,10 +208,7 @@ async def fetch_agent_row(
 ) -> Agent | None:
     """Stampede-protected cache-or-load for an Agent row.
 
-    Misses fall through to PG under a short Valkey lock so a cold-cache
-    burst doesn't all hit the same SELECT. Soft-deleted rows are kept
-    out of the cache (the loader returns None) so the next reader
-    re-checks PG.
+    Soft-deleted rows stay out of the cache so the next reader re-checks PG.
     """
 
     async def _load() -> dict[str, Any] | None:
@@ -284,7 +249,6 @@ def _serialize_skill(skill: AgentSkill) -> dict[str, Any]:
 
 
 def _deserialize_skill(payload: dict[str, Any]) -> AgentSkill:
-    """Rebuild a transient ``AgentSkill`` from a cached payload."""
     return AgentSkill(
         id=UUID(payload["id"]),
         organization_id=None,
@@ -336,12 +300,7 @@ async def fetch_agent_skills(
     organization_id: UUID,
     enabled_skill_ids: list[str],
 ) -> list[AgentSkill]:
-    """Stampede-protected cache-or-load for resolved agent skills.
-
-    Cache hit: return the cached list directly. Miss: call
-    ``skill_ops.get_skills_for_agent`` under a short Valkey lock so
-    cold-cache traffic doesn't all run the resolver.
-    """
+    """Stampede-protected cache-or-load for resolved agent skills."""
 
     async def _load() -> dict[str, Any] | None:
         skills = await skill_ops.get_skills_for_agent(
@@ -365,15 +324,7 @@ async def fetch_agent_skills(
 
 
 async def get_cached_agent_prompt(agent_id: UUID) -> str | None:
-    """Return cached resolved prompt content for an agent or ``None``.
-
-    A cached payload of ``{"content": null}`` is a legitimate
-    "no prompt configured" hit and is also returned as ``None`` here -
-    the caller cannot distinguish miss from cached-null, but the loader
-    runs in both cases so the answer is identical. The sentinel-None
-    path in ``cache_get`` short-circuits the second case after the first
-    miss.
-    """
+    """Return cached resolved prompt content, or `None` on miss/no-prompt."""
     cached = await cache_get(_agent_prompt_key(agent_id))
     if cached is CACHE_MISS:
         return None
@@ -406,13 +357,7 @@ async def fetch_agent_prompt(
     agent_id: UUID,
     prompt_id: UUID | None,
 ) -> str | None:
-    """Stampede-protected cache-or-load for the resolved prompt.
-
-    Misses fall through to ``PromptOperations.get_prompt_by_id`` under
-    the lock. The cached payload mirrors the existing
-    ``_resolve_prompt_content`` semantics: ``None`` (sentinel) for
-    "no prompt configured", string content otherwise.
-    """
+    """Stampede-protected cache-or-load for the resolved prompt."""
     if prompt_id is None:
         return None
 
@@ -491,12 +436,10 @@ async def track_agent_skill_refs(
     added_skill_ids: list[UUID] | None = None,
     removed_skill_ids: list[UUID] | None = None,
 ) -> None:
-    """Update the ``tag:skill:{sid}`` reverse-index sets for an agent.
+    """Update the `tag:skill:{sid}` reverse-index sets for an agent.
 
-    Called from agent create/update with the diff of ``enabled_skills``.
     The set TTL is refreshed on every SADD so the index can't expire
-    while the agent still references the skill (refresh cadence equals
-    the cache TTL of the skills list itself).
+    while the agent still references the skill.
     """
     if added_skill_ids:
         for sid in added_skill_ids:
@@ -514,10 +457,7 @@ async def track_agent_prompt_ref(
     old_prompt_id: UUID | None,
     new_prompt_id: UUID | None,
 ) -> None:
-    """Update the ``tag:prompt:{pid}`` reverse-index for an agent.
-
-    Idempotent on no-op (when ``old_prompt_id == new_prompt_id``).
-    """
+    """Update the `tag:prompt:{pid}` reverse-index; idempotent on no-op."""
     if old_prompt_id == new_prompt_id:
         return
     if old_prompt_id is not None:
@@ -535,12 +475,9 @@ async def invalidate_agents_using_skill(
     *,
     drop_tag_set: bool = False,
 ) -> None:
-    """Invalidate the skills cache for every agent that references ``skill_id``.
+    """Invalidate the skills cache for every agent referencing `skill_id`.
 
-    Walks the ``tag:skill:{skill_id}`` set, then issues a single bulk DEL
-    of the dependent agent skill keys. ``drop_tag_set=True`` also DELs
-    the tag set itself - used on skill row delete so the set doesn't
-    linger after its referent is gone.
+    `drop_tag_set=True` also DELs the tag set itself (skill row delete).
     """
     set_key = _skill_tag_key(skill_id)
     members = await _set_members(set_key)
@@ -563,13 +500,10 @@ async def invalidate_agents_using_skill(
 
 
 async def invalidate_org_always_active_skills(organization_id: UUID) -> None:
-    """Drop every agent's cached skills entry in the org via the org tag.
+    """Fan-invalidate every agent's skills cache via the org tag.
 
-    Used on always-active skill mutations: the per-skill reverse index
-    only knows about agents that named the skill in `enabled_skills`,
-    and an always-active skill is injected into every agent regardless
-    of that list. The org tag is the only way to fan an invalidation
-    across all agents in the org without enumerating them.
+    Always-active skills are injected for every agent, so per-skill reverse
+    indices miss them; only the org tag covers all agents at once.
     """
     await cache_invalidate_by_tag(_org_skills_tag(organization_id))
 
@@ -579,7 +513,7 @@ async def invalidate_agents_using_prompt(
     *,
     drop_tag_set: bool = False,
 ) -> None:
-    """Invalidate the prompt cache for every agent that references ``prompt_id``."""
+    """Invalidate the prompt cache for every agent referencing `prompt_id`."""
     set_key = _prompt_tag_key(prompt_id)
     members = await _set_members(set_key)
     if members:
@@ -611,7 +545,7 @@ def _is_uuid(value: str) -> bool:
 async def get_cached_provider_metadata(
     key_id: UUID,
 ) -> dict[str, Any] | None:
-    """Return cached non-secret provider-key metadata, or ``None``."""
+    """Return cached non-secret provider-key metadata, or `None`."""
     cached = await cache_get(_provider_key_metadata_key(key_id))
     if cached is CACHE_MISS or cached is None:
         return None
@@ -627,12 +561,7 @@ async def set_cached_provider_metadata(
     is_enabled: bool,
     model_ids: list[str],
 ) -> None:
-    """Cache the routing metadata for a provider key.
-
-    The encrypted credential is intentionally NOT included - it stays in
-    PG. The in-process LRU owns decrypted-client caching; this entry
-    only short-circuits the metadata-routing path.
-    """
+    """Cache non-secret routing metadata; encrypted credentials never enter Valkey."""
     await cache_set(
         _provider_key_metadata_key(key_id),
         {
@@ -647,12 +576,7 @@ async def set_cached_provider_metadata(
 
 
 async def invalidate_provider_metadata(key_id: UUID) -> None:
-    """Delete the Valkey entry and publish the cross-pod pubsub signal.
-
-    The pubsub channel ``provider_keys:invalidate:{key_id}`` is the
-    single invalidation seam; an in-process subscriber drops its
-    decrypted-client LRU on the same signal.
-    """
+    """Delete the Valkey entry and publish the cross-pod pubsub signal."""
     await cache_delete(_provider_key_metadata_key(key_id))
     client = _get_ops_client()
     if client is None:

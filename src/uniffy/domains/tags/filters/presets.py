@@ -1,14 +1,8 @@
-"""System presets for the unified tags explorer.
+"""Default tag-explorer presets, seeded idempotently against the org owner.
 
-Idempotent seeding via ``ON CONFLICT DO NOTHING`` on the per-user-per-org
-unique constraint mirrors ``files/filters/presets.py``. The presets are
-seeded against the org owner so every member sees them in their list
-(``list_filters(include_presets=True)`` unions the user's rows with all
-``is_preset=True`` rows for the org).
-
-"Untagged content" is implemented as ``untagged_only=True`` on the
-criteria. The explorer's right panel switches into untagged-content
-mode when this flag is set instead of opening a separate sub-view.
+Every org member sees them through list_filters(include_presets=True). The
+"Untagged content" preset uses untagged_only=True so the explorer's right
+panel switches modes rather than opening a separate sub-view.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -70,12 +64,7 @@ async def create_default_tag_filter_presets(
     organization_id: UUID,
     owner_user_id: UUID,
 ) -> None:
-    """Insert the default explorer presets for an organization.
-
-    Safe to run repeatedly. Presets are owned by the org owner; every
-    member sees them through the ``include_presets`` branch on
-    ``SavedTagFilterOperations.list_filters``.
-    """
+    """Idempotent: presets are owned by the org owner, shared via include_presets."""
     now = datetime.now(UTC)
     rows = [
         {

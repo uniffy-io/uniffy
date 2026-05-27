@@ -19,13 +19,7 @@ THREAD_INBOX_CONTENT_PREVIEW_CHARS = 200
 
 
 class ThreadInboxRow:
-    """Lightweight row returned by `get_threads_inbox`.
-
-    Avoids fetching full `ChatMessage` (with `mentioned_urns`, `metadata`,
-    `edited_at`, etc.) for thread roots that the inbox view never reads.
-    Content is trimmed to ``THREAD_INBOX_CONTENT_PREVIEW_CHARS`` at the SQL
-    level so wide-text messages don't pay TOAST detoast on inbox loads.
-    """
+    """Preview-only row; content trimmed at SQL level to avoid TOAST detoast on the inbox path."""
 
     __slots__ = (
         "thread",
@@ -60,8 +54,6 @@ class ThreadInboxRow:
 
 
 class ChatThreadOperations:
-    """Thread operations: inbox, follow/unfollow, thread messages."""
-
     def __init__(self, session: AsyncSession, access: ChatAccessChecker | None = None) -> None:
         self.session = session
         self.access = access or ChatAccessChecker(session)
@@ -73,18 +65,10 @@ class ChatThreadOperations:
         channel_id: UUID,
         root_message_id: UUID,
     ) -> tuple[ChatMessage, ChatThreadStats | None, list[UUID], int, bool]:
-        """Get thread info.
-
-        Returns ``(root_message, stats, participant preview list,
-        total_participants, is_following)``. Participant preview is capped
-        at ``THREAD_PARTICIPANT_PREVIEW_LIMIT`` for the avatar stack; the
-        absolute count is returned separately so the UI can render
-        "+N more" without hydrating every participant row.
-        """
+        """Returns (root, stats, preview participants, total_participants, is_following)."""
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
-        # Fetch root message
         result = await self.session.execute(
             select(ChatMessage).where(
                 ChatMessage.id == root_message_id,
@@ -95,7 +79,6 @@ class ChatThreadOperations:
         if not root_msg:
             raise NotFoundError("message", root_message_id)
 
-        # Fetch thread stats
         stats_result = await self.session.execute(
             select(ChatThreadStats).where(ChatThreadStats.root_message_id == root_message_id)
         )
@@ -139,7 +122,6 @@ class ChatThreadOperations:
         after_id: UUID | None = None,
         limit: int = 50,
     ) -> tuple[list[ChatMessage], bool]:
-        """Get messages in a thread (replies to root_message_id)."""
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
 
@@ -193,19 +175,7 @@ class ChatThreadOperations:
         unread_only: bool = False,
         limit: int = 20,
     ) -> list[ThreadInboxRow]:
-        """Get threads relevant to the user, sorted by last_reply_at.
-
-        A thread is surfaced if the viewer is following it, rooted it
-        (sent the root message), or participated in it (sent a reply).
-        Following alone misses self-rooted-and-self-replied threads,
-        which the inbox should still expose -- mirrors the Slack/Discord
-        "All Threads" convention.
-
-        Selects preview columns instead of hydrating full ``ChatMessage``
-        rows for each thread root: only id, sender, created_at, and a
-        SQL-trimmed content head (``left(content, N)``) make the network
-        trip. Saves a TOAST detoast for wide root messages.
-        """
+        """Inbox of threads where the user follows, rooted, or replied; sorted by last_reply_at."""
         limit = min(max(limit, 1), 50)
 
         query = (
@@ -283,10 +253,8 @@ class ChatThreadOperations:
         organization_id: UUID,
         root_message_id: UUID,
     ) -> None:
-        """Follow a thread."""
         from datetime import UTC, datetime
 
-        # Verify thread exists
         result = await self.session.execute(
             select(ChatThread).where(ChatThread.root_message_id == root_message_id)
         )
@@ -313,7 +281,6 @@ class ChatThreadOperations:
         organization_id: UUID,
         root_message_id: UUID,
     ) -> None:
-        """Unfollow a thread."""
         await self.session.execute(
             delete(ChatThreadFollow).where(
                 ChatThreadFollow.root_message_id == root_message_id,

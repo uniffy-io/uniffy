@@ -1,16 +1,4 @@
-"""
-Stress test seed for chat - generates a busy channel with thousands of messages.
-
-Usage:
-    uv run python -m uniffy.scripts.stress.chat_stress [OPTIONS]
-
-Options:
-    --messages      Number of messages to generate (default: 5000)
-    --channel-name  Name of the stress test channel (default: "stress-test")
-    --threads       Percentage of messages that start threads (default: 5)
-    --replies       Max replies per thread (default: 10)
-    --dry-run       Print stats without writing to database
-"""
+"""Stress test seed for chat - generates a busy channel with thousands of messages."""
 
 import argparse
 import asyncio
@@ -25,8 +13,6 @@ from loguru import logger
 
 @dataclass
 class ChatStressConfig:
-    """Configuration for chat stress test data generation."""
-
     message_count: int = 5000
     channel_name: str = "stress-test"
     thread_pct: int = 5
@@ -34,7 +20,6 @@ class ChatStressConfig:
     dry_run: bool = False
 
 
-# Realistic chat messages - short and conversational
 CHAT_MESSAGES = [
     "Hey, has anyone looked at the latest build?",
     "I just pushed a fix for that bug we discussed",
@@ -175,7 +160,6 @@ REACTION_EMOJIS = [
 
 
 def generate_message_content() -> str:
-    """Generate a random chat message."""
     roll = random.random()
     if roll < 0.05:
         return random.choice(CODE_SNIPPETS)
@@ -187,7 +171,6 @@ def generate_message_content() -> str:
 
 
 async def run_chat_stress(config: ChatStressConfig) -> None:
-    """Generate chat stress test data."""
     from dotenv import load_dotenv
     from sqlalchemy import select, update
 
@@ -222,7 +205,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
 
     try:
         async with open_session() as session:
-            # Get org - resolve slug from env (same logic as seed.py)
             org_slug = os.environ.get("DEFAULT_ORG_SLUG")
             if not org_slug:
                 from uniffy.core.types import slugify
@@ -257,7 +239,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
 
             logger.info(f"Found {len(users)} users: {[u.username for u in users]}")
 
-            # Check for existing stress channel
             result = await session.execute(
                 select(ChatChannel).where(
                     ChatChannel.organization_id == org.id,
@@ -269,7 +250,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                 logger.warning(f"Stress channel #{config.channel_name} already exists. Skipping.")
                 return
 
-            # Create the channel
             logger.info(f"Creating channel #{config.channel_name}...")
             channel = ChatChannel(
                 organization_id=org.id,
@@ -283,14 +263,12 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             await session.flush()
             await session.refresh(channel)
 
-            # Create stats row
             stats = ChatChannelStats(
                 channel_id=channel.id,
                 member_count=len(users),
             )
             session.add(stats)
 
-            # Add all users as members
             for i, user in enumerate(users):
                 member = ChatChannelMember(
                     channel_id=channel.id,
@@ -302,7 +280,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             await session.flush()
             logger.info(f"Channel created with {len(users)} members")
 
-            # Generate messages spread over ~30 days
+            # Spread messages over ~30 days.
             logger.info(f"Generating {config.message_count} messages...")
             now = datetime.now(UTC)
             start_time = now - timedelta(days=30)
@@ -315,7 +293,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
             total_replies = 0
             total_reactions = 0
 
-            # Determine visibility for search index
             is_public = channel.channel_type == ChannelType.PUBLIC
             search_visibility = "ORGANIZATION" if is_public else "PRIVATE"
             member_id_strs = None if is_public else [u.id for u in users]
@@ -329,7 +306,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                 )
                 content = generate_message_content()
 
-                # Decide if this is a thread reply
                 is_reply = root_message_ids and random.random() < 0.15 and len(root_message_ids) > 0
                 root_id = random.choice(root_message_ids) if is_reply else None
 
@@ -345,7 +321,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                 )
                 session.add(msg)
 
-                # Collect search document for indexing
                 search_docs.append({
                     "urn": f"urn:uniffy:content:CHAT_MESSAGE:{msg.id}",
                     "organization_id": org.id,
@@ -368,14 +343,11 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                     total_replies += 1
                 else:
                     total_root += 1
-                    # Some root messages become threads
                     if random.random() < (config.thread_pct / 100):
                         root_message_ids.append(msg.id)
-                        # Cap tracked threads to avoid memory bloat
                         if len(root_message_ids) > 500:
                             root_message_ids = root_message_ids[-300:]
 
-                # Random reactions (~10% of messages)
                 if random.random() < 0.10:
                     num_reactions = random.randint(1, 3)
                     reactors = random.sample(users, min(num_reactions, len(users)))
@@ -394,10 +366,8 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                     await session.flush()
                     logger.info(f"  {i + 1}/{config.message_count} messages...")
 
-            # Final flush
             await session.flush()
 
-            # Update channel stats
             await session.execute(
                 update(ChatChannelStats)
                 .where(ChatChannelStats.channel_id == channel.id)
@@ -411,7 +381,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
 
             await session.commit()
 
-            # Index all messages to Meilisearch in batches
             logger.info("Indexing messages to Meilisearch...")
             index_batch_size = 500
             from uniffy.core.search.indexer import SearchIndexer
@@ -426,9 +395,7 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
                 )
             logger.info(f"Search indexing complete: {len(search_docs)} documents")
 
-            logger.info("=" * 50)
             logger.info("CHAT STRESS SEED COMPLETE")
-            logger.info("=" * 50)
             logger.info(f"Channel: #{config.channel_name}")
             logger.info(f"Root messages: {total_root}")
             logger.info(f"Thread replies: {total_replies}")
@@ -442,7 +409,6 @@ async def run_chat_stress(config: ChatStressConfig) -> None:
 
 
 def main() -> None:
-    """Entry point for chat stress seed script."""
     parser = argparse.ArgumentParser(
         description="Generate chat stress test data for Uniffy",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

@@ -1,35 +1,14 @@
-"""General-purpose Valkey cache layer.
+"""General-purpose Valkey cache.
 
-Backed by the fail-fast ops client in ``uniffy.core.valkey.ops``: every
-public entry runs under a 150ms ``ops_call`` deadline so a slow / down
-Valkey returns ``CACHE_MISS`` (or no-ops the write) instead of stalling
-the user request. The caller falls through to PG.
+Every public entry runs under the 150ms ``ops_call`` deadline; a slow / down
+Valkey returns ``CACHE_MISS`` (or no-ops the write) and the caller falls through
+to PG. A ``"__none__"`` sentinel distinguishes a cached ``None`` from a miss.
 
-All operations are also non-fatal at the connection level: on
-``RedisConnectionError`` / decode failures they log a warning and
-degrade gracefully (cache miss on GET, silent no-op on SET/DEL).
+``CACHE_DISABLED_NAMESPACES`` (env, comma-separated) bypasses reads/writes per
+namespace; miss counters still increment so dashboards stay populated.
 
-A ``"__none__"`` sentinel string is stored when the caller explicitly
-caches ``None`` so that a true cache miss (key absent) can be
-distinguished from "we checked, and the value is legitimately empty".
-
-Domain-specific cache helpers live in their respective domain modules
-(e.g. ``domains/notifications/cache.py``).
-
-Per-namespace kill-switch
--------------------------
-Set the env var ``CACHE_DISABLED_NAMESPACES`` to a comma-separated list
-to bypass cache reads/writes for those namespaces. Disabled namespaces
-still bump miss counters so the dashboards stay populated. The disable
-list is read once at import time. Restart the process to flip a
-namespace.
-
-Stampede control
-----------------
-``cache_get_or_set_locked`` uses a short ``SET NX`` lock keyed
-``lock:{cache_key}`` (5s TTL) so only one caller runs the loader on a
-miss. Lock losers poll the cache key every 100ms up to the lock TTL.
-On still-miss they fall through and run their own loader.
+``cache_get_or_set_locked`` uses a ``SET NX`` lock at ``lock:{cache_key}`` (5s)
+to prevent loader stampedes; lock losers poll every 100ms then fall through.
 """
 
 import asyncio
@@ -67,7 +46,7 @@ T = TypeVar("T", bound=dict[str, Any] | None)
 
 
 class _CacheMiss(Enum):
-    """Sentinel type distinguishing a cache miss from a cached ``None``."""
+    """Sentinel distinguishing a true miss from a cached ``None``."""
 
     MISS = auto()
 
@@ -76,13 +55,11 @@ CACHE_MISS = _CacheMiss.MISS
 
 
 def _namespace_for_key(key: str) -> str:
-    """Return the metrics namespace for a cache key (segment before first ':')."""
     idx = key.find(":")
     return key if idx < 0 else key[:idx]
 
 
 def _is_namespace_disabled(key: str) -> bool:
-    """Return True when the key falls under a CACHE_DISABLED_NAMESPACES entry."""
     if not _DISABLED_NAMESPACES:
         return False
     if _namespace_for_key(key) in _DISABLED_NAMESPACES:
@@ -98,13 +75,7 @@ def _tag_key(tag: str) -> str:
 
 
 async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
-    """Fetch a JSON-serialised value from cache.
-
-    Returns the deserialised dict on hit, ``None`` on a sentinel hit
-    (legitimate cached ``None``), or ``CACHE_MISS`` for any other path:
-    key absent, namespace disabled, ops client unavailable, Valkey
-    error, decode failure, or the per-call deadline tripping.
-    """
+    """Returns the dict on hit, ``None`` on a sentinel hit, or ``CACHE_MISS`` otherwise."""
     namespace = _namespace_for_key(key)
 
     if _is_namespace_disabled(key):
@@ -148,16 +119,7 @@ async def cache_get(key: str) -> dict[str, Any] | None | _CacheMiss:
 async def cache_get_many(
     keys: list[str],
 ) -> tuple[dict[str, dict[str, Any] | None], list[str]]:
-    """Bulk variant of ``cache_get`` backed by a single Valkey MGET.
-
-    Returns ``(hits, misses)``:
-    - ``hits``: ``key -> dict`` for present entries, ``key -> None`` when
-      the cached value is the explicit-None sentinel.
-    - ``misses``: keys that were not present (or whose namespace is
-      disabled, or whose decoded payload was malformed, or where the
-      MGET tripped the per-call deadline). Order matches the input
-      order so callers can re-issue PG queries deterministically.
-    """
+    """MGET-backed bulk ``cache_get``. Misses preserve input order for downstream PG."""
     if not keys:
         return {}, []
 
@@ -230,11 +192,8 @@ async def cache_set(
     *,
     tags: list[str] | None = None,
 ) -> None:
-    """Store a JSON-serializable value in cache.
-
-    ``value=None`` is stored as a sentinel. ``tags`` adds the key to each
-    ``tag:{tag}`` set so ``cache_invalidate_by_tag`` can wipe related
-    entries in one call; the tag set's TTL is bumped to ``ttl + 60``.
+    """Store a JSON value. ``value=None`` becomes a sentinel; ``tags``
+    registers the key on each ``tag:{tag}`` set.
     """
     if _is_namespace_disabled(key):
         return
@@ -267,7 +226,6 @@ async def cache_set(
 
 
 async def cache_delete(key: str) -> None:
-    """Delete a single key from cache."""
     client = _get_ops_client()
     if client is None:
         return
@@ -285,7 +243,7 @@ async def cache_delete(key: str) -> None:
 
 
 async def cache_invalidate_many(*keys: str) -> None:
-    """Delete multiple keys in a single Valkey DEL round-trip."""
+    """DEL multiple keys in one round-trip."""
     if not keys:
         return
 
@@ -308,7 +266,7 @@ async def cache_invalidate_many(*keys: str) -> None:
 
 
 async def cache_invalidate_by_tag(tag: str) -> None:
-    """Delete every key registered under ``tag`` plus the tag set itself."""
+    """Delete every key registered under ``tag`` and the tag set itself."""
     client = _get_ops_client()
     if client is None:
         return
@@ -356,12 +314,8 @@ async def cache_get_or_set(
     *,
     tags: list[str] | None = None,
 ) -> dict[str, Any] | None:
-    """Return cached value, or run ``loader`` on miss and cache the result.
-
-    No locking. Multiple concurrent callers all run the loader on a cold
-    miss (acceptable when the loader is cheap or hit rate dominates). For
-    expensive loaders that are vulnerable to thundering herds, use
-    ``cache_get_or_set_locked`` instead.
+    """Cached value or ``loader()``; no stampede protection (use ``_locked``
+    for expensive loaders).
     """
     cached = await cache_get(key)
     if cached is not CACHE_MISS:

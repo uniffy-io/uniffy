@@ -12,8 +12,6 @@ from uniffy.domains.system_encryption.handlers import SystemEncryptionHandlers
 
 
 class SystemEncryptionServiceImpl:
-    """ConnectRPC service - delegates to SystemEncryptionHandlers."""
-
     def __init__(self) -> None:
         self._handlers = SystemEncryptionHandlers()
 

@@ -1,82 +1,27 @@
-"""
-Custom exceptions for UNIFFY.
-
-Provides consistent error handling across all modules with
-structured error information for API responses.
-"""
+"""Shared exception classes used across all UNIFFY modules."""
 
 from uuid import UUID
 
 
 class UNIFFYError(Exception):
-    """
-    Base exception for all UNIFFY errors.
-
-    All custom exceptions should inherit from this class.
-    """
+    """Base exception for all UNIFFY errors."""
 
     pass
 
 
 class NotFoundError(UNIFFYError):
-    """
-    Resource not found exception.
-
-    Raised when a requested resource does not exist.
-
-    Attributes
-    ----------
-    resource : str
-        Type of resource that was not found.
-    resource_id : UUID | str
-        ID of the resource that was not found.
-
-    """
+    """Requested resource does not exist."""
 
     def __init__(self, resource: str, resource_id: UUID | str) -> None:
-        """
-        Initialize NotFoundError.
-
-        Parameters
-        ----------
-        resource : str
-            Type of resource (e.g., "note", "user").
-        resource_id : UUID | str
-            ID of the resource.
-
-        """
         self.resource = resource
         self.resource_id = resource_id
         super().__init__(f"{resource} not found: {resource_id}")
 
 
 class PermissionDeniedError(UNIFFYError):
-    """
-    Permission denied exception.
-
-    Raised when a user lacks permission for a requested action.
-
-    Attributes
-    ----------
-    action : str
-        The action that was denied (e.g., "edit", "delete").
-    resource : str | None
-        Optional resource type the action was attempted on.
-
-    """
+    """User lacks permission for the requested action."""
 
     def __init__(self, action: str, resource: str | None = None) -> None:
-        """
-        Initialize PermissionDeniedError.
-
-        Parameters
-        ----------
-        action : str
-            The action that was denied.
-        resource : str | None
-            Optional resource type.
-
-        """
         self.action = action
         self.resource = resource
         msg = f"Permission denied: {action}"
@@ -86,105 +31,35 @@ class PermissionDeniedError(UNIFFYError):
 
 
 class ValidationError(UNIFFYError):
-    """
-    Validation error exception.
-
-    Raised when input validation fails.
-
-    Attributes
-    ----------
-    field : str
-        The field that failed validation.
-    message : str
-        Description of the validation failure.
-
-    """
+    """Input validation failed."""
 
     def __init__(self, field: str, message: str) -> None:
-        """
-        Initialize ValidationError.
-
-        Parameters
-        ----------
-        field : str
-            The field that failed validation.
-        message : str
-            Description of the validation failure.
-
-        """
         self.field = field
         self.message = message
         super().__init__(f"Validation error on '{field}': {message}")
 
 
 class ConflictError(UNIFFYError):
-    """
-    Resource conflict exception.
-
-    Raised when an operation conflicts with existing state
-    (e.g., duplicate slug, concurrent edit).
-
-    Attributes
-    ----------
-    resource : str
-        Type of resource with conflict.
-    conflict : str
-        Description of the conflict.
-
-    """
+    """Operation conflicts with existing state (e.g. duplicate slug, concurrent edit)."""
 
     def __init__(self, resource: str, conflict: str) -> None:
-        """
-        Initialize ConflictError.
-
-        Parameters
-        ----------
-        resource : str
-            Type of resource with conflict.
-        conflict : str
-            Description of the conflict.
-
-        """
         self.resource = resource
         self.conflict = conflict
         super().__init__(f"{resource} conflict: {conflict}")
 
 
 class AuthenticationError(UNIFFYError):
-    """
-    Authentication error exception.
-
-    Raised when authentication fails (invalid credentials, expired token, etc.).
-
-    Attributes
-    ----------
-    reason : str
-        Reason for authentication failure.
-
-    """
+    """Authentication failed (invalid credentials, expired token, etc.)."""
 
     def __init__(self, reason: str) -> None:
-        """
-        Initialize AuthenticationError.
-
-        Parameters
-        ----------
-        reason : str
-            Reason for authentication failure.
-
-        """
         self.reason = reason
         super().__init__(f"Authentication failed: {reason}")
 
 
 class BudgetExceededError(UNIFFYError):
-    """
-    Budget or quota exceeded exception.
+    """Raised only when a governing budget row has ``hard_limit=True`` and usage exceeds the cap.
 
-    Raised only when a governing budget or user-quota row has
-    ``hard_limit=True`` and the current-period usage exceeds the
-    configured cap. Soft overages log a warning and let the request
-    proceed; this exception is the hard-enforcement path.
+    Soft overages log a warning and let the request proceed; this is the hard-enforcement path.
     """
 
     def __init__(
@@ -194,7 +69,6 @@ class BudgetExceededError(UNIFFYError):
         current: str,
         limit: str,
     ) -> None:
-        """Initialize BudgetExceededError."""
         self.scope = scope
         self.limit_kind = limit_kind
         self.current = current
@@ -205,16 +79,12 @@ class BudgetExceededError(UNIFFYError):
 
 
 class RuntimeDeadlineExceededError(UNIFFYError):
-    """
-    Runtime deadline exceeded exception.
+    """Agent message call ran longer than the per-org deadline.
 
-    Raised when an agent ``send_message`` / ``stream_send_message`` call
-    runs longer than the configured per-org deadline. Maps to
-    ConnectRPC ``Code.DEADLINE_EXCEEDED``.
+    Maps to ConnectRPC ``Code.DEADLINE_EXCEEDED``.
     """
 
     def __init__(self, deadline_seconds: int, elapsed_seconds: float) -> None:
-        """Initialize RuntimeDeadlineExceededError."""
         self.deadline_seconds = deadline_seconds
         self.elapsed_seconds = elapsed_seconds
         super().__init__(
@@ -223,23 +93,7 @@ class RuntimeDeadlineExceededError(UNIFFYError):
 
 
 class RateLimitExceededError(UNIFFYError):
-    """
-    Rate limit exceeded exception.
-
-    Raised when a user exceeds the allowed request rate.
-
-    Attributes
-    ----------
-    resource : str
-        The resource being rate-limited (e.g., "agent_messages").
-    limit : int
-        Maximum allowed requests in the window.
-    window_seconds : int
-        Duration of the rate limit window.
-    retry_after : int
-        Seconds until the rate limit resets.
-
-    """
+    """User exceeded the allowed request rate for a resource."""
 
     def __init__(
         self,
@@ -248,21 +102,6 @@ class RateLimitExceededError(UNIFFYError):
         window_seconds: int,
         retry_after: int = 0,
     ) -> None:
-        """
-        Initialize RateLimitExceededError.
-
-        Parameters
-        ----------
-        resource : str
-            The resource being rate-limited.
-        limit : int
-            Maximum allowed requests in the window.
-        window_seconds : int
-            Duration of the rate limit window.
-        retry_after : int
-            Seconds until the rate limit resets.
-
-        """
         self.resource = resource
         self.limit = limit
         self.window_seconds = window_seconds

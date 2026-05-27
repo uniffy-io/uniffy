@@ -1,12 +1,7 @@
-"""
-Permission helper functions for requiring access.
+"""Helpers that raise ``PermissionDeniedError`` when a capability is missing.
 
-Thin wrappers around :meth:`PermissionChecker.effective_role` that raise
-:class:`PermissionDeniedError` when the required capability is not
-granted. Most code should use :class:`BaseContentOperations`' built-in
-``_require_*`` methods instead of calling these directly; they exist for
-code that checks access outside the base-operations flow (e.g. the
-cascade module).
+Most domain code uses ``BaseContentOperations._require_*`` instead; these
+exist for callers checking access outside that flow (e.g. cascade).
 """
 
 from uuid import UUID
@@ -35,7 +30,6 @@ async def require_view(
     baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """Raise ``PermissionDeniedError`` unless the user can view the content."""
     role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
@@ -64,7 +58,6 @@ async def require_edit(
     baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """Raise ``PermissionDeniedError`` unless the user can edit the content."""
     role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
@@ -93,7 +86,6 @@ async def require_delete(
     baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """Raise ``PermissionDeniedError`` unless the user can delete the content."""
     role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
@@ -122,11 +114,7 @@ async def require_manage(
     baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """Raise ``PermissionDeniedError`` unless the user can manage the content.
-
-    Managing covers: adding / removing members, changing access mode,
-    changing baseline role. Requires at least ADMIN.
-    """
+    """Manage = add/remove members, change access mode or baseline role; needs >= ADMIN."""
     role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
@@ -155,11 +143,7 @@ async def require_transfer(
     baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """Raise ``PermissionDeniedError`` unless the user can transfer ownership.
-
-    Requires the OWNER role (org and domain admins bypass at the checker
-    level).
-    """
+    """Requires OWNER (org and domain admins bypass at the checker level)."""
     role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
