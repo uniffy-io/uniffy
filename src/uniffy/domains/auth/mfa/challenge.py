@@ -25,7 +25,7 @@ one claim name.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -63,7 +63,7 @@ def create_mfa_challenge_token(
     """
     if expires_delta is None:
         expires_delta = timedelta(minutes=MFA_CHALLENGE_EXPIRE_MINUTES)
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "iat": now,
@@ -90,7 +90,7 @@ def create_enrollment_only_token(
     """
     if expires_delta is None:
         expires_delta = timedelta(minutes=ENROLLMENT_ONLY_EXPIRE_MINUTES)
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "iat": now,

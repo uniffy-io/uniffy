@@ -24,9 +24,11 @@ later. If a rollout grace becomes useful again, it can live as a
 separate per-organization-member nudge instead of a hidden delay on
 the requirement itself.
 
-Fail-open: when policy cannot be loaded (Valkey hiccup, missing org
-row) the evaluator returns ``NOT_REQUIRED`` so a backend hiccup never
-locks a user out of their own account.
+Fail-closed: when policy cannot be loaded (DB outage, missing row,
+malformed row) the evaluator raises so the login itself is refused.
+Silently treating a policy lookup failure as "no MFA needed" disables
+the security control system-wide for the duration of the outage; we
+prefer a hard error that pages somebody.
 """
 
 from __future__ import annotations
@@ -81,14 +83,17 @@ async def evaluate_mfa_requirement(
     if user_mfa is not None and user_mfa.enabled:
         return MfaRequirementResult(MfaRequirement.NOT_REQUIRED)
 
+    # Fail-closed: any error here disables MFA enforcement system-wide for the
+    # duration of the failure, which is the wrong default for a security
+    # boundary. Log + re-raise so the login surfaces a typed error and oncall
+    # gets paged instead of silently lowering the bar.
     try:
         required = await _is_required(session, user=user)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(
-            "mfa.enforcement: policy lookup failed, defaulting to not_required",
-            error=str(exc),
+    except Exception:
+        logger.exception(
+            "mfa.enforcement: policy lookup failed; refusing to skip MFA"
         )
-        return MfaRequirementResult(MfaRequirement.NOT_REQUIRED)
+        raise
 
     if not required:
         return MfaRequirementResult(MfaRequirement.NOT_REQUIRED)

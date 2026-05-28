@@ -57,7 +57,7 @@ from uniffy.core.converters import (
     domain_type_to_proto,
     org_role_to_proto,
 )
-from uniffy.core.errors import RateLimitExceededError
+from uniffy.core.errors import RateLimitExceededError, ValidationError
 from uniffy.core.models.shared import DomainType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
@@ -82,7 +82,7 @@ from uniffy.domains.auth.password_reset import (
     PasswordResetTokenNotFoundError,
     PasswordResetTokenUsedError,
 )
-from uniffy.domains.auth.tokens import decode_access_token
+from uniffy.domains.auth.tokens import decode_refresh_token
 from uniffy.domains.auth.types import (
     AuthResult,
     MfaChallengeRequired,
@@ -99,13 +99,23 @@ from uniffy.domains.invitations.operations import InvitationOperations
 
 
 def _domain_admins_to_proto(result: AuthResult) -> list[int]:
-    """Convert AuthResult domain_admin_domains to proto enum values."""
+    """Convert AuthResult domain_admin_domains to proto enum values.
+
+    Unmapped values surface as a warning rather than disappearing
+    silently so a missing entry in the proto enum is visible in logs
+    instead of underreporting an admin's badges to the UI.
+    """
     if not result.domain_admin_domains:
         return []
     values = []
     for d in result.domain_admin_domains:
-        with contextlib.suppress(ValueError):
+        try:
             values.append(domain_type_to_proto(DomainType(d)))
+        except ValueError:
+            logger.warning(
+                "domain_admins_to_proto: dropped unmapped domain {domain}",
+                domain=d,
+            )
     return values
 
 
@@ -283,7 +293,7 @@ class AuthHandlers:
 
             if request.HasField("refresh_token") and request.refresh_token:
                 try:
-                    payload = decode_access_token(request.refresh_token)
+                    payload = decode_refresh_token(request.refresh_token)
                     sid = payload.get("sid")
                     if sid:
                         session_id = UUID(sid)
@@ -304,8 +314,10 @@ class AuthHandlers:
 
             return LogoutResponse(success=True)
         except Exception as e:
-            logger.error(f"Logout error: {e}", exc_info=True)
-            # Logout never surfaces failure to the user.
+            # Logout never surfaces failure to the user; log a single line
+            # without the full traceback so routine "no session to revoke"
+            # cases stay quiet in ops logs.
+            logger.warning(f"Logout error: {e}")
             return LogoutResponse(success=True)
 
     async def list_sessions(
@@ -468,6 +480,8 @@ class AuthHandlers:
                 if preview.inviter_display_name:
                     response.inviter_display_name = preview.inviter_display_name
                 return response
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except InvitationNotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except (
@@ -485,14 +499,19 @@ class AuthHandlers:
         request: AcceptInvitationRequest,
         ctx: RequestContext,
     ) -> AcceptInvitationResponse:
-        """Consume an invitation token; creates the user + membership and logs them in."""
+        """Consume an invitation token; creates the user + membership.
+
+        Returns the ``auth_result`` variant on a steady-state success, or
+        the ``enrollment_required`` variant when the org/platform
+        mandates MFA before the account is usable.
+        """
         if not request.token:
             raise ConnectError(Code.INVALID_ARGUMENT, "token is required")
         user_agent = get_user_agent_from_context(ctx)
         try:
             async with open_session() as session:
                 ops = InvitationOperations(session)
-                result = await ops.accept(
+                outcome = await ops.accept(
                     raw_token=request.token,
                     username=request.username,
                     password=request.password,
@@ -501,18 +520,20 @@ class AuthHandlers:
                     ),
                     user_agent=user_agent,
                 )
+                if isinstance(outcome, MfaEnrollmentRequired):
+                    enrollment = EnrollmentRequiredProto(
+                        enrollment_token=outcome.enrollment_token,
+                    )
+                    if outcome.grace_expires_at is not None:
+                        enrollment.grace_expires_at.CopyFrom(
+                            datetime_to_timestamp(outcome.grace_expires_at)
+                        )
+                    return AcceptInvitationResponse(enrollment_required=enrollment)
                 return AcceptInvitationResponse(
-                    access_token=result.access_token,
-                    refresh_token=result.refresh_token,
-                    token_type="bearer",
-                    user_id=str(result.user_id),
-                    organization_id=(
-                        str(result.organization_id) if result.organization_id else ""
-                    ),
-                    organization_role=result.organization_role or "",
-                    session_id=str(result.session_id) if result.session_id else "",
-                    domain_admin_domains=_domain_admins_to_proto(result),
+                    auth_result=_auth_result_to_proto(outcome),
                 )
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except InvitationNotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except (
@@ -522,6 +543,8 @@ class AuthHandlers:
             InvitationEmailConflictError,
         ) as e:
             raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
@@ -533,7 +556,12 @@ class AuthHandlers:
         request: SendPasswordResetRequest,
         ctx: RequestContext,
     ) -> SendPasswordResetResponse:
-        """Trigger a password reset email; always returns success."""
+        """Trigger a password reset email; surfaces rate-limit, swallows the rest.
+
+        Rate-limit responses MUST surface so the caller can back off. Any
+        other failure is hidden behind a generic success to keep email
+        enumeration impossible.
+        """
         try:
             async with open_session() as session:
                 ops = PasswordResetOperations(session)
@@ -541,9 +569,12 @@ class AuthHandlers:
                     email=request.email,
                     requested_ip=audit_ip_var.get(),
                 )
+        except RateLimitExceededError as exc:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(exc))
         except Exception as e:
-            # Never leak; log for ops + still return success.
-            logger.warning(f"Password reset request error: {e}", exc_info=True)
+            # Swallowed by design (no enumeration); log one line, not a
+            # traceback that fills ops dashboards with routine SMTP hiccups.
+            logger.warning(f"Password reset request error: {e}")
         return SendPasswordResetResponse()
 
     async def verify_password_reset_token(
@@ -562,6 +593,8 @@ class AuthHandlers:
                     email=preview.email,
                     expires_at=datetime_to_timestamp(preview.expires_at),
                 )
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except PasswordResetTokenNotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except (PasswordResetTokenExpiredError, PasswordResetTokenUsedError) as e:
@@ -582,6 +615,8 @@ class AuthHandlers:
                 ops = PasswordResetOperations(session)
                 await ops.consume(request.token, request.new_password)
                 return ResetPasswordResponse(success=True)
+        except RateLimitExceededError as exc:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(exc))
         except PasswordResetTokenNotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except (PasswordResetTokenExpiredError, PasswordResetTokenUsedError) as e:

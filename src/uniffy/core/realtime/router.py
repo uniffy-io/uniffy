@@ -33,6 +33,7 @@ _DOC_PATTERN = "realtime:doc:*"
 _PERM_PATTERN = "realtime:perm:*"
 _DEFAULTS_PATTERN = "realtime:defaults:*"
 _REVOKE_PATTERN = "auth:revoke:*"
+_REVOKE_SID_PATTERN = "auth:revoke_sid:*"
 _RECONNECT_DELAY_INITIAL = 1.0
 _RECONNECT_DELAY_MAX = 30.0
 
@@ -44,6 +45,7 @@ class RouterCallbacks:
     apply_remote_update: Callable[[YDocSession, bytes], Awaitable[None]]
     enforce_role_change: Callable[[ClientHandle, str | None], Awaitable[None]]
     close_stale_user_sessions: Callable[[UUID, int], Awaitable[None]]
+    close_user_session_by_sid: Callable[[UUID, UUID], Awaitable[None]]
     reauthorize_doc: Callable[[DocKey], Awaitable[None]]
 
 
@@ -70,6 +72,16 @@ def _parse_perm_channel(channel: str) -> DocKey | None:
 def _parse_revoke_channel(channel: str) -> UUID | None:
     parts = channel.split(":")
     if len(parts) != 3 or parts[0] != "auth" or parts[1] != "revoke":
+        return None
+    try:
+        return UUID(parts[2])
+    except ValueError:
+        return None
+
+
+def _parse_revoke_sid_channel(channel: str) -> UUID | None:
+    parts = channel.split(":")
+    if len(parts) != 3 or parts[0] != "auth" or parts[1] != "revoke_sid":
         return None
     try:
         return UUID(parts[2])
@@ -137,9 +149,15 @@ class RealtimeRouter:
                 self._run_with_reconnect(_REVOKE_PATTERN, self._handle_revoke_message),
                 name="realtime-router-revoke",
             ),
+            asyncio.create_task(
+                self._run_with_reconnect(
+                    _REVOKE_SID_PATTERN, self._handle_revoke_sid_message
+                ),
+                name="realtime-router-revoke-sid",
+            ),
         ]
         logger.info(
-            "realtime router started (4 pattern subscribers)",
+            "realtime router started (5 pattern subscribers)",
             component=LOGGER_COMPONENT,
         )
 
@@ -304,6 +322,28 @@ class RealtimeRouter:
             return
         _observe_pubsub_latency("revoke", payload)
         await callbacks.close_stale_user_sessions(user_id, new_version)
+
+    async def _handle_revoke_sid_message(
+        self, channel: str, payload: dict[str, object]
+    ) -> None:
+        """Close a single user session targeted by its access-token ``sid``."""
+        user_id = _parse_revoke_sid_channel(channel)
+        if user_id is None:
+            return
+        sid_raw = payload.get("session_id")
+        if not isinstance(sid_raw, str):
+            return
+        try:
+            session_id = UUID(sid_raw)
+        except ValueError:
+            return
+        callbacks = self._callbacks
+        if callbacks is None:
+            return
+        if user_id not in self._user_handles:
+            return
+        _observe_pubsub_latency("revoke_sid", payload)
+        await callbacks.close_user_session_by_sid(user_id, session_id)
 
 
 router = RealtimeRouter()

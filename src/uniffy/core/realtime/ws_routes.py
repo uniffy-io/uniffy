@@ -74,6 +74,11 @@ async def realtime(
         token_org_raw = payload.get("org_id")
         token_org = UUID(token_org_raw) if token_org_raw else None
         token_version = payload.get("tkv")
+        sid_raw = payload.get("sid")
+        try:
+            session_id = UUID(sid_raw) if sid_raw else None
+        except (TypeError, ValueError):
+            session_id = None
     except Exception as exc:
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="decode_error").inc()
         logger.warning(
@@ -110,5 +115,6 @@ async def realtime(
         token_version=token_version,
         conn_id=id(ws),
         ws=ws,
+        session_id=session_id,
     )
     await run_multiplexed_session(ws, ws_session)

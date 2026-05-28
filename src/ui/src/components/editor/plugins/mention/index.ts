@@ -13,6 +13,7 @@ import { urnToPath } from '@/shared/utils/urn';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { getResolvedUrl } from '@/components/editor/plugins/mention/useUrnPreview';
 import { getMentionUrl } from '@/components/mention/mentionStateEmitter';
+import { getActiveEditorView } from '@/components/editor/editorRegistry';
 import { visit, SKIP } from 'unist-util-visit';
 import type { Parent, Node as UnistNode } from 'unist';
 
@@ -174,13 +175,11 @@ export const mentionRemarkPlugin = $remark('mentionRemarkPlugin', () => {
   };
 });
 
-const editorViewRef: EditorView | null = null;
-
 export const mentionInputRule = $inputRule(() => {
   const rule = new InputRule(/@([a-zA-Z0-9-_]*)$/, (_state, match, start, end) => {
     const query = match[1] || '';
 
-    const view = editorViewRef || (window as Window & { __milkdownEditorView?: EditorView }).__milkdownEditorView;
+    const view = getActiveEditorView();
 
     if (view) {
       triggerMentionSearch({

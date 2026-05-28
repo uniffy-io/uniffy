@@ -287,24 +287,12 @@ class AcceptInvitationRequest(_message.Message):
     def __init__(self, token: _Optional[str] = ..., username: _Optional[str] = ..., password: _Optional[str] = ..., full_name: _Optional[str] = ...) -> None: ...
 
 class AcceptInvitationResponse(_message.Message):
-    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")
-    ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
-    REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
-    TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
-    USER_ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
-    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
-    DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
-    access_token: str
-    refresh_token: str
-    token_type: str
-    user_id: str
-    organization_id: str
-    organization_role: str
-    session_id: str
-    domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
-    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
+    __slots__ = ("auth_result", "enrollment_required")
+    AUTH_RESULT_FIELD_NUMBER: _ClassVar[int]
+    ENROLLMENT_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    auth_result: AuthResult
+    enrollment_required: EnrollmentRequired
+    def __init__(self, auth_result: _Optional[_Union[AuthResult, _Mapping]] = ..., enrollment_required: _Optional[_Union[EnrollmentRequired, _Mapping]] = ...) -> None: ...
 
 class SendPasswordResetRequest(_message.Message):
     __slots__ = ("email",)

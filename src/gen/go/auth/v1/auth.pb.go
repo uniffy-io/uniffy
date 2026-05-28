@@ -1727,7 +1727,7 @@ type AcceptInvitationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"` // Min 8 characters
+	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"` // Min 8 characters; complexity rules in password_policy.py
 	FullName      *string                `protobuf:"bytes,4,opt,name=full_name,json=fullName,proto3,oneof" json:"full_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1791,18 +1791,19 @@ func (x *AcceptInvitationRequest) GetFullName() string {
 	return ""
 }
 
+// Two-state response. “auth_result“ is the steady-state success shape.
+// “enrollment_required“ fires when the target org (or the platform)
+// mandates MFA - the client must drive the enrollment RPCs with the
+// returned short-lived token before the account becomes usable.
 type AcceptInvitationResponse struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken        string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	RefreshToken       string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	TokenType          string                 `protobuf:"bytes,3,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"` // Always "bearer"
-	UserId             string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	OrganizationId     string                 `protobuf:"bytes,5,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	OrganizationRole   string                 `protobuf:"bytes,6,opt,name=organization_role,json=organizationRole,proto3" json:"organization_role,omitempty"` // MEMBER / ADMIN / OWNER
-	SessionId          string                 `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	DomainAdminDomains []v1.DomainType        `protobuf:"varint,8,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*AcceptInvitationResponse_AuthResult
+	//	*AcceptInvitationResponse_EnrollmentRequired
+	Result        isAcceptInvitationResponse_Result `protobuf_oneof:"result"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AcceptInvitationResponse) Reset() {
@@ -1835,61 +1836,46 @@ func (*AcceptInvitationResponse) Descriptor() ([]byte, []int) {
 	return file_auth_v1_auth_proto_rawDescGZIP(), []int{29}
 }
 
-func (x *AcceptInvitationResponse) GetAccessToken() string {
+func (x *AcceptInvitationResponse) GetResult() isAcceptInvitationResponse_Result {
 	if x != nil {
-		return x.AccessToken
-	}
-	return ""
-}
-
-func (x *AcceptInvitationResponse) GetRefreshToken() string {
-	if x != nil {
-		return x.RefreshToken
-	}
-	return ""
-}
-
-func (x *AcceptInvitationResponse) GetTokenType() string {
-	if x != nil {
-		return x.TokenType
-	}
-	return ""
-}
-
-func (x *AcceptInvitationResponse) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *AcceptInvitationResponse) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *AcceptInvitationResponse) GetOrganizationRole() string {
-	if x != nil {
-		return x.OrganizationRole
-	}
-	return ""
-}
-
-func (x *AcceptInvitationResponse) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *AcceptInvitationResponse) GetDomainAdminDomains() []v1.DomainType {
-	if x != nil {
-		return x.DomainAdminDomains
+		return x.Result
 	}
 	return nil
 }
+
+func (x *AcceptInvitationResponse) GetAuthResult() *AuthResult {
+	if x != nil {
+		if x, ok := x.Result.(*AcceptInvitationResponse_AuthResult); ok {
+			return x.AuthResult
+		}
+	}
+	return nil
+}
+
+func (x *AcceptInvitationResponse) GetEnrollmentRequired() *EnrollmentRequired {
+	if x != nil {
+		if x, ok := x.Result.(*AcceptInvitationResponse_EnrollmentRequired); ok {
+			return x.EnrollmentRequired
+		}
+	}
+	return nil
+}
+
+type isAcceptInvitationResponse_Result interface {
+	isAcceptInvitationResponse_Result()
+}
+
+type AcceptInvitationResponse_AuthResult struct {
+	AuthResult *AuthResult `protobuf:"bytes,1,opt,name=auth_result,json=authResult,proto3,oneof"`
+}
+
+type AcceptInvitationResponse_EnrollmentRequired struct {
+	EnrollmentRequired *EnrollmentRequired `protobuf:"bytes,2,opt,name=enrollment_required,json=enrollmentRequired,proto3,oneof"`
+}
+
+func (*AcceptInvitationResponse_AuthResult) isAcceptInvitationResponse_Result() {}
+
+func (*AcceptInvitationResponse_EnrollmentRequired) isAcceptInvitationResponse_Result() {}
 
 type SendPasswordResetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2322,18 +2308,12 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\bpassword\x18\x03 \x01(\tR\bpassword\x12 \n" +
 	"\tfull_name\x18\x04 \x01(\tH\x00R\bfullName\x88\x01\x01B\f\n" +
 	"\n" +
-	"_full_name\"\xd8\x02\n" +
-	"\x18AcceptInvitationResponse\x12!\n" +
-	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
-	"\n" +
-	"token_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n" +
-	"\auser_id\x18\x04 \x01(\tR\x06userId\x12'\n" +
-	"\x0forganization_id\x18\x05 \x01(\tR\x0eorganizationId\x12+\n" +
-	"\x11organization_role\x18\x06 \x01(\tR\x10organizationRole\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\a \x01(\tR\tsessionId\x12G\n" +
-	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\"0\n" +
+	"_full_name\"\xac\x01\n" +
+	"\x18AcceptInvitationResponse\x126\n" +
+	"\vauth_result\x18\x01 \x01(\v2\x13.auth.v1.AuthResultH\x00R\n" +
+	"authResult\x12N\n" +
+	"\x13enrollment_required\x18\x02 \x01(\v2\x1b.auth.v1.EnrollmentRequiredH\x00R\x12enrollmentRequiredB\b\n" +
+	"\x06result\"0\n" +
 	"\x18SendPasswordResetRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\"\x1b\n" +
 	"\x19SendPasswordResetResponse\"7\n" +
@@ -2432,45 +2412,46 @@ var file_auth_v1_auth_proto_depIdxs = []int32{
 	16, // 7: auth.v1.ListSessionsResponse.sessions:type_name -> auth.v1.SessionInfo
 	38, // 8: auth.v1.GetInvitationResponse.role:type_name -> common.v1.OrganizationRole
 	37, // 9: auth.v1.GetInvitationResponse.expires_at:type_name -> google.protobuf.Timestamp
-	36, // 10: auth.v1.AcceptInvitationResponse.domain_admin_domains:type_name -> common.v1.DomainType
-	37, // 11: auth.v1.VerifyPasswordResetTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
-	0,  // 12: auth.v1.AuthService.Register:input_type -> auth.v1.RegisterRequest
-	1,  // 13: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
-	2,  // 14: auth.v1.AuthService.RefreshToken:input_type -> auth.v1.RefreshTokenRequest
-	3,  // 15: auth.v1.AuthService.GetCurrentUser:input_type -> auth.v1.GetCurrentUserRequest
-	4,  // 16: auth.v1.AuthService.Logout:input_type -> auth.v1.LogoutRequest
-	5,  // 17: auth.v1.AuthService.ListSessions:input_type -> auth.v1.ListSessionsRequest
-	6,  // 18: auth.v1.AuthService.RevokeSession:input_type -> auth.v1.RevokeSessionRequest
-	7,  // 19: auth.v1.AuthService.RevokeOtherSessions:input_type -> auth.v1.RevokeOtherSessionsRequest
-	20, // 20: auth.v1.AuthService.GetCacheKeySeed:input_type -> auth.v1.GetCacheKeySeedRequest
-	22, // 21: auth.v1.AuthService.RotateCacheKeySeed:input_type -> auth.v1.RotateCacheKeySeedRequest
-	24, // 22: auth.v1.AuthService.GetAuthConfig:input_type -> auth.v1.GetAuthConfigRequest
-	26, // 23: auth.v1.AuthService.GetInvitation:input_type -> auth.v1.GetInvitationRequest
-	28, // 24: auth.v1.AuthService.AcceptInvitation:input_type -> auth.v1.AcceptInvitationRequest
-	30, // 25: auth.v1.AuthService.SendPasswordReset:input_type -> auth.v1.SendPasswordResetRequest
-	32, // 26: auth.v1.AuthService.VerifyPasswordResetToken:input_type -> auth.v1.VerifyPasswordResetTokenRequest
-	34, // 27: auth.v1.AuthService.ResetPassword:input_type -> auth.v1.ResetPasswordRequest
-	8,  // 28: auth.v1.AuthService.Register:output_type -> auth.v1.RegisterResponse
-	9,  // 29: auth.v1.AuthService.Login:output_type -> auth.v1.LoginResponse
-	13, // 30: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.RefreshTokenResponse
-	14, // 31: auth.v1.AuthService.GetCurrentUser:output_type -> auth.v1.GetCurrentUserResponse
-	15, // 32: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
-	17, // 33: auth.v1.AuthService.ListSessions:output_type -> auth.v1.ListSessionsResponse
-	18, // 34: auth.v1.AuthService.RevokeSession:output_type -> auth.v1.RevokeSessionResponse
-	19, // 35: auth.v1.AuthService.RevokeOtherSessions:output_type -> auth.v1.RevokeOtherSessionsResponse
-	21, // 36: auth.v1.AuthService.GetCacheKeySeed:output_type -> auth.v1.GetCacheKeySeedResponse
-	23, // 37: auth.v1.AuthService.RotateCacheKeySeed:output_type -> auth.v1.RotateCacheKeySeedResponse
-	25, // 38: auth.v1.AuthService.GetAuthConfig:output_type -> auth.v1.GetAuthConfigResponse
-	27, // 39: auth.v1.AuthService.GetInvitation:output_type -> auth.v1.GetInvitationResponse
-	29, // 40: auth.v1.AuthService.AcceptInvitation:output_type -> auth.v1.AcceptInvitationResponse
-	31, // 41: auth.v1.AuthService.SendPasswordReset:output_type -> auth.v1.SendPasswordResetResponse
-	33, // 42: auth.v1.AuthService.VerifyPasswordResetToken:output_type -> auth.v1.VerifyPasswordResetTokenResponse
-	35, // 43: auth.v1.AuthService.ResetPassword:output_type -> auth.v1.ResetPasswordResponse
-	28, // [28:44] is the sub-list for method output_type
-	12, // [12:28] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	10, // 10: auth.v1.AcceptInvitationResponse.auth_result:type_name -> auth.v1.AuthResult
+	12, // 11: auth.v1.AcceptInvitationResponse.enrollment_required:type_name -> auth.v1.EnrollmentRequired
+	37, // 12: auth.v1.VerifyPasswordResetTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
+	0,  // 13: auth.v1.AuthService.Register:input_type -> auth.v1.RegisterRequest
+	1,  // 14: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
+	2,  // 15: auth.v1.AuthService.RefreshToken:input_type -> auth.v1.RefreshTokenRequest
+	3,  // 16: auth.v1.AuthService.GetCurrentUser:input_type -> auth.v1.GetCurrentUserRequest
+	4,  // 17: auth.v1.AuthService.Logout:input_type -> auth.v1.LogoutRequest
+	5,  // 18: auth.v1.AuthService.ListSessions:input_type -> auth.v1.ListSessionsRequest
+	6,  // 19: auth.v1.AuthService.RevokeSession:input_type -> auth.v1.RevokeSessionRequest
+	7,  // 20: auth.v1.AuthService.RevokeOtherSessions:input_type -> auth.v1.RevokeOtherSessionsRequest
+	20, // 21: auth.v1.AuthService.GetCacheKeySeed:input_type -> auth.v1.GetCacheKeySeedRequest
+	22, // 22: auth.v1.AuthService.RotateCacheKeySeed:input_type -> auth.v1.RotateCacheKeySeedRequest
+	24, // 23: auth.v1.AuthService.GetAuthConfig:input_type -> auth.v1.GetAuthConfigRequest
+	26, // 24: auth.v1.AuthService.GetInvitation:input_type -> auth.v1.GetInvitationRequest
+	28, // 25: auth.v1.AuthService.AcceptInvitation:input_type -> auth.v1.AcceptInvitationRequest
+	30, // 26: auth.v1.AuthService.SendPasswordReset:input_type -> auth.v1.SendPasswordResetRequest
+	32, // 27: auth.v1.AuthService.VerifyPasswordResetToken:input_type -> auth.v1.VerifyPasswordResetTokenRequest
+	34, // 28: auth.v1.AuthService.ResetPassword:input_type -> auth.v1.ResetPasswordRequest
+	8,  // 29: auth.v1.AuthService.Register:output_type -> auth.v1.RegisterResponse
+	9,  // 30: auth.v1.AuthService.Login:output_type -> auth.v1.LoginResponse
+	13, // 31: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.RefreshTokenResponse
+	14, // 32: auth.v1.AuthService.GetCurrentUser:output_type -> auth.v1.GetCurrentUserResponse
+	15, // 33: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
+	17, // 34: auth.v1.AuthService.ListSessions:output_type -> auth.v1.ListSessionsResponse
+	18, // 35: auth.v1.AuthService.RevokeSession:output_type -> auth.v1.RevokeSessionResponse
+	19, // 36: auth.v1.AuthService.RevokeOtherSessions:output_type -> auth.v1.RevokeOtherSessionsResponse
+	21, // 37: auth.v1.AuthService.GetCacheKeySeed:output_type -> auth.v1.GetCacheKeySeedResponse
+	23, // 38: auth.v1.AuthService.RotateCacheKeySeed:output_type -> auth.v1.RotateCacheKeySeedResponse
+	25, // 39: auth.v1.AuthService.GetAuthConfig:output_type -> auth.v1.GetAuthConfigResponse
+	27, // 40: auth.v1.AuthService.GetInvitation:output_type -> auth.v1.GetInvitationResponse
+	29, // 41: auth.v1.AuthService.AcceptInvitation:output_type -> auth.v1.AcceptInvitationResponse
+	31, // 42: auth.v1.AuthService.SendPasswordReset:output_type -> auth.v1.SendPasswordResetResponse
+	33, // 43: auth.v1.AuthService.VerifyPasswordResetToken:output_type -> auth.v1.VerifyPasswordResetTokenResponse
+	35, // 44: auth.v1.AuthService.ResetPassword:output_type -> auth.v1.ResetPasswordResponse
+	29, // [29:45] is the sub-list for method output_type
+	13, // [13:29] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_auth_v1_auth_proto_init() }
@@ -2495,6 +2476,10 @@ func file_auth_v1_auth_proto_init() {
 	file_auth_v1_auth_proto_msgTypes[22].OneofWrappers = []any{}
 	file_auth_v1_auth_proto_msgTypes[27].OneofWrappers = []any{}
 	file_auth_v1_auth_proto_msgTypes[28].OneofWrappers = []any{}
+	file_auth_v1_auth_proto_msgTypes[29].OneofWrappers = []any{
+		(*AcceptInvitationResponse_AuthResult)(nil),
+		(*AcceptInvitationResponse_EnrollmentRequired)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -380,12 +380,34 @@ class SupportSessionOperations:
     async def revoke_session(
         self, *, actor_user_id: UUID, session_id: UUID, reason: str
     ) -> SupportSessionView:
-        """Either side may end an ACTIVE or PENDING session early."""
+        """Either side may end an ACTIVE or PENDING session early.
+
+        Three allowed actors: the support user themselves (self-end),
+        an actual org OWNER/ADMIN of the tenant (consent withdrawal),
+        or any platform sysadmin (operational override). Routing
+        through ``_require_actual_org_admin`` for non-support callers
+        forces sysadmins down an explicit branch so the audit row
+        records the true revoker kind instead of mislabelling them as
+        "org_admin".
+        """
         row = await self._require_session(session_id)
 
         is_support_user = row.support_user_id == actor_user_id
+        is_sysadmin = False
         if not is_support_user:
-            await self._require_org_admin(actor_user_id, row.organization_id)
+            try:
+                await self._require_actual_org_admin(
+                    actor_user_id, row.organization_id
+                )
+            except PermissionDeniedError:
+                actor = (
+                    await self._session.execute(
+                        select(User).where(User.id == actor_user_id)
+                    )
+                ).scalar_one_or_none()
+                if actor is None or not actor.is_system_admin:
+                    raise
+                is_sysadmin = True
 
         if row.state in _TERMINAL_STATES:
             raise SupportSessionTransitionError(row.state.value, "revoke")
@@ -403,6 +425,11 @@ class SupportSessionOperations:
         row.revoked_by_user_id = actor_user_id
         self._session.add(row)
 
+        revoked_by_kind = (
+            "support"
+            if is_support_user
+            else ("sysadmin" if is_sysadmin else "org_admin")
+        )
         await write_audit_event(
             self._session,
             organization_id=row.organization_id,
@@ -412,7 +439,7 @@ class SupportSessionOperations:
             resource_id=row.id,
             details={
                 "reason": reason,
-                "revoked_by_kind": "support" if is_support_user else "org_admin",
+                "revoked_by_kind": revoked_by_kind,
             },
         )
         await self._session.commit()

@@ -8,6 +8,7 @@ import { setAccentColor, setFontFamily } from '@/config/theme/themeSlice';
 import {
     friendlyErrorMessage,
     initStorageEncryptionFromApi,
+    setEnrollmentToken,
     setMemoryAccessToken,
     unaryTransport,
 } from '@/config';
@@ -165,7 +166,7 @@ export function AuthForms() {
             } else if (variant.case === 'mfaChallenge') {
                 setMfaChallengeToken(variant.value.challengeToken);
             } else if (variant.case === 'enrollmentRequired') {
-                setMemoryAccessToken(variant.value.enrollmentToken);
+                setEnrollmentToken(variant.value.enrollmentToken);
                 navigate('/auth/enroll-mfa', { replace: true });
             } else {
                 setError('Unexpected login response. Please try again.');

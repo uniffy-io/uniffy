@@ -39,9 +39,19 @@ def _parse_uuid(value: str, field: str) -> UUID:
 
 
 def _resolve_org(ctx: RequestContext, request_org_id: str) -> UUID:
-    if request_org_id:
-        return _parse_uuid(request_org_id, "organization_id")
+    """JWT wins; request value must match when both are present.
+
+    See ``domains/tags/handlers.py::_resolve_org`` for the rationale.
+    """
     inferred = get_organization_id_from_context(ctx)
+    if request_org_id:
+        parsed = _parse_uuid(request_org_id, "organization_id")
+        if inferred is not None and inferred != parsed:
+            raise ConnectError(
+                Code.PERMISSION_DENIED,
+                "organization_id does not match the authenticated session",
+            )
+        return parsed
     if inferred is None:
         raise ConnectError(Code.INVALID_ARGUMENT, "organization_id is required")
     return inferred

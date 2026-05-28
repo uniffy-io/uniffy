@@ -35,18 +35,39 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import write_audit_event
+from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.password_reset_token import PasswordResetToken
 from uniffy.core.models.login.user import User
 from uniffy.core.valkey.queue import get_queue
+from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.passwords import hash_password
 from uniffy.domains.security.operations import SecurityOperations
 
 _TOKEN_TTL = timedelta(minutes=30)
 _TEMPLATE = "auth/password_reset"
+
+# Loose caps mirror the login throttle ratio: the email bucket catches a
+# targeted attack on one address, the IP bucket catches a spray. Both are
+# loose enough that a legitimate user requesting a fresh link a few times
+# in a row never trips. Per-token throttling on ``consume`` is the
+# stronger defense and lives separately.
+RESET_REQUEST_LIMIT_EMAIL = 5
+RESET_REQUEST_LIMIT_IP = 20
+RESET_REQUEST_WINDOW_SECONDS = 15 * 60
+
+RESET_CONSUME_LIMIT_IP = 30
+RESET_CONSUME_WINDOW_SECONDS = 15 * 60
+
+# Preview is unauthenticated and confirms a token resolves to an email.
+# Per-token-hash is the load-bearing bucket - bounds how many times one
+# token can be confirmed if its value somehow leaks. Per-IP is best-effort
+# and skipped when the IP is not trustable.
+RESET_VERIFY_LIMIT_IP = 60
+RESET_VERIFY_LIMIT_TOKEN = 10
+RESET_VERIFY_WINDOW_SECONDS = 15 * 60
 
 
 def _hash_token(raw: str) -> str:
@@ -99,11 +120,28 @@ class PasswordResetOperations:
         """Send a reset link if the email maps to an active user.
 
         Always succeeds from the caller's perspective -- the RPC never
-        reveals whether the address has an account.
+        reveals whether the address has an account. Rate-limited per
+        email and per IP so the endpoint cannot be used to flood SMTP
+        or to enumerate addresses by response timing.
         """
         normalized = email.strip().lower()
         if not normalized or "@" not in normalized:
             return
+
+        await check_rate_limit(
+            key=f"rl:auth:reset:email:{normalized}",
+            limit=RESET_REQUEST_LIMIT_EMAIL,
+            window_seconds=RESET_REQUEST_WINDOW_SECONDS,
+            resource="password reset requests (per email)",
+        )
+        rate_limit_ip = client_ip_for_rate_limit()
+        if rate_limit_ip:
+            await check_rate_limit(
+                key=f"rl:auth:reset:ip:{rate_limit_ip}",
+                limit=RESET_REQUEST_LIMIT_IP,
+                window_seconds=RESET_REQUEST_WINDOW_SECONDS,
+                resource="password reset requests (per ip)",
+            )
 
         user = (
             await self._session.execute(select(User).where(User.email == normalized))
@@ -173,7 +211,28 @@ class PasswordResetOperations:
         )
 
     async def verify(self, raw_token: str) -> PasswordResetPreview:
-        """Return ``(email, expires_at)`` for the reset page or raise."""
+        """Return ``(email, expires_at)`` for the reset page or raise.
+
+        Rate-limited per-token-hash (load-bearing) + per-IP (best-effort,
+        skipped on misconfigured proxies). The token bucket bounds how
+        many times one token can be confirmed even if its raw value
+        somehow leaks to an attacker (mail log, referrer); the IP bucket
+        adds a second guard for spray scans from a single trusted client.
+        """
+        await check_rate_limit(
+            key=f"rl:auth:reset_verify:token:{_hash_token(raw_token)}",
+            limit=RESET_VERIFY_LIMIT_TOKEN,
+            window_seconds=RESET_VERIFY_WINDOW_SECONDS,
+            resource="password reset verify attempts (per token)",
+        )
+        rate_limit_ip = client_ip_for_rate_limit()
+        if rate_limit_ip:
+            await check_rate_limit(
+                key=f"rl:auth:reset_verify:ip:{rate_limit_ip}",
+                limit=RESET_VERIFY_LIMIT_IP,
+                window_seconds=RESET_VERIFY_WINDOW_SECONDS,
+                resource="password reset verify attempts (per ip)",
+            )
         token_record, user = await self._load_active_token(raw_token)
         return PasswordResetPreview(
             email=user.email,
@@ -181,9 +240,25 @@ class PasswordResetOperations:
         )
 
     async def consume(self, raw_token: str, new_password: str) -> User:
-        """Apply the new password + invalidate all existing sessions."""
-        if len(new_password) < 8:
-            raise ValueError("Password must be at least 8 characters")
+        """Apply the new password + invalidate all existing sessions.
+
+        Per-IP throttle bounds brute-force attempts against the token
+        space; the underlying token is 256-bit so the cap is more about
+        slowing crawlers than preventing guessing. The IP is read from
+        the request ContextVar; behind an unconfigured reverse proxy
+        the helper returns ``None`` and the per-IP bucket is skipped.
+        """
+        rate_limit_ip = client_ip_for_rate_limit()
+        if rate_limit_ip:
+            await check_rate_limit(
+                key=f"rl:auth:reset_consume:ip:{rate_limit_ip}",
+                limit=RESET_CONSUME_LIMIT_IP,
+                window_seconds=RESET_CONSUME_WINDOW_SECONDS,
+                resource="password reset attempts (per ip)",
+            )
+        from uniffy.domains.auth.password_policy import validate_password
+
+        validate_password(new_password)
 
         token_record, user = await self._load_active_token(raw_token)
 

@@ -88,7 +88,9 @@ class TestPublicRegistrationFlag:
 
 class TestRegisterGate:
     def test_rejects_when_disabled(self) -> None:
+        # AsyncSession.add is sync; AsyncMock would return an unawaited coroutine.
         session = AsyncMock()
+        session.add = MagicMock()
         ops = AuthOperations(session)
         with (
             patch.dict(os.environ, {"ALLOW_PUBLIC_REGISTRATION": "false"}, clear=False),
@@ -117,7 +119,10 @@ class TestRegisterGate:
         # We only verify the gate falls through; downstream code raises on the
         # AsyncMock session inside the real flow, which is fine -- we just need
         # to know the gate did not short-circuit with RegistrationError.
+        # AsyncSession.add is sync; AsyncMock would return an unawaited coroutine
+        # when write_audit_event hits session.add(event) on the reject path.
         session = AsyncMock()
+        session.add = MagicMock()
         ops = AuthOperations(session)
         with (
             patch.dict(os.environ, {"ALLOW_PUBLIC_REGISTRATION": "true"}, clear=False),
@@ -128,7 +133,12 @@ class TestRegisterGate:
             patch.object(
                 ops, "_get_user_by_email", new=AsyncMock(return_value=object())
             ),
-            pytest.raises(RegistrationError, match="already"),
+            patch.object(
+                ops, "_get_user_by_username", new=AsyncMock(return_value=None)
+            ),
+            pytest.raises(
+                RegistrationError, match="Could not create account"
+            ),
         ):
             _run(
                 ops.register(

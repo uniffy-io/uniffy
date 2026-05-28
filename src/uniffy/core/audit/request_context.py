@@ -5,6 +5,7 @@ through their signatures. Worker / ARQ paths leave them unset and the writer
 treats that as a system-initiated event.
 """
 
+import ipaddress
 import os
 from contextvars import ContextVar
 from typing import Final
@@ -54,6 +55,46 @@ def _extract_ip(scope: Scope) -> str | None:
     if len(parts) < _TRUSTED_PROXY_HOPS:
         return direct_ip
     return parts[-_TRUSTED_PROXY_HOPS] or direct_ip
+
+
+def client_ip_for_rate_limit() -> str | None:
+    """Return the audit IP only when it can be trusted as a client identifier.
+
+    Per-IP rate limits silently turn into "per-proxy" buckets the moment a
+    reverse proxy sits in front of the backend without ``TRUSTED_PROXY_HOPS``
+    set: every request shares the proxy's socket IP, so one user's brute-force
+    fills the bucket for every other user behind the same proxy. The same
+    failure mode shows up on a LAN where every client shares a CGNAT egress.
+
+    We treat an IP as trustworthy for rate limiting when either:
+
+    * the operator has explicitly configured ``TRUSTED_PROXY_HOPS`` and we
+      parsed an entry out of ``X-Forwarded-For`` (so the value really is a
+      client, not a proxy); or
+    * the resolved IP is a public address (so even without a proxy it
+      represents an internet client).
+
+    Loopback or RFC1918 IPs with no proxy trust configured are dropped: the
+    caller falls back to the per-email / per-token buckets and the deployment
+    keeps working until the operator sets the env knob.
+
+    The audit IP is unaffected - we still record whatever socket peer or
+    forwarded-for entry we saw, so forensic correlation is preserved even when
+    the rate-limit bucket is skipped.
+    """
+    raw = audit_ip_var.get()
+    if not raw:
+        return None
+    try:
+        addr = ipaddress.ip_address(raw)
+    except ValueError:
+        return None
+    if _TRUSTED_PROXY_HOPS > 0:
+        # Operator opted into XFF; trust whatever _extract_ip resolved.
+        return raw
+    if addr.is_loopback or addr.is_private or addr.is_link_local:
+        return None
+    return raw
 
 
 def _extract_user_agent(scope: Scope) -> str | None:

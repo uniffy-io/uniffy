@@ -49,6 +49,7 @@ from uniffy.domains.auth.errors import (
     MfaRateLimitedError,
     TokenError,
 )
+from uniffy.domains.auth.mfa.challenge import ENROLLMENT_ALLOWED_RPCS
 from uniffy.domains.auth.mfa.operations import MfaOperations
 
 
@@ -67,7 +68,7 @@ class MfaHandlers:
         request: BeginEnrollmentRequest,
         ctx: RequestContext,
     ) -> BeginEnrollmentResponse:
-        user_id = _user_for_enrollment(ctx)
+        user_id = _user_for_enrollment(ctx, rpc="BeginEnrollment")
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -92,7 +93,7 @@ class MfaHandlers:
         request: ConfirmEnrollmentRequest,
         ctx: RequestContext,
     ) -> ConfirmEnrollmentResponse:
-        user_id = _user_for_enrollment(ctx)
+        user_id = _user_for_enrollment(ctx, rpc="ConfirmEnrollment")
         user_agent = get_user_agent_from_context(ctx)
         try:
             async with open_session() as session:
@@ -195,7 +196,7 @@ class MfaHandlers:
         request: GetMfaStatusRequest,
         ctx: RequestContext,
     ) -> GetMfaStatusResponse:
-        user_id = _user_for_enrollment(ctx)
+        user_id = _user_for_enrollment(ctx, rpc="GetMfaStatus")
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
@@ -345,14 +346,19 @@ class MfaHandlers:
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
 
-def _user_for_enrollment(ctx: RequestContext) -> UUID:
+def _user_for_enrollment(ctx: RequestContext, *, rpc: str) -> UUID:
     """Accept either an access token or an enrollment-only token.
 
-    Whichever decoder accepts the token first wins. Used by the three
-    RPCs that must work for users who do not yet have full access:
-    BeginEnrollment, ConfirmEnrollment, GetMfaStatus.
+    ``rpc`` is checked against ``ENROLLMENT_ALLOWED_RPCS`` so an
+    enrollment-only token is only honoured for the three enrollment
+    endpoints (``BeginEnrollment``, ``ConfirmEnrollment``,
+    ``GetMfaStatus``). Any future handler that calls this helper
+    without an allowlisted name will refuse to accept an enrollment
+    token and require a real access token instead.
     """
     try:
         return get_user_id_from_context(ctx)
     except ConnectError:
+        if rpc not in ENROLLMENT_ALLOWED_RPCS:
+            raise
         return get_user_id_from_enrollment_context(ctx)

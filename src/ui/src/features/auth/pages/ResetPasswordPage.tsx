@@ -16,6 +16,22 @@ export function ResetPasswordPage() {
     const token = params.get('token') ?? '';
     const navigate = useNavigate();
 
+    // The reset URL carries the raw token in the query string. Without a
+    // referrer policy, any third-party link the user clicks from this page
+    // would leak the token to that origin via the Referer header. The token
+    // is single-use and short-lived, but suppressing the referrer entirely
+    // is cheap insurance and consistent with the privacy posture we promise
+    // on the rest of the auth surface.
+    useEffect(() => {
+        const meta = document.createElement('meta');
+        meta.name = 'referrer';
+        meta.content = 'no-referrer';
+        document.head.appendChild(meta);
+        return () => {
+            document.head.removeChild(meta);
+        };
+    }, []);
+
     const [bindingEmail, setBindingEmail] = useState<string | null>(null);
     const [previewError, setPreviewError] = useState<string | null>(
         () => (token ? null : 'Missing reset token.'),

@@ -273,19 +273,19 @@ message GetInvitationResponse {
 message AcceptInvitationRequest {
   string token = 1;
   string username = 2;
-  string password = 3; // Min 8 characters
+  string password = 3; // Min 8 characters; complexity rules in password_policy.py
   optional string full_name = 4;
 }
 
+// Two-state response. ``auth_result`` is the steady-state success shape.
+// ``enrollment_required`` fires when the target org (or the platform)
+// mandates MFA - the client must drive the enrollment RPCs with the
+// returned short-lived token before the account becomes usable.
 message AcceptInvitationResponse {
-  string access_token = 1;
-  string refresh_token = 2;
-  string token_type = 3; // Always "bearer"
-  string user_id = 4;
-  string organization_id = 5;
-  string organization_role = 6; // MEMBER / ADMIN / OWNER
-  string session_id = 7;
-  repeated common.v1.DomainType domain_admin_domains = 8;
+  oneof result {
+    AuthResult auth_result = 1;
+    EnrollmentRequired enrollment_required = 2;
+  }
 }
 
 message SendPasswordResetRequest {

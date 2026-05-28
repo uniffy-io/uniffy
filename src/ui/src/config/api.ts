@@ -17,6 +17,14 @@ import { initStorageEncryption } from '@/shared/crypto/storageEncryption';
 // Access token lives in memory only - never persisted, to reduce XSS surface.
 let memoryAccessToken: string | null = null;
 
+// Dedicated slot for the short-lived MFA enrollment-only token. Kept
+// separate from ``memoryAccessToken`` so the service worker never sees
+// it (only access tokens get broadcast) and so the auth interceptor's
+// refresh logic never tries to refresh it. The slot is populated only
+// during the mid-login MFA enrollment dance and cleared the moment the
+// real access token arrives from ConfirmEnrollment.
+let memoryEnrollmentToken: string | null = null;
+
 function getAuthState(): {
   accessToken: string | null;
   refreshToken: string | null;
@@ -60,14 +68,38 @@ function getAuthState(): {
 
 function setMemoryAccessToken(token: string | null): void {
   memoryAccessToken = token;
-  if (token) {
+  if (token && isAccessKindToken(token)) {
+    // The MFA enrollment flow temporarily parks a ``type=enrollment_only``
+    // token in this slot so the existing Bearer plumbing reaches the three
+    // enrollment RPCs. Forwarding it to the media service worker would
+    // make the worker attach a non-access token to file/thumbnail
+    // requests, and the strict ``decode_access_token`` on the backend
+    // would 401 every such call until enrollment completes. Decode the
+    // ``type`` claim here and only push real access tokens through.
     updateWorkerAuthToken(token);
   }
+}
+
+function isAccessKindToken(token: string): boolean {
+  const payload = decodeJwtPayload(token) as { type?: string } | null;
+  return payload?.type === 'access';
 }
 
 function clearMemoryAccessToken(): void {
   memoryAccessToken = null;
   clearWorkerAuthToken();
+}
+
+function setEnrollmentToken(token: string | null): void {
+  memoryEnrollmentToken = token;
+}
+
+function clearEnrollmentToken(): void {
+  memoryEnrollmentToken = null;
+}
+
+function getEnrollmentToken(): string | null {
+  return memoryEnrollmentToken;
 }
 
 function updateAuthState(
@@ -105,8 +137,35 @@ function updateAuthState(
   }
 }
 
-function clearAuthAndRedirect(): void {
+async function clearAuthAndRedirect(): Promise<void> {
+  // Best-effort server-side session kill so a stolen refresh / leaked sid
+  // does not outlive the client cleanup. The Logout RPC tolerates absent
+  // or expired tokens, so failure here is non-fatal - we still proceed
+  // with local cleanup and the redirect.
+  const { refreshToken } = getAuthState();
+  if (refreshToken) {
+    try {
+      const transportNoAuth = createConnectTransport({
+        baseUrl: env.apiBaseUrl,
+        useBinaryFormat: true,
+        defaultTimeoutMs: 5_000,
+      });
+      const client = createClient(AuthService, transportNoAuth);
+      await client.logout({ refreshToken });
+    } catch {
+      // Server-side cleanup is best-effort; ignore.
+    }
+  }
+
   clearMemoryAccessToken();
+
+  // Tell the realtime multiplexer (and any other auth-aware long-lived
+  // worker) to disconnect cleanly BEFORE we navigate. Without this the
+  // page redirect tears the WS down in mid-frame and we lose the chance
+  // to send a clean close frame.
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('uniffy:auth:revoked'));
+  }
 
   const store = getStoreRef();
   if (store) {
@@ -303,6 +362,13 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 
     if (accessToken) {
       req.header.set('Authorization', `Bearer ${accessToken}`);
+    } else if (memoryEnrollmentToken) {
+      // Mid-login MFA enrollment: no access token exists yet, only the
+      // short-lived enrollment-only token. Attach it without going
+      // through the refresh path - the enrollment token is not
+      // refreshable and the backend's strict ``type=access`` decoder
+      // would reject any attempt to use it as one.
+      req.header.set('Authorization', `Bearer ${memoryEnrollmentToken}`);
     }
   }
 
@@ -310,13 +376,18 @@ const authInterceptor: Interceptor = (next) => async (req) => {
     return await next(req);
   } catch (error) {
     if (error instanceof ConnectError && error.code === Code.Unauthenticated && !isRefreshRequest) {
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        req.header.set('Authorization', `Bearer ${newToken}`);
-        return await next(req);
-      }
+      // Skip the refresh+retry dance when we are riding on an enrollment
+      // token - refresh would fail (no session yet) and bounce the user
+      // off the enrollment page they are in the middle of.
+      if (!memoryEnrollmentToken) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          req.header.set('Authorization', `Bearer ${newToken}`);
+          return await next(req);
+        }
 
-      await clearAuthAndRedirect();
+        await clearAuthAndRedirect();
+      }
     }
 
     throw error;
@@ -339,6 +410,9 @@ export const unaryTransport = createConnectTransport({
 
 export { setMemoryAccessToken };
 export { clearMemoryAccessToken };
+export { setEnrollmentToken };
+export { clearEnrollmentToken };
+export { getEnrollmentToken };
 
 export function getAccessToken(): string | null {
     return memoryAccessToken;

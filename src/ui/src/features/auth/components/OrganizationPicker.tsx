@@ -181,6 +181,10 @@ export function OrganizationPicker() {
   };
 
   const handleLogout = () => {
+    if (refreshToken) {
+      const client = createClient(AuthService, unaryTransport);
+      client.logout({ refreshToken }).catch(() => { });
+    }
     clearMemoryAccessToken();
     dispatch(logout());
     dispatch(resetSettings());

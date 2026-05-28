@@ -30,6 +30,16 @@ def token_revoke_channel(user_id: UUID) -> str:
     return f"auth:revoke:{user_id}"
 
 
+def session_revoke_channel(user_id: UUID) -> str:
+    """Per-user channel; payload carries the specific ``session_id`` to close.
+
+    Keyed by user_id rather than session_id so the router can reuse its
+    existing ``_user_handles`` registry to find the matching WS without
+    a second index.
+    """
+    return f"auth:revoke_sid:{user_id}"
+
+
 async def publish_doc_update(
     content_type: ContentType,
     content_id: UUID,
@@ -90,6 +100,24 @@ async def publish_token_revoke(user_id: UUID, new_version: int) -> None:
         {
             "origin_replica": replica_id(),
             "token_version": new_version,
+            "published_at": time.time(),
+        },
+    )
+
+
+async def publish_session_revoke(user_id: UUID, session_id: UUID) -> None:
+    """Fan out a single-session revoke (logout-this-device).
+
+    Used when ``token_version`` did NOT bump - revoking one session
+    must not kill the user's other live tokens. Subscribers match
+    against the access token's ``sid`` claim and close only the WS /
+    stream bound to that session.
+    """
+    await publish_to_channel(
+        session_revoke_channel(user_id),
+        {
+            "origin_replica": replica_id(),
+            "session_id": str(session_id),
             "published_at": time.time(),
         },
     )

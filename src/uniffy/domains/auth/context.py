@@ -14,9 +14,10 @@ from uniffy.domains.auth.tokens import decode_access_token
 def get_user_id_from_context(ctx: RequestContext) -> UUID:
     """Extract user ID from an access-token bearer header.
 
-    Requires ``type == "access"`` so short-lived MFA challenge /
-    enrollment-only tokens cannot authorize normal RPCs. Revocation is
-    enforced once per RPC by `AuthRevocationInterceptor`.
+    ``decode_access_token`` enforces ``type == "access"`` so refresh /
+    mfa_challenge / enrollment_only tokens are rejected at the decoder
+    rather than slipping through. Revocation is enforced once per RPC
+    by ``AuthRevocationInterceptor``.
     """
     headers = ctx.request_headers()
     auth_header = headers.get("authorization", "")
@@ -27,19 +28,11 @@ def get_user_id_from_context(ctx: RequestContext) -> UUID:
             "Missing or invalid authorization header",
         )
 
-    token = auth_header[7:]  # Remove "Bearer " prefix
+    token = auth_header[7:]
 
     try:
         payload = decode_access_token(token)
-        if payload.get("type") != "access":
-            raise ConnectError(
-                Code.UNAUTHENTICATED,
-                "Wrong token type for this endpoint",
-            )
-        user_id = UUID(payload["sub"])
-        return user_id
-    except ConnectError:
-        raise
+        return UUID(payload["sub"])
     except Exception as e:
         logger.error(f"JWT decode error: {e}")
         raise ConnectError(Code.UNAUTHENTICATED, f"Invalid or expired token: {e}")

@@ -99,18 +99,6 @@ export function usePresenceHeartbeat() {
         };
         document.addEventListener('visibilitychange', handleVisibility);
 
-        // sendBeacon is fire-and-forget on tab close; TTL on the server side handles cleanup either way.
-        const handleUnload = () => {
-            if (!organizationId) return;
-            const url = '/presence.v1.PresenceService/SetPresence';
-            try {
-                navigator.sendBeacon(url);
-            } catch {
-                // best-effort
-            }
-        };
-        window.addEventListener('beforeunload', handleUnload);
-
         return () => {
             if (heartbeatRef.current) {
                 clearInterval(heartbeatRef.current);
@@ -124,7 +112,6 @@ export function usePresenceHeartbeat() {
                 window.removeEventListener(event, handleActivity);
             }
             document.removeEventListener('visibilitychange', handleVisibility);
-            window.removeEventListener('beforeunload', handleUnload);
         };
     }, [isAuthenticated, organizationId, userId, dispatch, sendPresence, resetIdleTimer]);
 }

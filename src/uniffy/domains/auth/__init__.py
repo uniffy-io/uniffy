@@ -33,6 +33,8 @@ from uniffy.domains.auth.tokens import (
     create_access_token,
     create_refresh_token,
     decode_access_token,
+    decode_refresh_token,
+    decode_token_unsafe,
 )
 from uniffy.domains.auth.types import AuthResult, TokenPair
 
@@ -44,6 +46,8 @@ __all__ = [
     "create_access_token",
     "create_refresh_token",
     "decode_access_token",
+    "decode_refresh_token",
+    "decode_token_unsafe",
     "AuthResult",
     "TokenPair",
     "AuthenticationError",

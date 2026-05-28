@@ -10,7 +10,10 @@ from uuid import UUID
 from fastapi import Header, HTTPException, status
 from loguru import logger
 
-from uniffy.domains.auth.revocation import is_access_token_revoked
+from uniffy.domains.auth.revocation import (
+    is_access_token_revoked,
+    is_session_revoked,
+)
 from uniffy.domains.auth.tokens import decode_access_token
 
 
@@ -53,15 +56,7 @@ async def get_current_user_id(
 
     try:
         payload = decode_access_token(token)
-        if payload.get("type") != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Wrong token type for this endpoint",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
         user_id = UUID(payload["sub"])
-    except HTTPException:
-        raise
     except Exception as e:
         logger.debug(f"JWT decode error: {e}")
         raise HTTPException(
@@ -76,4 +71,16 @@ async def get_current_user_id(
             detail="Token has been revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    sid_raw = payload.get("sid")
+    if sid_raw:
+        try:
+            session_id = UUID(sid_raw)
+        except (TypeError, ValueError):
+            session_id = None
+        if session_id is not None and await is_session_revoked(session_id):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been revoked",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     return user_id

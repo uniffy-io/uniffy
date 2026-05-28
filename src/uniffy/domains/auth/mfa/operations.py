@@ -15,7 +15,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import audit_ip_var, write_audit_event
+from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.user import User
@@ -182,6 +182,7 @@ class MfaOperations:
             user_id=user.id,
             user_agent=user_agent[:512],
             device_label=parse_device_label(user_agent),
+            ip_address=(audit_ip_var.get() or "")[:45],
         )
         self._session.add(session_record)
         await self._session.flush()
@@ -198,6 +199,9 @@ class MfaOperations:
             token_version=user.token_version,
             session_id=session_record.id,
         )
+        from uniffy.domains.auth.operations import _hash_refresh_token
+
+        session_record.refresh_token_hash = _hash_refresh_token(refresh)
 
         await self._audit_mfa_self_event(
             user_id=user_id,
@@ -232,7 +236,12 @@ class MfaOperations:
             UUID(payload["org_id"]) if payload.get("org_id") else None
         )
         challenge_tkv = payload.get("tkv")
-        ip = audit_ip_var.get()
+        # client_ip_for_rate_limit returns None when the resolved IP is the
+        # local proxy address with no TRUSTED_PROXY_HOPS configured - in that
+        # case the per-IP bucket is skipped and the per-user counter alone
+        # gates the attempt. The user-locked counter (5 fails / 15 min) is
+        # the must-have; the IP counter is defense in depth.
+        ip = client_ip_for_rate_limit()
 
         lock = await is_verify_locked(user_id, ip)
         if lock.user_locked or lock.ip_locked:
@@ -289,6 +298,7 @@ class MfaOperations:
             user_id=user.id,
             user_agent=user_agent[:512],
             device_label=parse_device_label(user_agent),
+            ip_address=(audit_ip_var.get() or "")[:45],
         )
         self._session.add(session_record)
         await self._session.flush()
@@ -306,6 +316,9 @@ class MfaOperations:
             token_version=user.token_version,
             session_id=session_record.id,
         )
+        from uniffy.domains.auth.operations import _hash_refresh_token
+
+        session_record.refresh_token_hash = _hash_refresh_token(refresh)
 
         await write_audit_event(
             self._session,
@@ -679,6 +692,8 @@ class MfaOperations:
             MailSuppressedError,
         )
         from uniffy.core.mail.sender import MailSender
+        from uniffy.core.models.login.user_session import UserSession
+        from uniffy.domains.auth.revocation import mark_sessions_revoked
 
         await self._session.execute(
             delete(UserRecoveryCode).where(UserRecoveryCode.user_id == target.id)
@@ -688,10 +703,32 @@ class MfaOperations:
         )
         await self._bump_token_version(target)
 
+        # Bumping token_version alone leaves the existing access tokens valid
+        # until their 15-min natural expiry. Flip every UserSession row AND
+        # publish per-sid revoked markers so the interceptor rejects every
+        # outstanding token on the next RPC.
+        now = datetime.now(UTC)
+        session_rows = (
+            await self._session.execute(
+                select(UserSession.id).where(
+                    UserSession.user_id == target.id,
+                    UserSession.is_revoked.is_(False),
+                )
+            )
+        ).all()
+        revoked_session_ids = [row[0] for row in session_rows]
+        if revoked_session_ids:
+            await self._session.execute(
+                update(UserSession)
+                .where(UserSession.id.in_(revoked_session_ids))
+                .values(is_revoked=True, revoked_at=now)
+            )
+
         details = {
             "target_user_id": str(target.id),
             "target_email": target.email,
             "reason": (reason or "").strip(),
+            "revoked_session_count": len(revoked_session_ids),
         }
         if extra_details:
             details.update(extra_details)
@@ -707,6 +744,15 @@ class MfaOperations:
         )
         await self._session.commit()
         await mark_token_version_revoked(target.id, target.token_version)
+        await mark_sessions_revoked(revoked_session_ids)
+        # Publish the token_version bump so the realtime router closes
+        # every open WS for the target with code 4410. Streaming RPCs
+        # (chat, notifications, agent runtime) still ride out to their
+        # natural disconnect - a follow-up could subscribe them to the
+        # same channel; for now the WS path is the user-visible one.
+        from uniffy.core.realtime.publisher import publish_token_revoke
+
+        await publish_token_revoke(target.id, target.token_version)
 
         try:
             await MailSender().send(

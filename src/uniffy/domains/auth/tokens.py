@@ -1,7 +1,7 @@
 """JWT token utilities for authentication."""
 
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -11,24 +11,23 @@ import jwt
 # Short-lived access tokens for security - user verification happens on refresh
 DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES = 15
 DEFAULT_REFRESH_TOKEN_EXPIRE_DAYS = 90
+# Hard ceiling on the env override so a misconfigured deployment cannot mint
+# year-long access tokens. The refresh path is the right knob for long
+# sessions; the access token should stay short.
+MAX_ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
 def get_access_token_expire_minutes() -> int:
-    """
-    Get access token expiration time from environment.
-
-    Returns
-    -------
-    int
-        Access token expiration time in minutes.
-
-    """
+    """Access-token TTL, clamped to ``MAX_ACCESS_TOKEN_EXPIRE_MINUTES``."""
     expire_str = os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES")
     if expire_str:
         try:
-            return int(expire_str)
+            minutes = int(expire_str)
         except ValueError:
-            pass
+            return DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES
+        if minutes <= 0:
+            return DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES
+        return min(minutes, MAX_ACCESS_TOKEN_EXPIRE_MINUTES)
     return DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES
 
 
@@ -93,11 +92,11 @@ def create_access_token(
     if expires_delta is None:
         expires_delta = timedelta(minutes=get_access_token_expire_minutes())
 
-    expire = datetime.utcnow() + expires_delta
+    now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": str(user_id),
-        "exp": expire,
-        "iat": datetime.utcnow(),
+        "exp": now + expires_delta,
+        "iat": now,
         "type": "access",
     }
 
@@ -122,27 +121,41 @@ def create_access_token(
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
+    """Decode + verify an access token. Refuses other token kinds.
+
+    Refresh / mfa_challenge / enrollment_only tokens share the signing
+    key but have different ``type`` claims; a centralised type check
+    here makes "wrong-kind token in Authorization header" a typed
+    rejection at the decoder rather than something every caller has to
+    remember to assert.
     """
-    Decode and verify a JWT access token.
+    return _decode_with_required_type(token, "access")
 
-    Parameters
-    ----------
-    token : str
-        JWT token to decode.
 
-    Returns
-    -------
-    dict[str, Any]
-        Decoded token payload.
+def decode_refresh_token(token: str) -> dict[str, Any]:
+    """Decode + verify a refresh token. Refuses other token kinds."""
+    return _decode_with_required_type(token, "refresh")
 
-    Raises
-    ------
-    jwt.InvalidTokenError
-        If token is invalid or expired.
 
+def decode_token_unsafe(token: str) -> dict[str, Any]:
+    """Decode without enforcing a ``type``; for callers that dispatch on it.
+
+    Used by the revocation interceptor, which inspects ``sub`` / ``tkv``
+    / ``sid`` regardless of token kind. Production callers that act on
+    the token's identity should reach for ``decode_access_token`` /
+    ``decode_refresh_token`` instead.
     """
     secret_key = get_secret_key()
+    return jwt.decode(token, secret_key, algorithms=["HS256"])
+
+
+def _decode_with_required_type(token: str, expected_type: str) -> dict[str, Any]:
+    secret_key = get_secret_key()
     payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+    if payload.get("type") != expected_type:
+        raise jwt.InvalidTokenError(
+            f"Expected token type {expected_type!r}, got {payload.get('type')!r}"
+        )
     return payload
 
 
@@ -175,11 +188,11 @@ def create_refresh_token(
     if expires_delta is None:
         expires_delta = timedelta(days=90)
 
-    expire = datetime.utcnow() + expires_delta
+    now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": str(user_id),
-        "exp": expire,
-        "iat": datetime.utcnow(),
+        "exp": now + expires_delta,
+        "iat": now,
         "type": "refresh",
     }
 

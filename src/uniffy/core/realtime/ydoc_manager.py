@@ -74,6 +74,7 @@ class YDocManager:
             apply_remote_update=self._apply_remote_pubsub_update,
             enforce_role_change=self._enforce_role_change,
             close_stale_user_sessions=self._close_stale_user_sessions,
+            close_user_session_by_sid=self._close_user_session_by_sid,
             reauthorize_doc=self._reauthorize_doc_by_key,
         )
 
@@ -123,6 +124,7 @@ class YDocManager:
             can_edit=can_edit,
             token_version=ws_session.token_version,
             ws=ws_session.ws,
+            session_id=ws_session.session_id,
             doc_key=session.key,
             ws_session=ws_session,
         )
@@ -342,6 +344,29 @@ class YDocManager:
 
         for handle in affected:
             await self._close_handle(handle, WS_CLOSE_TOKEN_REVOKED, "token revoked")
+
+    async def _close_user_session_by_sid(
+        self, user_id: UUID, session_id: UUID
+    ) -> None:
+        """Close handles bound to a single revoked session.
+
+        Used for per-session logout / "revoke this device" where the
+        user's ``token_version`` does NOT bump - only the matching
+        ``sid`` is gone. Handles without a ``session_id`` (legacy
+        tokens before sid tracking) are left alone here; the
+        ``_close_stale_user_sessions`` path catches the broader bump.
+        """
+        affected: list[ClientHandle] = []
+        for session in self._sessions.values():
+            for handle in session.clients.values():
+                if handle.user_id != user_id:
+                    continue
+                if handle.session_id is None or handle.session_id != session_id:
+                    continue
+                affected.append(handle)
+
+        for handle in affected:
+            await self._close_handle(handle, WS_CLOSE_TOKEN_REVOKED, "session revoked")
 
     async def _close_handle(
         self, handle: ClientHandle, code: int, reason: str

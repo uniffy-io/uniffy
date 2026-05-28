@@ -205,6 +205,19 @@ class SearchOperations:
     ) -> dict[str, SearchResult]:
         """Missing URNs return a tombstone with ``urn_status='DELETED'``;
         callers always get one entry per input URN.
+
+        Access decisions live entirely in the Meilisearch filter built by
+        ``_build_permission_filter`` (see ``core/search/meilisearch.py``).
+        That filter mirrors ``PermissionChecker.effective_role`` for the
+        user path: org match, not blocked, ownership OR explicit member
+        OR ``OPEN_TO_ORG`` baseline. A platform sysadmin without a
+        tenant membership cannot resolve tenant URNs through this RPC -
+        the index never granted them ``shared_user_ids`` membership, so
+        the filter excludes them, which is the intended cloud privacy
+        posture. Re-checking against PostgreSQL here would regress the
+        no-DB-read contract documented in ``rules/mentions.md``; instead,
+        any new access field must be denormalised into the index at
+        write time.
         """
         if not urns:
             return {}

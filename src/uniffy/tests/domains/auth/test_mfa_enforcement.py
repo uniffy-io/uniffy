@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
+import pytest
+
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.domains.auth.mfa import enforcement as enf
 from uniffy.domains.auth.mfa.enforcement import (
@@ -188,15 +190,18 @@ class TestEnforcementScansAllMemberships:
 
         assert result.requirement == MfaRequirement.NOT_REQUIRED
 
-    def test_failed_lookup_is_fail_open(self) -> None:
-        """A backend hiccup must not lock users out of their own account."""
+    def test_failed_lookup_is_fail_closed(self) -> None:
+        """A backend hiccup must NOT silently disable MFA enforcement.
+
+        The evaluator re-raises so the login surfaces a typed error
+        and oncall gets paged instead of issuing tokens to users that
+        policy would otherwise have funnelled into the enrollment path.
+        """
         user = _User(id=uuid4())
         session = MagicMock()
         session.execute = AsyncMock(side_effect=RuntimeError("db down"))
 
-        with _patch_policy(False):
-            result = _run(
+        with _patch_policy(False), pytest.raises(RuntimeError, match="db down"):
+            _run(
                 evaluate_mfa_requirement(session, user=user, user_mfa=None)
             )
-
-        assert result.requirement == MfaRequirement.NOT_REQUIRED

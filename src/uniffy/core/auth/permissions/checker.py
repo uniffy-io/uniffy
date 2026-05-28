@@ -82,6 +82,24 @@ class PermissionChecker:
         await self._ensure_support_session_context(user_id, organization_id)
 
         async def _compute() -> ContentRole | None:
+            # Platform operators (cloud sysadmins) who are NOT members of the
+            # tenant org MUST route through SupportSession - they have no
+            # tenant identity and the org/domain/owner branches below would
+            # otherwise grant nothing anyway, but treating them explicitly
+            # makes the boundary obvious. A self-hosted operator who is also
+            # the org owner has a real OrganizationMember row and follows the
+            # tenant-member path: their access flows from membership, not
+            # from is_system_admin.
+            if await self._is_system_admin(user_id):
+                if not await self._is_user_in_organization(
+                    user_id, organization_id
+                ):
+                    return await self._support_session_role(
+                        user_id, organization_id
+                    )
+                # Sysadmins with a tenant membership keep going; their access
+                # flows from the membership, not from is_system_admin.
+
             if await self._is_org_admin(user_id, organization_id):
                 return ContentRole.OWNER
 
@@ -89,12 +107,6 @@ class PermissionChecker:
                 user_id, organization_id, content_type
             ):
                 return ContentRole.ADMIN
-
-            support_role = await self._support_session_role(
-                user_id, organization_id
-            )
-            if support_role is not None:
-                return support_role
 
             if owner_id == user_id:
                 return ContentRole.OWNER

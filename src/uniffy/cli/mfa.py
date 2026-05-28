@@ -1,6 +1,9 @@
 """Break-glass MFA reset for self-hosted deployments.
 
 Gated by ``ENABLE_BREAK_GLASS_CLI=1`` so it is absent from cloud containers by default.
+The operator running the command MUST identify themselves via ``--operator``
+(or ``UNIFFY_BREAK_GLASS_OPERATOR``); the value is recorded in the audit row
+so a reset is never anonymous.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 from uniffy.db.session import open_session
 
 ENV_GATE = "ENABLE_BREAK_GLASS_CLI"
+OPERATOR_ENV = "UNIFFY_BREAK_GLASS_OPERATOR"
 
 
 def run() -> None:
@@ -50,29 +54,50 @@ def run() -> None:
         help="Free-text justification recorded in the audit row.",
     )
     parser.add_argument(
+        "--operator",
+        default=os.environ.get(OPERATOR_ENV, ""),
+        help=(
+            "Identifier of the operator running the command (email, username, "
+            "or ticket id). Required; defaults to "
+            f"${OPERATOR_ENV} when set."
+        ),
+    )
+    parser.add_argument(
         "--yes",
         action="store_true",
         help="Skip the confirmation prompt (for non-interactive use).",
     )
     args = parser.parse_args(_consume_mode_arg(sys.argv[1:]))
 
+    operator = (args.operator or "").strip()
+    if not operator:
+        print(
+            f"--operator is required (or set ${OPERATOR_ENV}); refusing to write "
+            "an unattributed break-glass audit row.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     if not args.yes:
         prompt = (
-            f"About to disable MFA on {args.user_email!r}. Reason: {args.reason!r}. "
-            "Continue? [y/N]: "
+            f"About to disable MFA on {args.user_email!r} as operator "
+            f"{operator!r}. Reason: {args.reason!r}. Continue? [y/N]: "
         )
         confirm = input(prompt).strip().lower()
         if confirm not in {"y", "yes"}:
             print("Aborted.")
             sys.exit(1)
 
-    asyncio.run(_reset(args.user_email, args.reason))
+    asyncio.run(_reset(args.user_email, args.reason, operator=operator))
 
 
-async def _reset(email: str, reason: str) -> None:
+async def _reset(email: str, reason: str, *, operator: str) -> None:
+    from uniffy.domains.auth.passwords import normalize_email
+
+    normalized = normalize_email(email)
     async with open_session() as session:
         user = (
-            await session.execute(select(User).where(User.email == email))
+            await session.execute(select(User).where(User.email == normalized))
         ).scalar_one_or_none()
         if user is None:
             print(f"No user with email {email!r}", file=sys.stderr)
@@ -100,14 +125,19 @@ async def _reset(email: str, reason: str) -> None:
                 "kind": "break_glass",
                 "target_user_id": str(user.id),
                 "target_email": user.email,
+                "operator": operator,
                 "reason": reason.strip(),
                 "ran_at": datetime.now(UTC).isoformat(),
             },
         )
         await session.commit()
 
-    logger.info("mfa.break_glass: reset {email}", email=email)
-    print(f"MFA disabled on {email}. Audit row written.")
+    logger.info(
+        "mfa.break_glass: reset {email} by operator {operator}",
+        email=email,
+        operator=operator,
+    )
+    print(f"MFA disabled on {email} by operator {operator}. Audit row written.")
 
 
 def _consume_mode_arg(argv: list[str]) -> list[str]:

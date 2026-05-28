@@ -138,7 +138,7 @@ def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
     valkey.set = AsyncMock(return_value=True)
 
     with patch(
-        "uniffy.domains.auth.operations.decode_access_token",
+        "uniffy.domains.auth.operations.decode_refresh_token",
         return_value={
             "type": "refresh",
             "sub": str(user.id),
@@ -177,7 +177,7 @@ def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
     valkey.set = AsyncMock(return_value=False)  # lock already held
 
     with patch(
-        "uniffy.domains.auth.operations.decode_access_token",
+        "uniffy.domains.auth.operations.decode_refresh_token",
         return_value={
             "type": "refresh",
             "sub": str(user.id),
@@ -218,10 +218,15 @@ def test_revoke_session_emits_session_terminated() -> None:
 def test_revoke_other_sessions_emits_token_revoked() -> None:
     user_id = uuid4()
     current_session = uuid4()
+    target_ids = [uuid4(), uuid4(), uuid4()]
     session = MagicMock()
-    revoke_result = MagicMock(rowcount=3)
-    seed_result = MagicMock()
-    session.execute = AsyncMock(side_effect=[revoke_result, seed_result])
+    select_result = MagicMock()
+    select_result.all = MagicMock(return_value=[(sid,) for sid in target_ids])
+    update_sessions_result = MagicMock()
+    update_user_result = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[select_result, update_sessions_result, update_user_result]
+    )
     session.add = MagicMock()
     session.commit = AsyncMock()
     ops = AuthOperations(session)
@@ -245,7 +250,7 @@ def test_token_error_does_not_emit_audit_row() -> None:
     ops = AuthOperations(session)
 
     with patch(
-        "uniffy.domains.auth.operations.decode_access_token",
+        "uniffy.domains.auth.operations.decode_refresh_token",
         side_effect=Exception("bad token"),
     ), pytest.raises(TokenError):
         asyncio.run(ops.refresh_token("garbage"))

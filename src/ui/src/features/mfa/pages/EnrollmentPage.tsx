@@ -2,7 +2,11 @@ import { createClient } from '@connectrpc/connect';
 import { useNavigate } from 'react-router-dom';
 
 import { useAppDispatch } from '@/app/hooks';
-import { setMemoryAccessToken, unaryTransport } from '@/config/api';
+import {
+    clearEnrollmentToken,
+    setMemoryAccessToken,
+    unaryTransport,
+} from '@/config/api';
 import { setCredentials } from '@/features/auth/store/authSlice';
 import { EnrollmentWizard } from '@/features/mfa/components/EnrollmentWizard';
 
@@ -17,6 +21,10 @@ export function EnrollmentPage() {
     const navigate = useNavigate();
 
     const completeAndSignIn = async (accessToken: string, refreshToken: string, sessionId: string) => {
+        // ConfirmEnrollment minted a real session; the enrollment-only
+        // token is now spent and any leftover slot value would just be
+        // dead state - clear it before swapping in the real access token.
+        clearEnrollmentToken();
         setMemoryAccessToken(accessToken);
         const client = createClient(AuthService, unaryTransport);
         const me = await client.getCurrentUser(

@@ -1,14 +1,15 @@
 """Authentication operations - login, register, refresh token, session management."""
 
+import hashlib
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import audit_ip_var, write_audit_event
+from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import RateLimitExceededError
 from uniffy.core.models.login.organization import Organization
@@ -27,11 +28,21 @@ from uniffy.domains.auth.mfa.enforcement import (
     MfaRequirement,
     evaluate_mfa_requirement,
 )
-from uniffy.domains.auth.passwords import hash_password, verify_password
+from uniffy.domains.auth.password_policy import validate_password
+from uniffy.domains.auth.passwords import (
+    hash_password,
+    normalize_email,
+    verify_password,
+)
+from uniffy.domains.auth.revocation import (
+    mark_session_revoked,
+    mark_sessions_revoked,
+    mark_token_version_revoked,
+)
 from uniffy.domains.auth.tokens import (
     create_access_token,
     create_refresh_token,
-    decode_access_token,
+    decode_refresh_token,
 )
 from uniffy.domains.auth.types import (
     AuthOutcome,
@@ -45,6 +56,36 @@ from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 LOGIN_RATE_LIMIT_EMAIL = 10
 LOGIN_RATE_LIMIT_IP = 30
 LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
+
+# Grace window in which a previously-issued refresh token still resolves to the
+# current pair without tripping the reuse alarm. Covers the brief race when two
+# tabs hit RefreshToken back-to-back and one tab reads the rotated token from
+# localStorage a moment after the other tab rotated.
+REFRESH_GRACE_SECONDS = 30
+
+
+def _hash_refresh_token(raw: str) -> str:
+    """SHA256 hex digest used as the at-rest fingerprint for rotation tracking."""
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+async def _publish_session_revoke_safe(user_id: UUID, session_id: UUID) -> None:
+    """Best-effort fanout to the realtime router; never blocks the caller.
+
+    A Valkey hiccup leaves the per-session marker in place (we already
+    wrote it via ``mark_session_revoked``) - the WS just rides out to
+    natural disconnect instead of getting the 4410 close. Fail-quiet.
+    """
+    try:
+        from uniffy.core.realtime.publisher import publish_session_revoke
+
+        await publish_session_revoke(user_id, session_id)
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "auth.publish_session_revoke failed",
+            user_id=str(user_id),
+            session_id=str(session_id),
+        )
 
 
 async def is_public_registration_enabled(session: AsyncSession) -> bool:
@@ -70,6 +111,7 @@ class AuthOperations:
         """Authenticate via email + password and return tokens or an MFA challenge."""
         user: User | None = None
         organization_id: UUID | None = None
+        email = normalize_email(email)
         try:
             await self._enforce_login_rate_limit(email)
 
@@ -168,6 +210,7 @@ class AuthOperations:
                 token_version=user.token_version,
                 session_id=session_record.id,
             )
+            session_record.refresh_token_hash = _hash_refresh_token(refresh_token)
 
             await write_audit_event(
                 self._session,
@@ -239,30 +282,52 @@ class AuthOperations:
         full_name: str | None = None,
         user_agent: str = "",
     ) -> AuthResult:
-        """Register a new user; refused when public registration is disabled."""
+        """Register a new user; refused when public registration is disabled.
+
+        Every reject path - public-registration disabled, collision,
+        password-policy failure - writes ``AUTH_REGISTER_REJECTED`` with a
+        ``reason`` tag so an attacker trying to enumerate accounts shows
+        up as a burst of rejects in the audit log instead of disappearing
+        into application logs.
+        """
+        email = normalize_email(email)
         try:
             if not await is_public_registration_enabled(self._session):
-                await write_audit_event(
-                    self._session,
-                    organization_id=None,
-                    actor_user_id=None,
-                    action=Action.AUTH_REGISTER_REJECTED,
-                    resource_type=None,
-                    resource_id=None,
-                    details={"email_attempted": email},
+                await self._audit_register_rejected(
+                    email=email, reason="public_registration_disabled"
                 )
-                await self._session.commit()
                 raise RegistrationError(
                     "Public registration is disabled. You must be invited."
                 )
 
             existing_user = await self._get_user_by_email(email)
-            if existing_user:
-                raise RegistrationError("Email already registered")
-
             existing_username = await self._get_user_by_username(username)
-            if existing_username:
-                raise RegistrationError("Username already taken")
+            if existing_user or existing_username:
+                # Audit the actual reason for ops visibility; client message
+                # stays generic so the API does not leak which field hit.
+                await self._audit_register_rejected(
+                    email=email,
+                    reason=(
+                        "email_taken"
+                        if existing_user
+                        else "username_taken"
+                    ),
+                    username=username,
+                )
+                raise RegistrationError(
+                    "Could not create account with these credentials"
+                )
+
+            try:
+                validate_password(password)
+            except Exception as exc:
+                await self._audit_register_rejected(
+                    email=email,
+                    reason="password_policy",
+                    username=username,
+                    detail=str(exc),
+                )
+                raise RegistrationError(str(exc)) from exc
 
             hashed_password = hash_password(password)
 
@@ -292,6 +357,21 @@ class AuthOperations:
                 token_version=user.token_version,
                 session_id=session_record.id,
             )
+            session_record.refresh_token_hash = _hash_refresh_token(refresh_token)
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=user.id,
+                action=Action.AUTH_REGISTER_SUCCESS,
+                resource_type="USER",
+                resource_id=user.id,
+                details={
+                    "email": user.email,
+                    "username": user.username,
+                    "session_id": str(session_record.id),
+                },
+            )
+            await self._session.commit()
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="success").inc()
 
@@ -310,15 +390,21 @@ class AuthOperations:
         refresh_token: str,
         organization_slug: str | None = None,
     ) -> AuthResult:
-        """Refresh an access token; validates user state, token version, and session."""
+        """Refresh an access token; rotates the refresh token + detects reuse.
+
+        The fingerprint of every issued refresh token is stored on the
+        session row. A request whose digest matches the current row
+        rotates normally. A digest matching the previous row within
+        ``REFRESH_GRACE_SECONDS`` is accepted to cover concurrent-tab
+        races. Anything else is treated as a stolen-token replay: the
+        user's ``token_version`` is bumped and every session is
+        revoked.
+        """
         try:
             try:
-                payload = decode_access_token(refresh_token)
+                payload = decode_refresh_token(refresh_token)
             except Exception as e:
                 raise TokenError(f"Invalid refresh token: {e}")
-
-            if payload.get("type") != "refresh":
-                raise TokenError("Invalid token type")
 
             user_id = UUID(payload["sub"])
             token_version_in_jwt = payload.get("tkv")
@@ -339,9 +425,17 @@ class AuthOperations:
                 raise TokenError("Token has been revoked")
 
             session_id: UUID | None = None
+            session_record: UserSession | None = None
             if session_id_str:
                 session_id = UUID(session_id_str)
-                await self._validate_and_touch_session(session_id, user_id)
+                session_record = await self._validate_and_touch_session(
+                    session_id, user_id
+                )
+                await self._enforce_refresh_rotation(
+                    user=user,
+                    session_record=session_record,
+                    incoming_refresh=refresh_token,
+                )
 
             organization_id = None
             organization_role = None
@@ -366,6 +460,16 @@ class AuthOperations:
                 token_version=user.token_version,
                 session_id=session_id,
             )
+
+            if session_record is not None:
+                now = datetime.now(UTC)
+                session_record.previous_refresh_token_hash = (
+                    session_record.refresh_token_hash
+                )
+                session_record.previous_refresh_rotated_at = now
+                session_record.refresh_token_hash = _hash_refresh_token(
+                    new_refresh_token
+                )
 
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="success").inc()
 
@@ -395,6 +499,102 @@ class AuthOperations:
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="failure").inc()
             raise
 
+    async def _enforce_refresh_rotation(
+        self,
+        *,
+        user: User,
+        session_record: UserSession,
+        incoming_refresh: str,
+    ) -> None:
+        """Refuse stolen-token replay; tolerate the brief cross-tab race."""
+        incoming_hash = _hash_refresh_token(incoming_refresh)
+        current = session_record.refresh_token_hash
+        previous = session_record.previous_refresh_token_hash
+        rotated_at = session_record.previous_refresh_rotated_at
+
+        if current is None:
+            # Legacy session from before rotation tracking existed.
+            return
+        if incoming_hash == current:
+            return
+        if (
+            previous is not None
+            and incoming_hash == previous
+            and rotated_at is not None
+            and datetime.now(UTC) - rotated_at <= timedelta(seconds=REFRESH_GRACE_SECONDS)
+        ):
+            return
+
+        await self._punish_refresh_reuse(user=user, session_record=session_record)
+        raise TokenError("Refresh token reuse detected; all sessions revoked")
+
+    async def _punish_refresh_reuse(
+        self,
+        *,
+        user: User,
+        session_record: UserSession,
+    ) -> None:
+        """Revoke every active session for the user and bump ``token_version``.
+
+        Reusing an old refresh after rotation is the textbook stolen-token
+        signal - either the attacker or the legitimate client is racing the
+        other on the next refresh, so the safe move is to kill both.
+        """
+        now = datetime.now(UTC)
+        await self._session.execute(
+            update(UserSession)
+            .where(
+                UserSession.user_id == user.id,
+                UserSession.is_revoked.is_(False),
+            )
+            .values(is_revoked=True, revoked_at=now)
+        )
+        all_active = (
+            await self._session.execute(
+                select(UserSession.id).where(UserSession.user_id == user.id)
+            )
+        ).all()
+        revoked_ids = [row[0] for row in all_active]
+
+        user.token_version = (user.token_version or 0) + 1
+        new_version = user.token_version
+        await self._session.execute(
+            update(User)
+            .where(User.id == user.id)
+            .values(
+                token_version=new_version,
+                cache_key_seed=os.urandom(32),
+            )
+        )
+
+        await write_audit_event(
+            self._session,
+            organization_id=None,
+            actor_user_id=user.id,
+            action=Action.AUTH_REFRESH_REUSE_DETECTED,
+            resource_type="USER",
+            resource_id=user.id,
+            details={
+                "trigger_session_id": str(session_record.id),
+                "revoked_session_count": len(revoked_ids),
+                "new_token_version": new_version,
+            },
+        )
+        await self._session.commit()
+        await mark_token_version_revoked(user.id, new_version)
+        await mark_sessions_revoked(revoked_ids)
+        # Publish the token_version bump so the realtime router closes
+        # every open WS for this user with code 4410 instead of letting
+        # the streams ride out their natural disconnect.
+        from uniffy.core.realtime.publisher import publish_token_revoke
+
+        await publish_token_revoke(user.id, new_version)
+        logger.warning(
+            "auth.refresh_reuse_detected",
+            user_id=str(user.id),
+            session_id=str(session_record.id),
+        )
+
     async def list_sessions(self, user_id: UUID) -> list[UserSession]:
         """List active (non-revoked) sessions, ordered by last_activity desc."""
         result = await self._session.execute(
@@ -408,7 +608,12 @@ class AuthOperations:
         return list(result.scalars().all())
 
     async def revoke_session(self, user_id: UUID, session_id: UUID) -> bool:
-        """Revoke a session owned by `user_id`."""
+        """Revoke a session owned by `user_id`.
+
+        Flips the DB row and publishes a Valkey revoked-sid marker so
+        the access token issued from this session is rejected within a
+        Valkey round-trip rather than waiting for natural expiry.
+        """
         result = await self._session.execute(
             select(UserSession).where(
                 UserSession.id == session_id,
@@ -434,6 +639,8 @@ class AuthOperations:
             details={"initiator": "self"},
         )
         await self._session.commit()
+        await mark_session_revoked(session_id)
+        await _publish_session_revoke_safe(user_id, session_id)
 
         logger.info(f"Session {session_id} revoked for user {user_id}")
         return True
@@ -443,24 +650,39 @@ class AuthOperations:
         user_id: UUID,
         current_session_id: UUID,
     ) -> int:
-        """Revoke all sessions except `current_session_id`; returns the count."""
+        """Revoke all sessions except `current_session_id`; returns the count.
+
+        Each revoked session publishes its own Valkey ``revoked_sid``
+        marker so the matching access tokens stop working within a
+        Valkey round-trip - bumping ``token_version`` would also kill
+        the current session, which is the opposite of what the user
+        asked for.
+        """
         now = datetime.now(UTC)
-        result = await self._session.execute(
-            update(UserSession)
-            .where(
-                UserSession.user_id == user_id,
-                UserSession.id != current_session_id,
-                UserSession.is_revoked.is_(False),
+        target_rows = (
+            await self._session.execute(
+                select(UserSession.id).where(
+                    UserSession.user_id == user_id,
+                    UserSession.id != current_session_id,
+                    UserSession.is_revoked.is_(False),
+                )
             )
-            .values(is_revoked=True, revoked_at=now)
-        )
+        ).all()
+        target_session_ids = [row[0] for row in target_rows]
+
+        if target_session_ids:
+            await self._session.execute(
+                update(UserSession)
+                .where(UserSession.id.in_(target_session_ids))
+                .values(is_revoked=True, revoked_at=now)
+            )
 
         # Rotate cache_key_seed so device-side caches invalidate.
         await self._session.execute(
             update(User).where(User.id == user_id).values(cache_key_seed=os.urandom(32))
         )
 
-        revoked_count = result.rowcount  # type: ignore[union-attr]
+        revoked_count = len(target_session_ids)
         await write_audit_event(
             self._session,
             organization_id=None,
@@ -476,6 +698,9 @@ class AuthOperations:
         )
 
         await self._session.commit()
+        await mark_sessions_revoked(target_session_ids)
+        for sid in target_session_ids:
+            await _publish_session_revoke_safe(user_id, sid)
 
         logger.info(
             f"Revoked {revoked_count} other sessions for user {user_id}, "
@@ -509,7 +734,7 @@ class AuthOperations:
         return new_seed
 
     async def logout_session(self, user_id: UUID, session_id: UUID) -> None:
-        """Revoke the current session on logout."""
+        """Revoke the current session on logout; publishes the Valkey marker too."""
         result = await self._session.execute(
             select(UserSession).where(
                 UserSession.id == session_id,
@@ -531,19 +756,101 @@ class AuthOperations:
                 details={"initiator": "logout"},
             )
             await self._session.commit()
+            await mark_session_revoked(session_id)
+            await _publish_session_revoke_safe(user_id, session_id)
             logger.info(f"Logout: session {session_id} revoked for user {user_id}")
+
+    async def _audit_register_rejected(
+        self,
+        *,
+        email: str,
+        reason: str,
+        username: str | None = None,
+        detail: str | None = None,
+    ) -> None:
+        """Write + commit an ``AUTH_REGISTER_REJECTED`` row with the reason tag."""
+        details: dict[str, str] = {
+            "email_attempted": email,
+            "reason": reason,
+        }
+        if username is not None:
+            details["username_attempted"] = username
+        if detail is not None:
+            details["detail"] = detail
+        await write_audit_event(
+            self._session,
+            organization_id=None,
+            actor_user_id=None,
+            action=Action.AUTH_REGISTER_REJECTED,
+            resource_type=None,
+            resource_id=None,
+            details=details,
+        )
+        await self._session.commit()
+
+    async def revoke_all_user_sessions(
+        self,
+        user_id: UUID,
+        *,
+        reason: str,
+    ) -> list[UUID]:
+        """Mark every active session for ``user_id`` revoked + publish Valkey markers.
+
+        Used by refresh-token reuse detection, admin MFA reset, and any
+        other "kill every device" path that does NOT want to bump
+        ``token_version`` for an unrelated reason.
+        """
+        now = datetime.now(UTC)
+        rows = (
+            await self._session.execute(
+                select(UserSession.id).where(
+                    UserSession.user_id == user_id,
+                    UserSession.is_revoked.is_(False),
+                )
+            )
+        ).all()
+        session_ids = [row[0] for row in rows]
+        if session_ids:
+            await self._session.execute(
+                update(UserSession)
+                .where(UserSession.id.in_(session_ids))
+                .values(is_revoked=True, revoked_at=now)
+            )
+            await write_audit_event(
+                self._session,
+                organization_id=None,
+                actor_user_id=user_id,
+                action=Action.AUTH_TOKEN_REVOKED,
+                resource_type="USER",
+                resource_id=user_id,
+                details={
+                    "actor": "system",
+                    "reason": reason,
+                    "revoked_session_count": len(session_ids),
+                },
+            )
+            await self._session.commit()
+            await mark_sessions_revoked(session_ids)
+        return session_ids
 
     async def _create_session(
         self,
         user_id: UUID,
         user_agent: str,
     ) -> UserSession:
-        """Create a new session record."""
+        """Create a new session record.
+
+        Captures the client IP for forensics. The IP is the audit-tier
+        IP (may be the proxy address when no proxy trust is configured)
+        - rate-limit decisions use ``client_ip_for_rate_limit`` and are
+        unrelated to what we store here.
+        """
         device_label = parse_device_label(user_agent)
         session_record = UserSession(
             user_id=user_id,
-            user_agent=user_agent[:512],  # Truncate to max length
+            user_agent=user_agent[:512],
             device_label=device_label,
+            ip_address=(audit_ip_var.get() or "")[:45],
         )
         self._session.add(session_record)
         await self._session.commit()
@@ -554,11 +861,12 @@ class AuthOperations:
         self,
         session_id: UUID,
         user_id: UUID,
-    ) -> None:
-        """
-        Validate session is still active and update last_activity.
+    ) -> UserSession:
+        """Validate the session is still active and return the row.
 
-        Raises TokenError if session is revoked or not found.
+        Raises ``TokenError`` if revoked or missing. Returned so the
+        caller can read + mutate the refresh-token rotation columns
+        inside the same transaction.
         """
         result = await self._session.execute(
             select(UserSession).where(
@@ -575,7 +883,7 @@ class AuthOperations:
             raise TokenError("Session has been revoked")
 
         session_record.last_activity = datetime.now(UTC)
-        await self._session.commit()
+        return session_record
 
     async def _load_user_mfa(self, user_id: UUID) -> UserMfa | None:
         """Return the user's MFA row or ``None`` when they never enrolled."""
@@ -587,13 +895,12 @@ class AuthOperations:
     async def _enforce_login_rate_limit(self, email: str) -> None:
         """Throttle the password step before bcrypt burns CPU.
 
-        Two buckets, both per-15-min: per-email (the credential under
-        attack) and per-IP (the source). Both are bump-on-every-attempt
-        so brute force trips the counter even when the attacker rotates
-        across multiple stolen credentials. Email is lowercased so case
-        variants share one bucket. Missing IP (no audit middleware on
-        this path, unlikely) skips that bucket; the per-email guard is
-        the must-have.
+        Per-email is the must-have bucket; per-IP is a defense in depth that
+        only applies when the IP is actually a client identifier (public
+        address, or ``TRUSTED_PROXY_HOPS`` configured). Behind an
+        unconfigured reverse proxy the per-IP bucket would collapse every
+        request onto the proxy's socket address and lock out everyone, so
+        we skip it rather than DoS the whole tenant.
         """
         email_key = (email or "").strip().lower()
         if email_key:
@@ -603,7 +910,7 @@ class AuthOperations:
                 window_seconds=LOGIN_RATE_LIMIT_WINDOW_SECONDS,
                 resource="login attempts (per email)",
             )
-        ip = audit_ip_var.get()
+        ip = client_ip_for_rate_limit()
         if ip:
             await check_rate_limit(
                 key=f"rl:auth:login:ip:{ip}",
@@ -618,8 +925,10 @@ class AuthOperations:
         return result.scalar_one_or_none()
 
     async def _get_user_by_email(self, email: str) -> User | None:
-        """Get user by email address."""
-        result = await self._session.execute(select(User).where(User.email == email))
+        """Get user by email address; the caller is responsible for normalization."""
+        result = await self._session.execute(
+            select(User).where(User.email == normalize_email(email))
+        )
         return result.scalar_one_or_none()
 
     async def _get_user_by_username(self, username: str) -> User | None:

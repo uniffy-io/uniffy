@@ -19,12 +19,15 @@ from uniffy.core.types import generate_id as uuid7
 
 @pytest.fixture(autouse=True)
 def _no_support_session():
-    """Skip both support-session entry points so these tests exercise the
-    pure branching logic. ``_ensure_support_session_context`` now runs
-    unconditionally at the top of ``effective_role`` (so the ContextVar
-    is populated regardless of role-cache state); ``_support_session_role``
-    still drives the role decision inside ``_compute``. Both go through
-    the MagicMock session otherwise."""
+    """Skip support-session and sysadmin entry points so these tests
+    exercise the pure tenant-member branching logic.
+
+    ``_ensure_support_session_context`` and ``_support_session_role``
+    both run inside ``effective_role`` and would otherwise hit the
+    MagicMock session. ``_is_system_admin`` now runs first as well -
+    pinning it to ``False`` keeps these tests focused on the tenant
+    paths; the sysadmin-bypass branch is covered separately.
+    """
     with (
         patch.object(
             PermissionChecker, "_support_session_role", AsyncMock(return_value=None)
@@ -33,6 +36,9 @@ def _no_support_session():
             PermissionChecker,
             "_ensure_support_session_context",
             AsyncMock(return_value=None),
+        ),
+        patch.object(
+            PermissionChecker, "_is_system_admin", AsyncMock(return_value=False)
         ),
     ):
         yield

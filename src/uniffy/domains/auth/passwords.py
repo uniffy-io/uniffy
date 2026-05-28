@@ -1,6 +1,18 @@
-"""Password hashing utilities."""
+"""Password hashing utilities + shared email normalization helper."""
 
 import bcrypt
+
+
+def normalize_email(value: str | None) -> str:
+    """Lowercase + trim - the canonical form for every read/write of an email.
+
+    Email is treated case-insensitively across the system. Storing a
+    canonical lowercased form keeps the unique index honest and lets
+    every comparison use plain equality without ``func.lower``.
+    """
+    if value is None:
+        return ""
+    return value.strip().lower()
 
 
 def hash_password(password: str) -> str:

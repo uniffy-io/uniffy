@@ -80,6 +80,8 @@ from uniffy.core.realtime import realtime_router
 from uniffy.core.realtime.router import router as realtime_pubsub_router
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
+from uniffy.core.streaming.middleware import StreamRevokeWatchMiddleware
+from uniffy.core.streaming.revoke_coordinator import coordinator as stream_revoke_coordinator
 from uniffy.core.valkey import (
     close_ops_client,
     close_pubsub,
@@ -251,10 +253,31 @@ def _setup_observability() -> None:
 
 
 def _get_cors_origins() -> list[str]:
-    origins = os.getenv("CORS_ORIGINS", "*")
-    if origins == "*":
-        return ["*"]
-    return [origin.strip() for origin in origins.split(",") if origin.strip()]
+    """Resolve the CORS allowlist; refuses ``*`` outside ``development``.
+
+    Wildcard with ``allow_credentials=True`` is widely misunderstood: browsers
+    accept the echoed origin, so the practical effect is "any origin can issue
+    authenticated requests once a user has a session there". On a production
+    deployment that disables Origin-based defenses entirely, so we require an
+    explicit list.
+    """
+    raw = os.getenv("CORS_ORIGINS", "")
+    environment = os.getenv("ENVIRONMENT", "development").lower()
+    if not raw:
+        if environment == "development":
+            return ["http://localhost:5173", "http://localhost:3000"]
+        raise RuntimeError(
+            "CORS_ORIGINS must be set to an explicit comma-separated list "
+            "outside development (e.g. https://app.example.com)"
+        )
+    if raw.strip() == "*":
+        if environment == "development":
+            return ["*"]
+        raise RuntimeError(
+            "CORS_ORIGINS='*' is not permitted with allow_credentials=True; "
+            "set an explicit origin list."
+        )
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 @asynccontextmanager
@@ -339,6 +362,12 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Realtime router not available: {e}")
 
     try:
+        await stream_revoke_coordinator.start()
+        logger.info("Stream revoke coordinator started successfully")
+    except Exception as e:
+        logger.warning(f"Stream revoke coordinator not available: {e}")
+
+    try:
         await seed_initial_data()
         logger.info("Initial data seeded successfully")
     except Exception as e:
@@ -362,6 +391,7 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down UNIFFY application...")
+    await stream_revoke_coordinator.stop()
     await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
@@ -461,8 +491,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/chat.v1.ChatStreamService",
         StreamDisconnectMiddleware(
-            ChatStreamServiceASGIApplication(
-                ChatStreamServiceImpl(), interceptors=interceptors
+            StreamRevokeWatchMiddleware(
+                ChatStreamServiceASGIApplication(
+                    ChatStreamServiceImpl(), interceptors=interceptors
+                )
             )
         ),
     )
@@ -561,8 +593,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/notifications.v1.NotificationsService",
         StreamDisconnectMiddleware(
-            NotificationsServiceASGIApplication(
-                NotificationsServiceImpl(), interceptors=interceptors
+            StreamRevokeWatchMiddleware(
+                NotificationsServiceASGIApplication(
+                    NotificationsServiceImpl(), interceptors=interceptors
+                )
             )
         ),
     )
@@ -619,7 +653,9 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/agents.v1.RuntimeService",
         StreamDisconnectMiddleware(
-            RuntimeServiceASGIApplication(RuntimeServiceImpl(), interceptors=interceptors)
+            StreamRevokeWatchMiddleware(
+                RuntimeServiceASGIApplication(RuntimeServiceImpl(), interceptors=interceptors)
+            )
         ),
     )
 

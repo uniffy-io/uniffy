@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { getActiveEditorView } from '@/components/editor/editorRegistry';
 
 interface SelectionInfo {
     from: number;
@@ -44,7 +45,7 @@ export function useSelectionComment(editorContainerRef: React.RefObject<HTMLElem
                     return;
                 }
 
-                const view = (window as Window & { __milkdownEditorView?: { state: { selection: { from: number; to: number } } } }).__milkdownEditorView;
+                const view = getActiveEditorView();
                 if (!view) {
                     setSelection(null);
                     return;

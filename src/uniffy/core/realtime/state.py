@@ -44,7 +44,9 @@ class WSSession:
     """One WebSocket; owns the outbound queue and per-doc handles.
 
     Auth binds at the WS level via the subprotocol JWT; per-doc role resolution
-    happens lazily on the first frame for each new docname.
+    happens lazily on the first frame for each new docname. ``session_id`` is
+    the access-token ``sid`` claim, used by the router to close a single
+    revoked session without disturbing the user's other live tokens.
     """
 
     user_id: UUID
@@ -52,6 +54,7 @@ class WSSession:
     token_version: int | None
     conn_id: int
     ws: WebSocket
+    session_id: UUID | None = None
     outbound: asyncio.Queue[bytes] = field(default_factory=_new_outbound_queue)
     doc_handles: dict[DocKey, ClientHandle] = field(default_factory=dict)
     closed: bool = False
@@ -62,8 +65,8 @@ class ClientHandle:
     """One WS's attachment to a single shared ``YDocSession``.
 
     ``can_edit`` lives on the handle so perm changes can flip it in place. The
-    router keys handles by ``(doc_key, conn_id)`` for fanout and by ``user_id``
-    for token-revoke.
+    router keys handles by ``(doc_key, conn_id)`` for fanout, by ``user_id``
+    for token-revoke, and by ``session_id`` for per-session revoke.
     """
 
     conn_id: int
@@ -71,6 +74,7 @@ class ClientHandle:
     can_edit: bool
     token_version: int | None
     ws: WebSocket
+    session_id: UUID | None = None
     # ``doc_key`` / ``ws_session`` are ``None`` only in tests that exercise
     # gate logic without a real doc.
     doc_key: DocKey | None = None

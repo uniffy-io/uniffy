@@ -253,6 +253,8 @@ class TestVerifyAndConsume:
         assert Action.AUTH_PASSWORD_RESET_COMPLETED in actions
 
     def test_consume_rejects_short_password(self) -> None:
+        from uniffy.core.errors import ValidationError
+
         session = _session([])
-        with pytest.raises(ValueError, match="at least 8"):
+        with pytest.raises(ValidationError, match="at least 8"):
             _run(PasswordResetOperations(session).consume("raw-token", "short"))

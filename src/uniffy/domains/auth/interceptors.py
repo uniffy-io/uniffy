@@ -26,8 +26,11 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 
-from uniffy.domains.auth.revocation import is_access_token_revoked
-from uniffy.domains.auth.tokens import decode_access_token
+from uniffy.domains.auth.revocation import (
+    is_access_token_revoked,
+    is_session_revoked,
+)
+from uniffy.domains.auth.tokens import decode_token_unsafe
 
 
 class AuthRevocationInterceptor:
@@ -63,11 +66,13 @@ class AuthRevocationInterceptor:
             return
         token = auth_header[7:]
         try:
-            payload = decode_access_token(token)
+            # Use the type-unsafe decoder: this interceptor only cares about
+            # revocation, which applies to every token kind. The downstream
+            # ``get_user_id_from_context`` enforces ``type == "access"`` so
+            # a wrong-kind token in the Authorization header is rejected by
+            # the handler with the typed UNAUTHENTICATED error.
+            payload = decode_token_unsafe(token)
         except Exception:
-            # Malformed / expired tokens are the downstream handler's
-            # problem; let get_user_id_from_context surface the typed
-            # UNAUTHENTICATED error so the wire shape stays consistent.
             return
         sub = payload.get("sub")
         if not sub:
@@ -78,6 +83,14 @@ class AuthRevocationInterceptor:
             return
         if await is_access_token_revoked(user_id, payload.get("tkv")):
             raise ConnectError(Code.UNAUTHENTICATED, "Token has been revoked")
+        sid_raw = payload.get("sid")
+        if sid_raw:
+            try:
+                session_id = UUID(sid_raw)
+            except (TypeError, ValueError):
+                return
+            if await is_session_revoked(session_id):
+                raise ConnectError(Code.UNAUTHENTICATED, "Session has been revoked")
 
 
 __all__ = ["AuthRevocationInterceptor"]

@@ -299,7 +299,7 @@ class TestAcceptRejectsConflict:
                 ops.accept(
                     raw_token="raw",
                     username="new_user",
-                    password="password1",
+                    password="Passw0rd!ok",
                     full_name=None,
                     user_agent="pytest",
                 )

@@ -12,11 +12,13 @@ class Action:
     AUTH_PASSWORD_CHANGED = "auth.password_changed"
     AUTH_SESSION_TERMINATED = "auth.session_terminated"
     AUTH_REGISTER_REJECTED = "auth.register_rejected"
+    AUTH_REGISTER_SUCCESS = "auth.register_success"
     AUTH_INVITATION_ACCEPTED = "auth.invitation_accepted"
     AUTH_PASSWORD_RESET_REQUESTED = "auth.password_reset_requested"
     AUTH_PASSWORD_RESET_COMPLETED = "auth.password_reset_completed"
     AUTH_PASSWORD_RESET_BLOCKED = "auth.password_reset_blocked"
     AUTH_LOGIN_RATE_LIMITED = "auth.login_rate_limited"
+    AUTH_REFRESH_REUSE_DETECTED = "auth.refresh_reuse_detected"
 
     # Auth - MFA (TOTP)
     AUTH_MFA_ENROLLMENT_STARTED = "auth.mfa_enrollment_started"

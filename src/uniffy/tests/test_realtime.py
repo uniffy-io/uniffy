@@ -811,6 +811,7 @@ class _StubCallbacks:
         self.applied_updates: list[tuple[YDocSession, bytes]] = []
         self.enforced: list[tuple[ClientHandle, str | None]] = []
         self.closed_stale: list[tuple[UUID, int]] = []
+        self.closed_by_sid: list[tuple[UUID, UUID]] = []
         self.reauthorized: list[DocKey] = []
 
     async def apply_remote_update(self, session: YDocSession, update: bytes) -> None:
@@ -821,6 +822,9 @@ class _StubCallbacks:
 
     async def close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
         self.closed_stale.append((user_id, new_version))
+
+    async def close_user_session_by_sid(self, user_id: UUID, session_id: UUID) -> None:
+        self.closed_by_sid.append((user_id, session_id))
 
     async def reauthorize_doc(self, key: DocKey) -> None:
         self.reauthorized.append(key)
@@ -834,6 +838,7 @@ def _make_router_with_callbacks() -> tuple[RealtimeRouter, _StubCallbacks]:
             apply_remote_update=cb.apply_remote_update,
             enforce_role_change=cb.enforce_role_change,
             close_stale_user_sessions=cb.close_stale_user_sessions,
+            close_user_session_by_sid=cb.close_user_session_by_sid,
             reauthorize_doc=cb.reauthorize_doc,
         )
     )

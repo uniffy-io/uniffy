@@ -14,6 +14,7 @@ import { OrganizationRole } from '@uniffy/proto/common/v1/common_pb';
 import {
     friendlyErrorMessage,
     initStorageEncryptionFromApi,
+    setEnrollmentToken,
     setMemoryAccessToken,
     unaryTransport,
 } from '@/config';
@@ -103,11 +104,23 @@ export function AcceptInvitePage() {
                 password,
                 fullName: fullName.trim() || undefined,
             });
-            setMemoryAccessToken(response.accessToken);
+            const variant = response.result;
+            if (variant.case === 'enrollmentRequired') {
+                setEnrollmentToken(variant.value.enrollmentToken);
+                navigate('/auth/enroll-mfa', { replace: true });
+                return;
+            }
+            if (variant.case !== 'authResult') {
+                setSubmitError('Unexpected invitation response. Please try again.');
+                setSubmitting(false);
+                return;
+            }
+            const r = variant.value;
+            setMemoryAccessToken(r.accessToken);
             const authenticated = createClient(AuthService, unaryTransport);
             const profile = await authenticated.getCurrentUser(
                 {},
-                { headers: { Authorization: `Bearer ${response.accessToken}` } },
+                { headers: { Authorization: `Bearer ${r.accessToken}` } },
             );
             const plainUser = {
                 id: profile.id,
@@ -127,12 +140,12 @@ export function AcceptInvitePage() {
             dispatch(
                 setCredentials({
                     user: plainUser,
-                    accessToken: response.accessToken,
-                    refreshToken: response.refreshToken,
-                    organizationId: response.organizationId,
-                    organizationRole: response.organizationRole,
-                    sessionId: response.sessionId,
-                    domainAdminDomains: Array.from(response.domainAdminDomains),
+                    accessToken: r.accessToken,
+                    refreshToken: r.refreshToken,
+                    organizationId: r.organizationId,
+                    organizationRole: r.organizationRole,
+                    sessionId: r.sessionId,
+                    domainAdminDomains: Array.from(r.domainAdminDomains),
                 }),
             );
             initStorageEncryptionFromApi(plainUser.id).catch(() => undefined);

@@ -44,7 +44,11 @@ class UserOperations:
         return user
 
     async def get_by_email(self, email: str) -> User | None:
-        result = await self._session.execute(select(User).where(User.email == email))
+        from uniffy.domains.auth.passwords import normalize_email
+
+        result = await self._session.execute(
+            select(User).where(User.email == normalize_email(email))
+        )
         return result.scalar_one_or_none()
 
     async def _profile_org_id(self, user_id: UUID) -> UUID | None:
@@ -120,7 +124,9 @@ class UserOperations:
         if username is not None:
             user.username = username
         if email is not None:
-            user.email = email
+            from uniffy.domains.auth.passwords import normalize_email
+
+            user.email = normalize_email(email)
         if is_active is not None:
             user.is_active = is_active
             # Bumping token_version on deactivation revokes every existing token.
@@ -213,8 +219,10 @@ class UserOperations:
         is_system_admin: bool = False,
         actor_user_id: UUID | None = None,
     ) -> User:
+        from uniffy.domains.auth.passwords import normalize_email
+
         user = User(
-            email=email,
+            email=normalize_email(email),
             username=username,
             hashed_password=hashed_password,
             full_name=full_name,

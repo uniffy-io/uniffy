@@ -8,6 +8,7 @@ import { upload, uploadConfig, type Uploader } from '@milkdown/kit/plugin/upload
 import { $prose } from '@milkdown/kit/utils';
 import {
   ySyncPlugin,
+  ySyncPluginKey,
   yCursorPlugin,
   yUndoPlugin,
   prosemirrorToYXmlFragment,
@@ -54,6 +55,7 @@ import {
   disposeSelectionScope,
 } from '@/components/editor/utils/selectionVersionPlugin';
 import type { EditorHandle } from '@/components/editor/EditorHandle';
+import { registerEditor } from '@/components/editor/editorRegistry';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 import { InlineCommentPopover } from '@/features/comments/components/InlineCommentPopover';
 import { CommentThreadPopover } from '@/features/comments/components/CommentThreadPopover';
@@ -421,6 +423,8 @@ export function CrepeEditor({
   const settings = editorState?.settings ?? defaultSettings;
   const editorRef = useRef<HTMLDivElement>(null);
   const crepeRef = useRef<Crepe | null>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const unregisterEditorRef = useRef<(() => void) | null>(null);
   const contentRef = useRef<string>('');
   const initializedNoteIdRef = useRef<string | null>(null);
   const handleScopeRef = useRef<object>({});
@@ -454,8 +458,8 @@ export function CrepeEditor({
   // Stable ref for the comment callback so createCrepeConfig captures the latest version
   const commentCallbackRef = useRef<() => void>(() => {});
   commentCallbackRef.current = () => {
-    const view = (window as Window & { __milkdownEditorView?: EditorView }).__milkdownEditorView;
-    if (!view) return;
+    const view = viewRef.current;
+    if (!view || view.isDestroyed) return;
     const { from, to } = view.state.selection;
     if (from === to) return;
 
@@ -478,8 +482,8 @@ export function CrepeEditor({
   // Stable ref for the highlight callback
   const highlightCallbackRef = useRef<() => void>(() => {});
   highlightCallbackRef.current = () => {
-    const view = (window as Window & { __milkdownEditorView?: EditorView }).__milkdownEditorView;
-    if (!view) return;
+    const view = viewRef.current;
+    if (!view || view.isDestroyed) return;
     const { from, to } = view.state.selection;
     if (from === to) return;
 
@@ -794,8 +798,6 @@ export function CrepeEditor({
         editor.use(upload);
       }
 
-      // Store the editor reference globally so we can access it in plugins
-      (window as Window & { __milkdownEditor?: unknown }).__milkdownEditor = editor;
     } catch {
       // Plugin registration failed silently
     }
@@ -815,7 +817,8 @@ export function CrepeEditor({
         editor.action((ctx) => {
           const view = ctx.get(editorViewCtx);
           if (view) {
-            (window as Window & { __milkdownEditorView?: unknown }).__milkdownEditorView = view;
+            viewRef.current = view;
+            unregisterEditorRef.current = registerEditor({ editor, view });
 
             if (!readonly && onEditorReadyRef.current) {
               const scope = handleScopeRef.current;
@@ -885,6 +888,8 @@ export function CrepeEditor({
           if (cancelled || !crepeRef.current) return;
           try {
             crepeRef.current.editor.action((ctx) => {
+              const view = ctx.get(editorViewCtx);
+              if (!view || view.isDestroyed) return;
               const fragment = rtBinding.ydoc.get(
                 PROSEMIRROR_FRAGMENT_FIELD,
                 Y.XmlFragment,
@@ -915,7 +920,7 @@ export function CrepeEditor({
         try {
           crepe.editor.action((ctx) => {
             const view = ctx.get(editorViewCtx);
-            if (view) {
+            if (view && !view.isDestroyed) {
               autoEmbedMediaMentions(view, organizationId);
             }
           });
@@ -927,6 +932,30 @@ export function CrepeEditor({
 
     return () => {
       cancelled = true;
+      if (unregisterEditorRef.current) {
+        unregisterEditorRef.current();
+        unregisterEditorRef.current = null;
+      }
+      // crepe.destroy() is async; without detaching the Y.Doc observer
+      // synchronously, a remote update can dispatch into the editor after
+      // Milkdown wipes its ctx, throwing "Context editorState not found".
+      // y-prosemirror's deferred metadata flush (lib.js updateMetas) gates
+      // on `binding.isDestroyed`, but binding.destroy() never sets it - set
+      // it ourselves to mute pending awareness dispatches.
+      const liveView = viewRef.current;
+      if (liveView && !liveView.isDestroyed) {
+        try {
+          const syncState = ySyncPluginKey.getState(liveView.state) as { binding?: { destroy?: () => void; isDestroyed?: boolean } } | null;
+          const binding = syncState?.binding;
+          if (binding) {
+            binding.isDestroyed = true;
+            binding.destroy?.();
+          }
+        } catch {
+          // best effort
+        }
+      }
+      viewRef.current = null;
       if (crepeRef.current) {
         crepeRef.current.destroy();
         crepeRef.current = null;
@@ -956,17 +985,20 @@ export function CrepeEditor({
     if (!container) return;
     
     let cancelled = false;
-    
-    // Destroy current instance
+
+    if (unregisterEditorRef.current) {
+      unregisterEditorRef.current();
+      unregisterEditorRef.current = null;
+    }
+    viewRef.current = null;
+
     crepeRef.current.destroy();
     crepeRef.current = null;
-    
-    // Clear container before recreating
+
     clearContainer(container);
-    
+
     contentRef.current = content;
 
-    // Recreate with new content
     const crepe = new Crepe(createCrepeConfig(container, content, true, compact, placeholder));
 
     // Register plugins before create (same as above)
@@ -990,21 +1022,23 @@ export function CrepeEditor({
       }
       crepeRef.current = crepe;
 
-      crepe.setReadonly(true);
-
-      // Auto-embed media file mentions after editor is ready
-      if (autoEmbedMedia && organizationId) {
-        try {
-          crepe.editor.action((ctx) => {
-            const editorView = ctx.get(editorViewCtx);
-            if (editorView) {
+      try {
+        const editor = crepe.editor;
+        editor.action((ctx) => {
+          const editorView = ctx.get(editorViewCtx);
+          if (editorView && !editorView.isDestroyed) {
+            viewRef.current = editorView;
+            unregisterEditorRef.current = registerEditor({ editor, view: editorView });
+            if (autoEmbedMedia && organizationId) {
               autoEmbedMediaMentions(editorView, organizationId);
             }
-          });
-        } catch {
-          // Editor action failed silently
-        }
+          }
+        });
+      } catch {
+        // Editor action failed silently
       }
+
+      crepe.setReadonly(true);
     });
 
     return () => {
@@ -1134,7 +1168,7 @@ export function CrepeEditor({
     try {
       crepeRef.current.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx);
-        if (!view) return;
+        if (!view || view.isDestroyed) return;
 
         const markType = highlightMark.type(ctx);
         const { from, to } = highlightPicker;
