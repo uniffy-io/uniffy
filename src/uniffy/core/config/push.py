@@ -77,5 +77,5 @@ async def load_vapid_config() -> None:
             logger.info("VAPID config loaded from application_settings table")
     except Exception:
         logger.opt(exception=True).warning(
-            "Failed to load VAPID config from database -- push notifications disabled"
+            "Failed to load VAPID config from database | push notifications disabled"
         )

@@ -34,12 +34,7 @@ ENV VITE_ENV=$VITE_ENV
 RUN pnpm --filter uniffy-ui build
 
 # Build service worker (minified IIFE bundle for production)
-RUN cd src/ui && ./node_modules/.bin/esbuild src/workers/mediaStreamWorker.ts \
-    --bundle --outfile=dist/media-stream-worker.js \
-    --format=iife --platform=browser \
-    --target=es2020 --minify \
-    --alias:@=./src \
-    --alias:@uniffy/proto=../gen/typescript
+RUN pnpm --filter uniffy-ui build:worker
 
 # Production stage - serve with nginx
 FROM nginx:alpine

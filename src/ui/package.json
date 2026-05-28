@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc -b && vite build",
+        "build:worker": "node scripts/build-worker.mjs",
         "lint": "eslint .",
         "test": "vitest run",
         "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=../../reports/vitest-report.xml",

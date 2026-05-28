@@ -137,6 +137,9 @@ def decode_refresh_token(token: str) -> dict[str, Any]:
     return _decode_with_required_type(token, "refresh")
 
 
+JWT_DECODE_LEEWAY = timedelta(minutes=2)
+
+
 def decode_token_unsafe(token: str) -> dict[str, Any]:
     """Decode without enforcing a ``type``; for callers that dispatch on it.
 
@@ -146,12 +149,16 @@ def decode_token_unsafe(token: str) -> dict[str, Any]:
     ``decode_refresh_token`` instead.
     """
     secret_key = get_secret_key()
-    return jwt.decode(token, secret_key, algorithms=["HS256"])
+    return jwt.decode(
+        token, secret_key, algorithms=["HS256"], leeway=JWT_DECODE_LEEWAY
+    )
 
 
 def _decode_with_required_type(token: str, expected_type: str) -> dict[str, Any]:
     secret_key = get_secret_key()
-    payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+    payload = jwt.decode(
+        token, secret_key, algorithms=["HS256"], leeway=JWT_DECODE_LEEWAY
+    )
     if payload.get("type") != expected_type:
         raise jwt.InvalidTokenError(
             f"Expected token type {expected_type!r}, got {payload.get('type')!r}"

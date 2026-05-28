@@ -379,7 +379,8 @@ async def lifespan(app: FastAPI):
             version = await DeploymentCipher(session).provision_if_missing()
             logger.info(f"Deployment DEK active at v{version}")
     except Exception as e:
-        logger.warning(f"Deployment DEK provisioning skipped: {e}")
+        logger.exception(f"Deployment DEK provisioning failed: {e}")
+        raise
 
     try:
         from uniffy.core.config.push import load_vapid_config
