@@ -4,7 +4,7 @@ The cached helpers are thin shells around ``cache_get_or_set_locked``;
 the loader is what does the work. Tests here patch the cache layer to
 verify:
 
-- org admin short-circuits ``compute_visible_tag_ids`` to ``None``
+- org admin is filtered like any member (no short-circuit to ``None``)
 - non-admin builds the union, intersected by visible content
 - payload encoding round-trips ``set | None`` through Valkey JSON
 - cache invalidation helpers call the right tags / keys
@@ -54,8 +54,13 @@ class TestPayloadCodec:
 
 
 class TestComputeVisibleTagIds:
-    def test_org_admin_short_circuits_none(self) -> None:
+    def test_org_admin_is_filtered_not_short_circuited(self) -> None:
+        """Org admins no longer get a None ('see all') sentinel - they build the
+        same filtered union as any member and run it."""
         session = MagicMock()
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=execute_result)
         org_id = generate_id()
         user_id = generate_id()
 
@@ -71,9 +76,8 @@ class TestComputeVisibleTagIds:
                 )
             )
 
-        assert result is None
-        # Org admin should never reach the union query.
-        session.execute.assert_not_called()
+        assert result == set()
+        session.execute.assert_awaited()
 
 
 class TestGetVisibleTagIdsCacheWiring:

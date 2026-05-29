@@ -165,34 +165,6 @@ class TestAddMemberRejections:
                 )
             )
 
-    def test_rejects_blocked_on_org_admin(self) -> None:
-        """Cannot BLOCK an org admin - the API must reject this explicitly."""
-        ops = _make_ops()
-        content = _fake_content()
-        target_user_id = uuid7()
-        p1, p2 = self._patch_prereqs(ops, content)
-        with (
-            p1,
-            p2,
-            patch.object(
-                ops.permission_checker,
-                "is_org_admin",
-                AsyncMock(return_value=True),
-            ),
-            pytest.raises(ValidationError, match="Organization admins cannot be blocked"),
-        ):
-            asyncio.run(
-                ops.add_member(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=target_user_id,
-                    role=ContentRole.BLOCKED,
-                )
-            )
-
 
 class TestUpdateMemberRoleRejections:
     def _patch_prereqs(self, ops, content):

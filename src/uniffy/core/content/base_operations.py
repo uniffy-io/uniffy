@@ -92,7 +92,12 @@ class BaseContentOperations[TModel](ABC):
         include_deleted: bool = False,
         **filters: Any,
     ) -> list[TModel]:
-        """Content items the user can see; org/domain admins bypass the access filter."""
+        """Content items the user can see, filtered by the access policy.
+
+        Admins are NOT exempt here: this powers personal list/sidebar views, where
+        an admin must see only their own accessible content, never other members'
+        private items. Admin-wide browse belongs to a dedicated surface.
+        """
         query = select(self.model_class).where(self._get_org_id_column() == organization_id)
 
         if not include_deleted:
@@ -100,15 +105,6 @@ class BaseContentOperations[TModel](ABC):
 
         # Apply domain filters before the access filter so they don't interact.
         query = self._apply_filters(query, **filters)
-
-        if await self.permission_checker.is_org_admin(user_id, organization_id):
-            result = await self.session.execute(query)
-            return list(result.scalars().all())
-        if await self.permission_checker.is_domain_admin(
-            user_id, organization_id, self.content_type
-        ):
-            result = await self.session.execute(query)
-            return list(result.scalars().all())
 
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,

@@ -248,26 +248,20 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         elif personal_only:
             query = query.where(AgentCronTask.owner_id == user_id)
         else:
-            is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
-            if not is_admin:
-                is_admin = await self.permission_checker.is_domain_admin(
-                    user_id, organization_id, self.content_type
-                )
-            if not is_admin:
-                accessible_agent_ids = select(Agent.id).where(
-                    Agent.organization_id == organization_id,
-                    Agent.is_deleted == False,  # noqa: E712
-                    self.access_query.build_accessible_filter(
-                        user_id=user_id,
-                        organization_id=organization_id,
-                        content_type=ContentType.AGENT,
-                        content_id_column=Agent.id,
-                        owner_id_column=Agent.owner_id,
-                        access_mode_column=Agent.access_mode,
-                        baseline_role_column=Agent.baseline_role,
-                    ),
-                )
-                query = query.where(AgentCronTask.agent_id.in_(accessible_agent_ids))
+            accessible_agent_ids = select(Agent.id).where(
+                Agent.organization_id == organization_id,
+                Agent.is_deleted == False,  # noqa: E712
+                self.access_query.build_accessible_filter(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=ContentType.AGENT,
+                    content_id_column=Agent.id,
+                    owner_id_column=Agent.owner_id,
+                    access_mode_column=Agent.access_mode,
+                    baseline_role_column=Agent.baseline_role,
+                ),
+            )
+            query = query.where(AgentCronTask.agent_id.in_(accessible_agent_ids))
 
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.session.execute(count_query)).scalar() or 0

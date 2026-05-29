@@ -785,21 +785,16 @@ class FileOperations(BaseContentOperations[File]):
             )
             query = query.where(File.owner_id != user_id, File.id.in_(shared_subq))
         else:
-            is_org_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
-            is_domain_admin = await self.permission_checker.is_domain_admin(
-                user_id, organization_id, self.content_type
+            access_filter = self.access_query.build_accessible_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id_column=File.id,
+                owner_id_column=File.owner_id,
+                access_mode_column=File.access_mode,
+                baseline_role_column=File.baseline_role,
             )
-            if not (is_org_admin or is_domain_admin):
-                access_filter = self.access_query.build_accessible_filter(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id_column=File.id,
-                    owner_id_column=File.owner_id,
-                    access_mode_column=File.access_mode,
-                    baseline_role_column=File.baseline_role,
-                )
-                query = query.where(access_filter)
+            query = query.where(access_filter)
 
         if group_id is not None:
             now = datetime.now(UTC)
@@ -1522,21 +1517,16 @@ class FolderOperations:
         if personal_only:
             query = query.where(Folder.owner_id == user_id)
         else:
-            is_org_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
-            is_domain_admin = await self.permission_checker.is_domain_admin(
-                user_id, organization_id, self.content_type
+            access_filter = self.access_query.build_accessible_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id_column=Folder.id,
+                owner_id_column=Folder.owner_id,
+                access_mode_column=Folder.access_mode,
+                baseline_role_column=Folder.baseline_role,
             )
-            if not (is_org_admin or is_domain_admin):
-                access_filter = self.access_query.build_accessible_filter(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id_column=Folder.id,
-                    owner_id_column=Folder.owner_id,
-                    access_mode_column=Folder.access_mode,
-                    baseline_role_column=Folder.baseline_role,
-                )
-                query = query.where(access_filter)
+            query = query.where(access_filter)
 
         if parent_id is None:
             query = query.where(Folder.parent_id.is_(None))

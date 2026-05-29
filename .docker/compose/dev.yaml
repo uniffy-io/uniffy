@@ -80,7 +80,10 @@ services:
         container_name: uniffy-dev-ui
         pull_policy: never
         restart: unless-stopped
-        command: pnpm --filter uniffy-ui dev
+        # verify-deps-before-run does a workspace-wide deps check that runs
+        # src/mobile's patch-package postinstall and crash-loops the container.
+        # The UI never needs the mobile workspace; skip the check (matches landing).
+        command: pnpm --config.verify-deps-before-run=false --filter uniffy-ui dev
         environment:
             PNPM_FILTER: "uniffy-ui..."
             CI: "true"

@@ -311,22 +311,16 @@ class AgentOperations(BaseContentOperations[Agent]):
             )
             query = query.where(Agent.id.in_(group_subq))
         else:
-            is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
-            if not is_admin:
-                is_admin = await self.permission_checker.is_domain_admin(
-                    user_id, organization_id, self.content_type
-                )
-            if not is_admin:
-                access_filter = self.access_query.build_accessible_filter(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id_column=Agent.id,
-                    owner_id_column=Agent.owner_id,
-                    access_mode_column=Agent.access_mode,
-                    baseline_role_column=Agent.baseline_role,
-                )
-                query = query.where(access_filter)
+            access_filter = self.access_query.build_accessible_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id_column=Agent.id,
+                owner_id_column=Agent.owner_id,
+                access_mode_column=Agent.access_mode,
+                baseline_role_column=Agent.baseline_role,
+            )
+            query = query.where(access_filter)
 
         # Avoid the unused import warning if personal_only / group_id aren't taken.
         _ = GroupMember
@@ -368,22 +362,16 @@ class AgentOperations(BaseContentOperations[Agent]):
             Agent.is_deleted == False,  # noqa: E712
         )
 
-        is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
-        if not is_admin:
-            is_admin = await self.permission_checker.is_domain_admin(
-                user_id, organization_id, self.content_type
-            )
-        if not is_admin:
-            access_filter = self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Agent.id,
-                owner_id_column=Agent.owner_id,
-                access_mode_column=Agent.access_mode,
-                baseline_role_column=Agent.baseline_role,
-            )
-            query = query.where(access_filter)
+        access_filter = self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Agent.id,
+            owner_id_column=Agent.owner_id,
+            access_mode_column=Agent.access_mode,
+            baseline_role_column=Agent.baseline_role,
+        )
+        query = query.where(access_filter)
 
         result = await self.session.execute(query.order_by(Agent.name))
         return list(result.scalars().all())

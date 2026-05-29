@@ -18,6 +18,8 @@ export interface ContentAccessPolicy {
     ownerId: string;
     accessMode: number;
     baselineRole: number | null;
+    /** The current user's backend-resolved effective role; null = no access. */
+    callerRole: number | null;
 }
 
 export interface SerializedContentMember {

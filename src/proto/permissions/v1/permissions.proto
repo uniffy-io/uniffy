@@ -38,6 +38,10 @@ message ContentAccessPolicy {
   string owner_id = 1;
   common.v1.AccessMode access_mode = 2;
   optional common.v1.ContentRole baseline_role = 3;
+  // The requesting user's effective role on this content (group-resolved,
+  // BLOCKED-aware). Absent means no access. Lets the client gate manage
+  // controls without recomputing permissions.
+  optional common.v1.ContentRole caller_role = 4;
 }
 
 // Audit log entry for a content member change.

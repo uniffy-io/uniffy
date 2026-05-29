@@ -22,11 +22,12 @@ function serializeTimestamp(ts: Timestamp | undefined): SerializedTimestamp | nu
 }
 
 function serializePolicy(policy: ProtoContentAccessPolicy | undefined): ContentAccessPolicy {
-    if (!policy) return { ownerId: '', accessMode: 0, baselineRole: null };
+    if (!policy) return { ownerId: '', accessMode: 0, baselineRole: null, callerRole: null };
     return {
         ownerId: policy.ownerId,
         accessMode: policy.accessMode,
         baselineRole: policy.baselineRole ?? null,
+        callerRole: policy.callerRole ?? null,
     };
 }
 

@@ -35,9 +35,7 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 
 **Multi-tenancy**: All content is scoped to `organization_id`. Users are global; memberships are org-scoped.
 
-**Permission system**: Every content row carries an `access_mode` (`OWNER_ONLY`, `EXPLICIT_MEMBERS`, `OPEN_TO_ORG`) and an optional `baseline_role` (only meaningful with `OPEN_TO_ORG`). Explicit grants live in `permissions_content_members` as `ContentMember` rows keyed on `(content_type, content_id, subject_type, subject_id)` with a `role` ordered `VIEWER < COMMENTER < EDITOR < ADMIN < OWNER` plus a `BLOCKED` deny state. `PermissionChecker.effective_role()` resolves the highest of (ownership, explicit direct/group member, baseline-when-OPEN_TO_ORG) minus any `BLOCKED` row. Org OWNER/ADMIN and per-domain `DomainAdmin` bypass the filter. Use `role_can_view / role_can_comment / role_can_edit / role_can_delete / role_can_manage / role_can_transfer` from `core.auth.permissions` to gate operations. Access-mode and member changes go through `permissions.v1.MembersService` (backed by `ContentMembersOperations` in `core/content/members.py`). For content that uses custom membership-based access (e.g., chat channels), domains override the `_require_*` hooks on `BaseContentOperations`.
-
-**Domain admin system**: Users can be granted admin status for specific domains (chat, files, calendar, etc.) without being full org admins. Stored in a shared `DomainAdmin` table with unique constraint on `(organization_id, user_id, domain)`. Access check order: org ADMIN/OWNER > domain admin > regular member.
+**Permission system**: Every content row carries an `access_mode` + optional `baseline_role`, resolved by `PermissionChecker.effective_role`. Personal content is private until shared - org/domain admins get no content bypass. Full model, enforcement points, caching, search/tag filtering, chat's separate model, and the hard rules live in **`.claude/rules/permissions.md`** (the single source of truth - do not duplicate it here).
 
 **Background tasks**: ARQ workers with Valkey for async job processing (file processing, indexing, etc.).
 

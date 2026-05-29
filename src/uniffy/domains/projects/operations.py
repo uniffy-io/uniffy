@@ -7,6 +7,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import String, and_, cast, delete, func, literal, not_, select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +30,9 @@ from uniffy.core.events import (
     emit_notification,
     extract_mentioned_user_ids,
 )
+from uniffy.core.models.login.group import Group
+from uniffy.core.models.login.group_member import GroupMember
+from uniffy.core.models.login.user import User
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
@@ -43,6 +47,7 @@ from uniffy.core.types import (
     ContentType,
     NotificationType,
     SubjectType,
+    generate_id,
 )
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.projects import queries
@@ -299,23 +304,16 @@ class ProjectOperations(BaseContentOperations[Project]):
     ) -> tuple[list[Project], int]:
         query = select(Project).where(Project.organization_id == organization_id)
 
-        is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
-        if not is_admin:
-            is_admin = await self.permission_checker.is_domain_admin(
-                user_id, organization_id, self.content_type
-            )
-
-        if not is_admin:
-            access_filter = self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Project.id,
-                owner_id_column=Project.owner_id,
-                access_mode_column=Project.access_mode,
-                baseline_role_column=Project.baseline_role,
-            )
-            query = query.where(access_filter)
+        access_filter = self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Project.id,
+            owner_id_column=Project.owner_id,
+            access_mode_column=Project.access_mode,
+            baseline_role_column=Project.baseline_role,
+        )
+        query = query.where(access_filter)
 
         if access_mode is not None:
             query = query.where(Project.access_mode == access_mode)
@@ -803,6 +801,15 @@ class TaskOperations(BaseContentOperations[Task]):
 
         await self._log_activity(task.id, user_id, "created")
 
+        watcher_user_ids = [user_id]
+        if task.assignee_ids:
+            watcher_user_ids += await self._expand_assignees_to_users(
+                [UUID(uid) for uid in task.assignee_ids]
+            )
+        await WatcherOperations(self.session).ensure_watching(
+            watcher_user_ids, organization_id, task.id
+        )
+
         await self.session.commit()
         await self.session.refresh(task)
 
@@ -970,6 +977,17 @@ class TaskOperations(BaseContentOperations[Task]):
                 },
             )
 
+        if "assignee_ids" in kwargs:
+            newly_assigned = set(task.assignee_ids or []) - set(old_assignee_ids or [])
+            if newly_assigned:
+                member_ids = await self._expand_assignees_to_users(
+                    [UUID(uid) for uid in newly_assigned]
+                )
+                if member_ids:
+                    await WatcherOperations(self.session).ensure_watching(
+                        member_ids, organization_id, task.id
+                    )
+
         await self.session.commit()
         await self.session.refresh(task)
 
@@ -991,6 +1009,10 @@ class TaskOperations(BaseContentOperations[Task]):
             changes.append(f'Priority changed to "{label}"')
         if "assignee_ids" in kwargs:
             changes.append("Assignees updated")
+        if title_changed:
+            changes.append("Title updated")
+        if "due_date" in kwargs and task.due_date != old_due_date:
+            changes.append("Due date updated")
         if changes:
             await self._emit_watcher_notifications(task, user_id, "; ".join(changes))
 
@@ -1556,6 +1578,35 @@ class TaskOperations(BaseContentOperations[Task]):
                     break
         return resolved
 
+    async def _expand_assignees_to_users(self, assignee_ids: list[UUID]) -> list[UUID]:
+        """Expand any group ids among assignees into active member user ids.
+
+        Assignees can be users or groups (the picker allows both), but only
+        users can hold a watcher row or receive a notification.
+        """
+        if not assignee_ids:
+            return []
+
+        group_rows = await self.session.execute(
+            select(Group.id).where(Group.id.in_(assignee_ids))
+        )
+        group_ids = {row[0] for row in group_rows.all()}
+
+        resolved: set[UUID] = {uid for uid in assignee_ids if uid not in group_ids}
+
+        if group_ids:
+            member_rows = await self.session.execute(
+                select(GroupMember.user_id).where(
+                    and_(
+                        GroupMember.group_id.in_(group_ids),
+                        GroupMember.is_active.is_(True),
+                    )
+                )
+            )
+            resolved.update(row[0] for row in member_rows.all())
+
+        return list(resolved)
+
     async def _emit_assignment_notifications(
         self,
         task: Task,
@@ -1566,9 +1617,14 @@ class TaskOperations(BaseContentOperations[Task]):
         old_set = set(old_assignee_ids or [])
         new_set = set(new_assignee_ids or [])
         added = new_set - old_set
-        added.discard(str(actor_id))
 
         if not added:
+            return
+
+        recipient_ids = await self._expand_assignees_to_users([UUID(uid) for uid in added])
+        recipient_ids = [uid for uid in recipient_ids if uid != actor_id]
+
+        if not recipient_ids:
             return
 
         await emit_notification(
@@ -1578,7 +1634,7 @@ class TaskOperations(BaseContentOperations[Task]):
                 actor_id=actor_id,
                 title=f"Assigned you to: {task.title}",
                 source_urn=build_content_urn(ContentType.TASK, task.id),
-                target_user_ids=[UUID(uid) for uid in added],
+                target_user_ids=recipient_ids,
             )
         )
 
@@ -1887,6 +1943,43 @@ class WatcherOperations:
         await self.session.commit()
         await self.session.refresh(watcher)
         return True, watcher
+
+    async def ensure_watching(
+        self,
+        user_ids: list[UUID],
+        organization_id: UUID,
+        task_id: UUID,
+    ) -> None:
+        """Idempotently subscribe users to a task without committing.
+
+        Used to auto-watch the creator and assignees so they receive
+        task-change notifications without having to opt in manually.
+        """
+        wanted = {uid for uid in user_ids}
+        if not wanted:
+            return
+        # Assignees may include group ids; only real users can watch (FK to login_users).
+        valid_rows = await self.session.execute(select(User.id).where(User.id.in_(wanted)))
+        valid_ids = {row[0] for row in valid_rows.all()}
+        if not valid_ids:
+            return
+        now = datetime.now(UTC)
+        await self.session.execute(
+            pg_insert(TaskWatcher)
+            .values(
+                [
+                    {
+                        "id": generate_id(),
+                        "user_id": uid,
+                        "organization_id": organization_id,
+                        "task_id": task_id,
+                        "created_at": now,
+                    }
+                    for uid in valid_ids
+                ]
+            )
+            .on_conflict_do_nothing(constraint="uq_task_watchers_user_task")
+        )
 
     async def is_watching(self, user_id: UUID, task_id: UUID) -> bool:
         watcher = await self._get_watcher(user_id, task_id)

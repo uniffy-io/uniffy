@@ -71,9 +71,11 @@ def content_access_policy_to_proto(
     owner_id: UUID,
     access_mode: AccessMode | None,
     baseline_role: ContentRole | None,
+    caller_role: ContentRole | None = None,
 ) -> ProtoContentAccessPolicy:
     """``access_mode=None`` means the row inherits from org defaults;
-    emitted as ``ACCESS_MODE_UNSPECIFIED``.
+    emitted as ``ACCESS_MODE_UNSPECIFIED``. ``caller_role=None`` means the
+    requesting user has no access; the field is left unset.
     """
     proto = ProtoContentAccessPolicy(
         owner_id=str(owner_id),
@@ -81,6 +83,8 @@ def content_access_policy_to_proto(
     )
     if baseline_role is not None:
         proto.baseline_role = content_role_to_proto(baseline_role)
+    if caller_role is not None:
+        proto.caller_role = content_role_to_proto(caller_role)
     return proto
 
 

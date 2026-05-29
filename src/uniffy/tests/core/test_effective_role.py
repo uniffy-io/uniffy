@@ -74,58 +74,70 @@ def _call(
     )
 
 
-class TestOrgAdminBypass:
-    """Org ADMIN/OWNER always gets OWNER regardless of content state."""
+class TestNoAdminBypass:
+    """Org and domain admins get NO content bypass. Access flows only from
+    ownership, an explicit ContentMember grant, or the OPEN_TO_ORG baseline -
+    personal content is private until shared."""
 
-    def test_org_admin_returns_owner(self) -> None:
+    def test_org_admin_denied_owner_only_when_not_owner(self) -> None:
         checker = _make_checker()
         with (
             patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)),
+            patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
         ):
-            role = _call(checker)
+            role = _call(
+                checker, owner_id=uuid7(), user_id=uuid7(),
+                access_mode=AccessMode.OWNER_ONLY,
+            )
+        assert role is None
+
+    def test_org_admin_still_owns_their_own_content(self) -> None:
+        user_id = uuid7()
+        checker = _make_checker()
+        with (
+            patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)),
+            patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
+        ):
+            role = _call(
+                checker, owner_id=user_id, user_id=user_id,
+                access_mode=AccessMode.OWNER_ONLY,
+            )
         assert role == ContentRole.OWNER
 
-    def test_org_admin_bypasses_blocked_member_row(self) -> None:
-        """Org admins are unaffected by BLOCKED rows on the content."""
-        user_id = uuid7()
+    def test_org_admin_gets_only_their_granted_role(self) -> None:
+        """An org admin with an explicit VIEWER grant gets VIEWER, not OWNER."""
+        checker = _make_checker()
+        with (
+            patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)),
+            patch.object(checker, "_get_member_role", AsyncMock(return_value=ContentRole.VIEWER)),
+        ):
+            role = _call(checker, access_mode=AccessMode.EXPLICIT_MEMBERS)
+        assert role == ContentRole.VIEWER
+
+    def test_org_admin_blocked_row_denies(self) -> None:
+        """BLOCKED applies to admins too - they are regular members for content."""
         checker = _make_checker()
         with (
             patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)),
             patch.object(checker, "_get_member_role", AsyncMock(return_value=ContentRole.BLOCKED)),
         ):
-            role = _call(checker, user_id=user_id)
-        assert role == ContentRole.OWNER
+            role = _call(
+                checker, access_mode=AccessMode.OPEN_TO_ORG, baseline_role=ContentRole.EDITOR
+            )
+        assert role is None
 
-    def test_org_admin_bypasses_owner_only_mode(self) -> None:
-        checker = _make_checker()
-        with patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)):
-            role = _call(checker, access_mode=AccessMode.OWNER_ONLY)
-        assert role == ContentRole.OWNER
-
-
-class TestDomainAdminBypass:
-    """Domain admins get ADMIN (not OWNER) on their domain's content."""
-
-    def test_domain_admin_returns_admin(self) -> None:
+    def test_domain_admin_denied_owner_only_when_not_owner(self) -> None:
         checker = _make_checker()
         with (
             patch.object(checker, "_is_org_admin", AsyncMock(return_value=False)),
             patch.object(checker, "_is_domain_admin_for_content", AsyncMock(return_value=True)),
+            patch.object(checker, "_get_member_role", AsyncMock(return_value=None)),
         ):
-            role = _call(checker)
-        assert role == ContentRole.ADMIN
-
-    def test_domain_admin_not_triggered_when_org_admin(self) -> None:
-        """Org admin short-circuits before domain admin check."""
-        checker = _make_checker()
-        domain_admin_mock = AsyncMock(return_value=True)
-        with (
-            patch.object(checker, "_is_org_admin", AsyncMock(return_value=True)),
-            patch.object(checker, "_is_domain_admin_for_content", domain_admin_mock),
-        ):
-            role = _call(checker)
-        assert role == ContentRole.OWNER
-        domain_admin_mock.assert_not_called()
+            role = _call(
+                checker, owner_id=uuid7(), user_id=uuid7(),
+                access_mode=AccessMode.OWNER_ONLY,
+            )
+        assert role is None
 
 
 class TestOwnerCheck:

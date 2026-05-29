@@ -920,16 +920,11 @@ class NoteOperations(BaseContentOperations[Note]):
         *,
         personal_only: bool,
     ) -> Any:
-        # ``personal_only`` -> owner only; admins bypass; rest get accessible-filter.
+        # ``personal_only`` -> owner only; otherwise the accessible-filter for
+        # everyone. Admins are NOT exempt: this feeds the personal sidebar, which
+        # must not surface other members' OWNER_ONLY notes.
         if personal_only:
             return query.where(Note.owner_id == user_id)
-
-        if await self.permission_checker.is_org_admin(user_id, organization_id):
-            return query
-        if await self.permission_checker.is_domain_admin(
-            user_id, organization_id, self.content_type
-        ):
-            return query
 
         access_filter = self.access_query.build_accessible_filter(
             user_id=user_id,

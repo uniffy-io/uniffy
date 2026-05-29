@@ -22,6 +22,12 @@ export function useMyContentRole(
     }
 
     if (policy) {
+        // Backend-resolved effective role is authoritative (group-resolved,
+        // BLOCKED-aware). The owner / baseline branches below are a fallback
+        // for responses that predate the field.
+        if (policy.callerRole != null && policy.callerRole !== ContentRole.UNSPECIFIED) {
+            return policy.callerRole as ContentRole;
+        }
         if (policy.ownerId === currentUserId) return ContentRole.OWNER;
         if (policy.accessMode === AccessMode.OPEN_TO_ORG && policy.baselineRole != null) {
             return policy.baselineRole as ContentRole;
