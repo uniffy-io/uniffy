@@ -52,6 +52,7 @@ class ChatMessageOperations:
         sender_type: SenderType = SenderType.USER,
         sender_name: str = "",
         sender_avatar: str = "",
+        attachment_file_ids: list[UUID] | None = None,
     ) -> tuple[ChatMessage, str, str]:
         """Send a message; Phase 1 DB transaction, Phase 2 post-commit publish/fan-out."""
         if len(content) > MAX_MESSAGE_LENGTH:
@@ -95,6 +96,19 @@ class ChatMessageOperations:
         )
         self.session.add(message)
         await self.session.flush()
+
+        if attachment_file_ids:
+            from uniffy.domains.attachments.operations import AttachmentOperations
+
+            att_ops = AttachmentOperations(self.session)
+            for file_id in attachment_file_ids:
+                await att_ops.attach_file(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=ContentType.CHAT_MESSAGE,
+                    content_id=message.id,
+                    source_file_id=file_id,
+                )
 
         if root_id is None:
             # Root message: bump both counters.

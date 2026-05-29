@@ -855,6 +855,7 @@ function ChatPanel() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const contentWrapperRef = useRef<HTMLDivElement>(null);
     const isNearBottomRef = useRef(true);
+    const lastScrolledSessionRef = useRef<string | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -954,6 +955,40 @@ function ChatPanel() {
             textareaRef.current?.focus();
         }
     }, [activeSessionId, isStreaming]);
+
+    useEffect(() => {
+        lastScrolledSessionRef.current = null;
+    }, [activeSessionId]);
+
+    // Pin to bottom on first activation of each session. The repeated
+    // calls absorb late image/file layout shifts: a single instant
+    // scroll lands above the bottom because embedded images grow the
+    // wrapper after the initial scrollHeight read.
+    useEffect(() => {
+        if (!activeSessionId || messages.length === 0) return;
+        if (lastScrolledSessionRef.current === activeSessionId) return;
+        lastScrolledSessionRef.current = activeSessionId;
+
+        const pinToBottom = () => {
+            const el = scrollContainerRef.current;
+            if (!el) return;
+            el.scrollTop = el.scrollHeight;
+            isNearBottomRef.current = true;
+        };
+
+        pinToBottom();
+        const raf = requestAnimationFrame(pinToBottom);
+        const t1 = window.setTimeout(pinToBottom, 100);
+        const t2 = window.setTimeout(pinToBottom, 300);
+        const t3 = window.setTimeout(pinToBottom, 800);
+
+        return () => {
+            cancelAnimationFrame(raf);
+            window.clearTimeout(t1);
+            window.clearTimeout(t2);
+            window.clearTimeout(t3);
+        };
+    }, [activeSessionId, messages.length]);
 
     useEffect(() => {
         if (isNearBottomRef.current) {

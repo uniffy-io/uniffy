@@ -22,7 +22,6 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.runtime_pb2 import (
     AgentStreamEvent,
     CancelStreamRequest,
@@ -69,7 +68,11 @@ from uniffy.domains.agents.runtime.converters import (
     send_message_response_to_proto,
     usage_stats_to_proto,
 )
-from uniffy.domains.agents.runtime.operations import FileContext
+from uniffy.domains.agents.runtime.file_loader import (
+    FileContext,
+    _file_contexts_to_payload,
+    _load_files,
+)
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeDoneEvent,
     RuntimeErrorEvent,
@@ -79,7 +82,6 @@ from uniffy.domains.agents.runtime.stream_events import (
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.observability.metrics import (
     AGENT_RUN_ENQUEUE_FAILURES_TOTAL,
@@ -95,62 +97,6 @@ SUBSCRIBE_WALL_BUDGET_SECONDS = 120.0
 SUBSCRIBE_BLOCK_MS = int(os.getenv("AGENT_RUN_SUBSCRIBE_BLOCK_MS", "1000"))
 SUBSCRIBE_BATCH_COUNT = 100
 SUBSCRIBE_TIMEOUT_MESSAGE = "subscribe_timeout"
-
-
-async def _load_files(
-    session: AsyncSession,
-    user_id: UUID,
-    organization_id: UUID,
-    file_ids: list[str],
-) -> list[FileContext]:
-    """Load files from the database with full permission checks.
-
-    Each id is resolved through :class:`FileOperations.get_by_id`, which
-    runs the canonical view check. The returned :class:`FileContext`
-    list is what the worker rebuilds from the JSON payload.
-    """
-    ops = FileOperations(session)
-    files: list[FileContext] = []
-    for fid in file_ids:
-        file = await ops.get_by_id(user_id, organization_id, UUID(fid))
-        files.append(
-            FileContext(
-                file_id=str(file.id),
-                media_type=file.mime_type or "",
-                filename=file.filename,
-                storage_key=file.storage_key,
-                extracted_text=(
-                    file.media_info.extracted_text
-                    if file.media_info and file.media_info.extracted_text
-                    else None
-                ),
-                extraction_status=(
-                    file.extraction_status.value
-                    if hasattr(file.extraction_status, "value")
-                    else str(file.extraction_status)
-                ),
-            )
-        )
-    return files
-
-
-def _file_contexts_to_payload(
-    files: list[FileContext] | None,
-) -> list[dict[str, Any]] | None:
-    """Serialise a :class:`FileContext` list into the worker's JSON shape."""
-    if not files:
-        return None
-    return [
-        {
-            "file_id": f.file_id,
-            "media_type": f.media_type,
-            "filename": f.filename,
-            "storage_key": f.storage_key,
-            "extracted_text": f.extracted_text,
-            "extraction_status": f.extraction_status,
-        }
-        for f in files
-    ]
 
 
 async def _enqueue_run(

@@ -24,7 +24,8 @@ from uniffy.core.valkey.streams import (
 )
 from uniffy.db.session import open_session
 from uniffy.domains.agents.runtime.destinations import SessionDestination
-from uniffy.domains.agents.runtime.operations import FileContext, RuntimeOperations
+from uniffy.domains.agents.runtime.file_loader import FileContext
+from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeDoneEvent,

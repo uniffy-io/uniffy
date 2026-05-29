@@ -382,7 +382,13 @@ export const fetchMessages = createAsyncThunk<
 
 export const sendMessage = createAsyncThunk<
   ChatMessage,
-  { channelId: string; content: string; rootId?: string; replyToId?: string },
+  {
+    channelId: string;
+    content: string;
+    rootId?: string;
+    replyToId?: string;
+    attachmentFileIds?: string[];
+  },
   { state: RootState; rejectValue: string }
 >('chat/sendMessage', async (params, { getState, dispatch, rejectWithValue }) => {
   try {
@@ -393,6 +399,7 @@ export const sendMessage = createAsyncThunk<
       content: params.content,
       rootId: params.rootId,
       replyToId: params.replyToId,
+      attachmentFileIds: params.attachmentFileIds ?? [],
     });
     if (!response.message) {
       return rejectWithValue('Failed to send message');

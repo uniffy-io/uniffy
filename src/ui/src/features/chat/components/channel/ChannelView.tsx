@@ -46,39 +46,32 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
         channelId: effectiveChannelId,
         content: content || '',
         replyToId: replyToMessage?.id,
+        attachmentFileIds: fileIds,
       })).unwrap();
       dispatch(clearReplyToMessage());
 
       if (fileIds.length > 0 && organizationId && result.id) {
-        const attachResults = await Promise.all(
-          fileIds.map((fileId) =>
-            attachmentsApi.attachFile({
-              organizationId,
-              sourceFileId: fileId,
-              contentType: ContentType.CHAT_MESSAGE,
-              contentId: result.id,
-            }).catch((err) => {
-              console.error('[ChannelView] Failed to attach file:', err);
-              return null;
-            })
-          )
-        );
-
-        const attachments = attachResults
-          .filter((r): r is NonNullable<typeof r> => r !== null && !!r.attachment)
-          .map((r) => ({
-            id: r.attachment!.id,
-            fileId: r.attachment!.fileId,
-            filename: r.attachment!.filename,
-            mimeType: r.attachment!.mimeType,
-            sizeBytes: Number(r.attachment!.sizeBytes),
+        try {
+          const response = await attachmentsApi.listAttachments({
+            organizationId,
+            contentType: ContentType.CHAT_MESSAGE,
+            contentId: result.id,
+          });
+          const attachments = response.attachments.map((a) => ({
+            id: a.id,
+            fileId: a.fileId,
+            filename: a.filename,
+            mimeType: a.mimeType,
+            sizeBytes: Number(a.sizeBytes),
           }));
-
-        if (attachments.length > 0) {
-          dispatch(updateMessage({
-            channelId: effectiveChannelId,
-            message: { ...result, attachments },
-          }));
+          if (attachments.length > 0) {
+            dispatch(updateMessage({
+              channelId: effectiveChannelId,
+              message: { ...result, attachments },
+            }));
+          }
+        } catch (err) {
+          console.error('[ChannelView] Failed to load attachments for sent message:', err);
         }
       }
     },

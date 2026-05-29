@@ -29,11 +29,13 @@ from uniffy.core.models.agents.approval_audit import AgentApprovalAudit
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
-from uniffy.core.types import SubjectType
+from uniffy.core.types import ContentType, SubjectType
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.destinations import ChatDestination
+from uniffy.domains.agents.runtime.file_loader import FileContext, _safe_load_files
 from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import ChatStreamPublisher
+from uniffy.domains.attachments.operations import AttachmentOperations
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
@@ -85,6 +87,12 @@ class AgentChatBridge:
         user_id = trigger.sender_id
         thread_root_id = trigger.root_id
 
+        files = await self._load_trigger_attachments(
+            user_id=user_id,
+            organization_id=channel.organization_id,
+            trigger_message_id=trigger_message_id,
+        )
+
         publisher = ChatStreamPublisher(
             session=self._session,
             channel_id=channel_id,
@@ -121,6 +129,7 @@ class AgentChatBridge:
                 user_id=user_id,
                 organization_id=channel.organization_id,
                 content=trigger.content,
+                files=files,
             ):
                 await publisher.publish(event)
         except Exception as exc:
@@ -152,6 +161,47 @@ class AgentChatBridge:
             )
         )
         return [r[0] for r in result.all()]
+
+    async def _load_trigger_attachments(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        trigger_message_id: UUID,
+    ) -> list[FileContext] | None:
+        """Resolve the trigger chat message's attachments into FileContexts.
+
+        Runs as the message sender so the canonical view check fires per
+        file. Per-file permission errors are swallowed (the readable
+        files still flow through) so a single revoked attachment cannot
+        block the agent from responding to the rest of the message.
+        Returns ``None`` when the trigger has no attachments.
+        """
+        try:
+            attachment_ops = AttachmentOperations(self._session)
+            tuples = await attachment_ops.list_attachments(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=ContentType.CHAT_MESSAGE,
+                content_id=trigger_message_id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to list attachments for chat-triggered agent invocation",
+            )
+            return None
+
+        file_ids = [str(att.file_id) for att, _file, _owner in tuples]
+        if not file_ids:
+            return None
+
+        files = await _safe_load_files(
+            self._session,
+            user_id,
+            organization_id,
+            file_ids,
+        )
+        return files or None
 
     async def handle_confirmation_decision(
         self,

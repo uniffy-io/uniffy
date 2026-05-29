@@ -33,8 +33,8 @@ from uniffy.core.errors import (
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id as uuid7
 from uniffy.domains.agents.runtime import handlers as handlers_mod
+from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.handlers import RuntimeHandlers
-from uniffy.domains.agents.runtime.operations import FileContext
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeDoneEvent,
     RuntimeErrorEvent,

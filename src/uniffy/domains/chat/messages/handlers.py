@@ -75,6 +75,13 @@ class MessageHandlers:
 
         metadata = dict(request.metadata) if request.metadata else None
 
+        attachment_file_ids: list[UUID] = []
+        for raw in request.attachment_file_ids:
+            try:
+                attachment_file_ids.append(UUID(raw))
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid attachment_file_id")
+
         try:
             async with open_session() as session:
                 access = ChatAccessChecker(session)
@@ -89,6 +96,7 @@ class MessageHandlers:
                     message_metadata=metadata,
                     sender_name=jwt_name,
                     sender_avatar=jwt_avatar,
+                    attachment_file_ids=attachment_file_ids,
                 )
 
                 return SendMessageResponse(

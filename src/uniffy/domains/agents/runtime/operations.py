@@ -13,7 +13,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import ValidationError
+from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.provider_key import ProviderKey
@@ -48,6 +48,7 @@ from uniffy.domains.agents.runtime.destinations import (
     RuntimeDestination,
     SessionDestination,
 )
+from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
 from uniffy.domains.agents.runtime.prompt import (
     build_chat_context_section,
@@ -153,23 +154,31 @@ async def _gather_read_tool_results(
     return results
 
 
-@dataclass
-class FileContext:
-    """Context for a file loaded from the database for LLM processing."""
+def _file_context_to_content_block(
+    f: FileContext,
+    *,
+    supports_vision: bool = True,
+) -> dict:
+    """Convert a FileContext to a provider-agnostic LLM content block.
 
-    file_id: str
-    media_type: str
-    filename: str
-    storage_key: str
-    extracted_text: str | None
-    extraction_status: str
-
-
-def _file_context_to_content_block(f: FileContext) -> dict:
-    """Convert a FileContext to a provider-agnostic LLM content block."""
+    Image attachments fall back to a structured text note when
+    ``supports_vision`` is False so the model can tell the user it
+    cannot view images instead of hallucinating "no image attached".
+    """
     media_type = f.media_type
 
     if media_type.startswith("image/"):
+        if not supports_vision:
+            return {
+                "type": "text",
+                "text": (
+                    f"[Attached image: {f.filename} ({media_type}) - the current model "
+                    f"does not support image input. The user attached this image but "
+                    f"you cannot view it. Tell the user the current model is not "
+                    f"vision-capable and ask them to describe the image or switch "
+                    f"to a vision-capable model.]"
+                ),
+            }
         return {
             "type": "image",
             "media_type": media_type,
@@ -204,6 +213,24 @@ def _file_context_to_content_block(f: FileContext) -> dict:
         "type": "text",
         "text": f"[Attached file: {f.filename} ({media_type}) - content not extractable]",
     }
+
+
+async def _resolve_supports_vision(provider: object, model_id: str) -> bool:
+    """Return True when the resolved model declares image-input support.
+
+    Defaults to True when the model is not in the provider's catalog so
+    unknown / newly-released models do not silently drop attachments;
+    provider call errors surface upstream in that case.
+    """
+    try:
+        available = await provider.get_available_models()  # type: ignore[attr-defined]
+    except Exception:
+        logger.exception("Failed to look up provider models for vision gating")
+        return True
+    for m in available:
+        if m.id == model_id:
+            return bool(getattr(m, "supports_vision", False))
+    return True
 
 
 def _file_urn(file_id: str) -> str:
@@ -377,10 +404,17 @@ class RuntimeOperations:
             )
             provider_key_id = pk.id
         else:
-            provider = await self._provider_ops.get_provider_for_model(
+            resolved = await self._provider_ops.get_key_and_provider_for_model(
                 organization_id=organization_id,
                 model_id=target_model,
             )
+            if resolved is None:
+                raise NotFoundError(
+                    "ProviderKey",
+                    f"No configured provider has model '{target_model}' available",
+                )
+            provider, pk = resolved
+            provider_key_id = pk.id
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
@@ -458,7 +492,10 @@ class RuntimeOperations:
             )
 
         # 11. Build LLM messages array from context
-        llm_messages = self._build_llm_messages(context_messages, content, files=files)
+        supports_vision = await _resolve_supports_vision(provider, model)
+        llm_messages = self._build_llm_messages(
+            context_messages, content, files=files, supports_vision=supports_vision
+        )
 
         # 11b. Resolve any content blocks that need S3 downloads
         await _resolve_pending_content_blocks(llm_messages)
@@ -749,6 +786,7 @@ class RuntimeOperations:
         *,
         files: list[FileContext] | None = None,
         append_new: bool = True,
+        supports_vision: bool = True,
     ) -> list[dict]:
         """Build the LLM messages array from session context.
 
@@ -875,7 +913,7 @@ class RuntimeOperations:
         if files:
             content_blocks: list[dict] = []
             for f in files:
-                block = _file_context_to_content_block(f)
+                block = _file_context_to_content_block(f, supports_vision=supports_vision)
                 content_blocks.append(block)
             if new_content.strip():
                 content_blocks.append({"type": "text", "text": new_content})
@@ -1036,10 +1074,17 @@ class RuntimeOperations:
             )
             provider_key_id = pk.id
         else:
-            provider = await self._provider_ops.get_provider_for_model(
+            resolved = await self._provider_ops.get_key_and_provider_for_model(
                 organization_id=organization_id,
                 model_id=target_model,
             )
+            if resolved is None:
+                raise NotFoundError(
+                    "ProviderKey",
+                    f"No configured provider has model '{target_model}' available",
+                )
+            provider, pk = resolved
+            provider_key_id = pk.id
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
@@ -1117,11 +1162,13 @@ class RuntimeOperations:
                     session_id=str(session_id),
                 )
 
+        supports_vision = await _resolve_supports_vision(provider, model)
         llm_messages = self._build_llm_messages(
             context_messages,
             content,
             files=files,
             append_new=rerun_anchor is None,
+            supports_vision=supports_vision,
         )
 
         # Resolve any content blocks that need S3 downloads

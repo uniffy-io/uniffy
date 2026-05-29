@@ -254,6 +254,10 @@ function createCrepeConfig(
 
 /** Same transformation as `MentionNodeView.handleReplaceWithMedia` applied to every FILE mention in the document. */
 async function autoEmbedMediaMentions(view: EditorView, organizationId: string) {
+  // resolveUrns() can return after a session switch leaves the view
+  // destroyed; dispatching then trips the milkdown context.
+  if (view.isDestroyed) return;
+
   const fileMentions: Array<{ pos: number; node: Node; urn: string; label: string; fileId: string }> = [];
 
   view.state.doc.descendants((node, pos) => {
@@ -317,6 +321,10 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
   }
 
   if (replacements.length === 0) return;
+
+  // Re-check after the async URN resolution: the view may have been
+  // destroyed while we were waiting.
+  if (view.isDestroyed) return;
 
   // Apply replacements in reverse document order
   replacements.sort((a, b) => b.pos - a.pos);

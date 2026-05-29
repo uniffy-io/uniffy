@@ -537,7 +537,7 @@ class UpdateChannelMemberResponse(_message.Message):
     def __init__(self, member: _Optional[_Union[ChatChannelMember, _Mapping]] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "content", "root_id", "metadata", "reply_to_id")
+    __slots__ = ("organization_id", "channel_id", "content", "root_id", "metadata", "reply_to_id", "attachment_file_ids")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -551,13 +551,15 @@ class SendMessageRequest(_message.Message):
     ROOT_ID_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
     REPLY_TO_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTACHMENT_FILE_IDS_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     content: str
     root_id: str
     metadata: _containers.ScalarMap[str, str]
     reply_to_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., reply_to_id: _Optional[str] = ...) -> None: ...
+    attachment_file_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., reply_to_id: _Optional[str] = ..., attachment_file_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SendMessageResponse(_message.Message):
     __slots__ = ("message",)

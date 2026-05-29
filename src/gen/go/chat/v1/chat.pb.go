@@ -2927,9 +2927,14 @@ type SendMessageRequest struct {
 	// Optional metadata (e.g., via_agent info)
 	Metadata map[string]string `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Set when quoting/replying to a specific message
-	ReplyToId     *string `protobuf:"bytes,6,opt,name=reply_to_id,json=replyToId,proto3,oneof" json:"reply_to_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ReplyToId *string `protobuf:"bytes,6,opt,name=reply_to_id,json=replyToId,proto3,oneof" json:"reply_to_id,omitempty"`
+	// File IDs to attach to the message in the same transaction.
+	// Attachments are linked before the message-created event is published
+	// and before any agent invocation is enqueued, so downstream consumers
+	// (notifications, chat-triggered agents) observe a consistent view.
+	AttachmentFileIds []string `protobuf:"bytes,7,rep,name=attachment_file_ids,json=attachmentFileIds,proto3" json:"attachment_file_ids,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SendMessageRequest) Reset() {
@@ -3002,6 +3007,13 @@ func (x *SendMessageRequest) GetReplyToId() string {
 		return *x.ReplyToId
 	}
 	return ""
+}
+
+func (x *SendMessageRequest) GetAttachmentFileIds() []string {
+	if x != nil {
+		return x.AttachmentFileIds
+	}
+	return nil
 }
 
 type SendMessageResponse struct {
@@ -7384,7 +7396,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x13_follow_all_threadsB\x15\n" +
 	"\x13_badge_all_messages\"Q\n" +
 	"\x1bUpdateChannelMemberResponse\x122\n" +
-	"\x06member\x18\x01 \x01(\v2\x1a.chat.v1.ChatChannelMemberR\x06member\"\xd9\x02\n" +
+	"\x06member\x18\x01 \x01(\v2\x1a.chat.v1.ChatChannelMemberR\x06member\"\x89\x03\n" +
 	"\x12SendMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -7392,7 +7404,8 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x1c\n" +
 	"\aroot_id\x18\x04 \x01(\tH\x00R\x06rootId\x88\x01\x01\x12E\n" +
 	"\bmetadata\x18\x05 \x03(\v2).chat.v1.SendMessageRequest.MetadataEntryR\bmetadata\x12#\n" +
-	"\vreply_to_id\x18\x06 \x01(\tH\x01R\treplyToId\x88\x01\x01\x1a;\n" +
+	"\vreply_to_id\x18\x06 \x01(\tH\x01R\treplyToId\x88\x01\x01\x12.\n" +
+	"\x13attachment_file_ids\x18\a \x03(\tR\x11attachmentFileIds\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\n" +

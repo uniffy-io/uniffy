@@ -1477,6 +1477,26 @@
 }
 
 /*
+ * Embedded media inside chat bubbles is capped so a large screenshot
+ * cannot blow the bubble width out to its max-w-[70%] ceiling. Aspect
+ * ratio is preserved via height:auto; the cap is purely a max-width.
+ * Display block keeps the milkdown image-block wrapper from leaving the
+ * img at zero size while the operation overlay sits in front.
+ */
+.chat-bubble-editor img,
+.chat-bubble-editor video,
+.chat-bubble-editor .image-wrapper img {
+  max-width: 22rem;
+  height: auto;
+  display: block;
+  border-radius: 0.5rem;
+}
+
+.chat-bubble-editor .image-wrapper {
+  max-width: 22rem;
+}
+
+/*
  * Table of Contents Block
  * Inline outline rendered as a block atom. Stripped of Crepe's default
  * link/paragraph chrome so the entries read as a quiet navigation aid.
