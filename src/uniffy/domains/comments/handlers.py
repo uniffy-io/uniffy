@@ -243,7 +243,14 @@ class CommentsHandlers:
                 )
 
                 proto_comments = []
-                for comment, author_name, avatar_url, reply_count, reactions, replies in comments_data:
+                for (
+                    comment,
+                    author_name,
+                    avatar_url,
+                    reply_count,
+                    reactions,
+                    replies,
+                ) in comments_data:
                     proto_replies = [
                         comment_to_proto(
                             comment=reply,

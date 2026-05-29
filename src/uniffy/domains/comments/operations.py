@@ -140,7 +140,9 @@ class CommentOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[
-        list[tuple[Comment, str, str | None, int, list[dict], list[tuple[Comment, str, list[dict]]]]],
+        list[
+            tuple[Comment, str, str | None, int, list[dict], list[tuple[Comment, str, list[dict]]]]
+        ],
         int,
         int,
         int,
