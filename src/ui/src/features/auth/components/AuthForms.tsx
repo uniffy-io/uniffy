@@ -70,6 +70,7 @@ export function AuthForms() {
         accessToken: string,
         refreshToken: string,
         organizationId?: string,
+        organizationSlug?: string,
         organizationRole?: string,
         sessionId?: string,
         domainAdminDomains?: number[],
@@ -105,6 +106,7 @@ export function AuthForms() {
                     accessToken,
                     refreshToken,
                     organizationId,
+                    organizationSlug,
                     organizationRole,
                     sessionId,
                     domainAdminDomains,
@@ -134,6 +136,7 @@ export function AuthForms() {
                 response.accessToken,
                 response.refreshToken,
                 response.organizationId,
+                response.organizationSlug,
                 response.organizationRole,
                 response.sessionId,
                 Array.from(response.domainAdminDomains),
@@ -159,6 +162,7 @@ export function AuthForms() {
                     r.accessToken,
                     r.refreshToken,
                     r.organizationId,
+                    r.organizationSlug,
                     r.organizationRole,
                     r.sessionId,
                     Array.from(r.domainAdminDomains),
@@ -183,16 +187,19 @@ export function AuthForms() {
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
+        organizationSlug?: string;
         organizationRole?: string;
         sessionId?: string;
+        domainAdminDomains?: number[];
     }) => {
         await fetchUserAndDispatch(
             params.accessToken,
             params.refreshToken,
             params.organizationId,
+            params.organizationSlug,
             params.organizationRole,
             params.sessionId,
-            [],
+            params.domainAdminDomains ?? [],
         );
         setMfaChallengeToken(null);
     };

@@ -51,8 +51,7 @@ export const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || null;
-      state.currentOrganizationSlug =
-        action.payload.organizationSlug ?? state.currentOrganizationSlug ?? null;
+      state.currentOrganizationSlug = action.payload.organizationSlug || null;
       state.currentOrganizationRole = action.payload.organizationRole || null;
       state.domainAdminDomains = action.payload.domainAdminDomains || [];
       state.currentSessionId = action.payload.sessionId || state.currentSessionId;
@@ -80,7 +79,7 @@ export const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.currentOrganizationId = action.payload.organizationId || state.currentOrganizationId;
       state.currentOrganizationSlug =
-        action.payload.organizationSlug ?? state.currentOrganizationSlug ?? null;
+        action.payload.organizationSlug || state.currentOrganizationSlug || null;
       state.currentOrganizationRole = action.payload.organizationRole || state.currentOrganizationRole;
       state.domainAdminDomains = action.payload.domainAdminDomains ?? state.domainAdminDomains;
       state.currentSessionId = action.payload.sessionId || state.currentSessionId;

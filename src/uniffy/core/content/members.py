@@ -214,11 +214,6 @@ class ContentMembersOperations:
                 "Owner cannot be added as a member",
             )
 
-        if role == ContentRole.BLOCKED:
-            await self._reject_blocking_admins(
-                organization_id, content_type, subject_type, subject_id
-            )
-
         existing = await self._get_existing_member(
             organization_id, content_type, content_id, subject_type, subject_id
         )
@@ -317,11 +312,6 @@ class ContentMembersOperations:
             raise ValidationError(
                 "role",
                 "Use transfer_ownership to grant the OWNER role",
-            )
-
-        if new_role == ContentRole.BLOCKED:
-            await self._reject_blocking_admins(
-                organization_id, content_type, subject_type, subject_id
             )
 
         existing = await self._get_existing_member(
@@ -907,31 +897,6 @@ class ContentMembersOperations:
             )
         )
         return result.scalar_one_or_none()
-
-    async def _reject_blocking_admins(
-        self,
-        organization_id: UUID,
-        content_type: ContentType,
-        subject_type: SubjectType,
-        subject_id: UUID,
-    ) -> None:
-        """Reject BLOCKED against org/domain admins since their bypass would silently win."""
-        if subject_type != SubjectType.USER:
-            return
-
-        if await self.permission_checker.is_org_admin(subject_id, organization_id):
-            raise ValidationError(
-                "subject",
-                "Organization admins cannot be blocked. Remove their "
-                "admin role first if you need to restrict their access.",
-            )
-
-        if await self.permission_checker.is_domain_admin(subject_id, organization_id, content_type):
-            raise ValidationError(
-                "subject",
-                "Domain admins for this content type cannot be blocked. "
-                "Revoke their domain admin status first.",
-            )
 
     def _validate_access_mode(
         self,

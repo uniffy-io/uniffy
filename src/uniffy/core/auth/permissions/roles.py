@@ -46,7 +46,7 @@ def role_can_manage(role: ContentRole | None) -> bool:
 
 
 def role_can_transfer(role: ContentRole | None) -> bool:
-    """OWNER only; org and domain admins bypass at a higher level in ``PermissionChecker``."""
+    """OWNER only - only the content owner can transfer ownership."""
     return role is not None and ROLE_ORDINAL[role] >= MIN_FOR_TRANSFER
 
 

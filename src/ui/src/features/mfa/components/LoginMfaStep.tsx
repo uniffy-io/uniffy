@@ -27,10 +27,12 @@ interface LoginMfaStepProps {
         accessToken: string;
         refreshToken: string;
         organizationId?: string;
+        organizationSlug?: string;
         organizationRole?: string;
         sessionId?: string;
         usedRecoveryCode: boolean;
         remainingRecoveryCodes: number;
+        domainAdminDomains?: number[];
     }) => Promise<void>;
     onCancel: () => void;
 }
@@ -62,10 +64,12 @@ export function LoginMfaStep({ challengeToken, onVerified, onCancel }: LoginMfaS
                 accessToken: response.accessToken,
                 refreshToken: response.refreshToken,
                 organizationId: response.organizationId,
+                organizationSlug: response.organizationSlug,
                 organizationRole: response.organizationRole,
                 sessionId: response.sessionId,
                 usedRecoveryCode: response.usedRecoveryCode,
                 remainingRecoveryCodes: response.remainingRecoveryCodes,
+                domainAdminDomains: Array.from(response.domainAdminDomains),
             });
         } catch (err: unknown) {
             const raw = err instanceof Error ? err.message : 'Verification failed';

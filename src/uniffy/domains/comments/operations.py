@@ -8,16 +8,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.files.file import File
 from uniffy.core.models.login.user import User
-from uniffy.core.types import AccessMode, ContentRole, ContentType, generate_id
+from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.types import (
+    AccessMode,
+    ContentRole,
+    ContentType,
+    NotificationType,
+    generate_id,
+)
 from uniffy.domains.comments.queries import (
     aggregate_reactions,
     build_comments_query,
     count_comments_query,
 )
+
+
+def _comment_snippet(body: str, limit: int = 140) -> str:
+    text = " ".join(body.split())
+    return f"{text[:limit]}..." if len(text) > limit else text
 
 
 class CommentOperations:
@@ -40,10 +53,12 @@ class CommentOperations:
         """Create a comment; requires VIEW on the parent content."""
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
+        parent_author_id: UUID | None = None
         if parent_comment_id:
             parent = await self._get_comment(parent_comment_id, organization_id)
             if not parent:
                 raise NotFoundError("Comment", str(parent_comment_id))
+            parent_author_id = parent.author_id
 
         author_name, author_avatar = await self._get_user_info(user_id)
 
@@ -62,6 +77,8 @@ class CommentOperations:
         await self._session.flush()
         await self._session.commit()
         await self._session.refresh(comment)
+
+        await self._emit_comment_notifications(comment, user_id, parent_author_id)
 
         return comment, author_name, author_avatar
 
@@ -122,8 +139,15 @@ class CommentOperations:
         anchor_type: CommentAnchorType | None = None,
         page: int = 1,
         page_size: int = 50,
-    ) -> tuple[list[tuple[Comment, str, str | None, int, list[dict]]], int, int, int]:
-        """List comments with author + reactions; requires VIEW on the parent content."""
+    ) -> tuple[
+        list[
+            tuple[Comment, str, str | None, int, list[dict], list[tuple[Comment, str, list[dict]]]]
+        ],
+        int,
+        int,
+        int,
+    ]:
+        """List comments with author, reactions, and nested replies; requires VIEW on parent."""
         await self._verify_content_access(user_id, organization_id, content_type, content_id)
 
         total_count = (
@@ -152,24 +176,46 @@ class CommentOperations:
         result = await self._session.execute(query)
         rows = result.all()
 
+        parent_ids = [row[0].id for row in rows]
+        replies_by_parent = await self._load_replies(parent_ids)
+
         comments_data = []
         for row in rows:
             comment = row[0]
             author_name = row[1] or "Unknown"
-
-            reply_count_result = await self._session.execute(
-                select(func.count()).where(
-                    Comment.parent_comment_id == comment.id,
-                    Comment.is_deleted == False,  # noqa: E712
-                )
-            )
-            reply_count = reply_count_result.scalar() or 0
-
             reactions = await aggregate_reactions(self._session, comment.id)
-
-            comments_data.append((comment, author_name, None, reply_count, reactions))
+            replies = replies_by_parent.get(comment.id, [])
+            comments_data.append((comment, author_name, None, len(replies), reactions, replies))
 
         return comments_data, total_count, open_count, resolved_count
+
+    async def _load_replies(
+        self, parent_ids: list[UUID]
+    ) -> dict[UUID, list[tuple[Comment, str, list[dict]]]]:
+        """Batch-load non-deleted replies for the given parents, grouped by parent id."""
+        if not parent_ids:
+            return {}
+
+        from sqlalchemy.orm import aliased
+
+        author = aliased(User)
+        result = await self._session.execute(
+            select(Comment, author.full_name)
+            .join(author, Comment.author_id == author.id)
+            .where(
+                Comment.parent_comment_id.in_(parent_ids),
+                Comment.is_deleted == False,  # noqa: E712
+            )
+            .order_by(Comment.created_at.asc())
+        )
+
+        grouped: dict[UUID, list[tuple[Comment, str, list[dict]]]] = {}
+        for reply, reply_author_name in result.all():
+            reactions = await aggregate_reactions(self._session, reply.id)
+            grouped.setdefault(reply.parent_comment_id, []).append(
+                (reply, reply_author_name or "Unknown", reactions)
+            )
+        return grouped
 
     async def get_comment(
         self,
@@ -389,6 +435,70 @@ class CommentOperations:
         )
         await self._session.commit()
         return result.rowcount  # type: ignore[return-value]
+
+    async def _emit_comment_notifications(
+        self,
+        comment: Comment,
+        actor_id: UUID,
+        parent_author_id: UUID | None,
+    ) -> None:
+        """Notify the parent author on a reply and every other prior commenter on the content."""
+        source_urn = build_content_urn(comment.content_type, comment.content_id)
+        snippet = _comment_snippet(comment.body)
+
+        reply_recipient: UUID | None = None
+        if parent_author_id and parent_author_id != actor_id:
+            reply_recipient = parent_author_id
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.COMMENT_REPLY,
+                    organization_id=comment.organization_id,
+                    actor_id=actor_id,
+                    title="replied to your comment",
+                    body=snippet,
+                    source_urn=source_urn,
+                    target_user_ids=[reply_recipient],
+                )
+            )
+
+        participants = await self._get_thread_participant_ids(
+            comment.organization_id, comment.content_type, comment.content_id
+        )
+        participants.discard(actor_id)
+        if reply_recipient:
+            participants.discard(reply_recipient)
+
+        if participants:
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.COMMENT_ADDED,
+                    organization_id=comment.organization_id,
+                    actor_id=actor_id,
+                    title="commented on a thread you're in",
+                    body=snippet,
+                    source_urn=source_urn,
+                    target_user_ids=list(participants),
+                )
+            )
+
+    async def _get_thread_participant_ids(
+        self,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> set[UUID]:
+        """Distinct authors of every non-deleted comment on a piece of content."""
+        result = await self._session.execute(
+            select(Comment.author_id)
+            .distinct()
+            .where(
+                Comment.organization_id == organization_id,
+                Comment.content_type == content_type,
+                Comment.content_id == content_id,
+                Comment.is_deleted == False,  # noqa: E712
+            )
+        )
+        return {row[0] for row in result.all()}
 
     async def _get_comment(self, comment_id: UUID, organization_id: UUID) -> Comment | None:
         result = await self._session.execute(

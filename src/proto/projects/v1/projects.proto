@@ -348,7 +348,9 @@ message UpdateTaskRequest {
   optional string description = 4;
   optional string status = 5;
   optional string priority = 6;
-  repeated string assignee_ids = 7;
+  // Replacement set of assignee ids. Empty list clears all assignees;
+  // field unset (HasField=false) leaves them untouched.
+  optional TaskAssigneeIds assignee_ids = 7;
   optional string start_date = 8;
   optional string due_date = 9;
   optional string parent_id = 10;
@@ -369,6 +371,12 @@ message UpdateTaskRequest {
 // Wrapper so callers can distinguish "leave tags alone" from
 // "clear all tags" (proto3 cannot tell empty repeated apart from unset).
 message TaskTagIds {
+  repeated string ids = 1;
+}
+
+// Wrapper so callers can distinguish "leave assignees alone" from
+// "clear all assignees" (proto3 cannot tell empty repeated apart from unset).
+message TaskAssigneeIds {
   repeated string ids = 1;
 }
 

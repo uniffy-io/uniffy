@@ -452,7 +452,9 @@ class InvitationOperations:
         )
         if requirement.requirement == MfaRequirement.HARD_REQUIRED:
             enrollment_token = create_enrollment_only_token(
-                user.id, token_version=user.token_version
+                user.id,
+                organization_id=invitation.organization_id,
+                token_version=user.token_version,
             )
             await write_audit_event(
                 self._session,
@@ -473,7 +475,9 @@ class InvitationOperations:
                 grace_expires_at=None,
             )
 
-        session_record = await self._create_user_session(user.id, user_agent)
+        session_record = await self._create_user_session(
+            user.id, user_agent, organization_id=invitation.organization_id
+        )
 
         access_token = create_access_token(
             user.id,
@@ -511,11 +515,19 @@ class InvitationOperations:
         domain_admins = await get_user_domain_admins(
             self._session, user.id, invitation.organization_id
         )
+        org = (
+            await self._session.execute(
+                select(Organization).where(
+                    Organization.id == invitation.organization_id
+                )
+            )
+        ).scalar_one_or_none()
         return AuthResult(
             access_token=access_token,
             refresh_token=refresh_token,
             user_id=user.id,
             organization_id=invitation.organization_id,
+            organization_slug=org.slug if org else None,
             organization_role=invitation.role.value,
             session_id=session_record.id,
             domain_admin_domains=[d.value for d in domain_admins],
@@ -525,6 +537,7 @@ class InvitationOperations:
         self,
         user_id: UUID,
         user_agent: str,
+        organization_id: UUID | None = None,
     ) -> UserSession:
         from uniffy.core.audit import audit_ip_var
 
@@ -532,6 +545,7 @@ class InvitationOperations:
         device_label = parse_device_label(user_agent)
         record = UserSession(
             user_id=user_id,
+            organization_id=organization_id,
             user_agent=user_agent[:512],
             device_label=device_label,
             ip_address=(audit_ip_var.get() or "")[:45],

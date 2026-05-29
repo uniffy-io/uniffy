@@ -27,10 +27,24 @@ function initTokenChannel(): BroadcastChannel {
 
 initTokenChannel();
 
+let reloadOnControllerChange = false;
+
 export async function registerMediaStreamWorker(): Promise<void> {
     if (!('serviceWorker' in navigator)) {
         console.warn('[MediaStreamWorker] Service Workers not supported in this browser');
         return;
+    }
+
+    // Page already controlled by an SW means any future controllerchange is a
+    // NEW SW taking over (skipWaiting + clients.claim). Reload so the page's
+    // bundle matches the SW's intercept rules instead of drifting until the
+    // user hits refresh.
+    if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (reloadOnControllerChange) return;
+            reloadOnControllerChange = true;
+            window.location.reload();
+        });
     }
 
     try {

@@ -20,16 +20,21 @@ export function EnrollmentPage() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
 
-    const completeAndSignIn = async (accessToken: string, refreshToken: string, sessionId: string) => {
-        // ConfirmEnrollment minted a real session; the enrollment-only
-        // token is now spent and any leftover slot value would just be
-        // dead state - clear it before swapping in the real access token.
+    const completeAndSignIn = async (result: {
+        accessToken: string;
+        refreshToken: string;
+        sessionId: string;
+        organizationId?: string;
+        organizationSlug?: string;
+        organizationRole?: string;
+        domainAdminDomains?: number[];
+    }) => {
         clearEnrollmentToken();
-        setMemoryAccessToken(accessToken);
+        setMemoryAccessToken(result.accessToken);
         const client = createClient(AuthService, unaryTransport);
         const me = await client.getCurrentUser(
             {},
-            { headers: { Authorization: `Bearer ${accessToken}` } },
+            { headers: { Authorization: `Bearer ${result.accessToken}` } },
         );
         const plainUser = {
             id: me.id,
@@ -47,9 +52,13 @@ export function EnrollmentPage() {
         dispatch(
             setCredentials({
                 user: plainUser,
-                accessToken,
-                refreshToken,
-                sessionId,
+                accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
+                sessionId: result.sessionId,
+                organizationId: result.organizationId,
+                organizationSlug: result.organizationSlug,
+                organizationRole: result.organizationRole,
+                domainAdminDomains: result.domainAdminDomains,
             }),
         );
         navigate('/', { replace: true });
@@ -68,15 +77,7 @@ export function EnrollmentPage() {
             </div>
 
             <div className="rounded-lg border border-border bg-card p-6">
-                <EnrollmentWizard
-                    onComplete={(result) =>
-                        completeAndSignIn(
-                            result.accessToken,
-                            result.refreshToken,
-                            result.sessionId,
-                        )
-                    }
-                />
+                <EnrollmentWizard onComplete={completeAndSignIn} />
             </div>
         </div>
     );

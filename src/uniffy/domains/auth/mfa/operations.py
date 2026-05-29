@@ -65,6 +65,10 @@ class ConfirmEnrollmentResult:
     access_token: str
     refresh_token: str
     session_id: UUID
+    organization_id: UUID | None = None
+    organization_slug: str | None = None
+    organization_role: str | None = None
+    domain_admin_domains: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +80,9 @@ class VerifyMfaResult:
     session_id: UUID
     used_recovery_code: bool
     remaining_recovery_codes: int
+    organization_slug: str | None = None
+    organization_role: str | None = None
+    domain_admin_domains: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -146,6 +153,7 @@ class MfaOperations:
         user_id: UUID,
         code: str,
         user_agent: str = "",
+        pending_organization_id: UUID | None = None,
     ) -> ConfirmEnrollmentResult:
         """Verify the pending TOTP code, flip enabled, mint a fresh session.
 
@@ -175,11 +183,16 @@ class MfaOperations:
 
         await self._bump_token_version(user)
 
+        org_id, org_slug, org_role, domain_admin_domains = await self._resolve_pending_org(
+            user.id, pending_organization_id
+        )
+
         from uniffy.core.models.login.user_session import UserSession
         from uniffy.domains.auth.context import parse_device_label
 
         session_record = UserSession(
             user_id=user.id,
+            organization_id=org_id,
             user_agent=user_agent[:512],
             device_label=parse_device_label(user_agent),
             ip_address=(audit_ip_var.get() or "")[:45],
@@ -189,6 +202,7 @@ class MfaOperations:
 
         access = create_access_token(
             user.id,
+            organization_id=org_id,
             token_version=user.token_version,
             session_id=session_record.id,
             full_name=user.full_name,
@@ -216,6 +230,10 @@ class MfaOperations:
             access_token=access,
             refresh_token=refresh,
             session_id=session_record.id,
+            organization_id=org_id,
+            organization_slug=org_slug,
+            organization_role=org_role,
+            domain_admin_domains=domain_admin_domains,
         )
 
     async def verify_mfa(
@@ -294,8 +312,13 @@ class MfaOperations:
         from uniffy.core.models.login.user_session import UserSession
         from uniffy.domains.auth.context import parse_device_label
 
+        bound_org_id, bound_slug, bound_role, bound_admin_domains = (
+            await self._resolve_pending_org(user.id, organization_id)
+        )
+
         session_record = UserSession(
             user_id=user.id,
+            organization_id=bound_org_id,
             user_agent=user_agent[:512],
             device_label=parse_device_label(user_agent),
             ip_address=(audit_ip_var.get() or "")[:45],
@@ -305,7 +328,7 @@ class MfaOperations:
 
         access = create_access_token(
             user.id,
-            organization_id=organization_id,
+            organization_id=bound_org_id,
             token_version=user.token_version,
             session_id=session_record.id,
             full_name=user.full_name,
@@ -340,10 +363,13 @@ class MfaOperations:
             access_token=access,
             refresh_token=refresh,
             user_id=user.id,
-            organization_id=organization_id,
+            organization_id=bound_org_id,
             session_id=session_record.id,
             used_recovery_code=used_recovery_code,
             remaining_recovery_codes=remaining,
+            organization_slug=bound_slug,
+            organization_role=bound_role,
+            domain_admin_domains=bound_admin_domains,
         )
 
     async def disable_mfa(self, user_id: UUID, code: str) -> None:
@@ -972,6 +998,36 @@ class MfaOperations:
             .where(User.id == user.id)
             .values(token_version=user.token_version)
         )
+
+    async def _resolve_pending_org(
+        self,
+        user_id: UUID,
+        organization_id: UUID | None,
+    ) -> tuple[UUID | None, str | None, str | None, list[str] | None]:
+        """Re-validate the pending org carried through challenge/enrollment.
+
+        Returns ``(org_id, slug, role, domain_admins)`` so the session row
+        and the returned ``VerifyMfaResult`` / ``ConfirmEnrollmentResult``
+        line up. Missing membership demotes the result to ``(None,)*4``
+        rather than blocking the MFA flow - the user lands at the org
+        picker instead of a dead session.
+        """
+        if organization_id is None:
+            return None, None, None, None
+        from uniffy.domains.auth.operations import AuthOperations
+
+        try:
+            (
+                org_id,
+                slug,
+                role,
+                domain_admins,
+            ) = await AuthOperations(self._session)._verify_org_membership_by_id(
+                user_id, organization_id
+            )
+        except AuthenticationError:
+            return None, None, None, None
+        return org_id, slug, role, domain_admins
 
 
 def _render_qr_svg_base64(provisioning_uri: str) -> str:

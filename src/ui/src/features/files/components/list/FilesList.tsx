@@ -94,7 +94,7 @@ interface FilesListProps {
     onBulkDownload?: (items: FileDownloadItem[]) => Promise<void>;
     onUpload?: () => void;
     onUploadFolder?: () => void;
-    onCreateFolder?: () => void;
+    onCreateFolder?: () => Promise<string | undefined> | string | undefined | void;
     onToggleSidebar?: () => void;
     folderTree?: {
         personal: SerializedTreeNode[];
@@ -161,6 +161,18 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
     // Context menu state
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null);
+
+    // Folder id that should open in rename mode immediately after creation.
+    const [pendingRenameFolderId, setPendingRenameFolderId] = useState<string | null>(null);
+    const handleAutoRenameResolved = useCallback(() => {
+        setPendingRenameFolderId(null);
+    }, []);
+
+    const handleCreateFolderClick = useCallback(async () => {
+        if (!onCreateFolder) return;
+        const result = await onCreateFolder();
+        if (result) setPendingRenameFolderId(result);
+    }, [onCreateFolder]);
 
     // Bulk action loading state
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -972,8 +984,8 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                         {onCreateFolder && (
                             <button
                                 onClick={() => {
-                                    onCreateFolder();
                                     setContextMenu(null);
+                                    void handleCreateFolderClick();
                                 }}
                                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                             >
@@ -1042,6 +1054,8 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                                 isChecked={selectedFolderIds.includes(folder.id)}
                                 onToggleCheck={handleToggleFolderCheck}
                                 canShare={true}
+                                autoRename={folder.id === pendingRenameFolderId}
+                                onAutoRenameResolved={handleAutoRenameResolved}
                             />
                         ))}
                         {/* Then files */}
@@ -1104,6 +1118,8 @@ export function FilesList({ files, allFiles, loading, onDownload, onBulkDownload
                             isChecked={selectedFolderIds.includes(folder.id)}
                             onToggleCheck={handleToggleFolderCheck}
                             canShare={true}
+                            autoRename={folder.id === pendingRenameFolderId}
+                            onAutoRenameResolved={handleAutoRenameResolved}
                         />
                     ))}
 

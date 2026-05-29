@@ -38,6 +38,8 @@ from uniffy_proto.auth.v1.auth_pb2 import (
     RotateCacheKeySeedResponse,
     SendPasswordResetRequest,
     SendPasswordResetResponse,
+    SwitchOrganizationRequest,
+    SwitchOrganizationResponse,
     VerifyPasswordResetTokenRequest,
     VerifyPasswordResetTokenResponse,
 )
@@ -130,6 +132,8 @@ def _auth_result_to_proto(result: AuthResult) -> AuthResultProto:
     )
     if result.organization_id is not None:
         proto.organization_id = str(result.organization_id)
+    if result.organization_slug:
+        proto.organization_slug = result.organization_slug
     if result.organization_role:
         proto.organization_role = result.organization_role
     if result.session_id is not None:
@@ -188,6 +192,7 @@ class AuthHandlers:
                     token_type="bearer",
                     user_id=str(result.user_id),
                     organization_id=str(result.organization_id) if result.organization_id else "",
+                    organization_slug=result.organization_slug or "",
                     organization_role=result.organization_role or "",
                     session_id=str(result.session_id) if result.session_id else "",
                     domain_admin_domains=_domain_admins_to_proto(result),
@@ -251,6 +256,7 @@ class AuthHandlers:
                     token_type="bearer",
                     user_id=str(result.user_id),
                     organization_id=str(result.organization_id) if result.organization_id else "",
+                    organization_slug=result.organization_slug or "",
                     organization_role=result.organization_role or "",
                     session_id=str(result.session_id) if result.session_id else "",
                     domain_admin_domains=_domain_admins_to_proto(result),
@@ -260,6 +266,36 @@ class AuthHandlers:
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
         except Exception as e:
             logger.error(f"Token refresh error: {e}", exc_info=True)
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def switch_organization(
+        self,
+        request: SwitchOrganizationRequest,
+        ctx: RequestContext,
+    ) -> SwitchOrganizationResponse:
+        """Move the current session into a different organization."""
+        if not request.refresh_token:
+            raise ConnectError(Code.INVALID_ARGUMENT, "refresh_token is required")
+        if not request.organization_slug:
+            raise ConnectError(Code.INVALID_ARGUMENT, "organization_slug is required")
+        try:
+            user_agent = get_user_agent_from_context(ctx)
+            async with open_session() as session:
+                auth_ops = AuthOperations(session)
+                result = await auth_ops.switch_organization(
+                    refresh_token=request.refresh_token,
+                    organization_slug=request.organization_slug,
+                    user_agent=user_agent,
+                )
+                return SwitchOrganizationResponse(
+                    auth_result=_auth_result_to_proto(result),
+                )
+        except AuthenticationError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except TokenError as e:
+            raise ConnectError(Code.UNAUTHENTICATED, str(e))
+        except Exception as e:
+            logger.error(f"Switch organization error: {e}", exc_info=True)
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_current_user(

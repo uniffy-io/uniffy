@@ -1556,7 +1556,10 @@ class EventTemplateOperations:
     """EventTemplate CRUD. Org-scoped; not indexed for search."""
 
     def __init__(self, session: AsyncSession) -> None:
+        from uniffy.core.auth.permissions.queries import ContentAccessQuery
+
         self.session = session
+        self.access_query = ContentAccessQuery(session)
 
     async def _verify_org_membership(
         self,

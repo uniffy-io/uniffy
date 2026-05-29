@@ -38,6 +38,11 @@ service AuthService {
   // Revoke all sessions except the current one
   rpc RevokeOtherSessions(RevokeOtherSessionsRequest) returns (RevokeOtherSessionsResponse);
 
+  // Switch the active organization for the current user. Revokes the current
+  // session and issues a fresh session bound to the target org. Use this
+  // instead of RefreshToken with a slug to change tenant context.
+  rpc SwitchOrganization(SwitchOrganizationRequest) returns (SwitchOrganizationResponse);
+
   // Get the cache key seed for client-side storage encryption (called once per session)
   rpc GetCacheKeySeed(GetCacheKeySeedRequest) returns (GetCacheKeySeedResponse);
 
@@ -81,10 +86,22 @@ message LoginRequest {
   optional string organization_slug = 3; // Authenticate into specific org
 }
 
-// Request to refresh access token
+// Request to refresh access token. The refresh stays bound to the session's
+// organization; the optional organization_slug is kept for backwards reads
+// and rejected when it differs from the session's bound org.
 message RefreshTokenRequest {
   string refresh_token = 1;
-  optional string organization_slug = 2; // Switch org context
+  optional string organization_slug = 2;
+}
+
+// Request to switch the active organization for the current session.
+message SwitchOrganizationRequest {
+  string refresh_token = 1;
+  string organization_slug = 2;
+}
+
+message SwitchOrganizationResponse {
+  AuthResult auth_result = 1;
 }
 
 // Request to get current user info
@@ -118,6 +135,7 @@ message RegisterResponse {
   optional string organization_role = 6; // User's role in the org: MEMBER, ADMIN, or OWNER
   optional string session_id = 7; // Server-side session identifier
   repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
+  optional string organization_slug = 9; // Slug of the org bound to the session
 }
 
 // Login outcome. One of three variants:
@@ -150,6 +168,7 @@ message AuthResult {
   optional string organization_role = 6; // MEMBER / ADMIN / OWNER
   optional string session_id = 7;
   repeated common.v1.DomainType domain_admin_domains = 8;
+  optional string organization_slug = 9;
 }
 
 // Mid-login state when password was correct but MFA is enabled.
@@ -179,6 +198,7 @@ message RefreshTokenResponse {
   optional string organization_role = 6; // User's role in the org: MEMBER, ADMIN, or OWNER
   optional string session_id = 7; // Server-side session identifier
   repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
+  optional string organization_slug = 9; // Slug of the org bound to the session
 }
 
 // Current user info response

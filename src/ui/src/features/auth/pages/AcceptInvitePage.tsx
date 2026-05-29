@@ -143,6 +143,7 @@ export function AcceptInvitePage() {
                     accessToken: r.accessToken,
                     refreshToken: r.refreshToken,
                     organizationId: r.organizationId,
+                    organizationSlug: r.organizationSlug,
                     organizationRole: r.organizationRole,
                     sessionId: r.sessionId,
                     domainAdminDomains: Array.from(r.domainAdminDomains),

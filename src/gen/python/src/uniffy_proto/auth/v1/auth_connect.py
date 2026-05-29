@@ -42,6 +42,9 @@ class AuthService(Protocol):
     async def revoke_other_sessions(self, request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def switch_organization(self, request: auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def get_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -151,6 +154,16 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.revoke_other_sessions,
+                ),
+                "/auth.v1.AuthService/SwitchOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SwitchOrganization",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest,
+                        output=auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.switch_organization,
                 ),
                 "/auth.v1.AuthService/GetCacheKeySeed": Endpoint.unary(
                     method=MethodInfo(
@@ -406,6 +419,26 @@ class AuthServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def switch_organization(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SwitchOrganization",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest,
+                output=auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_cache_key_seed(
         self,
         request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest,
@@ -587,6 +620,8 @@ class AuthServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def revoke_other_sessions(self, request: auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def switch_organization(self, request: auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.GetCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.GetCacheKeySeedResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def rotate_cache_key_seed(self, request: auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedRequest, ctx: RequestContext) -> auth_dot_v1_dot_auth__pb2.RotateCacheKeySeedResponse:
@@ -688,6 +723,16 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.revoke_other_sessions,
+                ),
+                "/auth.v1.AuthService/SwitchOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SwitchOrganization",
+                        service_name="auth.v1.AuthService",
+                        input=auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest,
+                        output=auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.switch_organization,
                 ),
                 "/auth.v1.AuthService/GetCacheKeySeed": EndpointSync.unary(
                     method=MethodInfo(
@@ -937,6 +982,26 @@ class AuthServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.AuthService",
                 input=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsRequest,
                 output=auth_dot_v1_dot_auth__pb2.RevokeOtherSessionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def switch_organization(
+        self,
+        request: auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SwitchOrganization",
+                service_name="auth.v1.AuthService",
+                input=auth_dot_v1_dot_auth__pb2.SwitchOrganizationRequest,
+                output=auth_dot_v1_dot_auth__pb2.SwitchOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -138,12 +138,18 @@ export function OrganizationPicker() {
     setSelectingSlug(orgSlug);
     try {
       const client = createClient(AuthService, unaryTransport);
-      const response = await client.refreshToken({
+      const response = await client.switchOrganization({
         refreshToken,
         organizationSlug: orgSlug,
       });
+      const r = response.authResult;
+      if (!r) {
+        setError('Failed to switch to organization.');
+        setSelectingSlug(null);
+        return;
+      }
 
-      setMemoryAccessToken(response.accessToken);
+      setMemoryAccessToken(r.accessToken);
 
       if (user) {
         if (user.accentColor) {
@@ -155,13 +161,13 @@ export function OrganizationPicker() {
 
         dispatch(setCredentials({
           user: user,
-          accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
-          organizationId: response.organizationId,
-          organizationSlug: orgSlug,
-          organizationRole: response.organizationRole,
-          sessionId: response.sessionId,
-          domainAdminDomains: Array.from(response.domainAdminDomains),
+          accessToken: r.accessToken,
+          refreshToken: r.refreshToken,
+          organizationId: r.organizationId,
+          organizationSlug: r.organizationSlug || orgSlug,
+          organizationRole: r.organizationRole,
+          sessionId: r.sessionId,
+          domainAdminDomains: Array.from(r.domainAdminDomains),
         }));
       }
 

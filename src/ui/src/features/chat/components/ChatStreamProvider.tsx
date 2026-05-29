@@ -177,6 +177,7 @@ function handleChannelEvent(
               replyCount: p.replyCount,
               lastReplyAt: timestampToIso(p.lastReplyAt) ?? new Date().toISOString(),
               participantIds: updatedParticipants,
+              hasUnread: existing?.thread?.hasUnread ?? false,
             },
           } as never,
         }));

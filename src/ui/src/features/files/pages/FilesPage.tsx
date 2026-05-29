@@ -242,16 +242,18 @@ export function FilesPage() {
     );
 
     // Handle create folder from context menu
-    const handleCreateFolder = useCallback(async () => {
+    const handleCreateFolder = useCallback(async (): Promise<string | undefined> => {
         try {
-            await dispatch(
+            const result = await dispatch(
                 createFolder({
                     name: 'New Folder',
                     parentId: currentFolderId ?? undefined,
                 })
             ).unwrap();
+            return result.id;
         } catch {
             // error toast is shown by errorToastMiddleware
+            return undefined;
         }
     }, [dispatch, currentFolderId]);
 

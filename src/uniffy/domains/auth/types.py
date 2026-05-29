@@ -13,6 +13,7 @@ class AuthResult:
     refresh_token: str
     user_id: UUID
     organization_id: UUID | None = None
+    organization_slug: str | None = None
     organization_role: str | None = None  # MEMBER, ADMIN, or OWNER
     session_id: UUID | None = None
     domain_admin_domains: list[str] | None = None  # List of DomainType values

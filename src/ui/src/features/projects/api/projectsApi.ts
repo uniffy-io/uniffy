@@ -489,7 +489,7 @@ export const projectsApi = {
       description: data.description,
       status: data.status,
       priority: data.priority,
-      assigneeIds: data.assigneeIds || [],
+      ...(data.assigneeIds !== undefined ? { assigneeIds: { ids: data.assigneeIds } } : {}),
       startDate: data.startDate !== undefined ? (data.startDate ?? "") : undefined,
       dueDate: data.dueDate !== undefined ? (data.dueDate ?? "") : undefined,
       sortOrder: data.sortOrder,

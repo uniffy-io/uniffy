@@ -2,8 +2,10 @@
 
 The tag predicate becomes ``Tag.id.in_(visible_ids)`` against a Valkey-cached
 union of ``SELECT DISTINCT tag_id`` branches scoped to content the actor can
-access. Org admins return ``None`` ("no filter"); domain admins collapse
-the branch for their content type to a single content-type test.
+access. Org/domain admins get no content bypass here - they are filtered like
+any member. The one exception is chat: org admins and chat domain admins keep
+the chat moderation view (all channels), since chat access lives in
+``ChatAccessChecker`` rather than the access-mode model.
 
 The same set per content type drives ``list_content`` row filtering via
 ``compute_visible_content_ids_by_type``.
@@ -134,22 +136,19 @@ async def compute_visible_tag_ids(
     user_id: UUID,
     organization_id: UUID,
 ) -> set[UUID] | None:
-    """Tag ids the actor can see; ``None`` for org admin (no filter needed).
+    """Tag ids the actor can see.
 
-    Visible = created the tag, or is domain admin for the assignment's content
-    type, or has an assignment pointing at content the actor can view under the
-    standard access policy.
+    Visible = created the tag, or has an assignment pointing at content the
+    actor can view under the standard access policy. Chat assignments are
+    visible for the actor's channels (plus PUBLIC), or every channel when the
+    actor moderates chat (org admin / chat domain admin).
     """
     from uniffy.core.models.tags.tag import Tag, TagAssignment
 
     checker = PermissionChecker(session)
-    if await checker.is_org_admin(user_id, organization_id):
-        return None
-
-    domain_admin_types: set[ContentType] = set()
-    for ct in _ALL_TAGGABLE_TYPES:
-        if await checker.is_domain_admin(user_id, organization_id, ct):
-            domain_admin_types.add(ct)
+    chat_moderator = await checker.is_org_admin(
+        user_id, organization_id
+    ) or await checker.is_domain_admin(user_id, organization_id, ContentType.CHAT)
 
     access_query = ContentAccessQuery(session)
     branches = [
@@ -160,13 +159,6 @@ async def compute_visible_tag_ids(
     ]
 
     for ct in _TAGGABLE_ACCESS_MODE_TYPES:
-        if ct in domain_admin_types:
-            branches.append(
-                select(TagAssignment.tag_id.label("tag_id"))
-                .where(TagAssignment.content_type == ct.value)
-                .distinct()
-            )
-            continue
         model, id_col, owner_col, am_col, baseline_col, org_col = _content_columns(ct)
         access_filter = access_query.build_accessible_filter(
             user_id=user_id,
@@ -188,8 +180,8 @@ async def compute_visible_tag_ids(
             .distinct()
         )
 
-    branches.append(_task_branch(access_query, user_id, organization_id, domain_admin_types))
-    branches.append(_chat_branch(user_id, organization_id, domain_admin_types))
+    branches.append(_task_branch(access_query, user_id, organization_id))
+    branches.append(_chat_branch(user_id, organization_id, chat_moderator))
 
     union_q = union_all(*branches).subquery()
     rows = (
@@ -207,15 +199,20 @@ async def compute_visible_content_ids_by_type(
 ) -> set[UUID] | None:
     """Ids of ``content_type`` rows the actor can view; ``None`` for "no filter needed"."""
     checker = PermissionChecker(session)
-    if await checker.is_org_admin(user_id, organization_id):
-        return None
-    if await checker.is_domain_admin(user_id, organization_id, content_type):
-        return None
+
+    if content_type == ContentType.CHAT:
+        # Chat moderation is retained: org admins and chat domain admins see
+        # every channel. Everyone else gets PUBLIC channels plus memberships.
+        if await checker.is_org_admin(
+            user_id, organization_id
+        ) or await checker.is_domain_admin(
+            user_id, organization_id, ContentType.CHAT
+        ):
+            return None
+        return await _accessible_channel_ids(session, user_id, organization_id)
 
     if content_type == ContentType.TASK:
         return await _accessible_task_ids(session, user_id, organization_id)
-    if content_type == ContentType.CHAT:
-        return await _accessible_channel_ids(session, user_id, organization_id)
     if content_type not in _TAGGABLE_ACCESS_MODE_TYPES:
         return set()
 
@@ -367,22 +364,11 @@ def _task_branch(
     access_query: ContentAccessQuery,
     user_id: UUID,
     organization_id: UUID,
-    domain_admin_types: set[ContentType],
 ):
     """Tag ids visible via TASK assignments (delegate to parent project access)."""
     from uniffy.core.models.projects.project import Project
     from uniffy.core.models.projects.task import Task
     from uniffy.core.models.tags.tag import TagAssignment
-
-    if (
-        ContentType.TASK in domain_admin_types
-        or ContentType.PROJECT in domain_admin_types
-    ):
-        return (
-            select(TagAssignment.tag_id.label("tag_id"))
-            .where(TagAssignment.content_type == ContentType.TASK.value)
-            .distinct()
-        )
 
     project_filter = access_query.build_accessible_filter(
         user_id=user_id,
@@ -410,16 +396,17 @@ def _task_branch(
 def _chat_branch(
     user_id: UUID,
     organization_id: UUID,
-    domain_admin_types: set[ContentType],
+    chat_moderator: bool,
 ):
-    """Tag ids visible via CHAT assignments: PUBLIC channels plus the user's memberships."""
+    """Tag ids visible via CHAT assignments: PUBLIC channels plus the user's
+    memberships, or every channel when the actor moderates chat."""
     from sqlalchemy import or_
 
     from uniffy.core.models.chat.channel import ChannelType, ChatChannel
     from uniffy.core.models.chat.channel_member import ChatChannelMember
     from uniffy.core.models.tags.tag import TagAssignment
 
-    if ContentType.CHAT in domain_admin_types:
+    if chat_moderator:
         return (
             select(TagAssignment.tag_id.label("tag_id"))
             .where(TagAssignment.content_type == ContentType.CHAT.value)

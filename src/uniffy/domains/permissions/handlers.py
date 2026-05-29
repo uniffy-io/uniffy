@@ -25,6 +25,7 @@ from uniffy_proto.permissions.v1.permissions_pb2 import (
     UpdateMemberRoleResponse,
 )
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.members import (
     ContentMembersOperations,
     get_content_loader,
@@ -99,6 +100,41 @@ def _map_domain_error(exc: Exception) -> ConnectError:
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 
+async def _policy_for(
+    session,
+    *,
+    user_id: UUID,
+    organization_id: UUID,
+    content_type: ContentType,
+    content_id: UUID,
+):
+    """Access-policy proto for content, including the caller's effective role.
+
+    The caller role is resolved by the same `PermissionChecker` that gates the
+    operations, so the client never recomputes permissions. Raises NOT_FOUND
+    when the content row is missing.
+    """
+    loader = get_content_loader(content_type)
+    content = await loader(session, organization_id, content_id)
+    if content is None:
+        raise ConnectError(Code.NOT_FOUND, "Content not found")
+    caller_role = await PermissionChecker(session).effective_role(
+        user_id=user_id,
+        organization_id=organization_id,
+        content_type=content_type,
+        content_id=content_id,
+        owner_id=content.owner_id,
+        access_mode=content.access_mode,
+        baseline_role=content.baseline_role,
+    )
+    return content_access_policy_to_proto(
+        owner_id=content.owner_id,
+        access_mode=content.access_mode,
+        baseline_role=content.baseline_role,
+        caller_role=caller_role,
+    )
+
+
 class MembersHandlers:
     async def list_members(
         self,
@@ -120,15 +156,12 @@ class MembersHandlers:
                     content_id=content_id,
                 )
 
-                loader = get_content_loader(content_type)
-                content = await loader(session, organization_id, content_id)
-                if content is None:
-                    raise ConnectError(Code.NOT_FOUND, "Content not found")
-
-                policy = content_access_policy_to_proto(
-                    owner_id=content.owner_id,
-                    access_mode=content.access_mode,
-                    baseline_role=content.baseline_role,
+                policy = await _policy_for(
+                    session,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
                 )
                 response = ListMembersResponse(policy=policy)
                 response.members.extend(content_member_to_proto(m) for m in members)
@@ -270,16 +303,13 @@ class MembersHandlers:
                     note=request.note,
                 )
 
-                loader = get_content_loader(content_type)
-                content = await loader(session, organization_id, content_id)
-                if content is None:
-                    raise ConnectError(Code.NOT_FOUND, "Content not found")
-
                 return SetAccessModeResponse(
-                    policy=content_access_policy_to_proto(
-                        owner_id=content.owner_id,
-                        access_mode=content.access_mode,
-                        baseline_role=content.baseline_role,
+                    policy=await _policy_for(
+                        session,
+                        user_id=user_id,
+                        organization_id=organization_id,
+                        content_type=content_type,
+                        content_id=content_id,
                     )
                 )
         except ConnectError:
@@ -310,16 +340,13 @@ class MembersHandlers:
                     note=request.note,
                 )
 
-                loader = get_content_loader(content_type)
-                content = await loader(session, organization_id, content_id)
-                if content is None:
-                    raise ConnectError(Code.NOT_FOUND, "Content not found")
-
                 return TransferOwnershipResponse(
-                    policy=content_access_policy_to_proto(
-                        owner_id=content.owner_id,
-                        access_mode=content.access_mode,
-                        baseline_role=content.baseline_role,
+                    policy=await _policy_for(
+                        session,
+                        user_id=user_id,
+                        organization_id=organization_id,
+                        content_type=content_type,
+                        content_id=content_id,
                     )
                 )
         except ConnectError:

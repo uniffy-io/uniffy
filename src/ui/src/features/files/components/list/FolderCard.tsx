@@ -31,6 +31,10 @@ export interface FolderCardProps {
     trashMode?: boolean;
     onRestore?: (id: string) => void;
     canRestore?: boolean;
+    /** Mount the rename input immediately. Used right after creation so the user can type the name without an extra click. */
+    autoRename?: boolean;
+    /** Called when the auto-rename has been resolved (confirmed or cancelled) so the parent can clear its pending state. */
+    onAutoRenameResolved?: () => void;
 }
 
 export function FolderCard({
@@ -51,9 +55,16 @@ export function FolderCard({
     trashMode = false,
     onRestore,
     canRestore = true,
+    autoRename = false,
+    onAutoRenameResolved,
 }: FolderCardProps) {
     const showOwner = viewScope === 'shared' || viewScope === 'organization';
-    const [isRenaming, setIsRenaming] = useState(false);
+    // Internal rename gate (Rename context-menu action). `autoRename` from the
+    // parent runs the same path right after creation - OR them so a late
+    // autoRename flip still opens the input.
+    const [renamingInternal, setRenamingInternal] = useState(false);
+    const isRenaming = renamingInternal || autoRename;
+    const setIsRenaming = setRenamingInternal;
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const config = sizeConfig || { cardMinWidth: 140, iconSize: 48, gap: 16, showDetails: true };
 
@@ -96,10 +107,12 @@ export function FolderCard({
     const handleRenameConfirm = (newName: string) => {
         onRename(folder.id, newName);
         setIsRenaming(false);
+        onAutoRenameResolved?.();
     };
 
     const handleRenameCancel = () => {
         setIsRenaming(false);
+        onAutoRenameResolved?.();
     };
 
     if (viewMode === 'list') {

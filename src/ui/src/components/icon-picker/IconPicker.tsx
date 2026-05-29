@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X } from '@phosphor-icons/react';
+import { SafeEmojiPicker } from '@/components/emoji/SafeEmojiPicker';
 import { cn } from '@/shared/utils/cn';
-import { Button } from '@/components/ui/button';
+import { useTheme } from '@/config/theme/ThemeProvider';
 import {
-    COMMON_EMOJIS,
     getIconCategories,
     getIconsByCategory,
     type IconValue,
@@ -35,8 +35,8 @@ export function IconPicker({
     const [activeTab, setActiveTab] = useState<TabType>(
         currentIcon?.type === 'emoji' ? 'emojis' : 'icons'
     );
-    const [customEmoji, setCustomEmoji] = useState('');
     const pickerRef = useRef<HTMLDivElement>(null);
+    const { resolvedTheme } = useTheme();
 
     // Close picker when clicking outside
     useEffect(() => {
@@ -66,18 +66,9 @@ export function IconPicker({
         onSelect({ type: 'icon', value: iconName });
     }, [onSelect]);
 
-    const handleEmojiSelect = useCallback((emoji: string) => {
-        onSelect({ type: 'emoji', value: emoji });
+    const handleEmojiSelect = useCallback((emoji: { native: string }) => {
+        onSelect({ type: 'emoji', value: emoji.native });
     }, [onSelect]);
-
-    const handleCustomEmojiSubmit = useCallback(() => {
-        if (customEmoji.trim()) {
-            const emoji = [...customEmoji.trim()][0];
-            if (emoji) {
-                onSelect({ type: 'emoji', value: emoji });
-            }
-        }
-    }, [customEmoji, onSelect]);
 
     const handleRemoveIcon = useCallback(() => {
         onSelect(null);
@@ -89,11 +80,14 @@ export function IconPicker({
         ? allCategories.filter(c => allowedCategories.includes(c))
         : allCategories;
 
+    const isEmojiTab = activeTab === 'emojis';
+
     return (
         <div
             ref={pickerRef}
             className={cn(
-                "absolute z-50 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl overflow-hidden",
+                "absolute z-50 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden",
+                isEmojiTab ? "w-[22rem]" : "w-80",
                 className
             )}
         >
@@ -135,8 +129,18 @@ export function IconPicker({
             </div>
 
             {/* Content */}
-            <div className="max-h-72 overflow-y-auto p-3">
-                {activeTab === 'icons' ? (
+            {isEmojiTab ? (
+                <SafeEmojiPicker
+                    onEmojiSelect={handleEmojiSelect}
+                    theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                    previewPosition="none"
+                    skinTonePosition="search"
+                    perLine={8}
+                    maxFrequentRows={2}
+                    navPosition="bottom"
+                />
+            ) : (
+                <div className="max-h-72 overflow-y-auto p-3">
                     <div className="space-y-4">
                         {categories.map((category) => (
                             <div key={category}>
@@ -168,65 +172,8 @@ export function IconPicker({
                             </div>
                         ))}
                     </div>
-                ) : (
-                    <div className="space-y-4">
-                        {/* Common emojis grid */}
-                        <div>
-                            <h4 className="text-xs font-medium text-muted-foreground mb-2">
-                                Common
-                            </h4>
-                            <div className="grid grid-cols-8 gap-1">
-                                {COMMON_EMOJIS.map((emoji) => {
-                                    const isSelected =
-                                        currentIcon?.type === 'emoji' &&
-                                        currentIcon.value === emoji;
-
-                                    return (
-                                        <button
-                                            key={emoji}
-                                            onClick={() => handleEmojiSelect(emoji)}
-                                            className={cn(
-                                                "p-2 rounded hover:bg-muted transition-colors text-lg",
-                                                isSelected && "bg-primary/10 ring-1 ring-primary"
-                                            )}
-                                        >
-                                            {emoji}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Custom emoji input */}
-                        <div>
-                            <h4 className="text-xs font-medium text-muted-foreground mb-2">
-                                Custom
-                            </h4>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={customEmoji}
-                                    onChange={(e) => setCustomEmoji(e.target.value)}
-                                    placeholder="Paste any emoji..."
-                                    className="flex-1 px-3 py-2 text-sm bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleCustomEmojiSubmit();
-                                        }
-                                    }}
-                                />
-                                <Button
-                                    size="sm"
-                                    onClick={handleCustomEmojiSubmit}
-                                    disabled={!customEmoji.trim()}
-                                >
-                                    Add
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Footer - Remove icon option */}
             {showRemove && currentIcon && (

@@ -143,7 +143,7 @@ async def require_transfer(
     baseline_role: ContentRole | None,
     error_message: str | None = None,
 ) -> None:
-    """Requires OWNER (org and domain admins bypass at the checker level)."""
+    """Requires OWNER - only the content owner can transfer ownership."""
     role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,

@@ -6,7 +6,7 @@ import { TASK_TYPES, getTaskTypeConfig, getHierarchyRuleViolation } from "@/feat
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { isOverdue } from "@/shared/utils/dateFormatting";
-import { SubjectAvatarStack } from "@/components/subject";
+import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -377,12 +377,19 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               </div>
 
               {/* Assignees */}
-              {task.assigneeIds.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-20">Assignee</span>
-                  <SubjectAvatarStack subjectIds={task.assigneeIds} />
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-20">Assignee</span>
+                <div className="flex-1 min-w-0">
+                  <AssigneeField
+                    assigneeIds={task.assigneeIds}
+                    onChange={(ids) => {
+                      dispatch(optimisticUpdateTask({ id: task.id, assigneeIds: ids }));
+                      dispatch(updateTask({ id: task.id, assigneeIds: ids }));
+                    }}
+                    disabled={!canEdit}
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Start Date */}
               <div className="flex items-center gap-3">
@@ -648,6 +655,50 @@ function EditableTitle({ title, onSave, readOnly }: { title: string; onSave: (ne
   );
 }
 
+
+interface AssigneeFieldProps {
+  assigneeIds: string[];
+  onChange: (ids: string[]) => void;
+  disabled?: boolean;
+}
+
+function AssigneeField({ assigneeIds, onChange, disabled }: AssigneeFieldProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => !disabled && setIsOpen((v) => !v)}
+        disabled={disabled}
+        className={cn(
+          "flex items-center gap-2 rounded-md px-2 py-1 -mx-2 text-sm transition-colors",
+          disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/50"
+        )}
+      >
+        {assigneeIds.length > 0 ? (
+          <SubjectAvatarStack subjectIds={assigneeIds} />
+        ) : (
+          <span className="text-muted-foreground">Unassigned</span>
+        )}
+      </button>
+      {isOpen && (
+        <SubjectPicker
+          mode="multi"
+          subjectTypes="all"
+          value={assigneeIds}
+          onChange={(ids) => onChange(ids)}
+          portal
+          anchorRef={triggerRef}
+          onClose={() => setIsOpen(false)}
+          autoFocus
+        />
+      )}
+    </>
+  );
+}
 
 interface OptionDropdownProps {
   options: SelectOption[];

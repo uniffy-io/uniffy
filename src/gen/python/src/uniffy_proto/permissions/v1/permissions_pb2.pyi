@@ -29,14 +29,16 @@ class ContentMember(_message.Message):
     def __init__(self, subject_type: _Optional[_Union[_common_pb2.SubjectType, str]] = ..., subject_id: _Optional[str] = ..., role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., added_by_user_id: _Optional[str] = ..., added_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class ContentAccessPolicy(_message.Message):
-    __slots__ = ("owner_id", "access_mode", "baseline_role")
+    __slots__ = ("owner_id", "access_mode", "baseline_role", "caller_role")
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     ACCESS_MODE_FIELD_NUMBER: _ClassVar[int]
     BASELINE_ROLE_FIELD_NUMBER: _ClassVar[int]
+    CALLER_ROLE_FIELD_NUMBER: _ClassVar[int]
     owner_id: str
     access_mode: _common_pb2.AccessMode
     baseline_role: _common_pb2.ContentRole
-    def __init__(self, owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
+    caller_role: _common_pb2.ContentRole
+    def __init__(self, owner_id: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ..., caller_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class ContentMemberEvent(_message.Message):
     __slots__ = ("id", "content_type", "content_id", "action", "subject_type", "subject_id", "previous_role", "new_role", "previous_access_mode", "new_access_mode", "previous_baseline_role", "new_baseline_role", "previous_owner_id", "new_owner_id", "actor_user_id", "actor_org_role", "note", "occurred_at")

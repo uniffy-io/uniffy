@@ -289,23 +289,16 @@ class RoomOperations(BaseContentOperations[Room]):
             Room.is_deleted == False,  # noqa: E712
         )
 
-        is_admin = await self.permission_checker.is_org_admin(user_id, organization_id)
-        if not is_admin:
-            is_admin = await self.permission_checker.is_domain_admin(
-                user_id, organization_id, self.content_type
-            )
-
-        if not is_admin:
-            access_filter = self.access_query.build_accessible_filter(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id_column=Room.id,
-                owner_id_column=Room.owner_id,
-                access_mode_column=Room.access_mode,
-                baseline_role_column=Room.baseline_role,
-            )
-            query = query.where(access_filter)
+        access_filter = self.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id_column=Room.id,
+            owner_id_column=Room.owner_id,
+            access_mode_column=Room.access_mode,
+            baseline_role_column=Room.baseline_role,
+        )
+        query = query.where(access_filter)
 
         if status is not None:
             query = query.where(Room.status == status)

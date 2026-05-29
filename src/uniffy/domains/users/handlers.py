@@ -33,7 +33,7 @@ from uniffy_proto.users.v1.users_pb2 import (
 )
 
 from uniffy.core.converters import member_info_to_proto, org_role_from_proto
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.auth.passwords import hash_password
@@ -216,6 +216,13 @@ class UsersHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Email and password are required")
 
         try:
+            from uniffy.domains.auth.password_policy import validate_password
+
+            validate_password(request.password)
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+
+        try:
             async with open_session() as session:
                 ops = UserOperations(session)
                 await ops.require_system_admin(user_id)
@@ -266,6 +273,12 @@ class UsersHandlers:
 
                 hashed_pw = None
                 if request.HasField("password") and request.password:
+                    from uniffy.domains.auth.password_policy import validate_password
+
+                    try:
+                        validate_password(request.password)
+                    except ValidationError as e:
+                        raise ConnectError(Code.INVALID_ARGUMENT, str(e))
                     hashed_pw = hash_password(request.password)
 
                 user = await ops.admin_update(

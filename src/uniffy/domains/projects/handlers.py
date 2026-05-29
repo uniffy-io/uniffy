@@ -583,8 +583,8 @@ class ProjectsHandlers:
             updates["status"] = request.status
         if request.HasField("priority"):
             updates["priority"] = request.priority
-        if request.assignee_ids:
-            updates["assignee_ids"] = list(request.assignee_ids)
+        if request.HasField("assignee_ids"):
+            updates["assignee_ids"] = list(request.assignee_ids.ids)
         if request.HasField("start_date"):
             updates["start_date"] = request.start_date or None
         if request.HasField("due_date"):

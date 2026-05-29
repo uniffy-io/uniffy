@@ -42,6 +42,20 @@ class RefreshTokenRequest(_message.Message):
     organization_slug: str
     def __init__(self, refresh_token: _Optional[str] = ..., organization_slug: _Optional[str] = ...) -> None: ...
 
+class SwitchOrganizationRequest(_message.Message):
+    __slots__ = ("refresh_token", "organization_slug")
+    REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
+    refresh_token: str
+    organization_slug: str
+    def __init__(self, refresh_token: _Optional[str] = ..., organization_slug: _Optional[str] = ...) -> None: ...
+
+class SwitchOrganizationResponse(_message.Message):
+    __slots__ = ("auth_result",)
+    AUTH_RESULT_FIELD_NUMBER: _ClassVar[int]
+    auth_result: AuthResult
+    def __init__(self, auth_result: _Optional[_Union[AuthResult, _Mapping]] = ...) -> None: ...
+
 class GetCurrentUserRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
@@ -67,7 +81,7 @@ class RevokeOtherSessionsRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class RegisterResponse(_message.Message):
-    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains", "organization_slug")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -76,6 +90,7 @@ class RegisterResponse(_message.Message):
     ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
     access_token: str
     refresh_token: str
     token_type: str
@@ -84,7 +99,8 @@ class RegisterResponse(_message.Message):
     organization_role: str
     session_id: str
     domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
-    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
+    organization_slug: str
+    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ..., organization_slug: _Optional[str] = ...) -> None: ...
 
 class LoginResponse(_message.Message):
     __slots__ = ("auth_result", "mfa_challenge", "enrollment_required")
@@ -97,7 +113,7 @@ class LoginResponse(_message.Message):
     def __init__(self, auth_result: _Optional[_Union[AuthResult, _Mapping]] = ..., mfa_challenge: _Optional[_Union[MfaChallenge, _Mapping]] = ..., enrollment_required: _Optional[_Union[EnrollmentRequired, _Mapping]] = ...) -> None: ...
 
 class AuthResult(_message.Message):
-    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains", "organization_slug")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -106,6 +122,7 @@ class AuthResult(_message.Message):
     ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
     access_token: str
     refresh_token: str
     token_type: str
@@ -114,7 +131,8 @@ class AuthResult(_message.Message):
     organization_role: str
     session_id: str
     domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
-    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
+    organization_slug: str
+    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ..., organization_slug: _Optional[str] = ...) -> None: ...
 
 class MfaChallenge(_message.Message):
     __slots__ = ("challenge_token", "methods")
@@ -133,7 +151,7 @@ class EnrollmentRequired(_message.Message):
     def __init__(self, enrollment_token: _Optional[str] = ..., grace_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class RefreshTokenResponse(_message.Message):
-    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains")
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "domain_admin_domains", "organization_slug")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -142,6 +160,7 @@ class RefreshTokenResponse(_message.Message):
     ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
     access_token: str
     refresh_token: str
     token_type: str
@@ -150,7 +169,8 @@ class RefreshTokenResponse(_message.Message):
     organization_role: str
     session_id: str
     domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
-    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
+    organization_slug: str
+    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ..., organization_slug: _Optional[str] = ...) -> None: ...
 
 class GetCurrentUserResponse(_message.Message):
     __slots__ = ("id", "email", "username", "full_name", "is_active", "is_system_admin", "email_verified", "accent_color", "font_family", "avatar_url", "has_avatar")
