@@ -535,7 +535,7 @@ class UpdateTaskRequest(_message.Message):
     description: str
     status: str
     priority: str
-    assignee_ids: _containers.RepeatedScalarFieldContainer[str]
+    assignee_ids: TaskAssigneeIds
     start_date: str
     due_date: str
     parent_id: str
@@ -549,9 +549,15 @@ class UpdateTaskRequest(_message.Message):
     estimated_minutes: int
     time_spent_minutes: int
     tag_ids: TaskTagIds
-    def __init__(self, organization_id: _Optional[str] = ..., task_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Iterable[str]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ..., task_type: _Optional[str] = ..., sprint_id: _Optional[str] = ..., estimated_minutes: _Optional[int] = ..., time_spent_minutes: _Optional[int] = ..., tag_ids: _Optional[_Union[TaskTagIds, _Mapping]] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., task_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., status: _Optional[str] = ..., priority: _Optional[str] = ..., assignee_ids: _Optional[_Union[TaskAssigneeIds, _Mapping]] = ..., start_date: _Optional[str] = ..., due_date: _Optional[str] = ..., parent_id: _Optional[str] = ..., blocked_by_task_ids: _Optional[_Iterable[str]] = ..., is_milestone: _Optional[bool] = ..., recurrence_rule: _Optional[str] = ..., sort_order: _Optional[int] = ..., field_values: _Optional[_Mapping[str, str]] = ..., task_type: _Optional[str] = ..., sprint_id: _Optional[str] = ..., estimated_minutes: _Optional[int] = ..., time_spent_minutes: _Optional[int] = ..., tag_ids: _Optional[_Union[TaskTagIds, _Mapping]] = ...) -> None: ...
 
 class TaskTagIds(_message.Message):
+    __slots__ = ("ids",)
+    IDS_FIELD_NUMBER: _ClassVar[int]
+    ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class TaskAssigneeIds(_message.Message):
     __slots__ = ("ids",)
     IDS_FIELD_NUMBER: _ClassVar[int]
     ids: _containers.RepeatedScalarFieldContainer[str]

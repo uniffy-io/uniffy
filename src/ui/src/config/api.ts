@@ -106,6 +106,7 @@ function updateAuthState(
   accessToken: string,
   refreshToken: string,
   organizationId?: string,
+  organizationSlug?: string,
   organizationRole?: string,
   sessionId?: string,
   domainAdminDomains?: number[],
@@ -121,6 +122,7 @@ function updateAuthState(
   const state = store.getState();
   const user = state.auth?.user;
   const currentOrgId = state.auth?.currentOrganizationId;
+  const currentOrgSlug = state.auth?.currentOrganizationSlug;
   const currentOrgRole = state.auth?.currentOrganizationRole;
 
   if (user) {
@@ -130,6 +132,7 @@ function updateAuthState(
       refreshToken,
       // `||` not `??`: protobuf returns "" for unset strings, which ?? does not fall through.
       organizationId: organizationId || currentOrgId || undefined,
+      organizationSlug: organizationSlug || currentOrgSlug || undefined,
       organizationRole: organizationRole || currentOrgRole || undefined,
       sessionId,
       domainAdminDomains,
@@ -203,7 +206,7 @@ async function refreshAccessToken(): Promise<string | null> {
     return refreshPromise;
   }
 
-  const { refreshToken, user, currentOrganizationSlug } = getAuthState();
+  const { refreshToken, user } = getAuthState();
 
   if (!refreshToken || !user) {
     return null;
@@ -219,12 +222,9 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       const client = createClient(AuthService, refreshTransport);
-      // Pass org slug so the refreshed access token keeps its `org_id` claim;
-      // handlers enforcing token-org parity (e.g. realtime WS upgrade) require it.
-      const response = await client.refreshToken({
-        refreshToken,
-        ...(currentOrganizationSlug ? { organizationSlug: currentOrganizationSlug } : {}),
-      });
+      // Refresh stays in whichever org the session is bound to server-side;
+      // org switches go through AuthService.SwitchOrganization, not a slug here.
+      const response = await client.refreshToken({ refreshToken });
 
       setMemoryAccessToken(response.accessToken);
 
@@ -232,6 +232,7 @@ async function refreshAccessToken(): Promise<string | null> {
         response.accessToken,
         response.refreshToken,
         response.organizationId,
+        response.organizationSlug,
         response.organizationRole,
         response.sessionId,
         response.domainAdminDomains.length > 0 ? Array.from(response.domainAdminDomains) : undefined,

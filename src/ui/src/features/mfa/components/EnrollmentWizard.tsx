@@ -18,6 +18,10 @@ interface EnrollmentResult {
     refreshToken: string;
     sessionId: string;
     recoveryCodes: string[];
+    organizationId?: string;
+    organizationSlug?: string;
+    organizationRole?: string;
+    domainAdminDomains?: number[];
 }
 
 interface EnrollmentWizardProps {
@@ -36,6 +40,10 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
         accessToken: string;
         refreshToken: string;
         sessionId: string;
+        organizationId?: string;
+        organizationSlug?: string;
+        organizationRole?: string;
+        domainAdminDomains?: number[];
     } | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -78,6 +86,10 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
                 accessToken: response.accessToken,
                 refreshToken: response.refreshToken,
                 sessionId: response.sessionId,
+                organizationId: response.organizationId,
+                organizationSlug: response.organizationSlug,
+                organizationRole: response.organizationRole,
+                domainAdminDomains: Array.from(response.domainAdminDomains),
             });
             setStep('recovery');
         } catch (err: unknown) {
@@ -263,6 +275,10 @@ export function EnrollmentWizard({ onComplete, onCancel }: EnrollmentWizardProps
                                     refreshToken: issuedTokens.refreshToken,
                                     sessionId: issuedTokens.sessionId,
                                     recoveryCodes,
+                                    organizationId: issuedTokens.organizationId,
+                                    organizationSlug: issuedTokens.organizationSlug,
+                                    organizationRole: issuedTokens.organizationRole,
+                                    domainAdminDomains: issuedTokens.domainAdminDomains,
                                 })
                             }
                             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"

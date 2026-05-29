@@ -1,7 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
+import { SafeEmojiPicker } from '@/components/emoji/SafeEmojiPicker';
 import { useTheme } from '@/config/theme/ThemeProvider';
 
 interface EmojiPickerProps {
@@ -84,8 +83,7 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
       data-testid="chat-emoji-picker"
     >
       <div className="rounded-xl border border-border bg-card shadow-xl overflow-hidden">
-        <Picker
-          data={data}
+        <SafeEmojiPicker
           onEmojiSelect={handleEmojiSelect}
           theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
           previewPosition="none"
@@ -93,7 +91,6 @@ export function EmojiPicker({ onSelect, onClose, anchorRef }: EmojiPickerProps) 
           perLine={8}
           maxFrequentRows={2}
           navPosition="bottom"
-          set="native"
         />
       </div>
     </div>,

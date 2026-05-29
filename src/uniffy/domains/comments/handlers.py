@@ -243,7 +243,18 @@ class CommentsHandlers:
                 )
 
                 proto_comments = []
-                for comment, author_name, avatar_url, reply_count, reactions in comments_data:
+                for comment, author_name, avatar_url, reply_count, reactions, replies in comments_data:
+                    proto_replies = [
+                        comment_to_proto(
+                            comment=reply,
+                            author_name=reply_author_name,
+                            author_avatar_url=None,
+                            reply_count=0,
+                            reactions=reply_reactions,
+                            current_user_id=str(user_id),
+                        )
+                        for reply, reply_author_name, reply_reactions in replies
+                    ]
                     proto_comments.append(
                         comment_to_proto(
                             comment=comment,
@@ -252,6 +263,7 @@ class CommentsHandlers:
                             reply_count=reply_count,
                             reactions=reactions,
                             current_user_id=str(user_id),
+                            replies=proto_replies,
                         )
                     )
 

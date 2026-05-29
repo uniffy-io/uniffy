@@ -7,6 +7,7 @@
 package authv1
 
 import (
+	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -174,11 +175,15 @@ type ConfirmEnrollmentResponse struct {
 	RecoveryCodes []string `protobuf:"bytes,1,rep,name=recovery_codes,json=recoveryCodes,proto3" json:"recovery_codes,omitempty"`
 	// Fresh AuthResult for the calling session. The previous tokens
 	// were invalidated by the token_version bump.
-	AccessToken   string `protobuf:"bytes,2,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	RefreshToken  string `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	SessionId     string `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	AccessToken        string          `protobuf:"bytes,2,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken       string          `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	SessionId          string          `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	OrganizationId     *string         `protobuf:"bytes,5,opt,name=organization_id,json=organizationId,proto3,oneof" json:"organization_id,omitempty"`
+	OrganizationSlug   *string         `protobuf:"bytes,6,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`
+	OrganizationRole   *string         `protobuf:"bytes,7,opt,name=organization_role,json=organizationRole,proto3,oneof" json:"organization_role,omitempty"`
+	DomainAdminDomains []v1.DomainType `protobuf:"varint,8,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ConfirmEnrollmentResponse) Reset() {
@@ -237,6 +242,34 @@ func (x *ConfirmEnrollmentResponse) GetSessionId() string {
 		return x.SessionId
 	}
 	return ""
+}
+
+func (x *ConfirmEnrollmentResponse) GetOrganizationId() string {
+	if x != nil && x.OrganizationId != nil {
+		return *x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ConfirmEnrollmentResponse) GetOrganizationSlug() string {
+	if x != nil && x.OrganizationSlug != nil {
+		return *x.OrganizationSlug
+	}
+	return ""
+}
+
+func (x *ConfirmEnrollmentResponse) GetOrganizationRole() string {
+	if x != nil && x.OrganizationRole != nil {
+		return *x.OrganizationRole
+	}
+	return ""
+}
+
+func (x *ConfirmEnrollmentResponse) GetDomainAdminDomains() []v1.DomainType {
+	if x != nil {
+		return x.DomainAdminDomains
+	}
+	return nil
 }
 
 type VerifyMfaRequest struct {
@@ -313,8 +346,10 @@ type VerifyMfaResponse struct {
 	SessionId        *string                `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
 	// True when this verify consumed a recovery code (UI nudges the
 	// user to regenerate when fewer than 3 remain).
-	UsedRecoveryCode       bool  `protobuf:"varint,8,opt,name=used_recovery_code,json=usedRecoveryCode,proto3" json:"used_recovery_code,omitempty"`
-	RemainingRecoveryCodes int32 `protobuf:"varint,9,opt,name=remaining_recovery_codes,json=remainingRecoveryCodes,proto3" json:"remaining_recovery_codes,omitempty"`
+	UsedRecoveryCode       bool            `protobuf:"varint,8,opt,name=used_recovery_code,json=usedRecoveryCode,proto3" json:"used_recovery_code,omitempty"`
+	RemainingRecoveryCodes int32           `protobuf:"varint,9,opt,name=remaining_recovery_codes,json=remainingRecoveryCodes,proto3" json:"remaining_recovery_codes,omitempty"`
+	OrganizationSlug       *string         `protobuf:"bytes,10,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`
+	DomainAdminDomains     []v1.DomainType `protobuf:"varint,11,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -410,6 +445,20 @@ func (x *VerifyMfaResponse) GetRemainingRecoveryCodes() int32 {
 		return x.RemainingRecoveryCodes
 	}
 	return 0
+}
+
+func (x *VerifyMfaResponse) GetOrganizationSlug() string {
+	if x != nil && x.OrganizationSlug != nil {
+		return *x.OrganizationSlug
+	}
+	return ""
+}
+
+func (x *VerifyMfaResponse) GetDomainAdminDomains() []v1.DomainType {
+	if x != nil {
+		return x.DomainAdminDomains
+	}
+	return nil
 }
 
 type DisableMfaRequest struct {
@@ -1268,7 +1317,7 @@ var File_auth_v1_mfa_proto protoreflect.FileDescriptor
 
 const file_auth_v1_mfa_proto_rawDesc = "" +
 	"\n" +
-	"\x11auth/v1/mfa.proto\x12\aauth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x18\n" +
+	"\x11auth/v1/mfa.proto\x12\aauth.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x18\n" +
 	"\x16BeginEnrollmentRequest\"\x87\x01\n" +
 	"\x17BeginEnrollmentResponse\x12\x1d\n" +
 	"\n" +
@@ -1276,17 +1325,24 @@ const file_auth_v1_mfa_proto_rawDesc = "" +
 	"\x10provisioning_uri\x18\x02 \x01(\tR\x0fprovisioningUri\x12\"\n" +
 	"\rqr_svg_base64\x18\x03 \x01(\tR\vqrSvgBase64\".\n" +
 	"\x18ConfirmEnrollmentRequest\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\"\xa9\x01\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\"\xc4\x03\n" +
 	"\x19ConfirmEnrollmentResponse\x12%\n" +
 	"\x0erecovery_codes\x18\x01 \x03(\tR\rrecoveryCodes\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x04 \x01(\tR\tsessionId\"g\n" +
+	"session_id\x18\x04 \x01(\tR\tsessionId\x12,\n" +
+	"\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n" +
+	"\x11organization_slug\x18\x06 \x01(\tH\x01R\x10organizationSlug\x88\x01\x01\x120\n" +
+	"\x11organization_role\x18\a \x01(\tH\x02R\x10organizationRole\x88\x01\x01\x12G\n" +
+	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomainsB\x12\n" +
+	"\x10_organization_idB\x14\n" +
+	"\x12_organization_slugB\x14\n" +
+	"\x12_organization_role\"g\n" +
 	"\x10VerifyMfaRequest\x12'\n" +
 	"\x0fchallenge_token\x18\x01 \x01(\tR\x0echallengeToken\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x16\n" +
-	"\x06method\x18\x03 \x01(\tR\x06method\"\xb8\x03\n" +
+	"\x06method\x18\x03 \x01(\tR\x06method\"\xc9\x04\n" +
 	"\x11VerifyMfaResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
@@ -1298,10 +1354,14 @@ const file_auth_v1_mfa_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\a \x01(\tH\x02R\tsessionId\x88\x01\x01\x12,\n" +
 	"\x12used_recovery_code\x18\b \x01(\bR\x10usedRecoveryCode\x128\n" +
-	"\x18remaining_recovery_codes\x18\t \x01(\x05R\x16remainingRecoveryCodesB\x12\n" +
+	"\x18remaining_recovery_codes\x18\t \x01(\x05R\x16remainingRecoveryCodes\x120\n" +
+	"\x11organization_slug\x18\n" +
+	" \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12G\n" +
+	"\x14domain_admin_domains\x18\v \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomainsB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
-	"\v_session_id\"'\n" +
+	"\v_session_idB\x14\n" +
+	"\x12_organization_slug\"'\n" +
 	"\x11DisableMfaRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\".\n" +
 	"\x12DisableMfaResponse\x12\x18\n" +
@@ -1411,42 +1471,45 @@ var file_auth_v1_mfa_proto_goTypes = []any{
 	(*PendingPeerReset)(nil),                 // 20: auth.v1.PendingPeerReset
 	(*ListPlatformPeerResetsRequest)(nil),    // 21: auth.v1.ListPlatformPeerResetsRequest
 	(*ListPlatformPeerResetsResponse)(nil),   // 22: auth.v1.ListPlatformPeerResetsResponse
-	(*timestamppb.Timestamp)(nil),            // 23: google.protobuf.Timestamp
+	(v1.DomainType)(0),                       // 23: common.v1.DomainType
+	(*timestamppb.Timestamp)(nil),            // 24: google.protobuf.Timestamp
 }
 var file_auth_v1_mfa_proto_depIdxs = []int32{
-	23, // 0: auth.v1.GetMfaStatusResponse.enrolled_at:type_name -> google.protobuf.Timestamp
-	23, // 1: auth.v1.GetMfaStatusResponse.last_used_at:type_name -> google.protobuf.Timestamp
-	23, // 2: auth.v1.RequestPlatformPeerResetResponse.expires_at:type_name -> google.protobuf.Timestamp
-	23, // 3: auth.v1.PendingPeerReset.created_at:type_name -> google.protobuf.Timestamp
-	23, // 4: auth.v1.PendingPeerReset.expires_at:type_name -> google.protobuf.Timestamp
-	20, // 5: auth.v1.ListPlatformPeerResetsResponse.requests:type_name -> auth.v1.PendingPeerReset
-	0,  // 6: auth.v1.MfaService.BeginEnrollment:input_type -> auth.v1.BeginEnrollmentRequest
-	2,  // 7: auth.v1.MfaService.ConfirmEnrollment:input_type -> auth.v1.ConfirmEnrollmentRequest
-	4,  // 8: auth.v1.MfaService.VerifyMfa:input_type -> auth.v1.VerifyMfaRequest
-	6,  // 9: auth.v1.MfaService.DisableMfa:input_type -> auth.v1.DisableMfaRequest
-	8,  // 10: auth.v1.MfaService.RegenerateRecoveryCodes:input_type -> auth.v1.RegenerateRecoveryCodesRequest
-	12, // 11: auth.v1.MfaService.AdminResetMfa:input_type -> auth.v1.AdminResetMfaRequest
-	14, // 12: auth.v1.MfaService.PlatformResetMfa:input_type -> auth.v1.PlatformResetMfaRequest
-	16, // 13: auth.v1.MfaService.RequestPlatformPeerReset:input_type -> auth.v1.RequestPlatformPeerResetRequest
-	18, // 14: auth.v1.MfaService.ApprovePlatformPeerReset:input_type -> auth.v1.ApprovePlatformPeerResetRequest
-	21, // 15: auth.v1.MfaService.ListPlatformPeerResets:input_type -> auth.v1.ListPlatformPeerResetsRequest
-	10, // 16: auth.v1.MfaService.GetMfaStatus:input_type -> auth.v1.GetMfaStatusRequest
-	1,  // 17: auth.v1.MfaService.BeginEnrollment:output_type -> auth.v1.BeginEnrollmentResponse
-	3,  // 18: auth.v1.MfaService.ConfirmEnrollment:output_type -> auth.v1.ConfirmEnrollmentResponse
-	5,  // 19: auth.v1.MfaService.VerifyMfa:output_type -> auth.v1.VerifyMfaResponse
-	7,  // 20: auth.v1.MfaService.DisableMfa:output_type -> auth.v1.DisableMfaResponse
-	9,  // 21: auth.v1.MfaService.RegenerateRecoveryCodes:output_type -> auth.v1.RegenerateRecoveryCodesResponse
-	13, // 22: auth.v1.MfaService.AdminResetMfa:output_type -> auth.v1.AdminResetMfaResponse
-	15, // 23: auth.v1.MfaService.PlatformResetMfa:output_type -> auth.v1.PlatformResetMfaResponse
-	17, // 24: auth.v1.MfaService.RequestPlatformPeerReset:output_type -> auth.v1.RequestPlatformPeerResetResponse
-	19, // 25: auth.v1.MfaService.ApprovePlatformPeerReset:output_type -> auth.v1.ApprovePlatformPeerResetResponse
-	22, // 26: auth.v1.MfaService.ListPlatformPeerResets:output_type -> auth.v1.ListPlatformPeerResetsResponse
-	11, // 27: auth.v1.MfaService.GetMfaStatus:output_type -> auth.v1.GetMfaStatusResponse
-	17, // [17:28] is the sub-list for method output_type
-	6,  // [6:17] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	23, // 0: auth.v1.ConfirmEnrollmentResponse.domain_admin_domains:type_name -> common.v1.DomainType
+	23, // 1: auth.v1.VerifyMfaResponse.domain_admin_domains:type_name -> common.v1.DomainType
+	24, // 2: auth.v1.GetMfaStatusResponse.enrolled_at:type_name -> google.protobuf.Timestamp
+	24, // 3: auth.v1.GetMfaStatusResponse.last_used_at:type_name -> google.protobuf.Timestamp
+	24, // 4: auth.v1.RequestPlatformPeerResetResponse.expires_at:type_name -> google.protobuf.Timestamp
+	24, // 5: auth.v1.PendingPeerReset.created_at:type_name -> google.protobuf.Timestamp
+	24, // 6: auth.v1.PendingPeerReset.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 7: auth.v1.ListPlatformPeerResetsResponse.requests:type_name -> auth.v1.PendingPeerReset
+	0,  // 8: auth.v1.MfaService.BeginEnrollment:input_type -> auth.v1.BeginEnrollmentRequest
+	2,  // 9: auth.v1.MfaService.ConfirmEnrollment:input_type -> auth.v1.ConfirmEnrollmentRequest
+	4,  // 10: auth.v1.MfaService.VerifyMfa:input_type -> auth.v1.VerifyMfaRequest
+	6,  // 11: auth.v1.MfaService.DisableMfa:input_type -> auth.v1.DisableMfaRequest
+	8,  // 12: auth.v1.MfaService.RegenerateRecoveryCodes:input_type -> auth.v1.RegenerateRecoveryCodesRequest
+	12, // 13: auth.v1.MfaService.AdminResetMfa:input_type -> auth.v1.AdminResetMfaRequest
+	14, // 14: auth.v1.MfaService.PlatformResetMfa:input_type -> auth.v1.PlatformResetMfaRequest
+	16, // 15: auth.v1.MfaService.RequestPlatformPeerReset:input_type -> auth.v1.RequestPlatformPeerResetRequest
+	18, // 16: auth.v1.MfaService.ApprovePlatformPeerReset:input_type -> auth.v1.ApprovePlatformPeerResetRequest
+	21, // 17: auth.v1.MfaService.ListPlatformPeerResets:input_type -> auth.v1.ListPlatformPeerResetsRequest
+	10, // 18: auth.v1.MfaService.GetMfaStatus:input_type -> auth.v1.GetMfaStatusRequest
+	1,  // 19: auth.v1.MfaService.BeginEnrollment:output_type -> auth.v1.BeginEnrollmentResponse
+	3,  // 20: auth.v1.MfaService.ConfirmEnrollment:output_type -> auth.v1.ConfirmEnrollmentResponse
+	5,  // 21: auth.v1.MfaService.VerifyMfa:output_type -> auth.v1.VerifyMfaResponse
+	7,  // 22: auth.v1.MfaService.DisableMfa:output_type -> auth.v1.DisableMfaResponse
+	9,  // 23: auth.v1.MfaService.RegenerateRecoveryCodes:output_type -> auth.v1.RegenerateRecoveryCodesResponse
+	13, // 24: auth.v1.MfaService.AdminResetMfa:output_type -> auth.v1.AdminResetMfaResponse
+	15, // 25: auth.v1.MfaService.PlatformResetMfa:output_type -> auth.v1.PlatformResetMfaResponse
+	17, // 26: auth.v1.MfaService.RequestPlatformPeerReset:output_type -> auth.v1.RequestPlatformPeerResetResponse
+	19, // 27: auth.v1.MfaService.ApprovePlatformPeerReset:output_type -> auth.v1.ApprovePlatformPeerResetResponse
+	22, // 28: auth.v1.MfaService.ListPlatformPeerResets:output_type -> auth.v1.ListPlatformPeerResetsResponse
+	11, // 29: auth.v1.MfaService.GetMfaStatus:output_type -> auth.v1.GetMfaStatusResponse
+	19, // [19:30] is the sub-list for method output_type
+	8,  // [8:19] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_auth_v1_mfa_proto_init() }
@@ -1454,6 +1517,7 @@ func file_auth_v1_mfa_proto_init() {
 	if File_auth_v1_mfa_proto != nil {
 		return
 	}
+	file_auth_v1_mfa_proto_msgTypes[3].OneofWrappers = []any{}
 	file_auth_v1_mfa_proto_msgTypes[5].OneofWrappers = []any{}
 	file_auth_v1_mfa_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}

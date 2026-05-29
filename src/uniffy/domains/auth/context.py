@@ -60,6 +60,25 @@ def get_user_id_from_enrollment_context(ctx: RequestContext) -> UUID:
         )
 
 
+def get_organization_id_from_enrollment_context(
+    ctx: RequestContext,
+) -> UUID | None:
+    """Return the pending org carried in the enrollment-only token, if any."""
+    from uniffy.domains.auth.mfa.challenge import decode_enrollment_only_token
+
+    headers = ctx.request_headers()
+    auth_header = headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header[7:]
+    try:
+        payload = decode_enrollment_only_token(token)
+        org_id = payload.get("org_id")
+        return UUID(org_id) if org_id else None
+    except Exception:
+        return None
+
+
 def get_sender_info_from_context(ctx: RequestContext) -> tuple[str, str]:
     """Return `(full_name, avatar_key)` from JWT claims; empties when absent."""
     headers = ctx.request_headers()

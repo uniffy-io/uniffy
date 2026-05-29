@@ -65,7 +65,10 @@ function messageRev(m: ChatMessage): string {
     : '';
   const attachmentCount = m.attachments?.length ?? 0;
   const contentLen = m.content?.length ?? 0;
-  return `${m.id}|${m.updatedAt ?? ''}|${m.editedAt ?? ''}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${reactionsHash}|${attachmentCount}`;
+  const threadRev = m.thread
+    ? `${m.thread.replyCount}:${m.thread.lastReplyAt ?? ''}:${m.thread.hasUnread ? 1 : 0}`
+    : '';
+  return `${m.id}|${m.updatedAt ?? ''}|${m.editedAt ?? ''}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${reactionsHash}|${attachmentCount}|${threadRev}`;
 }
 
 function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps): boolean {

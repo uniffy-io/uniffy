@@ -36,10 +36,12 @@ from uniffy_proto.auth.v1.mfa_pb2 import (
     PendingPeerReset as PendingPeerResetProto,
 )
 
-from uniffy.core.converters import datetime_to_timestamp
+from uniffy.core.converters import datetime_to_timestamp, domain_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.shared import DomainType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
+    get_organization_id_from_enrollment_context,
     get_user_agent_from_context,
     get_user_id_from_context,
     get_user_id_from_enrollment_context,
@@ -51,6 +53,18 @@ from uniffy.domains.auth.errors import (
 )
 from uniffy.domains.auth.mfa.challenge import ENROLLMENT_ALLOWED_RPCS
 from uniffy.domains.auth.mfa.operations import MfaOperations
+
+
+def _mfa_domain_admins(values: list[str] | None) -> list[int]:
+    if not values:
+        return []
+    out: list[int] = []
+    for v in values:
+        try:
+            out.append(domain_type_to_proto(DomainType(v)))
+        except ValueError:
+            logger.warning("mfa_domain_admins: dropped unmapped domain {domain}", domain=v)
+    return out
 
 
 class MfaHandlers:
@@ -95,18 +109,30 @@ class MfaHandlers:
     ) -> ConfirmEnrollmentResponse:
         user_id = _user_for_enrollment(ctx, rpc="ConfirmEnrollment")
         user_agent = get_user_agent_from_context(ctx)
+        pending_org_id = get_organization_id_from_enrollment_context(ctx)
         try:
             async with open_session() as session:
                 ops = MfaOperations(session)
                 result = await ops.confirm_enrollment(
-                    user_id, request.code, user_agent=user_agent
+                    user_id,
+                    request.code,
+                    user_agent=user_agent,
+                    pending_organization_id=pending_org_id,
                 )
-                return ConfirmEnrollmentResponse(
+                response = ConfirmEnrollmentResponse(
                     recovery_codes=result.recovery_codes,
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
                     session_id=str(result.session_id),
+                    domain_admin_domains=_mfa_domain_admins(result.domain_admin_domains),
                 )
+                if result.organization_id is not None:
+                    response.organization_id = str(result.organization_id)
+                if result.organization_slug:
+                    response.organization_slug = result.organization_slug
+                if result.organization_role:
+                    response.organization_role = result.organization_role
+                return response
         except AuthenticationError as exc:
             raise ConnectError(Code.UNAUTHENTICATED, str(exc))
         except NotFoundError as exc:
@@ -137,9 +163,14 @@ class MfaHandlers:
                     user_id=str(result.user_id),
                     used_recovery_code=result.used_recovery_code,
                     remaining_recovery_codes=result.remaining_recovery_codes,
+                    domain_admin_domains=_mfa_domain_admins(result.domain_admin_domains),
                 )
                 if result.organization_id is not None:
                     response.organization_id = str(result.organization_id)
+                if result.organization_slug:
+                    response.organization_slug = result.organization_slug
+                if result.organization_role:
+                    response.organization_role = result.organization_role
                 if result.session_id is not None:
                     response.session_id = str(result.session_id)
                 return response

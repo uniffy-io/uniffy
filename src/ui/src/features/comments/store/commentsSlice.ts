@@ -151,12 +151,19 @@ const commentsSlice = createSlice({
             action: PayloadAction<{ contentType: number; contentId: string; comment: SerializedComment }>
         ) {
             const key = contentKey(action.payload.contentType, action.payload.contentId);
-            if (state.commentsByContent[key]) {
-                // Reply thread merge: top-level comments push into the list; replies arrive nested under their parent.
-                if (!action.payload.comment.parentCommentId) {
-                    state.commentsByContent[key].comments.push(action.payload.comment);
-                    state.commentsByContent[key].totalCount += 1;
-                    state.commentsByContent[key].openCount += 1;
+            const content = state.commentsByContent[key];
+            if (content) {
+                const reply = action.payload.comment;
+                if (!reply.parentCommentId) {
+                    content.comments.push(reply);
+                    content.totalCount += 1;
+                    content.openCount += 1;
+                } else {
+                    const parent = content.comments.find((c) => c.id === reply.parentCommentId);
+                    if (parent && !parent.replies.some((r) => r.id === reply.id)) {
+                        parent.replies.push(reply);
+                        parent.replyCount += 1;
+                    }
                 }
             }
         },

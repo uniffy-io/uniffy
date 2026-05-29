@@ -462,6 +462,9 @@ class OrganizationOperations:
         await self._session.commit()
 
         await _drop_user_perm_cache(user_id)
+        from uniffy.core.auth.membership import invalidate_membership_cache
+
+        await invalidate_membership_cache(user_id, org_id)
 
         return membership
 
@@ -514,6 +517,9 @@ class OrganizationOperations:
         await self._session.refresh(member)
 
         await _drop_user_perm_cache(target_user_id)
+        from uniffy.core.auth.membership import invalidate_membership_cache
+
+        await invalidate_membership_cache(target_user_id, org_id)
 
         return (member, user)
 
@@ -558,6 +564,9 @@ class OrganizationOperations:
         await self._session.commit()
 
         await _drop_user_perm_cache(target_user_id)
+        from uniffy.core.auth.membership import invalidate_membership_cache
+
+        await invalidate_membership_cache(target_user_id, org_id)
 
         return True
 

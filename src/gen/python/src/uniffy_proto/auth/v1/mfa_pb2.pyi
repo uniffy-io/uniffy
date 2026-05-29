@@ -1,5 +1,6 @@
 import datetime
 
+from common.v1 import common_pb2 as _common_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
@@ -30,16 +31,24 @@ class ConfirmEnrollmentRequest(_message.Message):
     def __init__(self, code: _Optional[str] = ...) -> None: ...
 
 class ConfirmEnrollmentResponse(_message.Message):
-    __slots__ = ("recovery_codes", "access_token", "refresh_token", "session_id")
+    __slots__ = ("recovery_codes", "access_token", "refresh_token", "session_id", "organization_id", "organization_slug", "organization_role", "domain_admin_domains")
     RECOVERY_CODES_FIELD_NUMBER: _ClassVar[int]
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ROLE_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
     recovery_codes: _containers.RepeatedScalarFieldContainer[str]
     access_token: str
     refresh_token: str
     session_id: str
-    def __init__(self, recovery_codes: _Optional[_Iterable[str]] = ..., access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., session_id: _Optional[str] = ...) -> None: ...
+    organization_id: str
+    organization_slug: str
+    organization_role: str
+    domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
+    def __init__(self, recovery_codes: _Optional[_Iterable[str]] = ..., access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., session_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_slug: _Optional[str] = ..., organization_role: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
 
 class VerifyMfaRequest(_message.Message):
     __slots__ = ("challenge_token", "code", "method")
@@ -52,7 +61,7 @@ class VerifyMfaRequest(_message.Message):
     def __init__(self, challenge_token: _Optional[str] = ..., code: _Optional[str] = ..., method: _Optional[str] = ...) -> None: ...
 
 class VerifyMfaResponse(_message.Message):
-    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "used_recovery_code", "remaining_recovery_codes")
+    __slots__ = ("access_token", "refresh_token", "token_type", "user_id", "organization_id", "organization_role", "session_id", "used_recovery_code", "remaining_recovery_codes", "organization_slug", "domain_admin_domains")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -62,6 +71,8 @@ class VerifyMfaResponse(_message.Message):
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     USED_RECOVERY_CODE_FIELD_NUMBER: _ClassVar[int]
     REMAINING_RECOVERY_CODES_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_SLUG_FIELD_NUMBER: _ClassVar[int]
+    DOMAIN_ADMIN_DOMAINS_FIELD_NUMBER: _ClassVar[int]
     access_token: str
     refresh_token: str
     token_type: str
@@ -71,7 +82,9 @@ class VerifyMfaResponse(_message.Message):
     session_id: str
     used_recovery_code: bool
     remaining_recovery_codes: int
-    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., used_recovery_code: _Optional[bool] = ..., remaining_recovery_codes: _Optional[int] = ...) -> None: ...
+    organization_slug: str
+    domain_admin_domains: _containers.RepeatedScalarFieldContainer[_common_pb2.DomainType]
+    def __init__(self, access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., token_type: _Optional[str] = ..., user_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., organization_role: _Optional[str] = ..., session_id: _Optional[str] = ..., used_recovery_code: _Optional[bool] = ..., remaining_recovery_codes: _Optional[int] = ..., organization_slug: _Optional[str] = ..., domain_admin_domains: _Optional[_Iterable[_Union[_common_pb2.DomainType, str]]] = ...) -> None: ...
 
 class DisableMfaRequest(_message.Message):
     __slots__ = ("code",)

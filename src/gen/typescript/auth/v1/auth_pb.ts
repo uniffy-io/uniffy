@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file auth/v1/auth.proto.
  */
 export const file_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChJhdXRoL3YxL2F1dGgucHJvdG8SB2F1dGgudjEioAEKD1JlZ2lzdGVyUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIQCghwYXNzd29yZBgDIAEoCRIWCglmdWxsX25hbWUYBCABKAlIAIgBARIeChFvcmdhbml6YXRpb25fc2x1ZxgFIAEoCUgBiAEBQgwKCl9mdWxsX25hbWVCFAoSX29yZ2FuaXphdGlvbl9zbHVnImUKDExvZ2luUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRIeChFvcmdhbml6YXRpb25fc2x1ZxgDIAEoCUgAiAEBQhQKEl9vcmdhbml6YXRpb25fc2x1ZyJiChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkSHgoRb3JnYW5pemF0aW9uX3NsdWcYAiABKAlIAIgBAUIUChJfb3JnYW5pemF0aW9uX3NsdWciFwoVR2V0Q3VycmVudFVzZXJSZXF1ZXN0Ij0KDUxvZ291dFJlcXVlc3QSGgoNcmVmcmVzaF90b2tlbhgBIAEoCUgAiAEBQhAKDl9yZWZyZXNoX3Rva2VuIhUKE0xpc3RTZXNzaW9uc1JlcXVlc3QiKgoUUmV2b2tlU2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSIcChpSZXZva2VPdGhlclNlc3Npb25zUmVxdWVzdCKpAgoQUmVnaXN0ZXJSZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgp0b2tlbl90eXBlGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3JvbGUYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESMwoUZG9tYWluX2FkbWluX2RvbWFpbnMYCCADKA4yFS5jb21tb24udjEuRG9tYWluVHlwZUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZCKxAQoNTG9naW5SZXNwb25zZRIqCgthdXRoX3Jlc3VsdBgBIAEoCzITLmF1dGgudjEuQXV0aFJlc3VsdEgAEi4KDW1mYV9jaGFsbGVuZ2UYAiABKAsyFS5hdXRoLnYxLk1mYUNoYWxsZW5nZUgAEjoKE2Vucm9sbG1lbnRfcmVxdWlyZWQYAyABKAsyGy5hdXRoLnYxLkVucm9sbG1lbnRSZXF1aXJlZEgAQggKBnJlc3VsdCKjAgoKQXV0aFJlc3VsdBIUCgxhY2Nlc3NfdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgp0b2tlbl90eXBlGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSHAoPb3JnYW5pemF0aW9uX2lkGAUgASgJSACIAQESHgoRb3JnYW5pemF0aW9uX3JvbGUYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESMwoUZG9tYWluX2FkbWluX2RvbWFpbnMYCCADKA4yFS5jb21tb24udjEuRG9tYWluVHlwZUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZCI4CgxNZmFDaGFsbGVuZ2USFwoPY2hhbGxlbmdlX3Rva2VuGAEgASgJEg8KB21ldGhvZHMYAiADKAkifgoSRW5yb2xsbWVudFJlcXVpcmVkEhgKEGVucm9sbG1lbnRfdG9rZW4YASABKAkSOQoQZ3JhY2VfZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBAUITChFfZ3JhY2VfZXhwaXJlc19hdCKtAgoUUmVmcmVzaFRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKdG9rZW5fdHlwZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhwKD29yZ2FuaXphdGlvbl9pZBgFIAEoCUgAiAEBEh4KEW9yZ2FuaXphdGlvbl9yb2xlGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEjMKFGRvbWFpbl9hZG1pbl9kb21haW5zGAggAygOMhUuY29tbW9uLnYxLkRvbWFpblR5cGVCEgoQX29yZ2FuaXphdGlvbl9pZEIUChJfb3JnYW5pemF0aW9uX3JvbGVCDQoLX3Nlc3Npb25faWQiwQIKFkdldEN1cnJlbnRVc2VyUmVzcG9uc2USCgoCaWQYASABKAkSDQoFZW1haWwYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSFgoJZnVsbF9uYW1lGAQgASgJSACIAQESEQoJaXNfYWN0aXZlGAUgASgIEhcKD2lzX3N5c3RlbV9hZG1pbhgGIAEoCBIWCg5lbWFpbF92ZXJpZmllZBgHIAEoCBIZCgxhY2NlbnRfY29sb3IYCCABKAlIAYgBARIYCgtmb250X2ZhbWlseRgJIAEoCUgCiAEBEhcKCmF2YXRhcl91cmwYCiABKAlIA4gBARISCgpoYXNfYXZhdGFyGAsgASgIQgwKCl9mdWxsX25hbWVCDwoNX2FjY2VudF9jb2xvckIOCgxfZm9udF9mYW1pbHlCDQoLX2F2YXRhcl91cmwiIQoOTG9nb3V0UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKCAQoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSEgoKdXNlcl9hZ2VudBgCIAEoCRIUCgxkZXZpY2VfbGFiZWwYAyABKAkSEgoKY3JlYXRlZF9hdBgEIAEoCRIVCg1sYXN0X2FjdGl2aXR5GAUgASgJEhIKCmlzX2N1cnJlbnQYBiABKAgiPgoUTGlzdFNlc3Npb25zUmVzcG9uc2USJgoIc2Vzc2lvbnMYASADKAsyFC5hdXRoLnYxLlNlc3Npb25JbmZvIigKFVJldm9rZVNlc3Npb25SZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIjQKG1Jldm9rZU90aGVyU2Vzc2lvbnNSZXNwb25zZRIVCg1yZXZva2VkX2NvdW50GAEgASgFIhgKFkdldENhY2hlS2V5U2VlZFJlcXVlc3QiMQoXR2V0Q2FjaGVLZXlTZWVkUmVzcG9uc2USFgoOY2FjaGVfa2V5X3NlZWQYASABKAwiSwoZUm90YXRlQ2FjaGVLZXlTZWVkUmVxdWVzdBIbCg50YXJnZXRfdXNlcl9pZBgBIAEoCUgAiAEBQhEKD190YXJnZXRfdXNlcl9pZCI4ChpSb3RhdGVDYWNoZUtleVNlZWRSZXNwb25zZRIaChJuZXdfY2FjaGVfa2V5X3NlZWQYASABKAwiFgoUR2V0QXV0aENvbmZpZ1JlcXVlc3QiPAoVR2V0QXV0aENvbmZpZ1Jlc3BvbnNlEiMKG3B1YmxpY19yZWdpc3RyYXRpb25fZW5hYmxlZBgBIAEoCCIlChRHZXRJbnZpdGF0aW9uUmVxdWVzdBINCgV0b2tlbhgBIAEoCSKMAgoVR2V0SW52aXRhdGlvblJlc3BvbnNlEg0KBWVtYWlsGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRIZChFvcmdhbml6YXRpb25fbmFtZRgDIAEoCRIZChFvcmdhbml6YXRpb25fc2x1ZxgEIAEoCRIhChRpbnZpdGVyX2Rpc3BsYXlfbmFtZRgFIAEoCUgAiAEBEikKBHJvbGUYBiABKA4yGy5jb21tb24udjEuT3JnYW5pemF0aW9uUm9sZRIuCgpleHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIXChVfaW52aXRlcl9kaXNwbGF5X25hbWUicgoXQWNjZXB0SW52aXRhdGlvblJlcXVlc3QSDQoFdG9rZW4YASABKAkSEAoIdXNlcm5hbWUYAiABKAkSEAoIcGFzc3dvcmQYAyABKAkSFgoJZnVsbF9uYW1lGAQgASgJSACIAQFCDAoKX2Z1bGxfbmFtZSKMAQoYQWNjZXB0SW52aXRhdGlvblJlc3BvbnNlEioKC2F1dGhfcmVzdWx0GAEgASgLMhMuYXV0aC52MS5BdXRoUmVzdWx0SAASOgoTZW5yb2xsbWVudF9yZXF1aXJlZBgCIAEoCzIbLmF1dGgudjEuRW5yb2xsbWVudFJlcXVpcmVkSABCCAoGcmVzdWx0IikKGFNlbmRQYXNzd29yZFJlc2V0UmVxdWVzdBINCgVlbWFpbBgBIAEoCSIbChlTZW5kUGFzc3dvcmRSZXNldFJlc3BvbnNlIjAKH1ZlcmlmeVBhc3N3b3JkUmVzZXRUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkiYQogVmVyaWZ5UGFzc3dvcmRSZXNldFRva2VuUmVzcG9uc2USDQoFZW1haWwYASABKAkSLgoKZXhwaXJlc19hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiOwoUUmVzZXRQYXNzd29yZFJlcXVlc3QSDQoFdG9rZW4YASABKAkSFAoMbmV3X3Bhc3N3b3JkGAIgASgJIigKFVJlc2V0UGFzc3dvcmRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIMqsKCgtBdXRoU2VydmljZRI/CghSZWdpc3RlchIYLmF1dGgudjEuUmVnaXN0ZXJSZXF1ZXN0GhkuYXV0aC52MS5SZWdpc3RlclJlc3BvbnNlEjYKBUxvZ2luEhUuYXV0aC52MS5Mb2dpblJlcXVlc3QaFi5hdXRoLnYxLkxvZ2luUmVzcG9uc2USSwoMUmVmcmVzaFRva2VuEhwuYXV0aC52MS5SZWZyZXNoVG9rZW5SZXF1ZXN0Gh0uYXV0aC52MS5SZWZyZXNoVG9rZW5SZXNwb25zZRJRCg5HZXRDdXJyZW50VXNlchIeLmF1dGgudjEuR2V0Q3VycmVudFVzZXJSZXF1ZXN0Gh8uYXV0aC52MS5HZXRDdXJyZW50VXNlclJlc3BvbnNlEjkKBkxvZ291dBIWLmF1dGgudjEuTG9nb3V0UmVxdWVzdBoXLmF1dGgudjEuTG9nb3V0UmVzcG9uc2USSwoMTGlzdFNlc3Npb25zEhwuYXV0aC52MS5MaXN0U2Vzc2lvbnNSZXF1ZXN0Gh0uYXV0aC52MS5MaXN0U2Vzc2lvbnNSZXNwb25zZRJOCg1SZXZva2VTZXNzaW9uEh0uYXV0aC52MS5SZXZva2VTZXNzaW9uUmVxdWVzdBoeLmF1dGgudjEuUmV2b2tlU2Vzc2lvblJlc3BvbnNlEmAKE1Jldm9rZU90aGVyU2Vzc2lvbnMSIy5hdXRoLnYxLlJldm9rZU90aGVyU2Vzc2lvbnNSZXF1ZXN0GiQuYXV0aC52MS5SZXZva2VPdGhlclNlc3Npb25zUmVzcG9uc2USVAoPR2V0Q2FjaGVLZXlTZWVkEh8uYXV0aC52MS5HZXRDYWNoZUtleVNlZWRSZXF1ZXN0GiAuYXV0aC52MS5HZXRDYWNoZUtleVNlZWRSZXNwb25zZRJdChJSb3RhdGVDYWNoZUtleVNlZWQSIi5hdXRoLnYxLlJvdGF0ZUNhY2hlS2V5U2VlZFJlcXVlc3QaIy5hdXRoLnYxLlJvdGF0ZUNhY2hlS2V5U2VlZFJlc3BvbnNlEk4KDUdldEF1dGhDb25maWcSHS5hdXRoLnYxLkdldEF1dGhDb25maWdSZXF1ZXN0Gh4uYXV0aC52MS5HZXRBdXRoQ29uZmlnUmVzcG9uc2USTgoNR2V0SW52aXRhdGlvbhIdLmF1dGgudjEuR2V0SW52aXRhdGlvblJlcXVlc3QaHi5hdXRoLnYxLkdldEludml0YXRpb25SZXNwb25zZRJXChBBY2NlcHRJbnZpdGF0aW9uEiAuYXV0aC52MS5BY2NlcHRJbnZpdGF0aW9uUmVxdWVzdBohLmF1dGgudjEuQWNjZXB0SW52aXRhdGlvblJlc3BvbnNlEloKEVNlbmRQYXNzd29yZFJlc2V0EiEuYXV0aC52MS5TZW5kUGFzc3dvcmRSZXNldFJlcXVlc3QaIi5hdXRoLnYxLlNlbmRQYXNzd29yZFJlc2V0UmVzcG9uc2USbwoYVmVyaWZ5UGFzc3dvcmRSZXNldFRva2VuEiguYXV0aC52MS5WZXJpZnlQYXNzd29yZFJlc2V0VG9rZW5SZXF1ZXN0GikuYXV0aC52MS5WZXJpZnlQYXNzd29yZFJlc2V0VG9rZW5SZXNwb25zZRJOCg1SZXNldFBhc3N3b3JkEh0uYXV0aC52MS5SZXNldFBhc3N3b3JkUmVxdWVzdBoeLmF1dGgudjEuUmVzZXRQYXNzd29yZFJlc3BvbnNlQjdaNWdpdGh1Yi5jb20vQXRoZW5uYU1pbmQvdW5pZmZ5LXByb3RvLWdvL2F1dGgvdjE7YXV0aHYxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChJhdXRoL3YxL2F1dGgucHJvdG8SB2F1dGgudjEioAEKD1JlZ2lzdGVyUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIQCghwYXNzd29yZBgDIAEoCRIWCglmdWxsX25hbWUYBCABKAlIAIgBARIeChFvcmdhbml6YXRpb25fc2x1ZxgFIAEoCUgBiAEBQgwKCl9mdWxsX25hbWVCFAoSX29yZ2FuaXphdGlvbl9zbHVnImUKDExvZ2luUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRIeChFvcmdhbml6YXRpb25fc2x1ZxgDIAEoCUgAiAEBQhQKEl9vcmdhbml6YXRpb25fc2x1ZyJiChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkSHgoRb3JnYW5pemF0aW9uX3NsdWcYAiABKAlIAIgBAUIUChJfb3JnYW5pemF0aW9uX3NsdWciTQoZU3dpdGNoT3JnYW5pemF0aW9uUmVxdWVzdBIVCg1yZWZyZXNoX3Rva2VuGAEgASgJEhkKEW9yZ2FuaXphdGlvbl9zbHVnGAIgASgJIkYKGlN3aXRjaE9yZ2FuaXphdGlvblJlc3BvbnNlEigKC2F1dGhfcmVzdWx0GAEgASgLMhMuYXV0aC52MS5BdXRoUmVzdWx0IhcKFUdldEN1cnJlbnRVc2VyUmVxdWVzdCI9Cg1Mb2dvdXRSZXF1ZXN0EhoKDXJlZnJlc2hfdG9rZW4YASABKAlIAIgBAUIQCg5fcmVmcmVzaF90b2tlbiIVChNMaXN0U2Vzc2lvbnNSZXF1ZXN0IioKFFJldm9rZVNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiHAoaUmV2b2tlT3RoZXJTZXNzaW9uc1JlcXVlc3Qi3wIKEFJlZ2lzdGVyUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKdG9rZW5fdHlwZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhwKD29yZ2FuaXphdGlvbl9pZBgFIAEoCUgAiAEBEh4KEW9yZ2FuaXphdGlvbl9yb2xlGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEjMKFGRvbWFpbl9hZG1pbl9kb21haW5zGAggAygOMhUuY29tbW9uLnYxLkRvbWFpblR5cGUSHgoRb3JnYW5pemF0aW9uX3NsdWcYCSABKAlIA4gBAUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZEIUChJfb3JnYW5pemF0aW9uX3NsdWcisQEKDUxvZ2luUmVzcG9uc2USKgoLYXV0aF9yZXN1bHQYASABKAsyEy5hdXRoLnYxLkF1dGhSZXN1bHRIABIuCg1tZmFfY2hhbGxlbmdlGAIgASgLMhUuYXV0aC52MS5NZmFDaGFsbGVuZ2VIABI6ChNlbnJvbGxtZW50X3JlcXVpcmVkGAMgASgLMhsuYXV0aC52MS5FbnJvbGxtZW50UmVxdWlyZWRIAEIICgZyZXN1bHQi2QIKCkF1dGhSZXN1bHQSFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKdG9rZW5fdHlwZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhwKD29yZ2FuaXphdGlvbl9pZBgFIAEoCUgAiAEBEh4KEW9yZ2FuaXphdGlvbl9yb2xlGAYgASgJSAGIAQESFwoKc2Vzc2lvbl9pZBgHIAEoCUgCiAEBEjMKFGRvbWFpbl9hZG1pbl9kb21haW5zGAggAygOMhUuY29tbW9uLnYxLkRvbWFpblR5cGUSHgoRb3JnYW5pemF0aW9uX3NsdWcYCSABKAlIA4gBAUISChBfb3JnYW5pemF0aW9uX2lkQhQKEl9vcmdhbml6YXRpb25fcm9sZUINCgtfc2Vzc2lvbl9pZEIUChJfb3JnYW5pemF0aW9uX3NsdWciOAoMTWZhQ2hhbGxlbmdlEhcKD2NoYWxsZW5nZV90b2tlbhgBIAEoCRIPCgdtZXRob2RzGAIgAygJIn4KEkVucm9sbG1lbnRSZXF1aXJlZBIYChBlbnJvbGxtZW50X3Rva2VuGAEgASgJEjkKEGdyYWNlX2V4cGlyZXNfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQFCEwoRX2dyYWNlX2V4cGlyZXNfYXQi4wIKFFJlZnJlc2hUb2tlblJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhIKCnRva2VuX3R5cGUYAyABKAkSDwoHdXNlcl9pZBgEIAEoCRIcCg9vcmdhbml6YXRpb25faWQYBSABKAlIAIgBARIeChFvcmdhbml6YXRpb25fcm9sZRgGIAEoCUgBiAEBEhcKCnNlc3Npb25faWQYByABKAlIAogBARIzChRkb21haW5fYWRtaW5fZG9tYWlucxgIIAMoDjIVLmNvbW1vbi52MS5Eb21haW5UeXBlEh4KEW9yZ2FuaXphdGlvbl9zbHVnGAkgASgJSAOIAQFCEgoQX29yZ2FuaXphdGlvbl9pZEIUChJfb3JnYW5pemF0aW9uX3JvbGVCDQoLX3Nlc3Npb25faWRCFAoSX29yZ2FuaXphdGlvbl9zbHVnIsECChZHZXRDdXJyZW50VXNlclJlc3BvbnNlEgoKAmlkGAEgASgJEg0KBWVtYWlsGAIgASgJEhAKCHVzZXJuYW1lGAMgASgJEhYKCWZ1bGxfbmFtZRgEIAEoCUgAiAEBEhEKCWlzX2FjdGl2ZRgFIAEoCBIXCg9pc19zeXN0ZW1fYWRtaW4YBiABKAgSFgoOZW1haWxfdmVyaWZpZWQYByABKAgSGQoMYWNjZW50X2NvbG9yGAggASgJSAGIAQESGAoLZm9udF9mYW1pbHkYCSABKAlIAogBARIXCgphdmF0YXJfdXJsGAogASgJSAOIAQESEgoKaGFzX2F2YXRhchgLIAEoCEIMCgpfZnVsbF9uYW1lQg8KDV9hY2NlbnRfY29sb3JCDgoMX2ZvbnRfZmFtaWx5Qg0KC19hdmF0YXJfdXJsIiEKDkxvZ291dFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiggEKC1Nlc3Npb25JbmZvEgoKAmlkGAEgASgJEhIKCnVzZXJfYWdlbnQYAiABKAkSFAoMZGV2aWNlX2xhYmVsGAMgASgJEhIKCmNyZWF0ZWRfYXQYBCABKAkSFQoNbGFzdF9hY3Rpdml0eRgFIAEoCRISCgppc19jdXJyZW50GAYgASgIIj4KFExpc3RTZXNzaW9uc1Jlc3BvbnNlEiYKCHNlc3Npb25zGAEgAygLMhQuYXV0aC52MS5TZXNzaW9uSW5mbyIoChVSZXZva2VTZXNzaW9uUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCI0ChtSZXZva2VPdGhlclNlc3Npb25zUmVzcG9uc2USFQoNcmV2b2tlZF9jb3VudBgBIAEoBSIYChZHZXRDYWNoZUtleVNlZWRSZXF1ZXN0IjEKF0dldENhY2hlS2V5U2VlZFJlc3BvbnNlEhYKDmNhY2hlX2tleV9zZWVkGAEgASgMIksKGVJvdGF0ZUNhY2hlS2V5U2VlZFJlcXVlc3QSGwoOdGFyZ2V0X3VzZXJfaWQYASABKAlIAIgBAUIRCg9fdGFyZ2V0X3VzZXJfaWQiOAoaUm90YXRlQ2FjaGVLZXlTZWVkUmVzcG9uc2USGgoSbmV3X2NhY2hlX2tleV9zZWVkGAEgASgMIhYKFEdldEF1dGhDb25maWdSZXF1ZXN0IjwKFUdldEF1dGhDb25maWdSZXNwb25zZRIjChtwdWJsaWNfcmVnaXN0cmF0aW9uX2VuYWJsZWQYASABKAgiJQoUR2V0SW52aXRhdGlvblJlcXVlc3QSDQoFdG9rZW4YASABKAkijAIKFUdldEludml0YXRpb25SZXNwb25zZRINCgVlbWFpbBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkSGQoRb3JnYW5pemF0aW9uX25hbWUYAyABKAkSGQoRb3JnYW5pemF0aW9uX3NsdWcYBCABKAkSIQoUaW52aXRlcl9kaXNwbGF5X25hbWUYBSABKAlIAIgBARIpCgRyb2xlGAYgASgOMhsuY29tbW9uLnYxLk9yZ2FuaXphdGlvblJvbGUSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCFwoVX2ludml0ZXJfZGlzcGxheV9uYW1lInIKF0FjY2VwdEludml0YXRpb25SZXF1ZXN0Eg0KBXRva2VuGAEgASgJEhAKCHVzZXJuYW1lGAIgASgJEhAKCHBhc3N3b3JkGAMgASgJEhYKCWZ1bGxfbmFtZRgEIAEoCUgAiAEBQgwKCl9mdWxsX25hbWUijAEKGEFjY2VwdEludml0YXRpb25SZXNwb25zZRIqCgthdXRoX3Jlc3VsdBgBIAEoCzITLmF1dGgudjEuQXV0aFJlc3VsdEgAEjoKE2Vucm9sbG1lbnRfcmVxdWlyZWQYAiABKAsyGy5hdXRoLnYxLkVucm9sbG1lbnRSZXF1aXJlZEgAQggKBnJlc3VsdCIpChhTZW5kUGFzc3dvcmRSZXNldFJlcXVlc3QSDQoFZW1haWwYASABKAkiGwoZU2VuZFBhc3N3b3JkUmVzZXRSZXNwb25zZSIwCh9WZXJpZnlQYXNzd29yZFJlc2V0VG9rZW5SZXF1ZXN0Eg0KBXRva2VuGAEgASgJImEKIFZlcmlmeVBhc3N3b3JkUmVzZXRUb2tlblJlc3BvbnNlEg0KBWVtYWlsGAEgASgJEi4KCmV4cGlyZXNfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIjsKFFJlc2V0UGFzc3dvcmRSZXF1ZXN0Eg0KBXRva2VuGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIoChVSZXNldFBhc3N3b3JkUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCDKKCwoLQXV0aFNlcnZpY2USPwoIUmVnaXN0ZXISGC5hdXRoLnYxLlJlZ2lzdGVyUmVxdWVzdBoZLmF1dGgudjEuUmVnaXN0ZXJSZXNwb25zZRI2CgVMb2dpbhIVLmF1dGgudjEuTG9naW5SZXF1ZXN0GhYuYXV0aC52MS5Mb2dpblJlc3BvbnNlEksKDFJlZnJlc2hUb2tlbhIcLmF1dGgudjEuUmVmcmVzaFRva2VuUmVxdWVzdBodLmF1dGgudjEuUmVmcmVzaFRva2VuUmVzcG9uc2USUQoOR2V0Q3VycmVudFVzZXISHi5hdXRoLnYxLkdldEN1cnJlbnRVc2VyUmVxdWVzdBofLmF1dGgudjEuR2V0Q3VycmVudFVzZXJSZXNwb25zZRI5CgZMb2dvdXQSFi5hdXRoLnYxLkxvZ291dFJlcXVlc3QaFy5hdXRoLnYxLkxvZ291dFJlc3BvbnNlEksKDExpc3RTZXNzaW9ucxIcLmF1dGgudjEuTGlzdFNlc3Npb25zUmVxdWVzdBodLmF1dGgudjEuTGlzdFNlc3Npb25zUmVzcG9uc2USTgoNUmV2b2tlU2Vzc2lvbhIdLmF1dGgudjEuUmV2b2tlU2Vzc2lvblJlcXVlc3QaHi5hdXRoLnYxLlJldm9rZVNlc3Npb25SZXNwb25zZRJgChNSZXZva2VPdGhlclNlc3Npb25zEiMuYXV0aC52MS5SZXZva2VPdGhlclNlc3Npb25zUmVxdWVzdBokLmF1dGgudjEuUmV2b2tlT3RoZXJTZXNzaW9uc1Jlc3BvbnNlEl0KElN3aXRjaE9yZ2FuaXphdGlvbhIiLmF1dGgudjEuU3dpdGNoT3JnYW5pemF0aW9uUmVxdWVzdBojLmF1dGgudjEuU3dpdGNoT3JnYW5pemF0aW9uUmVzcG9uc2USVAoPR2V0Q2FjaGVLZXlTZWVkEh8uYXV0aC52MS5HZXRDYWNoZUtleVNlZWRSZXF1ZXN0GiAuYXV0aC52MS5HZXRDYWNoZUtleVNlZWRSZXNwb25zZRJdChJSb3RhdGVDYWNoZUtleVNlZWQSIi5hdXRoLnYxLlJvdGF0ZUNhY2hlS2V5U2VlZFJlcXVlc3QaIy5hdXRoLnYxLlJvdGF0ZUNhY2hlS2V5U2VlZFJlc3BvbnNlEk4KDUdldEF1dGhDb25maWcSHS5hdXRoLnYxLkdldEF1dGhDb25maWdSZXF1ZXN0Gh4uYXV0aC52MS5HZXRBdXRoQ29uZmlnUmVzcG9uc2USTgoNR2V0SW52aXRhdGlvbhIdLmF1dGgudjEuR2V0SW52aXRhdGlvblJlcXVlc3QaHi5hdXRoLnYxLkdldEludml0YXRpb25SZXNwb25zZRJXChBBY2NlcHRJbnZpdGF0aW9uEiAuYXV0aC52MS5BY2NlcHRJbnZpdGF0aW9uUmVxdWVzdBohLmF1dGgudjEuQWNjZXB0SW52aXRhdGlvblJlc3BvbnNlEloKEVNlbmRQYXNzd29yZFJlc2V0EiEuYXV0aC52MS5TZW5kUGFzc3dvcmRSZXNldFJlcXVlc3QaIi5hdXRoLnYxLlNlbmRQYXNzd29yZFJlc2V0UmVzcG9uc2USbwoYVmVyaWZ5UGFzc3dvcmRSZXNldFRva2VuEiguYXV0aC52MS5WZXJpZnlQYXNzd29yZFJlc2V0VG9rZW5SZXF1ZXN0GikuYXV0aC52MS5WZXJpZnlQYXNzd29yZFJlc2V0VG9rZW5SZXNwb25zZRJOCg1SZXNldFBhc3N3b3JkEh0uYXV0aC52MS5SZXNldFBhc3N3b3JkUmVxdWVzdBoeLmF1dGgudjEuUmVzZXRQYXNzd29yZFJlc3BvbnNlQjdaNWdpdGh1Yi5jb20vQXRoZW5uYU1pbmQvdW5pZmZ5LXByb3RvLWdvL2F1dGgvdjE7YXV0aHYxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * Request to register a new user
@@ -91,7 +91,9 @@ export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
   messageDesc(file_auth_v1_auth, 1);
 
 /**
- * Request to refresh access token
+ * Request to refresh access token. The refresh stays bound to the session's
+ * organization; the optional organization_slug is kept for backwards reads
+ * and rejected when it differs from the session's bound org.
  *
  * @generated from message auth.v1.RefreshTokenRequest
  */
@@ -102,8 +104,6 @@ export type RefreshTokenRequest = Message<"auth.v1.RefreshTokenRequest"> & {
   refreshToken: string;
 
   /**
-   * Switch org context
-   *
    * @generated from field: optional string organization_slug = 2;
    */
   organizationSlug?: string | undefined;
@@ -115,6 +115,47 @@ export type RefreshTokenRequest = Message<"auth.v1.RefreshTokenRequest"> & {
  */
 export const RefreshTokenRequestSchema: GenMessage<RefreshTokenRequest> = /*@__PURE__*/
   messageDesc(file_auth_v1_auth, 2);
+
+/**
+ * Request to switch the active organization for the current session.
+ *
+ * @generated from message auth.v1.SwitchOrganizationRequest
+ */
+export type SwitchOrganizationRequest = Message<"auth.v1.SwitchOrganizationRequest"> & {
+  /**
+   * @generated from field: string refresh_token = 1;
+   */
+  refreshToken: string;
+
+  /**
+   * @generated from field: string organization_slug = 2;
+   */
+  organizationSlug: string;
+};
+
+/**
+ * Describes the message auth.v1.SwitchOrganizationRequest.
+ * Use `create(SwitchOrganizationRequestSchema)` to create a new message.
+ */
+export const SwitchOrganizationRequestSchema: GenMessage<SwitchOrganizationRequest> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 3);
+
+/**
+ * @generated from message auth.v1.SwitchOrganizationResponse
+ */
+export type SwitchOrganizationResponse = Message<"auth.v1.SwitchOrganizationResponse"> & {
+  /**
+   * @generated from field: auth.v1.AuthResult auth_result = 1;
+   */
+  authResult?: AuthResult | undefined;
+};
+
+/**
+ * Describes the message auth.v1.SwitchOrganizationResponse.
+ * Use `create(SwitchOrganizationResponseSchema)` to create a new message.
+ */
+export const SwitchOrganizationResponseSchema: GenMessage<SwitchOrganizationResponse> = /*@__PURE__*/
+  messageDesc(file_auth_v1_auth, 4);
 
 /**
  * Request to get current user info
@@ -129,7 +170,7 @@ export type GetCurrentUserRequest = Message<"auth.v1.GetCurrentUserRequest"> & {
  * Use `create(GetCurrentUserRequestSchema)` to create a new message.
  */
 export const GetCurrentUserRequestSchema: GenMessage<GetCurrentUserRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 3);
+  messageDesc(file_auth_v1_auth, 5);
 
 /**
  * Request to logout
@@ -150,7 +191,7 @@ export type LogoutRequest = Message<"auth.v1.LogoutRequest"> & {
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
 export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 4);
+  messageDesc(file_auth_v1_auth, 6);
 
 /**
  * Request to list active sessions
@@ -165,7 +206,7 @@ export type ListSessionsRequest = Message<"auth.v1.ListSessionsRequest"> & {
  * Use `create(ListSessionsRequestSchema)` to create a new message.
  */
 export const ListSessionsRequestSchema: GenMessage<ListSessionsRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 5);
+  messageDesc(file_auth_v1_auth, 7);
 
 /**
  * Request to revoke a specific session
@@ -184,7 +225,7 @@ export type RevokeSessionRequest = Message<"auth.v1.RevokeSessionRequest"> & {
  * Use `create(RevokeSessionRequestSchema)` to create a new message.
  */
 export const RevokeSessionRequestSchema: GenMessage<RevokeSessionRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 6);
+  messageDesc(file_auth_v1_auth, 8);
 
 /**
  * Request to revoke all other sessions
@@ -199,7 +240,7 @@ export type RevokeOtherSessionsRequest = Message<"auth.v1.RevokeOtherSessionsReq
  * Use `create(RevokeOtherSessionsRequestSchema)` to create a new message.
  */
 export const RevokeOtherSessionsRequestSchema: GenMessage<RevokeOtherSessionsRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 7);
+  messageDesc(file_auth_v1_auth, 9);
 
 /**
  * Authentication response with tokens (Register)
@@ -256,6 +297,13 @@ export type RegisterResponse = Message<"auth.v1.RegisterResponse"> & {
    * @generated from field: repeated common.v1.DomainType domain_admin_domains = 8;
    */
   domainAdminDomains: DomainType[];
+
+  /**
+   * Slug of the org bound to the session
+   *
+   * @generated from field: optional string organization_slug = 9;
+   */
+  organizationSlug?: string | undefined;
 };
 
 /**
@@ -263,7 +311,7 @@ export type RegisterResponse = Message<"auth.v1.RegisterResponse"> & {
  * Use `create(RegisterResponseSchema)` to create a new message.
  */
 export const RegisterResponseSchema: GenMessage<RegisterResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 8);
+  messageDesc(file_auth_v1_auth, 10);
 
 /**
  * Login outcome. One of three variants:
@@ -309,7 +357,7 @@ export type LoginResponse = Message<"auth.v1.LoginResponse"> & {
  * Use `create(LoginResponseSchema)` to create a new message.
  */
 export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 9);
+  messageDesc(file_auth_v1_auth, 11);
 
 /**
  * Successful authentication tokens. Used as the success variant of
@@ -362,6 +410,11 @@ export type AuthResult = Message<"auth.v1.AuthResult"> & {
    * @generated from field: repeated common.v1.DomainType domain_admin_domains = 8;
    */
   domainAdminDomains: DomainType[];
+
+  /**
+   * @generated from field: optional string organization_slug = 9;
+   */
+  organizationSlug?: string | undefined;
 };
 
 /**
@@ -369,7 +422,7 @@ export type AuthResult = Message<"auth.v1.AuthResult"> & {
  * Use `create(AuthResultSchema)` to create a new message.
  */
 export const AuthResultSchema: GenMessage<AuthResult> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 10);
+  messageDesc(file_auth_v1_auth, 12);
 
 /**
  * Mid-login state when password was correct but MFA is enabled.
@@ -397,7 +450,7 @@ export type MfaChallenge = Message<"auth.v1.MfaChallenge"> & {
  * Use `create(MfaChallengeSchema)` to create a new message.
  */
 export const MfaChallengeSchema: GenMessage<MfaChallenge> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 11);
+  messageDesc(file_auth_v1_auth, 13);
 
 /**
  * Mid-login state when policy requires MFA and the user has not
@@ -424,7 +477,7 @@ export type EnrollmentRequired = Message<"auth.v1.EnrollmentRequired"> & {
  * Use `create(EnrollmentRequiredSchema)` to create a new message.
  */
 export const EnrollmentRequiredSchema: GenMessage<EnrollmentRequired> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 12);
+  messageDesc(file_auth_v1_auth, 14);
 
 /**
  * Authentication response with tokens (RefreshToken)
@@ -481,6 +534,13 @@ export type RefreshTokenResponse = Message<"auth.v1.RefreshTokenResponse"> & {
    * @generated from field: repeated common.v1.DomainType domain_admin_domains = 8;
    */
   domainAdminDomains: DomainType[];
+
+  /**
+   * Slug of the org bound to the session
+   *
+   * @generated from field: optional string organization_slug = 9;
+   */
+  organizationSlug?: string | undefined;
 };
 
 /**
@@ -488,7 +548,7 @@ export type RefreshTokenResponse = Message<"auth.v1.RefreshTokenResponse"> & {
  * Use `create(RefreshTokenResponseSchema)` to create a new message.
  */
 export const RefreshTokenResponseSchema: GenMessage<RefreshTokenResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 13);
+  messageDesc(file_auth_v1_auth, 15);
 
 /**
  * Current user info response
@@ -557,7 +617,7 @@ export type GetCurrentUserResponse = Message<"auth.v1.GetCurrentUserResponse"> &
  * Use `create(GetCurrentUserResponseSchema)` to create a new message.
  */
 export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 14);
+  messageDesc(file_auth_v1_auth, 16);
 
 /**
  * Logout response
@@ -576,7 +636,7 @@ export type LogoutResponse = Message<"auth.v1.LogoutResponse"> & {
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
 export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 15);
+  messageDesc(file_auth_v1_auth, 17);
 
 /**
  * Active session information
@@ -624,7 +684,7 @@ export type SessionInfo = Message<"auth.v1.SessionInfo"> & {
  * Use `create(SessionInfoSchema)` to create a new message.
  */
 export const SessionInfoSchema: GenMessage<SessionInfo> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 16);
+  messageDesc(file_auth_v1_auth, 18);
 
 /**
  * Response containing list of active sessions
@@ -643,7 +703,7 @@ export type ListSessionsResponse = Message<"auth.v1.ListSessionsResponse"> & {
  * Use `create(ListSessionsResponseSchema)` to create a new message.
  */
 export const ListSessionsResponseSchema: GenMessage<ListSessionsResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 17);
+  messageDesc(file_auth_v1_auth, 19);
 
 /**
  * Response after revoking a session
@@ -662,7 +722,7 @@ export type RevokeSessionResponse = Message<"auth.v1.RevokeSessionResponse"> & {
  * Use `create(RevokeSessionResponseSchema)` to create a new message.
  */
 export const RevokeSessionResponseSchema: GenMessage<RevokeSessionResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 18);
+  messageDesc(file_auth_v1_auth, 20);
 
 /**
  * Response after revoking other sessions
@@ -681,7 +741,7 @@ export type RevokeOtherSessionsResponse = Message<"auth.v1.RevokeOtherSessionsRe
  * Use `create(RevokeOtherSessionsResponseSchema)` to create a new message.
  */
 export const RevokeOtherSessionsResponseSchema: GenMessage<RevokeOtherSessionsResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 19);
+  messageDesc(file_auth_v1_auth, 21);
 
 /**
  * Request to get cache key seed for client-side storage encryption
@@ -696,7 +756,7 @@ export type GetCacheKeySeedRequest = Message<"auth.v1.GetCacheKeySeedRequest"> &
  * Use `create(GetCacheKeySeedRequestSchema)` to create a new message.
  */
 export const GetCacheKeySeedRequestSchema: GenMessage<GetCacheKeySeedRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 20);
+  messageDesc(file_auth_v1_auth, 22);
 
 /**
  * Response containing the cache key seed
@@ -717,7 +777,7 @@ export type GetCacheKeySeedResponse = Message<"auth.v1.GetCacheKeySeedResponse">
  * Use `create(GetCacheKeySeedResponseSchema)` to create a new message.
  */
 export const GetCacheKeySeedResponseSchema: GenMessage<GetCacheKeySeedResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 21);
+  messageDesc(file_auth_v1_auth, 23);
 
 /**
  * Request to rotate cache key seed
@@ -739,7 +799,7 @@ export type RotateCacheKeySeedRequest = Message<"auth.v1.RotateCacheKeySeedReque
  * Use `create(RotateCacheKeySeedRequestSchema)` to create a new message.
  */
 export const RotateCacheKeySeedRequestSchema: GenMessage<RotateCacheKeySeedRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 22);
+  messageDesc(file_auth_v1_auth, 24);
 
 /**
  * Response containing the new cache key seed after rotation
@@ -760,7 +820,7 @@ export type RotateCacheKeySeedResponse = Message<"auth.v1.RotateCacheKeySeedResp
  * Use `create(RotateCacheKeySeedResponseSchema)` to create a new message.
  */
 export const RotateCacheKeySeedResponseSchema: GenMessage<RotateCacheKeySeedResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 23);
+  messageDesc(file_auth_v1_auth, 25);
 
 /**
  * Request public auth configuration (no auth required)
@@ -775,7 +835,7 @@ export type GetAuthConfigRequest = Message<"auth.v1.GetAuthConfigRequest"> & {
  * Use `create(GetAuthConfigRequestSchema)` to create a new message.
  */
 export const GetAuthConfigRequestSchema: GenMessage<GetAuthConfigRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 24);
+  messageDesc(file_auth_v1_auth, 26);
 
 /**
  * Public auth configuration the login / register pages need
@@ -794,7 +854,7 @@ export type GetAuthConfigResponse = Message<"auth.v1.GetAuthConfigResponse"> & {
  * Use `create(GetAuthConfigResponseSchema)` to create a new message.
  */
 export const GetAuthConfigResponseSchema: GenMessage<GetAuthConfigResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 25);
+  messageDesc(file_auth_v1_auth, 27);
 
 /**
  * Preview an invitation before showing the accept form
@@ -813,7 +873,7 @@ export type GetInvitationRequest = Message<"auth.v1.GetInvitationRequest"> & {
  * Use `create(GetInvitationRequestSchema)` to create a new message.
  */
 export const GetInvitationRequestSchema: GenMessage<GetInvitationRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 26);
+  messageDesc(file_auth_v1_auth, 28);
 
 /**
  * @generated from message auth.v1.GetInvitationResponse
@@ -860,7 +920,7 @@ export type GetInvitationResponse = Message<"auth.v1.GetInvitationResponse"> & {
  * Use `create(GetInvitationResponseSchema)` to create a new message.
  */
 export const GetInvitationResponseSchema: GenMessage<GetInvitationResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 27);
+  messageDesc(file_auth_v1_auth, 29);
 
 /**
  * Accept an invitation; this creates the user + membership and returns auth tokens.
@@ -896,7 +956,7 @@ export type AcceptInvitationRequest = Message<"auth.v1.AcceptInvitationRequest">
  * Use `create(AcceptInvitationRequestSchema)` to create a new message.
  */
 export const AcceptInvitationRequestSchema: GenMessage<AcceptInvitationRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 28);
+  messageDesc(file_auth_v1_auth, 30);
 
 /**
  * Two-state response. ``auth_result`` is the steady-state success shape.
@@ -930,7 +990,7 @@ export type AcceptInvitationResponse = Message<"auth.v1.AcceptInvitationResponse
  * Use `create(AcceptInvitationResponseSchema)` to create a new message.
  */
 export const AcceptInvitationResponseSchema: GenMessage<AcceptInvitationResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 29);
+  messageDesc(file_auth_v1_auth, 31);
 
 /**
  * @generated from message auth.v1.SendPasswordResetRequest
@@ -947,7 +1007,7 @@ export type SendPasswordResetRequest = Message<"auth.v1.SendPasswordResetRequest
  * Use `create(SendPasswordResetRequestSchema)` to create a new message.
  */
 export const SendPasswordResetRequestSchema: GenMessage<SendPasswordResetRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 30);
+  messageDesc(file_auth_v1_auth, 32);
 
 /**
  * Intentionally empty -- the RPC never reveals whether the email exists.
@@ -962,7 +1022,7 @@ export type SendPasswordResetResponse = Message<"auth.v1.SendPasswordResetRespon
  * Use `create(SendPasswordResetResponseSchema)` to create a new message.
  */
 export const SendPasswordResetResponseSchema: GenMessage<SendPasswordResetResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 31);
+  messageDesc(file_auth_v1_auth, 33);
 
 /**
  * @generated from message auth.v1.VerifyPasswordResetTokenRequest
@@ -979,7 +1039,7 @@ export type VerifyPasswordResetTokenRequest = Message<"auth.v1.VerifyPasswordRes
  * Use `create(VerifyPasswordResetTokenRequestSchema)` to create a new message.
  */
 export const VerifyPasswordResetTokenRequestSchema: GenMessage<VerifyPasswordResetTokenRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 32);
+  messageDesc(file_auth_v1_auth, 34);
 
 /**
  * @generated from message auth.v1.VerifyPasswordResetTokenResponse
@@ -1001,7 +1061,7 @@ export type VerifyPasswordResetTokenResponse = Message<"auth.v1.VerifyPasswordRe
  * Use `create(VerifyPasswordResetTokenResponseSchema)` to create a new message.
  */
 export const VerifyPasswordResetTokenResponseSchema: GenMessage<VerifyPasswordResetTokenResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 33);
+  messageDesc(file_auth_v1_auth, 35);
 
 /**
  * @generated from message auth.v1.ResetPasswordRequest
@@ -1025,7 +1085,7 @@ export type ResetPasswordRequest = Message<"auth.v1.ResetPasswordRequest"> & {
  * Use `create(ResetPasswordRequestSchema)` to create a new message.
  */
 export const ResetPasswordRequestSchema: GenMessage<ResetPasswordRequest> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 34);
+  messageDesc(file_auth_v1_auth, 36);
 
 /**
  * @generated from message auth.v1.ResetPasswordResponse
@@ -1045,7 +1105,7 @@ export type ResetPasswordResponse = Message<"auth.v1.ResetPasswordResponse"> & {
  * Use `create(ResetPasswordResponseSchema)` to create a new message.
  */
 export const ResetPasswordResponseSchema: GenMessage<ResetPasswordResponse> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 35);
+  messageDesc(file_auth_v1_auth, 37);
 
 /**
  * AuthService handles user authentication (login, register, token refresh).
@@ -1135,6 +1195,18 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof RevokeOtherSessionsRequestSchema;
     output: typeof RevokeOtherSessionsResponseSchema;
+  },
+  /**
+   * Switch the active organization for the current user. Revokes the current
+   * session and issues a fresh session bound to the target org. Use this
+   * instead of RefreshToken with a slug to change tenant context.
+   *
+   * @generated from rpc auth.v1.AuthService.SwitchOrganization
+   */
+  switchOrganization: {
+    methodKind: "unary";
+    input: typeof SwitchOrganizationRequestSchema;
+    output: typeof SwitchOrganizationResponseSchema;
   },
   /**
    * Get the cache key seed for client-side storage encryption (called once per session)

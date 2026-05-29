@@ -12,6 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query, WebSocket
 from loguru import logger
 
+from uniffy.core.auth.membership import is_active_member
 from uniffy.core.realtime.auth import (
     CANONICAL_SUBPROTOCOL,
     WS_CLOSE_FORBIDDEN,
@@ -105,6 +106,16 @@ async def realtime(
             component=LOGGER_COMPONENT,
         )
         await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="token revoked")
+        return
+
+    if not await is_active_member(user_id, org_id):
+        REALTIME_AUTH_FAILURES_TOTAL.labels(reason="membership_revoked").inc()
+        logger.warning(
+            f"realtime upgrade rejected: not an active member "
+            f"(user={user_id}, org={org_id})",
+            component=LOGGER_COMPONENT,
+        )
+        await ws.close(code=WS_CLOSE_FORBIDDEN, reason="not a member")
         return
 
     await ws.accept(subprotocol=CANONICAL_SUBPROTOCOL)

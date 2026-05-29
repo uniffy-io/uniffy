@@ -32,6 +32,12 @@ class UserSession(SQLModel, table=True):
         foreign_key="login_users.id",
         nullable=False,
     )
+    organization_id: UUID | None = Field(
+        default=None,
+        sa_column_kwargs={"type_": None},
+        foreign_key="login_organizations.id",
+        nullable=True,
+    )
     ip_address: str = Field(max_length=45, nullable=False, default="")
     user_agent: str = Field(max_length=512, nullable=False, default="")
     device_label: str = Field(max_length=255, nullable=False, default="")

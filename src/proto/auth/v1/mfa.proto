@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package auth.v1;
 
+import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1";
@@ -93,6 +94,10 @@ message ConfirmEnrollmentResponse {
   string access_token = 2;
   string refresh_token = 3;
   string session_id = 4;
+  optional string organization_id = 5;
+  optional string organization_slug = 6;
+  optional string organization_role = 7;
+  repeated common.v1.DomainType domain_admin_domains = 8;
 }
 
 // ---------------------------------------------------------------- //
@@ -120,6 +125,8 @@ message VerifyMfaResponse {
   // user to regenerate when fewer than 3 remain).
   bool used_recovery_code = 8;
   int32 remaining_recovery_codes = 9;
+  optional string organization_slug = 10;
+  repeated common.v1.DomainType domain_admin_domains = 11;
 }
 
 // ---------------------------------------------------------------- //

@@ -221,6 +221,9 @@ export const updateTask = createAsyncThunk<
         response.protoUpdatedParent,
         response.protoSpawnedTask,
       ]);
+      // An edit writes new activity rows server-side; refetch so the activity
+      // log reflects them without a page reload.
+      dispatch(fetchActivities(data.id));
       return { task: response.task, updatedParent: response.updatedParent, spawnedTask: response.spawnedTask };
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : "Failed to update task");

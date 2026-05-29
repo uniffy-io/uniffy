@@ -80,13 +80,16 @@ def create_mfa_challenge_token(
 def create_enrollment_only_token(
     user_id: UUID,
     *,
+    organization_id: UUID | None = None,
     token_version: int | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
     """Return a fresh ``enrollment_only`` JWT for ``user_id``.
 
-    ``token_version`` rides the same revocation watermark as access /
-    challenge tokens.
+    ``organization_id`` (when set) carries the pending tenant binding
+    through enrollment so ``ConfirmEnrollment`` mints a session bound to
+    the right org. ``token_version`` rides the same revocation watermark
+    as access / challenge tokens.
     """
     if expires_delta is None:
         expires_delta = timedelta(minutes=ENROLLMENT_ONLY_EXPIRE_MINUTES)
@@ -97,6 +100,8 @@ def create_enrollment_only_token(
         "exp": now + expires_delta,
         "type": TOKEN_TYPE_ENROLLMENT_ONLY,
     }
+    if organization_id is not None:
+        payload["org_id"] = str(organization_id)
     if token_version is not None:
         payload["tkv"] = token_version
     return jwt.encode(payload, get_secret_key(), algorithm="HS256")
