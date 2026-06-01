@@ -28,6 +28,22 @@ Every feature must work in BOTH deployment modes. The same codebase ships as:
 
 When a design decision pulls in opposite directions (e.g. "ship Resend SDK for great cloud deliverability" vs "use generic SMTP so self-hosters can plug in Postfix"), pick the option that satisfies both unless one is impossible - then make the more general path the default and gate the specialized path behind a flag. Recent example: we dropped the Resend SDK in favor of SMTP (Resend ships an SMTP relay) so one backend covers every provider on both products.
 
+## Shell dialect / OS and approval guard
+
+- Do NOT use `sed` for file display, line ranges, path cleanup, or simple
+  text preview. Replace `sed -n 'A,Bp' path` with the native `Read` tool
+  using `offset=A` and `limit=B-A+1`.
+- Use native `Read` for file slices, `Grep`/`rg` for search, and `Glob` or
+  `find` for inventory. Do not ask the user to approve `sed` when a native
+  tool can do the read.
+- If a shell command triggers approval only because it used `sed`, cancel
+  it and rerun using `Read`, `Grep`/`rg`, `find`, or shell parameter
+  expansion.
+- `sed` is allowed only when the task is specifically about sed behavior or
+  no native/read-only equivalent exists. Even then, it must be non-mutating:
+  no `-i`, no output redirection to tracked files, no `w`/`e` sed commands,
+  and no shell execution unless the user explicitly authorizes that exact
+  command and scope.
 ---
 
 ## Commands
@@ -119,10 +135,11 @@ Create a backlog in `.claude/plans/backlogs/{name}-backlog.md` when the work spa
 16. `pnpm` is the package manager for the frontend (over npm or yarn).
 17. Setting state synchronously in `useEffect` causes loops and lint failures; useState initializers or `useMemo` are a better fit for derived values.
 18. Reading refs during render is unreliable - tracking dimensions in state via `ResizeObserver` is more robust.
-19. Authenticated resources in `<img>`/`<video>` tags work best via HTTP routes plus the service worker auth proxy, since those tags cannot send Authorization headers themselves.
+19. Authenticated resources in `<img>`/`<video>`/`<audio>` tags are served same-origin over HTTP and authenticated by the asset-read cookie - named `uniffy_asset` (`__Secure-uniffy_asset` when Secure is on); it carries a read-only JWT whose type claim is `asset_read` (Secure/HttpOnly/SameSite, set on login/refresh), since those tags cannot send `Authorization` headers. The cookie covers GET asset reads only - `/api/files`, `/api/thumbnails`, `/api/media` (Range-capable), `/api/avatars`, `/api/agents/avatars`; mutating RPCs and uploads stay on Bearer. There is no service-worker auth proxy (it was removed). The files-domain rule (`.claude/rules/files-domain.md`, path-scoped) is the source of truth for the upload engine, the asset cookie, and the media route.
 20. The attachments system (`@/features/attachments`) is the right place to link files to content; storing file references directly on content models tends to duplicate metadata.
 21. Python imports stay at the top of the file - this keeps dependency shape obvious. The one exception is the rare circular-import case where no other resolution exists.
 22. The centralized error handling system (`@/config/errorMessages.ts` + `errorToastMiddleware`) covers user-facing errors; manual `toast.error()` calls in thunks tend to duplicate copy.
 23. Pages, layouts, and components stay responsive across three tiers: desktop (first-class), tablet (polished), mobile (functional fallback since the native app exists). The `useBreakpoint()` hook and Tailwind responsive classes carry the weight.
 24. The comment and naming discipline in `.claude/rules/comment-discipline.md` (auto-loaded) keeps the codebase reading like a finished product: no decorative dividers, no process-history comments, no phase/plan artifacts in identifiers.
 25. Do NOT fetch executable code, workers, fonts, or styles from third-party CDNs at runtime (no `unpkg.com`, `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `cdn.skypack.dev`, `esm.sh`, `fonts.googleapis.com`, `fonts.gstatic.com`, etc.). All such assets MUST be bundled. Use Vite `?url` imports for assets shipped inside an npm package (e.g., `import workerUrl from 'pkg/dist/worker.mjs?url'`) or self-host via `@fontsource-variable/*`. CDN fetches leak user IP/referrer, break offline and air-gapped deploys, and create supply-chain risk. The frontend ESLint config rejects CDN URL literals via `no-restricted-syntax`, and `vite.config.ts` injects a mode-aware Content-Security-Policy meta tag that locks `script-src`, `style-src`, `worker-src`, `font-src`, and `connect-src` to `'self'` at runtime (dev split-origin backends are derived from `VITE_API_URL`). Both must stay in place. When adding a new dependency: audit it for hardcoded CDN URLs (grep its source for the domains above), telemetry endpoints, and `postinstall` scripts; reject the dep or vendor a fork if it phones home.
+26. **Optional:** when the **codegraph MCP server** is connected (per-dev opt-in - needs the `codegraph` binary + the server enabled locally; if the `mcp__codegraph__*` tools are absent, ignore this and use `Read`/`Grep`), reach for it BEFORE a grep+read loop or a file-reading subagent when answering "how does X work", "where is X", "what calls X", "what breaks if I change X", or "trace X to Y". Answer such questions directly in 2-3 codegraph calls rather than delegating exploration. See `.claude/rules/codegraph.md` (auto-loaded) for tool-by-intent selection and the subagent caveat.

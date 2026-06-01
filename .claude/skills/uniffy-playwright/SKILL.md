@@ -15,17 +15,25 @@ The project ships a Playwright MCP server inside docker so Claude Code can drive
 
 ## What runs
 
-| Container | Image | Port | Purpose |
-|---|---|---|---|
-| `uniffy-mcp-playwright` | `uniffy-mcp-playwright` (custom, built from `.docker/dev/mcp-playwright.Dockerfile`) | `8931` (SSE) | Headless Chromium + Playwright MCP server. Claude reaches it via SSE at `http://localhost:8931/sse`. |
+Two identical Playwright MCP containers - the second exists purely to give multi-user tests a **separate browser** (isolated cookie jar + `localStorage`):
 
-Connection wiring lives in `.mcp.json` at the repo root:
+| Container | MCP tool prefix | Host port | Purpose |
+|---|---|---|---|
+| `uniffy-mcp-playwright` | `mcp__playwright__*` | `8931` (SSE) | Primary browser. Default for single-user work. |
+| `uniffy-mcp-playwright-b` | `mcp__playwright-b__*` | `8932` (SSE) | Second, fully isolated browser. Use as the **second user** in cross-session tests. |
+
+Both run the same baked image `uniffy-mcp-playwright` (`.docker/dev/mcp-playwright.Dockerfile`); the `-b` container just maps host `8932` to the in-container MCP port `8931`. Connection wiring in `.mcp.json` at the repo root:
 
 ```json
-{ "mcpServers": { "playwright": { "type": "sse", "url": "http://localhost:8931/sse" } } }
+{ "mcpServers": {
+    "playwright":   { "type": "sse", "url": "http://localhost:8931/sse" },
+    "playwright-b": { "type": "sse", "url": "http://localhost:8932/sse" }
+} }
 ```
 
-The container starts under the `dev` profile (`docker compose --profile dev up` or `./run.sh dev-up`). Compose config: `.docker/compose/dev-tools.yaml`. Image build: `.docker/dev/mcp-playwright.Dockerfile` - it bakes `@playwright/mcp` + `chrome-for-testing` + `chromium-headless-shell` so first request after a cold start does not stall on a 100MB+ download.
+Both start under the `dev` profile (`docker compose --profile dev up` / `./run.sh dev-up`). Compose config: `.docker/compose/dev-tools.yaml`. The image bakes `@playwright/mcp` + `chrome-for-testing` + `chromium-headless-shell` so the first request after a cold start does not stall on a 100MB+ download. Each container launches with `--isolated`, so a fresh profile per session.
+
+**After adding/starting a server, Claude Code must reconnect MCP for its tools to appear** (`/mcp` reconnect or restart the session); `mcp__playwright-b__*` is invisible until then.
 
 ## Reaching the dev UI
 
@@ -38,12 +46,43 @@ The Vite dev server's `server.allowedHosts` includes `host.docker.internal` (see
 
 ## Default credentials (dev only)
 
-Seed user:
+**Every seeded user shares one password** = `$INITIAL_ADMIN_PASSWORD` (default `admin`). All belong to the org **"Uniffy"** (the org card on `/select-org`).
 
-- email: `admin@uniffy.io`
-- password: `admin` (or `$INITIAL_ADMIN_PASSWORD` if set)
+| Email | Username | Name | Org role | Notes |
+|---|---|---|---|---|
+| `admin@uniffy.io` | admin | System Administrator | OWNER | also `is_system_admin` |
+| `alice@uniffy.io` | alice | Alice Johnson | MEMBER | Engineering (member) |
+| `bob@uniffy.io` | bob | Bob Smith | MEMBER | Engineering (admin) |
+| `charlie@uniffy.io` | charlie | Charlie Brown | MEMBER | Engineering + Product (member of both) |
+| `diana@uniffy.io` | diana | Diana Prince | MEMBER | Product (admin) |
+| `eve@uniffy.io` | eve | Eve Martinez | MEMBER | Product (member) |
 
-Source of truth: `src/uniffy/db/seed.py:134`. The auth form has two `Sign in` buttons (mode switcher + submit). To submit, target `[data-testid="auth-submit-login"]` directly.
+Groups (org "Uniffy"): **Engineering** {alice, bob(admin), charlie} and **Product** {charlie, diana(admin), eve}. `charlie` is intentionally in both, to exercise multi-group permission resolution.
+
+Source of truth: `src/uniffy/db/seed.py` (admin + org) and `src/uniffy/db/seed_dev.py` (the 5 test users + 2 groups; only seeded when `ENVIRONMENT=development`).
+
+The auth form has two `Sign in` buttons (mode switcher + submit). To submit, target `[data-testid="auth-submit-login"]` directly.
+
+## Two-user (cross-session) testing
+
+For anything that needs two users at once - sharing, permission grants, live cross-session updates, "create as A, confirm B sees it" - **use the two containers as two browsers.** They have separate cookie jars + `localStorage`, so the users never collide.
+
+### Preferred: two containers (one user per browser)
+
+- **User A → `mcp__playwright__*`** (port 8931). **User B → `mcp__playwright-b__*`** (port 8932).
+- Log each user in once in its own browser via the login recipe below. No tab juggling, no identity-swap trap - you may `browser_navigate` / reload freely in either browser.
+- Both browsers hit the same dev UI (`http://host.docker.internal:5173`) and each opens its own notification stream, so a server push fired by A's action arrives in B's browser independently.
+- If `mcp__playwright-b__*` is missing, the `-b` container isn't up or MCP hasn't reconnected - see "Operating the containers".
+
+### Fallback: two tabs in one browser (only if the 2nd container is unavailable)
+
+A single Chromium shares one cookie jar + `localStorage`, so two users in two tabs is fragile - reach for this only when you can't use the second container.
+
+- The **access token lives in-memory per tab** (`memoryAccessToken` in `config/api.ts`, never persisted); the **refresh token + auth state live in shared `localStorage` (`persist:root`)** via redux-persist. No cross-tab `storage` listener, so two tabs hold independent in-memory tokens during a live session.
+- **Recipe:** log in user A in tab 0; `browser_tabs new` opens tab 1 (rehydrates A from `persist:root`); in tab 1 `localStorage.removeItem('persist:root')` -> `browser_navigate` to reload -> `/auth` -> log in user B. Now tab 0 = A, tab 1 = B.
+- **THE TRAP:** every tab keeps overwriting the shared `persist:root`, so any **full page load** (`browser_navigate`, reload) rehydrates that tab as whoever wrote it last - silently swapping identity. After both are logged in, **navigate ONLY via in-app SPA clicks** (`document.querySelector('a[href="/projects"]').click()`), never `browser_navigate`, and re-confirm identity before each critical action by reading the header avatar initials (`AJ` = Alice Johnson, `BS` = Bob Smith). Keep the test under the ~15 min access-token life so no silent refresh fires off the (now-shared) refresh token.
+
+The two-container path is what to reach for; the live content-access refresh feature (share / org-create / task-in-project -> recipient's sidebar/board updating without a reload) was first verified via the two-tab fallback before this second container existed.
 
 ## Login recipe
 
@@ -105,23 +144,28 @@ for (const p of view.state.plugins) {
 
 The `y-sync$` plugin holds the binding; its `state.binding.doc` is the live `Y.Doc`.
 
-## Operating the container
+## Operating the containers
+
+Both services live in `.docker/compose/dev-tools.yaml`; add `mcp-playwright-b` to any command to act on the second browser (or omit the service name to act on both).
 
 | Action | Command |
 |---|---|
-| Build / rebuild image | `docker compose build mcp-playwright` |
-| Start | `docker compose --profile dev up -d mcp-playwright` (or `./run.sh mcp-up`) |
-| Logs | `docker logs uniffy-mcp-playwright --tail 100 -f` |
-| Restart (e.g. after image rebuild) | `docker compose restart mcp-playwright` |
-| Tear down | `docker compose --profile dev down mcp-playwright` |
+| Build / rebuild image | `docker compose build mcp-playwright` (one image, shared by both) |
+| Start both | `docker compose --profile dev up -d mcp-playwright mcp-playwright-b` (or `./run.sh dev-up`) |
+| Start only the 2nd | `docker compose --profile dev up -d mcp-playwright-b` |
+| Logs | `docker logs uniffy-mcp-playwright-b --tail 100 -f` |
+| Restart (after image rebuild) | `docker compose restart mcp-playwright mcp-playwright-b` |
+| Tear down | `docker compose --profile dev down mcp-playwright mcp-playwright-b` |
 
-After editing the Dockerfile, rebuild and restart - the running container still uses the old image until then.
+After editing the Dockerfile, rebuild and restart - running containers keep the old image until then. **After starting/adding a server, reconnect MCP in Claude Code** (`/mcp`) or the `mcp__playwright-b__*` tools won't be visible.
 
 ## Selector gotchas
 
-- `browser_type` with `target` as the snapshot's `textbox` role description sometimes throws `Unexpected token while parsing css selector`. Fall back to `browser_evaluate` with the native setter pattern above.
+- **`ref=eXX` snapshot refs are NOT accepted by `browser_click` in this build** - it throws `browserBackend.callTool: Unknown engine "ref"`. Click via `browser_evaluate` instead: find the element (by text / `data-testid` / `title`) and call `.click()` on it. Treat the snapshot refs as read-only locators for *finding* things, not as click targets.
+- **`window.store` is NOT exposed** - reading Redux via `window.store.getState()` returns undefined. Read state from the **DOM** instead (e.g. tree section contents, header avatar initials), or from `localStorage.getItem('persist:root')` (note: that's the *persisted* snapshot, which can lag/diverge from a tab's live in-memory state - see two-user testing).
+- `browser_type` with `target` as the snapshot's `textbox` role description sometimes throws `Unexpected token while parsing css selector`. Fall back to `browser_evaluate` with the native `value`-setter pattern (the login recipe) - it's the reliable way to fill any React-controlled input.
 - Tree nodes in the notes sidebar are not always React-routable links - many fire via `onClick` on a `div[data-node-id="..."]`. Use `browser_evaluate` to click the chevron `<button>` child to expand a folder before clicking the leaf.
-- `strict mode violation: resolved to N elements` means the selector is ambiguous. Prefer `data-testid` attributes, or address by index via the snapshot `ref`.
+- `strict mode violation: resolved to N elements` means the selector is ambiguous. Prefer `data-testid` attributes, or filter to the visible one (`el.offsetParent !== null`).
 
 ## Workflow template
 

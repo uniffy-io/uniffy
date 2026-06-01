@@ -146,8 +146,7 @@ The backend is organized into domain-specific ConnectRPC services. Each service 
 | Service | Proto | Purpose |
 |---------|-------|---------|
 | `notes.v1.NotesService` | `src/proto/notes/v1/notes.proto` | Notes/documents |
-| `files.v1.FilesService` | `src/proto/files/v1/files.proto` | File storage, chunked uploads, streaming |
-| `attachments.v1.AttachmentsService` | `src/proto/attachments/v1/attachments.proto` | Link files to content (notes, events, etc.) |
+| `files.v1.FilesService` | `src/proto/files/v1/files.proto` | File storage, chunked uploads, streaming, and attachments (link files to content) |
 | `bookmarks.v1.BookmarksService` | `src/proto/bookmarks/v1/bookmarks.proto` | User bookmarks |
 | `search.v1.SearchService` | `src/proto/search/v1/search.proto` | Full-text search |
 | `settings.v1.SettingsService` | `src/proto/settings/v1/settings.proto` | User settings |
@@ -185,6 +184,25 @@ message PaginationResponse { page, page_size, total_count, total_pages }
 - **Type annotations**: Python functions read better with type hints + docstrings (PEP 257)
 - **File size**: Target 300-400 lines, soft cap 500. Splitting into sub-modules keeps things navigable
 - **Imports at the top**: Inline imports tend to obscure module dependencies
+
+## Logging
+
+Logging is [loguru](https://loguru.readthedocs.io) (`from loguru import logger`), configured in `observability/`. Output is human-readable console by default, or structured JSON when `LOG_FORMAT=json` (self-hosters and log aggregators); in JSON mode structured fields flatten to top-level keys.
+
+- **Every module tags its logs with a `component`.** Rebind the module logger once, right after the import:
+  ```python
+  from loguru import logger
+
+  logger = logger.bind(component="agents.runtime.operations")
+  ```
+  Every call in the file then inherits `component` - do NOT repeat `component=` on each call. The name is the dotted module path minus the top-level package (`domains/agents/runtime/operations.py` -> `agents.runtime.operations`). An explicit `component=` on a single call still overrides the bound value when one line needs a different label.
+
+- **Log exceptions the native loguru way - never stdlib `exc_info=True`.** loguru is not stdlib `logging`: it does not recognize `exc_info`, so `logger.error("...", exc_info=True)` silently drops the kwarg into `extra` and captures NO traceback. Inside an `except` block use:
+  ```python
+  logger.exception("upload failed")                  # ERROR level + full traceback
+  logger.opt(exception=True).warning("degraded")     # keep WARNING level + traceback
+  ```
+  `logger.exception` reads the active exception from `sys.exc_info()`, so it needs no exception argument. A patcher in `configure_loguru` rescues any stray `exc_info=True` at runtime, but it is a safety net - write the correct idiom.
 
 ## Multi-Tenancy
 
@@ -300,30 +318,39 @@ DEFAULT_KEYBOARD_SHORTCUTS = {
 }
 ```
 
-## Attachments System (Backend)
+## Attachments (part of the Files domain)
 
-The attachments system links files to content (notes, events, etc.) without duplicating storage. Files live in a user's Attachments folder; attachment records track which content uses them.
+Attachments link a file to a piece of content (note, chat message, calendar event, task) via a
+generic `(content_type, content_id)` row, without the content model duplicating file metadata. The
+attachment RPCs (`AttachFile`, `DetachFile`, `ListAttachments`, `BatchListAttachments`,
+`GetAttachmentsFolder`) live on `files.v1.FilesService` - attachments is a sub-feature of files,
+not a standalone domain.
 
 **Key Files:**
 
 | File | Purpose |
 |------|---------|
-| `src/proto/attachments/v1/attachments.proto` | API contract (AttachFile, DetachFile, ListAttachments, GetAttachmentsFolder) |
-| `src/uniffy/core/models/attachments/` | Attachment and AttachmentsFolder models |
-| `src/uniffy/domains/attachments/operations.py` | Business logic with permission checks |
-| `src/uniffy/domains/attachments/handlers.py` | RPC handlers |
+| `src/proto/files/v1/files.proto` | API contract (attachment RPCs on `FilesService`) |
+| `src/uniffy/core/models/files/attachment.py` | `Attachment` model (table `attachments_attachments`, `file_id` unique) |
+| `src/uniffy/domains/files/attachments/operations.py` | `AttachmentOperations` - business logic + permission checks |
+| `src/uniffy/domains/files/attachments/handlers.py` | `AttachmentsHandlersMixin`, mixed into `FilesServiceImpl` |
 
 **Design Pattern:**
-- Each user has one AttachmentsFolder per organization (created on demand)
-- Files uploaded to attachments folder via FilesService
-- AttachFile creates a link record (source_file_id, content_type, content_id)
-- Same file can be attached to multiple content items
-- Deleting attachment record does NOT delete the file
+- `AttachFile` copies the source file into an Attachments folder, then writes one `Attachment` row.
+  `file_id` is unique, so each attachment owns its own file copy (detaching one never affects another).
+- Folder + file policy follow the PARENT's effective access mode: an `OPEN_TO_ORG` parent routes to
+  the shared per-org "Organization Attachments" folder (`is_org_attachments`, `OPEN_TO_ORG/EDITOR`);
+  any other parent routes to the attacher's personal "Attachments" folder (`OWNER_ONLY`). Both are
+  system `Folder` rows - there is no separate `AttachmentsFolder` model.
+- `DetachFile` deletes the `Attachment` row AND the underlying file copy (plus its versions/objects).
+  `detach_all_for_content` runs this for every attachment on content delete.
 
 **Permission Model:**
-- Attaching requires EDIT permission on the target content
-- Viewing attachments requires VIEW permission on the content
-- Files inherit visibility from their folder (user's private attachments folder)
+- Attaching requires VIEW on the source file and access to the target content (EDIT-equivalent via
+  the parent's policy; chat messages delegate to `ChatAccessChecker`).
+- Viewing/listing requires VIEW on the parent content; `batch_list_attachments` shares one channel
+  check across a page of chat messages.
+- Detaching requires being the attacher, or EDIT on the parent (sender-or-elevated for chat).
 
 
 **Key Pattern:** Reach for `get_jobs_for_mime_type()` from `uniffy.workers.utils.mime` to determine which jobs to enqueue; hardcoded job names tend to drift from the registry.

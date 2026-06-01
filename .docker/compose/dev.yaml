@@ -99,7 +99,6 @@ services:
             - /app/src/mobile/node_modules
             - /app/src/landing/node_modules
             - /app/src/gen/typescript/node_modules
-            - /app/src/ui/.vite-worker
         ports:
             - "5173:5173"
         depends_on:
