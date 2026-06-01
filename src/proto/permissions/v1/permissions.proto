@@ -42,6 +42,10 @@ message ContentAccessPolicy {
   // BLOCKED-aware). Absent means no access. Lets the client gate manage
   // controls without recomputing permissions.
   optional common.v1.ContentRole caller_role = 4;
+  // The live resolved access mode after inheriting org defaults (raw
+  // ``access_mode`` UNSPECIFIED resolves to the org default). Lets the client
+  // act on what the row actually resolves to without recomputing inheritance.
+  optional common.v1.AccessMode effective_access_mode = 5;
 }
 
 // Audit log entry for a content member change.

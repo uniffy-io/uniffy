@@ -1,6 +1,7 @@
 import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from common.v1 import common_pb2 as _common_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -198,7 +199,7 @@ class FileUpdatePayload(_message.Message):
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
 
 class StreamNotificationsResponse(_message.Message):
-    __slots__ = ("event_type", "notification", "timestamp", "file_update", "presence_changed", "mention_state_changed")
+    __slots__ = ("event_type", "notification", "timestamp", "file_update", "presence_changed", "mention_state_changed", "content_access_changed")
     class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         EVENT_TYPE_UNSPECIFIED: _ClassVar[StreamNotificationsResponse.EventType]
@@ -208,6 +209,7 @@ class StreamNotificationsResponse(_message.Message):
         EVENT_TYPE_PRESENCE_CHANGED: _ClassVar[StreamNotificationsResponse.EventType]
         EVENT_TYPE_MENTION_STATE_CHANGED: _ClassVar[StreamNotificationsResponse.EventType]
         EVENT_TYPE_PERMISSIONS_CHANGED: _ClassVar[StreamNotificationsResponse.EventType]
+        EVENT_TYPE_CONTENT_ACCESS_CHANGED: _ClassVar[StreamNotificationsResponse.EventType]
     EVENT_TYPE_UNSPECIFIED: StreamNotificationsResponse.EventType
     EVENT_TYPE_NEW_NOTIFICATION: StreamNotificationsResponse.EventType
     EVENT_TYPE_HEARTBEAT: StreamNotificationsResponse.EventType
@@ -215,19 +217,22 @@ class StreamNotificationsResponse(_message.Message):
     EVENT_TYPE_PRESENCE_CHANGED: StreamNotificationsResponse.EventType
     EVENT_TYPE_MENTION_STATE_CHANGED: StreamNotificationsResponse.EventType
     EVENT_TYPE_PERMISSIONS_CHANGED: StreamNotificationsResponse.EventType
+    EVENT_TYPE_CONTENT_ACCESS_CHANGED: StreamNotificationsResponse.EventType
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     NOTIFICATION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     FILE_UPDATE_FIELD_NUMBER: _ClassVar[int]
     PRESENCE_CHANGED_FIELD_NUMBER: _ClassVar[int]
     MENTION_STATE_CHANGED_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_ACCESS_CHANGED_FIELD_NUMBER: _ClassVar[int]
     event_type: StreamNotificationsResponse.EventType
     notification: Notification
     timestamp: _timestamp_pb2.Timestamp
     file_update: FileUpdatePayload
     presence_changed: PresenceChangedPayload
     mention_state_changed: MentionStateChangedPayload
-    def __init__(self, event_type: _Optional[_Union[StreamNotificationsResponse.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ..., presence_changed: _Optional[_Union[PresenceChangedPayload, _Mapping]] = ..., mention_state_changed: _Optional[_Union[MentionStateChangedPayload, _Mapping]] = ...) -> None: ...
+    content_access_changed: ContentAccessChangedPayload
+    def __init__(self, event_type: _Optional[_Union[StreamNotificationsResponse.EventType, str]] = ..., notification: _Optional[_Union[Notification, _Mapping]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_update: _Optional[_Union[FileUpdatePayload, _Mapping]] = ..., presence_changed: _Optional[_Union[PresenceChangedPayload, _Mapping]] = ..., mention_state_changed: _Optional[_Union[MentionStateChangedPayload, _Mapping]] = ..., content_access_changed: _Optional[_Union[ContentAccessChangedPayload, _Mapping]] = ...) -> None: ...
 
 class PresenceChangedPayload(_message.Message):
     __slots__ = ("user_id", "status", "last_active", "status_emoji", "status_text", "status_expires_at")
@@ -259,6 +264,16 @@ class MentionStateChangedPayload(_message.Message):
     urn: str
     changes: _containers.ScalarMap[str, str]
     def __init__(self, urn: _Optional[str] = ..., changes: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+class ContentAccessChangedPayload(_message.Message):
+    __slots__ = ("content_type", "content_id", "action")
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ACTION_FIELD_NUMBER: _ClassVar[int]
+    content_type: _common_pb2.ContentType
+    content_id: str
+    action: str
+    def __init__(self, content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ..., action: _Optional[str] = ...) -> None: ...
 
 class GetVapidPublicKeyRequest(_message.Message):
     __slots__ = ()

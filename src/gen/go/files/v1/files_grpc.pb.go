@@ -26,7 +26,6 @@ const (
 	FilesService_GetUploadStatus_FullMethodName                = "/files.v1.FilesService/GetUploadStatus"
 	FilesService_AbortUpload_FullMethodName                    = "/files.v1.FilesService/AbortUpload"
 	FilesService_DownloadFile_FullMethodName                   = "/files.v1.FilesService/DownloadFile"
-	FilesService_StreamFileRange_FullMethodName                = "/files.v1.FilesService/StreamFileRange"
 	FilesService_GetFile_FullMethodName                        = "/files.v1.FilesService/GetFile"
 	FilesService_UpdateFile_FullMethodName                     = "/files.v1.FilesService/UpdateFile"
 	FilesService_DeleteFile_FullMethodName                     = "/files.v1.FilesService/DeleteFile"
@@ -61,6 +60,11 @@ const (
 	FilesService_UpdateSavedFilter_FullMethodName              = "/files.v1.FilesService/UpdateSavedFilter"
 	FilesService_DeleteSavedFilter_FullMethodName              = "/files.v1.FilesService/DeleteSavedFilter"
 	FilesService_ListSavedFilters_FullMethodName               = "/files.v1.FilesService/ListSavedFilters"
+	FilesService_AttachFile_FullMethodName                     = "/files.v1.FilesService/AttachFile"
+	FilesService_DetachFile_FullMethodName                     = "/files.v1.FilesService/DetachFile"
+	FilesService_ListAttachments_FullMethodName                = "/files.v1.FilesService/ListAttachments"
+	FilesService_BatchListAttachments_FullMethodName           = "/files.v1.FilesService/BatchListAttachments"
+	FilesService_GetAttachmentsFolder_FullMethodName           = "/files.v1.FilesService/GetAttachmentsFolder"
 )
 
 // FilesServiceClient is the client API for FilesService service.
@@ -85,9 +89,6 @@ type FilesServiceClient interface {
 	AbortUpload(ctx context.Context, in *AbortUploadRequest, opts ...grpc.CallOption) (*AbortUploadResponse, error)
 	// Stream file content from backend to client (server streaming RPC).
 	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadFileResponse], error)
-	// Stream file with byte range support for Service Worker media streaming.
-	// This RPC supports HTTP Range-like semantics for video/audio seeking.
-	StreamFileRange(ctx context.Context, in *StreamFileRangeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamFileRangeResponse], error)
 	// Get a file by ID.
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
 	// Update file metadata (rename, tags, description).
@@ -158,6 +159,21 @@ type FilesServiceClient interface {
 	DeleteSavedFilter(ctx context.Context, in *DeleteSavedFilterRequest, opts ...grpc.CallOption) (*DeleteSavedFilterResponse, error)
 	// List saved filters for the current user.
 	ListSavedFilters(ctx context.Context, in *ListSavedFiltersRequest, opts ...grpc.CallOption) (*ListSavedFiltersResponse, error)
+	// Attach a file to content. If the file is not already in the Attachments
+	// folder it is copied there. Upload new attachments via InitiateUpload with
+	// the folder id from GetAttachmentsFolder, then call AttachFile to link.
+	AttachFile(ctx context.Context, in *AttachFileRequest, opts ...grpc.CallOption) (*AttachFileResponse, error)
+	// Detach a file from content (deletes the attachment and the file copy).
+	DetachFile(ctx context.Context, in *DetachFileRequest, opts ...grpc.CallOption) (*DetachFileResponse, error)
+	// List all attachments for a piece of content.
+	ListAttachments(ctx context.Context, in *ListAttachmentsRequest, opts ...grpc.CallOption) (*ListAttachmentsResponse, error)
+	// Batch-list attachments for many content rows of the same type. Used by
+	// chat to hydrate attachments for a page of messages in one round-trip
+	// (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(ctx context.Context, in *BatchListAttachmentsRequest, opts ...grpc.CallOption) (*BatchListAttachmentsResponse, error)
+	// Get the user's Attachments folder id. Use it with InitiateUpload to
+	// upload new attachments.
+	GetAttachmentsFolder(ctx context.Context, in *GetAttachmentsFolderRequest, opts ...grpc.CallOption) (*GetAttachmentsFolderResponse, error)
 }
 
 type filesServiceClient struct {
@@ -249,25 +265,6 @@ func (c *filesServiceClient) DownloadFile(ctx context.Context, in *DownloadFileR
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type FilesService_DownloadFileClient = grpc.ServerStreamingClient[DownloadFileResponse]
-
-func (c *filesServiceClient) StreamFileRange(ctx context.Context, in *StreamFileRangeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamFileRangeResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &FilesService_ServiceDesc.Streams[2], FilesService_StreamFileRange_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[StreamFileRangeRequest, StreamFileRangeResponse]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FilesService_StreamFileRangeClient = grpc.ServerStreamingClient[StreamFileRangeResponse]
 
 func (c *filesServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -609,6 +606,56 @@ func (c *filesServiceClient) ListSavedFilters(ctx context.Context, in *ListSaved
 	return out, nil
 }
 
+func (c *filesServiceClient) AttachFile(ctx context.Context, in *AttachFileRequest, opts ...grpc.CallOption) (*AttachFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AttachFileResponse)
+	err := c.cc.Invoke(ctx, FilesService_AttachFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) DetachFile(ctx context.Context, in *DetachFileRequest, opts ...grpc.CallOption) (*DetachFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DetachFileResponse)
+	err := c.cc.Invoke(ctx, FilesService_DetachFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) ListAttachments(ctx context.Context, in *ListAttachmentsRequest, opts ...grpc.CallOption) (*ListAttachmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAttachmentsResponse)
+	err := c.cc.Invoke(ctx, FilesService_ListAttachments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) BatchListAttachments(ctx context.Context, in *BatchListAttachmentsRequest, opts ...grpc.CallOption) (*BatchListAttachmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchListAttachmentsResponse)
+	err := c.cc.Invoke(ctx, FilesService_BatchListAttachments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) GetAttachmentsFolder(ctx context.Context, in *GetAttachmentsFolderRequest, opts ...grpc.CallOption) (*GetAttachmentsFolderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAttachmentsFolderResponse)
+	err := c.cc.Invoke(ctx, FilesService_GetAttachmentsFolder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FilesServiceServer is the server API for FilesService service.
 // All implementations must embed UnimplementedFilesServiceServer
 // for forward compatibility.
@@ -631,9 +678,6 @@ type FilesServiceServer interface {
 	AbortUpload(context.Context, *AbortUploadRequest) (*AbortUploadResponse, error)
 	// Stream file content from backend to client (server streaming RPC).
 	DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadFileResponse]) error
-	// Stream file with byte range support for Service Worker media streaming.
-	// This RPC supports HTTP Range-like semantics for video/audio seeking.
-	StreamFileRange(*StreamFileRangeRequest, grpc.ServerStreamingServer[StreamFileRangeResponse]) error
 	// Get a file by ID.
 	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
 	// Update file metadata (rename, tags, description).
@@ -704,6 +748,21 @@ type FilesServiceServer interface {
 	DeleteSavedFilter(context.Context, *DeleteSavedFilterRequest) (*DeleteSavedFilterResponse, error)
 	// List saved filters for the current user.
 	ListSavedFilters(context.Context, *ListSavedFiltersRequest) (*ListSavedFiltersResponse, error)
+	// Attach a file to content. If the file is not already in the Attachments
+	// folder it is copied there. Upload new attachments via InitiateUpload with
+	// the folder id from GetAttachmentsFolder, then call AttachFile to link.
+	AttachFile(context.Context, *AttachFileRequest) (*AttachFileResponse, error)
+	// Detach a file from content (deletes the attachment and the file copy).
+	DetachFile(context.Context, *DetachFileRequest) (*DetachFileResponse, error)
+	// List all attachments for a piece of content.
+	ListAttachments(context.Context, *ListAttachmentsRequest) (*ListAttachmentsResponse, error)
+	// Batch-list attachments for many content rows of the same type. Used by
+	// chat to hydrate attachments for a page of messages in one round-trip
+	// (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(context.Context, *BatchListAttachmentsRequest) (*BatchListAttachmentsResponse, error)
+	// Get the user's Attachments folder id. Use it with InitiateUpload to
+	// upload new attachments.
+	GetAttachmentsFolder(context.Context, *GetAttachmentsFolderRequest) (*GetAttachmentsFolderResponse, error)
 	mustEmbedUnimplementedFilesServiceServer()
 }
 
@@ -734,9 +793,6 @@ func (UnimplementedFilesServiceServer) AbortUpload(context.Context, *AbortUpload
 }
 func (UnimplementedFilesServiceServer) DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadFileResponse]) error {
 	return status.Error(codes.Unimplemented, "method DownloadFile not implemented")
-}
-func (UnimplementedFilesServiceServer) StreamFileRange(*StreamFileRangeRequest, grpc.ServerStreamingServer[StreamFileRangeResponse]) error {
-	return status.Error(codes.Unimplemented, "method StreamFileRange not implemented")
 }
 func (UnimplementedFilesServiceServer) GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetFile not implemented")
@@ -839,6 +895,21 @@ func (UnimplementedFilesServiceServer) DeleteSavedFilter(context.Context, *Delet
 }
 func (UnimplementedFilesServiceServer) ListSavedFilters(context.Context, *ListSavedFiltersRequest) (*ListSavedFiltersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSavedFilters not implemented")
+}
+func (UnimplementedFilesServiceServer) AttachFile(context.Context, *AttachFileRequest) (*AttachFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AttachFile not implemented")
+}
+func (UnimplementedFilesServiceServer) DetachFile(context.Context, *DetachFileRequest) (*DetachFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DetachFile not implemented")
+}
+func (UnimplementedFilesServiceServer) ListAttachments(context.Context, *ListAttachmentsRequest) (*ListAttachmentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAttachments not implemented")
+}
+func (UnimplementedFilesServiceServer) BatchListAttachments(context.Context, *BatchListAttachmentsRequest) (*BatchListAttachmentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchListAttachments not implemented")
+}
+func (UnimplementedFilesServiceServer) GetAttachmentsFolder(context.Context, *GetAttachmentsFolderRequest) (*GetAttachmentsFolderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAttachmentsFolder not implemented")
 }
 func (UnimplementedFilesServiceServer) mustEmbedUnimplementedFilesServiceServer() {}
 func (UnimplementedFilesServiceServer) testEmbeddedByValue()                      {}
@@ -968,17 +1039,6 @@ func _FilesService_DownloadFile_Handler(srv interface{}, stream grpc.ServerStrea
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type FilesService_DownloadFileServer = grpc.ServerStreamingServer[DownloadFileResponse]
-
-func _FilesService_StreamFileRange_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamFileRangeRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(FilesServiceServer).StreamFileRange(m, &grpc.GenericServerStream[StreamFileRangeRequest, StreamFileRangeResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FilesService_StreamFileRangeServer = grpc.ServerStreamingServer[StreamFileRangeResponse]
 
 func _FilesService_GetFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetFileRequest)
@@ -1592,6 +1652,96 @@ func _FilesService_ListSavedFilters_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FilesService_AttachFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttachFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).AttachFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_AttachFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).AttachFile(ctx, req.(*AttachFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_DetachFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DetachFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).DetachFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_DetachFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).DetachFile(ctx, req.(*DetachFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_ListAttachments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAttachmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).ListAttachments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_ListAttachments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).ListAttachments(ctx, req.(*ListAttachmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_BatchListAttachments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchListAttachmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).BatchListAttachments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_BatchListAttachments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).BatchListAttachments(ctx, req.(*BatchListAttachmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_GetAttachmentsFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAttachmentsFolderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).GetAttachmentsFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_GetAttachmentsFolder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).GetAttachmentsFolder(ctx, req.(*GetAttachmentsFolderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FilesService_ServiceDesc is the grpc.ServiceDesc for FilesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1755,6 +1905,26 @@ var FilesService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ListSavedFilters",
 			Handler:    _FilesService_ListSavedFilters_Handler,
 		},
+		{
+			MethodName: "AttachFile",
+			Handler:    _FilesService_AttachFile_Handler,
+		},
+		{
+			MethodName: "DetachFile",
+			Handler:    _FilesService_DetachFile_Handler,
+		},
+		{
+			MethodName: "ListAttachments",
+			Handler:    _FilesService_ListAttachments_Handler,
+		},
+		{
+			MethodName: "BatchListAttachments",
+			Handler:    _FilesService_BatchListAttachments_Handler,
+		},
+		{
+			MethodName: "GetAttachmentsFolder",
+			Handler:    _FilesService_GetAttachmentsFolder_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -1765,11 +1935,6 @@ var FilesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "DownloadFile",
 			Handler:       _FilesService_DownloadFile_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "StreamFileRange",
-			Handler:       _FilesService_StreamFileRange_Handler,
 			ServerStreams: true,
 		},
 	},

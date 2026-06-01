@@ -3,6 +3,7 @@ syntax = "proto3";
 package notifications.v1;
 
 import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1";
 
@@ -235,6 +236,9 @@ message StreamNotificationsResponse {
     EVENT_TYPE_MENTION_STATE_CHANGED = 5;
     // User's permissions changed (domain admin granted/revoked) - triggers refetch
     EVENT_TYPE_PERMISSIONS_CHANGED = 6;
+    // The set of content the user can see changed (shared with them, or content
+    // became/ceased OPEN_TO_ORG) - triggers a sidebar/tree refresh
+    EVENT_TYPE_CONTENT_ACCESS_CHANGED = 7;
   }
 
   // Type of this event
@@ -249,6 +253,8 @@ message StreamNotificationsResponse {
   PresenceChangedPayload presence_changed = 5;
   // Mention state change payload (present for MENTION_STATE_CHANGED events)
   MentionStateChangedPayload mention_state_changed = 6;
+  // Content access change payload (present for CONTENT_ACCESS_CHANGED events)
+  ContentAccessChangedPayload content_access_changed = 7;
 }
 
 // Payload for presence change events
@@ -273,6 +279,16 @@ message MentionStateChangedPayload {
   string urn = 1;
   // Changed fields as key-value pairs (field_name -> new_value)
   map<string, string> changes = 2;
+}
+
+// Payload for content access change events (sidebar/tree refresh signal)
+message ContentAccessChangedPayload {
+  // Type of content whose access changed
+  common.v1.ContentType content_type = 1;
+  // ID of the content whose access changed
+  string content_id = 2;
+  // What happened: "granted", "revoked", or "access_mode_changed"
+  string action = 3;
 }
 
 // Request to get VAPID public key

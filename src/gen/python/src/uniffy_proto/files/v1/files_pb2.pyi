@@ -199,36 +199,6 @@ class DownloadFileResponse(_message.Message):
     total_size: int
     def __init__(self, data: _Optional[bytes] = ..., chunk_number: _Optional[int] = ..., total_chunks: _Optional[int] = ..., filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., total_size: _Optional[int] = ...) -> None: ...
 
-class StreamFileRangeRequest(_message.Message):
-    __slots__ = ("file_id", "organization_id", "start_byte", "end_byte")
-    FILE_ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    START_BYTE_FIELD_NUMBER: _ClassVar[int]
-    END_BYTE_FIELD_NUMBER: _ClassVar[int]
-    file_id: str
-    organization_id: str
-    start_byte: int
-    end_byte: int
-    def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., start_byte: _Optional[int] = ..., end_byte: _Optional[int] = ...) -> None: ...
-
-class StreamFileRangeResponse(_message.Message):
-    __slots__ = ("data", "total_size", "range_start", "range_end", "mime_type", "filename", "is_first_chunk")
-    DATA_FIELD_NUMBER: _ClassVar[int]
-    TOTAL_SIZE_FIELD_NUMBER: _ClassVar[int]
-    RANGE_START_FIELD_NUMBER: _ClassVar[int]
-    RANGE_END_FIELD_NUMBER: _ClassVar[int]
-    MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
-    FILENAME_FIELD_NUMBER: _ClassVar[int]
-    IS_FIRST_CHUNK_FIELD_NUMBER: _ClassVar[int]
-    data: bytes
-    total_size: int
-    range_start: int
-    range_end: int
-    mime_type: str
-    filename: str
-    is_first_chunk: bool
-    def __init__(self, data: _Optional[bytes] = ..., total_size: _Optional[int] = ..., range_start: _Optional[int] = ..., range_end: _Optional[int] = ..., mime_type: _Optional[str] = ..., filename: _Optional[str] = ..., is_first_chunk: _Optional[bool] = ...) -> None: ...
-
 class File(_message.Message):
     __slots__ = ("id", "urn", "organization_id", "owner_id", "access_mode", "filename", "original_filename", "mime_type", "size_bytes", "folder_id", "description", "version", "extraction_status", "is_deleted", "created_at", "updated_at", "deleted_at", "group_ids", "user_role", "owner_info", "metadata", "baseline_role", "tags", "transcode_status")
     ID_FIELD_NUMBER: _ClassVar[int]
@@ -1179,3 +1149,127 @@ class EnsureRecordingsFolderRequest(_message.Message):
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class Attachment(_message.Message):
+    __slots__ = ("id", "organization_id", "file_id", "content_type", "content_id", "attached_by_user_id", "attached_at", "filename", "mime_type", "size_bytes", "owner_info")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTACHED_BY_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTACHED_AT_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SIZE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    OWNER_INFO_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    organization_id: str
+    file_id: str
+    content_type: _common_pb2.ContentType
+    content_id: str
+    attached_by_user_id: str
+    attached_at: _timestamp_pb2.Timestamp
+    filename: str
+    mime_type: str
+    size_bytes: int
+    owner_info: AttachedFileOwner
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., file_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ..., attached_by_user_id: _Optional[str] = ..., attached_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., filename: _Optional[str] = ..., mime_type: _Optional[str] = ..., size_bytes: _Optional[int] = ..., owner_info: _Optional[_Union[AttachedFileOwner, _Mapping]] = ...) -> None: ...
+
+class AttachedFileOwner(_message.Message):
+    __slots__ = ("id", "name", "email")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    name: str
+    email: str
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ...) -> None: ...
+
+class AttachFileRequest(_message.Message):
+    __slots__ = ("organization_id", "source_file_id", "content_type", "content_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    source_file_id: str
+    content_type: _common_pb2.ContentType
+    content_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., source_file_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ...) -> None: ...
+
+class AttachFileResponse(_message.Message):
+    __slots__ = ("attachment",)
+    ATTACHMENT_FIELD_NUMBER: _ClassVar[int]
+    attachment: Attachment
+    def __init__(self, attachment: _Optional[_Union[Attachment, _Mapping]] = ...) -> None: ...
+
+class DetachFileRequest(_message.Message):
+    __slots__ = ("organization_id", "attachment_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTACHMENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    attachment_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., attachment_id: _Optional[str] = ...) -> None: ...
+
+class DetachFileResponse(_message.Message):
+    __slots__ = ("success", "message")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
+
+class ListAttachmentsRequest(_message.Message):
+    __slots__ = ("organization_id", "content_type", "content_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    content_type: _common_pb2.ContentType
+    content_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_id: _Optional[str] = ...) -> None: ...
+
+class ListAttachmentsResponse(_message.Message):
+    __slots__ = ("attachments", "total_count")
+    ATTACHMENTS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    attachments: _containers.RepeatedCompositeFieldContainer[Attachment]
+    total_count: int
+    def __init__(self, attachments: _Optional[_Iterable[_Union[Attachment, _Mapping]]] = ..., total_count: _Optional[int] = ...) -> None: ...
+
+class BatchListAttachmentsRequest(_message.Message):
+    __slots__ = ("organization_id", "content_type", "content_ids")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_IDS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    content_type: _common_pb2.ContentType
+    content_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, organization_id: _Optional[str] = ..., content_type: _Optional[_Union[_common_pb2.ContentType, str]] = ..., content_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BatchListAttachmentsGroup(_message.Message):
+    __slots__ = ("content_id", "attachments")
+    CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTACHMENTS_FIELD_NUMBER: _ClassVar[int]
+    content_id: str
+    attachments: _containers.RepeatedCompositeFieldContainer[Attachment]
+    def __init__(self, content_id: _Optional[str] = ..., attachments: _Optional[_Iterable[_Union[Attachment, _Mapping]]] = ...) -> None: ...
+
+class BatchListAttachmentsResponse(_message.Message):
+    __slots__ = ("groups",)
+    GROUPS_FIELD_NUMBER: _ClassVar[int]
+    groups: _containers.RepeatedCompositeFieldContainer[BatchListAttachmentsGroup]
+    def __init__(self, groups: _Optional[_Iterable[_Union[BatchListAttachmentsGroup, _Mapping]]] = ...) -> None: ...
+
+class GetAttachmentsFolderRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class GetAttachmentsFolderResponse(_message.Message):
+    __slots__ = ("folder_id",)
+    FOLDER_ID_FIELD_NUMBER: _ClassVar[int]
+    folder_id: str
+    def __init__(self, folder_id: _Optional[str] = ...) -> None: ...

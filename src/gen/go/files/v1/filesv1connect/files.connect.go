@@ -54,9 +54,6 @@ const (
 	// FilesServiceDownloadFileProcedure is the fully-qualified name of the FilesService's DownloadFile
 	// RPC.
 	FilesServiceDownloadFileProcedure = "/files.v1.FilesService/DownloadFile"
-	// FilesServiceStreamFileRangeProcedure is the fully-qualified name of the FilesService's
-	// StreamFileRange RPC.
-	FilesServiceStreamFileRangeProcedure = "/files.v1.FilesService/StreamFileRange"
 	// FilesServiceGetFileProcedure is the fully-qualified name of the FilesService's GetFile RPC.
 	FilesServiceGetFileProcedure = "/files.v1.FilesService/GetFile"
 	// FilesServiceUpdateFileProcedure is the fully-qualified name of the FilesService's UpdateFile RPC.
@@ -150,6 +147,19 @@ const (
 	// FilesServiceListSavedFiltersProcedure is the fully-qualified name of the FilesService's
 	// ListSavedFilters RPC.
 	FilesServiceListSavedFiltersProcedure = "/files.v1.FilesService/ListSavedFilters"
+	// FilesServiceAttachFileProcedure is the fully-qualified name of the FilesService's AttachFile RPC.
+	FilesServiceAttachFileProcedure = "/files.v1.FilesService/AttachFile"
+	// FilesServiceDetachFileProcedure is the fully-qualified name of the FilesService's DetachFile RPC.
+	FilesServiceDetachFileProcedure = "/files.v1.FilesService/DetachFile"
+	// FilesServiceListAttachmentsProcedure is the fully-qualified name of the FilesService's
+	// ListAttachments RPC.
+	FilesServiceListAttachmentsProcedure = "/files.v1.FilesService/ListAttachments"
+	// FilesServiceBatchListAttachmentsProcedure is the fully-qualified name of the FilesService's
+	// BatchListAttachments RPC.
+	FilesServiceBatchListAttachmentsProcedure = "/files.v1.FilesService/BatchListAttachments"
+	// FilesServiceGetAttachmentsFolderProcedure is the fully-qualified name of the FilesService's
+	// GetAttachmentsFolder RPC.
+	FilesServiceGetAttachmentsFolderProcedure = "/files.v1.FilesService/GetAttachmentsFolder"
 )
 
 // FilesServiceClient is a client for the files.v1.FilesService service.
@@ -170,9 +180,6 @@ type FilesServiceClient interface {
 	AbortUpload(context.Context, *connect.Request[v1.AbortUploadRequest]) (*connect.Response[v1.AbortUploadResponse], error)
 	// Stream file content from backend to client (server streaming RPC).
 	DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest]) (*connect.ServerStreamForClient[v1.DownloadFileResponse], error)
-	// Stream file with byte range support for Service Worker media streaming.
-	// This RPC supports HTTP Range-like semantics for video/audio seeking.
-	StreamFileRange(context.Context, *connect.Request[v1.StreamFileRangeRequest]) (*connect.ServerStreamForClient[v1.StreamFileRangeResponse], error)
 	// Get a file by ID.
 	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
 	// Update file metadata (rename, tags, description).
@@ -243,6 +250,21 @@ type FilesServiceClient interface {
 	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error)
 	// List saved filters for the current user.
 	ListSavedFilters(context.Context, *connect.Request[v1.ListSavedFiltersRequest]) (*connect.Response[v1.ListSavedFiltersResponse], error)
+	// Attach a file to content. If the file is not already in the Attachments
+	// folder it is copied there. Upload new attachments via InitiateUpload with
+	// the folder id from GetAttachmentsFolder, then call AttachFile to link.
+	AttachFile(context.Context, *connect.Request[v1.AttachFileRequest]) (*connect.Response[v1.AttachFileResponse], error)
+	// Detach a file from content (deletes the attachment and the file copy).
+	DetachFile(context.Context, *connect.Request[v1.DetachFileRequest]) (*connect.Response[v1.DetachFileResponse], error)
+	// List all attachments for a piece of content.
+	ListAttachments(context.Context, *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error)
+	// Batch-list attachments for many content rows of the same type. Used by
+	// chat to hydrate attachments for a page of messages in one round-trip
+	// (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(context.Context, *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error)
+	// Get the user's Attachments folder id. Use it with InitiateUpload to
+	// upload new attachments.
+	GetAttachmentsFolder(context.Context, *connect.Request[v1.GetAttachmentsFolderRequest]) (*connect.Response[v1.GetAttachmentsFolderResponse], error)
 }
 
 // NewFilesServiceClient constructs a client for the files.v1.FilesService service. By default, it
@@ -296,12 +318,6 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+FilesServiceDownloadFileProcedure,
 			connect.WithSchema(filesServiceMethods.ByName("DownloadFile")),
-			connect.WithClientOptions(opts...),
-		),
-		streamFileRange: connect.NewClient[v1.StreamFileRangeRequest, v1.StreamFileRangeResponse](
-			httpClient,
-			baseURL+FilesServiceStreamFileRangeProcedure,
-			connect.WithSchema(filesServiceMethods.ByName("StreamFileRange")),
 			connect.WithClientOptions(opts...),
 		),
 		getFile: connect.NewClient[v1.GetFileRequest, v1.GetFileResponse](
@@ -508,6 +524,36 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("ListSavedFilters")),
 			connect.WithClientOptions(opts...),
 		),
+		attachFile: connect.NewClient[v1.AttachFileRequest, v1.AttachFileResponse](
+			httpClient,
+			baseURL+FilesServiceAttachFileProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("AttachFile")),
+			connect.WithClientOptions(opts...),
+		),
+		detachFile: connect.NewClient[v1.DetachFileRequest, v1.DetachFileResponse](
+			httpClient,
+			baseURL+FilesServiceDetachFileProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("DetachFile")),
+			connect.WithClientOptions(opts...),
+		),
+		listAttachments: connect.NewClient[v1.ListAttachmentsRequest, v1.ListAttachmentsResponse](
+			httpClient,
+			baseURL+FilesServiceListAttachmentsProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("ListAttachments")),
+			connect.WithClientOptions(opts...),
+		),
+		batchListAttachments: connect.NewClient[v1.BatchListAttachmentsRequest, v1.BatchListAttachmentsResponse](
+			httpClient,
+			baseURL+FilesServiceBatchListAttachmentsProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("BatchListAttachments")),
+			connect.WithClientOptions(opts...),
+		),
+		getAttachmentsFolder: connect.NewClient[v1.GetAttachmentsFolderRequest, v1.GetAttachmentsFolderResponse](
+			httpClient,
+			baseURL+FilesServiceGetAttachmentsFolderProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("GetAttachmentsFolder")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -520,7 +566,6 @@ type filesServiceClient struct {
 	getUploadStatus                *connect.Client[v1.GetUploadStatusRequest, v1.GetUploadStatusResponse]
 	abortUpload                    *connect.Client[v1.AbortUploadRequest, v1.AbortUploadResponse]
 	downloadFile                   *connect.Client[v1.DownloadFileRequest, v1.DownloadFileResponse]
-	streamFileRange                *connect.Client[v1.StreamFileRangeRequest, v1.StreamFileRangeResponse]
 	getFile                        *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
 	updateFile                     *connect.Client[v1.UpdateFileRequest, v1.UpdateFileResponse]
 	deleteFile                     *connect.Client[v1.DeleteFileRequest, v1.DeleteFileResponse]
@@ -555,6 +600,11 @@ type filesServiceClient struct {
 	updateSavedFilter              *connect.Client[v1.UpdateSavedFilterRequest, v1.UpdateSavedFilterResponse]
 	deleteSavedFilter              *connect.Client[v1.DeleteSavedFilterRequest, v1.DeleteSavedFilterResponse]
 	listSavedFilters               *connect.Client[v1.ListSavedFiltersRequest, v1.ListSavedFiltersResponse]
+	attachFile                     *connect.Client[v1.AttachFileRequest, v1.AttachFileResponse]
+	detachFile                     *connect.Client[v1.DetachFileRequest, v1.DetachFileResponse]
+	listAttachments                *connect.Client[v1.ListAttachmentsRequest, v1.ListAttachmentsResponse]
+	batchListAttachments           *connect.Client[v1.BatchListAttachmentsRequest, v1.BatchListAttachmentsResponse]
+	getAttachmentsFolder           *connect.Client[v1.GetAttachmentsFolderRequest, v1.GetAttachmentsFolderResponse]
 }
 
 // InitiateUpload calls files.v1.FilesService.InitiateUpload.
@@ -590,11 +640,6 @@ func (c *filesServiceClient) AbortUpload(ctx context.Context, req *connect.Reque
 // DownloadFile calls files.v1.FilesService.DownloadFile.
 func (c *filesServiceClient) DownloadFile(ctx context.Context, req *connect.Request[v1.DownloadFileRequest]) (*connect.ServerStreamForClient[v1.DownloadFileResponse], error) {
 	return c.downloadFile.CallServerStream(ctx, req)
-}
-
-// StreamFileRange calls files.v1.FilesService.StreamFileRange.
-func (c *filesServiceClient) StreamFileRange(ctx context.Context, req *connect.Request[v1.StreamFileRangeRequest]) (*connect.ServerStreamForClient[v1.StreamFileRangeResponse], error) {
-	return c.streamFileRange.CallServerStream(ctx, req)
 }
 
 // GetFile calls files.v1.FilesService.GetFile.
@@ -767,6 +812,31 @@ func (c *filesServiceClient) ListSavedFilters(ctx context.Context, req *connect.
 	return c.listSavedFilters.CallUnary(ctx, req)
 }
 
+// AttachFile calls files.v1.FilesService.AttachFile.
+func (c *filesServiceClient) AttachFile(ctx context.Context, req *connect.Request[v1.AttachFileRequest]) (*connect.Response[v1.AttachFileResponse], error) {
+	return c.attachFile.CallUnary(ctx, req)
+}
+
+// DetachFile calls files.v1.FilesService.DetachFile.
+func (c *filesServiceClient) DetachFile(ctx context.Context, req *connect.Request[v1.DetachFileRequest]) (*connect.Response[v1.DetachFileResponse], error) {
+	return c.detachFile.CallUnary(ctx, req)
+}
+
+// ListAttachments calls files.v1.FilesService.ListAttachments.
+func (c *filesServiceClient) ListAttachments(ctx context.Context, req *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error) {
+	return c.listAttachments.CallUnary(ctx, req)
+}
+
+// BatchListAttachments calls files.v1.FilesService.BatchListAttachments.
+func (c *filesServiceClient) BatchListAttachments(ctx context.Context, req *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error) {
+	return c.batchListAttachments.CallUnary(ctx, req)
+}
+
+// GetAttachmentsFolder calls files.v1.FilesService.GetAttachmentsFolder.
+func (c *filesServiceClient) GetAttachmentsFolder(ctx context.Context, req *connect.Request[v1.GetAttachmentsFolderRequest]) (*connect.Response[v1.GetAttachmentsFolderResponse], error) {
+	return c.getAttachmentsFolder.CallUnary(ctx, req)
+}
+
 // FilesServiceHandler is an implementation of the files.v1.FilesService service.
 type FilesServiceHandler interface {
 	// Initialize a new upload session, returns upload_id and chunk parameters.
@@ -785,9 +855,6 @@ type FilesServiceHandler interface {
 	AbortUpload(context.Context, *connect.Request[v1.AbortUploadRequest]) (*connect.Response[v1.AbortUploadResponse], error)
 	// Stream file content from backend to client (server streaming RPC).
 	DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest], *connect.ServerStream[v1.DownloadFileResponse]) error
-	// Stream file with byte range support for Service Worker media streaming.
-	// This RPC supports HTTP Range-like semantics for video/audio seeking.
-	StreamFileRange(context.Context, *connect.Request[v1.StreamFileRangeRequest], *connect.ServerStream[v1.StreamFileRangeResponse]) error
 	// Get a file by ID.
 	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
 	// Update file metadata (rename, tags, description).
@@ -858,6 +925,21 @@ type FilesServiceHandler interface {
 	DeleteSavedFilter(context.Context, *connect.Request[v1.DeleteSavedFilterRequest]) (*connect.Response[v1.DeleteSavedFilterResponse], error)
 	// List saved filters for the current user.
 	ListSavedFilters(context.Context, *connect.Request[v1.ListSavedFiltersRequest]) (*connect.Response[v1.ListSavedFiltersResponse], error)
+	// Attach a file to content. If the file is not already in the Attachments
+	// folder it is copied there. Upload new attachments via InitiateUpload with
+	// the folder id from GetAttachmentsFolder, then call AttachFile to link.
+	AttachFile(context.Context, *connect.Request[v1.AttachFileRequest]) (*connect.Response[v1.AttachFileResponse], error)
+	// Detach a file from content (deletes the attachment and the file copy).
+	DetachFile(context.Context, *connect.Request[v1.DetachFileRequest]) (*connect.Response[v1.DetachFileResponse], error)
+	// List all attachments for a piece of content.
+	ListAttachments(context.Context, *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error)
+	// Batch-list attachments for many content rows of the same type. Used by
+	// chat to hydrate attachments for a page of messages in one round-trip
+	// (replaces an N+1 ListAttachments fan-out).
+	BatchListAttachments(context.Context, *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error)
+	// Get the user's Attachments folder id. Use it with InitiateUpload to
+	// upload new attachments.
+	GetAttachmentsFolder(context.Context, *connect.Request[v1.GetAttachmentsFolderRequest]) (*connect.Response[v1.GetAttachmentsFolderResponse], error)
 }
 
 // NewFilesServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -907,12 +989,6 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 		FilesServiceDownloadFileProcedure,
 		svc.DownloadFile,
 		connect.WithSchema(filesServiceMethods.ByName("DownloadFile")),
-		connect.WithHandlerOptions(opts...),
-	)
-	filesServiceStreamFileRangeHandler := connect.NewServerStreamHandler(
-		FilesServiceStreamFileRangeProcedure,
-		svc.StreamFileRange,
-		connect.WithSchema(filesServiceMethods.ByName("StreamFileRange")),
 		connect.WithHandlerOptions(opts...),
 	)
 	filesServiceGetFileHandler := connect.NewUnaryHandler(
@@ -1119,6 +1195,36 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(filesServiceMethods.ByName("ListSavedFilters")),
 		connect.WithHandlerOptions(opts...),
 	)
+	filesServiceAttachFileHandler := connect.NewUnaryHandler(
+		FilesServiceAttachFileProcedure,
+		svc.AttachFile,
+		connect.WithSchema(filesServiceMethods.ByName("AttachFile")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceDetachFileHandler := connect.NewUnaryHandler(
+		FilesServiceDetachFileProcedure,
+		svc.DetachFile,
+		connect.WithSchema(filesServiceMethods.ByName("DetachFile")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceListAttachmentsHandler := connect.NewUnaryHandler(
+		FilesServiceListAttachmentsProcedure,
+		svc.ListAttachments,
+		connect.WithSchema(filesServiceMethods.ByName("ListAttachments")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceBatchListAttachmentsHandler := connect.NewUnaryHandler(
+		FilesServiceBatchListAttachmentsProcedure,
+		svc.BatchListAttachments,
+		connect.WithSchema(filesServiceMethods.ByName("BatchListAttachments")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceGetAttachmentsFolderHandler := connect.NewUnaryHandler(
+		FilesServiceGetAttachmentsFolderProcedure,
+		svc.GetAttachmentsFolder,
+		connect.WithSchema(filesServiceMethods.ByName("GetAttachmentsFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/files.v1.FilesService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case FilesServiceInitiateUploadProcedure:
@@ -1135,8 +1241,6 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 			filesServiceAbortUploadHandler.ServeHTTP(w, r)
 		case FilesServiceDownloadFileProcedure:
 			filesServiceDownloadFileHandler.ServeHTTP(w, r)
-		case FilesServiceStreamFileRangeProcedure:
-			filesServiceStreamFileRangeHandler.ServeHTTP(w, r)
 		case FilesServiceGetFileProcedure:
 			filesServiceGetFileHandler.ServeHTTP(w, r)
 		case FilesServiceUpdateFileProcedure:
@@ -1205,6 +1309,16 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 			filesServiceDeleteSavedFilterHandler.ServeHTTP(w, r)
 		case FilesServiceListSavedFiltersProcedure:
 			filesServiceListSavedFiltersHandler.ServeHTTP(w, r)
+		case FilesServiceAttachFileProcedure:
+			filesServiceAttachFileHandler.ServeHTTP(w, r)
+		case FilesServiceDetachFileProcedure:
+			filesServiceDetachFileHandler.ServeHTTP(w, r)
+		case FilesServiceListAttachmentsProcedure:
+			filesServiceListAttachmentsHandler.ServeHTTP(w, r)
+		case FilesServiceBatchListAttachmentsProcedure:
+			filesServiceBatchListAttachmentsHandler.ServeHTTP(w, r)
+		case FilesServiceGetAttachmentsFolderProcedure:
+			filesServiceGetAttachmentsFolderHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1240,10 +1354,6 @@ func (UnimplementedFilesServiceHandler) AbortUpload(context.Context, *connect.Re
 
 func (UnimplementedFilesServiceHandler) DownloadFile(context.Context, *connect.Request[v1.DownloadFileRequest], *connect.ServerStream[v1.DownloadFileResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.DownloadFile is not implemented"))
-}
-
-func (UnimplementedFilesServiceHandler) StreamFileRange(context.Context, *connect.Request[v1.StreamFileRangeRequest], *connect.ServerStream[v1.StreamFileRangeResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.StreamFileRange is not implemented"))
 }
 
 func (UnimplementedFilesServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
@@ -1380,4 +1490,24 @@ func (UnimplementedFilesServiceHandler) DeleteSavedFilter(context.Context, *conn
 
 func (UnimplementedFilesServiceHandler) ListSavedFilters(context.Context, *connect.Request[v1.ListSavedFiltersRequest]) (*connect.Response[v1.ListSavedFiltersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListSavedFilters is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) AttachFile(context.Context, *connect.Request[v1.AttachFileRequest]) (*connect.Response[v1.AttachFileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.AttachFile is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) DetachFile(context.Context, *connect.Request[v1.DetachFileRequest]) (*connect.Response[v1.DetachFileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.DetachFile is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) ListAttachments(context.Context, *connect.Request[v1.ListAttachmentsRequest]) (*connect.Response[v1.ListAttachmentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.ListAttachments is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) BatchListAttachments(context.Context, *connect.Request[v1.BatchListAttachmentsRequest]) (*connect.Response[v1.BatchListAttachmentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.BatchListAttachments is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) GetAttachmentsFolder(context.Context, *connect.Request[v1.GetAttachmentsFolderRequest]) (*connect.Response[v1.GetAttachmentsFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetAttachmentsFolder is not implemented"))
 }
