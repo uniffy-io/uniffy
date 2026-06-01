@@ -9,6 +9,10 @@ services:
   # Custom image (see .docker/dev/mcp-playwright.Dockerfile) bakes the MCP
   # server + chrome-for-testing browser so the first request after a fresh
   # ``docker compose up`` does not stall on a 100MB+ download.
+  #
+  # A persistent --user-data-dir on the pw-profile-a volume keeps the browser
+  # profile (cookies, localStorage) across restarts, so a one-time app login
+  # survives ``docker compose down``/``up`` instead of re-authenticating.
   mcp-playwright:
     build:
       context: ../..
@@ -17,17 +21,24 @@ services:
     container_name: uniffy-mcp-playwright
     profiles: ["dev"]
     restart: unless-stopped
+    command: ["--port", "8931", "--host", "0.0.0.0", "--browser", "chromium", "--headless", "--user-data-dir", "/profile"]
     ports:
       - "8931:8931"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks: [uniffy-network]
+    volumes:
+      - pw-profile-a:/profile
 
   # Second, fully separate browser for multi-user / cross-session tests.
   # A distinct container = a distinct Chromium with its own cookie jar +
-  # localStorage, so two users never clobber each other's auth state (which
-  # tabs in a single browser do - see the skill's two-user testing notes).
-  # Same baked image; host port 8932 maps to the in-container MCP port 8931.
+  # localStorage on its own pw-profile-b volume, so the two users' logins
+  # persist independently and never clobber each other (which tabs in a
+  # single browser do - see the skill's two-user testing notes).
+  # Runs the MCP server on 8932 (not the image-default 8931): the server's
+  # DNS-rebind guard derives its allowed host from the listen port, so the
+  # published port must match the in-container port or every request 403s
+  # with "Access is only allowed at localhost:8931".
   mcp-playwright-b:
     build:
       context: ../..
@@ -36,12 +47,19 @@ services:
     container_name: uniffy-mcp-playwright-b
     profiles: ["dev"]
     restart: unless-stopped
+    command: ["--port", "8932", "--host", "0.0.0.0", "--browser", "chromium", "--headless", "--user-data-dir", "/profile"]
     ports:
-      - "8932:8931"
+      - "8932:8932"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks: [uniffy-network]
+    volumes:
+      - pw-profile-b:/profile
 
 networks:
   uniffy-network:
     driver: bridge
+
+volumes:
+  pw-profile-a:
+  pw-profile-b:

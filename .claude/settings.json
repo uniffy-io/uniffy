@@ -31,7 +31,8 @@
             "Bash(gh pr:*)",
             "Read(.claude/plans/**)",
             "Edit(.claude/plans/**)",
-            "Write(.claude/plans/**)"
+            "Write(.claude/plans/**)",
+            "mcp__playwright__*"
         ]
     },
     "outputStyle": "default"
