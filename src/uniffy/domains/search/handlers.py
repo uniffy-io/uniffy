@@ -29,6 +29,8 @@ from uniffy.domains.search.converters import (
 from uniffy.domains.search.operations import SearchOperations
 from uniffy.domains.search.parser import parse_search_query
 
+logger = logger.bind(component="search.handlers")
+
 
 class SearchHandlers:
     async def search(

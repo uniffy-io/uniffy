@@ -22,6 +22,8 @@ from uniffy.domains.agents.pricing_service.converters import model_pricing_to_pr
 from uniffy.domains.agents.pricing_service.operations import PricingServiceOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="agents.pricing_service.handlers")
+
 
 def _ts_to_dt(ts) -> datetime | None:
     """Convert a proto Timestamp to a timezone-aware datetime, or None."""
@@ -62,7 +64,7 @@ class PricingHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing model pricing: {e}", exc_info=True)
+            logger.exception(f"Error listing model pricing: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def upsert_model_pricing(
@@ -125,7 +127,7 @@ class PricingHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error upserting model pricing: {e}", exc_info=True)
+            logger.exception(f"Error upserting model pricing: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_model_pricing(
@@ -157,5 +159,5 @@ class PricingHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting model pricing: {e}", exc_info=True)
+            logger.exception(f"Error deleting model pricing: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

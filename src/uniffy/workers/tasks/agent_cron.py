@@ -8,6 +8,8 @@ from loguru import logger
 
 from uniffy.db import open_session
 
+logger = logger.bind(component="tasks.agent_cron")
+
 
 async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
     """ARQ cron tick: execute every due agent task and update its run log."""
@@ -32,9 +34,8 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
                     await ops.mark_completed(task.id, status="success")
                     executed += 1
                 except Exception as exc:
-                    logger.error(
-                        f"Cron task {task.id} ({task.name!r}) failed: {exc}",
-                        exc_info=True,
+                    logger.exception(
+                        f"Cron task {task.id} ({task.name!r}) failed: {exc}"
                     )
                     await ops.mark_completed(
                         task.id,
@@ -44,7 +45,7 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
                     errors += 1
 
     except Exception:
-        logger.error("Error in cron task executor", exc_info=True)
+        logger.exception("Error in cron task executor")
 
     if executed or errors:
         logger.info(f"Cron executor: {executed} succeeded, {errors} failed")
@@ -109,9 +110,8 @@ async def execute_single_agent_cron_task(
                     run_log.completed_at = datetime.now(UTC)
                     await session.commit()
 
-                    logger.error(
-                        f"On-demand cron task {task_id}: session setup failed: {exc}",
-                        exc_info=True,
+                    logger.exception(
+                        f"On-demand cron task {task_id}: session setup failed: {exc}"
                     )
                     return {"status": "error", "task_id": task_id}
 
@@ -155,16 +155,14 @@ async def execute_single_agent_cron_task(
                     error=str(exc)[:500],
                 )
 
-                logger.error(
-                    f"On-demand cron task {task_id} ({task.name!r}) failed: {exc}",
-                    exc_info=True,
+                logger.exception(
+                    f"On-demand cron task {task_id} ({task.name!r}) failed: {exc}"
                 )
                 return {"status": "error", "task_id": task_id}
 
     except Exception:
-        logger.error(
-            f"Error in on-demand cron task executor for {task_id}",
-            exc_info=True,
+        logger.exception(
+            f"Error in on-demand cron task executor for {task_id}"
         )
         return {"status": "error", "task_id": task_id}
 
@@ -231,9 +229,8 @@ async def _execute_single_cron_task(session, task) -> None:
         session.add(run_log)
         await session.commit()
 
-        logger.error(
-            f"Cron task {task.id} ({task.name!r}) failed: {error_text}",
-            exc_info=True,
+        logger.exception(
+            f"Cron task {task.id} ({task.name!r}) failed: {error_text}"
         )
         raise
 

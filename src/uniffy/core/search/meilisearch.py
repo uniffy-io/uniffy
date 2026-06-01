@@ -24,6 +24,8 @@ from uniffy.observability.metrics import (
     SEARCH_OPERATIONS_TOTAL,
 )
 
+logger = logger.bind(component="search.meilisearch")
+
 UNIFFY_INDEX_NAME = "uniffy"
 
 
@@ -309,10 +311,9 @@ class MeilisearchClient:
             task = await index.delete_documents_by_filter(filter_expr)
             await self._await_task(task)
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "Meilisearch: delete_documents_by_filter_expr failed",
-                filter=filter_expr,
-                exc_info=True,
+                filter=filter_expr
             )
             return
         elapsed_ms = (time.perf_counter() - start) * 1000

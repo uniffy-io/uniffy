@@ -53,6 +53,8 @@ from uniffy.domains.notes.converters import (
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.tags import TagOperations
 
+logger = logger.bind(component="notes.handlers")
+
 
 async def _resolve_user_role(
     session: AsyncSession,
@@ -120,7 +122,7 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
     if isinstance(exc, ConflictError):
         return ConnectError(Code.ABORTED, str(exc))
-    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    logger.exception(f"Error in {operation}: {exc}")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

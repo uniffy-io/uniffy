@@ -18,6 +18,8 @@ from uniffy.observability.metrics import (
     S3_OPERATIONS_TOTAL,
 )
 
+logger = logger.bind(component="storage.s3_client")
+
 # S3 multipart minimum.
 DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024
 

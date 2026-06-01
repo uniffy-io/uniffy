@@ -16,6 +16,8 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
 
+logger = logger.bind(component="tasks.task_reminders")
+
 
 async def _already_notified_today(
     session: AsyncSession,
@@ -112,5 +114,5 @@ async def check_task_due_dates(ctx: dict[str, Any]) -> dict[str, Any]:
                 logger.info(f"Sent {count} task due date reminder(s)")
             return {"status": "success", "count": count}
     except Exception:
-        logger.error("Error checking task due dates", exc_info=True)
+        logger.exception("Error checking task due dates")
         return {"status": "error"}

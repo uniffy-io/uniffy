@@ -29,6 +29,8 @@ from uniffy.domains.chat.cache import (
     set_cached_pinned_message_ids,
 )
 
+logger = logger.bind(component="chat.messages.operations")
+
 MAX_MESSAGE_LENGTH = 30_000
 EDIT_WINDOW_MINUTES = 2
 
@@ -98,7 +100,7 @@ class ChatMessageOperations:
         await self.session.flush()
 
         if attachment_file_ids:
-            from uniffy.domains.attachments.operations import AttachmentOperations
+            from uniffy.domains.files.attachments.operations import AttachmentOperations
 
             att_ops = AttachmentOperations(self.session)
             for file_id in attachment_file_ids:
@@ -961,7 +963,7 @@ class ChatMessageOperations:
             logger.warning(f"Resource decrement failed for message {msg.id}")
 
         try:
-            from uniffy.domains.attachments.operations import AttachmentOperations
+            from uniffy.domains.files.attachments.operations import AttachmentOperations
 
             att_ops = AttachmentOperations(self.session)
             await att_ops.detach_all_for_content(

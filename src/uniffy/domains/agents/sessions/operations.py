@@ -16,6 +16,8 @@ from uniffy.core.valkey.streams import session_has_active_run
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
 from uniffy.domains.organizations.operations import OrganizationOperations
 
+logger = logger.bind(component="agents.sessions.operations")
+
 VALID_SESSION_KINDS = {"direct", "group", "global", "cron"}
 VALID_MESSAGE_ROLES = {"user", "assistant", "tool", "system", "summary"}
 
@@ -907,10 +909,9 @@ class SessionOperations:
         try:
             await queue.enqueue_job("compact_session", str(session_id))
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "compact_session enqueue failed",
-                session_id=str(session_id),
-                exc_info=True,
+                session_id=str(session_id)
             )
             return False
         return True

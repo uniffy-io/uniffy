@@ -31,6 +31,8 @@ from uniffy.observability.metrics import (
     CACHE_STAMPEDE_LOCK_WAIT_TOTAL,
 )
 
+logger = logger.bind(component="cache")
+
 _SENTINEL = "__none__"
 _DEFAULT_TTL_SECONDS = 900
 _LOCK_TTL_SECONDS = 5

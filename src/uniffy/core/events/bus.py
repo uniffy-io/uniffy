@@ -8,6 +8,8 @@ from loguru import logger
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.valkey import get_queue
 
+logger = logger.bind(component="events.bus")
+
 
 def _event_to_json(event: NotificationEvent) -> str:
     data: dict[str, Any] = {
@@ -74,4 +76,4 @@ async def emit_notification(event: NotificationEvent) -> None:
     except RuntimeError:
         logger.warning("Notification queue unavailable, skipping event")
     except Exception:
-        logger.warning("Failed to enqueue notification event", exc_info=True)
+        logger.opt(exception=True).warning("Failed to enqueue notification event")

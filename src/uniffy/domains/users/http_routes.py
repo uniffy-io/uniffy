@@ -18,6 +18,8 @@ from uniffy.db import open_session
 from uniffy.domains.auth.http_deps import get_current_user_id
 from uniffy.domains.users.avatars import AVATAR_SIZES
 
+logger = logger.bind(component="users.http_routes")
+
 avatars_router = APIRouter(prefix="/avatars", tags=["avatars"])
 
 
@@ -104,7 +106,7 @@ async def get_avatar(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting avatar: {e}", exc_info=True)
+        logger.exception(f"Error getting avatar: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

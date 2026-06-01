@@ -130,7 +130,7 @@ def test_add_member_emits_member_added() -> None:
     with patch.object(
         OrganizationOperations, "get_membership", AsyncMock(return_value=None)
     ), patch(
-        "uniffy.domains.attachments.operations.AttachmentOperations",
+        "uniffy.domains.files.attachments.operations.AttachmentOperations",
         attachment_factory,
     ), patch(
         "uniffy.domains.chat.channels.operations.ChatChannelOperations",

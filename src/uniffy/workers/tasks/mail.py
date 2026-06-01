@@ -21,6 +21,8 @@ from uniffy.core.mail import (
     MailSuppressedError,
 )
 
+logger = logger.bind(component="mail")
+
 _sender: MailSender | None = None
 
 

@@ -27,6 +27,8 @@ from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.core.valkey.queue import get_queue
 from uniffy.db.session import open_session
 
+logger = logger.bind(component="mail")
+
 PURGE_GRACE_DAYS = 30
 _LOCK_KEY = "platform_org_purge_warning:lock"
 _LOCK_TTL_SECONDS = 300

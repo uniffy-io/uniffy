@@ -588,6 +588,75 @@ class TestOutboundBackpressure:
         assert all(b"overflow" not in f for f in drained)
 
 
+class TestQueryAwarenessRelay:
+    """A query-awareness frame fans out to live peers so they re-announce, rather
+    than being dropped - that drop left a joiner blind to idle peers' cursors."""
+
+    def test_query_awareness_relayed_to_peers_not_source(self) -> None:
+        import pycrdt
+
+        from uniffy.core.realtime.multiplex import peek_var_string
+        from uniffy.core.realtime.session import MSG_QUERY_AWARENESS, _dispatch_doc_frame
+        from uniffy.core.realtime.state import (
+            ClientHandle,
+            WSSession,
+            YDocSession,
+            doc_name_for,
+        )
+        from uniffy.core.realtime.ydoc_manager import ydoc_manager
+        from uniffy.core.types import ContentType
+
+        org_id = uuid4()
+        doc_key = (ContentType.NOTE, uuid4())
+
+        def make_client() -> tuple[WSSession, ClientHandle]:
+            ws_session = WSSession(
+                user_id=uuid4(),
+                organization_id=org_id,
+                token_version=1,
+                conn_id=_next_conn_id(),
+                ws=AsyncMock(),
+            )
+            handle = ClientHandle(
+                conn_id=ws_session.conn_id,
+                user_id=ws_session.user_id,
+                can_edit=True,
+                token_version=1,
+                ws=ws_session.ws,
+                doc_key=doc_key,
+                ws_session=ws_session,
+            )
+            return ws_session, handle
+
+        asker_ws, asker = make_client()
+        peer_ws, peer = make_client()
+
+        session = YDocSession(key=doc_key, ydoc=pycrdt.Doc(), organization_id=org_id)
+        session.clients[asker.conn_id] = asker
+        session.clients[peer.conn_id] = peer
+
+        doc_name = doc_name_for(doc_key)
+        query_frame = bytes([MSG_QUERY_AWARENESS])
+
+        async def go() -> None:
+            ydoc_manager._sessions[doc_key] = session
+            try:
+                await _dispatch_doc_frame(
+                    AsyncMock(), asker_ws, asker, doc_name, query_frame
+                )
+            finally:
+                ydoc_manager._sessions.pop(doc_key, None)
+
+        _run(go())
+
+        assert asker_ws.outbound.qsize() == 0
+        assert peer_ws.outbound.qsize() == 1
+        framed = peer_ws.outbound.get_nowait()
+        relayed_name, offset = peek_var_string(framed)
+        assert relayed_name == doc_name
+        assert framed[offset:] == query_frame
+
+
 class TestRealtimeSaveCAS:
     """``realtime_save`` must skip downstream side effects when CAS loses."""
 

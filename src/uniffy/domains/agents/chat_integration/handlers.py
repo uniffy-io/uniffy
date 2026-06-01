@@ -27,6 +27,8 @@ from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.feature_flags import is_chat_agents_enabled
 
+logger = logger.bind(component="agents.chat_integration.handlers")
+
 _DECISION_TO_STRING = {
     AgentConfirmationDecision.AGENT_CONFIRMATION_DECISION_APPROVE: "approved",
     AgentConfirmationDecision.AGENT_CONFIRMATION_DECISION_DENY: "denied",

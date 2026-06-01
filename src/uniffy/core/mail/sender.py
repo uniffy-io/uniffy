@@ -33,6 +33,8 @@ from uniffy.core.mail.suppression import SuppressionRepository, _normalize
 from uniffy.core.mail.templates import get_template
 from uniffy.db.session import open_session
 
+logger = logger.bind(component="mail")
+
 SessionFactory = Callable[[], AbstractAsyncContextManager[Any]]
 
 

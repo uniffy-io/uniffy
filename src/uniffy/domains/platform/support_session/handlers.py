@@ -43,6 +43,8 @@ from uniffy.domains.platform.support_session.operations import (
     SupportSessionOperations,
 )
 
+logger = logger.bind(component="platform.support_session.handlers")
+
 
 def _parse_uuid(value: str, field: str) -> UUID:
     if not value:
@@ -62,7 +64,7 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, ValueError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.error("Unhandled error in SupportService handler", exc_info=True)
+    logger.exception("Unhandled error in SupportService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

@@ -11,6 +11,8 @@ from uniffy.core.valkey import publish_notification
 from uniffy.domains.notifications.converters import notification_type_to_proto
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter
 
+logger = logger.bind(component="notifications.delivery.in_app")
+
 
 class InAppAdapter(DeliveryAdapter):
     """In-app delivery: writes a DB row and publishes for real-time streaming."""

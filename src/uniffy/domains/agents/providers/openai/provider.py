@@ -31,6 +31,8 @@ from uniffy.domains.agents.providers.openai.converters import (
     convert_tools_to_openai,
 )
 
+logger = logger.bind(component="agents.providers.openai.provider")
+
 # Module-level cache for the model list fetched from the OpenAI API.
 _MODEL_CACHE_TTL_SECONDS = 3600  # 1 hour
 _cached_models: list[ModelInfo] | None = None

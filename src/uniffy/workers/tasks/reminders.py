@@ -16,6 +16,8 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
 
+logger = logger.bind(component="tasks.reminders")
+
 
 def _format_reminder_interval(minutes: int) -> str:
     if minutes < 60:
@@ -97,4 +99,4 @@ async def check_calendar_reminders(ctx: dict[str, Any]) -> dict[str, Any]:
             if count > 0:
                 logger.info(f"Processed {count} calendar reminder(s)")
     except Exception:
-        logger.error("Error checking calendar reminders", exc_info=True)
+        logger.exception("Error checking calendar reminders")

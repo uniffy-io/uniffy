@@ -25,6 +25,8 @@ from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 from uniffy.core.valkey.cache import cache_invalidate_by_tag
 from uniffy.domains.organizations.defaults import DEFAULT_ORG_SETTINGS
 
+logger = logger.bind(component="org-ops")
+
 
 async def _drop_user_perm_cache(user_id: UUID) -> None:
     """Drop every cached perm entry tied to ``user_id``; failures fall back to TTL expiry."""
@@ -94,7 +96,7 @@ class OrganizationOperations:
             await self._user_indexer.index_for_organization(owner, org.id)
             await self._session.commit()
 
-        from uniffy.domains.attachments.operations import AttachmentOperations
+        from uniffy.domains.files.attachments.operations import AttachmentOperations
 
         attachment_ops = AttachmentOperations(self._session)
         await attachment_ops.get_or_create_attachments_folder(owner_user_id, org.id)
@@ -438,7 +440,7 @@ class OrganizationOperations:
             await self._user_indexer.index_for_organization(user, org_id)
             await self._session.commit()
 
-        from uniffy.domains.attachments.operations import AttachmentOperations
+        from uniffy.domains.files.attachments.operations import AttachmentOperations
 
         attachment_ops = AttachmentOperations(self._session)
         await attachment_ops.get_or_create_attachments_folder(user_id, org_id)
@@ -673,9 +675,8 @@ class OrganizationOperations:
                 _job_id=f"reindex_defaults:{org_id}:{content_type.value}",
             )
         except Exception:
-            logger.warning(
-                "Failed to enqueue org-content reindex after defaults change",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to enqueue org-content reindex after defaults change"
             )
 
         try:
@@ -683,9 +684,8 @@ class OrganizationOperations:
 
             await publish_defaults_changed(org_id, content_type)
         except Exception:
-            logger.warning(
-                "Failed to publish realtime defaults_changed event",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to publish realtime defaults_changed event"
             )
 
         return defaults

@@ -26,6 +26,8 @@ from uniffy.domains.system_config.converters import config_to_proto
 from uniffy.domains.system_config.operations import SystemConfigOperations
 from uniffy.domains.users.operations import UserOperations
 
+logger = logger.bind(component="system_config.handlers")
+
 
 def _map_domain_error(exc: Exception) -> ConnectError:
     if isinstance(exc, PermissionDeniedError):
@@ -36,7 +38,7 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, ValueError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.error("Unhandled error in SystemConfigService handler", exc_info=True)
+    logger.exception("Unhandled error in SystemConfigService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

@@ -68,6 +68,11 @@ from uniffy.domains.auth.context import (
     get_user_id_from_context,
 )
 from uniffy.domains.auth.converters import session_to_proto, user_to_proto
+from uniffy.domains.auth.cookies import (
+    build_clear_cookie,
+    build_set_cookie,
+    resolve_asset_cookie_config,
+)
 from uniffy.domains.auth.errors import (
     AuthenticationError,
     RegistrationError,
@@ -84,7 +89,11 @@ from uniffy.domains.auth.password_reset import (
     PasswordResetTokenNotFoundError,
     PasswordResetTokenUsedError,
 )
-from uniffy.domains.auth.tokens import decode_refresh_token
+from uniffy.domains.auth.tokens import (
+    create_asset_read_token,
+    decode_refresh_token,
+    decode_token_unsafe,
+)
 from uniffy.domains.auth.types import (
     AuthResult,
     MfaChallengeRequired,
@@ -98,6 +107,8 @@ from uniffy.domains.invitations.errors import (
     InvitationRevokedError,
 )
 from uniffy.domains.invitations.operations import InvitationOperations
+
+logger = logger.bind(component="auth.handlers")
 
 
 def _domain_admins_to_proto(result: AuthResult) -> list[int]:
@@ -139,6 +150,29 @@ def _auth_result_to_proto(result: AuthResult) -> AuthResultProto:
     if result.session_id is not None:
         proto.session_id = str(result.session_id)
     return proto
+
+
+def _set_asset_cookie(ctx: RequestContext, result: AuthResult) -> None:
+    """Attach the read-only asset cookie to an auth response.
+
+    ``tkv`` is lifted from the freshly-minted access token so the cookie rides the same revocation
+    watermark as Bearer. The cookie is honoured only by GET asset routes, never for mutations.
+    """
+    tkv = decode_token_unsafe(result.access_token).get("tkv")
+    token = create_asset_read_token(
+        user_id=result.user_id,
+        organization_id=result.organization_id,
+        token_version=tkv,
+        session_id=result.session_id,
+    )
+    config = resolve_asset_cookie_config()
+    ctx.response_headers().add("set-cookie", build_set_cookie(config, token))
+
+
+def _clear_asset_cookie(ctx: RequestContext) -> None:
+    ctx.response_headers().add(
+        "set-cookie", build_clear_cookie(resolve_asset_cookie_config())
+    )
 
 
 def _login_outcome_to_proto(
@@ -186,6 +220,7 @@ class AuthHandlers:
                     user_agent=user_agent,
                 )
 
+                _set_asset_cookie(ctx, result)
                 return RegisterResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
@@ -201,7 +236,7 @@ class AuthHandlers:
             logger.warning(f"Registration failed: {e}")
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
-            logger.error(f"Registration error: {e}", exc_info=True)
+            logger.exception(f"Registration error: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def login(
@@ -224,6 +259,8 @@ class AuthHandlers:
                     user_agent=user_agent,
                 )
 
+                if isinstance(result, AuthResult):
+                    _set_asset_cookie(ctx, result)
                 return _login_outcome_to_proto(result)
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
@@ -250,6 +287,7 @@ class AuthHandlers:
                     ),
                 )
 
+                _set_asset_cookie(ctx, result)
                 return RefreshTokenResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
@@ -265,7 +303,7 @@ class AuthHandlers:
             logger.warning(f"Token refresh failed: {e}")
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
         except Exception as e:
-            logger.error(f"Token refresh error: {e}", exc_info=True)
+            logger.exception(f"Token refresh error: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def switch_organization(
@@ -287,6 +325,7 @@ class AuthHandlers:
                     organization_slug=request.organization_slug,
                     user_agent=user_agent,
                 )
+                _set_asset_cookie(ctx, result)
                 return SwitchOrganizationResponse(
                     auth_result=_auth_result_to_proto(result),
                 )
@@ -295,7 +334,7 @@ class AuthHandlers:
         except TokenError as e:
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
         except Exception as e:
-            logger.error(f"Switch organization error: {e}", exc_info=True)
+            logger.exception(f"Switch organization error: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_current_user(
@@ -314,7 +353,7 @@ class AuthHandlers:
                 user = await user_ops.get_by_id(user_id)
                 return user_to_proto(user)
         except Exception as e:
-            logger.error(f"Error fetching user: {e}", exc_info=True)
+            logger.exception(f"Error fetching user: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def logout(
@@ -348,6 +387,7 @@ class AuthHandlers:
                     auth_ops = AuthOperations(session)
                     await auth_ops.logout_session(user_id, session_id)
 
+            _clear_asset_cookie(ctx)
             return LogoutResponse(success=True)
         except Exception as e:
             # Logout never surfaces failure to the user; log a single line
@@ -374,7 +414,7 @@ class AuthHandlers:
                     sessions=[session_to_proto(s, current_session_id) for s in sessions]
                 )
         except Exception as e:
-            logger.error(f"Error listing sessions: {e}", exc_info=True)
+            logger.exception(f"Error listing sessions: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def revoke_session(
@@ -398,7 +438,7 @@ class AuthHandlers:
         except TokenError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error revoking session: {e}", exc_info=True)
+            logger.exception(f"Error revoking session: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def revoke_other_sessions(
@@ -422,7 +462,7 @@ class AuthHandlers:
                 revoked_count = await auth_ops.revoke_other_sessions(user_id, current_session_id)
                 return RevokeOtherSessionsResponse(revoked_count=revoked_count)
         except Exception as e:
-            logger.error(f"Error revoking other sessions: {e}", exc_info=True)
+            logger.exception(f"Error revoking other sessions: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_cache_key_seed(
@@ -441,7 +481,7 @@ class AuthHandlers:
         except AuthenticationError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error fetching cache key seed: {e}", exc_info=True)
+            logger.exception(f"Error fetching cache key seed: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def rotate_cache_key_seed(
@@ -479,7 +519,7 @@ class AuthHandlers:
                 new_seed = await auth_ops.rotate_cache_key_seed(user_id, target_user_id)
                 return RotateCacheKeySeedResponse(new_cache_key_seed=new_seed)
         except Exception as e:
-            logger.error(f"Error rotating cache key seed: {e}", exc_info=True)
+            logger.exception(f"Error rotating cache key seed: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_auth_config(
@@ -527,7 +567,7 @@ class AuthHandlers:
         ) as e:
             raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except Exception as e:
-            logger.error(f"Error fetching invitation: {e}", exc_info=True)
+            logger.exception(f"Error fetching invitation: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def accept_invitation(
@@ -565,6 +605,7 @@ class AuthHandlers:
                             datetime_to_timestamp(outcome.grace_expires_at)
                         )
                     return AcceptInvitationResponse(enrollment_required=enrollment)
+                _set_asset_cookie(ctx, outcome)
                 return AcceptInvitationResponse(
                     auth_result=_auth_result_to_proto(outcome),
                 )
@@ -584,7 +625,7 @@ class AuthHandlers:
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
-            logger.error(f"Error accepting invitation: {e}", exc_info=True)
+            logger.exception(f"Error accepting invitation: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def send_password_reset(
@@ -662,5 +703,5 @@ class AuthHandlers:
         except PasswordResetError as e:
             raise ConnectError(Code.FAILED_PRECONDITION, str(e))
         except Exception as e:
-            logger.error(f"Error resetting password: {e}", exc_info=True)
+            logger.exception(f"Error resetting password: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

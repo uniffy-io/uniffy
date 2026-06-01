@@ -25,6 +25,8 @@ from uniffy.domains.platform.audit.converters import (
 )
 from uniffy.domains.platform.audit.operations import PlatformAuditOperations
 
+logger = logger.bind(component="platform.audit.handlers")
+
 
 def _parse_optional_uuid(value: str, field: str) -> UUID | None:
     if not value:
@@ -50,7 +52,7 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, ValueError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.error("Unhandled error in PlatformAuditService handler", exc_info=True)
+    logger.exception("Unhandled error in PlatformAuditService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

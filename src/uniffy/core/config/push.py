@@ -8,6 +8,8 @@ from dataclasses import dataclass
 
 from loguru import logger
 
+logger = logger.bind(component="config.push")
+
 
 @dataclass(frozen=True)
 class VapidConfig:

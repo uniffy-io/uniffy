@@ -16,6 +16,8 @@ from sqlalchemy.sql import text
 
 from uniffy.observability.metrics import DB_POOL_TIMEOUT_TOTAL
 
+logger = logger.bind(component="db.session")
+
 # Stable 64-bit advisory-lock ids serialise idempotent startup steps across
 # Granian workers. Add new ids here, never reuse.
 MIGRATION_LOCK_ID = 0x756E_6966_6679_4D31  # "unifyM1"

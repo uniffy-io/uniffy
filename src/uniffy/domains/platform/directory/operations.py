@@ -34,6 +34,8 @@ from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.revocation import mark_token_version_revoked
 from uniffy.domains.users.operations import UserOperations
 
+logger = logger.bind(component="platform.directory.operations")
+
 
 async def _safe_publish_token_revoke(user_id: UUID, version: int) -> None:
     """The Valkey ``min_tkv`` watermark is authoritative; the realtime

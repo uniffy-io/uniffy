@@ -41,6 +41,8 @@ from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.converters import membership_to_proto, user_to_profile
 from uniffy.domains.users.operations import UserOperations
 
+logger = logger.bind(component="users.handlers")
+
 
 class UsersHandlers:
     async def get_my_profile(
@@ -58,7 +60,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error fetching user profile: {e}", exc_info=True)
+            logger.exception(f"Error fetching user profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_my_profile(
@@ -82,7 +84,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error updating profile: {e}", exc_info=True)
+            logger.exception(f"Error updating profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def upload_avatar(
@@ -111,7 +113,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error uploading avatar: {e}", exc_info=True)
+            logger.exception(f"Error uploading avatar: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_avatar(
@@ -129,7 +131,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error deleting avatar: {e}", exc_info=True)
+            logger.exception(f"Error deleting avatar: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_users(
@@ -175,7 +177,7 @@ class UsersHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error listing users: {e}", exc_info=True)
+            logger.exception(f"Error listing users: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_user(
@@ -202,7 +204,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error fetching user: {e}", exc_info=True)
+            logger.exception(f"Error fetching user: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def create_user(
@@ -251,7 +253,7 @@ class UsersHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error creating user: {e}", exc_info=True)
+            logger.exception(f"Error creating user: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_user(
@@ -299,7 +301,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error updating user: {e}", exc_info=True)
+            logger.exception(f"Error updating user: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_user(
@@ -329,7 +331,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error deleting user: {e}", exc_info=True)
+            logger.exception(f"Error deleting user: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_user_organizations(
@@ -361,7 +363,7 @@ class UsersHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error listing user organizations: {e}", exc_info=True)
+            logger.exception(f"Error listing user organizations: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def add_user_to_organization(
@@ -401,7 +403,7 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error adding user to organization: {e}", exc_info=True)
+            logger.exception(f"Error adding user to organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def remove_user_from_organization(
@@ -431,5 +433,5 @@ class UsersHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error removing user from organization: {e}", exc_info=True)
+            logger.exception(f"Error removing user from organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

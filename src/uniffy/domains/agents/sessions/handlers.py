@@ -52,6 +52,8 @@ from uniffy.domains.agents.sessions.converters import (
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="agents.sessions.handlers")
+
 
 class SessionsHandlers:
     """RPC handlers for sessions service."""
@@ -109,7 +111,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating session: {e}", exc_info=True)
+            logger.exception(f"Error creating session: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_session(
@@ -157,7 +159,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting session: {e}", exc_info=True)
+            logger.exception(f"Error getting session: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_sessions(
@@ -240,7 +242,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing sessions: {e}", exc_info=True)
+            logger.exception(f"Error listing sessions: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_session(
@@ -295,7 +297,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating session: {e}", exc_info=True)
+            logger.exception(f"Error updating session: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def archive_session(
@@ -343,7 +345,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error archiving session: {e}", exc_info=True)
+            logger.exception(f"Error archiving session: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def add_message(
@@ -417,7 +419,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error adding message: {e}", exc_info=True)
+            logger.exception(f"Error adding message: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_messages(
@@ -491,7 +493,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing messages: {e}", exc_info=True)
+            logger.exception(f"Error listing messages: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_session_context(
@@ -542,7 +544,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting session context: {e}", exc_info=True)
+            logger.exception(f"Error getting session context: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_session_context_stats(
@@ -634,7 +636,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting session context stats: {e}", exc_info=True)
+            logger.exception(f"Error getting session context stats: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def compact_session(
@@ -798,7 +800,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error editing message: {e}", exc_info=True)
+            logger.exception(f"Error editing message: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_message(
@@ -833,7 +835,7 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting message: {e}", exc_info=True)
+            logger.exception(f"Error deleting message: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def retry_message(
@@ -868,5 +870,5 @@ class SessionsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error retrying message: {e}", exc_info=True)
+            logger.exception(f"Error retrying message: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

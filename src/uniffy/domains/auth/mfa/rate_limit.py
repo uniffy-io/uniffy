@@ -29,6 +29,8 @@ from loguru import logger
 
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
+logger = logger.bind(component="mfa")
+
 _NAMESPACE = "mfa"
 
 _USER_KEY = "mfa:verify:user:{user_id}"

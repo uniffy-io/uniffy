@@ -46,6 +46,8 @@ from uniffy.core.valkey.rate_limit import check_rate_limit
 from uniffy.domains.auth.passwords import hash_password
 from uniffy.domains.security.operations import SecurityOperations
 
+logger = logger.bind(component="auth")
+
 _TOKEN_TTL = timedelta(minutes=30)
 _TEMPLATE = "auth/password_reset"
 

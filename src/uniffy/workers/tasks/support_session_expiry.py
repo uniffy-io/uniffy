@@ -16,6 +16,8 @@ from uniffy.domains.platform.support_session.operations import (
     SupportSessionOperations,
 )
 
+logger = logger.bind(component="tasks.support_session_expiry")
+
 _LOCK_KEY = "support_session_expiry:lock"
 _LOCK_TTL_SECONDS = 120
 

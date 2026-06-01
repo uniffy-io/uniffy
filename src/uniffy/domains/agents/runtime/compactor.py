@@ -8,6 +8,8 @@ from loguru import logger
 
 from uniffy.domains.agents.providers.base import LLMProvider
 
+logger = logger.bind(component="agents.runtime.compactor")
+
 _SUMMARY_SYSTEM_PROMPT = "You are a conversation summarizer. Produce a concise summary."
 
 _SUMMARY_USER_PROMPT_TEMPLATE = (

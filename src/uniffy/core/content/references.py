@@ -8,10 +8,10 @@ from uniffy.core.types import ContentType
 # ``[[[label|urn]]]`` mentions, with backslash escapes some editors emit.
 MENTION_PATTERN = re.compile(r"\\?\[\\?\[\\?\[(.+?)\\?\|(.+?)\\?\]\\?\]\\?\]")
 
-# Inline file URLs: /api/files, /media-stream, /api/thumbnails over (org_uuid, file_uuid).
+# Inline file URLs: /api/files, /api/media, /media-stream, /api/thumbnails over (org, file) uuids.
 _UUID_RE = r"[0-9a-fA-F-]{36}"
 INLINE_FILE_URL_PATTERN = re.compile(
-    rf"(?:/api/files|/media-stream|/api/thumbnails)/({_UUID_RE})/({_UUID_RE})"
+    rf"(?:/api/files|/api/media|/media-stream|/api/thumbnails)/({_UUID_RE})/({_UUID_RE})"
 )
 
 _URN_PREFIX = "urn:uniffy:content:"

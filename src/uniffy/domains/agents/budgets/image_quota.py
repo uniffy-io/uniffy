@@ -36,6 +36,8 @@ from uniffy.domains.agents.budgets.defaults import (
 )
 from uniffy.domains.agents.budgets.period import month_window
 
+logger = logger.bind(component="agents.budgets.image_quota")
+
 
 async def _count_images_today_for_user(
     session: AsyncSession,

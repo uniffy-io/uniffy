@@ -12,6 +12,8 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
+logger = logger.bind(component="agents.tools.builtin.images")
+
 
 async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     """Generate an image from a text prompt and store it as a file.
@@ -44,7 +46,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.core.storage import get_s3_client
     from uniffy.core.types import ContentType, generate_id
     from uniffy.domains.agents.providers.operations import ProviderOperations
-    from uniffy.domains.attachments.operations import AttachmentOperations
+    from uniffy.domains.files.attachments.operations import AttachmentOperations
 
     prompt = args.get("prompt", "").strip()
     if not prompt:
@@ -241,7 +243,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 )
                 image_cost_currency = display_currency
     except Exception:
-        logger.warning("Image cost calculation failed", exc_info=True)
+        logger.opt(exception=True).warning("Image cost calculation failed")
 
     # Log image model usage so it appears in usage analytics
     if ctx.session_id and ctx.agent_id:
@@ -267,9 +269,8 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             )
             ctx.session.add(run_log)
         except Exception:
-            logger.warning(
-                "Failed to create image generation run log",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to create image generation run log"
             )
 
     try:
@@ -295,7 +296,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             },
         )
     except Exception:
-        logger.warning("Image generation audit emission failed", exc_info=True)
+        logger.opt(exception=True).warning("Image generation audit emission failed")
 
     await ctx.session.commit()
 
@@ -307,7 +308,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             run_image_count=1,
         )
     except Exception:
-        logger.warning("Image alert fan-out failed", exc_info=True)
+        logger.opt(exception=True).warning("Image alert fan-out failed")
 
     mention = f"[[[{filename}|{file_urn}]]]"
 

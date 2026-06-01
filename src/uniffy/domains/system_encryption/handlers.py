@@ -19,6 +19,8 @@ from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.system_encryption.converters import status_to_proto
 from uniffy.domains.system_encryption.operations import SystemEncryptionOperations
 
+logger = logger.bind(component="system_encryption.handlers")
+
 
 def _map_domain_error(exc: Exception) -> ConnectError:
     if isinstance(exc, PermissionDeniedError):
@@ -29,7 +31,7 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, ValueError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.error("Unhandled error in SystemEncryptionService handler", exc_info=True)
+    logger.exception("Unhandled error in SystemEncryptionService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

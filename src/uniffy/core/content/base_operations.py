@@ -26,9 +26,11 @@ from uniffy.core.auth.permissions import (
     role_can_transfer,
     role_can_view,
 )
+from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
+from uniffy.core.valkey import publish_content_access_changed
 
 
 class BaseContentOperations[TModel](ABC):
@@ -153,6 +155,27 @@ class BaseContentOperations[TModel](ABC):
             self.content_type,
             access_mode,
             baseline_role,
+        )
+
+    async def _broadcast_open_to_org_create(
+        self,
+        organization_id: UUID,
+        content_id: UUID,
+        effective_mode: AccessMode,
+    ) -> None:
+        """Signal an org-wide sidebar/page refresh when content is born OPEN_TO_ORG.
+
+        Direct creation never routes through a member mutation, so nothing else
+        tells org members the visible set grew - ``ContentMembersOperations``
+        owns the explicit-share and access-mode-flip fanouts.
+        """
+        if effective_mode != AccessMode.OPEN_TO_ORG:
+            return
+        await publish_content_access_changed(
+            content_type=content_type_to_proto(self.content_type),
+            content_id=content_id,
+            action="granted",
+            organization_id=organization_id,
         )
 
     async def _resolve_role(

@@ -26,6 +26,8 @@ from uniffy.domains.agents.skills.converters import skill_to_proto
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="agents.skills.handlers")
+
 
 class SkillsHandlers:
     """RPC handlers for skills service."""
@@ -87,7 +89,7 @@ class SkillsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating skill: {e}", exc_info=True)
+            logger.exception(f"Error creating skill: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_skill(
@@ -135,7 +137,7 @@ class SkillsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting skill: {e}", exc_info=True)
+            logger.exception(f"Error getting skill: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_skills(
@@ -199,7 +201,7 @@ class SkillsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing skills: {e}", exc_info=True)
+            logger.exception(f"Error listing skills: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_skill(
@@ -260,7 +262,7 @@ class SkillsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating skill: {e}", exc_info=True)
+            logger.exception(f"Error updating skill: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_skill(
@@ -308,5 +310,5 @@ class SkillsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting skill: {e}", exc_info=True)
+            logger.exception(f"Error deleting skill: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

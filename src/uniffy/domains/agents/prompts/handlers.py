@@ -35,6 +35,8 @@ from uniffy.domains.agents.prompts.converters import prompt_to_proto
 from uniffy.domains.agents.prompts.operations import PromptOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="agents.prompts.handlers")
+
 
 async def _resolve_effective_policy(
     session: AsyncSession,
@@ -68,7 +70,7 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
-    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    logger.exception(f"Error in {operation}: {exc}")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

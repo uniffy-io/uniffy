@@ -48,6 +48,8 @@ from uniffy.domains.auth.mfa.rate_limit import (
 from uniffy.domains.auth.revocation import mark_token_version_revoked
 from uniffy.domains.auth.tokens import create_access_token, create_refresh_token
 
+logger = logger.bind(component="auth.mfa.operations")
+
 TOTP_VALID_WINDOW = 1
 TOTP_ISSUER = "Uniffy"
 

@@ -36,6 +36,7 @@ from uniffy.core.valkey.presence import (
 from uniffy.core.valkey.pubsub import (
     close_pubsub,
     init_pubsub,
+    publish_content_access_changed,
     publish_notification,
     signal_pubsub_shutdown,
     subscribe_channels,
@@ -95,6 +96,7 @@ __all__ = [
     "presence_get_bulk",
     "presence_publish_change",
     "presence_set",
+    "publish_content_access_changed",
     "publish_mention_state",
     "publish_notification",
     "run_state_key",

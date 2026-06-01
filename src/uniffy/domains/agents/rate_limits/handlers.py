@@ -24,6 +24,8 @@ from uniffy.domains.agents.rate_limits.converters import (
 from uniffy.domains.agents.rate_limits.operations import RateLimitsOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="agents.rate_limits.handlers")
+
 
 class RateLimitsHandlers:
     """RPC handlers for the agents RateLimitsService."""
@@ -57,7 +59,7 @@ class RateLimitsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing rate limits: {e}", exc_info=True)
+            logger.exception(f"Error listing rate limits: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def upsert_rate_limit(
@@ -96,7 +98,7 @@ class RateLimitsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error upserting rate limit: {e}", exc_info=True)
+            logger.exception(f"Error upserting rate limit: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_rate_limit(
@@ -135,5 +137,5 @@ class RateLimitsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting rate limit: {e}", exc_info=True)
+            logger.exception(f"Error deleting rate limit: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

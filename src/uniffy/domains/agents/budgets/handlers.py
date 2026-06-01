@@ -47,6 +47,8 @@ from uniffy.domains.agents.budgets.converters import (
 from uniffy.domains.agents.budgets.operations import BudgetsOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="agents.budgets.handlers")
+
 
 class BudgetsHandlers:
     """Handlers for ``agents.v1.BudgetsService``."""
@@ -80,7 +82,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting org budget: {e}", exc_info=True)
+            logger.exception(f"Error getting org budget: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_org_budget(
@@ -129,7 +131,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating org budget: {e}", exc_info=True)
+            logger.exception(f"Error updating org budget: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_org_budget(
@@ -160,7 +162,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting org budget: {e}", exc_info=True)
+            logger.exception(f"Error deleting org budget: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_user_quota(
@@ -195,7 +197,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting user quota: {e}", exc_info=True)
+            logger.exception(f"Error getting user quota: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_user_quota(
@@ -254,7 +256,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating user quota: {e}", exc_info=True)
+            logger.exception(f"Error updating user quota: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_user_quota(
@@ -288,7 +290,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting user quota: {e}", exc_info=True)
+            logger.exception(f"Error deleting user quota: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_user_quotas(
@@ -342,7 +344,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing user quotas: {e}", exc_info=True)
+            logger.exception(f"Error listing user quotas: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_current_spend(
@@ -382,7 +384,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting current spend: {e}", exc_info=True)
+            logger.exception(f"Error getting current spend: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_currency_rates(
@@ -411,7 +413,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing currency rates: {e}", exc_info=True)
+            logger.exception(f"Error listing currency rates: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def upsert_currency_rate(
@@ -444,7 +446,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error upserting currency rate: {e}", exc_info=True)
+            logger.exception(f"Error upserting currency rate: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_currency_rate(
@@ -476,7 +478,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting currency rate: {e}", exc_info=True)
+            logger.exception(f"Error deleting currency rate: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_display_currency(
@@ -499,7 +501,7 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting display currency: {e}", exc_info=True)
+            logger.exception(f"Error getting display currency: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def set_display_currency(
@@ -530,5 +532,5 @@ class BudgetsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error setting display currency: {e}", exc_info=True)
+            logger.exception(f"Error setting display currency: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

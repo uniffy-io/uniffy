@@ -9,6 +9,8 @@ from sqlalchemy import update
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.db import open_session
 
+logger = logger.bind(component="tasks.chat_mute")
+
 
 async def auto_unmute_channels(ctx: dict[str, Any]) -> dict[str, Any]:
     """Cron tick: clear `is_muted` where `muted_until` has expired."""

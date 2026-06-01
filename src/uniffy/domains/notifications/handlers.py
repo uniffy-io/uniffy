@@ -18,6 +18,7 @@ from uniffy_proto.notifications.v1.notifications_pb2 import (
     BulkDeleteNotificationsResponse,
     BulkMarkAsReadRequest,
     BulkMarkAsReadResponse,
+    ContentAccessChangedPayload,
     DailyNotificationStat,
     DeleteNotificationRequest,
     DeleteNotificationResponse,
@@ -66,6 +67,8 @@ from uniffy.domains.notifications.operations import (
     PushSubscriptionOperations,
 )
 from uniffy.domains.notifications.tag_relay import TagEventRelay
+
+logger = logger.bind(component="notifications handler")
 
 
 class NotificationsHandlers:
@@ -135,7 +138,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing notifications: {e}", exc_info=True)
+            logger.exception(f"Error listing notifications: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_unread_count(
@@ -159,7 +162,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting unread count: {e}", exc_info=True)
+            logger.exception(f"Error getting unread count: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def mark_as_read(
@@ -189,7 +192,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error marking notification as read: {e}", exc_info=True)
+            logger.exception(f"Error marking notification as read: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def mark_all_as_read(
@@ -213,7 +216,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error marking all as read: {e}", exc_info=True)
+            logger.exception(f"Error marking all as read: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_notification(
@@ -241,7 +244,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting notification: {e}", exc_info=True)
+            logger.exception(f"Error deleting notification: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def register_push_subscription(
@@ -273,7 +276,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error registering push subscription: {e}", exc_info=True)
+            logger.exception(f"Error registering push subscription: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def unregister_push_subscription(
@@ -295,7 +298,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error unregistering push subscription: {e}", exc_info=True)
+            logger.exception(f"Error unregistering push subscription: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_vapid_public_key(
@@ -395,7 +398,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error searching notifications: {e}", exc_info=True)
+            logger.exception(f"Error searching notifications: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_notification_stats(
@@ -453,7 +456,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting notification stats: {e}", exc_info=True)
+            logger.exception(f"Error getting notification stats: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def bulk_mark_as_read(
@@ -482,7 +485,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error bulk marking as read: {e}", exc_info=True)
+            logger.exception(f"Error bulk marking as read: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def bulk_delete_notifications(
@@ -511,7 +514,7 @@ class NotificationsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error bulk deleting notifications: {e}", exc_info=True)
+            logger.exception(f"Error bulk deleting notifications: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def stream_notifications(
@@ -544,6 +547,7 @@ class NotificationsHandlers:
                     f"presence:{request.organization_id}",
                     f"mentions:{request.organization_id}",
                     f"tags:{request.organization_id}",
+                    f"content:{request.organization_id}",
                 )
             ) as subscriber:
                 last_send = time.monotonic()
@@ -607,6 +611,18 @@ class NotificationsHandlers:
                     if payload.get("_type") == "permissions_changed":
                         yield StreamNotificationsResponse(
                             event_type=StreamNotificationsResponse.EVENT_TYPE_PERMISSIONS_CHANGED,
+                        )
+                        last_send = now
+                        continue
+
+                    if payload.get("_type") == "content_access_changed":
+                        yield StreamNotificationsResponse(
+                            event_type=StreamNotificationsResponse.EVENT_TYPE_CONTENT_ACCESS_CHANGED,
+                            content_access_changed=ContentAccessChangedPayload(
+                                content_type=payload.get("content_type", 0),
+                                content_id=payload.get("content_id", ""),
+                                action=payload.get("action", ""),
+                            ),
                         )
                         last_send = now
                         continue

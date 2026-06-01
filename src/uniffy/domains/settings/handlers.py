@@ -38,6 +38,8 @@ from uniffy.domains.settings.converters import (
 )
 from uniffy.domains.settings.operations import SettingsOperations
 
+logger = logger.bind(component="settings.handlers")
+
 
 class SettingsHandlers:
     async def create_profile(
@@ -67,7 +69,7 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating profile: {e}", exc_info=True)
+            logger.exception(f"Error creating profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_profile(
@@ -93,7 +95,7 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting profile: {e}", exc_info=True)
+            logger.exception(f"Error getting profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_profile(
@@ -134,7 +136,7 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating profile: {e}", exc_info=True)
+            logger.exception(f"Error updating profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_profile(
@@ -162,7 +164,7 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting profile: {e}", exc_info=True)
+            logger.exception(f"Error deleting profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_profiles(
@@ -185,7 +187,7 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing profiles: {e}", exc_info=True)
+            logger.exception(f"Error listing profiles: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_effective_settings(
@@ -225,7 +227,7 @@ class SettingsHandlers:
             is_fk_error = "ForeignKeyViolationError" in str(type(e).__name__)
             if is_fk_error or "foreign key" in str(e).lower():
                 raise ConnectError(Code.UNAUTHENTICATED, "User not found. Please log in again.")
-            logger.error(f"Error getting effective settings: {e}", exc_info=True)
+            logger.exception(f"Error getting effective settings: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_settings_schema(
@@ -253,7 +255,7 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting settings schema: {e}", exc_info=True)
+            logger.exception(f"Error getting settings schema: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def set_default_profile(
@@ -279,5 +281,5 @@ class SettingsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error setting default profile: {e}", exc_info=True)
+            logger.exception(f"Error setting default profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

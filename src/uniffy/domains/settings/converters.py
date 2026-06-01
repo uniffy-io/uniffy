@@ -120,6 +120,9 @@ def notifications_dict_to_proto(settings: dict[str, Any] | None) -> ProtoNotific
     if settings.get("quiet_hours_end") is not None:
         proto.quiet_hours_end = settings["quiet_hours_end"]
 
+    if settings.get("toast_enabled") is not None:
+        proto.toast_enabled = settings["toast_enabled"]
+
     channel_overrides = settings.get("channel_overrides", {})
     for notif_type, channels in channel_overrides.items():
         pref = ProtoChannelPreference()
@@ -217,6 +220,9 @@ def notifications_from_proto(proto: ProtoNotifications | None) -> dict[str, Any]
 
     if proto.HasField("quiet_hours_end"):
         result["quiet_hours_end"] = proto.quiet_hours_end
+
+    if proto.HasField("toast_enabled"):
+        result["toast_enabled"] = proto.toast_enabled
 
     if proto.channel_overrides:
         overrides: dict[str, dict[str, bool]] = {}

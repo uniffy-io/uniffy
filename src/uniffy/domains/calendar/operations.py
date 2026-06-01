@@ -51,6 +51,8 @@ from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.recurrence import expand_recurrence
 from uniffy.domains.tags import TagAssignment, TagOperations
 
+logger = logger.bind(component="calendar.operations")
+
 
 def _master_event_id(event: CalendarEvent) -> UUID:
     """Strip `__occurrence__{date}` from a synthetic recurring-instance id.
@@ -253,6 +255,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._index_for_search(event, skip_member_lookup=not group_ids)
         await self.session.commit()
+
+        effective_mode, _ = await self._effective_policy(organization_id, event)
+        await self._broadcast_open_to_org_create(organization_id, event.id, effective_mode)
 
         if attendee_ids:
             invited = [aid for aid in attendee_ids if aid != user_id]
@@ -505,10 +510,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
                 await self.session.commit()
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to propagate calendar event rename to mentions",
-                    event_id=str(event_id),
-                    exc_info=True,
+                    event_id=str(event_id)
                 )
 
         if newly_invited_ids:
@@ -562,10 +566,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     changes=mention_changes,
                 )
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to publish calendar event mention state change",
-                    event_id=str(event_id),
-                    exc_info=True,
+                    event_id=str(event_id)
                 )
 
         if room_id is not None:

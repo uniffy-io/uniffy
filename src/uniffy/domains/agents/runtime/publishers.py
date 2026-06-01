@@ -53,6 +53,8 @@ from uniffy.domains.agents.runtime.stream_events import (
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
+logger = logger.bind(component="agents.runtime.publishers")
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 

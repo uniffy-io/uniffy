@@ -29,6 +29,8 @@ from uniffy.core.content.references import (
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 
+logger = logger.bind(component="content.cascade")
+
 # Hard cap to keep cascade work bounded on heavily-referenced content.
 MAX_CASCADE_REFERENCES = 50
 
@@ -54,7 +56,7 @@ async def collect_referenced_content(
             if parsed and parsed[0] != ContentType.USER:
                 refs.add(parsed)
 
-    from uniffy.core.models.attachments.attachment import Attachment
+    from uniffy.core.models.files.attachment import Attachment
 
     result = await session.execute(
         select(Attachment.file_id).where(
@@ -154,11 +156,10 @@ async def cascade_member_grant(
                 else:
                     skipped.append((ref_type.value, str(ref_id), "already_member"))
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "Failed to cascade grant for reference",
                 ref_type=ref_type.value,
-                ref_id=str(ref_id),
-                exc_info=True,
+                ref_id=str(ref_id)
             )
 
     logger.info(
@@ -462,11 +463,10 @@ async def _sync_search_sharing_batch(
                 blocked_group_ids=blocked_group_ids,
             )
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "Failed to sync search sharing for cascaded content",
                 content_type=ct.value,
-                content_id=str(cid),
-                exc_info=True,
+                content_id=str(cid)
             )
 
 
@@ -600,9 +600,8 @@ async def _reindex_renamed_content(
             for note in notes:
                 await ops._index_for_search(note)
         except Exception:
-            logger.warning(
-                "Failed to re-index notes after rename propagation",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to re-index notes after rename propagation"
             )
 
     if events:
@@ -613,9 +612,8 @@ async def _reindex_renamed_content(
             for event in events:
                 await ops._index_for_search(event)
         except Exception:
-            logger.warning(
-                "Failed to re-index calendar events after rename propagation",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to re-index calendar events after rename propagation"
             )
 
     if tasks:
@@ -626,7 +624,6 @@ async def _reindex_renamed_content(
             for task in tasks:
                 await ops._index_for_search(task)
         except Exception:
-            logger.warning(
-                "Failed to re-index tasks after rename propagation",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to re-index tasks after rename propagation"
             )

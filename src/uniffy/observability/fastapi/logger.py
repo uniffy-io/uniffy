@@ -12,7 +12,8 @@ try:
 except ImportError:
     logger.warning("FastAPI is not installed, skipping request logging")
 
-from uniffy.domains.auth.tokens import decode_access_token
+from uniffy.domains.auth.cookies import resolve_asset_cookie_config
+from uniffy.domains.auth.tokens import decode_access_token, decode_asset_read_token
 from uniffy.observability.crpc import http_version_var
 from uniffy.observability.metrics import HTTP_REQUEST_DURATION, HTTP_REQUESTS_TOTAL
 
@@ -27,13 +28,20 @@ def _normalize_path(path: str) -> str:
 
 
 def _extract_user_id_from_request(request: Request) -> str:
+    # Mirrors the asset-route dep: Bearer access token, else the asset_read cookie. Decode only -
+    # the route's own dependency does the revocation/permission gate; this is best-effort logging.
     auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
+    if auth_header.startswith("Bearer "):
+        token, decode = auth_header[7:], decode_access_token
+    else:
+        token = request.cookies.get(resolve_asset_cookie_config().name) or ""
+        decode = decode_asset_read_token
+
+    if not token:
         return "unauthenticated"
 
-    token = auth_header[7:]
     try:
-        payload = decode_access_token(token)
+        payload = decode(token)
         return payload.get("sub", "unauthenticated")
     except Exception:
         return "unauthenticated"
@@ -50,7 +58,7 @@ class LoggingMiddleware:
         user_id = _extract_user_id_from_request(request)
         http_version = http_version_var.get()
 
-        route_name = f"{method} {path}"
+        route_name = path
 
         normalized_path = _normalize_path(path)
 
@@ -63,13 +71,24 @@ class LoggingMiddleware:
             ).inc()
             HTTP_REQUEST_DURATION.labels(method=method, path=normalized_path).observe(duration)
 
-            logger.info(
-                f"access {route_name}",
-                user_id=user_id,
-                duration_ms=round(duration * 1000),
-                http=http_version,
-                status_code=response.status_code,
-            )
+            # 401/403 come back as a normal Response (FastAPI handles HTTPException), so
+            # surface access denials as a distinct WARNING rather than a routine access log.
+            if response.status_code in (401, 403):
+                logger.warning(
+                    f"access denied {route_name}",
+                    user_id=user_id,
+                    duration_ms=round(duration * 1000),
+                    http=http_version,
+                    status_code=response.status_code,
+                )
+            else:
+                logger.info(
+                    f"access {route_name}",
+                    user_id=user_id,
+                    duration_ms=round(duration * 1000),
+                    http=http_version,
+                    status_code=response.status_code,
+                )
 
             return response
 

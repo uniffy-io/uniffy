@@ -18,6 +18,8 @@ from uniffy.core.errors import (
     ValidationError,
 )
 
+logger = logger.bind(component="agents.tools.sanitization")
+
 _SENSITIVE_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\s", re.IGNORECASE),
     re.compile(r"psycopg|asyncpg|sqlalchemy", re.IGNORECASE),

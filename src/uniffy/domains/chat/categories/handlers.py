@@ -27,6 +27,8 @@ from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
 from uniffy.domains.chat.channels.converters import category_to_proto, channel_to_proto
 
+logger = logger.bind(component="chat.categories.handlers")
+
 
 def _handle_error(e: Exception) -> None:
     if isinstance(e, NotFoundError):

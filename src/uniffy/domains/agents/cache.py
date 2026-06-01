@@ -34,6 +34,8 @@ from uniffy.core.valkey.cache import (
 )
 from uniffy.core.valkey.ops import _get_ops_client
 
+logger = logger.bind(component="cache")
+
 _AGENT_TTL_SECONDS = 900
 _SKILLS_TTL_SECONDS = 900
 _PROMPT_TTL_SECONDS = 900
@@ -368,7 +370,7 @@ async def fetch_agent_prompt(
             prompt_ops = PromptOperations(session)
             prompt = await prompt_ops.get_prompt_by_id(prompt_id)
         except Exception:
-            logger.warning("Failed to resolve prompt template", exc_info=True)
+            logger.opt(exception=True).warning("Failed to resolve prompt template")
             return None
         if not prompt or not prompt.content:
             return None

@@ -21,6 +21,8 @@ from uniffy.db import open_session
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter
 from uniffy.domains.settings.defaults import NOTIFICATIONS_DEFAULTS
 
+logger = logger.bind(component="mail")
+
 
 async def _resolve_email_frequency(session: AsyncSession, user_id: UUID) -> str:
     """Return the user's effective email_frequency, defaulting to ``instant``."""

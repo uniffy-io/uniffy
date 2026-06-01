@@ -12,6 +12,8 @@ from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_category import ChatChannelCategory
 from uniffy.domains.chat.access import ChatAccessChecker
 
+logger = logger.bind(component="chat.categories.operations")
+
 
 class ChatCategoryOperations:
     """Category CRUD; org admin or chat domain admin only."""

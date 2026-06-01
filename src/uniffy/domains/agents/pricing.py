@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.agents.model_pricing import AgentModelPricing
 
+logger = logger.bind(component="agents.pricing")
+
 _ONE_MILLION = Decimal("1000000")
 
 # Provider model ids commonly include a trailing date snapshot

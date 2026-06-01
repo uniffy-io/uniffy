@@ -106,6 +106,8 @@ from uniffy.domains.organizations.converters import (
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.security.operations import SecurityOperations
 
+logger = logger.bind(component="organizations.handlers")
+
 
 class OrganizationsHandlers:
     async def list_my_organizations(
@@ -127,7 +129,7 @@ class OrganizationsHandlers:
                     ]
                 )
         except Exception as e:
-            logger.error(f"Error listing user organizations: {e}", exc_info=True)
+            logger.exception(f"Error listing user organizations: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_organizations(
@@ -177,7 +179,7 @@ class OrganizationsHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error listing organizations: {e}", exc_info=True)
+            logger.exception(f"Error listing organizations: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_organization(
@@ -220,7 +222,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error getting organization: {e}", exc_info=True)
+            logger.exception(f"Error getting organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def create_organization(
@@ -263,7 +265,7 @@ class OrganizationsHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error creating organization: {e}", exc_info=True)
+            logger.exception(f"Error creating organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_organization(
@@ -303,7 +305,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error updating organization: {e}", exc_info=True)
+            logger.exception(f"Error updating organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_organization(
@@ -334,7 +336,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error deleting organization: {e}", exc_info=True)
+            logger.exception(f"Error deleting organization: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_organization_overview(
@@ -368,7 +370,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error getting organization overview: {e}", exc_info=True)
+            logger.exception(f"Error getting organization overview: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_members(
@@ -427,7 +429,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error listing members: {e}", exc_info=True)
+            logger.exception(f"Error listing members: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def add_member(
@@ -467,7 +469,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error adding member: {e}", exc_info=True)
+            logger.exception(f"Error adding member: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_member_role(
@@ -506,7 +508,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error updating member role: {e}", exc_info=True)
+            logger.exception(f"Error updating member role: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def remove_member(
@@ -538,7 +540,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error removing member: {e}", exc_info=True)
+            logger.exception(f"Error removing member: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_permission_defaults(
@@ -566,7 +568,7 @@ class OrganizationsHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error getting permission defaults: {e}", exc_info=True)
+            logger.exception(f"Error getting permission defaults: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_permission_defaults(
@@ -611,7 +613,7 @@ class OrganizationsHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error updating permission defaults: {e}", exc_info=True)
+            logger.exception(f"Error updating permission defaults: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_organization_settings(
@@ -639,7 +641,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error getting organization settings: {e}", exc_info=True)
+            logger.exception(f"Error getting organization settings: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_organization_settings(
@@ -674,7 +676,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error updating organization settings: {e}", exc_info=True)
+            logger.exception(f"Error updating organization settings: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def grant_domain_admin(
@@ -711,7 +713,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error granting domain admin: {e}", exc_info=True)
+            logger.exception(f"Error granting domain admin: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def revoke_domain_admin(
@@ -746,7 +748,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error revoking domain admin: {e}", exc_info=True)
+            logger.exception(f"Error revoking domain admin: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_domain_admins(
@@ -799,7 +801,7 @@ class OrganizationsHandlers:
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
-            logger.error(f"Error listing domain admins: {e}", exc_info=True)
+            logger.exception(f"Error listing domain admins: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_user_domain_admins(
@@ -833,7 +835,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error getting user domain admins: {e}", exc_info=True)
+            logger.exception(f"Error getting user domain admins: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def rotate_encryption_key(
@@ -864,7 +866,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error rotating encryption key: {e}", exc_info=True)
+            logger.exception(f"Error rotating encryption key: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def invite_member(
@@ -911,7 +913,7 @@ class OrganizationsHandlers:
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
-            logger.error(f"Error inviting member: {e}", exc_info=True)
+            logger.exception(f"Error inviting member: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_invitations(
@@ -939,7 +941,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error listing invitations: {e}", exc_info=True)
+            logger.exception(f"Error listing invitations: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def revoke_invitation(
@@ -971,7 +973,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error revoking invitation: {e}", exc_info=True)
+            logger.exception(f"Error revoking invitation: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def resend_invitation(
@@ -1003,7 +1005,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error resending invitation: {e}", exc_info=True)
+            logger.exception(f"Error resending invitation: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_security_settings(
@@ -1033,7 +1035,7 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error getting security settings: {e}", exc_info=True)
+            logger.exception(f"Error getting security settings: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_security_settings(
@@ -1082,5 +1084,5 @@ class OrganizationsHandlers:
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except Exception as e:
-            logger.error(f"Error updating security settings: {e}", exc_info=True)
+            logger.exception(f"Error updating security settings: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

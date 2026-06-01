@@ -22,6 +22,8 @@ from uniffy.core.valkey import publish_notification
 from uniffy.db.session import open_session
 from uniffy.domains.tags import TagOperations
 
+logger = logger.bind(component="tasks.content_extraction")
+
 _task = "content_extraction"
 
 _MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024

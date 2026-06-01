@@ -40,6 +40,8 @@ from uniffy.domains.comments.converters import (
 from uniffy.domains.comments.operations import CommentOperations
 from uniffy.domains.comments.queries import aggregate_reactions
 
+logger = logger.bind(component="comments.handlers")
+
 
 class CommentsHandlers:
     async def create_comment(
@@ -109,7 +111,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating comment: {e}", exc_info=True)
+            logger.exception(f"Error creating comment: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_comment(
@@ -160,7 +162,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating comment: {e}", exc_info=True)
+            logger.exception(f"Error updating comment: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_comment(
@@ -193,7 +195,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting comment: {e}", exc_info=True)
+            logger.exception(f"Error deleting comment: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_comments(
@@ -288,7 +290,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing comments: {e}", exc_info=True)
+            logger.exception(f"Error listing comments: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_comment(
@@ -360,7 +362,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting comment: {e}", exc_info=True)
+            logger.exception(f"Error getting comment: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def resolve_comment(
@@ -407,7 +409,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error resolving comment: {e}", exc_info=True)
+            logger.exception(f"Error resolving comment: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def reopen_comment(
@@ -454,7 +456,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error reopening comment: {e}", exc_info=True)
+            logger.exception(f"Error reopening comment: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def add_reaction(
@@ -491,7 +493,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error adding reaction: {e}", exc_info=True)
+            logger.exception(f"Error adding reaction: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def remove_reaction(
@@ -524,7 +526,7 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error removing reaction: {e}", exc_info=True)
+            logger.exception(f"Error removing reaction: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_comment_counts(
@@ -565,5 +567,5 @@ class CommentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting comment counts: {e}", exc_info=True)
+            logger.exception(f"Error getting comment counts: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
