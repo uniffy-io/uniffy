@@ -15,11 +15,13 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import (
     PermissionChecker,
     resolve_access_policy,
+    role_can_view,
 )
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
+from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
@@ -36,9 +38,12 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
+from uniffy.core.valkey import publish_content_access_changed
 from uniffy.domains.files.quota_operations import QuotaOperations
 from uniffy.domains.tags import TagAssignment, TagOperations
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, get_processable_mime_types
+
+logger = logger.bind(component="files.operations")
 
 MIN_CHUNK_SIZE = 5 * 1024 * 1024  # S3 minimum.
 SMALL_CHUNK_SIZE = 5 * 1024 * 1024
@@ -83,6 +88,34 @@ class FileOperations(BaseContentOperations[File]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
         self.s3 = get_s3_client()
+
+    async def _resolve_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: File,
+    ) -> ContentRole | None:
+        """File access, with a read-only fallback through an attachment's parent.
+
+        An attachment file copy lives in the owner's private folder (OWNER_ONLY),
+        but anyone who can view the content it is attached to must be able to read
+        the bytes - the note editor fetches the image by id over the asset route.
+        Deriving from the parent keeps that in sync both ways and revokes with the
+        share; the grant is clamped to VIEWER since the file's lifecycle stays with
+        the attachment (detach), not with direct file edits.
+        """
+        role = await super()._resolve_role(user_id, organization_id, content)
+        if role is not None and role_can_view(role):
+            return role
+
+        from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+        attachment_ops = AttachmentOperations(self.session)
+        if await attachment_ops.can_view_file_via_attachment(
+            user_id, organization_id, content.id
+        ):
+            return ContentRole.VIEWER
+        return role
 
     def _build_search_keywords(self, model: File) -> str:
         # Tag slugs go through _get_search_tags_async; don't duplicate them into keywords.
@@ -445,10 +478,9 @@ class FileOperations(BaseContentOperations[File]):
                 file_count_delta=1,
             )
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "Failed to increment storage usage",
-                file_id=str(file.id),
-                exc_info=True,
+                file_id=str(file.id)
             )
 
         await self._index_for_search(
@@ -456,6 +488,9 @@ class FileOperations(BaseContentOperations[File]):
             skip_member_lookup=not group_ids,
         )
         await self.session.commit()
+
+        effective_mode, _ = await self._effective_policy(file.organization_id, file)
+        await self._broadcast_open_to_org_create(file.organization_id, file.id, effective_mode)
 
         if file.extraction_status == ExtractionStatus.PENDING:
             await self._enqueue_processing_jobs(file)
@@ -578,10 +613,9 @@ class FileOperations(BaseContentOperations[File]):
                 )
                 await self.session.commit()
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to propagate file rename to mentions",
-                    file_id=str(file_id),
-                    exc_info=True,
+                    file_id=str(file_id)
                 )
 
         return file
@@ -638,10 +672,9 @@ class FileOperations(BaseContentOperations[File]):
                     file_count_delta=1,
                 )
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to decrement storage usage on permanent delete",
-                    file_id=str(file_id),
-                    exc_info=True,
+                    file_id=str(file_id)
                 )
 
         if permanent:
@@ -978,10 +1011,9 @@ class FileOperations(BaseContentOperations[File]):
                     file_count_delta=len(files),
                 )
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to decrement storage usage on empty trash",
-                    user_id=str(user_id),
-                    exc_info=True,
+                    user_id=str(user_id)
                 )
 
         return len(files), len(folders)
@@ -1033,6 +1065,17 @@ class FolderOperations:
         self.session.add(folder)
         await self.session.commit()
         await self.session.refresh(folder)
+
+        # FolderOperations is standalone (not a BaseContentOperations subclass),
+        # so it broadcasts the org-wide refresh directly. resolve_access_policy
+        # above already materialised any inherited mode into access_mode.
+        if access_mode == AccessMode.OPEN_TO_ORG:
+            await publish_content_access_changed(
+                content_type=content_type_to_proto(ContentType.FOLDER),
+                content_id=folder.id,
+                action="granted",
+                organization_id=organization_id,
+            )
 
         return folder
 

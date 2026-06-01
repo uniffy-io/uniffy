@@ -1,5 +1,6 @@
 """Files domain models."""
 
+from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File, TranscodeStatus
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
@@ -12,6 +13,7 @@ from uniffy.core.models.files.storage_usage import StorageUsage
 from uniffy.core.models.files.user_storage_quota_override import UserStorageQuotaOverride
 
 __all__ = [
+    "Attachment",
     "File",
     "FileMediaInfo",
     "Folder",

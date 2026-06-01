@@ -3,14 +3,14 @@
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.attachments.attachment import Attachment
+from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
@@ -24,6 +24,8 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.workers.utils.mime import get_jobs_for_mime_type, supports_thumbnail
+
+logger = logger.bind(component="attachments.operations")
 
 ATTACHMENTS_FOLDER_NAME = "Attachments"
 ORG_ATTACHMENTS_FOLDER_NAME = "Organization Attachments"
@@ -407,56 +409,6 @@ class AttachmentOperations:
             )
         return grouped
 
-    async def list_shared_attachments(
-        self,
-        user_id: UUID,
-        organization_id: UUID,
-        content_type_filter: ContentType | None = None,
-        page: int = 1,
-        page_size: int = 50,
-    ) -> tuple[list[tuple[Attachment, File, User | None]], int]:
-        """List attachments from content shared with the user (not owned by them)."""
-        query = (
-            select(Attachment, File, User)
-            .join(File, Attachment.file_id == File.id)
-            .outerjoin(User, File.owner_id == User.id)
-            .where(
-                Attachment.organization_id == organization_id,
-                Attachment.attached_by_user_id != user_id,
-            )
-        )
-
-        if content_type_filter:
-            query = query.where(Attachment.content_type == content_type_filter)
-
-        count_query = select(func.count()).select_from(
-            select(Attachment.id)
-            .where(
-                Attachment.organization_id == organization_id,
-                Attachment.attached_by_user_id != user_id,
-            )
-            .subquery()
-        )
-        if content_type_filter:
-            count_query = select(func.count()).select_from(
-                select(Attachment.id)
-                .where(
-                    Attachment.organization_id == organization_id,
-                    Attachment.attached_by_user_id != user_id,
-                    Attachment.content_type == content_type_filter,
-                )
-                .subquery()
-            )
-        total = (await self._session.execute(count_query)).scalar() or 0
-
-        query = query.order_by(Attachment.attached_at.desc())
-        query = query.offset((page - 1) * page_size).limit(page_size)
-
-        result = await self._session.execute(query)
-        attachments = [(row[0], row[1], row[2]) for row in result.all()]
-
-        return attachments, total
-
     async def can_access_attachment(
         self,
         user_id: UUID,
@@ -483,6 +435,34 @@ class AttachmentOperations:
             )
             return True
         except PermissionDeniedError:
+            return False
+
+    async def can_view_file_via_attachment(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        file_id: UUID,
+    ) -> bool:
+        """True when `file_id` is an attachment whose parent content the user can view.
+
+        The asset read path uses this so viewing a note/event/task/channel grants
+        read access to the files attached to it - the file copy stays in the owner's
+        private folder, but access is derived from the parent (and revoked with it).
+        """
+        result = await self._session.execute(
+            select(Attachment.content_type, Attachment.content_id).where(
+                Attachment.file_id == file_id,
+                Attachment.organization_id == organization_id,
+            )
+        )
+        row = result.one_or_none()
+        if not row:
+            return False
+
+        try:
+            await self._verify_content_access(user_id, organization_id, row[0], row[1])
+            return True
+        except (PermissionDeniedError, NotFoundError):
             return False
 
     async def _get_accessible_file(

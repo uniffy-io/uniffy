@@ -29,6 +29,8 @@ from uniffy.domains.files.filters.converters import (
 )
 from uniffy.domains.files.filters.operations import SavedFilterOperations
 
+logger = logger.bind(component="files.filters.handlers")
+
 
 class SavedFilterHandlersMixin:
     async def create_saved_filter(
@@ -74,7 +76,7 @@ class SavedFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating saved filter: {e}", exc_info=True)
+            logger.exception(f"Error creating saved filter: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_saved_filter(
@@ -103,7 +105,7 @@ class SavedFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting saved filter: {e}", exc_info=True)
+            logger.exception(f"Error getting saved filter: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def update_saved_filter(
@@ -152,7 +154,7 @@ class SavedFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating saved filter: {e}", exc_info=True)
+            logger.exception(f"Error updating saved filter: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def delete_saved_filter(
@@ -184,7 +186,7 @@ class SavedFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting saved filter: {e}", exc_info=True)
+            logger.exception(f"Error deleting saved filter: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_saved_filters(
@@ -215,5 +217,5 @@ class SavedFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing saved filters: {e}", exc_info=True)
+            logger.exception(f"Error listing saved filters: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")

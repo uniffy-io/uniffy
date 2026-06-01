@@ -6,7 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from uniffy_proto.attachments.v1.attachments_pb2 import (
+from uniffy_proto.files.v1.files_pb2 import (
     AttachFileRequest,
     AttachFileResponse,
     BatchListAttachmentsGroup,
@@ -18,25 +18,22 @@ from uniffy_proto.attachments.v1.attachments_pb2 import (
     GetAttachmentsFolderResponse,
     ListAttachmentsRequest,
     ListAttachmentsResponse,
-    ListSharedAttachmentsRequest,
-    ListSharedAttachmentsResponse,
-    SharedAttachment,
-    SharedAttachmentGroup,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.attachments.converters import (
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.files.attachments.converters import (
     attachment_to_proto,
     content_type_from_proto,
-    content_type_to_proto,
 )
-from uniffy.domains.attachments.operations import AttachmentOperations
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+logger = logger.bind(component="files.attachments.handlers")
 
 
-class AttachmentsHandlers:
-    """Attachments RPC handlers."""
+class AttachmentsHandlersMixin:
+    """Attachment RPC handlers, mixed into FilesServiceImpl."""
 
     async def attach_file(
         self,
@@ -94,7 +91,7 @@ class AttachmentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error attaching file: {e}", exc_info=True)
+            logger.exception(f"Error attaching file: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def detach_file(
@@ -131,7 +128,7 @@ class AttachmentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error detaching file: {e}", exc_info=True)
+            logger.exception(f"Error detaching file: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_attachments(
@@ -172,7 +169,7 @@ class AttachmentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing attachments: {e}", exc_info=True)
+            logger.exception(f"Error listing attachments: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def batch_list_attachments(
@@ -222,76 +219,7 @@ class AttachmentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error batch-listing attachments: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
-
-    async def list_shared_attachments(
-        self,
-        request: ListSharedAttachmentsRequest,
-        ctx: RequestContext,
-    ) -> ListSharedAttachmentsResponse:
-        """List attachments from content shared with the user."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
-
-        content_type_filter = None
-        if request.HasField("content_type_filter"):
-            content_type_filter = content_type_from_proto(request.content_type_filter)
-
-        page = request.page if request.page > 0 else 1
-        page_size = request.page_size if request.page_size > 0 else 50
-
-        user_id = get_user_id_from_context(ctx)
-
-        try:
-            async with open_session() as session:
-                ops = AttachmentOperations(session)
-                attachments, total = await ops.list_shared_attachments(
-                    user_id=user_id,
-                    organization_id=organization_id,
-                    content_type_filter=content_type_filter,
-                    page=page,
-                    page_size=page_size,
-                )
-
-                # Group by content type
-                groups_dict: dict = {}
-                for attachment, file, owner in attachments:
-                    ct = attachment.content_type
-                    if ct not in groups_dict:
-                        groups_dict[ct] = []
-                    groups_dict[ct].append(
-                        SharedAttachment(
-                            attachment=attachment_to_proto(attachment, file, owner),
-                            content_title="",  # TODO: Fetch content title
-                            content_owner_name="",  # TODO: Fetch content owner
-                        )
-                    )
-
-                groups = [
-                    SharedAttachmentGroup(
-                        content_type=content_type_to_proto(ct),
-                        attachments=items,
-                    )
-                    for ct, items in groups_dict.items()
-                ]
-
-                total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
-
-                return ListSharedAttachmentsResponse(
-                    groups=groups,
-                    total_count=total,
-                    page=page,
-                    page_size=page_size,
-                    total_pages=total_pages,
-                )
-
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error listing shared attachments: {e}", exc_info=True)
+            logger.exception(f"Error batch-listing attachments: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_attachments_folder(
@@ -321,5 +249,5 @@ class AttachmentsHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting attachments folder: {e}", exc_info=True)
+            logger.exception(f"Error getting attachments folder: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")

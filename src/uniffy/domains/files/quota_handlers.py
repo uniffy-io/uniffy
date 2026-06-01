@@ -40,6 +40,8 @@ from uniffy.domains.files.quota_converters import (
 )
 from uniffy.domains.files.quota_operations import QuotaOperations
 
+logger = logger.bind(component="files.quota_handlers")
+
 
 class QuotaHandlersMixin:
     """Storage quota RPC handlers mixed into the files service."""
@@ -72,7 +74,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting org storage quota: {e}", exc_info=True)
+            logger.exception(f"Error getting org storage quota: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def set_org_storage_quota(
@@ -128,7 +130,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error setting org storage quota: {e}", exc_info=True)
+            logger.exception(f"Error setting org storage quota: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_user_storage_quota(
@@ -180,7 +182,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting user storage quota: {e}", exc_info=True)
+            logger.exception(f"Error getting user storage quota: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def set_user_storage_quota_override(
@@ -219,7 +221,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error setting user quota override: {e}", exc_info=True)
+            logger.exception(f"Error setting user quota override: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def remove_user_storage_quota_override(
@@ -254,7 +256,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error removing user quota override: {e}", exc_info=True)
+            logger.exception(f"Error removing user quota override: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_user_storage_quota_overrides(
@@ -287,7 +289,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing user quota overrides: {e}", exc_info=True)
+            logger.exception(f"Error listing user quota overrides: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_storage_usage(
@@ -335,7 +337,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting storage usage: {e}", exc_info=True)
+            logger.exception(f"Error getting storage usage: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_org_storage_usage(
@@ -373,7 +375,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing org storage usage: {e}", exc_info=True)
+            logger.exception(f"Error listing org storage usage: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def recalculate_storage_usage(
@@ -427,7 +429,7 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error recalculating storage usage: {e}", exc_info=True)
+            logger.exception(f"Error recalculating storage usage: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def check_storage_quota(
@@ -470,5 +472,5 @@ class QuotaHandlersMixin:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error checking storage quota: {e}", exc_info=True)
+            logger.exception(f"Error checking storage quota: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
