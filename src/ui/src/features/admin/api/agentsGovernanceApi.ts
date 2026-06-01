@@ -17,12 +17,6 @@ import {
     UpsertCurrencyRateRequestSchema,
 } from '@uniffy/proto/agents/v1/budgets_pb';
 import {
-    DeleteModelPricingRequestSchema,
-    ListModelPricingRequestSchema,
-    PricingService,
-    UpsertModelPricingRequestSchema,
-} from '@uniffy/proto/agents/v1/pricing_pb';
-import {
     DeleteRateLimitRequestSchema,
     GetRateLimitsRequestSchema,
     RateLimitsService,
@@ -31,7 +25,6 @@ import {
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
 const budgetsClient = createClient(BudgetsService, transport);
-const pricingClient = createClient(PricingService, transport);
 const rateLimitsClient = createClient(RateLimitsService, transport);
 
 export const agentsGovernanceApi = {
@@ -51,13 +44,6 @@ export const agentsGovernanceApi = {
         budgetsClient.listUserQuotas(req),
     getCurrentSpend: (req: MessageInitShape<typeof GetCurrentSpendRequestSchema>) =>
         budgetsClient.getCurrentSpend(req),
-
-    listModelPricing: (req: MessageInitShape<typeof ListModelPricingRequestSchema>) =>
-        pricingClient.listModelPricing(req),
-    upsertModelPricing: (req: MessageInitShape<typeof UpsertModelPricingRequestSchema>) =>
-        pricingClient.upsertModelPricing(req),
-    deleteModelPricing: (req: MessageInitShape<typeof DeleteModelPricingRequestSchema>) =>
-        pricingClient.deleteModelPricing(req),
 
     getRateLimits: (req: MessageInitShape<typeof GetRateLimitsRequestSchema>) =>
         rateLimitsClient.getRateLimits(req),

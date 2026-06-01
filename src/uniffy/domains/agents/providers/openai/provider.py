@@ -2,7 +2,6 @@
 
 import base64
 import json
-import time
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -20,12 +19,7 @@ from uniffy.domains.agents.providers.base import (
     ToolCall,
     ToolCallEvent,
 )
-from uniffy.domains.agents.providers.openai.catalog import (
-    FALLBACK_MODELS,
-    format_display_name,
-    get_capabilities,
-    map_finish_reason,
-)
+from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 from uniffy.domains.agents.providers.openai.converters import (
     convert_messages_to_openai,
     convert_tools_to_openai,
@@ -33,10 +27,14 @@ from uniffy.domains.agents.providers.openai.converters import (
 
 logger = logger.bind(component="agents.providers.openai.provider")
 
-# Module-level cache for the model list fetched from the OpenAI API.
-_MODEL_CACHE_TTL_SECONDS = 3600  # 1 hour
-_cached_models: list[ModelInfo] | None = None
-_cache_timestamp: float = 0.0
+
+def map_finish_reason(finish_reason: str | None) -> str:
+    """Map an OpenAI ``finish_reason`` to an Anthropic-style stop reason."""
+    if finish_reason == "tool_calls":
+        return "tool_use"
+    if finish_reason == "length":
+        return "max_tokens"
+    return "end_turn"
 
 
 class OpenAIProvider(LLMProvider):
@@ -182,73 +180,12 @@ class OpenAIProvider(LLMProvider):
         *,
         force_refresh: bool = False,
     ) -> list[ModelInfo]:
-        """Return available OpenAI models, fetched from the API.
+        """Return OpenAI models from the catalog (the source of truth).
 
-        Calls ``models.list()`` to discover currently available models,
-        filters to chat-capable models, and enriches with capability metadata.
-        Results are cached for one hour.
-
-        Parameters
-        ----------
-        force_refresh : bool
-            When True, bypass the cache and fetch fresh from the API.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Available OpenAI models.
-
+        ``force_refresh`` is accepted for interface compatibility and ignored
+        - the catalog is local and re-read on change.
         """
-        global _cached_models, _cache_timestamp
-
-        if not force_refresh:
-            cache_age = time.monotonic() - _cache_timestamp
-            if _cached_models is not None and cache_age < _MODEL_CACHE_TTL_SECONDS:
-                logger.debug(
-                    f"Returning cached OpenAI models "
-                    f"({len(_cached_models)} models, "
-                    f"age={cache_age:.0f}s)",
-                )
-                return list(_cached_models)
-        else:
-            logger.debug("Force-refreshing OpenAI model list")
-
-        logger.debug("Fetching model list from OpenAI API")
-        try:
-            models: list[ModelInfo] = []
-            response = await self._client.models.list()
-            for api_model in response.data:
-                model_id = api_model.id
-                caps = get_capabilities(model_id)
-                display_name = format_display_name(model_id)
-                models.append(
-                    ModelInfo(
-                        id=model_id,
-                        display_name=display_name,
-                        provider="openai",
-                        context_window=caps.context_window,
-                        supports_tools=caps.supports_tools,
-                        supports_vision=caps.supports_vision,
-                        supports_thinking=caps.supports_thinking,
-                    )
-                )
-
-            logger.debug(f"OpenAI API returned {len(models)} models")
-
-            if models:
-                _cached_models = models
-                _cache_timestamp = time.monotonic()
-                return list(models)
-
-            logger.warning(
-                "OpenAI API returned 0 models, using fallback catalog",
-            )
-        except Exception as e:
-            logger.warning(
-                f"Failed to fetch OpenAI model list, using fallback catalog: {e}",
-            )
-
-        return list(FALLBACK_MODELS)
+        return model_infos_for_provider("openai")
 
     def _build_request_kwargs(
         self,

@@ -1,6 +1,5 @@
 """Google Gemini LLM provider implementation using the google-genai SDK."""
 
-import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -20,21 +19,13 @@ from uniffy.domains.agents.providers.base import (
     ToolCall,
     ToolCallEvent,
 )
-from uniffy.domains.agents.providers.google.catalog import (
-    FALLBACK_MODELS,
-    get_capabilities,
-)
+from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 from uniffy.domains.agents.providers.google.converters import (
     convert_messages_to_google,
     convert_tools_to_google,
 )
 
 logger = logger.bind(component="agents.providers.google.provider")
-
-# Module-level cache for the model list fetched from the Google AI API.
-_MODEL_CACHE_TTL_SECONDS = 3600  # 1 hour
-_cached_models: list[ModelInfo] | None = None
-_cache_timestamp: float = 0.0
 
 
 class GoogleProvider(LLMProvider):
@@ -271,81 +262,12 @@ class GoogleProvider(LLMProvider):
         *,
         force_refresh: bool = False,
     ) -> list[ModelInfo]:
-        """Return available Google Gemini models, fetched from the API.
+        """Return Google models from the catalog (the source of truth).
 
-        Calls ``models.list()`` to discover currently available models,
-        then enriches each entry with capability metadata from the static
-        overlay map.  Results are cached for one hour.
-
-        Parameters
-        ----------
-        force_refresh : bool
-            When True, bypass the cache and fetch fresh from the API.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Available Google Gemini models.
-
+        ``force_refresh`` is accepted for interface compatibility and ignored
+        - the catalog is local and re-read on change.
         """
-        global _cached_models, _cache_timestamp
-
-        if not force_refresh:
-            cache_age = time.monotonic() - _cache_timestamp
-            if _cached_models is not None and cache_age < _MODEL_CACHE_TTL_SECONDS:
-                logger.debug(
-                    f"Returning cached Google models "
-                    f"({len(_cached_models)} models, "
-                    f"age={cache_age:.0f}s)",
-                )
-                return list(_cached_models)
-        else:
-            logger.debug("Force-refreshing Google model list")
-
-        logger.debug("Fetching model list from Google AI API")
-        try:
-            models: list[ModelInfo] = []
-            async for api_model in await self._client.aio.models.list(
-                config={"page_size": 100},
-            ):
-                model_id = api_model.name or ""
-                clean_id = model_id.removeprefix("models/")
-
-                if not clean_id.startswith("gemini"):
-                    continue
-
-                caps = get_capabilities(clean_id)
-                display_name = api_model.display_name or self._format_display_name(clean_id)
-                models.append(
-                    ModelInfo(
-                        id=clean_id,
-                        display_name=display_name,
-                        provider="google",
-                        context_window=caps.context_window,
-                        supports_tools=caps.supports_tools,
-                        supports_vision=caps.supports_vision,
-                        supports_thinking=caps.supports_thinking,
-                    )
-                )
-
-            logger.debug(
-                f"Google AI API returned {len(models)} Gemini models",
-            )
-
-            if models:
-                _cached_models = models
-                _cache_timestamp = time.monotonic()
-                return list(models)
-
-            logger.warning(
-                "Google AI API returned 0 Gemini models, using fallback catalog",
-            )
-        except Exception as e:
-            logger.warning(
-                f"Failed to fetch Google model list, using fallback catalog: {e}",
-            )
-
-        return list(FALLBACK_MODELS)
+        return model_infos_for_provider("google")
 
     def _build_config(
         self,
@@ -581,33 +503,3 @@ def _split_google_usage(usage_metadata) -> tuple[int, int, int]:
             if finish and str(finish) == "MAX_TOKENS":
                 return "max_tokens"
         return "end_turn"
-
-    @staticmethod
-    def _format_display_name(model_id: str) -> str:
-        """Format a model ID into a human-readable display name.
-
-        Parameters
-        ----------
-        model_id : str
-            Model identifier.
-
-        Returns
-        -------
-        str
-            Formatted display name.
-
-        """
-        known_names: dict[str, str] = {
-            "gemini-2.5-pro": "Gemini 2.5 Pro",
-            "gemini-2.5-flash": "Gemini 2.5 Flash",
-            "gemini-2.0-flash": "Gemini 2.0 Flash",
-            "gemini-1.5-pro": "Gemini 1.5 Pro",
-            "gemini-1.5-flash": "Gemini 1.5 Flash",
-        }
-        for prefix, name in known_names.items():
-            if model_id == prefix or model_id.startswith(prefix + "-"):
-                if model_id == prefix:
-                    return name
-                suffix = model_id[len(prefix) :]
-                return f"{name} ({suffix.lstrip('-')})"
-        return model_id

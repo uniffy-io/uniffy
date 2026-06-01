@@ -306,6 +306,7 @@ Non-destructive tools (read, search, create, update) execute immediately without
 | Memory | `memory.recall` | No | ILIKE search on `AgentMemory.key` and `content` |
 | Memory | `memory.list` | No | Lists `AgentMemory` filtered by category |
 | Memory | `memory.forget` | No | Deletes `AgentMemory` by key |
+| System | `system.current_time` | No | Returns the current UTC time (the prompt only carries a start-of-turn date snapshot) |
 
 All tool executors are registered in `tools/builtin/__init__.py:register_all()`.
 
@@ -402,7 +403,7 @@ Provider keys are Fernet-encrypted at rest in `agents_provider_keys`. Fields:
 
 `ProviderOperations.get_provider_for_key(...)` and `get_provider_for_model(...)` consult two cache tiers before touching PG:
 
-1. **In-process LRU** (`core/llm_providers/cache.py::ProviderClientLRU`): process singleton, `OrderedDict`-backed, 1-hour TTL, 256-entry cap. Holds the decrypted credential AND the constructed provider client so the SDK's httpx connection pool is reused across requests.
+1. **In-process LRU** (`domains/agents/providers/client_cache.py::ProviderClientLRU`): process singleton, `OrderedDict`-backed, 1-hour TTL, 256-entry cap. Holds the decrypted credential AND the constructed provider client so the SDK's httpx connection pool is reused across requests.
 2. **Valkey metadata cache** (`provider:key:{key_id}`, TTL 3600s): non-secret routing data only - provider, credential_type, is_valid, is_enabled, available model ids. The encrypted credential MUST NOT be written to Valkey.
 
 Cross-pod invalidation: any mutation that changes a provider key publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey metadata entry. A long-lived `PSUBSCRIBE provider_keys:invalidate:*` listener (started in the FastAPI app lifespan and the worker `on_startup`) drops the matching LRU entry on receipt. Cache and pubsub are in lockstep - one signal, both tiers drop.

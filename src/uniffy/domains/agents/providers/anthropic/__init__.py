@@ -1,9 +1,9 @@
 """Anthropic provider subpackage."""
 
-from uniffy.domains.agents.providers.anthropic.catalog import FALLBACK_MODELS
 from uniffy.domains.agents.providers.anthropic.provider import AnthropicProvider
 from uniffy.domains.agents.providers.anthropic.validation import validate_anthropic_credential
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo, ProviderDescriptor
+from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 
 
 class AnthropicDescriptor(ProviderDescriptor):
@@ -54,19 +54,8 @@ class AnthropicDescriptor(ProviderDescriptor):
         return AnthropicProvider(credential, credential_type=credential_type)
 
     def get_models(self) -> list[ModelInfo]:
-        """Return the static fallback Anthropic model catalog.
-
-        This is the synchronous fallback used by the registry when no
-        live provider instance is available.  The full dynamic catalog
-        is returned by :meth:`AnthropicProvider.get_available_models`.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Static fallback Anthropic models.
-
-        """
-        return list(FALLBACK_MODELS)
+        """Return the static Anthropic catalog (used when no live key is set)."""
+        return model_infos_for_provider("anthropic")
 
     def validate_credential(self, credential: str, credential_type: str) -> None:
         """Validate an Anthropic credential format.

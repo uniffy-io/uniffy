@@ -46,6 +46,8 @@ export const modelInfoToPlain = (model: ModelInfo) => ({
     supportsTools: model.supportsTools,
     supportsVision: model.supportsVision,
     supportsThinking: model.supportsThinking,
+    supportsImageGeneration: model.supportsImageGeneration,
+    catalogKnown: model.catalogKnown,
 });
 
 export type SerializedModelInfo = ReturnType<typeof modelInfoToPlain>;

@@ -13,11 +13,6 @@ from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.crypto import OrgCipher, ReEncryptingConsumer, register_consumer
 from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
-from uniffy.core.llm_providers.cache import (
-    get_provider_lru,
-    record_lru_hit,
-    record_lru_miss,
-)
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.permissions.content_member import ContentMember
@@ -27,12 +22,14 @@ from uniffy.core.types import (
     ContentType,
     SubjectType,
 )
-from uniffy.domains.agents.cache import (
-    get_cached_provider_metadata,
-    invalidate_provider_metadata,
-    set_cached_provider_metadata,
-)
+from uniffy.domains.agents.cache import publish_provider_key_invalidation
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo
+from uniffy.domains.agents.providers.catalog import provider_for_model
+from uniffy.domains.agents.providers.client_cache import (
+    get_provider_lru,
+    record_lru_hit,
+    record_lru_miss,
+)
 from uniffy.domains.agents.providers.registry import get_provider_registry
 from uniffy.domains.agents.providers.utils import build_key_hint
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -143,7 +140,7 @@ class ProviderOperations:
         )
         await self._session.commit()
 
-        await invalidate_provider_metadata(key.id)
+        await publish_provider_key_invalidation(key.id)
 
         return key
 
@@ -239,7 +236,7 @@ class ProviderOperations:
         )
         await self._session.commit()
 
-        await invalidate_provider_metadata(key_id)
+        await publish_provider_key_invalidation(key_id)
 
     async def validate_key(
         self,
@@ -271,7 +268,7 @@ class ProviderOperations:
         key.updated_at = datetime.now(UTC)
 
         await self._session.commit()
-        await invalidate_provider_metadata(key_id)
+        await publish_provider_key_invalidation(key_id)
         return is_valid, error
 
     async def list_available_models(
@@ -354,70 +351,58 @@ class ProviderOperations:
 
         return get_provider_registry().create_provider(provider, credential, key.credential_type)
 
+    async def _get_key_for_model(
+        self,
+        organization_id: UUID,
+        model_id: str,
+    ) -> tuple[LLMProvider, ProviderKey] | None:
+        """Resolve ``model_id`` to (client, key) via the catalog, or ``None``.
+
+        The catalog owns model->provider routing, so we map the model to its
+        provider and pick the org's oldest enabled key for that provider - no
+        live model-list lookup. The LRU reuses the decrypted credential and
+        warm httpx pool across calls.
+        """
+        provider_name = provider_for_model(model_id)
+        if provider_name is None:
+            return None
+
+        result = await self._session.execute(
+            select(ProviderKey)
+            .where(
+                ProviderKey.organization_id == organization_id,
+                ProviderKey.provider == provider_name,
+                ProviderKey.is_valid == True,  # noqa: E712
+                ProviderKey.is_enabled == True,  # noqa: E712
+            )
+            .order_by(ProviderKey.created_at)
+        )
+        key = result.scalars().first()
+        if key is None:
+            return None
+
+        llm = await self._resolve_or_build_provider(
+            get_provider_lru(), key, get_provider_registry()
+        )
+        key.last_used_at = datetime.now(UTC)
+        await self._session.commit()
+        return llm, key
+
     async def get_provider_for_model(
         self,
         *,
         organization_id: UUID,
         model_id: str,
     ) -> LLMProvider:
-        """Return the provider that serves a specific ``model_id``.
-
-        Routing metadata is read from Valkey when available so we can
-        skip the per-key decrypt + provider catalog round-trip until we
-        find the key that actually owns ``model_id``. The in-process
-        LRU caches the decrypted credential + constructed client so a
-        match against the same key reuses the warm httpx pool.
-        """
-        result = await self._session.execute(
-            select(ProviderKey)
-            .where(
-                ProviderKey.organization_id == organization_id,
-                ProviderKey.is_valid == True,  # noqa: E712
-                ProviderKey.is_enabled == True,  # noqa: E712
+        """Return a provider client for the key that serves ``model_id``."""
+        resolved = await self._get_key_for_model(organization_id, model_id)
+        if resolved is None:
+            raise NotFoundError(
+                "ProviderKey",
+                f"No enabled provider key serves model '{model_id}'",
             )
-            .order_by(ProviderKey.created_at)
-        )
-        keys = list(result.scalars().all())
-
-        seen_providers: set[str] = set()
-        registry = get_provider_registry()
-        lru = get_provider_lru()
-
-        for key in keys:
-            if key.provider in seen_providers:
-                continue
-            seen_providers.add(key.provider)
-
-            metadata = await get_cached_provider_metadata(key.id)
-            if metadata is not None:
-                cached_models = metadata.get("model_ids") or []
-                if model_id not in cached_models:
-                    continue
-                llm = await self._resolve_or_build_provider(lru, key, registry)
-                key.last_used_at = datetime.now(UTC)
-                await self._session.commit()
-                return llm
-
-            llm = await self._resolve_or_build_provider(lru, key, registry)
-            models = await llm.get_available_models()
-            await set_cached_provider_metadata(
-                key.id,
-                provider=key.provider,
-                credential_type=key.credential_type,
-                is_valid=key.is_valid,
-                is_enabled=key.is_enabled,
-                model_ids=[m.id for m in models],
-            )
-
-            if any(m.id == model_id for m in models):
-                key.last_used_at = datetime.now(UTC)
-                await self._session.commit()
-                return llm
-
-        raise NotFoundError(
-            "ProviderKey",
-            f"No configured provider has model '{model_id}' available",
-        )
+        llm, _key = resolved
+        return llm
 
     async def _resolve_or_build_provider(
         self,
@@ -478,22 +463,6 @@ class ProviderOperations:
         key.last_used_at = datetime.now(UTC)
         await self._session.commit()
 
-        if await get_cached_provider_metadata(key.id) is None:
-            try:
-                models = await provider.get_available_models()
-                await set_cached_provider_metadata(
-                    key.id,
-                    provider=key.provider,
-                    credential_type=key.credential_type,
-                    is_valid=key.is_valid,
-                    is_enabled=key.is_enabled,
-                    model_ids=[m.id for m in models],
-                )
-            except Exception:
-                logger.warning(
-                    f"Failed to populate provider metadata cache for {key.id}",
-                )
-
         return provider, key
 
     async def list_enabled_keys_for_provider(
@@ -526,59 +495,13 @@ class ProviderOperations:
         organization_id: UUID,
         model_id: str,
     ) -> tuple[LLMProvider, ProviderKey] | None:
-        """Resolve ``model_id`` to its (provider client, key row).
+        """Resolve ``model_id`` to its (provider client, key row), or ``None``.
 
-        Mirrors ``get_provider_for_model`` but also returns the
-        ``ProviderKey`` so callers (failover loop, run-log writer) can
-        track which credential is now active. Returns ``None`` when no
-        configured key advertises the model.
+        Like ``get_provider_for_model`` but also returns the ``ProviderKey`` so
+        callers (failover loop, run-log writer) can track which credential is
+        active. Routing is catalog-driven.
         """
-        result = await self._session.execute(
-            select(ProviderKey)
-            .where(
-                ProviderKey.organization_id == organization_id,
-                ProviderKey.is_valid == True,  # noqa: E712
-                ProviderKey.is_enabled == True,  # noqa: E712
-            )
-            .order_by(ProviderKey.created_at)
-        )
-        keys = list(result.scalars().all())
-
-        seen_providers: set[str] = set()
-        registry = get_provider_registry()
-        lru = get_provider_lru()
-
-        for key in keys:
-            if key.provider in seen_providers:
-                continue
-            seen_providers.add(key.provider)
-
-            metadata = await get_cached_provider_metadata(key.id)
-            if metadata is not None:
-                cached_models = metadata.get("model_ids") or []
-                if model_id not in cached_models:
-                    continue
-                llm = await self._resolve_or_build_provider(lru, key, registry)
-                key.last_used_at = datetime.now(UTC)
-                await self._session.commit()
-                return llm, key
-
-            llm = await self._resolve_or_build_provider(lru, key, registry)
-            models = await llm.get_available_models()
-            await set_cached_provider_metadata(
-                key.id,
-                provider=key.provider,
-                credential_type=key.credential_type,
-                is_valid=key.is_valid,
-                is_enabled=key.is_enabled,
-                model_ids=[m.id for m in models],
-            )
-            if any(m.id == model_id for m in models):
-                key.last_used_at = datetime.now(UTC)
-                await self._session.commit()
-                return llm, key
-
-        return None
+        return await self._get_key_for_model(organization_id, model_id)
 
     async def list_models_for_key(
         self,
@@ -643,7 +566,7 @@ class ProviderOperations:
         )
         await self._session.commit()
         await self._session.refresh(key)
-        await invalidate_provider_metadata(key_id)
+        await publish_provider_key_invalidation(key_id)
         return key
 
 

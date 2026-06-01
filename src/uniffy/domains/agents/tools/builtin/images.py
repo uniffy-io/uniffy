@@ -218,14 +218,16 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.agents.currency import (
         get_display_currency,
     )
-    from uniffy.domains.agents.pricing import compute_image_cost, get_pricing
+    from uniffy.domains.agents.pricing import (
+        PRICING_CURRENCY,
+        compute_image_cost,
+        get_pricing,
+    )
 
     image_cost = None
     image_cost_currency = None
     try:
-        pricing = await get_pricing(
-            ctx.session, provider=provider.name, model=image_model,
-        )
+        pricing = get_pricing(provider=provider.name, model=image_model)
         if pricing is not None:
             raw_cost = compute_image_cost(
                 pricing, size=size, quality=quality, count=1,
@@ -236,7 +238,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 )
                 image_cost = await convert_currency(
                     raw_cost,
-                    pricing.currency,
+                    PRICING_CURRENCY,
                     display_currency,
                     ctx.session,
                     ctx.organization_id,

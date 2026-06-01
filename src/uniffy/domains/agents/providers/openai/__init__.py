@@ -1,7 +1,7 @@
 """OpenAI provider subpackage."""
 
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo, ProviderDescriptor
-from uniffy.domains.agents.providers.openai.catalog import FALLBACK_MODELS
+from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 from uniffy.domains.agents.providers.openai.provider import OpenAIProvider
 from uniffy.domains.agents.providers.openai.validation import validate_openai_credential
 
@@ -54,18 +54,8 @@ class OpenAIDescriptor(ProviderDescriptor):
         return OpenAIProvider(credential, credential_type=credential_type)
 
     def get_models(self) -> list[ModelInfo]:
-        """Return the static fallback OpenAI model catalog.
-
-        This is the synchronous fallback used by the registry when no
-        live provider instance is available.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Static fallback OpenAI models.
-
-        """
-        return list(FALLBACK_MODELS)
+        """Return the static OpenAI catalog (used when no live key is set)."""
+        return model_infos_for_provider("openai")
 
     def validate_credential(self, credential: str, credential_type: str) -> None:
         """Validate an OpenAI credential format.

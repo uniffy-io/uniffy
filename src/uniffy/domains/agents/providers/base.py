@@ -3,11 +3,17 @@
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 
 @dataclass(frozen=True)
 class ModelInfo:
-    """Static model metadata from the catalog."""
+    """Static model metadata sourced from the catalog.
+
+    Pricing is per one million tokens in USD. ``reasoning_levels`` are the
+    ``reasoning_effort`` values the model accepts (empty when it has no
+    discrete levels); ``supports_thinking`` is whether it reasons at all.
+    """
 
     id: str
     display_name: str
@@ -16,6 +22,20 @@ class ModelInfo:
     supports_tools: bool = False
     supports_vision: bool = False
     supports_thinking: bool = False
+    supports_prompt_cache: bool = False
+    supports_image_generation: bool = False
+    default_max_tokens: int | None = None
+    aliases: tuple[str, ...] = ()
+    deprecated: bool = False
+    # True when this id resolves to a curated catalog entry (vs a live-API
+    # model we have no catalog row for). Drives the chat-model pickers.
+    catalog_known: bool = False
+    reasoning_levels: tuple[str, ...] = ()
+    default_reasoning_effort: str | None = None
+    input_per_1m: Decimal | None = None
+    output_per_1m: Decimal | None = None
+    cache_read_per_1m: Decimal | None = None
+    cache_write_per_1m: Decimal | None = None
 
 
 @dataclass

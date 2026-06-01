@@ -262,8 +262,29 @@ type ModelInfo struct {
 	SupportsVision bool `protobuf:"varint,6,opt,name=supports_vision,json=supportsVision,proto3" json:"supports_vision,omitempty"`
 	// Whether the model supports extended thinking
 	SupportsThinking bool `protobuf:"varint,7,opt,name=supports_thinking,json=supportsThinking,proto3" json:"supports_thinking,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Default max output tokens (0 when unspecified)
+	DefaultMaxTokens int32 `protobuf:"varint,8,opt,name=default_max_tokens,json=defaultMaxTokens,proto3" json:"default_max_tokens,omitempty"`
+	// Whether the model supports prompt caching
+	SupportsPromptCache bool `protobuf:"varint,9,opt,name=supports_prompt_cache,json=supportsPromptCache,proto3" json:"supports_prompt_cache,omitempty"`
+	// Whether the model is deprecated
+	Deprecated bool `protobuf:"varint,10,opt,name=deprecated,proto3" json:"deprecated,omitempty"`
+	// Reasoning effort levels the model accepts (e.g. "low", "high"); empty
+	// when it has no discrete levels
+	ReasoningLevels []string `protobuf:"bytes,11,rep,name=reasoning_levels,json=reasoningLevels,proto3" json:"reasoning_levels,omitempty"`
+	// Default reasoning effort, when the model has levels
+	DefaultReasoningEffort string `protobuf:"bytes,12,opt,name=default_reasoning_effort,json=defaultReasoningEffort,proto3" json:"default_reasoning_effort,omitempty"`
+	// USD price per 1M tokens, as decimal strings ("" when no catalog rate)
+	InputPer_1M      string `protobuf:"bytes,13,opt,name=input_per_1m,json=inputPer1m,proto3" json:"input_per_1m,omitempty"`
+	OutputPer_1M     string `protobuf:"bytes,14,opt,name=output_per_1m,json=outputPer1m,proto3" json:"output_per_1m,omitempty"`
+	CacheReadPer_1M  string `protobuf:"bytes,15,opt,name=cache_read_per_1m,json=cacheReadPer1m,proto3" json:"cache_read_per_1m,omitempty"`
+	CacheWritePer_1M string `protobuf:"bytes,16,opt,name=cache_write_per_1m,json=cacheWritePer1m,proto3" json:"cache_write_per_1m,omitempty"`
+	// Whether the model can generate images (has image pricing in the catalog)
+	SupportsImageGeneration bool `protobuf:"varint,17,opt,name=supports_image_generation,json=supportsImageGeneration,proto3" json:"supports_image_generation,omitempty"`
+	// Whether the id resolves to a curated catalog entry (vs a live-API model
+	// with no catalog row). The chat-model pickers show only catalog-known models.
+	CatalogKnown  bool `protobuf:"varint,18,opt,name=catalog_known,json=catalogKnown,proto3" json:"catalog_known,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ModelInfo) Reset() {
@@ -341,6 +362,83 @@ func (x *ModelInfo) GetSupportsVision() bool {
 func (x *ModelInfo) GetSupportsThinking() bool {
 	if x != nil {
 		return x.SupportsThinking
+	}
+	return false
+}
+
+func (x *ModelInfo) GetDefaultMaxTokens() int32 {
+	if x != nil {
+		return x.DefaultMaxTokens
+	}
+	return 0
+}
+
+func (x *ModelInfo) GetSupportsPromptCache() bool {
+	if x != nil {
+		return x.SupportsPromptCache
+	}
+	return false
+}
+
+func (x *ModelInfo) GetDeprecated() bool {
+	if x != nil {
+		return x.Deprecated
+	}
+	return false
+}
+
+func (x *ModelInfo) GetReasoningLevels() []string {
+	if x != nil {
+		return x.ReasoningLevels
+	}
+	return nil
+}
+
+func (x *ModelInfo) GetDefaultReasoningEffort() string {
+	if x != nil {
+		return x.DefaultReasoningEffort
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetInputPer_1M() string {
+	if x != nil {
+		return x.InputPer_1M
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetOutputPer_1M() string {
+	if x != nil {
+		return x.OutputPer_1M
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetCacheReadPer_1M() string {
+	if x != nil {
+		return x.CacheReadPer_1M
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetCacheWritePer_1M() string {
+	if x != nil {
+		return x.CacheWritePer_1M
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetSupportsImageGeneration() bool {
+	if x != nil {
+		return x.SupportsImageGeneration
+	}
+	return false
+}
+
+func (x *ModelInfo) GetCatalogKnown() bool {
+	if x != nil {
+		return x.CatalogKnown
 	}
 	return false
 }
@@ -1164,7 +1262,7 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x12_last_validated_atB\x0f\n" +
 	"\r_last_used_atB\r\n" +
 	"\v_last_errorB\x10\n" +
-	"\x0e_baseline_role\"\xfe\x01\n" +
+	"\x0e_baseline_role\"\xe4\x05\n" +
 	"\tModelInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
@@ -1172,7 +1270,22 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x0econtext_window\x18\x04 \x01(\x05R\rcontextWindow\x12%\n" +
 	"\x0esupports_tools\x18\x05 \x01(\bR\rsupportsTools\x12'\n" +
 	"\x0fsupports_vision\x18\x06 \x01(\bR\x0esupportsVision\x12+\n" +
-	"\x11supports_thinking\x18\a \x01(\bR\x10supportsThinking\"\xf7\x02\n" +
+	"\x11supports_thinking\x18\a \x01(\bR\x10supportsThinking\x12,\n" +
+	"\x12default_max_tokens\x18\b \x01(\x05R\x10defaultMaxTokens\x122\n" +
+	"\x15supports_prompt_cache\x18\t \x01(\bR\x13supportsPromptCache\x12\x1e\n" +
+	"\n" +
+	"deprecated\x18\n" +
+	" \x01(\bR\n" +
+	"deprecated\x12)\n" +
+	"\x10reasoning_levels\x18\v \x03(\tR\x0freasoningLevels\x128\n" +
+	"\x18default_reasoning_effort\x18\f \x01(\tR\x16defaultReasoningEffort\x12 \n" +
+	"\finput_per_1m\x18\r \x01(\tR\n" +
+	"inputPer1m\x12\"\n" +
+	"\routput_per_1m\x18\x0e \x01(\tR\voutputPer1m\x12)\n" +
+	"\x11cache_read_per_1m\x18\x0f \x01(\tR\x0ecacheReadPer1m\x12+\n" +
+	"\x12cache_write_per_1m\x18\x10 \x01(\tR\x0fcacheWritePer1m\x12:\n" +
+	"\x19supports_image_generation\x18\x11 \x01(\bR\x17supportsImageGeneration\x12#\n" +
+	"\rcatalog_known\x18\x12 \x01(\bR\fcatalogKnown\"\xf7\x02\n" +
 	"\x15AddProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12B\n" +

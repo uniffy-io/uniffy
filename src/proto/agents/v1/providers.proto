@@ -88,6 +88,27 @@ message ModelInfo {
   bool supports_vision = 6;
   // Whether the model supports extended thinking
   bool supports_thinking = 7;
+  // Default max output tokens (0 when unspecified)
+  int32 default_max_tokens = 8;
+  // Whether the model supports prompt caching
+  bool supports_prompt_cache = 9;
+  // Whether the model is deprecated
+  bool deprecated = 10;
+  // Reasoning effort levels the model accepts (e.g. "low", "high"); empty
+  // when it has no discrete levels
+  repeated string reasoning_levels = 11;
+  // Default reasoning effort, when the model has levels
+  string default_reasoning_effort = 12;
+  // USD price per 1M tokens, as decimal strings ("" when no catalog rate)
+  string input_per_1m = 13;
+  string output_per_1m = 14;
+  string cache_read_per_1m = 15;
+  string cache_write_per_1m = 16;
+  // Whether the model can generate images (has image pricing in the catalog)
+  bool supports_image_generation = 17;
+  // Whether the id resolves to a curated catalog entry (vs a live-API model
+  // with no catalog row). The chat-model pickers show only catalog-known models.
+  bool catalog_known = 18;
 }
 
 // Request to add a new provider key

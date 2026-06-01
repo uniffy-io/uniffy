@@ -39,7 +39,6 @@ logger = logger.bind(component="cache")
 _AGENT_TTL_SECONDS = 900
 _SKILLS_TTL_SECONDS = 900
 _PROMPT_TTL_SECONDS = 900
-_PROVIDER_TTL_SECONDS = 3600
 
 
 def _agent_key(agent_id: UUID) -> str:
@@ -52,10 +51,6 @@ def _agent_skills_key(agent_id: UUID) -> str:
 
 def _agent_prompt_key(agent_id: UUID) -> str:
     return f"agent:{agent_id}:prompt"
-
-
-def _provider_key_metadata_key(key_id: UUID) -> str:
-    return f"provider:key:{key_id}"
 
 
 def _skill_tag_key(skill_id: UUID) -> str:
@@ -544,42 +539,14 @@ def _is_uuid(value: str) -> bool:
     return True
 
 
-async def get_cached_provider_metadata(
-    key_id: UUID,
-) -> dict[str, Any] | None:
-    """Return cached non-secret provider-key metadata, or `None`."""
-    cached = await cache_get(_provider_key_metadata_key(key_id))
-    if cached is CACHE_MISS or cached is None:
-        return None
-    return cached if isinstance(cached, dict) else None
+async def publish_provider_key_invalidation(key_id: UUID) -> None:
+    """Publish the cross-pod signal that drops this key's cached client.
 
-
-async def set_cached_provider_metadata(
-    key_id: UUID,
-    *,
-    provider: str,
-    credential_type: str,
-    is_valid: bool,
-    is_enabled: bool,
-    model_ids: list[str],
-) -> None:
-    """Cache non-secret routing metadata; encrypted credentials never enter Valkey."""
-    await cache_set(
-        _provider_key_metadata_key(key_id),
-        {
-            "provider": provider,
-            "credential_type": credential_type,
-            "is_valid": is_valid,
-            "is_enabled": is_enabled,
-            "model_ids": list(model_ids),
-        },
-        ttl=_PROVIDER_TTL_SECONDS,
-    )
-
-
-async def invalidate_provider_metadata(key_id: UUID) -> None:
-    """Delete the Valkey entry and publish the cross-pod pubsub signal."""
-    await cache_delete(_provider_key_metadata_key(key_id))
+    The ``ProviderClientLRU`` (decrypted credential + SDK client) is the only
+    place a key's client is cached now that the model list is catalog-served;
+    every pod's subscriber drops its entry on this signal. Call after any
+    mutation to the key (add / validate / toggle / remove).
+    """
     client = _get_ops_client()
     if client is None:
         return

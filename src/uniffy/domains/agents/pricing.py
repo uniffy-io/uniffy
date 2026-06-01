@@ -1,197 +1,91 @@
-"""Pricing lookup and cost computation helpers.
+"""Cost computation from the model catalog.
 
-The public surface is intentionally small so every code path that
-writes an ``AgentRunLog`` agrees on how cost is calculated. Callers
-are expected to handle ``None`` returns from ``get_pricing`` by
-leaving ``AgentRunLog.cost`` null and logging a warning - we
-never guess at a price.
+Pricing is defined per model in the catalog (USD per one million tokens).
+Callers that get ``None`` from ``get_pricing`` leave ``AgentRunLog.cost``
+null and log a warning - we never guess at a price. Cost is computed at
+write time and frozen on the run-log row, so editing a catalog price only
+affects future runs.
 """
 
-import re
-from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from loguru import logger
-from sqlalchemy import or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.agents.model_pricing import AgentModelPricing
+from uniffy.domains.agents.providers.catalog import get_model
+from uniffy.domains.agents.providers.catalog.loader import cache_read_rate
+from uniffy.domains.agents.providers.catalog.schema import Model
 
 logger = logger.bind(component="agents.pricing")
 
 _ONE_MILLION = Decimal("1000000")
 
-# Provider model ids commonly include a trailing date snapshot
-# (OpenAI: ``gpt-4o-2024-08-06``; Anthropic: ``claude-3-5-sonnet-20241022``).
-# When a pricing row is not seeded for the exact snapshot, fall back to
-# the alias by stripping this suffix.
-_DATE_SUFFIX_RE = re.compile(r"-(\d{8}|\d{4}-\d{2}-\d{2})$")
+# All catalog rates are USD; currency conversion to the org's display
+# currency happens downstream in ``currency.py``.
+PRICING_CURRENCY = "USD"
 
 
-async def get_pricing(
-    session: AsyncSession,
-    *,
-    provider: str,
-    model: str,
-    at_time: datetime | None = None,
-) -> AgentModelPricing | None:
-    """Return the pricing row active for ``(provider, model)`` at ``at_time``.
-
-    Prefers the row with the latest ``effective_from`` that is still in
-    the past relative to ``at_time`` and whose ``effective_to`` is
-    either null or in the future. If no row matches, returns ``None``.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-    provider : str
-        Provider key (``anthropic`` / ``openai`` / ``google`` / ``other``).
-    model : str
-        Provider-specific model id.
-    at_time : datetime | None
-        Point in time the pricing should be valid for. Defaults to "now".
-
-    """
-    when = at_time or datetime.now(UTC)
-    candidates = [model]
-    alias = _DATE_SUFFIX_RE.sub("", model)
-    if alias != model:
-        candidates.append(alias)
-
-    for candidate in candidates:
-        row = (
-            await session.execute(
-                select(AgentModelPricing)
-                .where(
-                    AgentModelPricing.provider == provider,
-                    AgentModelPricing.model == candidate,
-                    AgentModelPricing.effective_from <= when,
-                    or_(
-                        AgentModelPricing.effective_to.is_(None),
-                        AgentModelPricing.effective_to > when,
-                    ),
-                )
-                .order_by(AgentModelPricing.effective_from.desc())
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-        if row is not None:
-            return row
-    return None
+def get_pricing(*, provider: str, model: str) -> Model | None:
+    """Return the catalog model carrying pricing for ``(provider, model)``."""
+    return get_model(provider, model)
 
 
 def compute_text_cost(
-    pricing: AgentModelPricing,
+    pricing: Model,
     *,
     input_tokens: int,
     output_tokens: int,
     cache_read_input_tokens: int = 0,
     thinking_tokens: int = 0,
 ) -> Decimal:
-    """Compute a text-model cost from token counts and the pricing row.
+    """Compute a text-model cost in USD from token counts.
 
-    Cached input tokens are priced using ``cached_input_per_1m`` when
-    set, otherwise at the regular input rate. Thinking tokens are priced
-    using ``thinking_per_1m`` when set, otherwise at the regular
-    output rate. Regular ``input_tokens`` is expected to exclude cached
-    reads and ``output_tokens`` is expected to exclude thinking tokens;
-    the caller is responsible for splitting the counts correctly.
-
-    Parameters
-    ----------
-    pricing : AgentModelPricing
-        Pricing row returned by ``get_pricing`` (must be ``kind='text'``).
-    input_tokens : int
-        Regular (non-cached) input tokens.
-    output_tokens : int
-        Regular (non-thinking) output tokens.
-    cache_read_input_tokens : int
-        Prompt-cache read tokens.
-    thinking_tokens : int
-        Extended-thinking output tokens.
-
-    Returns
-    -------
-    Decimal
-        Total cost in USD, rounded to 6 decimal places.
-
+    ``input_tokens`` should exclude cached reads; cached reads are priced at
+    the model's cache-read rate (falling back to the input rate). Thinking
+    tokens are billed at the output rate - the catalog carries no separate
+    thinking price.
     """
     cost = Decimal(0)
 
-    if pricing.input_per_1m is not None and input_tokens > 0:
-        cost += (Decimal(input_tokens) * pricing.input_per_1m) / _ONE_MILLION
+    if pricing.cost_per_1m_in > 0 and input_tokens > 0:
+        cost += (Decimal(input_tokens) * pricing.cost_per_1m_in) / _ONE_MILLION
 
-    if pricing.output_per_1m is not None and output_tokens > 0:
-        cost += (Decimal(output_tokens) * pricing.output_per_1m) / _ONE_MILLION
+    billable_output = output_tokens + max(thinking_tokens, 0)
+    if pricing.cost_per_1m_out > 0 and billable_output > 0:
+        cost += (Decimal(billable_output) * pricing.cost_per_1m_out) / _ONE_MILLION
 
     if cache_read_input_tokens > 0:
-        cached_rate = pricing.cached_input_per_1m or pricing.input_per_1m
-        if cached_rate is not None:
-            cost += (Decimal(cache_read_input_tokens) * cached_rate) / _ONE_MILLION
+        rate = cache_read_rate(pricing) or pricing.cost_per_1m_in
+        if rate > 0:
+            cost += (Decimal(cache_read_input_tokens) * rate) / _ONE_MILLION
 
-    if thinking_tokens > 0:
-        thinking_rate = pricing.thinking_per_1m or pricing.output_per_1m
-        if thinking_rate is not None:
-            cost += (Decimal(thinking_tokens) * thinking_rate) / _ONE_MILLION
-
-    # Quantize to the DECIMAL(12,6) column precision so the value we
-    # return matches what a round-trip through the DB would produce.
     return cost.quantize(Decimal("0.000001"))
 
 
 def compute_image_cost(
-    pricing: AgentModelPricing,
+    pricing: Model,
     *,
     size: str,
     quality: str,
     count: int = 1,
 ) -> Decimal | None:
-    """Compute the cost of generating ``count`` images at ``(size, quality)``.
+    """Compute image-generation cost, or ``None`` when no rate is configured.
 
-    Returns ``None`` when the pricing row has no entry for the requested
-    ``(size, quality)`` pair - callers leave the run log's ``cost_usd``
-    null and log the miss.
-
-    Parameters
-    ----------
-    pricing : AgentModelPricing
-        Pricing row returned by ``get_pricing`` (must be ``kind='image'``).
-    size : str
-        Image size enum value (e.g. ``1024x1024``).
-    quality : str
-        Image quality enum value (e.g. ``auto``).
-    count : int
-        Number of images produced in the run.
-
-    Returns
-    -------
-    Decimal | None
-        Total cost in USD, or ``None`` when no price is available.
-
+    Prefers the per-size/quality matrix (OpenAI); falls back to a flat
+    per-image rate (Gemini) when the matrix has no matching entry.
     """
-    if pricing.image_prices is None or count <= 0:
+    if count <= 0:
         return None
 
-    sizes = pricing.image_prices.get(size)
-    if not isinstance(sizes, dict):
-        return None
+    if pricing.image_prices:
+        sizes = pricing.image_prices.get(size)
+        if isinstance(sizes, dict):
+            raw_price = sizes.get(quality)
+            if raw_price is not None:
+                return (Decimal(str(raw_price)) * Decimal(count)).quantize(
+                    Decimal("0.000001")
+                )
 
-    raw_price = sizes.get(quality)
-    if raw_price is None:
-        return None
+    if pricing.cost_per_image is not None:
+        return (pricing.cost_per_image * Decimal(count)).quantize(Decimal("0.000001"))
 
-    try:
-        price = Decimal(str(raw_price))
-    except (InvalidOperation, TypeError):
-        logger.warning(
-            "Unparseable image price in pricing row",
-            model=pricing.model,
-            size=size,
-            quality=quality,
-            raw_price=raw_price,
-        )
-        return None
-
-    cost = price * Decimal(count)
-    return cost.quantize(Decimal("0.000001"))
+    return None
