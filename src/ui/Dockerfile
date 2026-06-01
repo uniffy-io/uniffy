@@ -33,9 +33,6 @@ ENV VITE_ENV=$VITE_ENV
 
 RUN pnpm --filter uniffy-ui build
 
-# Build service worker (minified IIFE bundle for production)
-RUN pnpm --filter uniffy-ui build:worker
-
 # Production stage - serve with nginx
 FROM nginx:alpine
 
@@ -67,7 +64,13 @@ server { \
         add_header Cache-Control "public, immutable"; \
     } \
     \
-    # Serve static files at root (service worker, etc.) - must be before SPA fallback \
+    # Service worker: always revalidate so a new version is picked up on the next update check \
+    location = /notification-worker.js { \
+        try_files $uri =404; \
+        add_header Cache-Control "no-cache"; \
+    } \
+    \
+    # Serve static files at root (favicons, manifest, etc.) - must be before SPA fallback \
     location ~* ^/[^/]+\\.(js|css|map|ico|png|svg|jpg|jpeg|gif|woff|woff2|ttf|eot)$ { \
         try_files $uri =404; \
         expires 1d; \

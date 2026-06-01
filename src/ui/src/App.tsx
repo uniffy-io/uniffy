@@ -13,6 +13,8 @@ import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { StreamingProvider } from '@/components/streaming/StreamingProvider';
 import { FileViewerModal } from '@/features/files';
+import { UploadTray } from '@/features/files/components/upload/UploadTray';
+import { UploadBoot } from '@/features/files/components/upload/UploadBoot';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { PageLoader } from '@/components/feedback/PageLoader';
 import { PageErrorFallback } from '@/components/feedback/PageErrorFallback';
@@ -203,6 +205,10 @@ export function App() {
                     <StreamingProvider />
                     {/* Global toast notifications */}
                     <ThemedToaster />
+                    {/* Global upload engine boot (mirror + reload recovery) and the floating transfers tray.
+                        Mounted outside Routes so uploads survive navigation across every domain. */}
+                    <UploadBoot />
+                    <UploadTray />
 
                     <AccessPolicyDialogProvider>
                     <AccessPolicyDialog />

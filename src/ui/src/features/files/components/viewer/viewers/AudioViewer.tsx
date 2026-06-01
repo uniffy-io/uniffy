@@ -23,7 +23,7 @@ import {
     setVolume,
     setViewerLoading,
 } from '@/features/files/store/viewerSlice';
-import { useMediaStream } from '@/features/files/components/viewer/hooks/useMediaStream';
+import { useMedia } from '@/features/files/components/viewer/hooks/useMedia';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize, supportsThumbnail } from '@/features/files/components/list/utils';
 import { formatMediaTime } from '@/shared/utils/dateFormatting';
@@ -55,7 +55,7 @@ export function AudioViewer({ file }: AudioViewerProps) {
         (state) => state.fileViewer
     );
     // Range-based streaming (no full download) - playback starts immediately
-    const { url: streamUrl, loading: swLoading, error: swError } = useMediaStream(file.id);
+    const { url: streamUrl, loading: swLoading, error: swError } = useMedia(file.id);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);

@@ -3,4 +3,4 @@ export { ViewerToolbar } from '@/features/files/components/viewer/ViewerToolbar'
 export { ViewerNavigation } from '@/features/files/components/viewer/ViewerNavigation';
 export { ViewerContent } from '@/features/files/components/viewer/ViewerContent';
 
-export { useMediaStreamUrl, useMediaStreamAvailable } from '@/features/files/components/viewer/hooks/useMediaStream';
+export { useMediaUrl } from '@/features/files/components/viewer/hooks/useMedia';

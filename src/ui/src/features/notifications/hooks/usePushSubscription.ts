@@ -50,8 +50,9 @@ export function usePushSubscription(): UsePushSubscriptionResult {
             const { publicKey } = await notificationsApi.getVapidPublicKey({});
             if (!publicKey) return { success: false, error: 'Could not retrieve push configuration from server.' };
 
-            // The media-stream service worker is already registered at /; push handling lives in the same worker.
-            const registration = await navigator.serviceWorker.ready;
+            // Dedicated notification-only worker (no auth/fetch); registered on demand when the user opts in.
+            const registration = await navigator.serviceWorker.register('/notification-worker.js');
+            await navigator.serviceWorker.ready;
 
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,

@@ -1,5 +1,5 @@
 import { DownloadSimple } from '@phosphor-icons/react';
-import { useMediaStreamUrl } from '@/features/files/components/viewer/hooks/useMediaStream';
+import { useMediaUrl } from '@/features/files/components/viewer/hooks/useMedia';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { formatFileSize } from '@/features/files/components/list/utils';
 import { renderFileIcon } from '@/features/files/components/list/utils';
@@ -9,7 +9,7 @@ interface UnsupportedViewerProps {
 }
 
 export function UnsupportedViewer({ file }: UnsupportedViewerProps) {
-    const streamUrl = useMediaStreamUrl(file.id);
+    const streamUrl = useMediaUrl(file.id);
 
     const handleDownload = () => {
         if (!streamUrl) return;

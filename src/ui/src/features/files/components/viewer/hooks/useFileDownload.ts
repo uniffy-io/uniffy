@@ -1,4 +1,4 @@
-/** For images/PDFs/etc. that don't need Range-based seeking; for video/audio use useMediaStream. */
+/** For images/PDFs/etc. that don't need Range-based seeking; for video/audio use useMedia. */
 
 import { useState, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/app/hooks';

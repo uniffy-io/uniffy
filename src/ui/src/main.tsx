@@ -16,10 +16,24 @@ import './index.css'
 import { App } from '@/App'
 import { store, persistor } from '@/app/store'
 import { ThemeProvider } from '@/config/theme/ThemeProvider'
-import { registerMediaStreamWorker } from '@/workers/registerMediaWorker'
+import { installAssetAuthErrorHandler } from '@/shared/utils/assetAuthRetry'
 
-// Register the media stream service worker for file viewing
-registerMediaStreamWorker();
+// Authenticated assets now ride the asset cookie, not a service-worker Bearer proxy. Unregister the
+// stale media-stream worker a previous build installed so it stops intercepting - but leave the
+// notification worker (registered on demand by push opt-in) alone.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations()
+    .then((regs) => {
+      for (const reg of regs) {
+        const scriptURL = reg.active?.scriptURL || reg.installing?.scriptURL || reg.waiting?.scriptURL || '';
+        if (scriptURL.includes('media-stream-worker')) {
+          reg.unregister();
+        }
+      }
+    })
+    .catch(() => undefined);
+}
+installAssetAuthErrorHandler();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
