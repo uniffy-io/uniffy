@@ -38,6 +38,8 @@ from uniffy.observability.metrics import (
     start_worker_metrics_server,
 )
 
+logger = logger.bind(component="tasks.base")
+
 
 async def _on_startup_shared(ctx: dict[str, Any], queue_name: QueueName) -> None:
     """Boot the resources every worker fleet needs."""

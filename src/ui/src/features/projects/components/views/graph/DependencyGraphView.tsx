@@ -6,6 +6,8 @@ import {
   ArrowsIn,
   CalendarBlank,
   Lightning,
+  TreeStructure,
+  ArrowElbowDownRight,
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -52,6 +54,7 @@ interface LayoutNode {
   sprintId: string | null;
   dueDate: string | null;
   assigneeIds: string[];
+  parentId: string | null;
   rank: number;
   x: number;
   y: number;
@@ -74,6 +77,7 @@ interface SprintGroup {
 interface GraphLayout {
   nodes: LayoutNode[];
   edges: LayoutEdge[];
+  containmentEdges: LayoutEdge[];
   groups: SprintGroup[];
   canvasWidth: number;
   canvasHeight: number;
@@ -116,6 +120,7 @@ function computeNodeState(
 function layoutTaskGroup(
   groupTasks: Task[],
   allEdges: LayoutEdge[],
+  containmentEdges: LayoutEdge[],
   tasksMap: Map<string, Task>,
   stateMap: Map<string, NodeState>,
   startX: number,
@@ -125,17 +130,19 @@ function layoutTaskGroup(
 
   const groupSet = new Set(groupTasks.map((t) => t.id));
 
-  // Rank assignment via longest-path on within-group edges
+  // Rank by longest path. Containment (parent -> child) joins dependency edges
+  // here so a child always lands a column to the right of its parent; the
+  // visual hierarchy reads left-to-right alongside the dependency flow.
   const rank: Record<string, number> = {};
   for (const t of groupTasks) rank[t.id] = 0;
 
-  const groupEdges = allEdges.filter(
+  const rankingEdges = [...allEdges, ...containmentEdges].filter(
     (e) => groupSet.has(e.fromId) && groupSet.has(e.toId)
   );
 
   for (let iter = 0; iter < 100; iter++) {
     let changed = false;
-    for (const e of groupEdges) {
+    for (const e of rankingEdges) {
       if (rank[e.toId] <= rank[e.fromId]) {
         rank[e.toId] = rank[e.fromId] + 1;
         changed = true;
@@ -181,6 +188,7 @@ function layoutTaskGroup(
         sprintId: t.sprintId,
         dueDate: t.dueDate,
         assigneeIds: t.assigneeIds,
+        parentId: t.parentId,
         rank: r,
         x,
         y,
@@ -203,16 +211,15 @@ function buildGraphLayout(
   tasks: Task[],
   sprints: Sprint[]
 ): GraphLayout | null {
-  const rootTasks = tasks.filter((t) => !t.parentId);
-  if (rootTasks.length === 0) return null;
+  if (tasks.length === 0) return null;
 
-  const tasksMap = new Map(rootTasks.map((t) => [t.id, t]));
-  const graphSet = new Set(rootTasks.map((t) => t.id));
+  const tasksMap = new Map(tasks.map((t) => [t.id, t]));
+  const graphSet = new Set(tasks.map((t) => t.id));
 
   // Build all edges
   const allEdges: LayoutEdge[] = [];
   const blockerSet = new Set<string>();
-  for (const t of rootTasks) {
+  for (const t of tasks) {
     for (const bid of t.blockedByTaskIds) {
       if (graphSet.has(bid)) {
         blockerSet.add(bid);
@@ -225,18 +232,27 @@ function buildGraphLayout(
     }
   }
 
+  // Parent -> child links. Kept separate from allEdges so they never feed the
+  // critical path or count as dependencies; they only inform layout + render.
+  const containmentEdges: LayoutEdge[] = [];
+  for (const t of tasks) {
+    if (t.parentId && graphSet.has(t.parentId)) {
+      containmentEdges.push({ fromId: t.parentId, toId: t.id, satisfied: false });
+    }
+  }
+
   // Compute states
   const stateMap = new Map<string, NodeState>();
-  for (const t of rootTasks) {
+  for (const t of tasks) {
     stateMap.set(t.id, computeNodeState(t, blockerSet, tasksMap));
   }
 
   // Compute critical path
   const completedIds = new Set(
-    rootTasks.filter((t) => t.completedAt).map((t) => t.id)
+    tasks.filter((t) => t.completedAt).map((t) => t.id)
   );
   const critPath = computeCriticalPath(
-    rootTasks.map((t) => t.id),
+    tasks.map((t) => t.id),
     allEdges,
     completedIds,
   );
@@ -244,8 +260,9 @@ function buildGraphLayout(
   // No sprints: flat layout
   if (sprints.length === 0) {
     const result = layoutTaskGroup(
-      rootTasks,
+      tasks,
       allEdges,
+      containmentEdges,
       tasksMap,
       stateMap,
       MARGIN,
@@ -254,6 +271,7 @@ function buildGraphLayout(
     return {
       nodes: result.nodes,
       edges: allEdges,
+      containmentEdges,
       groups: [],
       canvasWidth: result.width + MARGIN * 2,
       canvasHeight: result.height + MARGIN * 2,
@@ -291,7 +309,7 @@ function buildGraphLayout(
   let maxCanvasHeight = 0;
 
   for (const group of orderedGroups) {
-    const groupTasks = rootTasks.filter((t) =>
+    const groupTasks = tasks.filter((t) =>
       group.sprintId === null
         ? t.sprintId === null || t.sprintId === ""
         : t.sprintId === group.sprintId
@@ -305,6 +323,7 @@ function buildGraphLayout(
     const result = layoutTaskGroup(
       groupTasks,
       allEdges,
+      containmentEdges,
       tasksMap,
       stateMap,
       contentStartX,
@@ -334,6 +353,7 @@ function buildGraphLayout(
   return {
     nodes: allNodes,
     edges: allEdges,
+    containmentEdges,
     groups,
     canvasWidth: currentX - GROUP_GAP + MARGIN,
     canvasHeight: Math.max(maxCanvasHeight, MARGIN * 2),
@@ -349,7 +369,10 @@ export function DependencyGraphView() {
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
 
   const projectId = currentProject?.id;
-  const tasks = useFilteredTasks(projectId ?? "");
+  // Subtasks are first-class nodes here: a dependency graph that hides children
+  // hides their blockers too. The "Top-level only" filter is the opt-in for a
+  // root-only view.
+  const tasks = useFilteredTasks(projectId ?? "", { includeSubtasks: true });
   const sprints = useAppSelector(
     selectSprintsForProject(currentProject?.id ?? "")
   );
@@ -372,6 +395,8 @@ export function DependencyGraphView() {
 
   // Critical path toggle
   const [showCriticalPath, setShowCriticalPath] = useState(false);
+  // Parent/child links on by default; toggle off when the graph gets dense.
+  const [showHierarchy, setShowHierarchy] = useState(true);
 
   // Pan/zoom state
   const [transform, setTransform] = useState<ViewTransform>({
@@ -555,7 +580,7 @@ export function DependencyGraphView() {
     );
   }
 
-  const { nodes, edges, groups, canvasWidth, canvasHeight, criticalPath } = layout;
+  const { nodes, edges, containmentEdges, groups, canvasWidth, canvasHeight, criticalPath } = layout;
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-muted/30">
@@ -564,6 +589,9 @@ export function DependencyGraphView() {
         showCriticalPath={showCriticalPath}
         onToggleCriticalPath={() => setShowCriticalPath(!showCriticalPath)}
         criticalPathLength={criticalPath.pathLength}
+        showHierarchy={showHierarchy}
+        onToggleHierarchy={() => setShowHierarchy(!showHierarchy)}
+        hasHierarchy={containmentEdges.length > 0}
       />
 
       {/* Canvas area */}
@@ -642,7 +670,53 @@ export function DependencyGraphView() {
                   opacity="1"
                 />
               </marker>
+              <marker
+                id="dg-contain"
+                markerWidth="9"
+                markerHeight="9"
+                refX="4.5"
+                refY="4.5"
+                orient="auto"
+              >
+                <polygon
+                  points="0 4.5, 4.5 0, 9 4.5, 4.5 9"
+                  fill="hsl(var(--muted-foreground))"
+                  opacity="0.6"
+                />
+              </marker>
             </defs>
+
+            {/* Containment links sit beneath dependency arrows, visually recessive */}
+            {showHierarchy && containmentEdges.map((edge) => {
+              const fromNode = nodes.find((n) => n.id === edge.fromId);
+              const toNode = nodes.find((n) => n.id === edge.toId);
+              if (!fromNode || !toNode) return null;
+
+              const sx = fromNode.x + NODE_W;
+              const sy = fromNode.y + NODE_H / 2;
+              const ex = toNode.x;
+              const ey = toNode.y + NODE_H / 2;
+              const absDx = Math.abs(ex - sx);
+              const absDy = Math.abs(ey - sy);
+              const dy = ey - sy;
+              const cpOffset = Math.max(absDx * 0.4, absDy * 0.25, H_GAP * 0.4);
+              const cp1x = sx + cpOffset;
+              const cp2x = ex - cpOffset;
+              const cp2y = ey - dy * 0.2;
+
+              return (
+                <path
+                  key={`contain-${edge.fromId}-${edge.toId}`}
+                  d={`M ${sx} ${sy} C ${cp1x} ${sy}, ${cp2x} ${cp2y}, ${ex} ${ey}`}
+                  fill="none"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={1.25}
+                  strokeDasharray="2 5"
+                  opacity={0.45}
+                  markerStart="url(#dg-contain)"
+                />
+              );
+            })}
 
             {edges.map((edge) => {
               const fromNode = nodes.find((n) => n.id === edge.fromId);
@@ -812,6 +886,13 @@ function GraphNode({
         {/* Top row: type icon + number + badge */}
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 min-w-0">
+            {node.parentId && (
+              <ArrowElbowDownRight
+                size={11}
+                className="text-muted-foreground/60 shrink-0"
+                aria-label="Subtask"
+              />
+            )}
             <TypeIcon
               size={12}
               weight="fill"
@@ -971,10 +1052,16 @@ function LegendBar({
   showCriticalPath,
   onToggleCriticalPath,
   criticalPathLength,
+  showHierarchy,
+  onToggleHierarchy,
+  hasHierarchy,
 }: {
   showCriticalPath: boolean;
   onToggleCriticalPath: () => void;
   criticalPathLength: number;
+  showHierarchy: boolean;
+  onToggleHierarchy: () => void;
+  hasHierarchy: boolean;
 }) {
   return (
     <div className="px-4 py-2.5 flex items-center gap-6 border-b border-border shrink-0 bg-card">
@@ -991,26 +1078,46 @@ function LegendBar({
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <EdgeLegendItem color="#ef4444" dashed={false} label="Pending dep" />
         <EdgeLegendItem color="#22c55e" dashed label="Resolved dep" />
+        {hasHierarchy && (
+          <EdgeLegendItem color="currentColor" dashed marker="diamond" label="Subtask" />
+        )}
       </div>
       <div className="h-4 w-px bg-border" />
-      <button
-        type="button"
-        onClick={onToggleCriticalPath}
-        className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-          showCriticalPath
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-muted-foreground hover:text-foreground"
+      <div className="flex items-center gap-2">
+        {hasHierarchy && (
+          <button
+            type="button"
+            onClick={onToggleHierarchy}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+              showHierarchy
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <TreeStructure size={12} weight={showHierarchy ? "fill" : "regular"} />
+            Hierarchy
+          </button>
         )}
-      >
-        <Lightning size={12} weight={showCriticalPath ? "fill" : "regular"} />
-        Critical Path
-        {showCriticalPath && criticalPathLength > 0 && (
-          <span className="bg-primary-foreground/20 px-1.5 py-0.5 rounded text-[10px]">
-            {criticalPathLength} tasks
-          </span>
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={onToggleCriticalPath}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+            showCriticalPath
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Lightning size={12} weight={showCriticalPath ? "fill" : "regular"} />
+          Critical Path
+          {showCriticalPath && criticalPathLength > 0 && (
+            <span className="bg-primary-foreground/20 px-1.5 py-0.5 rounded text-[10px]">
+              {criticalPathLength} tasks
+            </span>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1028,16 +1135,18 @@ function EdgeLegendItem({
   color,
   dashed,
   label,
+  marker = "arrow",
 }: {
   color: string;
   dashed: boolean;
   label: string;
+  marker?: "arrow" | "diamond";
 }) {
   return (
     <span className="flex items-center gap-1.5">
       <svg width="22" height="8" className="shrink-0">
         <line
-          x1="0"
+          x1={marker === "diamond" ? "7" : "0"}
           y1="4"
           x2="15"
           y2="4"
@@ -1046,11 +1155,11 @@ function EdgeLegendItem({
           strokeDasharray={dashed ? "4 2" : undefined}
           opacity="0.85"
         />
-        <polygon
-          points="14 1.5, 20 4, 14 6.5"
-          fill={color}
-          opacity="0.85"
-        />
+        {marker === "diamond" ? (
+          <polygon points="0 4, 4 1, 8 4, 4 7" fill={color} opacity="0.85" />
+        ) : (
+          <polygon points="14 1.5, 20 4, 14 6.5" fill={color} opacity="0.85" />
+        )}
       </svg>
       {label}
     </span>

@@ -17,7 +17,7 @@ import {
 import { ViewerToolbar } from '@/features/files/components/viewer/ViewerToolbar';
 import { ViewerNavigation } from '@/features/files/components/viewer/ViewerNavigation';
 import { ViewerContent } from '@/features/files/components/viewer/ViewerContent';
-import { buildMediaStreamUrl } from '@/shared/utils/fileUrls';
+import { buildMediaUrl } from '@/shared/utils/fileUrls';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { getDownloadGateState } from '@/features/files/utils/transcodeGate';
 
@@ -83,7 +83,7 @@ export function FileViewerModal() {
         if (!file) return;
         if (getDownloadGateState(file.transcodeStatus).disabled) return;
         const link = document.createElement('a');
-        link.href = buildMediaStreamUrl(file.organizationId, file.id);
+        link.href = buildMediaUrl(file.organizationId, file.id);
         link.download = file.filename;
         document.body.appendChild(link);
         link.click();

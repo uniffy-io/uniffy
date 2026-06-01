@@ -18,6 +18,8 @@ from uniffy.core.storage import get_s3_client
 from uniffy.db import open_session
 from uniffy.domains.auth.http_deps import get_current_user_id
 
+logger = logger.bind(component="agents.agents.http_routes")
+
 agent_avatars_router = APIRouter(prefix="/agents/avatars", tags=["agent-avatars"])
 
 
@@ -136,7 +138,7 @@ async def get_agent_avatar(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting agent avatar: {e}", exc_info=True)
+        logger.exception(f"Error getting agent avatar: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

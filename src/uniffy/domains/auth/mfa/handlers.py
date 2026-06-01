@@ -54,6 +54,8 @@ from uniffy.domains.auth.errors import (
 from uniffy.domains.auth.mfa.challenge import ENROLLMENT_ALLOWED_RPCS
 from uniffy.domains.auth.mfa.operations import MfaOperations
 
+logger = logger.bind(component="auth.mfa.handlers")
+
 
 def _mfa_domain_admins(values: list[str] | None) -> list[int]:
     if not values:
@@ -99,7 +101,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"BeginEnrollment failed: {exc}", exc_info=True)
+            logger.exception(f"BeginEnrollment failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def confirm_enrollment(
@@ -138,7 +140,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"ConfirmEnrollment failed: {exc}", exc_info=True)
+            logger.exception(f"ConfirmEnrollment failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def verify_mfa(
@@ -181,7 +183,7 @@ class MfaHandlers:
         except AuthenticationError as exc:
             raise ConnectError(Code.UNAUTHENTICATED, str(exc))
         except Exception as exc:
-            logger.error(f"VerifyMfa failed: {exc}", exc_info=True)
+            logger.exception(f"VerifyMfa failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def disable_mfa(
@@ -200,7 +202,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"DisableMfa failed: {exc}", exc_info=True)
+            logger.exception(f"DisableMfa failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def regenerate_recovery_codes(
@@ -219,7 +221,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"RegenerateRecoveryCodes failed: {exc}", exc_info=True)
+            logger.exception(f"RegenerateRecoveryCodes failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_mfa_status(
@@ -246,7 +248,7 @@ class MfaHandlers:
                     )
                 return response
         except Exception as exc:
-            logger.error(f"GetMfaStatus failed: {exc}", exc_info=True)
+            logger.exception(f"GetMfaStatus failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def admin_reset_mfa(
@@ -270,7 +272,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"AdminResetMfa failed: {exc}", exc_info=True)
+            logger.exception(f"AdminResetMfa failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def platform_reset_mfa(
@@ -293,7 +295,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"PlatformResetMfa failed: {exc}", exc_info=True)
+            logger.exception(f"PlatformResetMfa failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def request_platform_peer_reset(
@@ -320,7 +322,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"RequestPlatformPeerReset failed: {exc}", exc_info=True)
+            logger.exception(f"RequestPlatformPeerReset failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_platform_peer_resets(
@@ -337,7 +339,7 @@ class MfaHandlers:
         except PermissionDeniedError as exc:
             raise ConnectError(Code.PERMISSION_DENIED, str(exc))
         except Exception as exc:
-            logger.error(f"ListPlatformPeerResets failed: {exc}", exc_info=True)
+            logger.exception(f"ListPlatformPeerResets failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
         response = ListPlatformPeerResetsResponse()
         for p in pending:
@@ -373,7 +375,7 @@ class MfaHandlers:
         except NotFoundError as exc:
             raise ConnectError(Code.NOT_FOUND, str(exc))
         except Exception as exc:
-            logger.error(f"ApprovePlatformPeerReset failed: {exc}", exc_info=True)
+            logger.exception(f"ApprovePlatformPeerReset failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
 

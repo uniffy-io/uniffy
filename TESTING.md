@@ -144,6 +144,61 @@ least one org configured at `/admin/email`. Local dev uses mailcatcher
 
 ---
 
+## Uploads (unified engine)
+
+The upload engine is module-level and lives outside the React tree, so uploads
+survive navigation. The floating transfers tray mounts at app root.
+
+- [ ] Drag 100 small files onto `/files`, then immediately navigate to `/notes`.
+      Uploads keep running and stay visible in the floating tray (they do not
+      abort on leaving `/files`).
+- [ ] While that batch runs, confirm the UI stays responsive (no main-thread
+      freeze) and the tray progress updates smoothly (throttled, not per-chunk).
+- [ ] Start a small-file upload, reload the page mid-upload. It resumes from the
+      first missing part (watch the network tab: completed parts are not re-sent).
+- [ ] Start an upload of a file larger than the persist limit (~50 MB), reload
+      mid-upload. It is marked failed with a "re-select to upload" message rather
+      than silently lost.
+- [ ] Cancel an in-flight upload from the tray. The worker stops (no further
+      `UploadChunk` POSTs in the network tab) and the row shows cancelled.
+- [ ] Tray view-states: minimize to the pill, expand it again, then hide it. With
+      it hidden, start a new upload - it stays hidden (sticky). Press `Ctrl/Cmd+U`
+      (or rebind via Settings) to bring it back.
+- [ ] With the tray hidden, force an upload to fail (e.g. kill the backend) -
+      a toast still appears (failures break through a hidden tray).
+- [ ] Chat: attach a large file in a channel. The composer stays responsive
+      (off main thread); navigating away does not orphan it. The attachment does
+      NOT appear in the global tray (chat shows progress inline).
+- [ ] Editor: paste a large image into a note. The editor stays responsive and
+      the upload shows in the global tray.
+- [ ] Recording: record a screen capture, then reload before it finishes
+      uploading. Recovery still completes the recording (now via the shared
+      `uniffy-uploads` IndexedDB store).
+
+## Authenticated assets (cookie read-path)
+
+Images/video/audio are served same-origin and authenticated by the `asset_read` cookie (Secure/HttpOnly,
+set on login/refresh). There is no service worker auth proxy. Run these in a SECURE context (https or
+`localhost`) - over a plain-http non-localhost host the browser disables service workers AND may drop the
+Secure cookie, so several of these cannot be exercised there.
+
+- [ ] Log in, then hard-reload a page with an embedded image (a note with a pasted image, or `/files`).
+      The image renders - the cookie is present on first paint. (DevTools: the `<img>` request has no
+      `Authorization` header and a `Cookie` carrying the asset token; response is `200`.)
+- [ ] Open a video attachment and scrub the timeline. Seeking works - DevTools shows `206 Partial Content`
+      with `Content-Range` on `/api/media/...` requests.
+- [ ] Log out, then request an asset URL directly (paste `/api/files/{org}/{file}` in a new tab while
+      logged out). It returns `401` - the cookie was cleared on logout.
+- [ ] Leave a page with images open well past the cookie TTL (default 60 min) idle, then trigger a new
+      image load. It recovers (the `onError` handler refreshes the cookie and retries) rather than staying broken.
+- [ ] Self-hosted over plain http on a LAN: set `ASSET_COOKIE_SECURE=false`, confirm images still load
+      (with it left `true`, the browser drops the cookie over http and assets `401`).
+- [ ] Mobile / native client: assets still load via the Bearer path (no cookie) - the routes accept both.
+- [ ] Enable push notifications (Settings), confirm the dedicated `/notification-worker.js` registers and a
+      test notification displays + click-through focuses the app. (The media worker is gone; push is its own worker.)
+- [ ] A user who had the OLD `media-stream-worker` installed loads the app once: it is unregistered on boot
+      (Application > Service Workers shows it removed) and assets still load via the cookie.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./run.sh lint`.

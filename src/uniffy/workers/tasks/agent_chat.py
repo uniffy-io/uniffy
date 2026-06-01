@@ -8,6 +8,8 @@ from loguru import logger
 from uniffy.db.session import open_session
 from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
 
+logger = logger.bind(component="tasks.agent_chat")
+
 
 async def respond_to_chat_message(
     ctx: dict[str, Any],

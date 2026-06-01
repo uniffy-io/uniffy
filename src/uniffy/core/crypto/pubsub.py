@@ -21,6 +21,8 @@ from uniffy.core.crypto.cache import get_deployment_dek_cache, get_org_dek_lru
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.core.valkey.pubsub import publish_to_channel
 
+logger = logger.bind(component="crypto.pubsub")
+
 _INVALIDATE_PATTERN = "org_deks:invalidate:*"
 _DEPLOYMENT_INVALIDATE_CHANNEL = "deployment_deks:invalidate"
 _RECONNECT_BACKOFF_SECONDS = 5.0

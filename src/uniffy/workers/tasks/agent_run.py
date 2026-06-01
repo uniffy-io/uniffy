@@ -39,6 +39,8 @@ from uniffy.observability.metrics import (
     AGENT_RUN_QUEUE_LAG,
 )
 
+logger = logger.bind(component="tasks.agent_run")
+
 _LOCK_TTL_SECONDS = 300
 _LOCK_KEY_TEMPLATE = "agent_run_lock:{run_id}"
 _DELETE_DEFER_SECONDS = 60

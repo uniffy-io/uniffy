@@ -25,6 +25,8 @@ from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.mail.converters import summary_to_proto
 from uniffy.domains.mail.operations import OrgMailOperations
 
+logger = logger.bind(component="mail.handlers")
+
 
 def _parse_uuid(value: str, field: str) -> UUID:
     if not value:
@@ -44,7 +46,7 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, ValueError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.error("Unhandled error in OrgMailService handler", exc_info=True)
+    logger.exception("Unhandled error in OrgMailService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

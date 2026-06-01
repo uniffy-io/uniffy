@@ -25,6 +25,8 @@ from uniffy.domains.agents.memories.converters import memory_category_from_proto
 from uniffy.domains.agents.memories.operations import MemoryOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="agents.memories.handlers")
+
 
 class MemoriesHandlers:
     """RPC handlers for memories service."""
@@ -88,7 +90,7 @@ class MemoriesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating memory: {e}", exc_info=True)
+            logger.exception(f"Error creating memory: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_memories(
@@ -164,7 +166,7 @@ class MemoriesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing memories: {e}", exc_info=True)
+            logger.exception(f"Error listing memories: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_memory(
@@ -225,7 +227,7 @@ class MemoriesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating memory: {e}", exc_info=True)
+            logger.exception(f"Error updating memory: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_memory(
@@ -273,5 +275,5 @@ class MemoriesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting memory: {e}", exc_info=True)
+            logger.exception(f"Error deleting memory: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

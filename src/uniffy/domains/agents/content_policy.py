@@ -10,6 +10,8 @@ import re
 
 from loguru import logger
 
+logger = logger.bind(component="agents.content_policy")
+
 _INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     # System prompt override attempts
     (

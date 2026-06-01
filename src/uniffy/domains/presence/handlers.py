@@ -31,6 +31,8 @@ from uniffy.domains.presence.converters import (
 )
 from uniffy.domains.presence.operations import PresenceOperations
 
+logger = logger.bind(component="presence.handlers")
+
 
 def _resolve_org(ctx: RequestContext, request_org_id: str) -> UUID:
     """JWT wins; request value must match when both are present.
@@ -80,7 +82,7 @@ class PresenceHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error setting presence: {e}", exc_info=True)
+            logger.exception(f"Error setting presence: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_bulk_presence(
@@ -138,7 +140,7 @@ class PresenceHandlers:
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
-            logger.error(f"Error getting bulk presence: {e}", exc_info=True)
+            logger.exception(f"Error getting bulk presence: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def set_custom_status(
@@ -184,7 +186,7 @@ class PresenceHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error setting custom status: {e}", exc_info=True)
+            logger.exception(f"Error setting custom status: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def clear_custom_status(
@@ -204,5 +206,5 @@ class PresenceHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error clearing custom status: {e}", exc_info=True)
+            logger.exception(f"Error clearing custom status: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

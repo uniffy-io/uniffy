@@ -39,9 +39,6 @@ class FilesService(Protocol):
     def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> AsyncIterator[files_dot_v1_dot_files__pb2.DownloadFileResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    def stream_file_range(self, request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest, ctx: RequestContext) -> AsyncIterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -144,6 +141,21 @@ class FilesService(Protocol):
     async def list_saved_filters(self, request: files_dot_v1_dot_files__pb2.ListSavedFiltersRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListSavedFiltersResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def attach_file(self, request: files_dot_v1_dot_files__pb2.AttachFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.AttachFileResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def detach_file(self, request: files_dot_v1_dot_files__pb2.DetachFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DetachFileResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_attachments(self, request: files_dot_v1_dot_files__pb2.ListAttachmentsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListAttachmentsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def batch_list_attachments(self, request: files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_attachments_folder(self, request: files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
     def __init__(self, service: FilesService | AsyncGenerator[FilesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -219,16 +231,6 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.download_file,
-                ),
-                "/files.v1.FilesService/StreamFileRange": Endpoint.server_stream(
-                    method=MethodInfo(
-                        name="StreamFileRange",
-                        service_name="files.v1.FilesService",
-                        input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
-                        output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.stream_file_range,
                 ),
                 "/files.v1.FilesService/GetFile": Endpoint.unary(
                     method=MethodInfo(
@@ -570,6 +572,56 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                     ),
                     function=svc.list_saved_filters,
                 ),
+                "/files.v1.FilesService/AttachFile": Endpoint.unary(
+                    method=MethodInfo(
+                        name="AttachFile",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.AttachFileRequest,
+                        output=files_dot_v1_dot_files__pb2.AttachFileResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.attach_file,
+                ),
+                "/files.v1.FilesService/DetachFile": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DetachFile",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.DetachFileRequest,
+                        output=files_dot_v1_dot_files__pb2.DetachFileResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.detach_file,
+                ),
+                "/files.v1.FilesService/ListAttachments": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListAttachments",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListAttachmentsRequest,
+                        output=files_dot_v1_dot_files__pb2.ListAttachmentsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_attachments,
+                ),
+                "/files.v1.FilesService/BatchListAttachments": Endpoint.unary(
+                    method=MethodInfo(
+                        name="BatchListAttachments",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest,
+                        output=files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.batch_list_attachments,
+                ),
+                "/files.v1.FilesService/GetAttachmentsFolder": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetAttachmentsFolder",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest,
+                        output=files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_attachments_folder,
+                ),
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
@@ -718,26 +770,6 @@ class FilesServiceClient(ConnectClient):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
                 output=files_dot_v1_dot_files__pb2.DownloadFileResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def stream_file_range(
-        self,
-        request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> AsyncIterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
-        return self.execute_server_stream(
-            request=request,
-            method=MethodInfo(
-                name="StreamFileRange",
-                service_name="files.v1.FilesService",
-                input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
-                output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1424,6 +1456,106 @@ class FilesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def attach_file(
+        self,
+        request: files_dot_v1_dot_files__pb2.AttachFileRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.AttachFileResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AttachFile",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.AttachFileRequest,
+                output=files_dot_v1_dot_files__pb2.AttachFileResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def detach_file(
+        self,
+        request: files_dot_v1_dot_files__pb2.DetachFileRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.DetachFileResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DetachFile",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.DetachFileRequest,
+                output=files_dot_v1_dot_files__pb2.DetachFileResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_attachments(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListAttachmentsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListAttachmentsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAttachments",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListAttachmentsRequest,
+                output=files_dot_v1_dot_files__pb2.ListAttachmentsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def batch_list_attachments(
+        self,
+        request: files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BatchListAttachments",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest,
+                output=files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_attachments_folder(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAttachmentsFolder",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest,
+                output=files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -1442,8 +1574,6 @@ class FilesServiceSync(Protocol):
     def abort_upload(self, request: files_dot_v1_dot_files__pb2.AbortUploadRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.AbortUploadResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def download_file(self, request: files_dot_v1_dot_files__pb2.DownloadFileRequest, ctx: RequestContext) -> Iterator[files_dot_v1_dot_files__pb2.DownloadFileResponse]:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def stream_file_range(self, request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest, ctx: RequestContext) -> Iterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_file(self, request: files_dot_v1_dot_files__pb2.GetFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetFileResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -1512,6 +1642,16 @@ class FilesServiceSync(Protocol):
     def delete_saved_filter(self, request: files_dot_v1_dot_files__pb2.DeleteSavedFilterRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DeleteSavedFilterResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_saved_filters(self, request: files_dot_v1_dot_files__pb2.ListSavedFiltersRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListSavedFiltersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def attach_file(self, request: files_dot_v1_dot_files__pb2.AttachFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.AttachFileResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def detach_file(self, request: files_dot_v1_dot_files__pb2.DetachFileRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.DetachFileResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_attachments(self, request: files_dot_v1_dot_files__pb2.ListAttachmentsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.ListAttachmentsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def batch_list_attachments(self, request: files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_attachments_folder(self, request: files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -1588,16 +1728,6 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.download_file,
-                ),
-                "/files.v1.FilesService/StreamFileRange": EndpointSync.server_stream(
-                    method=MethodInfo(
-                        name="StreamFileRange",
-                        service_name="files.v1.FilesService",
-                        input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
-                        output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.stream_file_range,
                 ),
                 "/files.v1.FilesService/GetFile": EndpointSync.unary(
                     method=MethodInfo(
@@ -1939,6 +2069,56 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.list_saved_filters,
                 ),
+                "/files.v1.FilesService/AttachFile": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="AttachFile",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.AttachFileRequest,
+                        output=files_dot_v1_dot_files__pb2.AttachFileResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.attach_file,
+                ),
+                "/files.v1.FilesService/DetachFile": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DetachFile",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.DetachFileRequest,
+                        output=files_dot_v1_dot_files__pb2.DetachFileResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.detach_file,
+                ),
+                "/files.v1.FilesService/ListAttachments": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListAttachments",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.ListAttachmentsRequest,
+                        output=files_dot_v1_dot_files__pb2.ListAttachmentsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_attachments,
+                ),
+                "/files.v1.FilesService/BatchListAttachments": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="BatchListAttachments",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest,
+                        output=files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.batch_list_attachments,
+                ),
+                "/files.v1.FilesService/GetAttachmentsFolder": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetAttachmentsFolder",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest,
+                        output=files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_attachments_folder,
+                ),
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
@@ -2087,26 +2267,6 @@ class FilesServiceClientSync(ConnectClientSync):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.DownloadFileRequest,
                 output=files_dot_v1_dot_files__pb2.DownloadFileResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def stream_file_range(
-        self,
-        request: files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> Iterator[files_dot_v1_dot_files__pb2.StreamFileRangeResponse]:
-        return self.execute_server_stream(
-            request=request,
-            method=MethodInfo(
-                name="StreamFileRange",
-                service_name="files.v1.FilesService",
-                input=files_dot_v1_dot_files__pb2.StreamFileRangeRequest,
-                output=files_dot_v1_dot_files__pb2.StreamFileRangeResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -2787,6 +2947,106 @@ class FilesServiceClientSync(ConnectClientSync):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.ListSavedFiltersRequest,
                 output=files_dot_v1_dot_files__pb2.ListSavedFiltersResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def attach_file(
+        self,
+        request: files_dot_v1_dot_files__pb2.AttachFileRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.AttachFileResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AttachFile",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.AttachFileRequest,
+                output=files_dot_v1_dot_files__pb2.AttachFileResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def detach_file(
+        self,
+        request: files_dot_v1_dot_files__pb2.DetachFileRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.DetachFileResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DetachFile",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.DetachFileRequest,
+                output=files_dot_v1_dot_files__pb2.DetachFileResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_attachments(
+        self,
+        request: files_dot_v1_dot_files__pb2.ListAttachmentsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.ListAttachmentsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAttachments",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.ListAttachmentsRequest,
+                output=files_dot_v1_dot_files__pb2.ListAttachmentsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def batch_list_attachments(
+        self,
+        request: files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="BatchListAttachments",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.BatchListAttachmentsRequest,
+                output=files_dot_v1_dot_files__pb2.BatchListAttachmentsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_attachments_folder(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAttachmentsFolder",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetAttachmentsFolderRequest,
+                output=files_dot_v1_dot_files__pb2.GetAttachmentsFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

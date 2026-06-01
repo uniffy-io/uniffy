@@ -1,7 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle, WarningCircle, ArrowsClockwise, Clock } from "@phosphor-icons/react";
+import { CheckCircle, WarningCircle, ArrowsClockwise, Clock, ArrowElbowDownRight, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { selectTask, openDetailPanel } from "@/features/projects/store/projectsUiSlice";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
@@ -61,6 +63,12 @@ export function TaskCard({
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
   const TypeIcon = typeConfig.icon;
 
+  const dispatch = useAppDispatch();
+  // Narrow subscription: re-renders only when this card's own parent changes.
+  const parentTask = useAppSelector((state) =>
+    task.parentId ? state.projects.tasks[task.parentId] : undefined
+  );
+
   const visibleTags = useTagsByIds(task.tagIds ?? []);
   const shownTags = visibleTags.slice(0, 3);
   const overflowTagCount = Math.max(0, visibleTags.length - shownTags.length);
@@ -90,9 +98,28 @@ export function TaskCard({
       )}
 
       <div className="p-3">
-        {/* Ticket ID and type */}
-        <div className="flex items-center gap-1.5 mb-1.5">
+        {/* Ticket ID and type, with parent breadcrumb for subtasks */}
+        <div className="flex items-center gap-1 mb-1.5 min-w-0">
           <TypeIcon size={12} className="text-muted-foreground shrink-0" weight="fill" />
+          {task.parentId && (
+            <>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch(selectTask(task.parentId!));
+                  dispatch(openDetailPanel());
+                }}
+                className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground/70 hover:text-foreground transition-colors truncate max-w-[100px] shrink-0"
+                title={parentTask ? `Subtask of ${parentTask.title}` : "Subtask"}
+              >
+                <ArrowElbowDownRight size={10} weight="bold" className="shrink-0" />
+                {parentTask ? `${projectSlug}-${parentTask.number}` : "Subtask"}
+              </button>
+              <CaretRight size={9} className="text-muted-foreground/40 shrink-0" />
+            </>
+          )}
           <span
             className="text-[10px] font-mono text-muted-foreground hover:text-foreground cursor-pointer"
             onClick={(e) => {

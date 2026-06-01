@@ -19,6 +19,8 @@ from uniffy.domains.notifications.delivery.in_app import InAppAdapter
 from uniffy.domains.notifications.delivery.push import PushAdapter
 from uniffy.observability.metrics import NOTIFICATION_DELIVERIES_TOTAL, NOTIFICATION_EVENTS_TOTAL
 
+logger = logger.bind(component="tasks.notifications")
+
 
 async def process_notification_event(
     ctx: dict[str, Any],

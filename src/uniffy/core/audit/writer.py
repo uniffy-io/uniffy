@@ -19,6 +19,8 @@ from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 from uniffy.observability.metrics import AUDIT_ROLE_LOOKUP_SECONDS
 
+logger = logger.bind(component="audit.writer")
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 

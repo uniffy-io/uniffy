@@ -41,7 +41,7 @@ import {
 import { setFolderId, setViewScope, initializeFilesData } from '@/features/files/store/filesSlice';
 import { openViewer } from '@/features/files/store/viewerSlice';
 import { StorageUsageIndicator } from '@/features/admin/components/storage/StorageUsageIndicator';
-import { toggleUploadPanel } from '@/features/files/store/uploadSlice';
+import { setTrayView } from '@/features/files/store/uploadSlice';
 import type { SerializedTreeNode } from '@/features/files/store/filesTreeThunks';
 
 // Scope filter configuration
@@ -317,12 +317,14 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
     const files = useAppSelector((state) => state.files.files);
 
     // Upload/Download status
-    const isUploading = useAppSelector((state) => state.upload.isUploading);
-    const isDownloading = useAppSelector((state) => state.upload.isDownloading);
-    const showPanel = useAppSelector((state) => state.upload.showUploadPanel);
     const activeUploadCount = useAppSelector((state) =>
-        Object.keys(state.upload.activeUploads).length + state.upload.queue.length
+        state.upload.records.filter(
+            (r) => r.status === 'uploading' || r.status === 'completing' || r.status === 'queued'
+        ).length
     );
+    const isUploading = activeUploadCount > 0;
+    const isDownloading = useAppSelector((state) => state.upload.isDownloading);
+    const showPanel = useAppSelector((state) => state.upload.trayView === 'expanded');
     const activeDownloadCount = useAppSelector((state) =>
         Object.keys(state.upload.activeDownloads).length
     );
@@ -525,8 +527,8 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
 
     const handleUploadClick = useCallback(() => {
         if (hasTransferActivity) {
-            // When there's activity, toggle the status panel
-            dispatch(toggleUploadPanel());
+            // When there's activity, expand the transfers tray (or collapse it if already open).
+            dispatch(setTrayView(showPanel ? 'minimized' : 'expanded'));
             return;
         }
         // When idle, open a small menu so the user can pick files or a folder
@@ -539,7 +541,7 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
             setUploadMenuPos({ x, y });
         }
         setUploadMenuOpen((prev) => !prev);
-    }, [dispatch, hasTransferActivity]);
+    }, [dispatch, hasTransferActivity, showPanel]);
 
     const handleSelectUploadFiles = useCallback(() => {
         setUploadMenuOpen(false);

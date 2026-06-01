@@ -33,6 +33,8 @@ from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import DomainType, NotificationType
 from uniffy.domains.agents.budgets.period import month_window
 
+logger = logger.bind(component="agents.budget_alerts")
+
 IMAGE_ALERT_THRESHOLDS: tuple[int, ...] = (90, 100)
 
 
@@ -354,4 +356,4 @@ async def check_and_fire_alerts(
                     },
                 )
     except Exception:
-        logger.warning("Budget alert processing failed", exc_info=True)
+        logger.opt(exception=True).warning("Budget alert processing failed")

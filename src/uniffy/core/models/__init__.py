@@ -7,7 +7,6 @@ from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.app_settings.application_setting import ApplicationSetting
-from uniffy.core.models.attachments.attachment import Attachment
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -38,6 +37,7 @@ from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.crypto.deployment_encryption_key import DeploymentEncryptionKey
 from uniffy.core.models.crypto.org_encryption_key import OrgEncryptionKey
+from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.file import ExtractionStatus, File
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder

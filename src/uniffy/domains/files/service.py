@@ -1,9 +1,15 @@
 """Files service wrapper for ConnectRPC mounting."""
 
+from uniffy.domains.files.attachments import AttachmentsHandlersMixin
 from uniffy.domains.files.filters import SavedFilterHandlersMixin
 from uniffy.domains.files.handlers import FilesHandlers
 from uniffy.domains.files.quota_handlers import QuotaHandlersMixin
 
 
-class FilesServiceImpl(FilesHandlers, QuotaHandlersMixin, SavedFilterHandlersMixin):
+class FilesServiceImpl(
+    FilesHandlers,
+    QuotaHandlersMixin,
+    SavedFilterHandlersMixin,
+    AttachmentsHandlersMixin,
+):
     pass

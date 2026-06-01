@@ -27,6 +27,8 @@ from uniffy.domains.search.queries import SearchResult, execute_search, get_docu
 from uniffy.domains.tags import TagOperations
 from uniffy.domains.tags.visibility import TagVisibilityFilter
 
+logger = logger.bind(component="search.operations")
+
 
 class SearchOperations:
     def __init__(self, session: AsyncSession) -> None:
@@ -427,7 +429,7 @@ class SearchOperations:
                     sr.assignee_ids = aids
                     sr.assignee_name = assignee_names.get(aids[0])
         except Exception as exc:
-            logger.error(f"Failed to enrich task live state: {exc}", exc_info=True)
+            logger.exception(f"Failed to enrich task live state: {exc}")
 
     async def _load_field_options(
         self,
@@ -510,7 +512,7 @@ class SearchOperations:
                 results[urn].file_mime_type = row.mime_type
                 results[urn].file_size = row.size_bytes or 0
         except Exception:
-            logger.warning("Failed to enrich file live state", exc_info=True)
+            logger.opt(exception=True).warning("Failed to enrich file live state")
 
     async def _enrich_projects(
         self,
@@ -545,7 +547,7 @@ class SearchOperations:
                 results[urn].total_tasks = row.total
                 results[urn].completed_tasks = row.completed
         except Exception:
-            logger.warning("Failed to enrich project live state", exc_info=True)
+            logger.opt(exception=True).warning("Failed to enrich project live state")
 
     async def _enrich_calendar_events(
         self,
@@ -581,7 +583,7 @@ class SearchOperations:
                 sr.event_location = row.location
                 sr.event_meeting_url = row.meeting_url
         except Exception:
-            logger.warning("Failed to enrich calendar event live state", exc_info=True)
+            logger.opt(exception=True).warning("Failed to enrich calendar event live state")
 
     async def _enrich_notes(
         self,
@@ -623,7 +625,7 @@ class SearchOperations:
                 results[urn].note_node_type = row.node_type.value if row.node_type else None
                 results[urn].content_tags = [t.slug for t in tags_by_urn.get(urn, [])] or None
         except Exception:
-            logger.warning("Failed to enrich note live state", exc_info=True)
+            logger.opt(exception=True).warning("Failed to enrich note live state")
 
     async def _enrich_channels(
         self,
@@ -655,7 +657,7 @@ class SearchOperations:
                 results[urn].agent_emoji = row.avatar_emoji
                 results[urn].agent_theme_color = row.theme_color
         except Exception:
-            logger.warning("Failed to enrich agent live state", exc_info=True)
+            logger.opt(exception=True).warning("Failed to enrich agent live state")
 
     async def _enrich_users(
         self,
@@ -680,7 +682,7 @@ class SearchOperations:
                 if row.avatar_key:
                     sr.user_avatar_url = f"/api/avatars/{row.avatar_key}"
         except Exception:
-            logger.warning("Failed to enrich user live state", exc_info=True)
+            logger.opt(exception=True).warning("Failed to enrich user live state")
 
     async def _get_user_group_ids(self, user_id: UUID) -> list[UUID]:
         result = await self.session.execute(
@@ -788,7 +790,7 @@ class SearchOperations:
                 metadata["user_assignment_count"] = str(counts.get(tag_id, 0))
                 sr.metadata = metadata
         except Exception:
-            logger.warning("Failed to enrich tag live state", exc_info=True)
+            logger.opt(exception=True).warning("Failed to enrich tag live state")
 
 
 def _build_tombstone(urn: str, organization_id: UUID) -> SearchResult:

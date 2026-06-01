@@ -9,6 +9,8 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.db import open_session
 from uniffy.domains.files.quota_operations import QuotaOperations
 
+logger = logger.bind(component="tasks.storage_recalculation")
+
 
 async def recalculate_all_storage_usage(ctx: dict[str, Any]) -> dict[str, Any]:
     """Recalculate per-user storage usage from the `files` table for every org."""
@@ -29,14 +31,13 @@ async def recalculate_all_storage_usage(ctx: dict[str, Any]) -> dict[str, Any]:
                     total_orgs += 1
                     total_users += len(usage_records)
                 except Exception:
-                    logger.warning(
+                    logger.opt(exception=True).warning(
                         "Failed to recalculate usage for organization",
-                        organization_id=str(org_id),
-                        exc_info=True,
+                        organization_id=str(org_id)
                     )
 
     except Exception:
-        logger.error("Storage usage recalculation failed", exc_info=True)
+        logger.exception("Storage usage recalculation failed")
 
     logger.info(
         "Storage usage recalculation complete",

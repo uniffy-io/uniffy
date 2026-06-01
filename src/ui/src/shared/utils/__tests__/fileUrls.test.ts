@@ -2,14 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
     buildFileUrl,
     buildThumbnailUrl,
-    buildMediaStreamUrl,
+    buildMediaUrl,
     buildAvatarUrl,
-    FILE_URL_PATTERN,
-    THUMBNAIL_URL_PATTERN,
-    MEDIA_STREAM_URL_PATTERN,
-    AVATAR_URL_PATTERN,
     parseFileUrl,
-    parseMediaStreamUrl,
+    parseMediaUrl,
     extractFileId,
 } from '../fileUrls';
 
@@ -31,65 +27,15 @@ describe('buildThumbnailUrl', () => {
     });
 });
 
-describe('buildMediaStreamUrl', () => {
+describe('buildMediaUrl', () => {
     it('builds correct media stream URL', () => {
-        expect(buildMediaStreamUrl(ORG_ID, FILE_ID)).toBe(`/media-stream/${ORG_ID}/${FILE_ID}`);
+        expect(buildMediaUrl(ORG_ID, FILE_ID)).toBe(`/api/media/${ORG_ID}/${FILE_ID}`);
     });
 });
 
 describe('buildAvatarUrl', () => {
     it('builds correct avatar URL', () => {
         expect(buildAvatarUrl(USER_ID, '128')).toBe(`/api/avatars/${USER_ID}/128?_v=2`);
-    });
-});
-
-// URL Patterns (regex)
-
-describe('FILE_URL_PATTERN', () => {
-    it('matches valid file URL', () => {
-        const match = `/api/files/${ORG_ID}/${FILE_ID}`.match(FILE_URL_PATTERN);
-        expect(match).not.toBeNull();
-        expect(match![1]).toBe(ORG_ID);
-        expect(match![2]).toBe(FILE_ID);
-    });
-
-    it('does not match URL with extra path segments', () => {
-        expect(`/api/files/${ORG_ID}/${FILE_ID}/extra`.match(FILE_URL_PATTERN)).toBeNull();
-    });
-
-    it('does not match thumbnail URL', () => {
-        expect(`/api/thumbnails/${ORG_ID}/${FILE_ID}`.match(FILE_URL_PATTERN)).toBeNull();
-    });
-
-    it('does not match media stream URL', () => {
-        expect(`/media-stream/${ORG_ID}/${FILE_ID}`.match(FILE_URL_PATTERN)).toBeNull();
-    });
-});
-
-describe('THUMBNAIL_URL_PATTERN', () => {
-    it('matches valid thumbnail URL', () => {
-        const match = `/api/thumbnails/${ORG_ID}/${FILE_ID}`.match(THUMBNAIL_URL_PATTERN);
-        expect(match).not.toBeNull();
-        expect(match![1]).toBe(ORG_ID);
-        expect(match![2]).toBe(FILE_ID);
-    });
-});
-
-describe('MEDIA_STREAM_URL_PATTERN', () => {
-    it('matches valid media stream URL', () => {
-        const match = `/media-stream/${ORG_ID}/${FILE_ID}`.match(MEDIA_STREAM_URL_PATTERN);
-        expect(match).not.toBeNull();
-        expect(match![1]).toBe(ORG_ID);
-        expect(match![2]).toBe(FILE_ID);
-    });
-});
-
-describe('AVATAR_URL_PATTERN', () => {
-    it('matches valid avatar URL', () => {
-        const match = `/api/avatars/${USER_ID}/128`.match(AVATAR_URL_PATTERN);
-        expect(match).not.toBeNull();
-        expect(match![1]).toBe(USER_ID);
-        expect(match![2]).toBe('128');
     });
 });
 
@@ -129,19 +75,19 @@ describe('parseFileUrl', () => {
     });
 });
 
-describe('parseMediaStreamUrl', () => {
+describe('parseMediaUrl', () => {
     it('parses relative media stream URL', () => {
-        const result = parseMediaStreamUrl(`/media-stream/${ORG_ID}/${FILE_ID}`);
+        const result = parseMediaUrl(`/media-stream/${ORG_ID}/${FILE_ID}`);
         expect(result).toEqual({ organizationId: ORG_ID, fileId: FILE_ID });
     });
 
     it('parses full media stream URL', () => {
-        const result = parseMediaStreamUrl(`http://localhost:5173/media-stream/${ORG_ID}/${FILE_ID}`);
+        const result = parseMediaUrl(`http://localhost:5173/media-stream/${ORG_ID}/${FILE_ID}`);
         expect(result).toEqual({ organizationId: ORG_ID, fileId: FILE_ID });
     });
 
     it('returns null for file URL', () => {
-        expect(parseMediaStreamUrl(`/api/files/${ORG_ID}/${FILE_ID}`)).toBeNull();
+        expect(parseMediaUrl(`/api/files/${ORG_ID}/${FILE_ID}`)).toBeNull();
     });
 });
 

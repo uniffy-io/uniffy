@@ -15,6 +15,8 @@ from uniffy.core.valkey.presence import (
     presence_set,
 )
 
+logger = logger.bind(component="presence.operations")
+
 
 class PresenceOperations:
     """Ephemeral presence in Valkey (120s TTL); custom status on ``settings_profiles``."""

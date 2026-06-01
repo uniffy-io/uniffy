@@ -13,6 +13,8 @@ from loguru import logger
 from uniffy.core.mail.errors import MailRateLimitedError
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
+logger = logger.bind(component="mail")
+
 
 def _window() -> int:
     return int(time.time() // 60)

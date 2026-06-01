@@ -55,8 +55,6 @@ from uniffy_proto.files.v1.files_pb2 import (
     RestoreFileVersionResponse,
     RestoreFolderRequest,
     RestoreFolderResponse,
-    StreamFileRangeRequest,
-    StreamFileRangeResponse,
     TreeNode,
     UpdateFileRequest,
     UpdateFileResponse,
@@ -96,6 +94,8 @@ from uniffy.domains.files.converters import (
 )
 from uniffy.domains.files.operations import FileOperations, FolderOperations
 from uniffy.domains.tags import TagOperations
+
+logger = logger.bind(component="files.handlers")
 
 
 def _file_urn(file_id: str | UUID) -> str:
@@ -214,7 +214,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error initiating upload: {e}", exc_info=True)
+            logger.exception(f"Error initiating upload: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def upload_chunk(
@@ -272,7 +272,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error uploading chunk: {e}", exc_info=True)
+            logger.exception(f"Error uploading chunk: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def complete_upload(
@@ -300,8 +300,6 @@ class FilesHandlers:
                     tag_ids=tag_ids,
                 )
 
-                logger.info(f"[Upload] Completed file id={file.id} folder_id={file.folder_id}")
-
                 tags_by_urn = await _hydrate_file_tags(session, file.organization_id, [file])
                 eff_mode, eff_baseline = await _resolve_file_effective_policy(
                     session, file.organization_id, file,
@@ -322,7 +320,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error completing upload: {e}", exc_info=True)
+            logger.exception(f"Error completing upload: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def upload_chunks(
@@ -398,7 +396,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error in upload_chunks: {e}", exc_info=True)
+            logger.exception(f"Error in upload_chunks: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_upload_status(
@@ -435,7 +433,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting upload status: {e}", exc_info=True)
+            logger.exception(f"Error getting upload status: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def abort_upload(
@@ -468,7 +466,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error aborting upload: {e}", exc_info=True)
+            logger.exception(f"Error aborting upload: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def download_file(
@@ -522,63 +520,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error downloading file: {e}", exc_info=True)
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
-
-    async def stream_file_range(
-        self,
-        request: StreamFileRangeRequest,
-        ctx: RequestContext,
-    ) -> AsyncIterator[StreamFileRangeResponse]:
-        """Stream a file with HTTP-Range-like semantics so media players can seek."""
-        try:
-            file_id = UUID(request.file_id)
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
-
-        user_id = get_user_id_from_context(ctx)
-
-        start_byte = request.start_byte if request.HasField("start_byte") else None
-        end_byte = request.end_byte if request.HasField("end_byte") else None
-
-        try:
-            async with open_session() as session:
-                ops = FileOperations(session)
-
-                file = await ops.get_by_id(user_id, organization_id, file_id)
-
-                s3 = get_s3_client()
-                is_first = True
-
-                async for chunk_data, total_size, range_start, range_end in s3.download_range(
-                    key=file.storage_key,
-                    start_byte=start_byte,
-                    end_byte=end_byte,
-                ):
-                    response = StreamFileRangeResponse(
-                        data=chunk_data,
-                        total_size=total_size,
-                        range_start=range_start,
-                        range_end=range_end,
-                        is_first_chunk=is_first,
-                    )
-
-                    if is_first:
-                        response.mime_type = file.mime_type
-                        response.filename = file.filename
-                        is_first = False
-
-                    yield response
-
-        except NotFoundError:
-            raise ConnectError(Code.NOT_FOUND, "File not found")
-        except PermissionDeniedError:
-            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
-        except ConnectError:
-            raise
-        except Exception as e:
-            logger.error(f"Error streaming file range: {e}", exc_info=True)
+            logger.exception(f"Error downloading file: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_file(
@@ -618,7 +560,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting file: {e}", exc_info=True)
+            logger.exception(f"Error getting file: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def update_file(
@@ -700,7 +642,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating file: {e}", exc_info=True)
+            logger.exception(f"Error updating file: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def delete_file(
@@ -737,7 +679,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting file: {e}", exc_info=True)
+            logger.exception(f"Error deleting file: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def restore_file(
@@ -782,7 +724,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error restoring file: {e}", exc_info=True)
+            logger.exception(f"Error restoring file: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_files(
@@ -890,7 +832,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing files: {e}", exc_info=True)
+            logger.exception(f"Error listing files: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def create_folder(
@@ -947,7 +889,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating folder: {e}", exc_info=True)
+            logger.exception(f"Error creating folder: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def update_folder(
@@ -1029,7 +971,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error updating folder: {e}", exc_info=True)
+            logger.exception(f"Error updating folder: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def delete_folder(
@@ -1071,7 +1013,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error deleting folder: {e}", exc_info=True)
+            logger.exception(f"Error deleting folder: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_files_tree(
@@ -1196,7 +1138,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error getting files tree: {e}", exc_info=True)
+            logger.exception(f"Error getting files tree: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def empty_trash(
@@ -1230,7 +1172,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error emptying trash: {e}", exc_info=True)
+            logger.exception(f"Error emptying trash: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_trash(
@@ -1294,7 +1236,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing trash: {e}", exc_info=True)
+            logger.exception(f"Error listing trash: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def restore_folder(
@@ -1337,7 +1279,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error restoring folder: {e}", exc_info=True)
+            logger.exception(f"Error restoring folder: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def list_file_versions(
@@ -1375,7 +1317,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing file versions: {e}", exc_info=True)
+            logger.exception(f"Error listing file versions: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def create_folder_tree(
@@ -1446,7 +1388,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error creating folder tree: {e}", exc_info=True)
+            logger.exception(f"Error creating folder tree: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def ensure_recordings_folder(
@@ -1483,7 +1425,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error ensuring recordings folder: {e}", exc_info=True)
+            logger.exception(f"Error ensuring recordings folder: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def move_items(
@@ -1649,7 +1591,7 @@ class FilesHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error moving items: {e}", exc_info=True)
+            logger.exception(f"Error moving items: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def copy_items(

@@ -37,6 +37,8 @@ from uniffy.domains.agents.providers.registry import get_provider_registry
 from uniffy.domains.agents.providers.utils import build_key_hint
 from uniffy.domains.organizations.operations import OrganizationOperations
 
+logger = logger.bind(component="agents.providers.operations")
+
 
 class ProviderOperations:
     """Operations for managing LLM provider credentials."""

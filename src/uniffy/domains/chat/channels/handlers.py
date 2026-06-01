@@ -84,6 +84,8 @@ from uniffy.domains.chat.subjects import ChatSubject
 from uniffy.domains.notifications.operations import NotificationOperations
 from uniffy.domains.tags import Tag, TagOperations
 
+logger = logger.bind(component="chat.channels.handlers")
+
 
 def _parse_subjects(proto_subjects, user_ids_fallback: list[str]) -> list[ChatSubject]:
     """Parse proto ChatSubject[] plus user_ids; subjects wins, user_ids merged as USER subjects."""
@@ -1111,8 +1113,8 @@ class ChannelHandlers:
         exclude_urns: set[str],
     ) -> list:
         """File attachments from channel messages, excluding already-tracked URNs."""
-        from uniffy.core.models.attachments.attachment import Attachment
         from uniffy.core.models.chat.message import ChatMessage
+        from uniffy.core.models.files.attachment import Attachment
         from uniffy.core.models.files.file import File
         from uniffy.core.models.shared import ContentType
 

@@ -10,6 +10,8 @@ from loguru import logger
 
 from uniffy.domains.auth.tokens import decode_access_token
 
+logger = logger.bind(component="auth.context")
+
 
 def get_user_id_from_context(ctx: RequestContext) -> UUID:
     """Extract user ID from an access-token bearer header.

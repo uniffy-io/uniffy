@@ -33,6 +33,8 @@ from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import message_to_proto
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
+logger = logger.bind(component="chat.messages.handlers")
+
 
 def _handle_error(e: Exception) -> None:
     if isinstance(e, NotFoundError):
@@ -277,7 +279,8 @@ class MessageHandlers:
             async with open_session() as session:
                 ops = ChatMessageOperations(session)
                 messages = await ops.get_pinned_messages(user_id, org_id, channel_id)
-                return GetPinnedMessagesResponse(messages=[message_to_proto(m) for m in messages])
+                proto_messages = await self._enrich_messages(session, messages, user_id)
+                return GetPinnedMessagesResponse(messages=proto_messages)
         except (NotFoundError, PermissionDeniedError) as e:
             _handle_error(e)
 

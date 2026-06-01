@@ -22,6 +22,8 @@ from uniffy.domains.agents.providers.base import (
     ToolCallEvent,
 )
 
+logger = logger.bind(component="agents.providers.anthropic.provider")
+
 # Module-level cache for the model list fetched from the Anthropic API.
 # Shared across all AnthropicProvider instances since the catalog is the
 # same regardless of credential.

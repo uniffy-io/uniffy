@@ -55,6 +55,8 @@ from uniffy.domains.platform.support_session.policy import (
 )
 from uniffy.domains.users.operations import UserOperations
 
+logger = logger.bind(component="support_session")
+
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
 

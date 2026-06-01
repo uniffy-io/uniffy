@@ -13,6 +13,8 @@ import { EventEditor } from '@/features/calendar/components/modals/EventEditor';
 import { closeEventModal, closeAddCategoryModal, closeCreateTemplateModal, closeEditEvent, selectEvent, setCurrentDate, toggleSidebar } from '@/features/calendar/store';
 import { fetchEventsInRange, fetchCategories, fetchEvent } from '@/features/calendar/store/calendarThunks';
 import { toDateString } from '@/features/calendar/utils';
+import { useContentAccessRefetch } from '@/features/notifications/hooks/useContentAccessRefetch';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
 export function CalendarPage() {
   const dispatch = useAppDispatch();
@@ -72,7 +74,7 @@ export function CalendarPage() {
       });
   }, [dispatch, eventId, currentOrganizationId, currentDate]);
 
-  useEffect(() => {
+  const refetchVisibleEvents = useCallback(() => {
     if (!currentOrganizationId) return;
 
     const date = new Date(currentDate);
@@ -84,6 +86,14 @@ export function CalendarPage() {
       endDate: endDate.toISOString(),
     }));
   }, [dispatch, currentDate, currentOrganizationId]);
+
+  useEffect(() => {
+    refetchVisibleEvents();
+  }, [refetchVisibleEvents]);
+
+  // An event shared with this user or flipped to OPEN_TO_ORG won't be in the
+  // current range fetch; refetch the visible window when access changes.
+  useContentAccessRefetch(ContentType.CALENDAR_EVENT, refetchVisibleEvents);
 
   return (
     <>

@@ -11,7 +11,6 @@ import {
   createRehydrateFailedAction,
   createLogoutAction,
 } from '@/features/auth/store/authActions';
-import { updateWorkerAuthToken, clearWorkerAuthToken } from '@/workers/registerMediaWorker';
 import { initStorageEncryption } from '@/shared/crypto/storageEncryption';
 
 // Access token lives in memory only - never persisted, to reduce XSS surface.
@@ -68,26 +67,10 @@ function getAuthState(): {
 
 function setMemoryAccessToken(token: string | null): void {
   memoryAccessToken = token;
-  if (token && isAccessKindToken(token)) {
-    // The MFA enrollment flow temporarily parks a ``type=enrollment_only``
-    // token in this slot so the existing Bearer plumbing reaches the three
-    // enrollment RPCs. Forwarding it to the media service worker would
-    // make the worker attach a non-access token to file/thumbnail
-    // requests, and the strict ``decode_access_token`` on the backend
-    // would 401 every such call until enrollment completes. Decode the
-    // ``type`` claim here and only push real access tokens through.
-    updateWorkerAuthToken(token);
-  }
-}
-
-function isAccessKindToken(token: string): boolean {
-  const payload = decodeJwtPayload(token) as { type?: string } | null;
-  return payload?.type === 'access';
 }
 
 function clearMemoryAccessToken(): void {
   memoryAccessToken = null;
-  clearWorkerAuthToken();
 }
 
 function setEnrollmentToken(token: string | null): void {

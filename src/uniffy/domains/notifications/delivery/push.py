@@ -14,6 +14,8 @@ from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter
 
+logger = logger.bind(component="notifications.delivery.push")
+
 
 class PushAdapter(DeliveryAdapter):
     """Web Push delivery via VAPID; 410 endpoints are pruned on send."""

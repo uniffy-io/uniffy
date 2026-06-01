@@ -11,6 +11,8 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from uniffy.observability import ObservabilityConfig, setup_observability
 from uniffy.observability.metrics import start_worker_metrics_server
 
+logger = logger.bind(component="runner")
+
 _MAX_BACKOFF = 30.0
 _STABLE_THRESHOLD = 60.0
 
@@ -28,6 +30,7 @@ def run_worker_with_restart(
             app_version="0.1.0",
             environment=os.getenv("ENVIRONMENT", "development"),
             console_log_level=os.getenv("LOG_LEVEL", "info").upper(),
+            console_log_type=os.getenv("LOG_FORMAT", "console").lower(),
         )
     )
     start_worker_metrics_server(metrics_port)

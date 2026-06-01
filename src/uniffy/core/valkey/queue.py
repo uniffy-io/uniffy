@@ -13,6 +13,8 @@ from loguru import logger
 
 from uniffy.core.valkey.config import ValkeyConfig
 
+logger = logger.bind(component="valkey.queue")
+
 QueueName = Literal["core", "egress"]
 
 _QUEUE_NAMES: dict[QueueName, str] = {

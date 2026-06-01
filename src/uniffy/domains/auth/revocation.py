@@ -30,6 +30,8 @@ from loguru import logger
 
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
 
+logger = logger.bind(component="auth")
+
 _NAMESPACE = "auth"
 _KEY_PREFIX = "auth:min_tkv"
 _SESSION_KEY_PREFIX = "auth:revoked_sid"

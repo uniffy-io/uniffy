@@ -21,8 +21,8 @@ import { getInitials } from '@/components/subject/utils';
 import { useKeybinding, matchesShortcut } from '@/features/settings';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
 import { AttachmentPreviewBar } from '@/features/chat/components/compose/AttachmentPreviewBar';
-import { filesApi } from '@/features/files/api/filesApi';
-import { attachmentsApi } from '@/features/attachments';
+import { uploadService } from '@/features/files/upload';
+import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { randomUUID } from '@/shared/utils/uuid';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
 
@@ -187,44 +187,36 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
 
     try {
       const folderRes = await attachmentsApi.getAttachmentsFolder({ organizationId });
-      const folderId = folderRes.folderId;
 
-      const initRes = await filesApi.initiateUpload({
-        organizationId,
+      // The shared engine does the slicing/POSTing in a worker (off the main thread) and keeps running
+      // across navigation. Chat consumes it directly - no Redux, and persist:false since the composer
+      // is ephemeral (no point auto-resuming an attachment whose message was never sent).
+      const [handle] = uploadService.enqueue([{
+        file,
         filename: file.name,
         mimeType: file.type || 'application/octet-stream',
-        totalSize: BigInt(file.size),
-        folderId,
+        organizationId,
+        context: 'chat',
+        folderId: folderRes.folderId,
+        persist: false,
+      }]);
+
+      const unsubscribe = uploadService.subscribe((records) => {
+        const record = records.find((r) => r.id === handle.id);
+        if (!record) return;
+        setPendingFiles((prev) =>
+          prev.map((pf) => (pf.id === pendingId ? { ...pf, progress: record.progress } : pf)),
+        );
       });
 
-      const { uploadId, chunkSize, totalChunks } = initRes;
-      const fileBuffer = await file.arrayBuffer();
-
-      for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
-        const start = (chunkNumber - 1) * chunkSize;
-        const end = Math.min(start + chunkSize, file.size);
-        const chunkData = new Uint8Array(fileBuffer.slice(start, end));
-
-        await filesApi.uploadChunk({
-          uploadId,
-          chunkNumber,
-          data: chunkData,
-          isLast: chunkNumber === totalChunks,
-        });
-
-        const progress = Math.round((chunkNumber / totalChunks) * 90);
+      try {
+        const { fileId } = await handle.done;
         setPendingFiles((prev) =>
-          prev.map((pf) => (pf.id === pendingId ? { ...pf, progress } : pf)),
+          prev.map((pf) => (pf.id === pendingId ? { ...pf, fileId, progress: 100 } : pf)),
         );
+      } finally {
+        unsubscribe();
       }
-
-      const completeRes = await filesApi.completeUpload({ uploadId });
-      const fileId = completeRes.file?.id;
-      if (!fileId) throw new Error('Upload completed but no file ID returned');
-
-      setPendingFiles((prev) =>
-        prev.map((pf) => (pf.id === pendingId ? { ...pf, fileId, progress: 100 } : pf)),
-      );
     } catch (err) {
       console.error('[MessageCompose] Upload failed:', err);
       setPendingFiles((prev) => prev.filter((pf) => pf.id !== pendingId));

@@ -8,6 +8,11 @@ from typing import TYPE_CHECKING, cast
 from colorama import just_fix_windows_console
 from loguru import logger
 
+try:
+    from loguru._recattrs import RecordException
+except ImportError:  # loguru internals relocated; the exc_info patcher degrades to a no-op
+    RecordException = None
+
 from .config import LogLevel
 
 if TYPE_CHECKING:
@@ -220,6 +225,21 @@ class InterceptHandler(logging.Handler):
             )
 
 
+def _capture_exc_info_from_extra(record) -> None:
+    """Rescue stdlib-style ``exc_info=True`` passed to loguru calls.
+
+    ``logger.error("msg", exc_info=True)`` is a stdlib-logging idiom loguru does not
+    honor: the kwarg lands in ``extra`` and the traceback is silently dropped. We pop
+    it and attach the live exception so the stack is captured. ``logger.exception`` /
+    ``logger.opt(exception=True)`` set ``record["exception"]`` directly and no-op here.
+    """
+    flagged = record["extra"].pop("exc_info", None)
+    if flagged and record["exception"] is None and RecordException is not None:
+        type_, value, tb = sys.exc_info()
+        if type_ is not None:
+            record["exception"] = RecordException(type_, value, tb)
+
+
 def serialize(record):
     subset = {
         "time": record["time"],
@@ -227,11 +247,16 @@ def serialize(record):
         "v": app_version,
         "level": record["level"].name,
         "msg": record["message"],
-        "extra": record["extra"],
         "func": record["function"],
         "line": record["line"],
         "pkg": record["name"],
     }
+
+    # Promote structured kwargs (user_id, duration_ms, http, error_code, ...) to
+    # top-level keys so log aggregators index them directly instead of under a
+    # nested path. Reserved keys above win on collision.
+    for key, value in record["extra"].items():
+        subset.setdefault(key, value)
 
     e = record["exception"]
 
@@ -258,6 +283,7 @@ def configure_loguru(config: ObservabilityConfig) -> None:
     app_version = config.app_version
 
     logger.remove()
+    logger.configure(patcher=_capture_exc_info_from_extra)
     root_logger = logging.getLogger()
     root_logger.handlers = [InterceptHandler()]
     root_logger.setLevel(0)
@@ -308,14 +334,15 @@ def configure_loguru(config: ObservabilityConfig) -> None:
         http_logger.propagate = False
 
     if config.console_log_type == "json":
+        # The custom `sink` already serializes via `serialize()`, so loguru's own
+        # `serialize=True` is redundant. `diagnose=True` is intentionally off: it
+        # injects local variable values into tracebacks, which leaks data in prod.
         logger.add(
             sink,
             level=config.console_log_level.value,
             backtrace=True,
-            serialize=True,
-            diagnose=True,
         )
-        logger.info("json sync logger configured", component="observability")
+        logger.info("json logger configured", component="observability")
     else:
         just_fix_windows_console()
         loggers_config = {

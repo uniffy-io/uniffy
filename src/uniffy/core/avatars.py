@@ -13,6 +13,8 @@ from PIL import Image
 
 from uniffy.core.storage import get_s3_client
 
+logger = logger.bind(component="avatars")
+
 AVATAR_SIZES: dict[str, int] = {
     "sm": 32,
     "md": 64,

@@ -15,6 +15,8 @@ from uniffy.core.storage import get_s3_client
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.db.session import open_session
 
+logger = logger.bind(component="tasks.multipart_reaper")
+
 _LOCK_KEY = "multipart_reaper:lock"
 _LOCK_TTL_SECONDS = 300
 _BATCH_SIZE = 100

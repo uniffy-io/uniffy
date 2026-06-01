@@ -70,6 +70,8 @@ from uniffy.domains.chat.streaming.events import (
 )
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
+logger = logger.bind(component="agents.chat_integration.context")
+
 
 @dataclass(frozen=True)
 class ContextStats:

@@ -42,6 +42,7 @@ from uniffy.core.auth.permissions.visible_sets import (
     invalidate_visible_sets_for_org,
     invalidate_visible_sets_for_user,
 )
+from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.audit.event import AuditEvent
@@ -56,6 +57,9 @@ from uniffy.core.types import (
     NotificationType,
     SubjectType,
 )
+from uniffy.core.valkey import publish_content_access_changed
+
+logger = logger.bind(component="content.members")
 
 # Loader returns the raw SQLModel row (bypassing permission checks). The row
 # must expose id, organization_id, owner_id, access_mode, baseline_role columns.
@@ -288,6 +292,14 @@ class ContentMembersOperations:
             subject_id if subject_type == SubjectType.USER else None,
             role.value,
         )
+        await self._publish_access_change(
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            action="revoked" if role == ContentRole.BLOCKED else "granted",
+        )
 
         return member
 
@@ -375,6 +387,14 @@ class ContentMembersOperations:
             subject_id if subject_type == SubjectType.USER else None,
             new_role.value,
         )
+        await self._publish_access_change(
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            action="revoked" if new_role == ContentRole.BLOCKED else "granted",
+        )
 
         return existing
 
@@ -443,6 +463,14 @@ class ContentMembersOperations:
             content_id,
             subject_id if subject_type == SubjectType.USER else None,
             None,
+        )
+        await self._publish_access_change(
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            action="revoked",
         )
 
     async def set_access_mode(
@@ -567,6 +595,21 @@ class ContentMembersOperations:
         await self._sync_search_sharing(organization_id, content_type, content_id)
         await publish_perm_change(content_type, content_id, None, None)
 
+        # Crossing the OPEN_TO_ORG boundary changes the org-member-visible set;
+        # tell every member's sidebar to refresh. Transitions that don't touch
+        # org visibility (e.g. OWNER_ONLY <-> EXPLICIT_MEMBERS) are covered by
+        # the per-member publishes in add/remove_member instead.
+        if previous_effective_mode != new_effective_mode and (
+            previous_effective_mode == AccessMode.OPEN_TO_ORG
+            or new_effective_mode == AccessMode.OPEN_TO_ORG
+        ):
+            await publish_content_access_changed(
+                content_type=content_type_to_proto(content_type),
+                content_id=content_id,
+                action="access_mode_changed",
+                organization_id=organization_id,
+            )
+
         # Migrate attachments only when the effective mode crosses the
         # OPEN_TO_ORG boundary; pure inheritance changes are handled by the
         # org-defaults reindex.
@@ -604,9 +647,9 @@ class ContentMembersOperations:
         owner_id: UUID,
     ) -> None:
         """Re-route a content's attachments between USER and ORG folders; idempotent."""
-        from uniffy.core.models.attachments.attachment import Attachment
+        from uniffy.core.models.files.attachment import Attachment
         from uniffy.core.models.files.file import File
-        from uniffy.domains.attachments.operations import AttachmentOperations
+        from uniffy.domains.files.attachments.operations import AttachmentOperations
 
         affected = [(content_type, content_id)]
         for loader in _attachment_cascade_loaders.get(content_type, []):
@@ -972,9 +1015,8 @@ class ContentMembersOperations:
                 )
             )
         except Exception:
-            logger.warning(
-                "Failed to emit PERMISSION_GRANTED notification",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to emit PERMISSION_GRANTED notification"
             )
 
     async def _emit_revoked_notification(
@@ -1000,10 +1042,31 @@ class ContentMembersOperations:
                 )
             )
         except Exception:
-            logger.warning(
-                "Failed to emit PERMISSION_REVOKED notification",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to emit PERMISSION_REVOKED notification"
             )
+
+    async def _publish_access_change(
+        self,
+        *,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        subject_type: SubjectType,
+        subject_id: UUID,
+        action: str,
+    ) -> None:
+        """Signal the affected users' sidebars to refresh after an explicit grant/revoke."""
+        target_ids = await self._resolve_notification_targets(subject_type, subject_id)
+        if not target_ids:
+            return
+        await publish_content_access_changed(
+            content_type=content_type_to_proto(content_type),
+            content_id=content_id,
+            action=action,
+            organization_id=organization_id,
+            target_user_ids=target_ids,
+        )
 
     async def _resolve_notification_targets(
         self,
@@ -1067,9 +1130,8 @@ class ContentMembersOperations:
                 blocked_group_ids=blocked_groups,
             )
         except Exception:
-            logger.warning(
-                "Failed to sync search sharing metadata",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to sync search sharing metadata"
             )
 
     async def _sync_search_access_policy(
@@ -1100,7 +1162,6 @@ class ContentMembersOperations:
                 owner_id=owner_id,
             )
         except Exception:
-            logger.warning(
-                "Failed to sync search access policy",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to sync search access policy"
             )

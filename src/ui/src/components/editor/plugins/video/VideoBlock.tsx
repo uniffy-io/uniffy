@@ -1,4 +1,4 @@
-// `src` starting with `uploading:` renders the in-progress placeholder; `/media-stream/` URLs flow through the SW for ranged seek.
+// `src` starting with `uploading:` renders the in-progress placeholder; `/api/media/` URLs serve ranged bytes for seeking.
 
 import { useEffect, useRef } from 'react';
 import videojs from 'video.js';

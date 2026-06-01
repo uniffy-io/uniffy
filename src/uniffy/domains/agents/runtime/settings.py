@@ -23,6 +23,8 @@ from uniffy.core.models.agents.runtime_settings import (
     AgentRuntimeSettings,
 )
 
+logger = logger.bind(component="agents.runtime.settings")
+
 
 @dataclass(frozen=True)
 class ResolvedRuntimeSettings:
@@ -68,7 +70,7 @@ async def get_runtime_settings(
         )
         row = result.scalar_one_or_none()
     except Exception:
-        logger.warning("Failed to load runtime settings; using defaults", exc_info=True)
+        logger.opt(exception=True).warning("Failed to load runtime settings; using defaults")
         return _defaults()
 
     if row is None:

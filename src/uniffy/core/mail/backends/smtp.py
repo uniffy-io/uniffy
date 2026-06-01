@@ -14,6 +14,8 @@ from loguru import logger
 from uniffy.core.mail.backends.base import MailBackend, MailResult
 from uniffy.core.mail.config import MailConfig
 
+logger = logger.bind(component="mail")
+
 
 class SmtpBackend(MailBackend):
     """One-shot SMTP submission client."""

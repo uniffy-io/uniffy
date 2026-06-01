@@ -34,6 +34,8 @@ from uniffy.domains.audit.operations import (
 )
 from uniffy.domains.auth.context import get_user_id_from_context
 
+logger = logger.bind(component="audit.handlers")
+
 
 def _parse_uuid(value: str, field: str) -> UUID:
     """Parse a UUID string or raise INVALID_ARGUMENT."""
@@ -49,7 +51,7 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.PERMISSION_DENIED, str(exc))
     if isinstance(exc, ValidationError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.error("Unhandled error in AuditService handler", exc_info=True)
+    logger.exception("Unhandled error in AuditService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

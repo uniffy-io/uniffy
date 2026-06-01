@@ -7,10 +7,8 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { FilesLayout } from '@/features/files/components/FilesLayout';
 import { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 import { FilesList } from '@/features/files/components/list/FilesList';
-import { UploadPanel } from '@/features/files/components/upload/UploadPanel';
 import { FolderUploadConfirmDialog } from '@/features/files/components/FolderUploadConfirmDialog';
 import { FileDetailsPanel } from '@/features/files/components/details';
-import { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 import { useFolderUpload } from '@/features/files/hooks/useFolderUpload';
 import { scanInputFiles, isFolderUploadSupported } from '@/features/files/utils/folderScanner';
 import { resolveUploadAccessMode } from '@/features/files/utils/resolveUploadAccessMode';
@@ -18,14 +16,16 @@ import { initializeFilesData, setFolderId, setDetailsPanelOpen, toggleSidebar } 
 import { fetchFilesTree, setSelectedFolder, createFolder } from '@/features/files/store/filesTreeSlice';
 import { selectFilesForCurrentFolderAndScope, selectAllFiles } from '@/features/files/store/selectors';
 import { openViewer } from '@/features/files/store/viewerSlice';
-import { addToQueue } from '@/features/files/store/uploadSlice';
-import { storeFile } from '@/features/files/utils/fileStore';
+import { enqueueFileUploads } from '@/features/files/upload/enqueueFileUploads';
 import { filesApi } from '@/features/files/api/filesApi';
 import { downloadAsArchive, type FileDownloadItem } from '@/features/files/utils/archiveDownload';
+import { useContentAccessRefetch } from '@/features/notifications/hooks/useContentAccessRefetch';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+
+const FILE_CONTENT_TYPES = [ContentType.FILE, ContentType.FOLDER];
 
 export function FilesPage() {
     useDocumentTitle('Files');
-    useUploadProcessor();
 
     const dispatch = useAppDispatch();
     const { fileId: urlFileId } = useParams<{ fileId?: string }>();
@@ -81,6 +81,16 @@ export function FilesPage() {
             dispatch(initializeFilesData({ forceRefresh: true }));
         }
     }, [dispatch, organizationId, viewScope]);
+
+    // A file/folder shared with this user or flipped to OPEN_TO_ORG won't be in
+    // the loaded list/tree; refresh both when access changes.
+    useContentAccessRefetch(
+        FILE_CONTENT_TYPES,
+        useCallback(() => {
+            dispatch(initializeFilesData({ forceRefresh: true }));
+            dispatch(fetchFilesTree({ includeFiles: false }));
+        }, [dispatch]),
+    );
 
     useEffect(() => {
         const folderId = searchParams.get('folder');
@@ -213,32 +223,28 @@ export function FilesPage() {
     const handleFileInputChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
             const selectedFiles = e.target.files;
-            if (selectedFiles && selectedFiles.length > 0) {
+            if (selectedFiles && selectedFiles.length > 0 && organizationId) {
                 const fileArray = Array.from(selectedFiles);
                 const parentFolder = currentFolderId ? folders[currentFolderId] : undefined;
                 const accessMode = resolveUploadAccessMode(viewScope, parentFolder);
 
-                const uploadItems = fileArray.map((file) => {
-                    const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    storeFile(id, file);
-                    return {
-                        id,
+                enqueueFileUploads(
+                    fileArray.map((file) => ({
+                        file,
                         filename: file.name,
                         mimeType: file.type || 'application/octet-stream',
-                        totalSize: file.size,
+                        organizationId,
+                        context: 'files' as const,
                         folderId: currentFolderId ?? undefined,
                         accessMode,
-                        totalChunks: 0,
-                        chunkSize: 0,
-                    };
-                });
-
-                dispatch(addToQueue(uploadItems));
+                    })),
+                    dispatch
+                );
             }
             // Reset input so same file can be selected again
             e.target.value = '';
         },
-        [dispatch, currentFolderId, folders, viewScope]
+        [dispatch, organizationId, currentFolderId, folders, viewScope]
     );
 
     // Handle create folder from context menu
@@ -307,8 +313,6 @@ export function FilesPage() {
                 onConfirm={confirmFolderUpload}
                 onCancel={cancelFolderUpload}
             />
-
-            <UploadPanel />
         </>
     );
 }

@@ -107,6 +107,8 @@ from uniffy.domains.projects.operations import (
 )
 from uniffy.domains.tags import TagOperations
 
+logger = logger.bind(component="projects.handlers")
+
 
 def _parse_uuid(value: str, field: str) -> UUID:
     try:
@@ -179,7 +181,7 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.FAILED_PRECONDITION, str(exc))
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
-    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    logger.exception(f"Error in {operation}: {exc}")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ExpandableEditor } from "@/components/editor/ExpandableEditor";
-import { attachmentsApi } from "@/features/attachments";
+import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";

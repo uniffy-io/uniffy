@@ -32,6 +32,13 @@ export {
 
 export { useNotificationStream } from '@/features/notifications/hooks/useNotificationStream';
 
+export { useContentAccessRefetch } from '@/features/notifications/hooks/useContentAccessRefetch';
+export {
+    onContentAccessChanged,
+    emitContentAccessChanged,
+} from '@/features/notifications/contentAccessEmitter';
+export type { ContentAccessChange, ContentAccessAction } from '@/features/notifications/contentAccessEmitter';
+
 export { usePushSubscription } from '@/features/notifications/hooks/usePushSubscription';
 export type { UsePushSubscriptionResult, SubscribeResult } from '@/features/notifications/hooks/usePushSubscription';
 

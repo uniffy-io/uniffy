@@ -39,10 +39,6 @@ service FilesService {
   // Stream file content from backend to client (server streaming RPC).
   rpc DownloadFile(DownloadFileRequest) returns (stream DownloadFileResponse);
 
-  // Stream file with byte range support for Service Worker media streaming.
-  // This RPC supports HTTP Range-like semantics for video/audio seeking.
-  rpc StreamFileRange(StreamFileRangeRequest) returns (stream StreamFileRangeResponse);
-
   // === File CRUD ===
 
   // Get a file by ID.
@@ -160,6 +156,31 @@ service FilesService {
 
   // List saved filters for the current user.
   rpc ListSavedFilters(ListSavedFiltersRequest) returns (ListSavedFiltersResponse);
+
+  // === Attachments ===
+  // Attachments link files to content (notes, chat messages, calendar events,
+  // tasks, etc.) without duplicating storage. Files live in a user's (or the
+  // org's) Attachments folder; attachment rows track which content uses them.
+
+  // Attach a file to content. If the file is not already in the Attachments
+  // folder it is copied there. Upload new attachments via InitiateUpload with
+  // the folder id from GetAttachmentsFolder, then call AttachFile to link.
+  rpc AttachFile(AttachFileRequest) returns (AttachFileResponse);
+
+  // Detach a file from content (deletes the attachment and the file copy).
+  rpc DetachFile(DetachFileRequest) returns (DetachFileResponse);
+
+  // List all attachments for a piece of content.
+  rpc ListAttachments(ListAttachmentsRequest) returns (ListAttachmentsResponse);
+
+  // Batch-list attachments for many content rows of the same type. Used by
+  // chat to hydrate attachments for a page of messages in one round-trip
+  // (replaces an N+1 ListAttachments fan-out).
+  rpc BatchListAttachments(BatchListAttachmentsRequest) returns (BatchListAttachmentsResponse);
+
+  // Get the user's Attachments folder id. Use it with InitiateUpload to
+  // upload new attachments.
+  rpc GetAttachmentsFolder(GetAttachmentsFolderRequest) returns (GetAttachmentsFolderResponse);
 }
 
 // ENUMS
@@ -292,25 +313,6 @@ message DownloadFileResponse {
   optional string filename = 4;
   optional string mime_type = 5;
   optional int64 total_size = 6;
-}
-
-// Request for range-based file streaming (used by Service Worker for media).
-message StreamFileRangeRequest {
-  string file_id = 1;
-  string organization_id = 2;
-  optional int64 start_byte = 3; // Range start (inclusive), default 0
-  optional int64 end_byte = 4; // Range end (inclusive), default EOF
-}
-
-// Response for range-based file streaming.
-message StreamFileRangeResponse {
-  bytes data = 1;
-  int64 total_size = 2; // Total file size (for Content-Length)
-  int64 range_start = 3; // Actual range start returned
-  int64 range_end = 4; // Actual range end returned
-  string mime_type = 5; // For Content-Type header
-  string filename = 6; // For Content-Disposition
-  bool is_first_chunk = 7; // Metadata only meaningful in first chunk
 }
 
 // FILE MESSAGES
@@ -906,4 +908,88 @@ message CreateFolderTreeResponse {
 
 message EnsureRecordingsFolderRequest {
   string organization_id = 1;
+}
+
+// ATTACHMENT MESSAGES
+
+// Attachment represents a file attached to content.
+message Attachment {
+  string id = 1;
+  string organization_id = 2;
+  string file_id = 3;
+  common.v1.ContentType content_type = 4;
+  string content_id = 5;
+  string attached_by_user_id = 6;
+  google.protobuf.Timestamp attached_at = 7;
+
+  // File details (populated from the linked file)
+  string filename = 10;
+  string mime_type = 11;
+  int64 size_bytes = 12;
+  optional AttachedFileOwner owner_info = 13;
+}
+
+message AttachedFileOwner {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message AttachFileRequest {
+  string organization_id = 1;
+  string source_file_id = 2; // File to copy and attach
+  common.v1.ContentType content_type = 3;
+  string content_id = 4; // Content to attach to
+}
+
+message AttachFileResponse {
+  Attachment attachment = 1;
+}
+
+message DetachFileRequest {
+  string organization_id = 1;
+  string attachment_id = 2; // Attachment to remove
+}
+
+message DetachFileResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListAttachmentsRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  string content_id = 3;
+}
+
+message ListAttachmentsResponse {
+  repeated Attachment attachments = 1;
+  int32 total_count = 2;
+}
+
+message BatchListAttachmentsRequest {
+  string organization_id = 1;
+  common.v1.ContentType content_type = 2;
+  // Content rows to look up. Capped at 200 server-side; callers that
+  // need more should issue multiple batches.
+  repeated string content_ids = 3;
+}
+
+// One entry per requested content_id. Content rows with no attachments are
+// omitted -- callers must default to empty arrays.
+message BatchListAttachmentsGroup {
+  string content_id = 1;
+  repeated Attachment attachments = 2;
+}
+
+message BatchListAttachmentsResponse {
+  repeated BatchListAttachmentsGroup groups = 1;
+}
+
+message GetAttachmentsFolderRequest {
+  string organization_id = 1;
+}
+
+message GetAttachmentsFolderResponse {
+  string folder_id = 1;
 }

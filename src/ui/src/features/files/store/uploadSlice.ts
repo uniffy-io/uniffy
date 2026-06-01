@@ -1,35 +1,8 @@
-import { createSlice, createSelector } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { RootState } from '@/app/store';
-import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
+import type { UploadRecord } from '@/features/files/upload/uploadTypes';
 
-export interface UploadItem {
-    id: string;
-
-    filename: string;
-    mimeType: string;
-    totalSize: number;
-
-    uploadId?: string;
-    chunkSize?: number;
-    totalChunks?: number;
-
-    status: 'queued' | 'initializing' | 'uploading' | 'completing' | 'completed' | 'failed' | 'aborted';
-    uploadedChunks: number;
-    uploadedBytes: number;
-    /** 0..100 */
-    progress: number;
-
-    folderId?: string;
-    accessMode?: AccessMode;
-
-    error?: string;
-
-    startedAt?: number;
-    completedAt?: number;
-
-    fileId?: string;
-}
+export type TrayView = 'expanded' | 'minimized' | 'hidden';
 
 export interface DownloadItem {
     id: string;
@@ -52,238 +25,35 @@ export interface DownloadItem {
 }
 
 interface UploadState {
-    queue: UploadItem[];
-    activeUploads: Record<string, UploadItem>;
-    completedUploads: UploadItem[];
-    failedUploads: UploadItem[];
+    /** Read-only projection of the engine's non-chat uploads, mirrored by reduxMirror. */
+    records: UploadRecord[];
+    trayView: TrayView;
 
     activeDownloads: Record<string, DownloadItem>;
     completedDownloads: DownloadItem[];
-
-    isUploading: boolean;
     isDownloading: boolean;
-    totalQueuedSize: number;
-    totalUploadedSize: number;
-
-    maxConcurrentUploads: number;
-
-    showUploadPanel: boolean;
 }
 
 const initialState: UploadState = {
-    queue: [],
-    activeUploads: {},
-    completedUploads: [],
-    failedUploads: [],
+    records: [],
+    // Default to minimized; the tray renders nothing until there is content to show. Once the user
+    // hides it, the mirror never re-surfaces it - new uploads stay silent (failures still toast).
+    trayView: 'minimized',
     activeDownloads: {},
     completedDownloads: [],
-    isUploading: false,
     isDownloading: false,
-    totalQueuedSize: 0,
-    totalUploadedSize: 0,
-    maxConcurrentUploads: 3,
-    showUploadPanel: false,
 };
 
 export const uploadSlice = createSlice({
     name: 'upload',
     initialState,
     reducers: {
-        addToQueue: (state, action: PayloadAction<Omit<UploadItem, 'status' | 'uploadedChunks' | 'uploadedBytes' | 'progress'>[]>) => {
-            const newItems: UploadItem[] = action.payload.map(item => ({
-                ...item,
-                status: 'queued',
-                uploadedChunks: 0,
-                uploadedBytes: 0,
-                progress: 0,
-            }));
-
-            state.queue.push(...newItems);
-            state.totalQueuedSize += newItems.reduce((sum, item) => sum + item.totalSize, 0);
-
-            if (newItems.length > 0) {
-                state.showUploadPanel = true;
-            }
+        setUploadRecords: (state, action: PayloadAction<UploadRecord[]>) => {
+            state.records = action.payload;
         },
 
-        removeFromQueue: (state, action: PayloadAction<string>) => {
-            const index = state.queue.findIndex(item => item.id === action.payload);
-            if (index >= 0) {
-                const item = state.queue[index];
-                state.totalQueuedSize -= item.totalSize;
-                state.queue.splice(index, 1);
-            }
-        },
-
-        startUpload: (state, action: PayloadAction<{ itemId: string; uploadId: string; chunkSize: number; totalChunks: number }>) => {
-            const { itemId, uploadId, chunkSize, totalChunks } = action.payload;
-
-            const queueIndex = state.queue.findIndex(item => item.id === itemId);
-            if (queueIndex >= 0) {
-                const item = state.queue[queueIndex];
-                const activeItem: UploadItem = {
-                    ...item,
-                    uploadId,
-                    chunkSize,
-                    totalChunks,
-                    status: 'uploading',
-                    startedAt: Date.now(),
-                };
-
-                state.queue.splice(queueIndex, 1);
-                state.activeUploads[itemId] = activeItem;
-                state.isUploading = true;
-            }
-        },
-
-        updateProgress: (state, action: PayloadAction<{ itemId: string; uploadedChunks: number; uploadedBytes: number }>) => {
-            const { itemId, uploadedChunks, uploadedBytes } = action.payload;
-            const item = state.activeUploads[itemId];
-            if (item) {
-                item.uploadedChunks = uploadedChunks;
-                item.uploadedBytes = uploadedBytes;
-                item.progress = Math.round((uploadedBytes / item.totalSize) * 100);
-                state.totalUploadedSize = Object.values(state.activeUploads)
-                    .reduce((sum, i) => sum + i.uploadedBytes, 0);
-            }
-        },
-
-        /** Final chunk sent, awaiting server CompleteUpload. */
-        setCompleting: (state, action: PayloadAction<string>) => {
-            const item = state.activeUploads[action.payload];
-            if (item) {
-                item.status = 'completing';
-            }
-        },
-
-        completeUpload: (state, action: PayloadAction<{ itemId: string; fileId: string }>) => {
-            const { itemId, fileId } = action.payload;
-            const item = state.activeUploads[itemId];
-            if (item) {
-                const completedItem: UploadItem = {
-                    ...item,
-                    status: 'completed',
-                    fileId,
-                    completedAt: Date.now(),
-                    progress: 100,
-                };
-
-                delete state.activeUploads[itemId];
-                state.completedUploads.unshift(completedItem);
-
-                if (state.completedUploads.length > 20) {
-                    state.completedUploads = state.completedUploads.slice(0, 20);
-                }
-
-                if (Object.keys(state.activeUploads).length === 0 && state.queue.length === 0) {
-                    state.isUploading = false;
-                }
-            }
-        },
-
-        failUpload: (state, action: PayloadAction<{ itemId: string; error: string }>) => {
-            const { itemId, error } = action.payload;
-
-            const queueIndex = state.queue.findIndex(item => item.id === itemId);
-            if (queueIndex >= 0) {
-                const item = state.queue[queueIndex];
-                const failedItem: UploadItem = {
-                    ...item,
-                    status: 'failed',
-                    error,
-                    completedAt: Date.now(),
-                };
-                state.queue.splice(queueIndex, 1);
-                state.failedUploads.unshift(failedItem);
-            } else {
-                const item = state.activeUploads[itemId];
-                if (item) {
-                    const failedItem: UploadItem = {
-                        ...item,
-                        status: 'failed',
-                        error,
-                        completedAt: Date.now(),
-                    };
-                    delete state.activeUploads[itemId];
-                    state.failedUploads.unshift(failedItem);
-                }
-            }
-
-            if (state.failedUploads.length > 10) {
-                state.failedUploads = state.failedUploads.slice(0, 10);
-            }
-
-            if (Object.keys(state.activeUploads).length === 0 && state.queue.length === 0) {
-                state.isUploading = false;
-            }
-        },
-
-        abortUpload: (state, action: PayloadAction<string>) => {
-            const itemId = action.payload;
-            const item = state.activeUploads[itemId];
-            if (item) {
-                const abortedItem: UploadItem = {
-                    ...item,
-                    status: 'aborted',
-                    completedAt: Date.now(),
-                };
-                delete state.activeUploads[itemId];
-                state.failedUploads.unshift(abortedItem);
-            }
-
-            if (Object.keys(state.activeUploads).length === 0 && state.queue.length === 0) {
-                state.isUploading = false;
-            }
-        },
-
-        retryUpload: (state, action: PayloadAction<string>) => {
-            const itemId = action.payload;
-            const index = state.failedUploads.findIndex(item => item.id === itemId);
-            if (index >= 0) {
-                const item = state.failedUploads[index];
-                const retryItem: UploadItem = {
-                    ...item,
-                    status: 'queued',
-                    uploadedChunks: 0,
-                    uploadedBytes: 0,
-                    progress: 0,
-                    error: undefined,
-                    startedAt: undefined,
-                    completedAt: undefined,
-                    fileId: undefined,
-                };
-                state.failedUploads.splice(index, 1);
-                state.queue.push(retryItem);
-            }
-        },
-
-        clearCompleted: (state) => {
-            state.completedUploads = [];
-        },
-
-        clearFailed: (state) => {
-            state.failedUploads = [];
-        },
-
-        toggleUploadPanel: (state) => {
-            state.showUploadPanel = !state.showUploadPanel;
-        },
-
-        setShowUploadPanel: (state, action: PayloadAction<boolean>) => {
-            state.showUploadPanel = action.payload;
-        },
-
-        clearUploads: (state) => {
-            state.queue = [];
-            state.activeUploads = {};
-            state.completedUploads = [];
-            state.failedUploads = [];
-            state.activeDownloads = {};
-            state.completedDownloads = [];
-            state.isUploading = false;
-            state.isDownloading = false;
-            state.totalQueuedSize = 0;
-            state.totalUploadedSize = 0;
+        setTrayView: (state, action: PayloadAction<TrayView>) => {
+            state.trayView = action.payload;
         },
 
         startDownload: (state, action: PayloadAction<{ id: string; filename: string; fileCount: number }>) => {
@@ -299,7 +69,10 @@ export const uploadSlice = createSlice({
                 startedAt: Date.now(),
             };
             state.isDownloading = true;
-            state.showUploadPanel = true;
+            // A download is a deliberate action, so surface the tray even if it was hidden.
+            if (state.trayView === 'hidden') {
+                state.trayView = 'minimized';
+            }
         },
 
         updateDownloadProgress: (state, action: PayloadAction<{ id: string; currentFile: number; currentFilename: string; progress: number }>) => {
@@ -360,37 +133,28 @@ export const uploadSlice = createSlice({
         clearCompletedDownloads: (state) => {
             state.completedDownloads = [];
         },
+
+        /** Reset the tray projection on logout / org switch. The engine itself is cancelled separately. */
+        clearUploads: (state) => {
+            state.records = [];
+            state.activeDownloads = {};
+            state.completedDownloads = [];
+            state.isDownloading = false;
+            state.trayView = 'minimized';
+        },
     },
 });
 
 export const {
-    addToQueue,
-    removeFromQueue,
-    startUpload,
-    updateProgress,
-    setCompleting,
-    completeUpload,
-    failUpload,
-    abortUpload,
-    retryUpload,
-    clearCompleted,
-    clearFailed,
-    toggleUploadPanel,
-    setShowUploadPanel,
-    clearUploads,
+    setUploadRecords,
+    setTrayView,
     startDownload,
     updateDownloadProgress,
     setDownloadArchiving,
     completeDownload,
     failDownload,
     clearCompletedDownloads,
+    clearUploads,
 } = uploadSlice.actions;
-
-const selectFailedUploads = (state: RootState) => state.upload.failedUploads;
-
-export const selectAbortedUploads = createSelector(
-    [selectFailedUploads],
-    (failedUploads) => failedUploads.filter((item) => item.status === 'aborted')
-);
 
 export const uploadReducer = uploadSlice.reducer;

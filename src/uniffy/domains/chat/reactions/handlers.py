@@ -19,6 +19,8 @@ from uniffy.db import open_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.reactions.operations import ChatReactionOperations
 
+logger = logger.bind(component="chat.reactions.handlers")
+
 
 def _handle_error(e: Exception) -> None:
     if isinstance(e, NotFoundError):

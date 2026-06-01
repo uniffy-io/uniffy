@@ -1,5 +1,5 @@
-import { filesApi } from '@/features/files/api/filesApi';
-import { attachmentsApi } from '@/features/attachments';
+import { uploadService } from '@/features/files/upload';
+import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { buildFileUrl } from '@/shared/utils/fileUrls';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
@@ -36,42 +36,28 @@ export async function uploadImage(options: UploadImageOptions): Promise<string> 
     const folderId = await getAttachmentsFolderId(organizationId);
     onProgress?.(5);
 
-    const initiateResponse = await filesApi.initiateUpload({
-        organizationId,
+    // The shared engine slices and POSTs in a worker, off the main thread, so a large paste no longer
+    // freezes the editor. persist:false: an editor image is ephemeral until the content flushes.
+    const [handle] = uploadService.enqueue([{
+        file,
         filename: file.name,
         mimeType: file.type || 'application/octet-stream',
-        totalSize: BigInt(file.size),
+        organizationId,
+        context: 'editor',
         folderId,
+        persist: false,
+    }]);
+
+    const unsubscribe = uploadService.subscribe((records) => {
+        const record = records.find((r) => r.id === handle.id);
+        if (record) onProgress?.(5 + record.progress * 0.8);
     });
 
-    const { uploadId, chunkSize, totalChunks } = initiateResponse;
-    onProgress?.(10);
-
-    const fileBuffer = await file.arrayBuffer();
-    const progressPerChunk = 70 / totalChunks;
-
-    for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
-        const start = (chunkNumber - 1) * chunkSize;
-        const end = Math.min(start + chunkSize, file.size);
-        const chunkData = new Uint8Array(fileBuffer.slice(start, end));
-
-        await filesApi.uploadChunk({
-            uploadId,
-            chunkNumber,
-            data: chunkData,
-            isLast: chunkNumber === totalChunks,
-        });
-
-        onProgress?.(10 + chunkNumber * progressPerChunk);
-    }
-
-    const completeResponse = await filesApi.completeUpload({
-        uploadId,
-    });
-
-    const fileId = completeResponse.file?.id;
-    if (!fileId) {
-        throw new Error('Upload completed but no file ID returned');
+    let fileId: string;
+    try {
+        ({ fileId } = await handle.done);
+    } finally {
+        unsubscribe();
     }
     onProgress?.(85);
 

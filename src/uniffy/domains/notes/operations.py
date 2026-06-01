@@ -52,6 +52,8 @@ from uniffy.domains.tags import (
     sync_inline_tags,
 )
 
+logger = logger.bind(component="notes.operations")
+
 _MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^|\]]+)\|[^\]]+\\?\]\\?\]\\?\]")
 _MENTION_RE = re.compile(r"\[\[\[([^|]+)\|[^\]]+\]\]\]")
 _IMAGE_RE = re.compile(r"!\[([^\]]*)\]\([^)]+\)")
@@ -264,6 +266,7 @@ class NoteOperations(BaseContentOperations[Note]):
         effective_mode, _ = await self._effective_policy(organization_id, note)
         if effective_mode != AccessMode.OWNER_ONLY or group_ids:
             await self._emit_shared_notification(user_id, organization_id, note)
+        await self._broadcast_open_to_org_create(organization_id, note.id, effective_mode)
         await self._notify_new_mentions(user_id, organization_id, note, old_refs=None)
 
         return note
@@ -891,10 +894,9 @@ class NoteOperations(BaseContentOperations[Note]):
             )
             await self.session.commit()
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "Failed to propagate note rename to mentions",
-                note_id=str(note.id),
-                exc_info=True,
+                note_id=str(note.id)
             )
 
     async def _collect_descendant_ids(self, note: Note) -> list[UUID]:

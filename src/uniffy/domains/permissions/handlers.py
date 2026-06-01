@@ -26,6 +26,7 @@ from uniffy_proto.permissions.v1.permissions_pb2 import (
 )
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.permissions.defaults import resolve_effective_policy
 from uniffy.core.content.members import (
     ContentMembersOperations,
     get_content_loader,
@@ -52,6 +53,8 @@ from uniffy.domains.permissions.converters import (
     content_access_policy_to_proto,
     content_member_to_proto,
 )
+
+logger = logger.bind(component="permissions.handlers")
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -96,7 +99,7 @@ def _map_domain_error(exc: Exception) -> ConnectError:
         return ConnectError(Code.NOT_FOUND, str(exc))
     if isinstance(exc, ValidationError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
-    logger.error("Unhandled error in MembersService handler", exc_info=True)
+    logger.exception("Unhandled error in MembersService handler")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 
@@ -118,7 +121,8 @@ async def _policy_for(
     content = await loader(session, organization_id, content_id)
     if content is None:
         raise ConnectError(Code.NOT_FOUND, "Content not found")
-    caller_role = await PermissionChecker(session).effective_role(
+    checker = PermissionChecker(session)
+    caller_role = await checker.effective_role(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
@@ -127,11 +131,18 @@ async def _policy_for(
         access_mode=content.access_mode,
         baseline_role=content.baseline_role,
     )
+    default_mode, default_baseline = await checker.get_org_defaults(
+        organization_id, content_type
+    )
+    effective_mode, _ = resolve_effective_policy(
+        content.access_mode, content.baseline_role, default_mode, default_baseline
+    )
     return content_access_policy_to_proto(
         owner_id=content.owner_id,
         access_mode=content.access_mode,
         baseline_role=content.baseline_role,
         caller_role=caller_role,
+        effective_access_mode=effective_mode,
     )
 
 

@@ -31,6 +31,8 @@ from uniffy.observability.metrics import (
     APPROVAL_STORE_VALKEY_UNREACHABLE_TOTAL,
 )
 
+logger = logger.bind(component="agents.runtime.approvals")
+
 APPROVAL_TTL_SECONDS = 24 * 60 * 60
 _APPROVAL_KEY_PREFIX = "approval"
 _SWEEP_GRACE_SECONDS = 60

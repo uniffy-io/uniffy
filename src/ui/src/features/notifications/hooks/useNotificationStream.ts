@@ -6,6 +6,8 @@ import { createElement } from 'react';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { fetchFile } from '@/features/files/store/filesSlice';
+import { initializeNotesData } from '@/features/notes/store/notesThunks';
+import { emitContentAccessChanged, type ContentAccessAction } from '@/features/notifications/contentAccessEmitter';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
 import { addRealtimeNotification, markNotificationAsRead } from '@/features/notifications/store/notificationsSlice';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
@@ -14,6 +16,7 @@ import { setDomainAdminDomains } from '@/features/auth/store/authSlice';
 import { adminApi } from '@/features/admin/api/adminApi';
 import { emitMentionStateChange } from '@/components/mention';
 import { StreamNotificationsResponse_EventType } from '@uniffy/proto/notifications/v1/notifications_pb';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { getState } from '@/app/storeRef';
 import { NotificationToast } from '@/features/notifications/components/NotificationToast';
 
@@ -37,6 +40,7 @@ export function useNotificationStream() {
         let backoff = INITIAL_BACKOFF_MS;
         let mounted = true;
         const pendingFileUpdates = new Map<string, ReturnType<typeof setTimeout>>();
+        let pendingTreeRefresh: ReturnType<typeof setTimeout> | null = null;
 
         async function connect() {
             while (mounted) {
@@ -148,6 +152,32 @@ export function useNotificationStream() {
                             }
                         }
 
+                        // CONTENT_ACCESS_CHANGED: the user's accessible-content set
+                        // shifted (shared with them, or content became/ceased
+                        // OPEN_TO_ORG). Notes keeps a global store, so refresh it
+                        // regardless of route (off-page shares land too). Other
+                        // domains fetch per-page and subscribe via
+                        // useContentAccessRefetch - relay through the emitter.
+                        if (
+                            event.eventType ===
+                                StreamNotificationsResponse_EventType.CONTENT_ACCESS_CHANGED &&
+                            event.contentAccessChanged
+                        ) {
+                            const { contentType, contentId, action } = event.contentAccessChanged;
+                            if (contentType === ContentType.NOTE && getState()?.notesTree.treeLoaded) {
+                                if (pendingTreeRefresh) clearTimeout(pendingTreeRefresh);
+                                pendingTreeRefresh = setTimeout(() => {
+                                    pendingTreeRefresh = null;
+                                    dispatch(initializeNotesData({ forceRefresh: true }));
+                                }, 500);
+                            }
+                            emitContentAccessChanged({
+                                contentType,
+                                contentId,
+                                action: action as ContentAccessAction,
+                            });
+                        }
+
                         if (
                             event.eventType ===
                                 StreamNotificationsResponse_EventType.PERMISSIONS_CHANGED &&
@@ -187,6 +217,7 @@ export function useNotificationStream() {
                 clearTimeout(timer);
             }
             pendingFileUpdates.clear();
+            if (pendingTreeRefresh) clearTimeout(pendingTreeRefresh);
         };
     }, [dispatch, organizationId, userId, isAuthenticated]);
 }

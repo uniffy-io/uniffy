@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -21,6 +21,8 @@ import {
   selectIsDetailPanelOpen,
 } from "../store/projectsUiSlice";
 import { fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
+import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 export function ProjectsPage() {
   const dispatch = useAppDispatch();
@@ -67,6 +69,19 @@ export function ProjectsPage() {
       dispatch(fetchProjectTasks(currentProjectId));
     }
   }, [dispatch, currentProjectId]);
+
+  // Live refresh on project access changes (shared / flipped to OPEN_TO_ORG ->
+  // refetch the list) and on a task created in the open project (child_added ->
+  // refetch that project's task board).
+  useContentAccessRefetch(ContentType.PROJECT, useCallback((change) => {
+    if (change.action === 'child_added') {
+      if (change.contentId === currentProjectId) {
+        dispatch(fetchProjectTasks(currentProjectId));
+      }
+      return;
+    }
+    dispatch(fetchProjects());
+  }, [dispatch, currentProjectId]));
 
   useEffect(() => {
     if (isProgrammaticNav.current) {

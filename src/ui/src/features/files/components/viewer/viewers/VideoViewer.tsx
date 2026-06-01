@@ -12,7 +12,7 @@ import {
     setDuration,
     setViewerLoading,
 } from '@/features/files/store/viewerSlice';
-import { useMediaStream } from '@/features/files/components/viewer/hooks/useMediaStream';
+import { useMedia } from '@/features/files/components/viewer/hooks/useMedia';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 
 // Formats that browsers typically don't support
@@ -32,7 +32,7 @@ export function VideoViewer({ file }: VideoViewerProps) {
     const isPlaying = useAppSelector((state) => state.fileViewer.isPlaying);
     const volume = useAppSelector((state) => state.fileViewer.volume);
     const isMuted = useAppSelector((state) => state.fileViewer.isMuted);
-    const { url: streamUrl, loading: swLoading, error: swError } = useMediaStream(file.id);
+    const { url: streamUrl, loading: swLoading, error: swError } = useMedia(file.id);
     const [error, setError] = useState<string | null>(null);
 
     const videoContainerRef = useRef<HTMLDivElement>(null);

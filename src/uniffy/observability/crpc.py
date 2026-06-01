@@ -82,13 +82,25 @@ class LoggingInterceptor:
             ).inc()
             RPC_REQUEST_DURATION.labels(service=service_name, method=method_name).observe(duration)
 
-            logger.error(
-                f"error {service_name}/{method_name}",
-                user_id=user_id,
-                duration_ms=round(duration * 1000),
-                error_code=e.code.name,
-                error_message=e.message,
-            )
+            # Auth (401) and permission (403) failures are expected client outcomes, not
+            # server errors - log them as a distinct WARNING so they read clearly and do
+            # not drown the ERROR stream.
+            if e.code in (Code.UNAUTHENTICATED, Code.PERMISSION_DENIED):
+                logger.warning(
+                    f"access denied {service_name}/{method_name}",
+                    user_id=user_id,
+                    duration_ms=round(duration * 1000),
+                    http=http_version_var.get(),
+                    error_code=e.code.name,
+                )
+            else:
+                logger.error(
+                    f"error {service_name}/{method_name}",
+                    user_id=user_id,
+                    duration_ms=round(duration * 1000),
+                    error_code=e.code.name,
+                    error_message=e.message,
+                )
             raise
 
         except Exception as e:

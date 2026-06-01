@@ -9,7 +9,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import { type NodeProps, NodeResizer, Handle, Position } from '@xyflow/react';
 import { useAppSelector } from '@/app/hooks';
-import { buildFileUrl, buildMediaStreamUrl } from '@/shared/utils/fileUrls';
+import { buildFileUrl, buildMediaUrl } from '@/shared/utils/fileUrls';
 import type { MediaCanvasNode } from '@/features/notes/canvas/types';
 import { VideoBlock } from '@/components/editor/plugins/video/VideoBlock';
 import { AudioBlock } from '@/components/editor/plugins/audio/AudioBlock';
@@ -34,7 +34,7 @@ export const MediaNode = memo(function MediaNode({
     if (mime.startsWith('image/')) {
       return buildFileUrl(organizationId, data.fileId);
     }
-    return buildMediaStreamUrl(organizationId, data.fileId);
+    return buildMediaUrl(organizationId, data.fileId);
   }, [organizationId, data.fileId, data.mimeType]);
 
   const handleStyleChange = useCallback(

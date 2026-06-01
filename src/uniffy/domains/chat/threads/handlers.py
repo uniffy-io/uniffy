@@ -32,6 +32,8 @@ from uniffy.domains.chat.messages.converters import SENDER_TYPE_TO_PROTO, messag
 from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.chat.threads.operations import ChatThreadOperations, ThreadInboxRow
 
+logger = logger.bind(component="chat.threads.handlers")
+
 
 def _handle_error(e: Exception) -> None:
     if isinstance(e, NotFoundError):

@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import RateLimitExceededError
 
+logger = logger.bind(component="rate_limit")
+
 AGENT_MSG_USER = "AGENT_MSG_USER"
 AGENT_MSG_ORG = "AGENT_MSG_ORG"
 AGENT_MSG_AGENT = "AGENT_MSG_AGENT"

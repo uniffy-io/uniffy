@@ -47,6 +47,8 @@ from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.chat.subjects import ChatSubject
 from uniffy.domains.tags import TagAssignment, TagOperations
 
+logger = logger.bind(component="chat.channels.operations")
+
 DEFAULT_PAGE_SIZE = 200
 MAX_PAGE_SIZE = 500
 

@@ -20,6 +20,8 @@ from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.bookmarks.converters import bookmark_to_proto
 from uniffy.domains.bookmarks.operations import BookmarksOperations
 
+logger = logger.bind(component="bookmarks.handlers")
+
 
 class BookmarksHandlers:
     """RPC handlers for bookmarks service."""
@@ -75,7 +77,7 @@ class BookmarksHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error toggling bookmark: {e}", exc_info=True)
+            logger.exception(f"Error toggling bookmark: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_bookmarks(
@@ -131,7 +133,7 @@ class BookmarksHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error listing bookmarks: {e}", exc_info=True)
+            logger.exception(f"Error listing bookmarks: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def bulk_check_bookmarks(
@@ -187,5 +189,5 @@ class BookmarksHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error bulk checking bookmarks: {e}", exc_info=True)
+            logger.exception(f"Error bulk checking bookmarks: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

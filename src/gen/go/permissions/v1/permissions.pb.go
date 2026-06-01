@@ -125,9 +125,13 @@ type ContentAccessPolicy struct {
 	// The requesting user's effective role on this content (group-resolved,
 	// BLOCKED-aware). Absent means no access. Lets the client gate manage
 	// controls without recomputing permissions.
-	CallerRole    *v1.ContentRole `protobuf:"varint,4,opt,name=caller_role,json=callerRole,proto3,enum=common.v1.ContentRole,oneof" json:"caller_role,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CallerRole *v1.ContentRole `protobuf:"varint,4,opt,name=caller_role,json=callerRole,proto3,enum=common.v1.ContentRole,oneof" json:"caller_role,omitempty"`
+	// The live resolved access mode after inheriting org defaults (raw
+	// “access_mode“ UNSPECIFIED resolves to the org default). Lets the client
+	// act on what the row actually resolves to without recomputing inheritance.
+	EffectiveAccessMode *v1.AccessMode `protobuf:"varint,5,opt,name=effective_access_mode,json=effectiveAccessMode,proto3,enum=common.v1.AccessMode,oneof" json:"effective_access_mode,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ContentAccessPolicy) Reset() {
@@ -186,6 +190,13 @@ func (x *ContentAccessPolicy) GetCallerRole() v1.ContentRole {
 		return *x.CallerRole
 	}
 	return v1.ContentRole(0)
+}
+
+func (x *ContentAccessPolicy) GetEffectiveAccessMode() v1.AccessMode {
+	if x != nil && x.EffectiveAccessMode != nil {
+		return *x.EffectiveAccessMode
+	}
+	return v1.AccessMode(0)
 }
 
 // Audit log entry for a content member change.
@@ -1313,16 +1324,18 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
 	"\n" +
 	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x00R\texpiresAt\x88\x01\x01B\r\n" +
-	"\v_expires_at\"\x8a\x02\n" +
+	"\v_expires_at\"\xf4\x02\n" +
 	"\x13ContentAccessPolicy\x12\x19\n" +
 	"\bowner_id\x18\x01 \x01(\tR\aownerId\x126\n" +
 	"\vaccess_mode\x18\x02 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
 	"accessMode\x12@\n" +
 	"\rbaseline_role\x18\x03 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x12<\n" +
 	"\vcaller_role\x18\x04 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\n" +
-	"callerRole\x88\x01\x01B\x10\n" +
+	"callerRole\x88\x01\x01\x12N\n" +
+	"\x15effective_access_mode\x18\x05 \x01(\x0e2\x15.common.v1.AccessModeH\x02R\x13effectiveAccessMode\x88\x01\x01B\x10\n" +
 	"\x0e_baseline_roleB\x0e\n" +
-	"\f_caller_role\"\x96\t\n" +
+	"\f_caller_roleB\x18\n" +
+	"\x16_effective_access_mode\"\x96\t\n" +
 	"\x12ContentMemberEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x129\n" +
 	"\fcontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
@@ -1506,63 +1519,64 @@ var file_permissions_v1_permissions_proto_depIdxs = []int32{
 	20, // 5: permissions.v1.ContentAccessPolicy.access_mode:type_name -> common.v1.AccessMode
 	18, // 6: permissions.v1.ContentAccessPolicy.baseline_role:type_name -> common.v1.ContentRole
 	18, // 7: permissions.v1.ContentAccessPolicy.caller_role:type_name -> common.v1.ContentRole
-	21, // 8: permissions.v1.ContentMemberEvent.content_type:type_name -> common.v1.ContentType
-	22, // 9: permissions.v1.ContentMemberEvent.action:type_name -> common.v1.ContentMemberAction
-	17, // 10: permissions.v1.ContentMemberEvent.subject_type:type_name -> common.v1.SubjectType
-	18, // 11: permissions.v1.ContentMemberEvent.previous_role:type_name -> common.v1.ContentRole
-	18, // 12: permissions.v1.ContentMemberEvent.new_role:type_name -> common.v1.ContentRole
-	20, // 13: permissions.v1.ContentMemberEvent.previous_access_mode:type_name -> common.v1.AccessMode
-	20, // 14: permissions.v1.ContentMemberEvent.new_access_mode:type_name -> common.v1.AccessMode
-	18, // 15: permissions.v1.ContentMemberEvent.previous_baseline_role:type_name -> common.v1.ContentRole
-	18, // 16: permissions.v1.ContentMemberEvent.new_baseline_role:type_name -> common.v1.ContentRole
-	23, // 17: permissions.v1.ContentMemberEvent.actor_org_role:type_name -> common.v1.OrganizationRole
-	19, // 18: permissions.v1.ContentMemberEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	21, // 19: permissions.v1.ListMembersRequest.content_type:type_name -> common.v1.ContentType
-	1,  // 20: permissions.v1.ListMembersResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	0,  // 21: permissions.v1.ListMembersResponse.members:type_name -> permissions.v1.ContentMember
-	21, // 22: permissions.v1.AddMemberRequest.content_type:type_name -> common.v1.ContentType
-	17, // 23: permissions.v1.AddMemberRequest.subject_type:type_name -> common.v1.SubjectType
-	18, // 24: permissions.v1.AddMemberRequest.role:type_name -> common.v1.ContentRole
-	19, // 25: permissions.v1.AddMemberRequest.expires_at:type_name -> google.protobuf.Timestamp
-	21, // 26: permissions.v1.UpdateMemberRoleRequest.content_type:type_name -> common.v1.ContentType
-	17, // 27: permissions.v1.UpdateMemberRoleRequest.subject_type:type_name -> common.v1.SubjectType
-	18, // 28: permissions.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ContentRole
-	21, // 29: permissions.v1.RemoveMemberRequest.content_type:type_name -> common.v1.ContentType
-	17, // 30: permissions.v1.RemoveMemberRequest.subject_type:type_name -> common.v1.SubjectType
-	21, // 31: permissions.v1.SetAccessModeRequest.content_type:type_name -> common.v1.ContentType
-	20, // 32: permissions.v1.SetAccessModeRequest.access_mode:type_name -> common.v1.AccessMode
-	18, // 33: permissions.v1.SetAccessModeRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 34: permissions.v1.SetAccessModeResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	21, // 35: permissions.v1.TransferOwnershipRequest.content_type:type_name -> common.v1.ContentType
-	1,  // 36: permissions.v1.TransferOwnershipResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
-	0,  // 37: permissions.v1.AddMemberResponse.member:type_name -> permissions.v1.ContentMember
-	0,  // 38: permissions.v1.UpdateMemberRoleResponse.member:type_name -> permissions.v1.ContentMember
-	21, // 39: permissions.v1.ListMemberEventsRequest.content_type:type_name -> common.v1.ContentType
-	24, // 40: permissions.v1.ListMemberEventsRequest.pagination:type_name -> common.v1.PaginationRequest
-	22, // 41: permissions.v1.ListMemberEventsRequest.action:type_name -> common.v1.ContentMemberAction
-	19, // 42: permissions.v1.ListMemberEventsRequest.after:type_name -> google.protobuf.Timestamp
-	19, // 43: permissions.v1.ListMemberEventsRequest.before:type_name -> google.protobuf.Timestamp
-	2,  // 44: permissions.v1.ListMemberEventsResponse.events:type_name -> permissions.v1.ContentMemberEvent
-	25, // 45: permissions.v1.ListMemberEventsResponse.pagination:type_name -> common.v1.PaginationResponse
-	3,  // 46: permissions.v1.MembersService.ListMembers:input_type -> permissions.v1.ListMembersRequest
-	5,  // 47: permissions.v1.MembersService.AddMember:input_type -> permissions.v1.AddMemberRequest
-	6,  // 48: permissions.v1.MembersService.UpdateMemberRole:input_type -> permissions.v1.UpdateMemberRoleRequest
-	7,  // 49: permissions.v1.MembersService.RemoveMember:input_type -> permissions.v1.RemoveMemberRequest
-	9,  // 50: permissions.v1.MembersService.SetAccessMode:input_type -> permissions.v1.SetAccessModeRequest
-	11, // 51: permissions.v1.MembersService.TransferOwnership:input_type -> permissions.v1.TransferOwnershipRequest
-	15, // 52: permissions.v1.MembersService.ListMemberEvents:input_type -> permissions.v1.ListMemberEventsRequest
-	4,  // 53: permissions.v1.MembersService.ListMembers:output_type -> permissions.v1.ListMembersResponse
-	13, // 54: permissions.v1.MembersService.AddMember:output_type -> permissions.v1.AddMemberResponse
-	14, // 55: permissions.v1.MembersService.UpdateMemberRole:output_type -> permissions.v1.UpdateMemberRoleResponse
-	8,  // 56: permissions.v1.MembersService.RemoveMember:output_type -> permissions.v1.RemoveMemberResponse
-	10, // 57: permissions.v1.MembersService.SetAccessMode:output_type -> permissions.v1.SetAccessModeResponse
-	12, // 58: permissions.v1.MembersService.TransferOwnership:output_type -> permissions.v1.TransferOwnershipResponse
-	16, // 59: permissions.v1.MembersService.ListMemberEvents:output_type -> permissions.v1.ListMemberEventsResponse
-	53, // [53:60] is the sub-list for method output_type
-	46, // [46:53] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	20, // 8: permissions.v1.ContentAccessPolicy.effective_access_mode:type_name -> common.v1.AccessMode
+	21, // 9: permissions.v1.ContentMemberEvent.content_type:type_name -> common.v1.ContentType
+	22, // 10: permissions.v1.ContentMemberEvent.action:type_name -> common.v1.ContentMemberAction
+	17, // 11: permissions.v1.ContentMemberEvent.subject_type:type_name -> common.v1.SubjectType
+	18, // 12: permissions.v1.ContentMemberEvent.previous_role:type_name -> common.v1.ContentRole
+	18, // 13: permissions.v1.ContentMemberEvent.new_role:type_name -> common.v1.ContentRole
+	20, // 14: permissions.v1.ContentMemberEvent.previous_access_mode:type_name -> common.v1.AccessMode
+	20, // 15: permissions.v1.ContentMemberEvent.new_access_mode:type_name -> common.v1.AccessMode
+	18, // 16: permissions.v1.ContentMemberEvent.previous_baseline_role:type_name -> common.v1.ContentRole
+	18, // 17: permissions.v1.ContentMemberEvent.new_baseline_role:type_name -> common.v1.ContentRole
+	23, // 18: permissions.v1.ContentMemberEvent.actor_org_role:type_name -> common.v1.OrganizationRole
+	19, // 19: permissions.v1.ContentMemberEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	21, // 20: permissions.v1.ListMembersRequest.content_type:type_name -> common.v1.ContentType
+	1,  // 21: permissions.v1.ListMembersResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	0,  // 22: permissions.v1.ListMembersResponse.members:type_name -> permissions.v1.ContentMember
+	21, // 23: permissions.v1.AddMemberRequest.content_type:type_name -> common.v1.ContentType
+	17, // 24: permissions.v1.AddMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	18, // 25: permissions.v1.AddMemberRequest.role:type_name -> common.v1.ContentRole
+	19, // 26: permissions.v1.AddMemberRequest.expires_at:type_name -> google.protobuf.Timestamp
+	21, // 27: permissions.v1.UpdateMemberRoleRequest.content_type:type_name -> common.v1.ContentType
+	17, // 28: permissions.v1.UpdateMemberRoleRequest.subject_type:type_name -> common.v1.SubjectType
+	18, // 29: permissions.v1.UpdateMemberRoleRequest.new_role:type_name -> common.v1.ContentRole
+	21, // 30: permissions.v1.RemoveMemberRequest.content_type:type_name -> common.v1.ContentType
+	17, // 31: permissions.v1.RemoveMemberRequest.subject_type:type_name -> common.v1.SubjectType
+	21, // 32: permissions.v1.SetAccessModeRequest.content_type:type_name -> common.v1.ContentType
+	20, // 33: permissions.v1.SetAccessModeRequest.access_mode:type_name -> common.v1.AccessMode
+	18, // 34: permissions.v1.SetAccessModeRequest.baseline_role:type_name -> common.v1.ContentRole
+	1,  // 35: permissions.v1.SetAccessModeResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	21, // 36: permissions.v1.TransferOwnershipRequest.content_type:type_name -> common.v1.ContentType
+	1,  // 37: permissions.v1.TransferOwnershipResponse.policy:type_name -> permissions.v1.ContentAccessPolicy
+	0,  // 38: permissions.v1.AddMemberResponse.member:type_name -> permissions.v1.ContentMember
+	0,  // 39: permissions.v1.UpdateMemberRoleResponse.member:type_name -> permissions.v1.ContentMember
+	21, // 40: permissions.v1.ListMemberEventsRequest.content_type:type_name -> common.v1.ContentType
+	24, // 41: permissions.v1.ListMemberEventsRequest.pagination:type_name -> common.v1.PaginationRequest
+	22, // 42: permissions.v1.ListMemberEventsRequest.action:type_name -> common.v1.ContentMemberAction
+	19, // 43: permissions.v1.ListMemberEventsRequest.after:type_name -> google.protobuf.Timestamp
+	19, // 44: permissions.v1.ListMemberEventsRequest.before:type_name -> google.protobuf.Timestamp
+	2,  // 45: permissions.v1.ListMemberEventsResponse.events:type_name -> permissions.v1.ContentMemberEvent
+	25, // 46: permissions.v1.ListMemberEventsResponse.pagination:type_name -> common.v1.PaginationResponse
+	3,  // 47: permissions.v1.MembersService.ListMembers:input_type -> permissions.v1.ListMembersRequest
+	5,  // 48: permissions.v1.MembersService.AddMember:input_type -> permissions.v1.AddMemberRequest
+	6,  // 49: permissions.v1.MembersService.UpdateMemberRole:input_type -> permissions.v1.UpdateMemberRoleRequest
+	7,  // 50: permissions.v1.MembersService.RemoveMember:input_type -> permissions.v1.RemoveMemberRequest
+	9,  // 51: permissions.v1.MembersService.SetAccessMode:input_type -> permissions.v1.SetAccessModeRequest
+	11, // 52: permissions.v1.MembersService.TransferOwnership:input_type -> permissions.v1.TransferOwnershipRequest
+	15, // 53: permissions.v1.MembersService.ListMemberEvents:input_type -> permissions.v1.ListMemberEventsRequest
+	4,  // 54: permissions.v1.MembersService.ListMembers:output_type -> permissions.v1.ListMembersResponse
+	13, // 55: permissions.v1.MembersService.AddMember:output_type -> permissions.v1.AddMemberResponse
+	14, // 56: permissions.v1.MembersService.UpdateMemberRole:output_type -> permissions.v1.UpdateMemberRoleResponse
+	8,  // 57: permissions.v1.MembersService.RemoveMember:output_type -> permissions.v1.RemoveMemberResponse
+	10, // 58: permissions.v1.MembersService.SetAccessMode:output_type -> permissions.v1.SetAccessModeResponse
+	12, // 59: permissions.v1.MembersService.TransferOwnership:output_type -> permissions.v1.TransferOwnershipResponse
+	16, // 60: permissions.v1.MembersService.ListMemberEvents:output_type -> permissions.v1.ListMemberEventsResponse
+	54, // [54:61] is the sub-list for method output_type
+	47, // [47:54] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_permissions_v1_permissions_proto_init() }

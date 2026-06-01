@@ -17,6 +17,8 @@ from uniffy.domains.agents.tools.definitions import (
 )
 from uniffy.domains.agents.tools.registry import ToolRegistry
 
+logger = logger.bind(component="agents.tools.executor")
+
 MAX_TOOL_RESULT_CHARS = 100_000
 
 _SENSITIVE_PATTERNS = [
@@ -208,11 +210,10 @@ class ToolExecutor:
                 error=f"Validation error: {exc}",
             )
         except Exception as exc:
-            logger.error(
+            logger.exception(
                 "Tool execution failed",
                 tool=tool_call.name,
-                error=str(exc),
-                exc_info=True,
+                error=str(exc)
             )
             error_reason = type(exc).__name__
             result = ToolResult(
@@ -272,8 +273,7 @@ class ToolExecutor:
                 details=details,
             )
         except Exception:  # noqa: BLE001
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "Failed to emit tool-call audit row",
-                tool=tool_def.name,
-                exc_info=True,
+                tool=tool_def.name
             )

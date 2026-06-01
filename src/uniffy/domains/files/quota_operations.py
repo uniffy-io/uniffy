@@ -19,6 +19,8 @@ from uniffy.core.models.files.user_storage_quota_override import UserStorageQuot
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.types import DomainType
 
+logger = logger.bind(component="files.quota_operations")
+
 
 @dataclass(frozen=True)
 class UserUsageRow:

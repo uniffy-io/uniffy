@@ -45,22 +45,17 @@ export type { SerializedTreeNode as TreeNode, SerializedFolder as Folder } from 
 
 export {
     uploadReducer,
-    addToQueue,
-    removeFromQueue,
-    startUpload,
-    updateProgress,
-    setCompleting,
-    completeUpload,
-    failUpload,
-    abortUpload,
-    retryUpload,
-    clearCompleted,
-    clearFailed,
-    toggleUploadPanel,
-    setShowUploadPanel,
+    setUploadRecords,
+    setTrayView,
+    startDownload,
+    updateDownloadProgress,
+    setDownloadArchiving,
+    completeDownload,
+    failDownload,
+    clearCompletedDownloads,
     clearUploads,
 } from '@/features/files/store/uploadSlice';
-export type { UploadItem } from '@/features/files/store/uploadSlice';
+export type { DownloadItem, TrayView } from '@/features/files/store/uploadSlice';
 
 export {
     selectAllFiles,
@@ -69,8 +64,6 @@ export {
     selectActiveFiles,
     selectDeletedFiles,
     selectAllTreeNodes,
-    selectActiveUploadsArray,
-    selectTotalPendingUploads,
 } from '@/features/files/store/selectors';
 
 export {

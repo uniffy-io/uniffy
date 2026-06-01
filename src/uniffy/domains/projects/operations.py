@@ -24,6 +24,7 @@ from uniffy.core.content.members import (
     register_attachment_cascade_loader,
     register_content_loader,
 )
+from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.events import (
     NotificationEvent,
@@ -33,6 +34,7 @@ from uniffy.core.events import (
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
+from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
@@ -49,6 +51,7 @@ from uniffy.core.types import (
     SubjectType,
     generate_id,
 )
+from uniffy.core.valkey import publish_content_access_changed
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.recurrence import (
@@ -58,6 +61,8 @@ from uniffy.domains.projects.recurrence import (
 )
 from uniffy.domains.projects.validation import validate_field_values
 from uniffy.domains.tags import TagAssignment, TagOperations
+
+logger = logger.bind(component="projects.operations")
 
 _SLUG_PATTERN = re.compile(r"^[A-Z][A-Z0-9]{1,4}$")
 
@@ -181,6 +186,9 @@ class ProjectOperations(BaseContentOperations[Project]):
         await self._index_for_search(project, skip_member_lookup=not group_ids)
         await self.session.commit()
 
+        effective_mode, _ = await self._effective_policy(organization_id, project)
+        await self._broadcast_open_to_org_create(organization_id, project.id, effective_mode)
+
         return project
 
     async def update(
@@ -230,10 +238,9 @@ class ProjectOperations(BaseContentOperations[Project]):
                 )
                 await self.session.commit()
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to propagate project rename to mentions",
-                    project_id=str(project_id),
-                    exc_info=True,
+                    project_id=str(project_id)
                 )
 
         return project
@@ -820,7 +827,64 @@ class TaskOperations(BaseContentOperations[Task]):
         await self._emit_assignment_notifications(task, user_id, None, task.assignee_ids)
         await self._emit_mention_notifications(task, user_id, None, task.outgoing_references)
 
+        audience = await self._resolve_project_audience(organization_id, project)
+        await publish_content_access_changed(
+            content_type=content_type_to_proto(ContentType.PROJECT),
+            content_id=project_id,
+            action="child_added",
+            organization_id=organization_id,
+            target_user_ids=audience,
+        )
+
         return task
+
+    async def _resolve_project_audience(
+        self,
+        organization_id: UUID,
+        project: Project,
+    ) -> list[UUID] | None:
+        """User ids that can view ``project`` (to ping their open task board), or
+        ``None`` for an org-wide broadcast when the project is OPEN_TO_ORG.
+
+        Targeting members directly keeps a private project's id off the org-wide
+        channel; OPEN_TO_ORG projects are visible to everyone anyway.
+        """
+        default_mode, default_baseline = await resolve_content_defaults(
+            self.session, organization_id, ContentType.PROJECT,
+        )
+        effective_mode, _ = resolve_effective_policy(
+            project.access_mode, project.baseline_role, default_mode, default_baseline,
+        )
+        if effective_mode == AccessMode.OPEN_TO_ORG:
+            return None
+
+        rows = await self.session.execute(
+            select(
+                ContentMember.subject_type,
+                ContentMember.subject_id,
+                ContentMember.role,
+            ).where(
+                ContentMember.content_type == ContentType.PROJECT,
+                ContentMember.content_id == project.id,
+            )
+        )
+        viewers: set[UUID] = {project.owner_id}
+        blocked: set[UUID] = set()
+        group_ids: list[UUID] = []
+        for subject_type, subject_id, role in rows.all():
+            if subject_type == SubjectType.USER:
+                (blocked if role == ContentRole.BLOCKED else viewers).add(subject_id)
+            elif subject_type == SubjectType.GROUP and role != ContentRole.BLOCKED:
+                group_ids.append(subject_id)
+        if group_ids:
+            members = await self.session.execute(
+                select(GroupMember.user_id).where(
+                    GroupMember.group_id.in_(group_ids),
+                    GroupMember.is_active == True,  # noqa: E712
+                )
+            )
+            viewers.update(row[0] for row in members.all())
+        return list(viewers - blocked)
 
     async def update(
         self,
@@ -1027,10 +1091,9 @@ class TaskOperations(BaseContentOperations[Task]):
                 )
                 await self.session.commit()
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to propagate task rename to mentions",
-                    task_id=str(task_id),
-                    exc_info=True,
+                    task_id=str(task_id)
                 )
 
         mention_changes: dict[str, str] = {}
@@ -1060,10 +1123,9 @@ class TaskOperations(BaseContentOperations[Task]):
                     changes=mention_changes,
                 )
             except Exception:
-                logger.warning(
+                logger.opt(exception=True).warning(
                     "Failed to publish task mention state change",
-                    task_id=str(task_id),
-                    exc_info=True,
+                    task_id=str(task_id)
                 )
 
         if task.parent_id and task.status == "status_done" and old_status != "status_done":

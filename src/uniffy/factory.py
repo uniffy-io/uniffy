@@ -23,7 +23,6 @@ from uniffy_proto.agents.v1.rate_limits_connect import RateLimitsServiceASGIAppl
 from uniffy_proto.agents.v1.runtime_connect import RuntimeServiceASGIApplication
 from uniffy_proto.agents.v1.sessions_connect import SessionsServiceASGIApplication
 from uniffy_proto.agents.v1.skills_connect import SkillsServiceASGIApplication
-from uniffy_proto.attachments.v1.attachments_connect import AttachmentsServiceASGIApplication
 from uniffy_proto.audit.v1.audit_connect import AuditServiceASGIApplication
 from uniffy_proto.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy_proto.auth.v1.mfa_connect import MfaServiceASGIApplication
@@ -106,7 +105,6 @@ from uniffy.domains.agents.rate_limits.service import RateLimitsServiceImpl
 from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
 from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
-from uniffy.domains.attachments.service import AttachmentsServiceImpl
 from uniffy.domains.audit.service import AuditServiceImpl
 from uniffy.domains.auth.interceptors import AuthRevocationInterceptor
 from uniffy.domains.auth.mfa.service import MfaServiceImpl
@@ -116,7 +114,11 @@ from uniffy.domains.calendar.service import CalendarServiceImpl
 from uniffy.domains.chat.service import ChatServiceImpl
 from uniffy.domains.chat.streaming.service import ChatStreamServiceImpl
 from uniffy.domains.comments.service import CommentsServiceImpl
-from uniffy.domains.files.http_routes import files_router, thumbnails_router
+from uniffy.domains.files.http_routes import (
+    files_router,
+    media_router,
+    thumbnails_router,
+)
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
 from uniffy.domains.mail.service import OrgMailServiceImpl
@@ -248,6 +250,7 @@ def _setup_observability() -> None:
             app_version="0.1.0",
             environment=environment,
             console_log_level=log_level,
+            console_log_type=os.getenv("LOG_FORMAT", "console").lower(),
         )
     )
 
@@ -530,12 +533,6 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         FilesServiceASGIApplication(FilesServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
-        "/attachments.v1.AttachmentsService",
-        AttachmentsServiceASGIApplication(
-            AttachmentsServiceImpl(), interceptors=interceptors
-        ),
-    )
-    dispatcher.add_service(
         "/audit.v1.AuditService",
         AuditServiceASGIApplication(AuditServiceImpl(), interceptors=interceptors),
     )
@@ -664,11 +661,13 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     setup_request_logging(http_app)
     http_app.include_router(thumbnails_router)
     http_app.include_router(files_router)
+    http_app.include_router(media_router)
     http_app.include_router(avatars_router)
     http_app.include_router(agent_avatars_router)
     http_app.include_router(realtime_router)
     dispatcher.add_service("/thumbnails", http_app)
     dispatcher.add_service("/files", http_app)
+    dispatcher.add_service("/media", http_app)
     dispatcher.add_service("/avatars", http_app)
     dispatcher.add_service("/agents/avatars", http_app)
     dispatcher.add_service("/realtime", http_app)

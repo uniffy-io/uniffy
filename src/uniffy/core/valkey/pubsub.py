@@ -126,6 +126,38 @@ async def publish_to_channel(channel: str, payload: dict[str, Any]) -> None:
         logger.warning(f"Failed to publish to channel {channel}", component=LOGGER_COMPONENT)
 
 
+def _content_channel_name(organization_id: UUID) -> str:
+    return f"content:{organization_id}"
+
+
+async def publish_content_access_changed(
+    *,
+    content_type: int,
+    content_id: UUID,
+    action: str,
+    organization_id: UUID,
+    target_user_ids: list[UUID] | None = None,
+) -> None:
+    """Signal that a user's accessible-content set changed so their sidebar/tree refetches.
+
+    ``content_type`` is the ``common.v1.ContentType`` proto enum value (callers map
+    their domain enum via ``content_type_to_proto``). Per-user on ``notifications:{uid}``
+    when ``target_user_ids`` is given (explicit share/revoke); org-wide on
+    ``content:{org}`` otherwise (OPEN_TO_ORG transitions).
+    """
+    payload = {
+        "_type": "content_access_changed",
+        "content_type": content_type,
+        "content_id": str(content_id),
+        "action": action,
+    }
+    if target_user_ids is None:
+        await publish_to_channel(_content_channel_name(organization_id), payload)
+        return
+    for user_id in target_user_ids:
+        await publish_to_channel(_channel_name(user_id), payload)
+
+
 async def subscribe_user(user_id: UUID) -> AsyncGenerator[dict[str, Any] | None]:
     """Subscribe to ``notifications:{user_id}``; yields payloads, or
     ``None`` on each 1s poll tick.

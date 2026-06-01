@@ -37,6 +37,8 @@ from uniffy.domains.agents.budgets.period import day_window, month_window
 from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.organizations.operations import OrganizationOperations
 
+logger = logger.bind(component="agents.budgets.operations")
+
 
 @dataclass(frozen=True)
 class _PreflightSpend:

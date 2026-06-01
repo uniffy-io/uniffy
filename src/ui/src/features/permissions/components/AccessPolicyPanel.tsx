@@ -7,6 +7,7 @@ import { SubjectPicker } from '@/components/subject/SubjectPicker';
 import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { roleCanManage, roleCanTransfer } from '@/shared/utils/contentRoles';
 import { useContentMembers } from '@/features/permissions/hooks/useContentMembers';
 import { useMyContentRole } from '@/features/permissions/hooks/useMyContentRole';
@@ -42,6 +43,7 @@ export function AccessPolicyPanel({
         remove,
         setMode,
         transfer,
+        refresh,
     } = useContentMembers(contentType, contentId);
     const myRole = useMyContentRole(contentType, contentId, explicitUserRole);
     const canManage = roleCanManage(myRole);
@@ -49,6 +51,8 @@ export function AccessPolicyPanel({
 
     const [showAudit, setShowAudit] = useState(false);
     const [transferring, setTransferring] = useState(false);
+    const [confirmPersonal, setConfirmPersonal] = useState(false);
+    const [narrowing, setNarrowing] = useState(false);
 
     const ownerIds = useMemo(() => (policy?.ownerId ? [policy.ownerId] : []), [policy?.ownerId]);
     const { subjects: ownerSubjects } = useSubjectResolver(ownerIds);
@@ -75,8 +79,42 @@ export function AccessPolicyPanel({
         [members, policy?.ownerId],
     );
 
+    // The resolved mode after org-default inheritance; an UNSPECIFIED row still
+    // resolves to OWNER_ONLY when that's the org default.
+    const resolvedAccessMode = policy?.effectiveAccessMode ?? policy?.accessMode;
+    const isPersonal = resolvedAccessMode === AccessMode.OWNER_ONLY;
+
     const handleAdd = async (subject: Subject, role: ContentRole, expiresAt?: Date) => {
+        // The backend rejects members while access resolves to OWNER_ONLY.
+        // Inviting someone implies sharing, so widen a personal item to
+        // EXPLICIT_MEMBERS first, then add.
+        if (isPersonal) {
+            await setMode(AccessMode.EXPLICIT_MEMBERS, null);
+        }
         await add(subject.type, subject.id, role, expiresAt);
+    };
+
+    const handleModeChange = (next: { accessMode: AccessMode | number; baselineRole: ContentRole | number | null }) => {
+        // Narrowing to OWNER_ONLY orphans existing members; the backend refuses
+        // unless we opt into removing them. Confirm first, then remove on narrow.
+        if (next.accessMode === AccessMode.OWNER_ONLY && active.length > 0) {
+            setConfirmPersonal(true);
+            return;
+        }
+        setMode(next.accessMode, next.baselineRole);
+    };
+
+    const confirmMakePersonal = async () => {
+        setNarrowing(true);
+        try {
+            await setMode(AccessMode.OWNER_ONLY, null, true);
+            // The narrow deleted the member rows server-side; refetch so the
+            // list reflects reality (setAccessMode only returns the policy).
+            await refresh();
+            setConfirmPersonal(false);
+        } finally {
+            setNarrowing(false);
+        }
     };
 
     const handleUnblock = async (member: SerializedContentMember) => {
@@ -147,7 +185,7 @@ export function AccessPolicyPanel({
                         accessMode: policy.accessMode as AccessMode,
                         baselineRole: policy.baselineRole,
                     }}
-                    onChange={(next) => setMode(next.accessMode, next.baselineRole)}
+                    onChange={handleModeChange}
                     disabled={!canManage}
                     showInheritOption
                 />
@@ -162,6 +200,12 @@ export function AccessPolicyPanel({
                         <AddMemberPopover existingSubjectIds={existingSubjectIds} onAdd={handleAdd} />
                     )}
                 </div>
+                {canManage && isPersonal && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                        This is personal. Adding people switches it to{' '}
+                        <span className="font-medium text-foreground">Invited people</span>.
+                    </p>
+                )}
                 {active.length === 0 ? (
                     <div className="py-4 text-center text-sm text-muted-foreground border border-dashed border-border rounded-lg">
                         No members yet
@@ -199,6 +243,17 @@ export function AccessPolicyPanel({
                     )}
                 </div>
             )}
+
+            <ConfirmDialog
+                isOpen={confirmPersonal}
+                onClose={() => setConfirmPersonal(false)}
+                onConfirm={confirmMakePersonal}
+                title="Make personal?"
+                message={`Only you will have access. This removes ${active.length} member${active.length !== 1 ? 's' : ''} from this item.`}
+                confirmLabel="Make personal"
+                variant="danger"
+                loading={narrowing}
+            />
         </div>
     );
 }

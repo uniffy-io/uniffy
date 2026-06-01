@@ -19,12 +19,16 @@ function generateId(): string {
 }
 
 interface UploadOptions {
-    file: File;
+    file: Blob;
     uploadId: string;
     chunkSize: number;
     totalChunks: number;
     apiUrl: string;
     onProgress?: (uploadedChunks: number, uploadedBytes: number) => void;
+    /** Caller-owned id so the upload can be aborted later via abort(operationId). */
+    operationId?: string;
+    /** Part numbers already stored server-side; skipped when resuming. */
+    completedChunks?: number[];
 }
 
 interface CompressOptions {
@@ -184,14 +188,14 @@ export class FileWorkerManager {
     }
 
     async uploadChunks(options: UploadOptions): Promise<void> {
-        const { file, uploadId, chunkSize, totalChunks, apiUrl, onProgress } = options;
+        const { file, uploadId, chunkSize, totalChunks, apiUrl, onProgress, operationId, completedChunks } = options;
 
         const token = this.getToken();
         if (!token) {
             throw new Error('No access token available');
         }
 
-        const id = generateId();
+        const id = operationId ?? generateId();
 
         return this.sendRequest<void>(
             {
@@ -203,6 +207,7 @@ export class FileWorkerManager {
                 totalChunks,
                 token,
                 apiUrl,
+                completedChunks,
             },
             undefined,
             onProgress

@@ -16,6 +16,11 @@ DEFAULT_REFRESH_TOKEN_EXPIRE_DAYS = 90
 # sessions; the access token should stay short.
 MAX_ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
+# The read-only asset cookie outlives the 15-min access token so steady sessions
+# never see an asset 401; the read path still rides the same revocation watermark.
+DEFAULT_ASSET_TOKEN_EXPIRE_MINUTES = 60
+MAX_ASSET_TOKEN_EXPIRE_MINUTES = 240
+
 
 def get_access_token_expire_minutes() -> int:
     """Access-token TTL, clamped to ``MAX_ACCESS_TOKEN_EXPIRE_MINUTES``."""
@@ -29,6 +34,20 @@ def get_access_token_expire_minutes() -> int:
             return DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES
         return min(minutes, MAX_ACCESS_TOKEN_EXPIRE_MINUTES)
     return DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES
+
+
+def get_asset_token_expire_minutes() -> int:
+    """Asset-cookie TTL in minutes, clamped to ``MAX_ASSET_TOKEN_EXPIRE_MINUTES``."""
+    expire_str = os.getenv("ASSET_COOKIE_TTL_MINUTES")
+    if expire_str:
+        try:
+            minutes = int(expire_str)
+        except ValueError:
+            return DEFAULT_ASSET_TOKEN_EXPIRE_MINUTES
+        if minutes <= 0:
+            return DEFAULT_ASSET_TOKEN_EXPIRE_MINUTES
+        return min(minutes, MAX_ASSET_TOKEN_EXPIRE_MINUTES)
+    return DEFAULT_ASSET_TOKEN_EXPIRE_MINUTES
 
 
 def get_secret_key() -> str:
@@ -135,6 +154,40 @@ def decode_access_token(token: str) -> dict[str, Any]:
 def decode_refresh_token(token: str) -> dict[str, Any]:
     """Decode + verify a refresh token. Refuses other token kinds."""
     return _decode_with_required_type(token, "refresh")
+
+
+def create_asset_read_token(
+    user_id: UUID,
+    organization_id: UUID | None = None,
+    token_version: int | None = None,
+    session_id: UUID | None = None,
+    expires_delta: timedelta | None = None,
+) -> str:
+    """Mint the read-only asset cookie token; honoured only on GET asset routes, never mutations."""
+    if expires_delta is None:
+        expires_delta = timedelta(minutes=get_asset_token_expire_minutes())
+
+    now = datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": str(user_id),
+        "exp": now + expires_delta,
+        "iat": now,
+        "type": "asset_read",
+    }
+    if organization_id:
+        payload["org_id"] = str(organization_id)
+    if token_version is not None:
+        payload["tkv"] = token_version
+    if session_id is not None:
+        payload["sid"] = str(session_id)
+
+    secret_key = get_secret_key()
+    return jwt.encode(payload, secret_key, algorithm="HS256")
+
+
+def decode_asset_read_token(token: str) -> dict[str, Any]:
+    """Decode + verify an asset-read token. Refuses other token kinds."""
+    return _decode_with_required_type(token, "asset_read")
 
 
 JWT_DECODE_LEEWAY = timedelta(minutes=2)

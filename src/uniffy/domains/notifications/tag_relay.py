@@ -13,6 +13,8 @@ from uniffy.core.types import ContentRole, ContentType
 from uniffy.db import open_session
 from uniffy.domains.tags.visibility import TagVisibilityFilter
 
+logger = logger.bind(component="notifications.tag_relay")
+
 
 class TagEventRelay:
     """Per-recipient filter / projector for tag events."""

@@ -53,6 +53,8 @@ from uniffy.domains.auth.types import (
 from uniffy.domains.system_config.operations import public_registration_enabled
 from uniffy.observability.metrics import AUTH_ATTEMPTS_TOTAL
 
+logger = logger.bind(component="auth.operations")
+
 LOGIN_RATE_LIMIT_EMAIL = 10
 LOGIN_RATE_LIMIT_IP = 30
 LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60

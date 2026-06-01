@@ -42,6 +42,8 @@ from uniffy.domains.invitations.errors import (
     InvitationRevokedError,
 )
 
+logger = logger.bind(component="mail")
+
 # Loose per-IP + per-token caps. The token is high-entropy so the IP bucket
 # is mostly there to bound credential-stuffing scripts; the token bucket
 # stops a single leaked token from being used to spray bad passwords.

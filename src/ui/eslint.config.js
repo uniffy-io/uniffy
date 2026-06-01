@@ -12,7 +12,7 @@ const CDN_RULE_MESSAGE =
   'Runtime CDN fetches leak user IP/referrer, break offline/air-gapped deploys, and create supply-chain risk.'
 
 export default defineConfig([
-  globalIgnores(['dist', 'public', '.vite-worker']),
+  globalIgnores(['dist', 'public']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

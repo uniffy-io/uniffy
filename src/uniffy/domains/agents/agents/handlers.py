@@ -49,6 +49,8 @@ from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.tags import Tag, TagOperations
 from uniffy.domains.users.operations import UserOperations
 
+logger = logger.bind(component="agents.agents.handlers")
+
 
 async def _resolve_effective_policy(
     session: AsyncSession,
@@ -122,7 +124,7 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
-    logger.error(f"Error in {operation}: {exc}", exc_info=True)
+    logger.exception(f"Error in {operation}: {exc}")
     return ConnectError(Code.INTERNAL, "Internal server error")
 
 
@@ -617,7 +619,7 @@ class AgentsHandlers:
                 return []
             return [f"[{m.category}] {m.key}: {m.content}" for m in memories]
         except Exception:
-            logger.warning("Failed to fetch memory context for preview", exc_info=True)
+            logger.opt(exception=True).warning("Failed to fetch memory context for preview")
             return []
 
     @staticmethod
@@ -637,5 +639,5 @@ class AgentsHandlers:
             if prompt and prompt.content:
                 return prompt.content
         except Exception:
-            logger.warning("Failed to resolve prompt for preview", exc_info=True)
+            logger.opt(exception=True).warning("Failed to resolve prompt for preview")
         return None

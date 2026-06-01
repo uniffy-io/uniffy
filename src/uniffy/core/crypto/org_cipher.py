@@ -32,6 +32,8 @@ from uniffy.observability.metrics import (
     ORG_DEK_UNWRAP_SECONDS,
 )
 
+logger = logger.bind(component="crypto")
+
 
 class SupportSessionCipherBridgeDenied(CryptoError):
     """Default-deny when a support-session actor decrypts without

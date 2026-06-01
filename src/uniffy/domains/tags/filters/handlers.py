@@ -30,6 +30,8 @@ from uniffy.domains.tags.filters.converters import (
 )
 from uniffy.domains.tags.filters.operations import SavedTagFilterOperations
 
+logger = logger.bind(component="tags.filters.handlers")
+
 
 def _parse_uuid(value: str, field: str) -> UUID:
     try:
@@ -100,7 +102,7 @@ class SavedTagFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"create_saved_filter failed: {exc}", exc_info=True)
+            logger.exception(f"create_saved_filter failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error") from exc
 
     async def update_saved_filter(
@@ -150,7 +152,7 @@ class SavedTagFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"update_saved_filter failed: {exc}", exc_info=True)
+            logger.exception(f"update_saved_filter failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error") from exc
 
     async def delete_saved_filter(
@@ -178,7 +180,7 @@ class SavedTagFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"delete_saved_filter failed: {exc}", exc_info=True)
+            logger.exception(f"delete_saved_filter failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error") from exc
 
     async def list_saved_filters(
@@ -206,5 +208,5 @@ class SavedTagFilterHandlersMixin:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"list_saved_filters failed: {exc}", exc_info=True)
+            logger.exception(f"list_saved_filters failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error") from exc

@@ -227,3 +227,5 @@ src/unictl/dist/
 .pnpm-store/
 /core
 /core.[0-9]*
+
+.codegraph/

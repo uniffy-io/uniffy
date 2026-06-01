@@ -14,6 +14,7 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "app.help": "F1",
     "app.zenMode": "Ctrl+\\",
     "app.toggleSidebar": "Ctrl+B",
+    "app.showUploads": "Ctrl+U",
     "viewer.close": "Escape",
     "viewer.next": "ArrowRight",
     "viewer.previous": "ArrowLeft",
@@ -95,6 +96,7 @@ class NotificationsDefaults:
     email_frequency: str = "instant"
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
+    toast_enabled: bool = True
 
 
 # Per-notification-type channel preferences. Keys are NotificationType values.
@@ -146,6 +148,7 @@ def get_notifications_defaults_dict() -> dict[str, Any]:
         "email_frequency": NOTIFICATIONS_DEFAULTS.email_frequency,
         "quiet_hours_start": NOTIFICATIONS_DEFAULTS.quiet_hours_start,
         "quiet_hours_end": NOTIFICATIONS_DEFAULTS.quiet_hours_end,
+        "toast_enabled": NOTIFICATIONS_DEFAULTS.toast_enabled,
         "channel_overrides": {},
         "default_reminder_intervals": DEFAULT_REMINDER_INTERVALS,
     }

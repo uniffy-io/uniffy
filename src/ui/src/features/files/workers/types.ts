@@ -1,12 +1,14 @@
 export interface UploadChunksRequest {
     type: 'UPLOAD_CHUNKS';
     id: string;
-    file: File;
+    file: Blob;
     uploadId: string;
     chunkSize: number;
     totalChunks: number;
     token: string;
     apiUrl: string;
+    /** Part numbers already stored server-side; skipped on a resumed upload. */
+    completedChunks?: number[];
 }
 
 export interface UploadProgress {

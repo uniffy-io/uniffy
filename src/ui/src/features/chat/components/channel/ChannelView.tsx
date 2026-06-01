@@ -9,7 +9,7 @@ import { sendMessage, sendTyping, editMessage } from '@/features/chat/store/chat
 import { updateMessage } from '@/features/chat/store/chatMessagesSlice';
 import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearEditingMessage, setEditingMessage } from '@/features/chat/store/chatUiSlice';
 import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
-import { attachmentsApi } from '@/features/attachments';
+import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
 const TYPING_THROTTLE_MS = 3000;

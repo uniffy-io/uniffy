@@ -21,6 +21,8 @@ from uniffy.domains.agents.sessions.operations import (
     SessionOperations,
 )
 
+logger = logger.bind(component="tasks.agent_compaction")
+
 _LOCK_TTL_SECONDS = 300
 _LOCK_KEY_TEMPLATE = "compaction_lock:{session_id}"
 

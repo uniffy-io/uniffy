@@ -24,6 +24,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.domains.files.operations import FileOperations
 
+logger = logger.bind(component="agents.runtime.file_loader")
+
 
 @dataclass
 class FileContext:

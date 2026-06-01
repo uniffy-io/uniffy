@@ -89,6 +89,8 @@ from uniffy.observability.metrics import (
     AGENT_RUN_SUBSCRIBE_TIMEOUT_TOTAL,
 )
 
+logger = logger.bind(component="agents.runtime.handlers")
+
 SUBSCRIBE_WALL_BUDGET_SECONDS = 120.0
 # How long each XREAD round waits for new events before yielding control
 # back to the loop. Each blocking round pins one streams-pool connection
@@ -244,7 +246,7 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"send_message preflight failed: {exc}", exc_info=True)
+            logger.exception(f"send_message preflight failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
         del files_payload  # already enqueued; not needed for the subscribe loop
@@ -287,7 +289,7 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"Error in send_message subscribe loop: {exc}", exc_info=True)
+            logger.exception(f"Error in send_message subscribe loop: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def stream_send_message(
@@ -333,7 +335,7 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"stream_send_message preflight failed: {exc}", exc_info=True)
+            logger.exception(f"stream_send_message preflight failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
         yield StreamSendMessageResponse(event=_header_event(run_id))
@@ -349,9 +351,8 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(
-                f"Error in stream_send_message subscribe loop (run={run_id}): {exc}",
-                exc_info=True,
+            logger.exception(
+                f"Error in stream_send_message subscribe loop (run={run_id}): {exc}"
             )
             yield StreamSendMessageResponse(
                 event=_synthetic_error_event(run_id, "Internal server error"),
@@ -441,7 +442,7 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"rerun_from_message preflight failed: {exc}", exc_info=True)
+            logger.exception(f"rerun_from_message preflight failed: {exc}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
         yield RerunFromMessageResponse(event=_header_event(run_id))
@@ -457,9 +458,8 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(
-                f"Error in rerun_from_message subscribe loop (run={run_id}): {exc}",
-                exc_info=True,
+            logger.exception(
+                f"Error in rerun_from_message subscribe loop (run={run_id}): {exc}"
             )
             yield RerunFromMessageResponse(
                 event=_synthetic_error_event(run_id, "Internal server error"),
@@ -509,9 +509,8 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(
-                f"Error in subscribe_to_run loop (run={run_id}): {exc}",
-                exc_info=True,
+            logger.exception(
+                f"Error in subscribe_to_run loop (run={run_id}): {exc}"
             )
             yield SubscribeToRunResponse(
                 event=_synthetic_error_event(run_id, "Internal server error"),
@@ -617,9 +616,8 @@ class RuntimeHandlers:
             )
         except Exception as exc:
             AGENT_RUN_ENQUEUE_FAILURES_TOTAL.inc()
-            logger.error(
-                f"Failed to enqueue run_agent_session (run={run_id}): {exc}",
-                exc_info=True,
+            logger.exception(
+                f"Failed to enqueue run_agent_session (run={run_id}): {exc}"
             )
             raise ConnectError(Code.UNAVAILABLE, "Agent runtime queue unavailable")
 
@@ -725,5 +723,5 @@ class RuntimeHandlers:
         except ConnectError:
             raise
         except Exception as e:
-            logger.error(f"Error in get_usage_stats: {e}", exc_info=True)
+            logger.exception(f"Error in get_usage_stats: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

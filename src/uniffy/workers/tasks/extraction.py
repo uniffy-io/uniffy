@@ -19,6 +19,8 @@ from uniffy.core.valkey import publish_notification
 from uniffy.db.session import open_session
 from uniffy.workers.tasks.thumbnails import _create_thumbnail, get_thumbnail_key
 
+logger = logger.bind(component="tasks.extraction")
+
 _task = "extraction"
 
 

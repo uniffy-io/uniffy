@@ -82,6 +82,8 @@ from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
+logger = logger.bind(component="agents.runtime.operations")
+
 MAX_TOOL_ITERATIONS = 10
 READ_TOOL_POOL_SIZE = 5
 
@@ -1812,7 +1814,7 @@ class RuntimeOperations:
 
             return [f"[{m.category}] {m.key}: {m.content}" for m in memories]
         except Exception:
-            logger.warning("Failed to fetch memory context", exc_info=True)
+            logger.opt(exception=True).warning("Failed to fetch memory context")
             return []
 
     async def _build_chat_context_for_destination(
@@ -1885,9 +1887,8 @@ class RuntimeOperations:
                 in_thread=destination.thread_root_id is not None,
             )
         except Exception:
-            logger.warning(
-                "Failed to build chat_context block; continuing without it",
-                exc_info=True,
+            logger.opt(exception=True).warning(
+                "Failed to build chat_context block; continuing without it"
             )
             return None
 
@@ -1947,7 +1948,7 @@ class RuntimeOperations:
             self._session.add(run_log)
             await self._session.commit()
         except Exception:
-            logger.warning("Failed to create agent run log", exc_info=True)
+            logger.opt(exception=True).warning("Failed to create agent run log")
             return
 
         if cost is not None:
@@ -2019,7 +2020,7 @@ class RuntimeOperations:
             logger.warning(f"Skipping cost calculation: {exc}")
             return None, None
         except Exception:
-            logger.warning("Cost calculation failed unexpectedly", exc_info=True)
+            logger.opt(exception=True).warning("Cost calculation failed unexpectedly")
             return None, None
 
 

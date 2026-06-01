@@ -30,6 +30,8 @@ from uniffy.domains.agents.chat_integration.context import (
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.chat.feature_flags import is_chat_agents_enabled
 
+logger = logger.bind(component="agents.chat_integration.context_handlers")
+
 
 def _stats_to_proto(stats: ContextStats) -> ProtoChannelAgentContextStats:
     """Translate the dataclass into the proto wire shape."""

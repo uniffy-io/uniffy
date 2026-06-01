@@ -27,6 +27,8 @@ from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.db.session import open_session
 from uniffy.domains.files.operations import FileOperations
 
+logger = logger.bind(component="tasks.video_transcode")
+
 _LOCK_TTL_SECONDS = 300
 _LOCK_KEY_TEMPLATE = "transcode_lock:{file_id}"
 _FFMPEG_TIMEOUT_SECONDS = int(os.getenv("TRANSCODE_FFMPEG_TIMEOUT", "1800"))

@@ -285,3 +285,28 @@ export function EmptyGanttRow({ rowIndex }: EmptyGanttRowProps) {
     />
   );
 }
+
+interface SummaryBarProps {
+  position: GanttBarPosition;
+  rowIndex: number;
+  onClick: (e: React.MouseEvent) => void;
+}
+
+/** Read-only rollup bracket for a parent with no dates of its own; spans the
+ *  date range of its descendants. Distinct from a draggable task bar. */
+export function SummaryBar({ position, rowIndex, onClick }: SummaryBarProps) {
+  const top = rowIndex * LAYOUT.ROADMAP_ROW_HEIGHT + LAYOUT.ROADMAP_ROW_HEIGHT / 2;
+
+  return (
+    <div
+      className="absolute -translate-y-1/2 text-muted-foreground/70 hover:text-muted-foreground cursor-pointer"
+      style={{ left: position.left, width: position.width, top, height: 14 }}
+      onClick={onClick}
+      title="Rolled up from subtasks"
+    >
+      <span className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-current" />
+      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-[3px] rounded-sm bg-current" />
+      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-[3px] rounded-sm bg-current" />
+    </div>
+  );
+}

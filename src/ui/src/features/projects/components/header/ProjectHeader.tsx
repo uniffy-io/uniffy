@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MagnifyingGlass, Table, Columns, ChartLine, Check, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners, Gear, TreeView } from "@phosphor-icons/react";
+import { MagnifyingGlass, Table, Columns, ChartLine, Trash, X, Funnel, SquaresFour, CaretDown, Plus, Archive, ShareNetwork, SidebarSimple, Users, FrameCorners, Gear, TreeView, SlidersHorizontal } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -49,7 +49,7 @@ import type { SelectOption, Sprint } from "@/features/projects/types";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { TagPicker } from "@/features/tags";
 import { TAGS_FILTER_FIELD_ID } from "@/features/projects/utils/filterTasks";
-import type { FilterCondition, FilterConfig } from "@/features/projects/types/views";
+import type { FilterCondition } from "@/features/projects/types/views";
 import type { AppDispatch } from "@/app/store";
 
 interface ProjectHeaderProps {
@@ -57,10 +57,24 @@ interface ProjectHeaderProps {
   taskCount: number;
 }
 
+interface Option {
+  value: string | null;
+  label: string;
+}
+
+const VIEWS: { value: ViewType; label: string; icon: React.ReactNode }[] = [
+  { value: "table", label: "Table", icon: <Table size={16} /> },
+  { value: "board", label: "Board", icon: <Columns size={16} /> },
+  { value: "roadmap", label: "Roadmap", icon: <ChartLine size={16} /> },
+  { value: "backlog", label: "Backlog", icon: <Archive size={16} /> },
+  { value: "graph", label: "Graph", icon: <ShareNetwork size={16} /> },
+  { value: "resources", label: "Resources", icon: <Users size={16} /> },
+];
+
 export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isMobile, isMobileOrTablet } = useBreakpoint();
+  const { isMobile, isMobileOrTablet, isDesktop } = useBreakpoint();
   const viewMode = useAppSelector(selectViewMode);
   const searchQuery = useAppSelector(selectSearchQuery);
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
@@ -91,30 +105,45 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   const [showDeleteTasksConfirm, setShowDeleteTasksConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
   const [isManageStatusesOpen, setIsManageStatusesOpen] = useState(false);
-  // Get status field options for management
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Label visibility tracks the real control-bar width, not the viewport: the
+  // surrounding panels are resizable, so a wide viewport can still leave the
+  // bar narrow. Full labels only appear once the whole switcher fits.
+  const controlBarRef = useRef<HTMLDivElement>(null);
+  const [controlBarWidth, setControlBarWidth] = useState(0);
+  useEffect(() => {
+    const el = controlBarRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setControlBarWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const showViewLabels = controlBarWidth === 0 ? isDesktop : controlBarWidth > 1040;
+
   const statusField = project.fieldDefinitions.find(
     (f) => f.id === SYSTEM_FIELD_IDS.STATUS
   );
   const statusOptions = statusField?.config.options || [];
 
   const handleUpdateStatuses = (newOptions: SelectOption[]) => {
-      if (!statusField) return;
-      const updatedConfig = { ...statusField.config, options: newOptions };
-    
-      // Optimistic update
-      dispatch(updateFieldDefinition({
-        projectId: project.id,
-        fieldId: SYSTEM_FIELD_IDS.STATUS,
-        changes: { config: updatedConfig },
-      }));
+    if (!statusField) return;
+    const updatedConfig = { ...statusField.config, options: newOptions };
 
-      dispatch(updateFieldThunk({
-        projectId: project.id,
-        fieldId: SYSTEM_FIELD_IDS.STATUS,
-        updates: { config: updatedConfig },
-      }));
-    };
+    dispatch(updateFieldDefinition({
+      projectId: project.id,
+      fieldId: SYSTEM_FIELD_IDS.STATUS,
+      changes: { config: updatedConfig },
+    }));
+
+    dispatch(updateFieldThunk({
+      projectId: project.id,
+      fieldId: SYSTEM_FIELD_IDS.STATUS,
+      updates: { config: updatedConfig },
+    }));
+  };
 
   const handleViewChange = (view: ViewType) => {
     dispatch(setViewMode(view));
@@ -141,12 +170,124 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
 
   const hasSelection = selectedTaskIds.length > 0;
 
+  // Tags live inside the shared FilterConfig; pull them out so they can be
+  // surfaced as their own quick control and chip.
+  const tagCondition = activeFilterConfig?.conditions.find(
+    (c) => c.fieldId === TAGS_FILTER_FIELD_ID
+  );
+  const selectedTagIds: string[] = Array.isArray(tagCondition?.value)
+    ? (tagCondition!.value as string[])
+    : tagCondition?.value
+      ? [String(tagCondition.value)]
+      : [];
+  const nonTagConditions = (activeFilterConfig?.conditions ?? []).filter(
+    (c) => c.fieldId !== TAGS_FILTER_FIELD_ID
+  );
+
+  const applyTags = useCallback(
+    (nextTagIds: string[]) => {
+      const others = (activeFilterConfig?.conditions ?? []).filter(
+        (c) => c.fieldId !== TAGS_FILTER_FIELD_ID
+      );
+      if (nextTagIds.length === 0) {
+        dispatch(setFilterConfig(others.length === 0 ? null : { conditions: others, logic: activeFilterConfig?.logic ?? "and" }));
+        return;
+      }
+      const next: FilterCondition = {
+        id: tagCondition?.id ?? crypto.randomUUID(),
+        fieldId: TAGS_FILTER_FIELD_ID,
+        operator: "contains",
+        value: nextTagIds,
+      };
+      dispatch(setFilterConfig({ conditions: [...others, next], logic: activeFilterConfig?.logic ?? "and" }));
+    },
+    [activeFilterConfig, tagCondition, dispatch],
+  );
+
+  const clearBuilderConditions = useCallback(() => {
+    const tagsOnly = (activeFilterConfig?.conditions ?? []).filter(
+      (c) => c.fieldId === TAGS_FILTER_FIELD_ID
+    );
+    dispatch(setFilterConfig(tagsOnly.length === 0 ? null : { conditions: tagsOnly, logic: activeFilterConfig?.logic ?? "and" }));
+  }, [activeFilterConfig, dispatch]);
+
+  const sprintOptions: Option[] = useMemo(
+    () => [
+      { value: null, label: "All sprints" },
+      { value: "__backlog__", label: "Backlog" },
+      ...allSprints
+        .filter((s) => s.status !== "closed")
+        .map((s) => ({ value: s.id, label: s.name })),
+    ],
+    [allSprints],
+  );
+  const typeOptions: Option[] = useMemo(
+    () => [{ value: null, label: "All types" }, ...TASK_TYPES.map((t) => ({ value: t.value, label: t.label }))],
+    [],
+  );
+  const epicFilterOptions: Option[] = useMemo(
+    () => [{ value: null, label: "All tasks" }, ...epicOptions],
+    [epicOptions],
+  );
+
+  const showSprintControl = hasSprintsWithTasks && viewMode !== "backlog";
+  const showEpicControl = epicOptions.length > 0;
+  const showGroupBy = viewMode === "table" || viewMode === "board";
+  const showOutline = viewMode === "table";
+  const showManageStatuses = viewMode === "board";
+
+  const groupByOptions: Option[] = useMemo(() => {
+    if (viewMode === "board") return BOARD_GROUP_BY_OPTIONS;
+    return hasSprintsWithTasks
+      ? GROUP_BY_OPTIONS
+      : GROUP_BY_OPTIONS.filter((o) => o.value !== "__sprint__");
+  }, [viewMode, hasSprintsWithTasks]);
+  const groupByValue =
+    viewMode === "board"
+      ? activeGroupByFieldId === GROUP_BY_EPIC_KEY
+        ? GROUP_BY_EPIC_KEY
+        : null
+      : activeGroupByFieldId;
+
+  // Resolve human labels for the active-filter chips.
+  const typeLabel = TASK_TYPES.find((t) => t.value === taskTypeFilter)?.label ?? taskTypeFilter;
+  const sprintLabel =
+    sprintFilter === "__backlog__"
+      ? "Backlog"
+      : allSprints.find((s) => s.id === sprintFilter)?.name ?? sprintFilter;
+  const epicLabel = epicOptions.find((e) => e.value === inEpicFilter)?.label ?? inEpicFilter;
+
+  const activeFilterCount =
+    nonTagConditions.length +
+    (selectedTagIds.length > 0 ? 1 : 0) +
+    (taskTypeFilter ? 1 : 0) +
+    (sprintFilter ? 1 : 0) +
+    (inEpicFilter ? 1 : 0) +
+    (rootOnlyFilter ? 1 : 0);
+  const hasActiveFilters = activeFilterCount > 0;
+
+  const displayDirtyCount =
+    (taskTypeFilter ? 1 : 0) +
+    (sprintFilter && showSprintControl ? 1 : 0) +
+    (inEpicFilter && showEpicControl ? 1 : 0) +
+    (selectedTagIds.length > 0 ? 1 : 0) +
+    (rootOnlyFilter ? 1 : 0) +
+    (groupByValue && showGroupBy ? 1 : 0) +
+    (tableOutlineEnabled && showOutline ? 1 : 0);
+
+  const clearAllFilters = () => {
+    dispatch(setTaskTypeFilter(null));
+    dispatch(setSprintFilter(null));
+    dispatch(setInEpicFilter(null));
+    dispatch(setRootOnlyFilter(false));
+    dispatch(setFilterConfig(null));
+  };
+
   return (
     <>
     <div className="shrink-0 border-b border-border bg-card">
       {/* Project Info Bar */}
       <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 border-b border-border">
-        {/* Sidebar toggle (mobile + tablet when collapsed) */}
         {isMobileOrTablet && !isSidebarOpen && (
           <button
             onClick={() => dispatch(toggleSidebar())}
@@ -173,14 +314,14 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           </p>
         </div>
         {canEdit && (
-          <button
-            type="button"
-            className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 text-sm text-primary bg-transparent hover:bg-muted rounded-md transition-colors shrink-0"
+          <Button
+            size="sm"
+            className="shrink-0 gap-1.5"
             onClick={() => dispatch(openCreateTaskModal())}
           >
             <Plus size={16} weight="bold" />
             {!isMobile && "New Task"}
-          </button>
+          </Button>
         )}
 
         {/* Detail view mode toggle */}
@@ -209,7 +350,6 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           </button>
         </div>
 
-        {/* Project Settings */}
         {canManage && (
           <button
             type="button"
@@ -222,85 +362,68 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
         )}
       </div>
 
-      {/* View Tabs + Filter Bar */}
-      <div className="flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2 min-w-0">
-        <div className="flex items-center gap-0.5 md:gap-1 min-w-0">
-          <ViewTab
-            icon={<Table size={16} />}
-            label={isMobile ? "" : "Table"}
-            isActive={viewMode === "table"}
-            onClick={() => handleViewChange("table")}
-          />
-          <ViewTab
-            icon={<Columns size={16} />}
-            label={isMobile ? "" : "Board"}
-            isActive={viewMode === "board"}
-            onClick={() => handleViewChange("board")}
-          />
-          <ViewTab
-            icon={<ChartLine size={16} />}
-            label={isMobile ? "" : "Roadmap"}
-            isActive={viewMode === "roadmap"}
-            onClick={() => handleViewChange("roadmap")}
-          />
-          <ViewTab
-            icon={<Archive size={16} />}
-            label={isMobile ? "" : "Backlog"}
-            isActive={viewMode === "backlog"}
-            onClick={() => handleViewChange("backlog")}
-          />
-          <ViewTab
-            icon={<ShareNetwork size={16} />}
-            label={isMobile ? "" : "Graph"}
-            isActive={viewMode === "graph"}
-            onClick={() => handleViewChange("graph")}
-          />
-          {!isMobile && (
-            <ViewTab
-              icon={<Users size={16} />}
-              label="Resources"
-              isActive={viewMode === "resources"}
-              onClick={() => handleViewChange("resources")}
-            />
-          )}
-        </div>
+      {/* Control bar: view switcher (left) vs slice controls (right) */}
+      <div ref={controlBarRef} className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2">
+        <ViewSwitcher
+          viewMode={viewMode}
+          onChange={handleViewChange}
+          showLabels={showViewLabels}
+        />
 
         {activeSprint && !isMobile && (
-          <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+          <span className="shrink-0 text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
             {activeSprint.name}
           </span>
         )}
 
-        <div className="hidden md:block h-5 w-px bg-border" />
+        <div className="hidden md:block flex-1" />
 
-        {/* Search */}
-        <div className="relative flex-1 min-w-[120px] max-w-sm">
-          <MagnifyingGlass
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            type="text"
-            placeholder="Filter tasks..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="pl-9 h-8 text-sm bg-muted border-0"
-          />
-        </div>
+        {/* Search: full-width field on mobile, fixed field on desktop */}
+        {isMobile ? (
+          isSearchOpen || searchQuery ? (
+            <div className="relative flex-1 min-w-0">
+              <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                autoFocus
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onBlur={() => !searchQuery && setIsSearchOpen(false)}
+                className="pl-9 h-8 text-sm bg-muted border-0"
+              />
+            </div>
+          ) : (
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsSearchOpen(true)} title="Search tasks">
+              <MagnifyingGlass size={16} />
+            </Button>
+          )
+        ) : (
+          <div className="relative w-56 lg:w-64 shrink-0">
+            <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="pl-9 h-8 text-sm bg-muted border-0"
+            />
+          </div>
+        )}
 
-        {/* Filter Button */}
-        <div className="relative min-w-0">
+        {/* Advanced filter builder */}
+        <div className="relative shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className={cn("h-8", activeFilterConfig && "text-primary")}
+            className={cn("h-8 gap-1.5", nonTagConditions.length > 0 && "text-primary")}
             onClick={() => setIsFilterOpen(!isFilterOpen)}
           >
-            <Funnel size={16} className={isMobile ? "" : "mr-1"} />
+            <Funnel size={16} weight={nonTagConditions.length > 0 ? "fill" : "regular"} />
             {!isMobile && "Filter"}
-            {activeFilterConfig && activeFilterConfig.conditions.length > 0 && (
-              <span className="ml-1 text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
-                {activeFilterConfig.conditions.length}
+            {nonTagConditions.length > 0 && (
+              <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
+                {nonTagConditions.length}
               </span>
             )}
           </Button>
@@ -315,135 +438,105 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
           )}
         </div>
 
-        {/* Sprint Filter - hidden on mobile */}
-        {hasSprintsWithTasks && viewMode !== "backlog" && !isMobile && (
-          <QuickFilterDropdown
-            label="Sprint"
-            value={sprintFilter}
-            options={[
-              { value: null, label: "All sprints" },
-              { value: "__backlog__", label: "Backlog" },
-              ...allSprints
-                .filter((s) => s.status !== "closed")
-                .map((s) => ({ value: s.id, label: s.name })),
-            ]}
-            onSelect={(value) => dispatch(setSprintFilter(value))}
-          />
-        )}
-
-        {/* Task Type Filter - hidden on mobile */}
-        {!isMobile && (
-          <QuickFilterDropdown
-            label="Type"
-            value={taskTypeFilter}
-            options={[
-              { value: null, label: "All types" },
-              ...TASK_TYPES.map((t) => ({ value: t.value, label: t.label })),
-            ]}
-            onSelect={(value) => dispatch(setTaskTypeFilter(value))}
-          />
-        )}
-
-        {/* Tags Quick Filter - hidden on mobile. ANY-mode shortcut for the
-            full filter builder; both write to the same FilterConfig. */}
-        {!isMobile && (
-          <TagsQuickFilter
-            filterConfig={activeFilterConfig}
-            onChange={(config) => dispatch(setFilterConfig(config))}
-          />
-        )}
-
-        {/* Root-only quick filter */}
-        {!isMobile && (
+        {/* Display: every quick filter + arrangement control in one panel */}
+        <div className="relative shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className={cn("h-8", rootOnlyFilter && "text-primary")}
-            onClick={() => dispatch(setRootOnlyFilter(!rootOnlyFilter))}
-            title={rootOnlyFilter ? "Showing top-level tasks only" : "Show top-level tasks only"}
+            className={cn("h-8 gap-1.5", displayDirtyCount > 0 && "text-primary")}
+            onClick={() => setIsDisplayOpen(!isDisplayOpen)}
           >
-            Root only
+            <SlidersHorizontal size={16} weight={displayDirtyCount > 0 ? "fill" : "regular"} />
+            {!isMobile && "Display"}
+            {displayDirtyCount > 0 && (
+              <span className="text-xs bg-primary text-primary-foreground rounded-full px-1.5 min-w-[18px] text-center">
+                {displayDirtyCount}
+              </span>
+            )}
           </Button>
-        )}
-
-        {/* In-Epic quick filter */}
-        {!isMobile && epicOptions.length > 0 && (
-          <QuickFilterDropdown
-            label="Epic"
-            value={inEpicFilter}
-            options={[
-              { value: null, label: "All tasks" },
-              ...epicOptions,
-            ]}
-            onSelect={(value) => dispatch(setInEpicFilter(value))}
-          />
-        )}
-
-        {/* Manage Statuses Button (Board view only) - hidden on mobile */}
-        {viewMode === "board" && !isMobile && (
-            <div className="relative min-w-0">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-muted-foreground hover:text-foreground"
-                    onClick={() => setIsManageStatusesOpen(!isManageStatusesOpen)}
-                >
-                    <SquaresFour size={16} className={isMobileOrTablet ? "" : "mr-1"} />
-                    {!isMobileOrTablet && "Manage Statuses"}
-                </Button>
-                {isManageStatusesOpen && (
-                    <div className="absolute top-9 right-0 z-50">
-                        <ManageStatusesDialog
-                            options={statusOptions}
-                            onSave={handleUpdateStatuses}
-                            onClose={() => setIsManageStatusesOpen(false)}
-                        />
-                    </div>
-                )}
+          {isDisplayOpen && (
+            <DisplayPanel
+              onClose={() => setIsDisplayOpen(false)}
+              typeOptions={typeOptions}
+              taskTypeFilter={taskTypeFilter}
+              onType={(v) => dispatch(setTaskTypeFilter(v))}
+              showSprint={showSprintControl}
+              sprintOptions={sprintOptions}
+              sprintFilter={sprintFilter}
+              onSprint={(v) => dispatch(setSprintFilter(v))}
+              showEpic={showEpicControl}
+              epicOptions={epicFilterOptions}
+              inEpicFilter={inEpicFilter}
+              onEpic={(v) => dispatch(setInEpicFilter(v))}
+              selectedTagIds={selectedTagIds}
+              onTags={applyTags}
+              rootOnlyFilter={rootOnlyFilter}
+              onRootOnly={() => dispatch(setRootOnlyFilter(!rootOnlyFilter))}
+              showGroupBy={showGroupBy}
+              groupByOptions={groupByOptions}
+              groupByValue={groupByValue}
+              onGroupBy={(v) => dispatch(setGroupBy(v))}
+              showOutline={showOutline}
+              tableOutlineEnabled={tableOutlineEnabled}
+              onOutline={() => dispatch(setTableOutlineEnabled(!tableOutlineEnabled))}
+              showManageStatuses={showManageStatuses}
+              onManageStatuses={() => {
+                setIsDisplayOpen(false);
+                setIsManageStatusesOpen(true);
+              }}
+            />
+          )}
+          {isManageStatusesOpen && (
+            <div className="absolute top-full right-0 z-50 mt-1.5">
+              <ManageStatusesDialog
+                options={statusOptions}
+                onSave={handleUpdateStatuses}
+                onClose={() => setIsManageStatusesOpen(false)}
+              />
             </div>
-        )}
+          )}
+        </div>
+      </div>
 
-        {/* Group By (Table view only) - hidden on mobile */}
-        {viewMode === "table" && !isMobile && (
-          <GroupByDropdown
-            activeGroupByFieldId={activeGroupByFieldId}
-            onSelect={(value) => dispatch(setGroupBy(value))}
-            showSprintOption={hasSprintsWithTasks}
-          />
-        )}
-
-        {/* Outline toggle (Table view only) - hidden on mobile */}
-        {viewMode === "table" && !isMobile && (
+      {/* Active filters: only present once something narrows the view */}
+      {hasActiveFilters && !hasSelection && (
+        <div className="flex flex-wrap items-center gap-1.5 px-3 md:px-4 pb-2">
+          <span className="text-xs text-muted-foreground mr-0.5">Filters</span>
+          {nonTagConditions.length > 0 && (
+            <FilterChip
+              label={`Conditions · ${nonTagConditions.length}`}
+              onClick={() => setIsFilterOpen(true)}
+              onRemove={clearBuilderConditions}
+            />
+          )}
+          {taskTypeFilter && (
+            <FilterChip label={`Type · ${typeLabel}`} onRemove={() => dispatch(setTaskTypeFilter(null))} />
+          )}
+          {sprintFilter && (
+            <FilterChip label={`Sprint · ${sprintLabel}`} onRemove={() => dispatch(setSprintFilter(null))} />
+          )}
+          {inEpicFilter && (
+            <FilterChip label={`Epic · ${epicLabel}`} onRemove={() => dispatch(setInEpicFilter(null))} />
+          )}
+          {selectedTagIds.length > 0 && (
+            <FilterChip label={`Tags · ${selectedTagIds.length}`} onRemove={() => applyTags([])} />
+          )}
+          {rootOnlyFilter && (
+            <FilterChip label="Top-level only" onRemove={() => dispatch(setRootOnlyFilter(false))} />
+          )}
           <button
             type="button"
-            onClick={() => dispatch(setTableOutlineEnabled(!tableOutlineEnabled))}
-            className={cn(
-              "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors hover:bg-muted min-w-0",
-              tableOutlineEnabled ? "text-primary font-medium" : "text-muted-foreground",
-            )}
-            title={tableOutlineEnabled ? "Outline on - subtasks nest under parents" : "Outline off - tasks render flat"}
+            onClick={clearAllFilters}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-0.5"
           >
-            <TreeView size={16} className="shrink-0" />
-            <span className="truncate">Outline</span>
+            Clear all
           </button>
-        )}
+        </div>
+      )}
 
-        {/* Group By (Board view: Status | Epic) - hidden on mobile */}
-        {viewMode === "board" && !isMobile && (
-          <GroupByDropdown
-            activeGroupByFieldId={
-              activeGroupByFieldId === GROUP_BY_EPIC_KEY ? GROUP_BY_EPIC_KEY : null
-            }
-            onSelect={(value) => dispatch(setGroupBy(value))}
-            showSprintOption={false}
-            options={BOARD_GROUP_BY_OPTIONS}
-            defaultLabel="Status"
-            triggerLabel="Group by"
-          />
-        )}
-
-        {/* Bulk action toolbar */}
-        {hasSelection && (
+      {/* Bulk actions take over the rail while tasks are selected */}
+      {hasSelection && (
+        <div className="flex items-center px-3 md:px-4 pb-2">
           <BulkActionToolbar
             selectedCount={selectedTaskIds.length}
             selectedTaskIds={selectedTaskIds}
@@ -453,11 +546,10 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
             dispatch={dispatch}
             sprints={allSprints}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
 
-    {/* Delete tasks confirmation */}
     <ConfirmDialog
       isOpen={showDeleteTasksConfirm}
       onClose={() => setShowDeleteTasksConfirm(false)}
@@ -472,35 +564,75 @@ export function ProjectHeader({ project, taskCount }: ProjectHeaderProps) {
   );
 }
 
-interface ViewTabProps {
-  icon: React.ReactNode;
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
+interface ViewSwitcherProps {
+  viewMode: ViewType;
+  onChange: (view: ViewType) => void;
+  showLabels: boolean;
 }
 
-function ViewTab({ icon, label, isActive, onClick }: ViewTabProps) {
+function ViewSwitcher({ viewMode, onChange, showLabels }: ViewSwitcherProps) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 px-2 md:px-2.5 py-1 text-sm rounded-md transition-colors min-w-0",
-        isActive
-          ? "text-primary bg-primary/10"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-      )}
-      title={label || undefined}
-    >
-      <span className="shrink-0 flex items-center">{icon}</span>
-      {label && <span className="truncate">{label}</span>}
-    </button>
+    <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5 shrink-0">
+      {VIEWS.map((view) => {
+        const isActive = viewMode === view.value;
+        // Always label the active tab so the current view is legible even when
+        // the rest collapse to icons on tablet/mobile.
+        const withLabel = showLabels || isActive;
+        return (
+          <button
+            key={view.value}
+            type="button"
+            onClick={() => onChange(view.value)}
+            title={view.label}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm transition-all",
+              isActive
+                ? "bg-card text-foreground shadow-sm font-medium"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span className="shrink-0 flex items-center">{view.icon}</span>
+            {withLabel && <span className="truncate">{view.label}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface FilterChipProps {
+  label: string;
+  onRemove: () => void;
+  onClick?: () => void;
+}
+
+function FilterChip({ label, onRemove, onClick }: FilterChipProps) {
+  return (
+    <span className="inline-flex items-center h-6 rounded-full bg-primary/10 text-primary text-xs">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!onClick}
+        className={cn("pl-2.5 pr-1 py-0.5 max-w-[180px] truncate", onClick && "hover:underline")}
+      >
+        {label}
+      </button>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="px-1 h-full rounded-r-full hover:bg-primary/20 transition-colors"
+        title="Remove filter"
+      >
+        <X size={12} weight="bold" />
+      </button>
+    </span>
   );
 }
 
 export const GROUP_BY_TAGS_KEY = "__tags__";
 export const GROUP_BY_EPIC_KEY = "__epic__";
 
-const GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
+const GROUP_BY_OPTIONS: Option[] = [
   { value: null, label: "No grouping" },
   { value: SYSTEM_FIELD_IDS.STATUS, label: "Status" },
   { value: SYSTEM_FIELD_IDS.PRIORITY, label: "Priority" },
@@ -510,279 +642,186 @@ const GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
   { value: GROUP_BY_TAGS_KEY, label: "Tags" },
 ];
 
-const BOARD_GROUP_BY_OPTIONS: { value: string | null; label: string }[] = [
+const BOARD_GROUP_BY_OPTIONS: Option[] = [
   { value: null, label: "Status" },
   { value: GROUP_BY_EPIC_KEY, label: "Epic" },
 ];
 
-interface GroupByDropdownProps {
-  activeGroupByFieldId: string | null;
-  onSelect: (value: string | null) => void;
-  showSprintOption: boolean;
-  options?: { value: string | null; label: string }[];
-  defaultLabel?: string;
-  triggerLabel?: string;
+interface DisplayPanelProps {
+  onClose: () => void;
+  typeOptions: Option[];
+  taskTypeFilter: string | null;
+  onType: (v: string | null) => void;
+  showSprint: boolean;
+  sprintOptions: Option[];
+  sprintFilter: string | null;
+  onSprint: (v: string | null) => void;
+  showEpic: boolean;
+  epicOptions: Option[];
+  inEpicFilter: string | null;
+  onEpic: (v: string | null) => void;
+  selectedTagIds: string[];
+  onTags: (ids: string[]) => void;
+  rootOnlyFilter: boolean;
+  onRootOnly: () => void;
+  showGroupBy: boolean;
+  groupByOptions: Option[];
+  groupByValue: string | null;
+  onGroupBy: (v: string | null) => void;
+  showOutline: boolean;
+  tableOutlineEnabled: boolean;
+  onOutline: () => void;
+  showManageStatuses: boolean;
+  onManageStatuses: () => void;
 }
 
-interface QuickFilterOption {
-  value: string | null;
-  label: string;
-}
-
-interface QuickFilterDropdownProps {
-  label: string;
-  value: string | null;
-  options: QuickFilterOption[];
-  onSelect: (value: string | null) => void;
-}
-
-function QuickFilterDropdown({ label, value, options, onSelect }: QuickFilterDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
+function DisplayPanel(props: DisplayPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const activeOption = options.find((o) => o.value === value);
-  const displayLabel = activeOption?.value != null ? activeOption.label : label;
-  const isFiltered = value !== null;
-
-  const handleClose = useCallback(() => setIsOpen(false), []);
+  const handleClose = props.onClose;
 
   useEffect(() => {
-    if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         handleClose();
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, handleClose]);
+    const timer = setTimeout(() => document.addEventListener("mousedown", handleClickOutside), 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [handleClose]);
 
   return (
-    <div ref={containerRef} className="relative min-w-0">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors min-w-0",
-          "hover:bg-muted",
-          isFiltered
-            ? "text-primary font-medium"
-            : "text-muted-foreground"
+    <div
+      ref={containerRef}
+      className="absolute top-full right-0 z-50 mt-1.5 w-72 max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-card shadow-xl p-3 space-y-4 animate-in fade-in-0 zoom-in-95"
+    >
+      <PanelSection label="Filter">
+        <PanelRow label="Type">
+          <OptionChips options={props.typeOptions} value={props.taskTypeFilter} onSelect={props.onType} />
+        </PanelRow>
+        {props.showSprint && (
+          <PanelRow label="Sprint">
+            <OptionChips options={props.sprintOptions} value={props.sprintFilter} onSelect={props.onSprint} />
+          </PanelRow>
         )}
-        title={displayLabel}
-      >
-        <span className="truncate">{displayLabel}</span>
-        <CaretDown size={12} className={cn("shrink-0 transition-transform", isOpen && "rotate-180")} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full right-0 z-50 mt-1.5 w-48 rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95">
-          <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            {label}
-          </div>
-          {options.map((option) => {
-            const isActive = option.value === value;
-            return (
-              <button
-                key={option.value ?? "__none__"}
-                type="button"
-                onClick={() => {
-                  onSelect(option.value);
-                  setIsOpen(false);
-                }}
-                className={cn(
-                  "flex w-full items-center justify-between px-3 py-1.5 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted"
-                )}
-              >
-                <span>{option.label}</span>
-                {isActive && <Check size={14} weight="bold" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function GroupByDropdown({
-  activeGroupByFieldId,
-  onSelect,
-  showSprintOption,
-  options: optionsOverride,
-  defaultLabel = "No grouping",
-  triggerLabel = "Group by",
-}: GroupByDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const baseOptions = optionsOverride ?? GROUP_BY_OPTIONS;
-  const options = showSprintOption
-    ? baseOptions
-    : baseOptions.filter((o) => o.value !== "__sprint__");
-
-  const activeOption = options.find((o) => o.value === activeGroupByFieldId);
-  const displayLabel = activeOption ? activeOption.label : defaultLabel;
-
-  const handleClose = useCallback(() => setIsOpen(false), []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        handleClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, handleClose]);
-
-  return (
-    <div ref={containerRef} className="relative min-w-0">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors min-w-0",
-          "hover:bg-muted",
-          activeGroupByFieldId
-            ? "text-primary font-medium"
-            : "text-muted-foreground"
+        {props.showEpic && (
+          <PanelRow label="Epic">
+            <OptionChips options={props.epicOptions} value={props.inEpicFilter} onSelect={props.onEpic} />
+          </PanelRow>
         )}
-        title={displayLabel}
-      >
-        <SquaresFour size={16} className="shrink-0" />
-        <span className="truncate">{displayLabel}</span>
-        <CaretDown size={12} className={cn("shrink-0 transition-transform", isOpen && "rotate-180")} />
-      </button>
+        <PanelRow label="Tags">
+          <TagPicker selectedTagIds={props.selectedTagIds} onChange={props.onTags} placeholder="Pick a tag" />
+        </PanelRow>
+        <ToggleRow
+          icon={<SquaresFour size={16} />}
+          label="Top-level only"
+          description="Hide subtasks; show parent tasks"
+          active={props.rootOnlyFilter}
+          onToggle={props.onRootOnly}
+        />
+      </PanelSection>
 
-      {isOpen && (
-        <div className="absolute top-full right-0 z-50 mt-1.5 w-48 rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95">
-          <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            {triggerLabel}
-          </div>
-          {options.map((option) => {
-            const isActive = option.value === activeGroupByFieldId;
-            return (
-              <button
-                key={option.value ?? "__none__"}
-                type="button"
-                onClick={() => {
-                  onSelect(option.value);
-                  setIsOpen(false);
-                }}
-                className={cn(
-                  "flex w-full items-center justify-between px-3 py-1.5 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted"
-                )}
-              >
-                <span>{option.label}</span>
-                {isActive && <Check size={14} weight="bold" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface TagsQuickFilterProps {
-  filterConfig: FilterConfig | null;
-  onChange: (next: FilterConfig | null) => void;
-}
-
-function TagsQuickFilter({ filterConfig, onChange }: TagsQuickFilterProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const tagCondition = filterConfig?.conditions.find(
-    (c) => c.fieldId === TAGS_FILTER_FIELD_ID
-  );
-  const selectedTagIds: string[] = Array.isArray(tagCondition?.value)
-    ? (tagCondition!.value as string[])
-    : tagCondition?.value
-      ? [String(tagCondition.value)]
-      : [];
-
-  const handleClose = useCallback(() => setIsOpen(false), []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        handleClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, handleClose]);
-
-  const apply = (nextTagIds: string[]) => {
-    const others = (filterConfig?.conditions ?? []).filter(
-      (c) => c.fieldId !== TAGS_FILTER_FIELD_ID
-    );
-    if (nextTagIds.length === 0) {
-      if (others.length === 0) {
-        onChange(null);
-      } else {
-        onChange({ conditions: others, logic: filterConfig?.logic ?? "and" });
-      }
-      return;
-    }
-    const next: FilterCondition = {
-      id: tagCondition?.id ?? crypto.randomUUID(),
-      fieldId: TAGS_FILTER_FIELD_ID,
-      operator: "contains",
-      value: nextTagIds,
-    };
-    onChange({ conditions: [...others, next], logic: filterConfig?.logic ?? "and" });
-  };
-
-  const isFiltered = selectedTagIds.length > 0;
-  const displayLabel = isFiltered ? `Tags (${selectedTagIds.length})` : "Tags";
-
-  return (
-    <div ref={containerRef} className="relative min-w-0">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex items-center gap-1.5 h-8 px-2.5 rounded-md text-sm transition-colors hover:bg-muted",
-          isFiltered ? "text-primary font-medium" : "text-muted-foreground"
-        )}
-      >
-        <span>{displayLabel}</span>
-        <CaretDown size={12} className={cn("transition-transform", isOpen && "rotate-180")} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full right-0 z-50 mt-1.5 w-72 rounded-lg border border-border bg-card shadow-lg p-3 animate-in fade-in-0 zoom-in-95">
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Filter by tag
-          </div>
-          <TagPicker
-            selectedTagIds={selectedTagIds}
-            onChange={apply}
-            placeholder="Pick a tag"
-          />
-          {isFiltered && (
+      {(props.showGroupBy || props.showOutline || props.showManageStatuses) && (
+        <PanelSection label="Arrange">
+          {props.showGroupBy && (
+            <PanelRow label="Group by">
+              <OptionChips options={props.groupByOptions} value={props.groupByValue} onSelect={props.onGroupBy} />
+            </PanelRow>
+          )}
+          {props.showOutline && (
+            <ToggleRow
+              icon={<TreeView size={16} />}
+              label="Outline"
+              description="Nest subtasks under parents"
+              active={props.tableOutlineEnabled}
+              onToggle={props.onOutline}
+            />
+          )}
+          {props.showManageStatuses && (
             <button
               type="button"
-              onClick={() => apply([])}
-              className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground"
+              onClick={props.onManageStatuses}
+              className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
             >
-              Clear
+              <SquaresFour size={16} className="text-muted-foreground shrink-0" />
+              Manage statuses
             </button>
           )}
-        </div>
+        </PanelSection>
       )}
     </div>
+  );
+}
+
+function PanelSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
+      <div className="space-y-2.5">{children}</div>
+    </div>
+  );
+}
+
+function PanelRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function OptionChips({ options, value, onSelect }: { options: Option[]; value: string | null; onSelect: (v: string | null) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {options.map((option) => {
+        const isActive = option.value === value;
+        return (
+          <button
+            key={option.value ?? "__none__"}
+            type="button"
+            onClick={() => onSelect(option.value)}
+            className={cn(
+              "px-2 py-1 rounded-md text-xs transition-colors",
+              isActive
+                ? "bg-primary text-primary-foreground font-medium"
+                : "bg-muted text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface ToggleRowProps {
+  icon: React.ReactNode;
+  label: string;
+  description?: string;
+  active: boolean;
+  onToggle: () => void;
+}
+
+function ToggleRow({ icon, label, description, active, onToggle }: ToggleRowProps) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-muted transition-colors"
+    >
+      <span className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}>{icon}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm text-foreground">{label}</span>
+        {description && <span className="block text-xs text-muted-foreground truncate">{description}</span>}
+      </span>
+      <span className={cn("relative h-4 w-7 rounded-full transition-colors shrink-0", active ? "bg-primary" : "bg-muted-foreground/30")}>
+        <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform", active ? "translate-x-3.5" : "translate-x-0.5")} />
+      </span>
+    </button>
   );
 }
 
@@ -847,7 +886,6 @@ function BulkActionToolbar({
         {selectedCount} selected
       </span>
 
-      {/* Status */}
       <div className="relative">
         <button
           type="button"
@@ -879,7 +917,6 @@ function BulkActionToolbar({
         )}
       </div>
 
-      {/* Priority */}
       <div className="relative">
         <button
           type="button"
@@ -911,7 +948,6 @@ function BulkActionToolbar({
         )}
       </div>
 
-      {/* Sprint */}
       {sprints.length > 0 && (
         <div className="relative">
           <button
@@ -957,7 +993,6 @@ function BulkActionToolbar({
         </div>
       )}
 
-      {/* Delete */}
       <button
         onClick={onDeleteClick}
         className="p-1 rounded-md hover:bg-destructive/10 transition-colors"
@@ -966,7 +1001,6 @@ function BulkActionToolbar({
         <Trash size={16} weight="duotone" className="text-destructive" />
       </button>
 
-      {/* Clear */}
       <button
         onClick={onClearSelection}
         className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

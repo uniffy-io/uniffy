@@ -1,0 +1,253 @@
+"""Attachments RPC handlers."""
+
+from uuid import UUID
+
+from connectrpc.code import Code
+from connectrpc.errors import ConnectError
+from connectrpc.request import RequestContext
+from loguru import logger
+from uniffy_proto.files.v1.files_pb2 import (
+    AttachFileRequest,
+    AttachFileResponse,
+    BatchListAttachmentsGroup,
+    BatchListAttachmentsRequest,
+    BatchListAttachmentsResponse,
+    DetachFileRequest,
+    DetachFileResponse,
+    GetAttachmentsFolderRequest,
+    GetAttachmentsFolderResponse,
+    ListAttachmentsRequest,
+    ListAttachmentsResponse,
+)
+
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.db import open_session
+from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.files.attachments.converters import (
+    attachment_to_proto,
+    content_type_from_proto,
+)
+from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+logger = logger.bind(component="files.attachments.handlers")
+
+
+class AttachmentsHandlersMixin:
+    """Attachment RPC handlers, mixed into FilesServiceImpl."""
+
+    async def attach_file(
+        self,
+        request: AttachFileRequest,
+        ctx: RequestContext,
+    ) -> AttachFileResponse:
+        """Attach a file to content."""
+        try:
+            organization_id = UUID(request.organization_id)
+            source_file_id = UUID(request.source_file_id)
+            content_id = UUID(request.content_id)
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
+
+        content_type = content_type_from_proto(request.content_type)
+        if not content_type:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content_type")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = AttachmentOperations(session)
+                attachment = await ops.attach_file(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
+                    source_file_id=source_file_id,
+                )
+
+                # Get the file and owner info
+                from sqlalchemy import select
+
+                from uniffy.core.models.files.file import File
+                from uniffy.core.models.login.user import User
+
+                result = await session.execute(
+                    select(File, User)
+                    .outerjoin(User, File.owner_id == User.id)
+                    .where(File.id == attachment.file_id)
+                )
+                row = result.first()
+                file = row[0] if row else None
+                owner = row[1] if row else None
+
+                await session.commit()
+
+                return AttachFileResponse(attachment=attachment_to_proto(attachment, file, owner))
+
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error attaching file: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def detach_file(
+        self,
+        request: DetachFileRequest,
+        ctx: RequestContext,
+    ) -> DetachFileResponse:
+        """Detach a file from content."""
+        try:
+            organization_id = UUID(request.organization_id)
+            attachment_id = UUID(request.attachment_id)
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = AttachmentOperations(session)
+                success = await ops.detach_file(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    attachment_id=attachment_id,
+                )
+                await session.commit()
+
+                msg = "Attachment removed" if success else "Failed to remove"
+                return DetachFileResponse(success=success, message=msg)
+
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error detaching file: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def list_attachments(
+        self,
+        request: ListAttachmentsRequest,
+        ctx: RequestContext,
+    ) -> ListAttachmentsResponse:
+        """List attachments for a piece of content."""
+        try:
+            organization_id = UUID(request.organization_id)
+            content_id = UUID(request.content_id)
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
+
+        content_type = content_type_from_proto(request.content_type)
+        if not content_type:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content_type")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = AttachmentOperations(session)
+                attachments = await ops.list_attachments(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_id=content_id,
+                )
+
+                return ListAttachmentsResponse(
+                    attachments=[attachment_to_proto(a, f, o) for a, f, o in attachments],
+                    total_count=len(attachments),
+                )
+
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error listing attachments: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def batch_list_attachments(
+        self,
+        request: BatchListAttachmentsRequest,
+        ctx: RequestContext,
+    ) -> BatchListAttachmentsResponse:
+        """List attachments for many content rows in one call."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
+
+        content_type = content_type_from_proto(request.content_type)
+        if not content_type:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid content_type")
+
+        if not request.content_ids:
+            return BatchListAttachmentsResponse(groups=[])
+
+        try:
+            content_ids = [UUID(cid) for cid in request.content_ids]
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid content_id: {e}")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = AttachmentOperations(session)
+                grouped = await ops.batch_list_attachments(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    content_type=content_type,
+                    content_ids=content_ids,
+                )
+
+                groups = [
+                    BatchListAttachmentsGroup(
+                        content_id=str(cid),
+                        attachments=[attachment_to_proto(a, f, o) for a, f, o in rows],
+                    )
+                    for cid, rows in grouped.items()
+                ]
+                return BatchListAttachmentsResponse(groups=groups)
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error batch-listing attachments: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def get_attachments_folder(
+        self,
+        request: GetAttachmentsFolderRequest,
+        ctx: RequestContext,
+    ) -> GetAttachmentsFolderResponse:
+        """Get the user's Attachments folder ID."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid UUID: {e}")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = AttachmentOperations(session)
+                folder = await ops.get_or_create_attachments_folder(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                )
+                await session.commit()
+
+                return GetAttachmentsFolderResponse(folder_id=str(folder.id))
+
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error getting attachments folder: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")

@@ -40,7 +40,7 @@ from uniffy.observability.metrics import (
     REALTIME_UPDATE_MESSAGES_TOTAL,
 )
 
-# Acknowledged but not acted on (no server-side awareness map).
+# No server-side awareness map; a query is relayed so live peers re-announce.
 MSG_QUERY_AWARENESS = 3
 
 MAX_FRAME_BYTES = 1 * 1024 * 1024
@@ -196,7 +196,10 @@ async def _dispatch_doc_frame(
             session, payload, source_conn_id=handle.conn_id
         )
     elif kind == MSG_QUERY_AWARENESS:
-        return
+        # Relay to peers so each re-announces its awareness to the asker.
+        await ydoc_manager.broadcast_awareness(
+            session, payload, source_conn_id=handle.conn_id
+        )
     else:
         logger.debug(
             f"unknown message type {kind} on {doc_name}, dropping",

@@ -3,7 +3,7 @@ import { memo, useState, useRef, useCallback, useMemo, useEffect, type RefObject
 import { createPortal } from 'react-dom';
 import { CaretDown, Robot, Trash } from '@phosphor-icons/react';
 import { parseUrn, getUrnTypeLabel, UrnType } from '@/shared/utils/urn';
-import { buildFileUrl, buildMediaStreamUrl, buildAgentAvatarUrl } from '@/shared/utils/fileUrls';
+import { buildFileUrl, buildMediaUrl, buildAgentAvatarUrl } from '@/shared/utils/fileUrls';
 import { MentionPreview } from '@/components/mention/MentionPreview';
 import { MentionExpandedCard } from '@/components/mention/MentionExpandedCard';
 import { buildLiveStateFromMetadata } from '@/components/mention/buildLiveState';
@@ -332,10 +332,10 @@ function MentionChipInner({
       url = buildFileUrl(organizationId, parsed.id);
     } else if (mimeType.startsWith('video/')) {
       mediaType = 'video';
-      url = buildMediaStreamUrl(organizationId, parsed.id);
+      url = buildMediaUrl(organizationId, parsed.id);
     } else if (mimeType.startsWith('audio/')) {
       mediaType = 'audio';
-      url = buildMediaStreamUrl(organizationId, parsed.id);
+      url = buildMediaUrl(organizationId, parsed.id);
     } else {
       return;
     }

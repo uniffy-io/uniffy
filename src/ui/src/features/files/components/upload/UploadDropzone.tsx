@@ -2,8 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { CloudArrowUp, FolderOpen } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
-import { addToQueue } from '@/features/files/store/uploadSlice';
-import { storeFile } from '@/features/files/utils/fileStore';
+import { enqueueFileUploads } from '@/features/files/upload/enqueueFileUploads';
 import {
     hasDroppedFolders,
     scanDroppedItems,
@@ -28,6 +27,7 @@ export function UploadDropzone({
     compact = false,
 }: UploadDropzoneProps) {
     const dispatch = useAppDispatch();
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
     const viewScope = useAppSelector((state) => state.files.filters.viewScope);
     const folders = useAppSelector((state) => state.filesTree.folders);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -45,29 +45,27 @@ export function UploadDropzone({
 
     const handleFiles = useCallback(
         (files: FileList | null) => {
-            if (!files || files.length === 0) return;
+            if (!files || files.length === 0 || !organizationId) return;
 
             const fileArray = Array.from(files);
             const parentFolder = folderId ? folders[folderId] : undefined;
             const accessMode = resolveUploadAccessMode(viewScope, parentFolder);
 
-            const uploadItems = fileArray.map((file) => {
-                const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                storeFile(id, file);
-                return {
-                    id,
+            enqueueFileUploads(
+                fileArray.map((file) => ({
+                    file,
                     filename: file.name,
                     mimeType: file.type || 'application/octet-stream',
-                    totalSize: file.size,
+                    organizationId,
+                    context: 'files' as const,
                     folderId,
                     accessMode,
-                };
-            });
-
-            dispatch(addToQueue(uploadItems));
+                })),
+                dispatch
+            );
             onFilesSelected?.(fileArray);
         },
-        [dispatch, folderId, folders, viewScope, onFilesSelected]
+        [dispatch, organizationId, folderId, folders, viewScope, onFilesSelected]
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {

@@ -79,8 +79,6 @@ const selectCurrentUserId = (state: RootState) => state.auth.user?.id;
 const selectFilesTreePersonal = (state: RootState) => state.filesTree.tree.personal;
 const selectFilesTreeOrganization = (state: RootState) => state.filesTree.tree.organization;
 const selectFilesTreeShared = (state: RootState) => state.filesTree.tree.shared;
-const selectUploadQueue = (state: RootState) => state.upload.queue;
-const selectUploadActive = (state: RootState) => state.upload.activeUploads;
 
 export const selectAllFiles = createSelector(
     [selectFilesMap],
@@ -229,12 +227,3 @@ export const selectSubfoldersForCurrentFolder = createSelector(
     }
 );
 
-export const selectActiveUploadsArray = createSelector(
-    [selectUploadActive],
-    (activeMap) => Object.values(activeMap)
-);
-
-export const selectTotalPendingUploads = createSelector(
-    [selectUploadQueue, selectActiveUploadsArray],
-    (queue, active) => queue.length + active.length
-);

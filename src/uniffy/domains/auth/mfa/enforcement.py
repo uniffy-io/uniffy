@@ -46,6 +46,8 @@ from uniffy.core.models.login.user_mfa import UserMfa
 from uniffy.domains.auth.mfa.policy import MfaPolicyOperations
 from uniffy.domains.security.operations import SecurityOperations
 
+logger = logger.bind(component="auth.mfa.enforcement")
+
 
 class MfaRequirement(str, Enum):
     """Two-valued result of policy evaluation."""

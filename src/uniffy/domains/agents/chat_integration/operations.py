@@ -35,9 +35,11 @@ from uniffy.domains.agents.runtime.destinations import ChatDestination
 from uniffy.domains.agents.runtime.file_loader import FileContext, _safe_load_files
 from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import ChatStreamPublisher
-from uniffy.domains.attachments.operations import AttachmentOperations
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
+from uniffy.domains.files.attachments.operations import AttachmentOperations
+
+logger = logger.bind(component="agents.chat_integration.operations")
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

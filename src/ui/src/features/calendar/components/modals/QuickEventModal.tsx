@@ -13,7 +13,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
 import { createEvent } from '@/features/calendar/store/calendarThunks';
-import { attachmentsApi } from '@/features/attachments';
+import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { cn } from '@/shared/utils/cn';
 import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
 import { ExpandableEditor } from '@/components/editor/ExpandableEditor';

@@ -128,10 +128,11 @@ async function uploadChunkWithRetry(
 }
 
 async function handleUploadChunks(request: UploadChunksRequest): Promise<void> {
-    const { id, file, uploadId, chunkSize, totalChunks, token, apiUrl } = request;
+    const { id, file, uploadId, chunkSize, totalChunks, token, apiUrl, completedChunks } = request;
 
     operationTokens.set(id, token);
 
+    const alreadyStored = new Set(completedChunks ?? []);
     let uploadedBytes = 0;
 
     for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
@@ -141,6 +142,19 @@ async function handleUploadChunks(request: UploadChunksRequest): Promise<void> {
 
         const start = (chunkNumber - 1) * chunkSize;
         const end = Math.min(start + chunkSize, file.size);
+
+        // On a resumed upload the server already has this part; count its bytes but skip the POST.
+        if (alreadyStored.has(chunkNumber)) {
+            uploadedBytes += end - start;
+            self.postMessage({
+                type: 'UPLOAD_PROGRESS',
+                id,
+                uploadedChunks: chunkNumber,
+                uploadedBytes,
+            });
+            continue;
+        }
+
         const chunkBlob = file.slice(start, end);
         const chunkData = await chunkBlob.arrayBuffer();
 

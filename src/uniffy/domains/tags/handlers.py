@@ -63,6 +63,8 @@ from uniffy.domains.tags.operations import (
     TagSlugCollisionError,
 )
 
+logger = logger.bind(component="tags.handlers")
+
 
 def _parse_uuid(value: str, field: str) -> UUID:
     try:
@@ -147,7 +149,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"create_tag failed: {exc}", exc_info=True)
+            logger.exception(f"create_tag failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def update_tag(
@@ -197,7 +199,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"update_tag failed: {exc}", exc_info=True)
+            logger.exception(f"update_tag failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def delete_tag(
@@ -235,7 +237,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"delete_tag failed: {exc}", exc_info=True)
+            logger.exception(f"delete_tag failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def get_tag(
@@ -262,7 +264,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"get_tag failed: {exc}", exc_info=True)
+            logger.exception(f"get_tag failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def list_tags(
@@ -292,7 +294,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"list_tags failed: {exc}", exc_info=True)
+            logger.exception(f"list_tags failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def suggest_tags(
@@ -319,7 +321,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"suggest_tags failed: {exc}", exc_info=True)
+            logger.exception(f"suggest_tags failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def assign_tags(
@@ -352,7 +354,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"assign_tags failed: {exc}", exc_info=True)
+            logger.exception(f"assign_tags failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def unassign_tags(
@@ -386,7 +388,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"unassign_tags failed: {exc}", exc_info=True)
+            logger.exception(f"unassign_tags failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def get_tags_for_urns(
@@ -417,7 +419,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"get_tags_for_urns failed: {exc}", exc_info=True)
+            logger.exception(f"get_tags_for_urns failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def list_content_by_tag(
@@ -477,7 +479,7 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"list_content_by_tag failed: {exc}", exc_info=True)
+            logger.exception(f"list_content_by_tag failed: {exc}")
             raise _domain_error_to_connect(exc)
 
     async def merge_tags(
@@ -520,5 +522,5 @@ class TagsHandlers:
         except ConnectError:
             raise
         except Exception as exc:
-            logger.error(f"merge_tags failed: {exc}", exc_info=True)
+            logger.exception(f"merge_tags failed: {exc}")
             raise _domain_error_to_connect(exc)

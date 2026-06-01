@@ -19,6 +19,7 @@ import {
 import { useFilteredTasks } from "@/features/projects/hooks/useTasks";
 import { selectSprintsForProject } from "@/features/projects/store/sprintsSlice";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
+import type { Task } from "@/features/projects/types";
 import type { ZoomLevel } from "@/features/projects/utils/ganttPositioning";
 import {
   generateTimelineColumns,
@@ -29,8 +30,9 @@ import {
 } from "@/features/projects/utils/ganttPositioning";
 import { LAYOUT } from "@/features/projects/constants";
 import { RoadmapTaskList } from "./RoadmapTaskList";
+import { buildOrderedRows } from "./roadmapRows";
 import { TimelineGrid } from "./TimelineGrid";
-import { GanttBar, EmptyGanttRow } from "./GanttBar";
+import { GanttBar, EmptyGanttRow, SummaryBar } from "./GanttBar";
 import { DependencyLines } from "./DependencyLines";
 import { EmptyState } from "../table/EmptyState";
 
@@ -38,16 +40,90 @@ import { EmptyState } from "../table/EmptyState";
 const PERIODS_BEFORE = 15;
 const PERIODS_AFTER = 45;
 
+interface RollupSpan {
+  start: string;
+  due: string;
+}
+
+/**
+ * For each task with children, the min start / max due across all descendants
+ * that carry dates. Drives the summary rollup bracket shown for parents that
+ * lack their own dates. ISO date strings compare lexicographically.
+ */
+function computeRollupSpans(tasks: Task[]): Map<string, RollupSpan> {
+  const childrenByParent = new Map<string, Task[]>();
+  for (const t of tasks) {
+    if (t.parentId) {
+      const arr = childrenByParent.get(t.parentId) ?? [];
+      arr.push(t);
+      childrenByParent.set(t.parentId, arr);
+    }
+  }
+
+  const spans = new Map<string, RollupSpan>();
+  const compute = (taskId: string, visiting: Set<string>): RollupSpan | null => {
+    if (spans.has(taskId)) return spans.get(taskId)!;
+    if (visiting.has(taskId)) return null;
+    visiting.add(taskId);
+
+    let minStart: string | null = null;
+    let maxDue: string | null = null;
+    const consider = (start: string | null, due: string | null) => {
+      if (start && (minStart === null || start < minStart)) minStart = start;
+      if (due && (maxDue === null || due > maxDue)) maxDue = due;
+    };
+
+    for (const kid of childrenByParent.get(taskId) ?? []) {
+      consider(kid.startDate, kid.dueDate);
+      const sub = compute(kid.id, visiting);
+      if (sub) consider(sub.start, sub.due);
+    }
+
+    visiting.delete(taskId);
+    if (minStart && maxDue) {
+      const span: RollupSpan = { start: minStart, due: maxDue };
+      spans.set(taskId, span);
+      return span;
+    }
+    return null;
+  };
+
+  for (const t of tasks) {
+    if (childrenByParent.has(t.id)) compute(t.id, new Set());
+  }
+  return spans;
+}
+
 export function RoadmapView() {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
-  const filteredTasks = useFilteredTasks(project?.id ?? "");
+  // Subtasks are real rows here; the "Top-level only" filter is the opt-in for
+  // a flat root view.
+  const filteredTasks = useFilteredTasks(project?.id ?? "", { includeSubtasks: true });
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
   const searchQuery = useAppSelector(selectSearchQuery);
 
   // Zoom level state
   const [zoom, setZoom] = useState<ZoomLevel>("week");
+
+  // Collapsed parents; descendants drop out of the ordered rows entirely.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const rows = useMemo(
+    () => buildOrderedRows(filteredTasks, collapsedIds),
+    [filteredTasks, collapsedIds]
+  );
+  // Rollup spans are derived from the full task set, so a collapsed parent
+  // still shows its aggregate bracket.
+  const rollupSpans = useMemo(() => computeRollupSpans(filteredTasks), [filteredTasks]);
+  const toggleCollapse = useCallback((taskId: string) => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }, []);
 
   // Base date for timeline (center point)
   const [baseDate, setBaseDate] = useState(() => getStartOfPeriod(new Date(), "week"));
@@ -79,15 +155,16 @@ export function RoadmapView() {
 
   // Calculate dependency data for lines
   const dependencyData = useMemo(() => {
-    return filteredTasks.map((task, index) => {
-      const position = calculateBarPosition(
-        task.startDate,
-        task.dueDate,
-        timelineStart,
-        timelineEnd,
-        zoom
-      );
-      
+    return rows.map(({ task }, index) => {
+      const hasOwnDates = !!(task.startDate && task.dueDate);
+      const own = hasOwnDates
+        ? calculateBarPosition(task.startDate, task.dueDate, timelineStart, timelineEnd, zoom)
+        : null;
+      const span = !hasOwnDates ? rollupSpans.get(task.id) : undefined;
+      const position =
+        own ??
+        (span ? calculateBarPosition(span.start, span.due, timelineStart, timelineEnd, zoom) : null);
+
       return {
         id: task.id,
         blockedByTaskIds: task.blockedByTaskIds || [],
@@ -97,7 +174,7 @@ export function RoadmapView() {
         hasDates: !!position,
       };
     }).filter(t => t.hasDates);
-  }, [filteredTasks, timelineStart, timelineEnd, zoom]);
+  }, [rows, rollupSpans, timelineStart, timelineEnd, zoom]);
 
   // Handle task click
   const handleTaskClick = useCallback(
@@ -234,12 +311,14 @@ export function RoadmapView() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Task List */}
         <RoadmapTaskList
-          tasks={filteredTasks}
+          rows={rows}
           statusOptions={statusOptions}
           selectedTaskIds={selectedTaskIds}
           projectSlug={project.slug}
+          collapsedIds={collapsedIds}
           onTaskClick={handleTaskClick}
           onCheckboxChange={handleCheckboxChange}
+          onToggleCollapse={toggleCollapse}
           onWheel={handleTaskListWheel}
           scrollTop={scrollTop}
         />
@@ -249,7 +328,7 @@ export function RoadmapView() {
           <TimelineGrid
             columns={columns}
             zoom={zoom}
-            rowCount={filteredTasks.length}
+            rowCount={rows.length}
             scrollLeft={scrollLeft}
             onScroll={setScrollLeft}
             onScrollTop={setScrollTop}
@@ -263,43 +342,64 @@ export function RoadmapView() {
               {/* Task rows */}
               <div
                 style={{
-                  height: filteredTasks.length * LAYOUT.ROADMAP_ROW_HEIGHT,
+                  height: rows.length * LAYOUT.ROADMAP_ROW_HEIGHT,
                   position: "relative",
                   zIndex: 10, // Ensure bars are above lines
                 }}
               >
-                {filteredTasks.map((task, index) => {
-                const position = calculateBarPosition(
-                  task.startDate,
-                  task.dueDate,
-                  timelineStart,
-                  timelineEnd,
-                  zoom
-                );
+                {rows.map(({ task }, index) => {
+                const hasOwnDates = !!(task.startDate && task.dueDate);
+                const position = hasOwnDates
+                  ? calculateBarPosition(
+                      task.startDate,
+                      task.dueDate,
+                      timelineStart,
+                      timelineEnd,
+                      zoom
+                    )
+                  : null;
 
                 const statusOption = statusOptions.find(
                   (s) => s.id === task.status
                 );
 
-                if (!position) {
-                  return <EmptyGanttRow key={task.id} rowIndex={index} />;
+                if (position) {
+                  return (
+                    <GanttBar
+                      key={task.id}
+                      task={task}
+                      position={position}
+                      statusOption={statusOption}
+                      isSelected={selectedTaskIds.includes(task.id)}
+                      isOverdue={isTaskOverdue(task.dueDate)}
+                      onClick={(e: React.MouseEvent) => handleTaskClick(task.id, e)}
+                      rowIndex={index}
+                      viewStartDate={timelineStart}
+                      zoom={zoom}
+                      onResizeEnd={handleBarResize}
+                    />
+                  );
                 }
 
-                return (
-                  <GanttBar
-                    key={task.id}
-                    task={task}
-                    position={position}
-                    statusOption={statusOption}
-                    isSelected={selectedTaskIds.includes(task.id)}
-                    isOverdue={isTaskOverdue(task.dueDate)}
-                    onClick={(e: React.MouseEvent) => handleTaskClick(task.id, e)}
-                    rowIndex={index}
-                    viewStartDate={timelineStart}
-                    zoom={zoom}
-                    onResizeEnd={handleBarResize}
-                  />
-                );
+                // Parent without its own dates: show a rollup bracket spanning subtasks.
+                if (!hasOwnDates) {
+                  const span = rollupSpans.get(task.id);
+                  const rollupPosition = span
+                    ? calculateBarPosition(span.start, span.due, timelineStart, timelineEnd, zoom)
+                    : null;
+                  if (rollupPosition) {
+                    return (
+                      <SummaryBar
+                        key={task.id}
+                        position={rollupPosition}
+                        rowIndex={index}
+                        onClick={(e: React.MouseEvent) => handleTaskClick(task.id, e)}
+                      />
+                    );
+                  }
+                }
+
+                return <EmptyGanttRow key={task.id} rowIndex={index} />;
               })}
             </div>
           </TimelineGrid>
@@ -322,6 +422,12 @@ export function RoadmapView() {
           <div className="w-3 h-3 rounded border-2 border-dashed border-destructive" />
           <span>Overdue</span>
         </div>
+        {rollupSpans.size > 0 && (
+          <div className="flex items-center gap-1">
+            <span className="w-4 h-1.5 rounded-full bg-muted-foreground/70" />
+            <span>Rolled up</span>
+          </div>
+        )}
       </div>
     </div>
   );
