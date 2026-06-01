@@ -9,6 +9,7 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
     'app.help': 'F1',
     'app.zenMode': 'Ctrl+\\',
     'app.toggleSidebar': 'Ctrl+B',
+    'app.showUploads': 'Ctrl+U',
     'viewer.close': 'Escape',
     'viewer.next': 'ArrowRight',
     'viewer.previous': 'ArrowLeft',

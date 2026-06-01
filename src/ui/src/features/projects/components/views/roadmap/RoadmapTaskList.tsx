@@ -1,30 +1,35 @@
 import { useRef, useEffect } from "react";
-import { Circle, CheckCircle, Spinner } from "@phosphor-icons/react";
+import { Circle, CheckCircle, Spinner, CaretRight, CaretDown } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarStack } from "@/components/subject";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { LAYOUT } from "@/features/projects/constants";
 import { getTaskTypeConfig } from "@/features/projects/utils/taskTypes";
 import type { Task, SelectOption } from "@/features/projects/types";
+import type { RoadmapRow } from "./roadmapRows";
 
 interface RoadmapTaskListProps {
-  tasks: Task[];
+  rows: RoadmapRow[];
   statusOptions: SelectOption[];
   selectedTaskIds: string[];
   projectSlug: string;
+  collapsedIds: Set<string>;
   onTaskClick: (taskId: string, e: React.MouseEvent) => void;
   onCheckboxChange: (taskId: string) => void;
+  onToggleCollapse: (taskId: string) => void;
   onWheel: (deltaY: number) => void;
   scrollTop: number;
 }
 
 export function RoadmapTaskList({
-  tasks,
+  rows,
   statusOptions,
   selectedTaskIds,
   projectSlug,
+  collapsedIds,
   onTaskClick,
   onCheckboxChange,
+  onToggleCollapse,
   onWheel,
   scrollTop,
 }: RoadmapTaskListProps) {
@@ -70,7 +75,7 @@ export function RoadmapTaskList({
         className="flex-1 overflow-hidden border-r border-border"
       >
         <div style={{ transform: `translateY(-${scrollTop}px)` }}>
-          {tasks.map((task) => {
+          {rows.map(({ task, depth, hasChildren }) => {
             const statusOption = statusOptions.find((s) => s.id === task.status);
             const hasDates = task.startDate && task.dueDate;
 
@@ -82,8 +87,12 @@ export function RoadmapTaskList({
                 hasDates={!!hasDates}
                 isSelected={selectedTaskIds.includes(task.id)}
                 projectSlug={projectSlug}
+                depth={depth}
+                hasChildren={hasChildren}
+                isCollapsed={collapsedIds.has(task.id)}
                 onClick={(e) => onTaskClick(task.id, e)}
                 onCheckboxChange={() => onCheckboxChange(task.id)}
+                onToggleCollapse={() => onToggleCollapse(task.id)}
               />
             );
           })}
@@ -99,8 +108,12 @@ interface RoadmapTaskRowProps {
   hasDates: boolean;
   isSelected: boolean;
   projectSlug: string;
+  depth: number;
+  hasChildren: boolean;
+  isCollapsed: boolean;
   onClick: (e: React.MouseEvent) => void;
   onCheckboxChange: () => void;
+  onToggleCollapse: () => void;
 }
 
 function RoadmapTaskRow({
@@ -109,8 +122,12 @@ function RoadmapTaskRow({
   hasDates,
   isSelected,
   projectSlug,
+  depth,
+  hasChildren,
+  isCollapsed,
   onClick,
   onCheckboxChange,
+  onToggleCollapse,
 }: RoadmapTaskRowProps) {
   const typeConfig = getTaskTypeConfig(task.taskType || "task");
   const TypeIcon = typeConfig.icon;
@@ -130,6 +147,25 @@ function RoadmapTaskRow({
       {isSelected && (
         <div className="absolute left-0 w-0.5 h-full bg-primary" />
       )}
+
+      {/* Indent + expand/collapse toggle */}
+      <div className="flex items-center shrink-0" style={{ paddingLeft: depth * 16 }}>
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse();
+            }}
+            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title={isCollapsed ? "Expand subtasks" : "Collapse subtasks"}
+          >
+            {isCollapsed ? <CaretRight size={12} weight="bold" /> : <CaretDown size={12} weight="bold" />}
+          </button>
+        ) : (
+          <span className="w-5" />
+        )}
+      </div>
 
       {/* Checkbox */}
       <input

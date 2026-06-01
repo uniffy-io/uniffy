@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FileArrowDown, ArrowsOut } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
-import { buildThumbnailUrl, buildMediaStreamUrl } from '@/shared/utils/fileUrls';
+import { buildThumbnailUrl, buildMediaUrl } from '@/shared/utils/fileUrls';
 import { formatFileSize } from '@/shared/utils/dateFormatting';
 import { useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files/store/viewerThunks';
@@ -151,7 +151,7 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
       {audios.map((att) => (
         <div key={att.id} className="relative max-w-md group/media">
           <AudioBlock
-            src={buildMediaStreamUrl(organizationId, att.fileId)}
+            src={buildMediaUrl(organizationId, att.fileId)}
             title={att.filename}
           />
           <button
@@ -173,7 +173,7 @@ function MessageAttachmentsInner({ attachments, organizationId }: MessageAttachm
       {videos.map((att) => (
         <div key={att.id} className="relative max-w-lg rounded-lg overflow-hidden border border-border group/media">
           <VideoBlock
-            src={buildMediaStreamUrl(organizationId, att.fileId)}
+            src={buildMediaUrl(organizationId, att.fileId)}
             title={att.filename}
           />
           <button

@@ -25,6 +25,7 @@ import {
     closeViewer,
     clearSavedFilters,
 } from "@/features/files";
+import { uploadService } from "@/features/files/upload";
 import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
 import { clearTags } from '@/features/tags/store/tagsSlice';
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
@@ -198,6 +199,8 @@ export function OrganizationPicker() {
     dispatch(clearNotesTree());
     dispatch(clearFiles());
     dispatch(clearFilesTree());
+    // The upload engine is module-level; cancel in-flight uploads before resetting the tray projection.
+    uploadService.cancelAll();
     dispatch(clearUploads());
     dispatch(closeViewer());
     dispatch(clearSavedFilters());

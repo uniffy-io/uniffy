@@ -7,6 +7,7 @@ import type { Awareness } from 'y-protocols/awareness';
 import {
   encodeAwarenessUpdate,
   applyAwarenessUpdate,
+  removeAwarenessStates,
 } from 'y-protocols/awareness';
 import * as syncProtocol from 'y-protocols/sync';
 import * as encoding from 'lib0/encoding';
@@ -139,6 +140,22 @@ class RealtimeMultiplexer {
     if (!entry) return;
     entry.ydoc.off('update', entry.updateHandler);
     entry.awareness.off('change', entry.awarenessHandler);
+    // Announce departure so peers drop our cursor now, rather than waiting for
+    // y-protocols' 30s outdatedTimeout GC. The change handler is already
+    // detached, so this manual frame is the only removal that goes out.
+    if (
+      this.ws?.readyState === WebSocket.OPEN
+      && entry.awareness.getLocalState() !== null
+    ) {
+      removeAwarenessStates(entry.awareness, [entry.awareness.clientID], 'local-detach');
+      const enc = encoding.createEncoder();
+      encoding.writeVarUint(enc, MESSAGE_AWARENESS);
+      encoding.writeVarUint8Array(
+        enc,
+        encodeAwarenessUpdate(entry.awareness, [entry.awareness.clientID]),
+      );
+      this.sendForDoc(docName, encoding.toUint8Array(enc));
+    }
     this.docs.delete(docName);
     if (this.docs.size === 0) this.scheduleIdleClose();
   }
@@ -289,17 +306,20 @@ class RealtimeMultiplexer {
       // Rebroadcast local awareness so peers' `outdatedTimeout` resets
       // and our cursor/label stays on their screen.
       for (const entry of this.docs.values()) {
-        const localState = entry.awareness.getLocalState();
-        if (localState === null) continue;
-        const enc = encoding.createEncoder();
-        encoding.writeVarUint(enc, MESSAGE_AWARENESS);
-        encoding.writeVarUint8Array(
-          enc,
-          encodeAwarenessUpdate(entry.awareness, [entry.awareness.clientID]),
-        );
-        this.sendForDoc(entry.docName, encoding.toUint8Array(enc));
+        this.sendLocalAwareness(entry);
       }
     }, AWARENESS_KEEPALIVE_MS);
+  }
+
+  private sendLocalAwareness(entry: DocEntry): void {
+    if (entry.awareness.getLocalState() === null) return;
+    const enc = encoding.createEncoder();
+    encoding.writeVarUint(enc, MESSAGE_AWARENESS);
+    encoding.writeVarUint8Array(
+      enc,
+      encodeAwarenessUpdate(entry.awareness, [entry.awareness.clientID]),
+    );
+    this.sendForDoc(entry.docName, encoding.toUint8Array(enc));
   }
 
   private stopAwarenessKeepaliveTimer(): void {
@@ -370,13 +390,7 @@ class RealtimeMultiplexer {
     } else if (messageType === MESSAGE_AWARENESS) {
       applyAwarenessUpdate(entry.awareness, decoding.readVarUint8Array(decoder), 'remote');
     } else if (messageType === MESSAGE_QUERY_AWARENESS) {
-      const enc = encoding.createEncoder();
-      encoding.writeVarUint(enc, MESSAGE_AWARENESS);
-      encoding.writeVarUint8Array(
-        enc,
-        encodeAwarenessUpdate(entry.awareness, [entry.awareness.clientID]),
-      );
-      this.sendForDoc(docName, encoding.toUint8Array(enc));
+      this.sendLocalAwareness(entry);
     }
   }
 
@@ -392,17 +406,14 @@ class RealtimeMultiplexer {
 
   private bootstrapDoc(entry: DocEntry): void {
     this.sendInitialSync(entry);
-    // Push our awareness state so peers see us immediately.
-    const localState = entry.awareness.getLocalState();
-    if (localState !== null) {
-      const enc = encoding.createEncoder();
-      encoding.writeVarUint(enc, MESSAGE_AWARENESS);
-      encoding.writeVarUint8Array(
-        enc,
-        encodeAwarenessUpdate(entry.awareness, [entry.awareness.clientID]),
-      );
-      this.sendForDoc(entry.docName, encoding.toUint8Array(enc));
-    }
+    // Push our awareness so peers see us immediately...
+    this.sendLocalAwareness(entry);
+    // ...and ask peers to re-announce theirs. The backend keeps no awareness
+    // map, so without this an idle peer's cursor stays hidden until their next
+    // keep-alive. Peers reply via their MESSAGE_QUERY_AWARENESS handler.
+    const enc = encoding.createEncoder();
+    encoding.writeVarUint(enc, MESSAGE_QUERY_AWARENESS);
+    this.sendForDoc(entry.docName, encoding.toUint8Array(enc));
   }
 
   private sendInitialSync(entry: DocEntry): void {

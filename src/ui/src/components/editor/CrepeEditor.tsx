@@ -25,7 +25,7 @@ import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files';
-import { parseFileUrl, buildFileUrl, buildMediaStreamUrl } from '@/shared/utils/fileUrls';
+import { parseFileUrl, buildFileUrl, buildMediaUrl } from '@/shared/utils/fileUrls';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { searchApi } from '@/features/search';
 import { tagPlugins } from '@/components/editor/plugins/tag';
@@ -303,10 +303,10 @@ async function autoEmbedMediaMentions(view: EditorView, organizationId: string) 
       url = buildFileUrl(organizationId, mention.fileId);
     } else if (mime.startsWith('video/')) {
       mediaType = 'video';
-      url = buildMediaStreamUrl(organizationId, mention.fileId);
+      url = buildMediaUrl(organizationId, mention.fileId);
     } else if (mime.startsWith('audio/')) {
       mediaType = 'audio';
-      url = buildMediaStreamUrl(organizationId, mention.fileId);
+      url = buildMediaUrl(organizationId, mention.fileId);
     } else {
       continue;
     }

@@ -2,7 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { Dispatch, UnknownAction } from '@reduxjs/toolkit';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { chatApi } from '@/features/chat/api/chatApi';
-import { attachmentsApi } from '@/features/attachments';
+import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import type { ChatChannel as ProtoChatChannel } from '@uniffy/proto/chat/v1/chat_pb';
 import {

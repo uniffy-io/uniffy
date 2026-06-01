@@ -20,6 +20,7 @@ const SHORTCUT_CATEGORIES = [
             { action: 'app.help', label: 'Help' },
             { action: 'app.zenMode', label: 'Zen Mode' },
             { action: 'app.toggleSidebar', label: 'Toggle Sidebar' },
+            { action: 'app.showUploads', label: 'Show Uploads' },
         ],
     },
     {

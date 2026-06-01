@@ -20,6 +20,8 @@ export interface ContentAccessPolicy {
     baselineRole: number | null;
     /** The current user's backend-resolved effective role; null = no access. */
     callerRole: number | null;
+    /** Live access mode after inheriting org defaults; null = not provided. */
+    effectiveAccessMode: number | null;
 }
 
 export interface SerializedContentMember {

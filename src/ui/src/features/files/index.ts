@@ -15,7 +15,7 @@ export { FilesLayout } from '@/features/files/components/FilesLayout';
 export { FilesSidebar } from '@/features/files/components/sidebar/FilesSidebar';
 export { FilesList } from '@/features/files/components/list/FilesList';
 export { UploadDropzone } from '@/features/files/components/upload/UploadDropzone';
-export { UploadPanel } from '@/features/files/components/upload/UploadPanel';
+export { UploadTray } from '@/features/files/components/upload/UploadTray';
 export { FileViewerModal } from '@/features/files/components/viewer';
 
 export {
@@ -63,22 +63,17 @@ export type { FilesTreeState, SerializedTreeNode, SerializedFolder } from '@/fea
 
 export {
     uploadReducer,
-    addToQueue,
-    removeFromQueue,
-    startUpload,
-    updateProgress,
-    setCompleting,
-    completeUpload,
-    failUpload,
-    abortUpload,
-    retryUpload,
-    clearCompleted,
-    clearFailed,
-    toggleUploadPanel,
-    setShowUploadPanel,
+    setUploadRecords,
+    setTrayView,
+    startDownload,
+    updateDownloadProgress,
+    setDownloadArchiving,
+    completeDownload,
+    failDownload,
+    clearCompletedDownloads,
     clearUploads,
 } from '@/features/files/store';
-export type { UploadItem } from '@/features/files/store';
+export type { DownloadItem, TrayView } from '@/features/files/store';
 
 export {
     selectAllFiles,
@@ -86,16 +81,14 @@ export {
     selectActiveFiles,
     selectDeletedFiles,
     selectAllTreeNodes,
-    selectActiveUploadsArray,
-    selectTotalPendingUploads,
 } from '@/features/files/store';
 
-export { useUploadProcessor } from '@/features/files/hooks/useUploadProcessor';
 export { useSavedFilters } from '@/features/files/hooks/useSavedFilters';
 export { useApplyFilter } from '@/features/files/hooks/useApplyFilter';
 
 export { filesApi } from '@/features/files/api/filesApi';
 export { savedFiltersApi } from '@/features/files/api/savedFiltersApi';
+export { attachmentsApi } from '@/features/files/api/attachmentsApi';
 
 export {
     savedFiltersReducer,

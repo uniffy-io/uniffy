@@ -1,9 +1,9 @@
 import { createClient } from '@connectrpc/connect';
 import { unaryTransport } from '@/config/api';
-import { AttachmentsService, AttachFileRequestSchema, BatchListAttachmentsRequestSchema, DetachFileRequestSchema, GetAttachmentsFolderRequestSchema, ListAttachmentsRequestSchema, ListSharedAttachmentsRequestSchema } from '@uniffy/proto/attachments/v1/attachments_pb';
+import { FilesService, AttachFileRequestSchema, BatchListAttachmentsRequestSchema, DetachFileRequestSchema, GetAttachmentsFolderRequestSchema, ListAttachmentsRequestSchema } from '@uniffy/proto/files/v1/files_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
-const attachmentsClient = createClient(AttachmentsService, unaryTransport);
+const attachmentsClient = createClient(FilesService, unaryTransport);
 
 export const attachmentsApi = {
     /** Attaches a file to content; copies into the user's Attachments folder if not already there. */
@@ -23,10 +23,6 @@ export const attachmentsApi = {
     /** Hot-path batched fetch (e.g. chat channel open) - avoids N parallel `listAttachments` calls. */
     batchListAttachments: async (request: MessageInitShape<typeof BatchListAttachmentsRequestSchema>) => {
         return attachmentsClient.batchListAttachments(request);
-    },
-
-    listSharedAttachments: async (request: MessageInitShape<typeof ListSharedAttachmentsRequestSchema>) => {
-        return attachmentsClient.listSharedAttachments(request);
     },
 
     /** Returns the folder_id used with FilesService.InitiateUpload for new attachments. */
