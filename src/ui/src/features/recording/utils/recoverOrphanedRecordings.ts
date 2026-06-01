@@ -7,11 +7,11 @@
 import { UploadStatus } from '@uniffy/proto/files/v1/files_pb';
 import { filesApi } from '@/features/files/api/filesApi';
 import {
-    clearUpload,
+    clearUploadChunks,
     deleteChunk,
-    listOrphanedUploads,
+    listOrphanedChunkUploads,
     loadPendingChunks,
-} from '@/features/recording/utils/recordingChunkStore';
+} from '@/features/files/upload/uploadStore';
 
 const ORPHAN_AGE_MS = 60_000;
 const RECOVERY_CHANNEL = 'uniffy-recording-recovery';
@@ -56,7 +56,7 @@ export interface RecoveryResult {
 export async function resumeUpload(uploadId: string): Promise<RecoveryResult | null> {
     const status = await filesApi.getUploadStatus({ uploadId });
     if (status.status !== UploadStatus.ACTIVE) {
-        await clearUpload(uploadId);
+        await clearUploadChunks(uploadId);
         return null;
     }
     const completed = new Set<number>(
@@ -78,7 +78,7 @@ export async function resumeUpload(uploadId: string): Promise<RecoveryResult | n
         await deleteChunk(uploadId, chunk.partNumber);
     }
     const completion = await filesApi.completeUpload({ uploadId });
-    await clearUpload(uploadId);
+    await clearUploadChunks(uploadId);
     if (!completion.file) return null;
     return {
         fileId: completion.file.id,
@@ -94,7 +94,7 @@ export async function recoverOrphanedRecordings(
 
     let uploadIds: string[];
     try {
-        uploadIds = await listOrphanedUploads(ORPHAN_AGE_MS);
+        uploadIds = await listOrphanedChunkUploads(ORPHAN_AGE_MS);
     } catch {
         return;
     }
@@ -118,7 +118,7 @@ export async function recoverOrphanedRecordings(
             }
         } catch (err) {
             console.warn('[recording] recovery failed', uploadId, err);
-            await clearUpload(uploadId);
+            await clearUploadChunks(uploadId);
         }
     }
 }

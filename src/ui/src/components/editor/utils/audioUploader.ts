@@ -1,6 +1,6 @@
 import { filesApi } from '@/features/files/api/filesApi';
-import { attachmentsApi } from '@/features/attachments';
-import { buildMediaStreamUrl } from '@/shared/utils/fileUrls';
+import { attachmentsApi } from '@/features/files/api/attachmentsApi';
+import { buildMediaUrl } from '@/shared/utils/fileUrls';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
 const attachmentsFolderCache = new Map<string, string>();
@@ -86,7 +86,7 @@ export async function uploadAudio(options: UploadAudioOptions): Promise<string> 
     onFileUploaded?.(fileId);
     onProgress?.(100);
 
-    return buildMediaStreamUrl(organizationId, fileId);
+    return buildMediaUrl(organizationId, fileId);
 }
 
 export function createAudioUploadHandler(

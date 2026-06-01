@@ -7,10 +7,10 @@
 import { filesApi } from '@/features/files/api/filesApi';
 import { PartAggregator } from '@/features/recording/utils/partAggregator';
 import {
-    clearUpload,
+    clearUploadChunks,
     deleteChunk,
     putChunk,
-} from '@/features/recording/utils/recordingChunkStore';
+} from '@/features/files/upload/uploadStore';
 import {
     classifyBacklog,
     type BackpressureLevel,
@@ -102,7 +102,7 @@ export class StreamingUploader {
             throw new Error('Server did not return a File on completeUpload');
         }
         // Server has it; drop client-side recovery rows so they don't haunt the next session.
-        void clearUpload(this.uploadId);
+        void clearUploadChunks(this.uploadId);
         return {
             fileId: completion.file.id,
             filename: completion.file.filename,
@@ -118,7 +118,7 @@ export class StreamingUploader {
             } catch {
                 // best-effort; the reaper will GC if abort fails
             }
-            void clearUpload(this.uploadId);
+            void clearUploadChunks(this.uploadId);
         }
     }
 

@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { filesApi } from '@/features/files/api/filesApi';
-import { addToQueue } from '@/features/files/store/uploadSlice';
-import { storeFile } from '@/features/files/utils/fileStore';
+import { enqueueFileUploads } from '@/features/files/upload/enqueueFileUploads';
 import { fetchFilesTree } from '@/features/files/store/filesTreeSlice';
 import { resolveUploadAccessMode } from '@/features/files/utils/resolveUploadAccessMode';
 import type { ScanResult, FolderTreeStructure } from '@/features/files/utils/folderScanner';
@@ -123,25 +122,23 @@ export function useFolderUpload() {
                 }
             }
 
-            const uploadItems = includedFiles.map((scannedFile) => {
-                const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                storeFile(id, scannedFile.file);
-
+            const uploadInputs = includedFiles.map((scannedFile) => {
                 const parentPath = getParentPath(scannedFile.path);
                 const folderId = folderMapping[parentPath] || targetFolderId;
 
                 return {
-                    id,
+                    file: scannedFile.file,
                     filename: scannedFile.file.name,
                     mimeType: scannedFile.file.type || 'application/octet-stream',
-                    totalSize: scannedFile.file.size,
+                    organizationId,
+                    context: 'files' as const,
                     folderId,
                     accessMode,
                 };
             });
 
-            if (uploadItems.length > 0) {
-                dispatch(addToQueue(uploadItems));
+            if (uploadInputs.length > 0) {
+                enqueueFileUploads(uploadInputs, dispatch);
             }
         } finally {
             setUploading(false);
