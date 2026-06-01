@@ -672,16 +672,18 @@ export function ConfigView() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() =>
-                                                dispatch(
-                                                    modelsTab === "all"
-                                                        ? fetchAvailableModels({ forceRefresh: true })
-                                                        : fetchModelsForKey({
-                                                              keyId: selectedKey.id,
-                                                              forceRefresh: true,
-                                                          }),
-                                                )
-                                            }
+                                            onClick={() => {
+                                                if (modelsTab === "all") {
+                                                    dispatch(fetchAvailableModels({ forceRefresh: true }));
+                                                } else {
+                                                    dispatch(
+                                                        fetchModelsForKey({
+                                                            keyId: selectedKey.id,
+                                                            forceRefresh: true,
+                                                        }),
+                                                    );
+                                                }
+                                            }}
                                             aria-label="Refresh models"
                                         >
                                             <ArrowClockwise size={16} />
