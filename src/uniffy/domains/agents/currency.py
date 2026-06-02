@@ -20,7 +20,9 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
 from uniffy.core.models.agents.runtime_settings import AgentRuntimeSettings
 
-DEFAULT_DISPLAY_CURRENCY = "EUR"
+# Matches pricing.PRICING_CURRENCY so a fresh org needs no exchange-rate row:
+# convert() short-circuits when display == pricing currency.
+DEFAULT_DISPLAY_CURRENCY = "USD"
 
 
 async def get_display_currency(
@@ -67,8 +69,9 @@ async def convert(
 
     if rate is None:
         raise ValidationError(
+            "exchange_rate",
             f"No exchange rate defined for {from_currency} -> {to_currency}. "
-            f"Add one in /admin/agents-budgets > Currencies."
+            f"Add one in /admin/agents-budgets > Currencies.",
         )
 
     return amount * rate

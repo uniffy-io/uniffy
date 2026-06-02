@@ -67,7 +67,7 @@ const initialState: AgentsGovernanceState = {
     spend: null,
     rateLimits: [],
     currencyRates: [],
-    displayCurrency: 'EUR',
+    displayCurrency: 'USD',
     loadingBudget: false,
     savingBudget: false,
     loadingSpend: false,

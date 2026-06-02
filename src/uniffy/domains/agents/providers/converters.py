@@ -145,4 +145,19 @@ def model_info_to_proto(model: DomainModelInfo) -> ProtoModelInfo:
         supports_tools=model.supports_tools,
         supports_vision=model.supports_vision,
         supports_thinking=model.supports_thinking,
+        supports_image_generation=model.supports_image_generation,
+        catalog_known=model.catalog_known,
+        default_max_tokens=model.default_max_tokens or 0,
+        supports_prompt_cache=model.supports_prompt_cache,
+        deprecated=model.deprecated,
+        reasoning_levels=list(model.reasoning_levels),
+        default_reasoning_effort=model.default_reasoning_effort or "",
+        input_per_1m=str(model.input_per_1m) if model.input_per_1m is not None else "",
+        output_per_1m=str(model.output_per_1m) if model.output_per_1m is not None else "",
+        cache_read_per_1m=str(model.cache_read_per_1m)
+        if model.cache_read_per_1m is not None
+        else "",
+        cache_write_per_1m=str(model.cache_write_per_1m)
+        if model.cache_write_per_1m is not None
+        else "",
     )

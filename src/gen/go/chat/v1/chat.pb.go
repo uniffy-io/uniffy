@@ -6260,6 +6260,112 @@ func (x *RespondToAgentConfirmationResponse) GetDecidedAt() *timestamppb.Timesta
 	return nil
 }
 
+type StopAgentRunRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ChannelId      string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	AgentId        string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *StopAgentRunRequest) Reset() {
+	*x = StopAgentRunRequest{}
+	mi := &file_chat_v1_chat_proto_msgTypes[97]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StopAgentRunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StopAgentRunRequest) ProtoMessage() {}
+
+func (x *StopAgentRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[97]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StopAgentRunRequest.ProtoReflect.Descriptor instead.
+func (*StopAgentRunRequest) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{97}
+}
+
+func (x *StopAgentRunRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *StopAgentRunRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *StopAgentRunRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+type StopAgentRunResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True if an active run was found for the (channel, agent) and a cancel was
+	// requested; false if nothing was running.
+	Stopped       bool `protobuf:"varint,1,opt,name=stopped,proto3" json:"stopped,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StopAgentRunResponse) Reset() {
+	*x = StopAgentRunResponse{}
+	mi := &file_chat_v1_chat_proto_msgTypes[98]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StopAgentRunResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StopAgentRunResponse) ProtoMessage() {}
+
+func (x *StopAgentRunResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[98]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StopAgentRunResponse.ProtoReflect.Descriptor instead.
+func (*StopAgentRunResponse) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{98}
+}
+
+func (x *StopAgentRunResponse) GetStopped() bool {
+	if x != nil {
+		return x.Stopped
+	}
+	return false
+}
+
 // A single pending agent tool-call approval still awaiting a user decision.
 // Mirrors the fields the AGENT_CONFIRMATION_REQUESTED stream event carries so
 // the frontend can synthesise the same confirmation card shape on reload.
@@ -6279,7 +6385,7 @@ type PendingAgentApproval struct {
 
 func (x *PendingAgentApproval) Reset() {
 	*x = PendingAgentApproval{}
-	mi := &file_chat_v1_chat_proto_msgTypes[97]
+	mi := &file_chat_v1_chat_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6291,7 +6397,7 @@ func (x *PendingAgentApproval) String() string {
 func (*PendingAgentApproval) ProtoMessage() {}
 
 func (x *PendingAgentApproval) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[97]
+	mi := &file_chat_v1_chat_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6304,7 +6410,7 @@ func (x *PendingAgentApproval) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PendingAgentApproval.ProtoReflect.Descriptor instead.
 func (*PendingAgentApproval) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{97}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *PendingAgentApproval) GetRequestId() string {
@@ -6373,7 +6479,7 @@ type GetChannelPendingApprovalsRequest struct {
 
 func (x *GetChannelPendingApprovalsRequest) Reset() {
 	*x = GetChannelPendingApprovalsRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[98]
+	mi := &file_chat_v1_chat_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6385,7 +6491,7 @@ func (x *GetChannelPendingApprovalsRequest) String() string {
 func (*GetChannelPendingApprovalsRequest) ProtoMessage() {}
 
 func (x *GetChannelPendingApprovalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[98]
+	mi := &file_chat_v1_chat_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6398,7 +6504,7 @@ func (x *GetChannelPendingApprovalsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetChannelPendingApprovalsRequest.ProtoReflect.Descriptor instead.
 func (*GetChannelPendingApprovalsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{98}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *GetChannelPendingApprovalsRequest) GetOrganizationId() string {
@@ -6424,7 +6530,7 @@ type GetChannelPendingApprovalsResponse struct {
 
 func (x *GetChannelPendingApprovalsResponse) Reset() {
 	*x = GetChannelPendingApprovalsResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[99]
+	mi := &file_chat_v1_chat_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6436,7 +6542,7 @@ func (x *GetChannelPendingApprovalsResponse) String() string {
 func (*GetChannelPendingApprovalsResponse) ProtoMessage() {}
 
 func (x *GetChannelPendingApprovalsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[99]
+	mi := &file_chat_v1_chat_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6449,7 +6555,7 @@ func (x *GetChannelPendingApprovalsResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetChannelPendingApprovalsResponse.ProtoReflect.Descriptor instead.
 func (*GetChannelPendingApprovalsResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{99}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *GetChannelPendingApprovalsResponse) GetApprovals() []*PendingAgentApproval {
@@ -6503,7 +6609,7 @@ type ChannelAgentContextStats struct {
 
 func (x *ChannelAgentContextStats) Reset() {
 	*x = ChannelAgentContextStats{}
-	mi := &file_chat_v1_chat_proto_msgTypes[100]
+	mi := &file_chat_v1_chat_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6515,7 +6621,7 @@ func (x *ChannelAgentContextStats) String() string {
 func (*ChannelAgentContextStats) ProtoMessage() {}
 
 func (x *ChannelAgentContextStats) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[100]
+	mi := &file_chat_v1_chat_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6528,7 +6634,7 @@ func (x *ChannelAgentContextStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelAgentContextStats.ProtoReflect.Descriptor instead.
 func (*ChannelAgentContextStats) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{100}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ChannelAgentContextStats) GetTotalMessages() int32 {
@@ -6633,7 +6739,7 @@ type GetChannelAgentContextStatsRequest struct {
 
 func (x *GetChannelAgentContextStatsRequest) Reset() {
 	*x = GetChannelAgentContextStatsRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[101]
+	mi := &file_chat_v1_chat_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6645,7 +6751,7 @@ func (x *GetChannelAgentContextStatsRequest) String() string {
 func (*GetChannelAgentContextStatsRequest) ProtoMessage() {}
 
 func (x *GetChannelAgentContextStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[101]
+	mi := &file_chat_v1_chat_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6658,7 +6764,7 @@ func (x *GetChannelAgentContextStatsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetChannelAgentContextStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetChannelAgentContextStatsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{101}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *GetChannelAgentContextStatsRequest) GetOrganizationId() string {
@@ -6691,7 +6797,7 @@ type GetChannelAgentContextStatsResponse struct {
 
 func (x *GetChannelAgentContextStatsResponse) Reset() {
 	*x = GetChannelAgentContextStatsResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[102]
+	mi := &file_chat_v1_chat_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6703,7 +6809,7 @@ func (x *GetChannelAgentContextStatsResponse) String() string {
 func (*GetChannelAgentContextStatsResponse) ProtoMessage() {}
 
 func (x *GetChannelAgentContextStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[102]
+	mi := &file_chat_v1_chat_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6716,7 +6822,7 @@ func (x *GetChannelAgentContextStatsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetChannelAgentContextStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetChannelAgentContextStatsResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{102}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *GetChannelAgentContextStatsResponse) GetStats() *ChannelAgentContextStats {
@@ -6738,7 +6844,7 @@ type GetChannelAgentContextStatsBatchRequest struct {
 
 func (x *GetChannelAgentContextStatsBatchRequest) Reset() {
 	*x = GetChannelAgentContextStatsBatchRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[103]
+	mi := &file_chat_v1_chat_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6750,7 +6856,7 @@ func (x *GetChannelAgentContextStatsBatchRequest) String() string {
 func (*GetChannelAgentContextStatsBatchRequest) ProtoMessage() {}
 
 func (x *GetChannelAgentContextStatsBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[103]
+	mi := &file_chat_v1_chat_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6763,7 +6869,7 @@ func (x *GetChannelAgentContextStatsBatchRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetChannelAgentContextStatsBatchRequest.ProtoReflect.Descriptor instead.
 func (*GetChannelAgentContextStatsBatchRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{103}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *GetChannelAgentContextStatsBatchRequest) GetOrganizationId() string {
@@ -6799,7 +6905,7 @@ type GetChannelAgentContextStatsBatchResponse struct {
 
 func (x *GetChannelAgentContextStatsBatchResponse) Reset() {
 	*x = GetChannelAgentContextStatsBatchResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[104]
+	mi := &file_chat_v1_chat_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6811,7 +6917,7 @@ func (x *GetChannelAgentContextStatsBatchResponse) String() string {
 func (*GetChannelAgentContextStatsBatchResponse) ProtoMessage() {}
 
 func (x *GetChannelAgentContextStatsBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[104]
+	mi := &file_chat_v1_chat_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6824,7 +6930,7 @@ func (x *GetChannelAgentContextStatsBatchResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use GetChannelAgentContextStatsBatchResponse.ProtoReflect.Descriptor instead.
 func (*GetChannelAgentContextStatsBatchResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{104}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *GetChannelAgentContextStatsBatchResponse) GetStats() map[string]*ChannelAgentContextStats {
@@ -6845,7 +6951,7 @@ type CompactChannelAgentContextRequest struct {
 
 func (x *CompactChannelAgentContextRequest) Reset() {
 	*x = CompactChannelAgentContextRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[105]
+	mi := &file_chat_v1_chat_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6857,7 +6963,7 @@ func (x *CompactChannelAgentContextRequest) String() string {
 func (*CompactChannelAgentContextRequest) ProtoMessage() {}
 
 func (x *CompactChannelAgentContextRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[105]
+	mi := &file_chat_v1_chat_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6870,7 +6976,7 @@ func (x *CompactChannelAgentContextRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use CompactChannelAgentContextRequest.ProtoReflect.Descriptor instead.
 func (*CompactChannelAgentContextRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{105}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *CompactChannelAgentContextRequest) GetOrganizationId() string {
@@ -6908,7 +7014,7 @@ type CompactChannelAgentContextResponse struct {
 
 func (x *CompactChannelAgentContextResponse) Reset() {
 	*x = CompactChannelAgentContextResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[106]
+	mi := &file_chat_v1_chat_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6920,7 +7026,7 @@ func (x *CompactChannelAgentContextResponse) String() string {
 func (*CompactChannelAgentContextResponse) ProtoMessage() {}
 
 func (x *CompactChannelAgentContextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[106]
+	mi := &file_chat_v1_chat_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6933,7 +7039,7 @@ func (x *CompactChannelAgentContextResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use CompactChannelAgentContextResponse.ProtoReflect.Descriptor instead.
 func (*CompactChannelAgentContextResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{106}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *CompactChannelAgentContextResponse) GetCompacted() bool {
@@ -6989,7 +7095,7 @@ type ResetChannelAgentContextRequest struct {
 
 func (x *ResetChannelAgentContextRequest) Reset() {
 	*x = ResetChannelAgentContextRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[107]
+	mi := &file_chat_v1_chat_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7001,7 +7107,7 @@ func (x *ResetChannelAgentContextRequest) String() string {
 func (*ResetChannelAgentContextRequest) ProtoMessage() {}
 
 func (x *ResetChannelAgentContextRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[107]
+	mi := &file_chat_v1_chat_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7014,7 +7120,7 @@ func (x *ResetChannelAgentContextRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetChannelAgentContextRequest.ProtoReflect.Descriptor instead.
 func (*ResetChannelAgentContextRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{107}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *ResetChannelAgentContextRequest) GetOrganizationId() string {
@@ -7052,7 +7158,7 @@ type ResetChannelAgentContextResponse struct {
 
 func (x *ResetChannelAgentContextResponse) Reset() {
 	*x = ResetChannelAgentContextResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[108]
+	mi := &file_chat_v1_chat_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7064,7 +7170,7 @@ func (x *ResetChannelAgentContextResponse) String() string {
 func (*ResetChannelAgentContextResponse) ProtoMessage() {}
 
 func (x *ResetChannelAgentContextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[108]
+	mi := &file_chat_v1_chat_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7077,7 +7183,7 @@ func (x *ResetChannelAgentContextResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetChannelAgentContextResponse.ProtoReflect.Descriptor instead.
 func (*ResetChannelAgentContextResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{108}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *ResetChannelAgentContextResponse) GetDividerMessageId() string {
@@ -7671,7 +7777,14 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\"RespondToAgentConfirmationResponse\x12>\n" +
 	"\bdecision\x18\x01 \x01(\x0e2\".chat.v1.AgentConfirmationDecisionR\bdecision\x129\n" +
 	"\n" +
-	"decided_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\"\xe1\x02\n" +
+	"decided_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\"x\n" +
+	"\x13StopAgentRunRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\"0\n" +
+	"\x14StopAgentRunResponse\x12\x18\n" +
+	"\astopped\x18\x01 \x01(\bR\astopped\"\xe1\x02\n" +
 	"\x14PendingAgentApproval\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
@@ -7772,7 +7885,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x19AgentConfirmationDecision\x12+\n" +
 	"'AGENT_CONFIRMATION_DECISION_UNSPECIFIED\x10\x00\x12'\n" +
 	"#AGENT_CONFIRMATION_DECISION_APPROVE\x10\x01\x12$\n" +
-	" AGENT_CONFIRMATION_DECISION_DENY\x10\x022\xc5 \n" +
+	" AGENT_CONFIRMATION_DECISION_DENY\x10\x022\x94!\n" +
 	"\vChatService\x12P\n" +
 	"\rCreateChannel\x12\x1d.chat.v1.CreateChannelRequest\x1a\x1e.chat.v1.CreateChannelResponse\"\x00\x12G\n" +
 	"\n" +
@@ -7825,7 +7938,8 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x1bGetChannelAgentContextStats\x12+.chat.v1.GetChannelAgentContextStatsRequest\x1a,.chat.v1.GetChannelAgentContextStatsResponse\"\x00\x12\x89\x01\n" +
 	" GetChannelAgentContextStatsBatch\x120.chat.v1.GetChannelAgentContextStatsBatchRequest\x1a1.chat.v1.GetChannelAgentContextStatsBatchResponse\"\x00\x12w\n" +
 	"\x1aCompactChannelAgentContext\x12*.chat.v1.CompactChannelAgentContextRequest\x1a+.chat.v1.CompactChannelAgentContextResponse\"\x00\x12q\n" +
-	"\x18ResetChannelAgentContext\x12(.chat.v1.ResetChannelAgentContextRequest\x1a).chat.v1.ResetChannelAgentContextResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
+	"\x18ResetChannelAgentContext\x12(.chat.v1.ResetChannelAgentContextRequest\x1a).chat.v1.ResetChannelAgentContextResponse\"\x00\x12M\n" +
+	"\fStopAgentRun\x12\x1c.chat.v1.StopAgentRunRequest\x1a\x1d.chat.v1.StopAgentRunResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
 
 var (
 	file_chat_v1_chat_proto_rawDescOnce sync.Once
@@ -7840,7 +7954,7 @@ func file_chat_v1_chat_proto_rawDescGZIP() []byte {
 }
 
 var file_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 112)
+var file_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 114)
 var file_chat_v1_chat_proto_goTypes = []any{
 	(ChannelType)(0),                                 // 0: chat.v1.ChannelType
 	(ChannelRole)(0),                                 // 1: chat.v1.ChannelRole
@@ -7944,54 +8058,56 @@ var file_chat_v1_chat_proto_goTypes = []any{
 	(*MoveChannelToCategoryResponse)(nil),            // 99: chat.v1.MoveChannelToCategoryResponse
 	(*RespondToAgentConfirmationRequest)(nil),        // 100: chat.v1.RespondToAgentConfirmationRequest
 	(*RespondToAgentConfirmationResponse)(nil),       // 101: chat.v1.RespondToAgentConfirmationResponse
-	(*PendingAgentApproval)(nil),                     // 102: chat.v1.PendingAgentApproval
-	(*GetChannelPendingApprovalsRequest)(nil),        // 103: chat.v1.GetChannelPendingApprovalsRequest
-	(*GetChannelPendingApprovalsResponse)(nil),       // 104: chat.v1.GetChannelPendingApprovalsResponse
-	(*ChannelAgentContextStats)(nil),                 // 105: chat.v1.ChannelAgentContextStats
-	(*GetChannelAgentContextStatsRequest)(nil),       // 106: chat.v1.GetChannelAgentContextStatsRequest
-	(*GetChannelAgentContextStatsResponse)(nil),      // 107: chat.v1.GetChannelAgentContextStatsResponse
-	(*GetChannelAgentContextStatsBatchRequest)(nil),  // 108: chat.v1.GetChannelAgentContextStatsBatchRequest
-	(*GetChannelAgentContextStatsBatchResponse)(nil), // 109: chat.v1.GetChannelAgentContextStatsBatchResponse
-	(*CompactChannelAgentContextRequest)(nil),        // 110: chat.v1.CompactChannelAgentContextRequest
-	(*CompactChannelAgentContextResponse)(nil),       // 111: chat.v1.CompactChannelAgentContextResponse
-	(*ResetChannelAgentContextRequest)(nil),          // 112: chat.v1.ResetChannelAgentContextRequest
-	(*ResetChannelAgentContextResponse)(nil),         // 113: chat.v1.ResetChannelAgentContextResponse
-	nil,                                              // 114: chat.v1.ChatMessage.MetadataEntry
-	nil,                                              // 115: chat.v1.SendMessageRequest.MetadataEntry
-	nil,                                              // 116: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
-	(v1.SubjectType)(0),                              // 117: common.v1.SubjectType
-	(*timestamppb.Timestamp)(nil),                    // 118: google.protobuf.Timestamp
-	(*v11.Tag)(nil),                                  // 119: tags.v1.Tag
+	(*StopAgentRunRequest)(nil),                      // 102: chat.v1.StopAgentRunRequest
+	(*StopAgentRunResponse)(nil),                     // 103: chat.v1.StopAgentRunResponse
+	(*PendingAgentApproval)(nil),                     // 104: chat.v1.PendingAgentApproval
+	(*GetChannelPendingApprovalsRequest)(nil),        // 105: chat.v1.GetChannelPendingApprovalsRequest
+	(*GetChannelPendingApprovalsResponse)(nil),       // 106: chat.v1.GetChannelPendingApprovalsResponse
+	(*ChannelAgentContextStats)(nil),                 // 107: chat.v1.ChannelAgentContextStats
+	(*GetChannelAgentContextStatsRequest)(nil),       // 108: chat.v1.GetChannelAgentContextStatsRequest
+	(*GetChannelAgentContextStatsResponse)(nil),      // 109: chat.v1.GetChannelAgentContextStatsResponse
+	(*GetChannelAgentContextStatsBatchRequest)(nil),  // 110: chat.v1.GetChannelAgentContextStatsBatchRequest
+	(*GetChannelAgentContextStatsBatchResponse)(nil), // 111: chat.v1.GetChannelAgentContextStatsBatchResponse
+	(*CompactChannelAgentContextRequest)(nil),        // 112: chat.v1.CompactChannelAgentContextRequest
+	(*CompactChannelAgentContextResponse)(nil),       // 113: chat.v1.CompactChannelAgentContextResponse
+	(*ResetChannelAgentContextRequest)(nil),          // 114: chat.v1.ResetChannelAgentContextRequest
+	(*ResetChannelAgentContextResponse)(nil),         // 115: chat.v1.ResetChannelAgentContextResponse
+	nil,                                              // 116: chat.v1.ChatMessage.MetadataEntry
+	nil,                                              // 117: chat.v1.SendMessageRequest.MetadataEntry
+	nil,                                              // 118: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
+	(v1.SubjectType)(0),                              // 119: common.v1.SubjectType
+	(*timestamppb.Timestamp)(nil),                    // 120: google.protobuf.Timestamp
+	(*v11.Tag)(nil),                                  // 121: tags.v1.Tag
 }
 var file_chat_v1_chat_proto_depIdxs = []int32{
-	117, // 0: chat.v1.ChatSubject.type:type_name -> common.v1.SubjectType
+	119, // 0: chat.v1.ChatSubject.type:type_name -> common.v1.SubjectType
 	0,   // 1: chat.v1.ChatChannel.channel_type:type_name -> chat.v1.ChannelType
-	118, // 2: chat.v1.ChatChannel.created_at:type_name -> google.protobuf.Timestamp
-	118, // 3: chat.v1.ChatChannel.updated_at:type_name -> google.protobuf.Timestamp
-	118, // 4: chat.v1.ChatChannel.last_message_at:type_name -> google.protobuf.Timestamp
-	118, // 5: chat.v1.ChatChannel.last_root_message_at:type_name -> google.protobuf.Timestamp
+	120, // 2: chat.v1.ChatChannel.created_at:type_name -> google.protobuf.Timestamp
+	120, // 3: chat.v1.ChatChannel.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 4: chat.v1.ChatChannel.last_message_at:type_name -> google.protobuf.Timestamp
+	120, // 5: chat.v1.ChatChannel.last_root_message_at:type_name -> google.protobuf.Timestamp
 	1,   // 6: chat.v1.ChatChannel.current_user_role:type_name -> chat.v1.ChannelRole
-	119, // 7: chat.v1.ChatChannel.tags:type_name -> tags.v1.Tag
-	118, // 8: chat.v1.ThreadInfo.last_reply_at:type_name -> google.protobuf.Timestamp
+	121, // 7: chat.v1.ChatChannel.tags:type_name -> tags.v1.Tag
+	120, // 8: chat.v1.ThreadInfo.last_reply_at:type_name -> google.protobuf.Timestamp
 	2,   // 9: chat.v1.ChatMessage.sender_type:type_name -> chat.v1.SenderType
-	118, // 10: chat.v1.ChatMessage.edited_at:type_name -> google.protobuf.Timestamp
-	114, // 11: chat.v1.ChatMessage.metadata:type_name -> chat.v1.ChatMessage.MetadataEntry
-	118, // 12: chat.v1.ChatMessage.created_at:type_name -> google.protobuf.Timestamp
+	120, // 10: chat.v1.ChatMessage.edited_at:type_name -> google.protobuf.Timestamp
+	116, // 11: chat.v1.ChatMessage.metadata:type_name -> chat.v1.ChatMessage.MetadataEntry
+	120, // 12: chat.v1.ChatMessage.created_at:type_name -> google.protobuf.Timestamp
 	7,   // 13: chat.v1.ChatMessage.thread:type_name -> chat.v1.ThreadInfo
 	10,  // 14: chat.v1.ChatMessage.reactions:type_name -> chat.v1.ReactionGroup
 	8,   // 15: chat.v1.ChatMessage.reply_context:type_name -> chat.v1.ReplyContext
 	1,   // 16: chat.v1.ChatChannelMember.role:type_name -> chat.v1.ChannelRole
 	3,   // 17: chat.v1.ChatChannelMember.notification_level:type_name -> chat.v1.ChatNotificationLevel
-	118, // 18: chat.v1.ChatChannelMember.joined_at:type_name -> google.protobuf.Timestamp
-	118, // 19: chat.v1.ChatChannelMember.muted_until:type_name -> google.protobuf.Timestamp
+	120, // 18: chat.v1.ChatChannelMember.joined_at:type_name -> google.protobuf.Timestamp
+	120, // 19: chat.v1.ChatChannelMember.muted_until:type_name -> google.protobuf.Timestamp
 	5,   // 20: chat.v1.ChatChannelMember.subject:type_name -> chat.v1.ChatSubject
-	118, // 21: chat.v1.ChatChannelCategory.created_at:type_name -> google.protobuf.Timestamp
-	118, // 22: chat.v1.ChatChannelCategory.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 21: chat.v1.ChatChannelCategory.created_at:type_name -> google.protobuf.Timestamp
+	120, // 22: chat.v1.ChatChannelCategory.updated_at:type_name -> google.protobuf.Timestamp
 	9,   // 23: chat.v1.ThreadInboxItem.root_message:type_name -> chat.v1.ChatMessage
-	118, // 24: chat.v1.ThreadInboxItem.last_reply_at:type_name -> google.protobuf.Timestamp
+	120, // 24: chat.v1.ThreadInboxItem.last_reply_at:type_name -> google.protobuf.Timestamp
 	9,   // 25: chat.v1.ThreadInboxItem.latest_reply:type_name -> chat.v1.ChatMessage
-	118, // 26: chat.v1.ChatResource.first_mentioned_at:type_name -> google.protobuf.Timestamp
-	118, // 27: chat.v1.ChatResource.last_mentioned_at:type_name -> google.protobuf.Timestamp
+	120, // 26: chat.v1.ChatResource.first_mentioned_at:type_name -> google.protobuf.Timestamp
+	120, // 27: chat.v1.ChatResource.last_mentioned_at:type_name -> google.protobuf.Timestamp
 	0,   // 28: chat.v1.CreateChannelRequest.channel_type:type_name -> chat.v1.ChannelType
 	5,   // 29: chat.v1.CreateChannelRequest.members:type_name -> chat.v1.ChatSubject
 	6,   // 30: chat.v1.CreateChannelResponse.channel:type_name -> chat.v1.ChatChannel
@@ -8005,9 +8121,9 @@ var file_chat_v1_chat_proto_depIdxs = []int32{
 	5,   // 38: chat.v1.RemoveMembersRequest.subjects:type_name -> chat.v1.ChatSubject
 	11,  // 39: chat.v1.GetMembersResponse.members:type_name -> chat.v1.ChatChannelMember
 	3,   // 40: chat.v1.UpdateChannelMemberRequest.notification_level:type_name -> chat.v1.ChatNotificationLevel
-	118, // 41: chat.v1.UpdateChannelMemberRequest.muted_until:type_name -> google.protobuf.Timestamp
+	120, // 41: chat.v1.UpdateChannelMemberRequest.muted_until:type_name -> google.protobuf.Timestamp
 	11,  // 42: chat.v1.UpdateChannelMemberResponse.member:type_name -> chat.v1.ChatChannelMember
-	115, // 43: chat.v1.SendMessageRequest.metadata:type_name -> chat.v1.SendMessageRequest.MetadataEntry
+	117, // 43: chat.v1.SendMessageRequest.metadata:type_name -> chat.v1.SendMessageRequest.MetadataEntry
 	9,   // 44: chat.v1.SendMessageResponse.message:type_name -> chat.v1.ChatMessage
 	9,   // 45: chat.v1.GetMessagesResponse.messages:type_name -> chat.v1.ChatMessage
 	9,   // 46: chat.v1.GetMessageResponse.message:type_name -> chat.v1.ChatMessage
@@ -8016,13 +8132,13 @@ var file_chat_v1_chat_proto_depIdxs = []int32{
 	9,   // 49: chat.v1.UnpinMessageResponse.message:type_name -> chat.v1.ChatMessage
 	9,   // 50: chat.v1.GetPinnedMessagesResponse.messages:type_name -> chat.v1.ChatMessage
 	9,   // 51: chat.v1.GetThreadResponse.root_message:type_name -> chat.v1.ChatMessage
-	118, // 52: chat.v1.GetThreadResponse.last_reply_at:type_name -> google.protobuf.Timestamp
+	120, // 52: chat.v1.GetThreadResponse.last_reply_at:type_name -> google.protobuf.Timestamp
 	9,   // 53: chat.v1.GetThreadMessagesResponse.messages:type_name -> chat.v1.ChatMessage
 	13,  // 54: chat.v1.GetThreadsInboxResponse.threads:type_name -> chat.v1.ThreadInboxItem
 	10,  // 55: chat.v1.AddReactionResponse.reaction:type_name -> chat.v1.ReactionGroup
 	79,  // 56: chat.v1.GetUnreadCountsResponse.channels:type_name -> chat.v1.ChannelUnreadCount
 	3,   // 57: chat.v1.ChannelUnreadCount.notification_level:type_name -> chat.v1.ChatNotificationLevel
-	118, // 58: chat.v1.ChannelUnreadCount.muted_until:type_name -> google.protobuf.Timestamp
+	120, // 58: chat.v1.ChannelUnreadCount.muted_until:type_name -> google.protobuf.Timestamp
 	14,  // 59: chat.v1.GetChannelResourcesResponse.resources:type_name -> chat.v1.ChatResource
 	6,   // 60: chat.v1.CreateAgentChatResponse.channel:type_name -> chat.v1.ChatChannel
 	6,   // 61: chat.v1.RenameAgentChatResponse.channel:type_name -> chat.v1.ChatChannel
@@ -8034,17 +8150,17 @@ var file_chat_v1_chat_proto_depIdxs = []int32{
 	6,   // 67: chat.v1.MoveChannelToCategoryResponse.channel:type_name -> chat.v1.ChatChannel
 	4,   // 68: chat.v1.RespondToAgentConfirmationRequest.decision:type_name -> chat.v1.AgentConfirmationDecision
 	4,   // 69: chat.v1.RespondToAgentConfirmationResponse.decision:type_name -> chat.v1.AgentConfirmationDecision
-	118, // 70: chat.v1.RespondToAgentConfirmationResponse.decided_at:type_name -> google.protobuf.Timestamp
-	118, // 71: chat.v1.PendingAgentApproval.requested_at:type_name -> google.protobuf.Timestamp
-	118, // 72: chat.v1.PendingAgentApproval.expires_at:type_name -> google.protobuf.Timestamp
-	102, // 73: chat.v1.GetChannelPendingApprovalsResponse.approvals:type_name -> chat.v1.PendingAgentApproval
-	118, // 74: chat.v1.ChannelAgentContextStats.manual_reset_at:type_name -> google.protobuf.Timestamp
-	105, // 75: chat.v1.GetChannelAgentContextStatsResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
-	116, // 76: chat.v1.GetChannelAgentContextStatsBatchResponse.stats:type_name -> chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
-	105, // 77: chat.v1.CompactChannelAgentContextResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
-	118, // 78: chat.v1.ResetChannelAgentContextResponse.reset_at:type_name -> google.protobuf.Timestamp
-	105, // 79: chat.v1.ResetChannelAgentContextResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
-	105, // 80: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry.value:type_name -> chat.v1.ChannelAgentContextStats
+	120, // 70: chat.v1.RespondToAgentConfirmationResponse.decided_at:type_name -> google.protobuf.Timestamp
+	120, // 71: chat.v1.PendingAgentApproval.requested_at:type_name -> google.protobuf.Timestamp
+	120, // 72: chat.v1.PendingAgentApproval.expires_at:type_name -> google.protobuf.Timestamp
+	104, // 73: chat.v1.GetChannelPendingApprovalsResponse.approvals:type_name -> chat.v1.PendingAgentApproval
+	120, // 74: chat.v1.ChannelAgentContextStats.manual_reset_at:type_name -> google.protobuf.Timestamp
+	107, // 75: chat.v1.GetChannelAgentContextStatsResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
+	118, // 76: chat.v1.GetChannelAgentContextStatsBatchResponse.stats:type_name -> chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
+	107, // 77: chat.v1.CompactChannelAgentContextResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
+	120, // 78: chat.v1.ResetChannelAgentContextResponse.reset_at:type_name -> google.protobuf.Timestamp
+	107, // 79: chat.v1.ResetChannelAgentContextResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
+	107, // 80: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry.value:type_name -> chat.v1.ChannelAgentContextStats
 	16,  // 81: chat.v1.ChatService.CreateChannel:input_type -> chat.v1.CreateChannelRequest
 	18,  // 82: chat.v1.ChatService.GetChannel:input_type -> chat.v1.GetChannelRequest
 	20,  // 83: chat.v1.ChatService.UpdateChannel:input_type -> chat.v1.UpdateChannelRequest
@@ -8087,60 +8203,62 @@ var file_chat_v1_chat_proto_depIdxs = []int32{
 	96,  // 120: chat.v1.ChatService.ReorderCategories:input_type -> chat.v1.ReorderCategoriesRequest
 	98,  // 121: chat.v1.ChatService.MoveChannelToCategory:input_type -> chat.v1.MoveChannelToCategoryRequest
 	100, // 122: chat.v1.ChatService.RespondToAgentConfirmation:input_type -> chat.v1.RespondToAgentConfirmationRequest
-	103, // 123: chat.v1.ChatService.GetChannelPendingApprovals:input_type -> chat.v1.GetChannelPendingApprovalsRequest
-	106, // 124: chat.v1.ChatService.GetChannelAgentContextStats:input_type -> chat.v1.GetChannelAgentContextStatsRequest
-	108, // 125: chat.v1.ChatService.GetChannelAgentContextStatsBatch:input_type -> chat.v1.GetChannelAgentContextStatsBatchRequest
-	110, // 126: chat.v1.ChatService.CompactChannelAgentContext:input_type -> chat.v1.CompactChannelAgentContextRequest
-	112, // 127: chat.v1.ChatService.ResetChannelAgentContext:input_type -> chat.v1.ResetChannelAgentContextRequest
-	17,  // 128: chat.v1.ChatService.CreateChannel:output_type -> chat.v1.CreateChannelResponse
-	19,  // 129: chat.v1.ChatService.GetChannel:output_type -> chat.v1.GetChannelResponse
-	22,  // 130: chat.v1.ChatService.UpdateChannel:output_type -> chat.v1.UpdateChannelResponse
-	24,  // 131: chat.v1.ChatService.ArchiveChannel:output_type -> chat.v1.ArchiveChannelResponse
-	26,  // 132: chat.v1.ChatService.DeleteChannel:output_type -> chat.v1.DeleteChannelResponse
-	28,  // 133: chat.v1.ChatService.ListChannels:output_type -> chat.v1.ListChannelsResponse
-	30,  // 134: chat.v1.ChatService.JoinChannel:output_type -> chat.v1.JoinChannelResponse
-	32,  // 135: chat.v1.ChatService.LeaveChannel:output_type -> chat.v1.LeaveChannelResponse
-	34,  // 136: chat.v1.ChatService.AddMembers:output_type -> chat.v1.AddMembersResponse
-	36,  // 137: chat.v1.ChatService.RemoveMembers:output_type -> chat.v1.RemoveMembersResponse
-	38,  // 138: chat.v1.ChatService.GetMembers:output_type -> chat.v1.GetMembersResponse
-	40,  // 139: chat.v1.ChatService.UpdateChannelMember:output_type -> chat.v1.UpdateChannelMemberResponse
-	42,  // 140: chat.v1.ChatService.SendMessage:output_type -> chat.v1.SendMessageResponse
-	44,  // 141: chat.v1.ChatService.GetMessages:output_type -> chat.v1.GetMessagesResponse
-	46,  // 142: chat.v1.ChatService.GetMessage:output_type -> chat.v1.GetMessageResponse
-	48,  // 143: chat.v1.ChatService.UpdateMessage:output_type -> chat.v1.UpdateMessageResponse
-	50,  // 144: chat.v1.ChatService.DeleteMessage:output_type -> chat.v1.DeleteMessageResponse
-	52,  // 145: chat.v1.ChatService.PinMessage:output_type -> chat.v1.PinMessageResponse
-	54,  // 146: chat.v1.ChatService.UnpinMessage:output_type -> chat.v1.UnpinMessageResponse
-	56,  // 147: chat.v1.ChatService.GetPinnedMessages:output_type -> chat.v1.GetPinnedMessagesResponse
-	58,  // 148: chat.v1.ChatService.GetThread:output_type -> chat.v1.GetThreadResponse
-	60,  // 149: chat.v1.ChatService.GetThreadMessages:output_type -> chat.v1.GetThreadMessagesResponse
-	62,  // 150: chat.v1.ChatService.GetThreadsInbox:output_type -> chat.v1.GetThreadsInboxResponse
-	64,  // 151: chat.v1.ChatService.FollowThread:output_type -> chat.v1.FollowThreadResponse
-	66,  // 152: chat.v1.ChatService.UnfollowThread:output_type -> chat.v1.UnfollowThreadResponse
-	68,  // 153: chat.v1.ChatService.AddReaction:output_type -> chat.v1.AddReactionResponse
-	70,  // 154: chat.v1.ChatService.RemoveReaction:output_type -> chat.v1.RemoveReactionResponse
-	72,  // 155: chat.v1.ChatService.SetTyping:output_type -> chat.v1.SetTypingResponse
-	74,  // 156: chat.v1.ChatService.MarkChannelRead:output_type -> chat.v1.MarkChannelReadResponse
-	76,  // 157: chat.v1.ChatService.MarkThreadRead:output_type -> chat.v1.MarkThreadReadResponse
-	78,  // 158: chat.v1.ChatService.GetUnreadCounts:output_type -> chat.v1.GetUnreadCountsResponse
-	81,  // 159: chat.v1.ChatService.GetChannelResources:output_type -> chat.v1.GetChannelResourcesResponse
-	83,  // 160: chat.v1.ChatService.CreateAgentChat:output_type -> chat.v1.CreateAgentChatResponse
-	85,  // 161: chat.v1.ChatService.RenameAgentChat:output_type -> chat.v1.RenameAgentChatResponse
-	87,  // 162: chat.v1.ChatService.ListAgentChats:output_type -> chat.v1.ListAgentChatsResponse
-	89,  // 163: chat.v1.ChatService.CreateCategory:output_type -> chat.v1.CreateCategoryResponse
-	91,  // 164: chat.v1.ChatService.UpdateCategory:output_type -> chat.v1.UpdateCategoryResponse
-	93,  // 165: chat.v1.ChatService.DeleteCategory:output_type -> chat.v1.DeleteCategoryResponse
-	95,  // 166: chat.v1.ChatService.ListCategories:output_type -> chat.v1.ListCategoriesResponse
-	97,  // 167: chat.v1.ChatService.ReorderCategories:output_type -> chat.v1.ReorderCategoriesResponse
-	99,  // 168: chat.v1.ChatService.MoveChannelToCategory:output_type -> chat.v1.MoveChannelToCategoryResponse
-	101, // 169: chat.v1.ChatService.RespondToAgentConfirmation:output_type -> chat.v1.RespondToAgentConfirmationResponse
-	104, // 170: chat.v1.ChatService.GetChannelPendingApprovals:output_type -> chat.v1.GetChannelPendingApprovalsResponse
-	107, // 171: chat.v1.ChatService.GetChannelAgentContextStats:output_type -> chat.v1.GetChannelAgentContextStatsResponse
-	109, // 172: chat.v1.ChatService.GetChannelAgentContextStatsBatch:output_type -> chat.v1.GetChannelAgentContextStatsBatchResponse
-	111, // 173: chat.v1.ChatService.CompactChannelAgentContext:output_type -> chat.v1.CompactChannelAgentContextResponse
-	113, // 174: chat.v1.ChatService.ResetChannelAgentContext:output_type -> chat.v1.ResetChannelAgentContextResponse
-	128, // [128:175] is the sub-list for method output_type
-	81,  // [81:128] is the sub-list for method input_type
+	105, // 123: chat.v1.ChatService.GetChannelPendingApprovals:input_type -> chat.v1.GetChannelPendingApprovalsRequest
+	108, // 124: chat.v1.ChatService.GetChannelAgentContextStats:input_type -> chat.v1.GetChannelAgentContextStatsRequest
+	110, // 125: chat.v1.ChatService.GetChannelAgentContextStatsBatch:input_type -> chat.v1.GetChannelAgentContextStatsBatchRequest
+	112, // 126: chat.v1.ChatService.CompactChannelAgentContext:input_type -> chat.v1.CompactChannelAgentContextRequest
+	114, // 127: chat.v1.ChatService.ResetChannelAgentContext:input_type -> chat.v1.ResetChannelAgentContextRequest
+	102, // 128: chat.v1.ChatService.StopAgentRun:input_type -> chat.v1.StopAgentRunRequest
+	17,  // 129: chat.v1.ChatService.CreateChannel:output_type -> chat.v1.CreateChannelResponse
+	19,  // 130: chat.v1.ChatService.GetChannel:output_type -> chat.v1.GetChannelResponse
+	22,  // 131: chat.v1.ChatService.UpdateChannel:output_type -> chat.v1.UpdateChannelResponse
+	24,  // 132: chat.v1.ChatService.ArchiveChannel:output_type -> chat.v1.ArchiveChannelResponse
+	26,  // 133: chat.v1.ChatService.DeleteChannel:output_type -> chat.v1.DeleteChannelResponse
+	28,  // 134: chat.v1.ChatService.ListChannels:output_type -> chat.v1.ListChannelsResponse
+	30,  // 135: chat.v1.ChatService.JoinChannel:output_type -> chat.v1.JoinChannelResponse
+	32,  // 136: chat.v1.ChatService.LeaveChannel:output_type -> chat.v1.LeaveChannelResponse
+	34,  // 137: chat.v1.ChatService.AddMembers:output_type -> chat.v1.AddMembersResponse
+	36,  // 138: chat.v1.ChatService.RemoveMembers:output_type -> chat.v1.RemoveMembersResponse
+	38,  // 139: chat.v1.ChatService.GetMembers:output_type -> chat.v1.GetMembersResponse
+	40,  // 140: chat.v1.ChatService.UpdateChannelMember:output_type -> chat.v1.UpdateChannelMemberResponse
+	42,  // 141: chat.v1.ChatService.SendMessage:output_type -> chat.v1.SendMessageResponse
+	44,  // 142: chat.v1.ChatService.GetMessages:output_type -> chat.v1.GetMessagesResponse
+	46,  // 143: chat.v1.ChatService.GetMessage:output_type -> chat.v1.GetMessageResponse
+	48,  // 144: chat.v1.ChatService.UpdateMessage:output_type -> chat.v1.UpdateMessageResponse
+	50,  // 145: chat.v1.ChatService.DeleteMessage:output_type -> chat.v1.DeleteMessageResponse
+	52,  // 146: chat.v1.ChatService.PinMessage:output_type -> chat.v1.PinMessageResponse
+	54,  // 147: chat.v1.ChatService.UnpinMessage:output_type -> chat.v1.UnpinMessageResponse
+	56,  // 148: chat.v1.ChatService.GetPinnedMessages:output_type -> chat.v1.GetPinnedMessagesResponse
+	58,  // 149: chat.v1.ChatService.GetThread:output_type -> chat.v1.GetThreadResponse
+	60,  // 150: chat.v1.ChatService.GetThreadMessages:output_type -> chat.v1.GetThreadMessagesResponse
+	62,  // 151: chat.v1.ChatService.GetThreadsInbox:output_type -> chat.v1.GetThreadsInboxResponse
+	64,  // 152: chat.v1.ChatService.FollowThread:output_type -> chat.v1.FollowThreadResponse
+	66,  // 153: chat.v1.ChatService.UnfollowThread:output_type -> chat.v1.UnfollowThreadResponse
+	68,  // 154: chat.v1.ChatService.AddReaction:output_type -> chat.v1.AddReactionResponse
+	70,  // 155: chat.v1.ChatService.RemoveReaction:output_type -> chat.v1.RemoveReactionResponse
+	72,  // 156: chat.v1.ChatService.SetTyping:output_type -> chat.v1.SetTypingResponse
+	74,  // 157: chat.v1.ChatService.MarkChannelRead:output_type -> chat.v1.MarkChannelReadResponse
+	76,  // 158: chat.v1.ChatService.MarkThreadRead:output_type -> chat.v1.MarkThreadReadResponse
+	78,  // 159: chat.v1.ChatService.GetUnreadCounts:output_type -> chat.v1.GetUnreadCountsResponse
+	81,  // 160: chat.v1.ChatService.GetChannelResources:output_type -> chat.v1.GetChannelResourcesResponse
+	83,  // 161: chat.v1.ChatService.CreateAgentChat:output_type -> chat.v1.CreateAgentChatResponse
+	85,  // 162: chat.v1.ChatService.RenameAgentChat:output_type -> chat.v1.RenameAgentChatResponse
+	87,  // 163: chat.v1.ChatService.ListAgentChats:output_type -> chat.v1.ListAgentChatsResponse
+	89,  // 164: chat.v1.ChatService.CreateCategory:output_type -> chat.v1.CreateCategoryResponse
+	91,  // 165: chat.v1.ChatService.UpdateCategory:output_type -> chat.v1.UpdateCategoryResponse
+	93,  // 166: chat.v1.ChatService.DeleteCategory:output_type -> chat.v1.DeleteCategoryResponse
+	95,  // 167: chat.v1.ChatService.ListCategories:output_type -> chat.v1.ListCategoriesResponse
+	97,  // 168: chat.v1.ChatService.ReorderCategories:output_type -> chat.v1.ReorderCategoriesResponse
+	99,  // 169: chat.v1.ChatService.MoveChannelToCategory:output_type -> chat.v1.MoveChannelToCategoryResponse
+	101, // 170: chat.v1.ChatService.RespondToAgentConfirmation:output_type -> chat.v1.RespondToAgentConfirmationResponse
+	106, // 171: chat.v1.ChatService.GetChannelPendingApprovals:output_type -> chat.v1.GetChannelPendingApprovalsResponse
+	109, // 172: chat.v1.ChatService.GetChannelAgentContextStats:output_type -> chat.v1.GetChannelAgentContextStatsResponse
+	111, // 173: chat.v1.ChatService.GetChannelAgentContextStatsBatch:output_type -> chat.v1.GetChannelAgentContextStatsBatchResponse
+	113, // 174: chat.v1.ChatService.CompactChannelAgentContext:output_type -> chat.v1.CompactChannelAgentContextResponse
+	115, // 175: chat.v1.ChatService.ResetChannelAgentContext:output_type -> chat.v1.ResetChannelAgentContextResponse
+	103, // 176: chat.v1.ChatService.StopAgentRun:output_type -> chat.v1.StopAgentRunResponse
+	129, // [129:177] is the sub-list for method output_type
+	81,  // [81:129] is the sub-list for method input_type
 	81,  // [81:81] is the sub-list for extension type_name
 	81,  // [81:81] is the sub-list for extension extendee
 	0,   // [0:81] is the sub-list for field type_name
@@ -8177,15 +8295,15 @@ func file_chat_v1_chat_proto_init() {
 	file_chat_v1_chat_proto_msgTypes[85].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[93].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[95].OneofWrappers = []any{}
-	file_chat_v1_chat_proto_msgTypes[97].OneofWrappers = []any{}
-	file_chat_v1_chat_proto_msgTypes[100].OneofWrappers = []any{}
+	file_chat_v1_chat_proto_msgTypes[99].OneofWrappers = []any{}
+	file_chat_v1_chat_proto_msgTypes[102].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_v1_chat_proto_rawDesc), len(file_chat_v1_chat_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   112,
+			NumMessages:   114,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

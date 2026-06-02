@@ -103,6 +103,11 @@ service ChatService {
   // Per-agent: resetting agent A in a multi-agent channel does not affect
   // agent B's view.
   rpc ResetChannelAgentContext(ResetChannelAgentContextRequest) returns (ResetChannelAgentContextResponse) {}
+
+  // Stop an in-flight agent run in a channel. Cancels the active run for the
+  // given agent - whether it is mid tool call, image generation, or text
+  // generation - via the run-state cancel flag the egress task observes.
+  rpc StopAgentRun(StopAgentRunRequest) returns (StopAgentRunResponse) {}
 }
 
 // ChatSubject is a polymorphic channel/thread participant.
@@ -835,6 +840,18 @@ message RespondToAgentConfirmationResponse {
   // Echo of the resolved status; useful for optimistic UI reconciliation.
   AgentConfirmationDecision decision = 1;
   google.protobuf.Timestamp decided_at = 2;
+}
+
+message StopAgentRunRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string agent_id = 3;
+}
+
+message StopAgentRunResponse {
+  // True if an active run was found for the (channel, agent) and a cancel was
+  // requested; false if nothing was running.
+  bool stopped = 1;
 }
 
 // A single pending agent tool-call approval still awaiting a user decision.

@@ -1,5 +1,5 @@
-import { memo, useState, useCallback, useRef } from 'react';
-import { ArrowBendUpLeft, PushPin, Robot } from '@phosphor-icons/react';
+import { memo, useState, useCallback, useRef, useMemo } from 'react';
+import { ArrowBendUpLeft, PushPin, Robot, Stop } from '@phosphor-icons/react';
 
 import { type ChatMessage } from '@/features/chat/types';
 import { HoverActionsToolbar } from '@/features/chat/components/channel/HoverActionsToolbar';
@@ -60,6 +60,7 @@ interface MessageItemProps {
 function messageRev(m: ChatMessage): string {
   const meta = m.metadata as Record<string, unknown> | undefined;
   const seq = typeof meta?.streaming_sequence === 'number' ? meta.streaming_sequence : 0;
+  const stopped = meta?.agent_run_stopped === 'true' || meta?.agent_run_stopped === true ? 1 : 0;
   const reactionsHash = m.reactions
     ? m.reactions.map(r => `${r.emoji}:${r.count}:${r.currentUserReacted ? 1 : 0}`).join(',')
     : '';
@@ -68,7 +69,7 @@ function messageRev(m: ChatMessage): string {
   const threadRev = m.thread
     ? `${m.thread.replyCount}:${m.thread.lastReplyAt ?? ''}:${m.thread.hasUnread ? 1 : 0}`
     : '';
-  return `${m.id}|${m.updatedAt ?? ''}|${m.editedAt ?? ''}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${reactionsHash}|${attachmentCount}|${threadRev}`;
+  return `${m.id}|${m.updatedAt ?? ''}|${m.editedAt ?? ''}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}`;
 }
 
 function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps): boolean {
@@ -90,6 +91,21 @@ function MessageItemInner({
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const isAgent = message.senderType === 'AGENT';
+  // A file referenced inline as a mention chip already represents itself; skip its
+  // card so it shows once (the attachment record still rides along for access).
+  const visibleAttachments = useMemo(
+    () => (message.attachments ?? []).filter((att) => !message.content.includes(`FILE:${att.fileId}`)),
+    [message.attachments, message.content],
+  );
+  // Set on the trigger message when the user stops the agent's reply mid-run.
+  const agentRunStopped =
+    message.metadata?.['agent_run_stopped'] === 'true' || message.metadata?.['agent_run_stopped'] === true;
+  // DMs and agent chats (DIRECT, incl. is_agent_dm) thread every turn off the
+  // previous message; a reply quote on each one is noise there, so suppress it.
+  const isDmChannel = useAppSelector((state) => {
+    const ch = state.chatChannels.channels.find((c) => c.id === message.channelId);
+    return ch?.channelType === 'DIRECT' || ch?.channelType === 'GROUP_DM';
+  });
   const agent = useAppSelector((state) => state.agents.agents[message.senderId] ?? null);
   const senderName = (isAgent ? agent?.name : null) ?? message.senderName ?? (isAgent ? 'Agent' : 'Unknown User');
   const hasThread = message.thread && message.thread.replyCount > 0;
@@ -312,7 +328,7 @@ function MessageItemInner({
             </div>
           )}
 
-          {message.replyContext && (
+          {!isDmChannel && message.replyContext && (
             <button
               type="button"
               className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer max-w-full"
@@ -345,8 +361,18 @@ function MessageItemInner({
             )}
           </div>
 
-          {message.attachments && message.attachments.length > 0 && organizationId && (
-            <MessageAttachments attachments={message.attachments} organizationId={organizationId} />
+          {agentRunStopped && (
+            <div
+              className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground"
+              data-testid={`chat-message-stopped-${message.id}`}
+            >
+              <Stop size={10} weight="fill" />
+              Response stopped
+            </div>
+          )}
+
+          {visibleAttachments.length > 0 && organizationId && (
+            <MessageAttachments attachments={visibleAttachments} organizationId={organizationId} />
           )}
 
           <div ref={addReactionRef}>

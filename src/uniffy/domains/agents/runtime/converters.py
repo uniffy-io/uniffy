@@ -354,7 +354,7 @@ def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:
         total_retries=totals.get("total_retries", 0),
         total_cancelled=totals.get("total_cancelled", 0),
         total_deadline_exceeded=totals.get("total_deadline_exceeded", 0),
-        display_currency=stats.get("display_currency", "EUR"),
+        display_currency=stats.get("display_currency", "USD"),
         daily_usage=[
             DailyUsage(
                 date=d["date"],

@@ -14,10 +14,6 @@ from uniffy.core.crypto import (
     close_dek_invalidation_subscriber,
     subscribe_dek_invalidations,
 )
-from uniffy.core.llm_providers import (
-    close_provider_invalidation_subscriber,
-    init_provider_invalidation_subscriber,
-)
 from uniffy.core.search import close_meilisearch, init_meilisearch
 from uniffy.core.storage.s3_client import close_s3, init_s3
 from uniffy.core.valkey import (
@@ -30,6 +26,10 @@ from uniffy.core.valkey import (
 )
 from uniffy.core.valkey.queue import QueueName
 from uniffy.db import close_db, init_db
+from uniffy.domains.agents.providers.client_cache import (
+    close_provider_invalidation_subscriber,
+    init_provider_invalidation_subscriber,
+)
 from uniffy.observability.metrics import (
     WORKER_JOB_DURATION,
     WORKER_JOBS_COMPLETED_TOTAL,

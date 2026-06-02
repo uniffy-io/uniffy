@@ -212,7 +212,7 @@ Logging is [loguru](https://loguru.readthedocs.io) (`from loguru import logger`)
 
 ## Performance-Critical Domains
 
-`domains/chat/` and `domains/agents/` carry the bulk of user traffic. Every change in these two domains is held to a higher bar than the rest of the codebase. The patterns below apply when working anywhere under those trees, and transitively to anything they call into (`core/auth/`, `core/content/`, `core/valkey/`, `core/users/`, `core/llm_providers/`).
+`domains/chat/` and `domains/agents/` carry the bulk of user traffic. Every change in these two domains is held to a higher bar than the rest of the codebase. The patterns below apply when working anywhere under those trees, and transitively to anything they call into (`core/auth/`, `core/content/`, `core/valkey/`, `core/users/`).
 
 Patterns that work well in chat or agents code:
 
@@ -246,7 +246,7 @@ Three physical clients per process, each tuned for its access pattern. Importing
 
 **Cache helper conventions:**
 
-- Domain-shaped helpers live in `domains/{domain}/cache.py` (chat, agents). Cross-cutting helpers live in `core/{x}/cache.py` (auth, users, llm_providers).
+- Domain-shaped helpers live in `domains/{domain}/cache.py` (chat, agents). Cross-cutting helpers live in `core/{x}/cache.py` (auth, users).
 - Key naming: `{namespace}:{scope}:{id}[:subkind]`. The first segment is the metrics namespace (used by `uniffy_cache_hit_total{namespace}` etc).
 - Tag-based bulk invalidation via Valkey sets keyed `tag:{name}` - callers add tags on `cache_set` and call `cache_invalidate_by_tag` on writes whose blast radius isn't enumerable cheaply (BLOCKED grants, group-targeted permissions, skill row mutations).
 - Stampede control via `cache_get_or_set_locked` on the hottest helpers (perm, channel metadata, agent config). Lock losers poll the cache key for the lock TTL and fall through to running their own loader if the owner crashed - a Valkey hiccup should not propagate.

@@ -111,6 +111,12 @@ export const TOOL_SECTIONS: ToolCategorySection[] = [
                     { name: "cron.get_runs", displayName: "View Run History", description: "View execution history of a scheduled task", destructive: false },
                 ],
             },
+            {
+                group: "System",
+                tools: [
+                    { name: "system.current_time", displayName: "Current Time (UTC)", description: "Get the real current date and time in UTC", destructive: false },
+                ],
+            },
         ],
     },
     {

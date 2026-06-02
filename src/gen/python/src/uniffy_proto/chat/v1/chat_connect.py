@@ -159,6 +159,9 @@ class ChatService(Protocol):
     async def reset_channel_agent_context(self, request: chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def stop_agent_run(self, request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
     def __init__(self, service: ChatService | AsyncGenerator[ChatService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -634,6 +637,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.reset_channel_agent_context,
+                ),
+                "/chat.v1.ChatService/StopAgentRun": Endpoint.unary(
+                    method=MethodInfo(
+                        name="StopAgentRun",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
+                        output=chat_dot_v1_dot_chat__pb2.StopAgentRunResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.stop_agent_run,
                 ),
             },
             interceptors=interceptors,
@@ -1589,6 +1602,26 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def stop_agent_run(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StopAgentRun",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
+                output=chat_dot_v1_dot_chat__pb2.StopAgentRunResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -1687,6 +1720,8 @@ class ChatServiceSync(Protocol):
     def compact_channel_agent_context(self, request: chat_dot_v1_dot_chat__pb2.CompactChannelAgentContextRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CompactChannelAgentContextResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def reset_channel_agent_context(self, request: chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def stop_agent_run(self, request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -2163,6 +2198,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.reset_channel_agent_context,
+                ),
+                "/chat.v1.ChatService/StopAgentRun": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="StopAgentRun",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
+                        output=chat_dot_v1_dot_chat__pb2.StopAgentRunResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.stop_agent_run,
                 ),
             },
             interceptors=interceptors,
@@ -3112,6 +3157,26 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextRequest,
                 output=chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def stop_agent_run(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StopAgentRun",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
+                output=chat_dot_v1_dot_chat__pb2.StopAgentRunResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -1,7 +1,7 @@
 """Google Gemini provider subpackage."""
 
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo, ProviderDescriptor
-from uniffy.domains.agents.providers.google.catalog import FALLBACK_MODELS
+from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 from uniffy.domains.agents.providers.google.provider import GoogleProvider
 from uniffy.domains.agents.providers.google.validation import validate_google_credential
 
@@ -54,18 +54,8 @@ class GoogleDescriptor(ProviderDescriptor):
         return GoogleProvider(credential, credential_type=credential_type)
 
     def get_models(self) -> list[ModelInfo]:
-        """Return the static fallback Google model catalog.
-
-        This is the synchronous fallback used by the registry when no
-        live provider instance is available.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Static fallback Google Gemini models.
-
-        """
-        return list(FALLBACK_MODELS)
+        """Return the static Google catalog (used when no live key is set)."""
+        return model_infos_for_provider("google")
 
     def validate_credential(self, credential: str, credential_type: str) -> None:
         """Validate a Google credential format.

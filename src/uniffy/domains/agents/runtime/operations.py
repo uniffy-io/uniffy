@@ -32,7 +32,7 @@ from uniffy.domains.agents.cache import (
 from uniffy.domains.agents.content_policy import check_user_message
 from uniffy.domains.agents.currency import convert as convert_currency
 from uniffy.domains.agents.currency import get_display_currency
-from uniffy.domains.agents.pricing import compute_text_cost, get_pricing
+from uniffy.domains.agents.pricing import PRICING_CURRENCY, compute_text_cost, get_pricing
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
     DoneEvent,
@@ -1992,10 +1992,10 @@ class RuntimeOperations:
                 )
                 return None, None
 
-            pricing = await get_pricing(self._session, provider=provider, model=model)
+            pricing = get_pricing(provider=provider, model=model)
             if pricing is None:
                 logger.warning(
-                    "Skipping cost calculation: no pricing row",
+                    "Skipping cost calculation: model not in catalog",
                     provider=provider,
                     model=model,
                 )
@@ -2010,7 +2010,7 @@ class RuntimeOperations:
             display_currency = await get_display_currency(self._session, organization_id)
             converted = await convert_currency(
                 raw_cost,
-                pricing.currency,
+                PRICING_CURRENCY,
                 display_currency,
                 self._session,
                 organization_id,
@@ -2019,8 +2019,8 @@ class RuntimeOperations:
         except ValidationError as exc:
             logger.warning(f"Skipping cost calculation: {exc}")
             return None, None
-        except Exception:
-            logger.opt(exception=True).warning("Cost calculation failed unexpectedly")
+        except Exception as exc:
+            logger.exception(f"Cost calculation failed unexpectedly: {exc!r}")
             return None, None
 
 

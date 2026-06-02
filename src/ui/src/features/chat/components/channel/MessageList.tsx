@@ -19,7 +19,7 @@ import {
   evictOldestMessages,
   evictExpiredTyping,
 } from '@/features/chat/store/chatMessagesSlice';
-import { fetchMessages } from '@/features/chat/store/chatThunks';
+import { fetchMessages, stopAgentRun } from '@/features/chat/store/chatThunks';
 import {
   selectJumpToMessageId,
   clearJumpToMessage,
@@ -240,9 +240,29 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     return () => clearInterval(timer);
   }, [dispatch, effectiveChannelId, typingUsers.length]);
 
+  // Tool calls that already have a row absorb their result into the call card,
+  // so the standalone result row is dropped from the list.
+  const absorbedResultCallIds = useMemo(() => {
+    const calls = new Set<string>();
+    for (const m of messages) {
+      if (m.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_call') {
+        const cid = m.metadata?.['tool_call_id'];
+        if (typeof cid === 'string') calls.add(cid);
+      }
+    }
+    return calls;
+  }, [messages]);
+
   const rootMessages = useMemo(
-    () => messages.filter((m) => m.rootId === null),
-    [messages],
+    () => messages.filter((m) => {
+      if (m.rootId !== null) return false;
+      if (m.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_result') {
+        const cid = m.metadata?.['tool_call_id'];
+        if (typeof cid === 'string' && absorbedResultCallIds.has(cid)) return false;
+      }
+      return true;
+    }),
+    [messages, absorbedResultCallIds],
   );
 
   const grouped = useMemo(() => groupMessages(rootMessages), [rootMessages]);
@@ -325,11 +345,24 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
       });
   }, [effectiveChannelId, hasMore, rootMessages, dispatch]);
 
+  const handleStopAgent = useCallback((agentId: string) => {
+    if (!effectiveChannelId) return;
+    dispatch(stopAgentRun({ channelId: effectiveChannelId, agentId }));
+  }, [effectiveChannelId, dispatch]);
+
   const handleAtBottomChange = useCallback((atBottom: boolean) => {
     isAtBottomRef.current = atBottom;
     if (atBottom) {
       setNewMessageCount(0);
     }
+  }, []);
+
+  const handleTotalListHeightChanged = useCallback(() => {
+    // A streaming reply grows the last row's height without adding an item, so
+    // followOutput never re-fires. Re-pin to the bottom on every height change
+    // while we're tracking it, so the view stays glued through the whole stream.
+    if (!isAtBottomRef.current) return;
+    virtuosoRef.current?.scrollToIndex({ index: 'LAST', align: 'end', behavior: 'auto' });
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -444,7 +477,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
             accent={accent}
           />
         </div>
-        <TypingIndicator typingUsers={typingUsers} />
+        <TypingIndicator typingUsers={typingUsers} onStopAgent={handleStopAgent} />
       </div>
     );
   }
@@ -458,17 +491,18 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         data={grouped}
         firstItemIndex={firstItemIndex}
         initialTopMostItemIndex={Math.max(0, grouped.length - 1)}
-        followOutput={(isAtBottom) => (isAtBottom ? 'smooth' : false)}
+        followOutput={(isAtBottom) => (isAtBottom ? 'auto' : false)}
         startReached={startReached}
         atBottomStateChange={handleAtBottomChange}
         atBottomThreshold={100}
+        totalListHeightChanged={handleTotalListHeightChanged}
         components={components}
         itemContent={itemContent}
         computeItemKey={(_idx, g) => g.message.id}
       />
 
       <NewMessagesPill count={newMessageCount} onClick={scrollToBottom} />
-      <TypingIndicator typingUsers={typingUsers} />
+      <TypingIndicator typingUsers={typingUsers} onStopAgent={handleStopAgent} />
     </div>
   );
 }

@@ -142,29 +142,33 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         })),
     ], [enabledKeys]);
 
+    // Only curated catalog chat models are selectable - keeps live-API noise
+    // (whisper, realtime, embeddings, image-only) out of the chat pickers.
+    const chatModels = useMemo(
+        () => primaryKeyModels.filter((m) => m.catalogKnown && !m.supportsImageGeneration),
+        [primaryKeyModels],
+    );
+
     const primaryModelOptions: SelectOption<string>[] = useMemo(() => {
-        const opts = primaryKeyModels.map((m) => ({
+        const opts = chatModels.map((m) => ({
             value: m.id,
             label: `${m.displayName}`,
         }));
-        if (agent.primaryModel && !primaryKeyModels.some((m) => m.id === agent.primaryModel)) {
+        if (agent.primaryModel && !chatModels.some((m) => m.id === agent.primaryModel)) {
             opts.unshift({ value: agent.primaryModel, label: agent.primaryModel });
         }
         return opts;
-    }, [primaryKeyModels, agent.primaryModel]);
+    }, [chatModels, agent.primaryModel]);
 
     const imageModelOptions: SelectOption<string>[] = useMemo(() => {
         const opts: SelectOption<string>[] = [
             { value: "", label: "Disabled" },
             ...imageKeyModels
-                .filter((m) => m.id.includes("image") || m.id.includes("dall-e") || m.id.includes("gpt-image"))
+                .filter((m) => m.supportsImageGeneration)
                 .map((m) => ({ value: m.id, label: m.displayName })),
         ];
-        for (const m of imageKeyModels) {
-            if (!opts.some((o) => o.value === m.id)) {
-                opts.push({ value: m.id, label: m.displayName });
-            }
-        }
+        // Keep an already-configured model visible even if it is no longer
+        // advertised as image-capable (e.g. a key/catalog change).
         if (agent.imageModel && !opts.some((o) => o.value === agent.imageModel)) {
             opts.push({ value: agent.imageModel, label: agent.imageModel });
         }
@@ -173,10 +177,10 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
 
     const fallbackModelOptions = useMemo(
         () =>
-            primaryKeyModels
+            chatModels
                 .filter((m) => m.id !== agent.primaryModel)
                 .map((m) => ({ value: m.id, label: `${m.displayName}` })),
-        [primaryKeyModels, agent.primaryModel],
+        [chatModels, agent.primaryModel],
     );
 
     const handleUpdate = (fields: Omit<Parameters<typeof updateAgent>[0], 'agentId'>) => {

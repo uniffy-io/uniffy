@@ -1067,6 +1067,22 @@ class RespondToAgentConfirmationResponse(_message.Message):
     decided_at: _timestamp_pb2.Timestamp
     def __init__(self, decision: _Optional[_Union[AgentConfirmationDecision, str]] = ..., decided_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
+class StopAgentRunRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "agent_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    agent_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
+
+class StopAgentRunResponse(_message.Message):
+    __slots__ = ("stopped",)
+    STOPPED_FIELD_NUMBER: _ClassVar[int]
+    stopped: bool
+    def __init__(self, stopped: _Optional[bool] = ...) -> None: ...
+
 class PendingAgentApproval(_message.Message):
     __slots__ = ("request_id", "agent_id", "message_id", "tool_name", "args_preview", "actor_user_id", "requested_at", "expires_at")
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]

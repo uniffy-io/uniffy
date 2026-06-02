@@ -77,8 +77,9 @@ export const agentProvidersSlice = createSlice({
 
 export const selectProviderKeys = (state: RootState) => state.agentProviders.providerKeys;
 export const selectAvailableModels = (state: RootState) => state.agentProviders.availableModels;
+const EMPTY_MODELS: SerializedModelInfo[] = [];
 export const selectModelsForKey = (keyId: string) => (state: RootState) =>
-    state.agentProviders.modelsPerKey[keyId] ?? [];
+    state.agentProviders.modelsPerKey[keyId] ?? EMPTY_MODELS;
 export const selectProvidersLoading = (state: RootState) => state.agentProviders.loading;
 
 export const agentProvidersReducer = agentProvidersSlice.reducer;

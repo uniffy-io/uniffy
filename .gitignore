@@ -229,3 +229,6 @@ src/unictl/dist/
 /core.[0-9]*
 
 .codegraph/
+
+# External repos cloned for analysis only (not part of the product)
+.external/

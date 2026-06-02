@@ -499,7 +499,7 @@ function CurrenciesTab() {
 
     const [picked, setPicked] = useState(displayCurrency);
     const [newFrom, setNewFrom] = useState('USD');
-    const [newTo, setNewTo] = useState(displayCurrency || 'EUR');
+    const [newTo, setNewTo] = useState(displayCurrency || 'USD');
     const [newRate, setNewRate] = useState('');
 
     useEffect(() => {
@@ -511,7 +511,7 @@ function CurrenciesTab() {
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form select when the org's display currency loads
         setPicked(displayCurrency);
-        setNewTo(displayCurrency || 'EUR');
+        setNewTo(displayCurrency || 'USD');
     }, [displayCurrency]);
 
     const handleSaveDisplay = () => {

@@ -49,6 +49,7 @@ import {
   GetChannelAgentContextStatsBatchRequestSchema,
   CompactChannelAgentContextRequestSchema,
   ResetChannelAgentContextRequestSchema,
+  StopAgentRunRequestSchema,
 } from '@uniffy/proto/chat/v1/chat_pb';
 import {
   ChatStreamService,
@@ -166,6 +167,8 @@ export const chatApi = {
     chatClient.compactChannelAgentContext(req),
   resetChannelAgentContext: (req: MessageInitShape<typeof ResetChannelAgentContextRequestSchema>) =>
     chatClient.resetChannelAgentContext(req),
+  stopAgentRun: (req: MessageInitShape<typeof StopAgentRunRequestSchema>) =>
+    chatClient.stopAgentRun(req),
 };
 
 export const chatStreamApi = {

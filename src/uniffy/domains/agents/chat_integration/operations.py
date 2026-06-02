@@ -16,6 +16,8 @@ only responsible for the fan-out side (driving the publisher + the
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -29,7 +31,14 @@ from uniffy.core.models.agents.approval_audit import AgentApprovalAudit
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
-from uniffy.core.types import ContentType, SubjectType
+from uniffy.core.types import ContentType, SubjectType, generate_id
+from uniffy.core.valkey.streams import (
+    clear_chat_active_run,
+    is_cancel_requested,
+    set_chat_active_run,
+    set_run_state,
+    touch_run_state,
+)
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.destinations import ChatDestination
 from uniffy.domains.agents.runtime.file_loader import FileContext, _safe_load_files
@@ -46,6 +55,15 @@ if TYPE_CHECKING:
 
 
 APPROVAL_TTL_SECONDS = 24 * 60 * 60
+
+# The client expires an agent-typing entry after a short TTL. A turn that runs
+# silently (image generation, a long tool, slow reasoning) would otherwise let
+# the working indicator vanish mid-run, so re-assert typing on this interval.
+TYPING_HEARTBEAT_SECONDS = 8
+
+# How often the egress task polls the run-state cancel flag so a user "stop"
+# interrupts an in-flight tool (e.g. image generation) within ~this window.
+CANCEL_POLL_SECONDS = 1.5
 
 
 class AgentChatBridge:
@@ -79,19 +97,24 @@ class AgentChatBridge:
         if channel is None:
             logger.warning(f"Agent invocation skipped: channel {channel_id} not found")
             return
+        organization_id = channel.organization_id
 
         agent = await self._session.get(Agent, agent_id)
-        if agent is None or agent.organization_id != channel.organization_id:
+        if agent is None or agent.organization_id != organization_id:
             logger.warning("Agent invocation skipped: agent missing or wrong org")
             return
 
         member_ids = await self._load_user_member_ids(channel_id)
         user_id = trigger.sender_id
         thread_root_id = trigger.root_id
+        # Snapshot ORM-backed values now. A mid-run cancel rolls the session back,
+        # which expires every attribute; the cleanup path can't drive an async
+        # lazy-load (it raises MissingGreenlet), so the cleanup must read locals only.
+        agent_name = agent.name or ""
 
         files = await self._load_trigger_attachments(
             user_id=user_id,
-            organization_id=channel.organization_id,
+            organization_id=organization_id,
             trigger_message_id=trigger_message_id,
         )
 
@@ -105,19 +128,39 @@ class AgentChatBridge:
             thread_root_id=thread_root_id,
         )
 
-        await publish_channel_event_to_members(
-            member_ids,
-            chat_evt.AGENT_TYPING,
-            chat_evt.build_agent_typing_payload(
-                agent_id=agent_id,
-                display_name=agent.name or "",
-                started=True,
-                root_id=trigger.root_id,
-            ),
-            channel_id=channel_id,
-        )
+        async def _emit_agent_typing(*, started: bool) -> None:
+            await publish_channel_event_to_members(
+                member_ids,
+                chat_evt.AGENT_TYPING,
+                chat_evt.build_agent_typing_payload(
+                    agent_id=agent_id,
+                    display_name=agent_name,
+                    started=started,
+                    root_id=thread_root_id,
+                ),
+                channel_id=channel_id,
+            )
 
-        try:
+        run_id = generate_id()
+        await set_run_state(
+            run_id=run_id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_id=channel_id,
+            status="running",
+        )
+        await set_chat_active_run(channel_id, agent_id, run_id)
+
+        async def _typing_heartbeat() -> None:
+            while True:
+                await asyncio.sleep(TYPING_HEARTBEAT_SECONDS)
+                await _emit_agent_typing(started=True)
+                # Keep run-state + active-run alive for long turns. touch_run_state
+                # only bumps the TTL, so a pending cancel flag is never clobbered.
+                await touch_run_state(run_id)
+                await set_chat_active_run(channel_id, agent_id, run_id)
+
+        async def _drive_stream() -> None:
             runtime_ops = RuntimeOperations(self._session)
             destination = ChatDestination(
                 channel_id=channel_id,
@@ -129,11 +172,31 @@ class AgentChatBridge:
             async for event in runtime_ops.stream_send_message(
                 destination=destination,
                 user_id=user_id,
-                organization_id=channel.organization_id,
+                organization_id=organization_id,
                 content=trigger.content,
                 files=files,
             ):
                 await publisher.publish(event)
+
+        async def _cancel_watcher(task: asyncio.Task[None]) -> None:
+            while not task.done():
+                await asyncio.sleep(CANCEL_POLL_SECONDS)
+                if await is_cancel_requested(run_id):
+                    task.cancel()
+                    return
+
+        await _emit_agent_typing(started=True)
+        heartbeat = asyncio.create_task(_typing_heartbeat())
+        stream_task = asyncio.create_task(_drive_stream())
+        watcher = asyncio.create_task(_cancel_watcher(stream_task))
+
+        cancelled = False
+        try:
+            await stream_task
+        except asyncio.CancelledError:
+            # Watcher cancelled the run on a user "stop" (interrupting the
+            # in-flight tool / generation mid-await).
+            cancelled = True
         except Exception as exc:
             logger.exception("Agent chat invocation failed")
             try:
@@ -141,18 +204,47 @@ class AgentChatBridge:
             except Exception:
                 logger.exception("Failed to write agent error message to chat")
         finally:
+            heartbeat.cancel()
+            watcher.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await heartbeat
+            with contextlib.suppress(asyncio.CancelledError):
+                await watcher
+            # A stop clicked just as the stream finishes never raises
+            # CancelledError - the watcher's poll loses the race - but the cancel
+            # flag is still set. Honor it so the marker reflects the user's intent.
+            stop_requested = cancelled
+            if not stop_requested:
+                with contextlib.suppress(Exception):
+                    stop_requested = await is_cancel_requested(run_id)
+
+            if cancelled:
+                # The run task was interrupted mid-await; reset the session
+                # before the cleanup writes and drop any empty placeholder so
+                # no blank bubble is left behind (partial text is kept).
+                with contextlib.suppress(Exception):
+                    await self._session.rollback()
+                    await publisher.discard_empty_placeholders()
+                    await self._session.commit()
+
+            if stop_requested:
+                try:
+                    await publisher.mark_run_stopped()
+                except Exception:
+                    logger.exception("Failed to mark trigger message as stopped")
+
             await publisher.close()
-            await publish_channel_event_to_members(
-                member_ids,
-                chat_evt.AGENT_TYPING,
-                chat_evt.build_agent_typing_payload(
-                    agent_id=agent_id,
-                    display_name=agent.name or "",
-                    started=False,
-                    root_id=trigger.root_id,
-                ),
-                channel_id=channel_id,
-            )
+            with contextlib.suppress(Exception):
+                await set_run_state(
+                    run_id=run_id,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    session_id=channel_id,
+                    status="cancelled" if stop_requested else "completed",
+                )
+            with contextlib.suppress(Exception):
+                await clear_chat_active_run(channel_id, agent_id)
+            await _emit_agent_typing(started=False)
 
     async def _load_user_member_ids(self, channel_id: UUID) -> list[UUID]:
         """Return the user-subject member ids for fan-out."""

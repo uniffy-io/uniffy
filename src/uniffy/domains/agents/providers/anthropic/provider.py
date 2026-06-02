@@ -1,15 +1,10 @@
 """Anthropic LLM provider implementation using the official SDK."""
 
-import time
 from collections.abc import AsyncIterator
 
 import anthropic
 from loguru import logger
 
-from uniffy.domains.agents.providers.anthropic.catalog import (
-    FALLBACK_MODELS,
-    get_capabilities,
-)
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
     DoneEvent,
@@ -21,15 +16,9 @@ from uniffy.domains.agents.providers.base import (
     ToolCall,
     ToolCallEvent,
 )
+from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 
 logger = logger.bind(component="agents.providers.anthropic.provider")
-
-# Module-level cache for the model list fetched from the Anthropic API.
-# Shared across all AnthropicProvider instances since the catalog is the
-# same regardless of credential.
-_MODEL_CACHE_TTL_SECONDS = 3600  # 1 hour
-_cached_models: list[ModelInfo] | None = None
-_cache_timestamp: float = 0.0
 
 
 class AnthropicProvider(LLMProvider):
@@ -53,6 +42,11 @@ class AnthropicProvider(LLMProvider):
     OAUTH_BETA_HEADERS = {
         "anthropic-beta": "oauth-2025-04-20",
     }
+
+    @property
+    def name(self) -> str:
+        """Catalog provider key, used for pricing lookups."""
+        return "anthropic"
 
     def __init__(self, credential: str, credential_type: str = "api_key") -> None:
         self._credential_type = credential_type
@@ -145,85 +139,12 @@ class AnthropicProvider(LLMProvider):
         *,
         force_refresh: bool = False,
     ) -> list[ModelInfo]:
-        """Return available Anthropic models, fetched from the API.
+        """Return Anthropic models from the catalog (the source of truth).
 
-        Calls ``models.list()`` to discover currently available models,
-        then enriches each entry with capability metadata from the static
-        overlay map.  Results are cached for one hour to avoid redundant
-        API calls.
-
-        For setup-token credentials (where ``models.list()`` is not
-        supported) and on any API error, falls back to the static catalog.
-
-        Parameters
-        ----------
-        force_refresh : bool
-            When True, bypass the cache and fetch fresh from the API.
-
-        Returns
-        -------
-        list[ModelInfo]
-            Available Anthropic models.
-
+        ``force_refresh`` is accepted for interface compatibility and ignored
+        - the catalog is local and re-read on change.
         """
-        global _cached_models, _cache_timestamp
-
-        # Return cached result if still fresh (unless forced)
-        if not force_refresh:
-            cache_age = time.monotonic() - _cache_timestamp
-            if _cached_models is not None and cache_age < _MODEL_CACHE_TTL_SECONDS:
-                logger.debug(
-                    f"Returning cached Anthropic models "
-                    f"({len(_cached_models)} models, "
-                    f"age={cache_age:.0f}s)",
-                )
-                return list(_cached_models)
-        else:
-            logger.debug("Force-refreshing Anthropic model list")
-
-        logger.debug(
-            f"Fetching model list from Anthropic API (credential_type={self._credential_type})",
-        )
-        try:
-            models: list[ModelInfo] = []
-            async for api_model in self._client.models.list(limit=100):
-                caps = get_capabilities(api_model.id)
-                logger.debug(
-                    f"  API model: id={api_model.id} "
-                    f"display_name={api_model.display_name!r} "
-                    f"created_at={api_model.created_at}",
-                )
-                models.append(
-                    ModelInfo(
-                        id=api_model.id,
-                        display_name=api_model.display_name,
-                        provider="anthropic",
-                        context_window=caps.context_window,
-                        supports_tools=caps.supports_tools,
-                        supports_vision=caps.supports_vision,
-                        supports_thinking=caps.supports_thinking,
-                    )
-                )
-
-            logger.debug(
-                f"Anthropic API returned {len(models)} models",
-            )
-
-            if models:
-                _cached_models = models
-                _cache_timestamp = time.monotonic()
-                return list(models)
-
-            # Empty response -- fall through to static catalog
-            logger.warning(
-                "Anthropic API returned 0 models, using fallback catalog",
-            )
-        except Exception as e:
-            logger.warning(
-                f"Failed to fetch Anthropic model list, using fallback catalog: {e}",
-            )
-
-        return list(FALLBACK_MODELS)
+        return model_infos_for_provider("anthropic")
 
     def _build_request_kwargs(
         self,

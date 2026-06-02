@@ -386,3 +386,67 @@ async def is_cancel_requested(run_id: UUID) -> bool:
     if state is None:
         return False
     return bool(state.get("cancel_requested"))
+
+
+async def touch_run_state(run_id: UUID, ttl: int = RUN_STATE_TTL_SECONDS) -> None:
+    """Bump the run-state TTL without rewriting fields.
+
+    A full ``set_run_state`` would clobber ``cancel_requested``; long turns
+    (multiple image generations) need their state kept alive without dropping a
+    pending cancel, so this only refreshes the expiry.
+    """
+    client = _get_ops_client()
+    if client is None:
+        return
+    with contextlib.suppress(TimeoutError, Exception):
+        async with ops_call(STREAMS_NAMESPACE, "touch_state"):
+            await client.expire(run_state_key(run_id), ttl)
+
+
+def chat_active_run_key(channel_id: UUID, agent_id: UUID) -> str:
+    """Maps a (channel, agent) pair to its currently active run id."""
+    return f"agent:chat:activerun:{channel_id}:{agent_id}"
+
+
+async def set_chat_active_run(
+    channel_id: UUID,
+    agent_id: UUID,
+    run_id: UUID,
+    ttl: int = RUN_STATE_TTL_SECONDS,
+) -> None:
+    """Record ``run_id`` as the active chat run for ``(channel, agent)``."""
+    client = _get_ops_client()
+    if client is None:
+        return
+    with contextlib.suppress(TimeoutError, Exception):
+        async with ops_call(STREAMS_NAMESPACE, "set_chat_active_run"):
+            await client.set(chat_active_run_key(channel_id, agent_id), str(run_id), ex=ttl)
+
+
+async def get_chat_active_run(channel_id: UUID, agent_id: UUID) -> UUID | None:
+    """Return the active run id for ``(channel, agent)`` or ``None``."""
+    client = _get_ops_client()
+    if client is None:
+        return None
+    try:
+        async with ops_call(STREAMS_NAMESPACE, "get_chat_active_run"):
+            raw = await client.get(chat_active_run_key(channel_id, agent_id))
+    except (TimeoutError, Exception):
+        return None
+    if not raw:
+        return None
+    value = raw.decode() if isinstance(raw, bytes) else str(raw)
+    try:
+        return UUID(value)
+    except ValueError:
+        return None
+
+
+async def clear_chat_active_run(channel_id: UUID, agent_id: UUID) -> None:
+    """Drop the active-run pointer for ``(channel, agent)``."""
+    client = _get_ops_client()
+    if client is None:
+        return
+    with contextlib.suppress(TimeoutError, Exception):
+        async with ops_call(STREAMS_NAMESPACE, "clear_chat_active_run"):
+            await client.delete(chat_active_run_key(channel_id, agent_id))

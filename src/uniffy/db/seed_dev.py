@@ -254,6 +254,7 @@ ALL_TOOL_NAMES: list[str] = [
     "cron.update",
     "cron.delete",
     "cron.get_runs",
+    "system.current_time",
 ]
 
 PROVIDER_AGENT_CONFIGS: dict[str, dict[str, str]] = {

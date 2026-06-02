@@ -171,24 +171,6 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     file_record.current_version_id = version.id
     await ctx.session.flush()
 
-    # Enqueue thumbnail generation jobs
-    from uniffy.workers.utils.mime import get_jobs_for_mime_type
-
-    jobs = get_jobs_for_mime_type(mime_type)
-    if jobs:
-        try:
-            from uniffy.core.valkey import get_queue
-
-            queue = get_queue("core")
-            for job_name in jobs:
-                await queue.enqueue_job(
-                    job_name,
-                    str(file_id),
-                    str(ctx.organization_id),
-                )
-        except RuntimeError:
-            pass
-
     # Build the file URN and index for search
     file_urn = build_content_urn(ContentType.FILE, file_id)
 
@@ -218,14 +200,16 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.domains.agents.currency import (
         get_display_currency,
     )
-    from uniffy.domains.agents.pricing import compute_image_cost, get_pricing
+    from uniffy.domains.agents.pricing import (
+        PRICING_CURRENCY,
+        compute_image_cost,
+        get_pricing,
+    )
 
     image_cost = None
     image_cost_currency = None
     try:
-        pricing = await get_pricing(
-            ctx.session, provider=provider.name, model=image_model,
-        )
+        pricing = get_pricing(provider=provider.name, model=image_model)
         if pricing is not None:
             raw_cost = compute_image_cost(
                 pricing, size=size, quality=quality, count=1,
@@ -236,14 +220,14 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 )
                 image_cost = await convert_currency(
                     raw_cost,
-                    pricing.currency,
+                    PRICING_CURRENCY,
                     display_currency,
                     ctx.session,
                     ctx.organization_id,
                 )
                 image_cost_currency = display_currency
-    except Exception:
-        logger.opt(exception=True).warning("Image cost calculation failed")
+    except Exception as exc:
+        logger.exception(f"Image cost calculation failed: {exc!r}")
 
     # Log image model usage so it appears in usage analytics
     if ctx.session_id and ctx.agent_id:
@@ -299,6 +283,25 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         logger.opt(exception=True).warning("Image generation audit emission failed")
 
     await ctx.session.commit()
+
+    # Enqueue thumbnail/extraction jobs only after the file row is committed, so
+    # the core worker can load it - mirrors FileOperations._enqueue_processing_jobs.
+    from uniffy.workers.utils.mime import get_jobs_for_mime_type
+
+    jobs = get_jobs_for_mime_type(mime_type)
+    if jobs:
+        try:
+            from uniffy.core.valkey import get_queue
+
+            queue = get_queue("core")
+            for job_name in jobs:
+                await queue.enqueue_job(
+                    job_name,
+                    str(file_id),
+                    str(ctx.organization_id),
+                )
+        except RuntimeError:
+            pass
 
     try:
         await check_and_fire_alerts(
@@ -366,7 +369,7 @@ generate_image = ToolDefinition(
     },
     executor=_execute_generate_image,
     destructive=False,
-    timeout_seconds=60,
+    timeout_seconds=300,
 )
 
 IMAGES_TOOLS: list[ToolDefinition] = [generate_image]

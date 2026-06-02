@@ -47,8 +47,8 @@ class AgentRuntimeSettings(SQLModel, table=True):
         sa_column=Column(Integer, nullable=False, default=DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS),
     )
     display_currency: str = Field(
-        default="EUR",
-        sa_column=Column(String(3), nullable=False, default="EUR"),
+        default="USD",
+        sa_column=Column(String(3), nullable=False, default="USD"),
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

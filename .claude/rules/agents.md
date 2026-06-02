@@ -100,7 +100,7 @@ The agent runtime is one of the two highest-traffic paths in the system. Every c
 | Pre-flight reads go through the agent caches. | `fetch_agent_row`, `fetch_agent_skills`, `fetch_agent_prompt`, `get_provider_for_key`, the user/agent profile cache via `SenderResolver`. When you add a new runtime read, adding a cache helper alongside is a good fit. |
 | Agent / skill / prompt mutations invalidate the dependent agent caches in the same commit. | Reverse-index sets `tag:skill:{skill_id}` and `tag:prompt:{prompt_id}` hold the agent ids that reference each shared row. Skill / prompt update / delete = SMEMBERS the set, bulk wipe the dependent agent caches, drop the set on delete. Agent.enabled_skills / prompt_id changes diff old vs new and SREM / SADD the matching tag sets. |
 | Tool calls within a single LLM turn are partitioned read / write. | Read-only tools fan out concurrently against per-tool sessions; writes run sequentially on the runtime session. New tools default to `read_only=False` - flipping to True is a deliberate annotation. |
-| Per-tool `timeout_seconds`. | Default 15s. Long-running tools opt up explicitly with a clear reason in the `ToolDefinition`. Tools that have no upper bound on duration (open-ended search, image gen against a slow provider) live with 30-60s ceilings; if they exceed that, the LLM sees a structured timeout error and recovers, not a stuck event loop. |
+| Per-tool `timeout_seconds`. | Default 15s. Long-running tools opt up explicitly with a clear reason in the `ToolDefinition`. Tools that have no upper bound on duration (open-ended search, image gen against a slow provider) live with 30-300s ceilings; if they exceed that, the LLM sees a structured timeout error and recovers, not a stuck event loop. |
 | Hot-row counter UPDATEs gate on the prior value. | `agent_channel_bindings.last_active_token_estimate` and any future "biggest wins" counter use `WHERE current < new_value` (or `IS NULL`) so concurrent agents in the same channel race deterministically. |
 | `agents_messages.token_estimate` is populated at INSERT, never at read time. | Every writer (runtime add_message, summary insert, consolidated summary, chat-channel writer) computes the estimate via `_estimate_message_tokens` and stores it. The window-function context loader assumes the column is populated. |
 | ApprovalStore is in-process and ephemeral. | TTL sweep on every `register` evicts entries older than `APPROVAL_TTL_SECONDS + 60s` and releases their waiters. Pod restarts drop pending approvals - durability is not part of the contract here. |
@@ -237,7 +237,7 @@ The tool loop runs up to `MAX_TOOL_ITERATIONS = 10` times per message. Within a 
 
 1. LLM returns `stop_reason="tool_use"` with one or more tool calls.
 2. Tool calls are partitioned by `ToolDefinition.read_only`. Read-only tools fan out concurrently via `asyncio.gather(return_exceptions=True)` against fresh per-tool `AsyncSession`s acquired from a small per-turn pool (`READ_TOOL_POOL_SIZE=5`); each task commits its own session. Write tools run sequentially on the runtime's own session so transaction boundaries hold.
-3. Every tool call has a wall-clock cap. `ToolDefinition.timeout_seconds` (default 15s; 30s for search and file reads; 60s for image generation) wraps the executor in `asyncio.wait_for`. On `TimeoutError` the result is a structured `ToolResult(success=False, error="Tool {name} exceeded {n}s timeout")`.
+3. Every tool call has a wall-clock cap. `ToolDefinition.timeout_seconds` (default 15s; 30s for search and file reads; 300s for image generation) wraps the executor in `asyncio.wait_for`. On `TimeoutError` the result is a structured `ToolResult(success=False, error="Tool {name} exceeded {n}s timeout")`.
 4. Tool results are stored in `agents_messages` with `role="tool"`, in the original tool-call order, regardless of read-group concurrency.
 5. Tool results are appended to `llm_messages` and the LLM is re-invoked.
 6. If LLM returns more tool calls, the loop continues.
@@ -306,6 +306,7 @@ Non-destructive tools (read, search, create, update) execute immediately without
 | Memory | `memory.recall` | No | ILIKE search on `AgentMemory.key` and `content` |
 | Memory | `memory.list` | No | Lists `AgentMemory` filtered by category |
 | Memory | `memory.forget` | No | Deletes `AgentMemory` by key |
+| System | `system.current_time` | No | Returns the current UTC time (the prompt only carries a start-of-turn date snapshot) |
 
 All tool executors are registered in `tools/builtin/__init__.py:register_all()`.
 
@@ -402,7 +403,7 @@ Provider keys are Fernet-encrypted at rest in `agents_provider_keys`. Fields:
 
 `ProviderOperations.get_provider_for_key(...)` and `get_provider_for_model(...)` consult two cache tiers before touching PG:
 
-1. **In-process LRU** (`core/llm_providers/cache.py::ProviderClientLRU`): process singleton, `OrderedDict`-backed, 1-hour TTL, 256-entry cap. Holds the decrypted credential AND the constructed provider client so the SDK's httpx connection pool is reused across requests.
+1. **In-process LRU** (`domains/agents/providers/client_cache.py::ProviderClientLRU`): process singleton, `OrderedDict`-backed, 1-hour TTL, 256-entry cap. Holds the decrypted credential AND the constructed provider client so the SDK's httpx connection pool is reused across requests.
 2. **Valkey metadata cache** (`provider:key:{key_id}`, TTL 3600s): non-secret routing data only - provider, credential_type, is_valid, is_enabled, available model ids. The encrypted credential MUST NOT be written to Valkey.
 
 Cross-pod invalidation: any mutation that changes a provider key publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey metadata entry. A long-lived `PSUBSCRIBE provider_keys:invalidate:*` listener (started in the FastAPI app lifespan and the worker `on_startup`) drops the matching LRU entry on receipt. Cache and pubsub are in lockstep - one signal, both tiers drop.

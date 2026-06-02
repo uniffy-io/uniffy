@@ -31,7 +31,7 @@ from uniffy.observability.metrics import (
     LLM_PROVIDER_LRU_MISS_TOTAL,
 )
 
-logger = logger.bind(component="llm_providers.cache")
+logger = logger.bind(component="agents.providers.client_cache")
 
 if TYPE_CHECKING:
     from uniffy.domains.agents.providers.base import LLMProvider

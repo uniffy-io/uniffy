@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     selectProviderKeys,
     selectAvailableModels,
+    selectModelsForKey,
     selectProvidersLoading,
 } from "@/features/agents/store/agentProvidersSlice";
 import {
@@ -39,6 +40,7 @@ import {
     removeProviderKey,
     validateProviderKey,
     fetchAvailableModels,
+    fetchModelsForKey,
     toggleProviderKey,
 } from "@/features/agents/store/agentProvidersThunks";
 import type { SerializedProviderKey } from "@/features/agents/store/agentProvidersThunks";
@@ -57,6 +59,14 @@ const CREDENTIAL_TYPE_OPTIONS = [
     { value: CredentialType.API_KEY, label: "API Key" },
     { value: CredentialType.SETUP_TOKEN, label: "Setup Token" },
 ];
+
+/** "1M ctx" at >= 1M tokens, "200k ctx" below. */
+function formatContextWindow(tokens: number): string {
+    if (tokens >= 1_000_000) {
+        return `${Number((tokens / 1_000_000).toFixed(1))}M`;
+    }
+    return `${Math.round(tokens / 1000)}k`;
+}
 
 interface KeySectionConfig {
     id: "personal" | "shared" | "organization";
@@ -306,6 +316,7 @@ export function ConfigView() {
     const [togglingKeyId, setTogglingKeyId] = useState<string | null>(null);
     const [showAddForm, setShowAddForm] = useState(false);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+    const [modelsTab, setModelsTab] = useState<"key" | "all">("key");
 
     const providerKeys = useMemo(
         () => Object.values(providerKeysMap),
@@ -339,6 +350,15 @@ export function ConfigView() {
         () => (selectedKeyId ? providerKeysMap[selectedKeyId] ?? null : null),
         [selectedKeyId, providerKeysMap],
     );
+
+    const keyModels = useAppSelector(selectModelsForKey(selectedKeyId ?? ""));
+    const shownModels = modelsTab === "all" ? availableModels : keyModels;
+
+    useEffect(() => {
+        if (selectedKeyId) {
+            dispatch(fetchModelsForKey({ keyId: selectedKeyId }));
+        }
+    }, [selectedKeyId, dispatch]);
 
     const handleValidate = async (keyId: string) => {
         setValidatingKeyId(keyId);
@@ -614,29 +634,66 @@ export function ConfigView() {
 
                             {/* Available Models Section */}
                             <div className="bg-card border border-border rounded-lg overflow-hidden">
-                                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Brain size={18} className="text-muted-foreground" />
+                                <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <Brain size={18} className="text-muted-foreground shrink-0" />
                                         <span className="font-medium text-foreground">
-                                            Available Models (All Keys)
+                                            Available Models
                                         </span>
-                                        <Badge variant="secondary">
-                                            {availableModels.length}
-                                        </Badge>
+                                        <Badge variant="secondary">{shownModels.length}</Badge>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => dispatch(fetchAvailableModels({ forceRefresh: true }))}
-                                        aria-label="Refresh models"
-                                    >
-                                        <ArrowClockwise size={16} />
-                                    </Button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <div className="inline-flex rounded-md border border-border bg-muted p-0.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setModelsTab("key")}
+                                                className={cn(
+                                                    "px-2.5 py-1 text-xs font-medium rounded transition-colors",
+                                                    modelsTab === "key"
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "text-muted-foreground hover:text-foreground",
+                                                )}
+                                            >
+                                                This key
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setModelsTab("all")}
+                                                className={cn(
+                                                    "px-2.5 py-1 text-xs font-medium rounded transition-colors",
+                                                    modelsTab === "all"
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "text-muted-foreground hover:text-foreground",
+                                                )}
+                                            >
+                                                All keys
+                                            </button>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                                if (modelsTab === "all") {
+                                                    dispatch(fetchAvailableModels({ forceRefresh: true }));
+                                                } else {
+                                                    dispatch(
+                                                        fetchModelsForKey({
+                                                            keyId: selectedKey.id,
+                                                            forceRefresh: true,
+                                                        }),
+                                                    );
+                                                }
+                                            }}
+                                            aria-label="Refresh models"
+                                        >
+                                            <ArrowClockwise size={16} />
+                                        </Button>
+                                    </div>
                                 </div>
 
-                                {availableModels.length > 0 ? (
+                                {shownModels.length > 0 ? (
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-4">
-                                        {availableModels.map((model) => (
+                                        {shownModels.map((model) => (
                                             <div
                                                 key={model.id}
                                                 className="bg-muted/30 border border-border rounded-lg p-3"
@@ -656,7 +713,7 @@ export function ConfigView() {
                                                 </div>
                                                 <div className="flex items-center gap-3 mt-2">
                                                     <span className="text-xs text-muted-foreground">
-                                                        {(model.contextWindow / 1000).toFixed(0)}k ctx
+                                                        {formatContextWindow(model.contextWindow)} ctx
                                                     </span>
                                                     <div className="flex items-center gap-1.5">
                                                         {model.supportsTools && (
@@ -686,7 +743,9 @@ export function ConfigView() {
                                             No models available
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            Add a valid provider key to see available models
+                                            {modelsTab === "key"
+                                                ? "This key exposes no models, or it has not been validated yet"
+                                                : "Add a valid provider key to see available models"}
                                         </p>
                                     </div>
                                 )}
