@@ -483,6 +483,56 @@ export const selectMessageById = (
   messageId: string,
 ): ChatMessage | undefined => state.chatMessages.byId[messageId];
 
+export interface InFlightTool {
+  agentId: string;
+  toolName: string;
+  toolCallId: string;
+  startedAt: string;
+}
+
+const EMPTY_INFLIGHT: readonly InFlightTool[] = Object.freeze([]);
+const inFlightToolsSelectorByChannel = new Map<string, (state: RootState) => InFlightTool[]>();
+
+/** Agent `tool_call` rows whose matching `tool_result` (same tool_call_id) has not arrived yet. */
+export const selectInFlightToolsForChannel = (
+  state: RootState,
+  channelId: string,
+): InFlightTool[] => {
+  let selector = inFlightToolsSelectorByChannel.get(channelId);
+  if (!selector) {
+    selector = createSelector(
+      [
+        (s: RootState) => s.chatMessages.idsByChannel[channelId],
+        (s: RootState) => s.chatMessages.byId,
+      ],
+      (ids, byId): InFlightTool[] => {
+        if (!ids || ids.length === 0) return EMPTY_INFLIGHT as InFlightTool[];
+        const settledCallIds = new Set<string>();
+        for (const id of ids) {
+          const m = byId[id];
+          if (m?.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_result') {
+            const cid = m.metadata?.['tool_call_id'];
+            if (typeof cid === 'string') settledCallIds.add(cid);
+          }
+        }
+        const out: InFlightTool[] = [];
+        for (const id of ids) {
+          const m = byId[id];
+          if (m?.senderType !== 'AGENT' || m.metadata?.['kind'] !== 'tool_call') continue;
+          const cid = m.metadata?.['tool_call_id'];
+          if (typeof cid !== 'string' || settledCallIds.has(cid)) continue;
+          const toolName = typeof m.metadata?.['tool_name'] === 'string' ? (m.metadata['tool_name'] as string) : 'tool';
+          const agentId = typeof m.metadata?.['agent_id'] === 'string' ? (m.metadata['agent_id'] as string) : m.senderId;
+          out.push({ agentId, toolName, toolCallId: cid, startedAt: m.createdAt });
+        }
+        return out.length ? out : (EMPTY_INFLIGHT as InFlightTool[]);
+      },
+    );
+    inFlightToolsSelectorByChannel.set(channelId, selector);
+  }
+  return selector(state);
+};
+
 export const selectHasMoreForChannel = (
   state: RootState,
   channelId: string,

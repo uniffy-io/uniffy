@@ -92,6 +92,35 @@
   transform-origin: center center;
 }
 
+/* Chat typing / agent-working indicator */
+@keyframes uniffy-typing-wave {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes uniffy-typing-aura {
+  0% { transform: scale(1); opacity: 0.5; }
+  70%, 100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes uniffy-typing-enter {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.uniffy-typing-bar {
+  transform-origin: center;
+  animation: uniffy-typing-wave 1.1s ease-in-out infinite;
+}
+
+.uniffy-typing-aura {
+  animation: uniffy-typing-aura 1.6s ease-out infinite;
+}
+
+.uniffy-typing-enter {
+  animation: uniffy-typing-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Status colors — semantic, theme-independent (see config/theme/statusColors.ts) */
 :root {
   --status-error: #dc2626;

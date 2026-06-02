@@ -1,12 +1,14 @@
 /** Renders an agent-authored ChatMessage by dispatching on `metadata.kind`. */
 
-import { useState } from 'react';
-import { Wrench, CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { Wrench, CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, CircleNotch, Image as ImageIcon, Stop, Clock } from '@phosphor-icons/react';
 import { StreamingMessage } from '@/features/chat/components/channel/StreamingMessage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { respondToAgentConfirmation } from '@/features/chat/store/chatThunks';
+import { respondToAgentConfirmation, stopAgentRun } from '@/features/chat/store/chatThunks';
+import { selectMessagesForChannel, selectTypingUsers } from '@/features/chat/store/chatMessagesSlice';
+import { formatMediaTime } from '@/shared/utils/dateFormatting';
 import type { ChatMessage } from '@/features/chat/types';
 
 interface AgentMessageBodyProps {
@@ -39,8 +41,10 @@ export function AgentMessageBody({ message }: AgentMessageBodyProps) {
 
     switch (kind) {
         case 'tool_call':
-            return <ToolCallCard message={message} />;
+            return <ToolActivityCard message={message} />;
         case 'tool_result':
+            // A result whose tool_call row is present is absorbed into the call
+            // card (the list hides it); this only renders an orphan result.
             return <ToolResultCard message={message} />;
         case 'summary':
             return <SummaryRow message={message} />;
@@ -61,39 +65,160 @@ export function AgentMessageBody({ message }: AgentMessageBodyProps) {
     }
 }
 
-function ToolCallCard({ message }: { message: ChatMessage }) {
+/** Ticks once a second while `active`; frozen otherwise. */
+function useElapsedSeconds(startIso: string, active: boolean): number {
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        if (!active) return;
+        const timer = window.setInterval(() => setNow(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, [active]);
+    return Math.max(0, Math.floor((now - new Date(startIso).getTime()) / 1000));
+}
+
+/** Present-tense phrase for the running state, e.g. "Generating image". */
+function toolRunningLabel(toolName: string): string {
+    const [, rawAction] = toolName.split('.', 2);
+    const action = rawAction ?? toolName;
+    if (action.includes('image')) return 'Generating image';
+    if (action.includes('search')) return 'Searching';
+    if (action.startsWith('create')) return 'Creating';
+    if (action.startsWith('update')) return 'Updating';
+    if (action.startsWith('delete')) return 'Deleting';
+    if (action.startsWith('move')) return 'Moving';
+    if (action.startsWith('read') || action.startsWith('get') || action.startsWith('list')) return 'Reading';
+    return humanizeToolName(toolName);
+}
+
+/** A single card per tool call that evolves running -> completed / failed, absorbing its result row. */
+function ToolActivityCard({ message }: { message: ChatMessage }) {
     const toolName = readString(message.metadata, 'tool_name') ?? 'tool';
     const toolArgs = readString(message.metadata, 'tool_args');
-    const [showDetails, setShowDetails] = useState(false);
-    const hasArgs = toolArgs && toolArgs !== '{}' && toolArgs !== 'None';
+    const toolCallId = readString(message.metadata, 'tool_call_id');
+    const agentId = readString(message.metadata, 'agent_id');
+    const dispatch = useAppDispatch();
+    const [showArgs, setShowArgs] = useState(false);
+    const [showResult, setShowResult] = useState(false);
+
+    const resultMsg = useAppSelector((s) => {
+        if (!toolCallId) return undefined;
+        return selectMessagesForChannel(s, message.channelId).find(
+            (m) =>
+                m.senderType === 'AGENT' &&
+                m.metadata?.['kind'] === 'tool_result' &&
+                m.metadata?.['tool_call_id'] === toolCallId,
+        );
+    });
+    const agentActive = useAppSelector((s) =>
+        !!agentId && selectTypingUsers(s, message.channelId).some((u) => u.userId === agentId),
+    );
+
+    const running = !resultMsg && agentActive;
+    const interrupted = !resultMsg && !agentActive;
+    const elapsed = useElapsedSeconds(message.createdAt, running);
+
+    const result = resultMsg?.content || (resultMsg ? readString(resultMsg.metadata, 'tool_result') : undefined) || '';
+    const failed = !!resultMsg && /^(Error|Permission denied|Not found|Validation error)/i.test(result);
+    const hasArgs = !!toolArgs && toolArgs !== '{}' && toolArgs !== 'None';
+    const hasResult = result.trim().length > 0;
+    const durationSecs = resultMsg
+        ? Math.max(0, Math.floor((new Date(resultMsg.createdAt).getTime() - new Date(message.createdAt).getTime()) / 1000))
+        : 0;
+    const isImage = toolName.includes('image');
+    const ToolIcon = isImage ? ImageIcon : Wrench;
 
     return (
         <div
-            className="flex items-start gap-2.5 px-3 py-2 bg-muted/60 rounded-lg max-w-[70%]"
+            className={cn(
+                'flex items-start gap-2.5 px-3 py-2 rounded-lg max-w-[70%]',
+                failed ? 'bg-red-500/10' : 'bg-muted/60',
+            )}
             data-testid={`chat-agent-tool-call-${message.id}`}
             data-tool-name={toolName}
+            data-tool-status={resultMsg ? (failed ? 'failed' : 'completed') : running ? 'running' : 'interrupted'}
         >
-            <Wrench size={16} weight="duotone" className="text-primary shrink-0 mt-0.5" />
+            {running ? (
+                <CircleNotch size={16} weight="bold" className="text-primary shrink-0 mt-0.5 animate-spin" />
+            ) : failed ? (
+                <XCircle size={16} weight="fill" className="text-red-500 shrink-0 mt-0.5" />
+            ) : resultMsg ? (
+                <CheckCircle size={16} weight="fill" className="text-green-500 shrink-0 mt-0.5" />
+            ) : (
+                <ToolIcon size={16} weight="duotone" className="text-muted-foreground shrink-0 mt-0.5" />
+            )}
             <div className="min-w-0 flex-1">
-                <div className="text-[13px] text-foreground">{humanizeToolName(toolName)}</div>
+                <div className="text-[13px] text-foreground flex items-center gap-2 flex-wrap">
+                    <span>
+                        {running
+                            ? `${toolRunningLabel(toolName)}...`
+                            : interrupted
+                                ? `${humanizeToolName(toolName)} interrupted`
+                                : `${humanizeToolName(toolName)} ${failed ? 'failed' : 'completed'}`}
+                    </span>
+                    {running && <span className="text-[11px] text-muted-foreground tabular-nums">{formatMediaTime(elapsed)}</span>}
+                    {running && agentId && (
+                        <button
+                            type="button"
+                            onClick={() => dispatch(stopAgentRun({ channelId: message.channelId, agentId }))}
+                            className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-red-500 hover:border-red-500/40 transition-colors"
+                            data-testid={`chat-agent-tool-stop-${message.id}`}
+                            title="Stop the agent"
+                        >
+                            <Stop size={11} weight="fill" />
+                            Stop
+                        </button>
+                    )}
+                    {resultMsg && durationSecs > 0 && (
+                        <span className="text-[11px] text-muted-foreground">- took {formatMediaTime(durationSecs)}</span>
+                    )}
+                </div>
                 <div className="text-[11px] text-muted-foreground font-mono truncate">{toolName}</div>
-                {hasArgs && (
-                    <button
-                        type="button"
-                        onClick={() => setShowDetails((v) => !v)}
-                        className="text-[11px] text-muted-foreground hover:text-foreground mt-1"
-                        data-testid={`chat-agent-tool-call-toggle-${message.id}`}
-                        data-state={showDetails ? 'open' : 'closed'}
-                    >
-                        {showDetails ? 'Hide arguments' : 'Show arguments'}
-                    </button>
+                {running && isImage && (
+                    <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">
+                        <Clock size={12} weight="duotone" className="shrink-0" />
+                        Image generation can take up to 5 minutes - hang tight.
+                    </div>
                 )}
-                {showDetails && hasArgs && (
+                {(hasArgs || hasResult) && (
+                    <div className="flex items-center gap-3 mt-1">
+                        {hasArgs && (
+                            <button
+                                type="button"
+                                onClick={() => setShowArgs((v) => !v)}
+                                className="text-[11px] text-muted-foreground hover:text-foreground"
+                                data-testid={`chat-agent-tool-call-toggle-${message.id}`}
+                                data-state={showArgs ? 'open' : 'closed'}
+                            >
+                                {showArgs ? 'Hide arguments' : 'Show arguments'}
+                            </button>
+                        )}
+                        {hasResult && (
+                            <button
+                                type="button"
+                                onClick={() => setShowResult((v) => !v)}
+                                className="text-[11px] text-muted-foreground hover:text-foreground"
+                                data-testid={`chat-agent-tool-result-toggle-${message.id}`}
+                                data-state={showResult ? 'open' : 'closed'}
+                            >
+                                {showResult ? 'Hide result' : 'Show result'}
+                            </button>
+                        )}
+                    </div>
+                )}
+                {showArgs && hasArgs && (
                     <pre
                         className="text-[11px] font-mono bg-background/50 rounded p-2 mt-1 overflow-x-auto text-foreground/80"
                         data-testid={`chat-agent-tool-call-args-${message.id}`}
                     >
                         {toolArgs}
+                    </pre>
+                )}
+                {showResult && hasResult && (
+                    <pre
+                        className="text-[11px] font-mono bg-background/50 rounded p-2 mt-1 overflow-x-auto whitespace-pre-wrap text-foreground/80 max-h-64"
+                        data-testid={`chat-agent-tool-result-body-${message.id}`}
+                    >
+                        {result}
                     </pre>
                 )}
             </div>

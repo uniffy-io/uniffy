@@ -104,7 +104,7 @@ export const fetchUsageStats = createAsyncThunk<
             totalSessions: Number(response.totalSessions),
             avgDurationMs: response.avgDurationMs,
             totalCost: response.totalCost || '0',
-            displayCurrency: response.displayCurrency || 'EUR',
+            displayCurrency: response.displayCurrency || 'USD',
             totalThinkingTokens: Number(response.totalThinkingTokens),
             totalImageCount: Number(response.totalImageCount),
             totalRetries: Number(response.totalRetries),

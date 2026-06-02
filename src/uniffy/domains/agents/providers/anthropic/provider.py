@@ -43,6 +43,11 @@ class AnthropicProvider(LLMProvider):
         "anthropic-beta": "oauth-2025-04-20",
     }
 
+    @property
+    def name(self) -> str:
+        """Catalog provider key, used for pricing lookups."""
+        return "anthropic"
+
     def __init__(self, credential: str, credential_type: str = "api_key") -> None:
         self._credential_type = credential_type
         if credential_type == "setup_token":

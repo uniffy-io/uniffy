@@ -37,8 +37,8 @@ class AgentBudget(SQLModel, table=True):
         sa_column=Column(Numeric(12, 2), nullable=True),
     )
     currency: str = Field(
-        default="EUR",
-        sa_column=Column(String(3), nullable=False, default="EUR"),
+        default="USD",
+        sa_column=Column(String(3), nullable=False, default="USD"),
     )
     image_monthly_limit: int | None = Field(
         default=None,

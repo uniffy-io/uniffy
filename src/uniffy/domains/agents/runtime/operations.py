@@ -2019,8 +2019,8 @@ class RuntimeOperations:
         except ValidationError as exc:
             logger.warning(f"Skipping cost calculation: {exc}")
             return None, None
-        except Exception:
-            logger.opt(exception=True).warning("Cost calculation failed unexpectedly")
+        except Exception as exc:
+            logger.exception(f"Cost calculation failed unexpectedly: {exc!r}")
             return None, None
 
 

@@ -44,6 +44,11 @@ class GoogleProvider(LLMProvider):
         self._credential_type = credential_type
         self._client = genai.Client(api_key=credential)
 
+    @property
+    def name(self) -> str:
+        """Catalog provider key, used for pricing lookups."""
+        return "google"
+
     async def validate(self) -> tuple[bool, str | None]:
         """Validate the credential against the Google AI API.
 

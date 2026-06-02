@@ -1185,6 +1185,25 @@ export const respondToAgentConfirmation = createAsyncThunk<
   }
 });
 
+/** Cancel the in-flight agent run (tool call / image gen / text) for a channel agent. */
+export const stopAgentRun = createAsyncThunk<
+  { stopped: boolean },
+  { channelId: string; agentId: string },
+  { state: RootState; rejectValue: string }
+>('chat/stopAgentRun', async (params, { getState, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.stopAgentRun({
+      organizationId,
+      channelId: params.channelId,
+      agentId: params.agentId,
+    });
+    return { stopped: response.stopped };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to stop the agent');
+  }
+});
+
 /** Re-inject synthetic approval cards on channel mount; live in Valkey but Redux drops on reload. */
 export const fetchChannelPendingApprovals = createAsyncThunk<
   void,

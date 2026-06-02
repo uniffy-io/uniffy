@@ -276,6 +276,45 @@ class ChatStreamPublisher:
         await self._session.refresh(row)
         await self._publish_message_created(row.id)
 
+    async def discard_empty_placeholders(self) -> None:
+        """Public hook for a cancelled run: drop empty assistant placeholders
+        while keeping any partial text already streamed."""
+        await self._clear_streaming_placeholders()
+
+    async def mark_run_stopped(self) -> None:
+        """Flag the trigger user message so the UI shows its reply was stopped.
+
+        Stored as the string ``"true"`` because the chat metadata wire type is
+        ``map<string, string>``. The fan-out payload is built from the loaded row
+        BEFORE commit - commit expires every attribute and an async session can't
+        lazy-load them back - then published once the write lands.
+        """
+        trigger = await self._session.get(ChatMessage, self._trigger_message_id)
+        if trigger is None:
+            return
+        new_meta = {**(trigger.message_metadata or {}), "agent_run_stopped": "true"}
+        payload = chat_evt.build_message_payload(
+            message_id=trigger.id,
+            channel_id=trigger.channel_id,
+            sender_id=trigger.sender_id,
+            sender_type=trigger.sender_type.value
+            if hasattr(trigger.sender_type, "value")
+            else str(trigger.sender_type),
+            content=trigger.content or "",
+            root_id=trigger.root_id,
+            created_at=trigger.created_at,
+            metadata=new_meta,
+            reply_to_id=trigger.reply_to_id,
+        )
+        trigger.message_metadata = new_meta
+        await self._session.commit()
+        await publish_channel_event_to_members(
+            self._member_ids,
+            chat_evt.MESSAGE_UPDATED,
+            payload,
+            channel_id=self._channel_id,
+        )
+
     async def _clear_streaming_placeholders(self) -> None:
         """Drop empty assistant placeholders left over by an aborted run."""
         result = await self._session.execute(

@@ -21,7 +21,7 @@ for the model list, pricing, capabilities, and image-gen support (see
 1. **Run the audit** from the repo root:
 
    ```bash
-   uv run python .claude/skills/model-catalog-audit/audit_models.py
+   uv run python .claude/skills/model-catalog-audit/scripts/audit_models.py
    ```
 
    It loads provider keys from `.env` (`CLAUDE_API_KEY`, `OPENAI_API_KEY`,
@@ -37,6 +37,8 @@ for the model list, pricing, capabilities, and image-gen support (see
      add a code path. Focus on chat models and image-gen models.
    - **UNSEEN** - a catalog model this key did not return. Often just means the
      account lacks access or it is a dated snapshot; do not delete blindly.
+
+2.5 **Ask and review with the user** 
 
 3. **Decide what to adopt.** For each NEW model worth adding (a real chat or
    image-gen model), and for any model whose pricing may have changed:
@@ -69,9 +71,6 @@ for the model list, pricing, capabilities, and image-gen support (see
 
    A malformed catalog raises on load (hard fail), so a clean load means the
    schema is satisfied.
-
-6. **Ship it.** Commit the `catalog.json` change (and any newly-supported
-   provider code). Open a PR with `/pr` if appropriate.
 
 ## Notes
 

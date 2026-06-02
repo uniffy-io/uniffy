@@ -482,6 +482,21 @@
           "supports_attachments": true
         },
         {
+          "id": "gpt-image-2",
+          "name": "GPT Image 2",
+          "aliases": ["gpt-image-2-2026-04-21", "chatgpt-image-latest"],
+          "context_window": 4096,
+          "can_reason": false,
+          "supports_attachments": true,
+          "supports_tools": false,
+          "supports_image_generation": true,
+          "image_prices": {
+            "1024x1024": {"auto": 0.053, "low": 0.006, "high": 0.211},
+            "1536x1024": {"auto": 0.041, "low": 0.005, "high": 0.165},
+            "1024x1536": {"auto": 0.041, "low": 0.005, "high": 0.165}
+          }
+        },
+        {
           "id": "gpt-image-1",
           "name": "GPT Image 1",
           "context_window": 4096,
@@ -493,20 +508,6 @@
             "1024x1024": {"auto": 0.04, "low": 0.01, "high": 0.17},
             "1536x1024": {"auto": 0.06, "low": 0.02, "high": 0.25},
             "1024x1536": {"auto": 0.06, "low": 0.02, "high": 0.25}
-          }
-        },
-        {
-          "id": "dall-e-3",
-          "name": "DALL-E 3",
-          "context_window": 4096,
-          "can_reason": false,
-          "supports_attachments": true,
-          "supports_tools": false,
-          "supports_image_generation": true,
-          "image_prices": {
-            "1024x1024": {"auto": 0.04, "low": 0.04, "high": 0.08},
-            "1536x1024": {"auto": 0.08, "low": 0.08, "high": 0.12},
-            "1024x1536": {"auto": 0.08, "low": 0.08, "high": 0.12}
           }
         }
       ]
@@ -533,6 +534,7 @@
         {
           "id": "gemini-3.1-pro-preview-customtools",
           "name": "Gemini 3.1 Pro",
+          "aliases": ["gemini-3.1-pro-preview"],
           "cost_per_1m_in": 2,
           "cost_per_1m_out": 12,
           "cost_per_1m_in_cached": 0,
@@ -567,6 +569,21 @@
           "cost_per_1m_out_cached": 0.05,
           "context_window": 1048576,
           "default_max_tokens": 50000,
+          "can_reason": true,
+          "reasoning_levels": ["minimal", "low", "medium", "high"],
+          "default_reasoning_effort": "minimal",
+          "supports_attachments": true
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "name": "Gemini 3.1 Flash Lite",
+          "aliases": ["gemini-3.1-flash-lite-preview"],
+          "cost_per_1m_in": 0.25,
+          "cost_per_1m_out": 1.5,
+          "cost_per_1m_in_cached": 0,
+          "cost_per_1m_out_cached": 0.025,
+          "context_window": 1048576,
+          "default_max_tokens": 64000,
           "can_reason": true,
           "reasoning_levels": ["minimal", "low", "medium", "high"],
           "default_reasoning_effort": "minimal",

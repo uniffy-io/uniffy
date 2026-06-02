@@ -432,7 +432,19 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
 
     if (!trimmed && fileIds.length === 0) return;
 
-    onSend?.(trimmed, fileIds);
+    // Attached files become inline mentions so they render as chips and the agent
+    // receives the file URN, not just the raw attachment. Skip any already mentioned.
+    const attachmentMentions = pendingFiles
+      .filter((f) => Boolean(f.fileId) && !trimmed.includes(f.fileId!))
+      .map((f) => `[[[${f.name}|urn:uniffy:content:FILE:${f.fileId!}]]]`)
+      .join(' ');
+    const content = attachmentMentions
+      ? trimmed
+        ? `${trimmed} ${attachmentMentions}`
+        : attachmentMentions
+      : trimmed;
+
+    onSend?.(content, fileIds);
     el.innerHTML = '';
     setPendingFiles([]);
     updateState();

@@ -16,10 +16,13 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     PendingAgentApproval,
     RespondToAgentConfirmationRequest,
     RespondToAgentConfirmationResponse,
+    StopAgentRunRequest,
+    StopAgentRunResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.channel import ChatChannel
+from uniffy.core.valkey.streams import get_chat_active_run, request_run_cancel
 from uniffy.db import open_session
 from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
 from uniffy.domains.agents.runtime.approvals import get_approval_store
@@ -95,6 +98,44 @@ class AgentConfirmationHandlers:
                     decision=request.decision,
                     decided_at=decided_at,
                 )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def stop_agent_run(
+        self,
+        request: StopAgentRunRequest,
+        ctx: RequestContext,
+    ) -> StopAgentRunResponse:
+        """Cancel the in-flight agent run for a (channel, agent) pair."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            channel_id = UUID(request.channel_id)
+            agent_id = UUID(request.agent_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        try:
+            async with open_session() as session:
+                channel = (
+                    await session.execute(
+                        select(ChatChannel).where(
+                            ChatChannel.id == channel_id,
+                            ChatChannel.organization_id == org_id,
+                        )
+                    )
+                ).scalar_one_or_none()
+                if channel is None:
+                    raise NotFoundError("channel", str(channel_id))
+
+                access = ChatAccessChecker(session)
+                await access.check_access(user_id, org_id, channel)
+
+                run_id = await get_chat_active_run(channel_id, agent_id)
+                if run_id is None:
+                    return StopAgentRunResponse(stopped=False)
+                stopped = await request_run_cancel(run_id)
+                return StopAgentRunResponse(stopped=stopped)
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 

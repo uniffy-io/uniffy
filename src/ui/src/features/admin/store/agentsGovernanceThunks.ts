@@ -18,7 +18,7 @@ function serialiseBudget(row: OrgBudget): OrgBudgetState {
         hardLimit: row.hardLimit,
         alertThresholds: [...row.alertThresholds],
         resetDay: row.resetDay,
-        currency: row.currency || 'EUR',
+        currency: row.currency || 'USD',
     };
 }
 
@@ -104,7 +104,7 @@ export const fetchCurrentSpend = createAsyncThunk<
     const summary = resp.summary;
     return {
         spend: summary?.spend ?? '0',
-        currency: summary?.currency ?? 'EUR',
+        currency: summary?.currency ?? 'USD',
         imageCount: summary?.imageCount ?? 0,
         periodStart: summary?.periodStart
             ? new Date(Number(summary.periodStart.seconds) * 1000).toISOString()
@@ -210,7 +210,7 @@ export const fetchDisplayCurrency = createAsyncThunk<
 >('agentsGovernance/fetchDisplayCurrency', async (_, { getState }) => {
     const organizationId = requireOrg(getState);
     const resp = await agentsGovernanceApi.getDisplayCurrency({ organizationId });
-    return resp.displayCurrency || 'EUR';
+    return resp.displayCurrency || 'USD';
 });
 
 export const setDisplayCurrency = createAsyncThunk<

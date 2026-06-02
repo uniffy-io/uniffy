@@ -53,6 +53,11 @@ class OpenAIProvider(LLMProvider):
         self._credential_type = credential_type
         self._client = openai.AsyncOpenAI(api_key=credential)
 
+    @property
+    def name(self) -> str:
+        """Catalog provider key, used for pricing lookups."""
+        return "openai"
+
     async def validate(self) -> tuple[bool, str | None]:
         """Validate the credential against the OpenAI API.
 
@@ -86,40 +91,16 @@ class OpenAIProvider(LLMProvider):
         size: str = "1024x1024",
         quality: str = "auto",
     ) -> tuple[bytes, str]:
-        """Generate an image using OpenAI's image generation API.
-
-        Parameters
-        ----------
-        prompt : str
-            Text description of the desired image.
-        model : str
-            Image model identifier (e.g. "gpt-image-1", "dall-e-3").
-        size : str
-            Image dimensions (e.g. "1024x1024").
-        quality : str
-            Image quality setting.
-
-        Returns
-        -------
-        tuple[bytes, str]
-            (image_bytes, mime_type).
-
-        """
-        # dall-e models use 'standard'/'hd'; gpt-image models use 'auto'/'high'/'low'
-        if model.startswith("dall-e"):
-            quality_map = {"auto": "standard", "high": "hd", "low": "standard"}
-            quality = quality_map.get(quality, quality)
-
+        """Generate a PNG via the gpt-image API; returns (image_bytes, mime_type)."""
+        # gpt-image models always return base64 PNG and reject response_format.
         response = await self._client.images.generate(
             prompt=prompt,
             model=model,
-            response_format="b64_json",
             size=size,
             quality=quality,
         )
         b64_data = response.data[0].b64_json
         image_bytes = base64.b64decode(b64_data)
-        # gpt-image-1 returns PNG, dall-e-3 returns PNG
         return image_bytes, "image/png"
 
     async def chat_completion(

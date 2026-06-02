@@ -1,9 +1,9 @@
-/** Word-by-word reveal for agent replies; markdown parsing is deferred until streaming settles. */
+/** Word-by-word reveal for agent replies; markdown renders live, with the partial tail sanitized. */
 
 import { memo, useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from '@/components/feedback';
 import { MessageContent } from '@/features/chat/components/channel/MessageContent';
-import { cn } from '@/shared/utils/cn';
+import { sanitizeStreamingMarkdown } from '@/features/chat/utils/streamingMarkdown';
 
 interface StreamingMessageProps {
     content: string;
@@ -15,10 +15,14 @@ const SLOW_INTERVAL_MS = 80;
 const FAST_THRESHOLD_CHARS = 200;
 
 function StreamingMessageInner({ content, streaming }: StreamingMessageProps) {
-    // Settled messages snap to full content; in-flight bubbles mount empty and walk visible up via rAF.
-    const [visible, setVisible] = useState(streaming ? '' : content);
+    // Show whatever content is present at mount immediately; only animate the
+    // growth that arrives WHILE mounted (live deltas). A re-mounted or reopened
+    // message already carries full content, so it never replays the reveal -
+    // even if its `streaming` flag is stale (stopped/errored/raced run). The
+    // live placeholder mounts empty and walks `visible` up via rAF as deltas land.
+    const [visible, setVisible] = useState(content);
     const targetRef = useRef(content);
-    const visibleLenRef = useRef(streaming ? 0 : content.length);
+    const visibleLenRef = useRef(content.length);
     const streamingRef = useRef(streaming);
     const lastTickAtRef = useRef(0);
     const rafRef = useRef<number | null>(null);
@@ -110,19 +114,8 @@ function StreamingMessageInner({ content, streaming }: StreamingMessageProps) {
     }
 
     return (
-        <div
-            className="text-sm leading-[1.625] text-foreground/90 whitespace-pre-wrap break-words"
-            data-testid="chat-streaming-content"
-            data-streaming-state="streaming"
-        >
-            {visible}
-            <span
-                className={cn(
-                    'inline-block w-[2px] h-[1em] ml-[1px] align-text-bottom',
-                    'bg-primary/80 rounded-sm animate-pulse',
-                )}
-                aria-hidden="true"
-            />
+        <div data-testid="chat-streaming-content" data-streaming-state="streaming">
+            <MessageContent content={sanitizeStreamingMarkdown(visible)} />
         </div>
     );
 }

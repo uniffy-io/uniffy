@@ -128,7 +128,12 @@ function handleChannelEvent(
     case ChatEventType.MESSAGE_CREATED: {
       if (ce.payload.case === 'message' && ce.payload.value) {
         const msg = messageToPlain(ce.payload.value);
-        dispatch(clearTypingUser({ channelId: activeChannelId, userId: msg.senderId }));
+        // An agent emits several rows mid-turn (tool calls/results, the final
+        // placeholder); its working indicator is owned by AGENT_TYPING
+        // start/stop, so only a human's own message clears their typing entry.
+        if (msg.senderType !== 'AGENT') {
+          dispatch(clearTypingUser({ channelId: activeChannelId, userId: msg.senderId }));
+        }
         if (msg.rootId) {
           dispatch(appendThreadMessage({ rootMessageId: msg.rootId, message: msg }));
         } else {

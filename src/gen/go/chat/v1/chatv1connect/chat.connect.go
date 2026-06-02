@@ -163,6 +163,9 @@ const (
 	// ChatServiceResetChannelAgentContextProcedure is the fully-qualified name of the ChatService's
 	// ResetChannelAgentContext RPC.
 	ChatServiceResetChannelAgentContextProcedure = "/chat.v1.ChatService/ResetChannelAgentContext"
+	// ChatServiceStopAgentRunProcedure is the fully-qualified name of the ChatService's StopAgentRun
+	// RPC.
+	ChatServiceStopAgentRunProcedure = "/chat.v1.ChatService/StopAgentRun"
 )
 
 // ChatServiceClient is a client for the chat.v1.ChatService service.
@@ -246,6 +249,10 @@ type ChatServiceClient interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error)
+	// Stop an in-flight agent run in a channel. Cancels the active run for the
+	// given agent - whether it is mid tool call, image generation, or text
+	// generation - via the run-state cancel flag the egress task observes.
+	StopAgentRun(context.Context, *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the chat.v1.ChatService service. By default, it uses
@@ -541,6 +548,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("ResetChannelAgentContext")),
 			connect.WithClientOptions(opts...),
 		),
+		stopAgentRun: connect.NewClient[v1.StopAgentRunRequest, v1.StopAgentRunResponse](
+			httpClient,
+			baseURL+ChatServiceStopAgentRunProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("StopAgentRun")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -593,6 +606,7 @@ type chatServiceClient struct {
 	getChannelAgentContextStatsBatch *connect.Client[v1.GetChannelAgentContextStatsBatchRequest, v1.GetChannelAgentContextStatsBatchResponse]
 	compactChannelAgentContext       *connect.Client[v1.CompactChannelAgentContextRequest, v1.CompactChannelAgentContextResponse]
 	resetChannelAgentContext         *connect.Client[v1.ResetChannelAgentContextRequest, v1.ResetChannelAgentContextResponse]
+	stopAgentRun                     *connect.Client[v1.StopAgentRunRequest, v1.StopAgentRunResponse]
 }
 
 // CreateChannel calls chat.v1.ChatService.CreateChannel.
@@ -830,6 +844,11 @@ func (c *chatServiceClient) ResetChannelAgentContext(ctx context.Context, req *c
 	return c.resetChannelAgentContext.CallUnary(ctx, req)
 }
 
+// StopAgentRun calls chat.v1.ChatService.StopAgentRun.
+func (c *chatServiceClient) StopAgentRun(ctx context.Context, req *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error) {
+	return c.stopAgentRun.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the chat.v1.ChatService service.
 type ChatServiceHandler interface {
 	// Channel CRUD
@@ -911,6 +930,10 @@ type ChatServiceHandler interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error)
+	// Stop an in-flight agent run in a channel. Cancels the active run for the
+	// given agent - whether it is mid tool call, image generation, or text
+	// generation - via the run-state cancel flag the egress task observes.
+	StopAgentRun(context.Context, *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -1202,6 +1225,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("ResetChannelAgentContext")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceStopAgentRunHandler := connect.NewUnaryHandler(
+		ChatServiceStopAgentRunProcedure,
+		svc.StopAgentRun,
+		connect.WithSchema(chatServiceMethods.ByName("StopAgentRun")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/chat.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceCreateChannelProcedure:
@@ -1298,6 +1327,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceCompactChannelAgentContextHandler.ServeHTTP(w, r)
 		case ChatServiceResetChannelAgentContextProcedure:
 			chatServiceResetChannelAgentContextHandler.ServeHTTP(w, r)
+		case ChatServiceStopAgentRunProcedure:
+			chatServiceStopAgentRunHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1493,4 +1524,8 @@ func (UnimplementedChatServiceHandler) CompactChannelAgentContext(context.Contex
 
 func (UnimplementedChatServiceHandler) ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ResetChannelAgentContext is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) StopAgentRun(context.Context, *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.StopAgentRun is not implemented"))
 }

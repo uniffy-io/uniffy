@@ -66,6 +66,7 @@ const (
 	ChatService_GetChannelAgentContextStatsBatch_FullMethodName = "/chat.v1.ChatService/GetChannelAgentContextStatsBatch"
 	ChatService_CompactChannelAgentContext_FullMethodName       = "/chat.v1.ChatService/CompactChannelAgentContext"
 	ChatService_ResetChannelAgentContext_FullMethodName         = "/chat.v1.ChatService/ResetChannelAgentContext"
+	ChatService_StopAgentRun_FullMethodName                     = "/chat.v1.ChatService/StopAgentRun"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -153,6 +154,10 @@ type ChatServiceClient interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(ctx context.Context, in *ResetChannelAgentContextRequest, opts ...grpc.CallOption) (*ResetChannelAgentContextResponse, error)
+	// Stop an in-flight agent run in a channel. Cancels the active run for the
+	// given agent - whether it is mid tool call, image generation, or text
+	// generation - via the run-state cancel flag the egress task observes.
+	StopAgentRun(ctx context.Context, in *StopAgentRunRequest, opts ...grpc.CallOption) (*StopAgentRunResponse, error)
 }
 
 type chatServiceClient struct {
@@ -633,6 +638,16 @@ func (c *chatServiceClient) ResetChannelAgentContext(ctx context.Context, in *Re
 	return out, nil
 }
 
+func (c *chatServiceClient) StopAgentRun(ctx context.Context, in *StopAgentRunRequest, opts ...grpc.CallOption) (*StopAgentRunResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StopAgentRunResponse)
+	err := c.cc.Invoke(ctx, ChatService_StopAgentRun_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility.
@@ -718,6 +733,10 @@ type ChatServiceServer interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(context.Context, *ResetChannelAgentContextRequest) (*ResetChannelAgentContextResponse, error)
+	// Stop an in-flight agent run in a channel. Cancels the active run for the
+	// given agent - whether it is mid tool call, image generation, or text
+	// generation - via the run-state cancel flag the egress task observes.
+	StopAgentRun(context.Context, *StopAgentRunRequest) (*StopAgentRunResponse, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -868,6 +887,9 @@ func (UnimplementedChatServiceServer) CompactChannelAgentContext(context.Context
 }
 func (UnimplementedChatServiceServer) ResetChannelAgentContext(context.Context, *ResetChannelAgentContextRequest) (*ResetChannelAgentContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetChannelAgentContext not implemented")
+}
+func (UnimplementedChatServiceServer) StopAgentRun(context.Context, *StopAgentRunRequest) (*StopAgentRunResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopAgentRun not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 func (UnimplementedChatServiceServer) testEmbeddedByValue()                     {}
@@ -1736,6 +1758,24 @@ func _ChatService_ResetChannelAgentContext_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_StopAgentRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopAgentRunRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).StopAgentRun(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_StopAgentRun_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).StopAgentRun(ctx, req.(*StopAgentRunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1930,6 +1970,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResetChannelAgentContext",
 			Handler:    _ChatService_ResetChannelAgentContext_Handler,
+		},
+		{
+			MethodName: "StopAgentRun",
+			Handler:    _ChatService_StopAgentRun_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
