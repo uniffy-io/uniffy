@@ -19,7 +19,7 @@ export type ThemeColors = {
   pageBg: string;
 };
 
-export const DEFAULT_ACCENT_HSL = "262.1 83.3% 57.8%";
+export const DEFAULT_ACCENT_HSL = "217 91% 60%";
 
 export const DARK: ThemeColors = {
   bg: "#1A1B1E",
@@ -29,9 +29,9 @@ export const DARK: ThemeColors = {
   text: "#C1C2C5",
   textBright: "#E9ECEF",
   textDim: "#909296",
-  accent: "#7C5CFC",
-  accentSoft: "rgba(124,92,252,0.12)",
-  accentGlow: "rgba(124,92,252,0.25)",
+  accent: "#3b82f6",
+  accentSoft: "rgba(59,130,246,0.12)",
+  accentGlow: "rgba(59,130,246,0.25)",
   green: "#40C057",
   orange: "#FD7E14",
   blue: "#339AF0",
@@ -50,9 +50,9 @@ export const LIGHT: ThemeColors = {
   text: "#495057",
   textBright: "#212529",
   textDim: "#868E96",
-  accent: "#7C5CFC",
-  accentSoft: "rgba(124,92,252,0.08)",
-  accentGlow: "rgba(124,92,252,0.15)",
+  accent: "#0b64f4",
+  accentSoft: "rgba(11,100,244,0.08)",
+  accentGlow: "rgba(11,100,244,0.15)",
   green: "#2F9E44",
   orange: "#E8590C",
   blue: "#1C7ED6",
@@ -64,16 +64,16 @@ export const LIGHT: ThemeColors = {
 };
 
 export const DOMAIN_COLORS = {
-  notes: "#7C5CFC",
-  notesSoft: "rgba(124,92,252,0.12)",
+  notes: "#3b82f6",
+  notesSoft: "rgba(59,130,246,0.12)",
   files: "#3b82f6",
   filesSoft: "rgba(59,130,246,0.12)",
-  chat: "#8b5cf6",
-  chatSoft: "rgba(139,92,246,0.12)",
-  calendar: "#f43f5e",
-  calendarSoft: "rgba(244,63,94,0.12)",
-  projects: "#f97316",
-  projectsSoft: "rgba(249,115,22,0.12)",
+  chat: "#3b82f6",
+  chatSoft: "rgba(59,130,246,0.12)",
+  calendar: "#3b82f6",
+  calendarSoft: "rgba(59,130,246,0.12)",
+  projects: "#3b82f6",
+  projectsSoft: "rgba(59,130,246,0.12)",
 };
 
 export const FILE_COLORS: Record<string, string> = {

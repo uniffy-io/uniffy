@@ -7,7 +7,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useThemeContext } from "@/context/theme-context";
 import type { ThemeMode } from "@/context/theme-context";
 import { hslToHex } from "@/lib/colorUtils";
-import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { BOTTOM_NAV_HEIGHT, DEFAULT_ACCENT_HSL } from "@/constants/theme";
 
 const THEME_MODES: { key: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { key: "light", label: "Light", Icon: Sun },
@@ -16,7 +16,7 @@ const THEME_MODES: { key: ThemeMode; label: string; Icon: typeof Sun }[] = [
 ];
 
 const ACCENT_PRESETS = [
-  { name: "Blue", hsl: "221.2 83.2% 53.3%" },
+  { name: "Blue", hsl: "217 91% 60%" },
   { name: "Purple", hsl: "262.1 83.3% 57.8%" },
   { name: "Green", hsl: "142.1 76.2% 36.3%" },
   { name: "Orange", hsl: "24.6 95% 53.1%" },
@@ -33,7 +33,7 @@ export function AppearanceScreen() {
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
-  const currentAccentHsl = accentColorHsl ?? "262.1 83.3% 57.8%";
+  const currentAccentHsl = accentColorHsl ?? DEFAULT_ACCENT_HSL;
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>

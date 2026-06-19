@@ -29,7 +29,7 @@ export interface NotesGraphData {
   links: GraphLink[];
 }
 
-const NOTE_COLOR = "#7C5CFC";
+const NOTE_COLOR = "#8b5cf6";
 
 const URN_TYPE_COLORS: Record<string, string> = {
   NOTE: NOTE_COLOR,
