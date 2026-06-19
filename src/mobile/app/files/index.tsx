@@ -11,7 +11,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import {
   MagnifyingGlass,
   Plus,
@@ -34,11 +36,34 @@ import {
   useDeleteFolder,
   useCreateFolder,
   useUploadFile,
+  useUpdateFile,
+  useUpdateFolder,
+  useMoveItems,
 } from "@/hooks/useFileMutations";
 import * as DocumentPicker from "expo-document-picker";
 
 function getFileColor(ext: string) {
   return FILE_COLORS[ext.toLowerCase()] ?? FILE_COLORS.default;
+}
+
+type FolderOption = { id: string; name: string; depth: number };
+
+// Flat list of folders for the move picker. Skips the subtree rooted at
+// `excludeId` so a folder can never be moved into itself or a descendant.
+function flattenFolders(
+  nodes: PlainTreeNode[],
+  excludeId: string | undefined,
+  depth = 0,
+): FolderOption[] {
+  const out: FolderOption[] = [];
+  for (const node of nodes) {
+    if (!node.isFolder || node.id === excludeId) continue;
+    out.push({ id: node.id, name: node.name, depth });
+    if (node.children.length > 0) {
+      out.push(...flattenFolders(node.children, excludeId, depth + 1));
+    }
+  }
+  return out;
 }
 
 type SheetItem = { id: string; name: string; isFolder: boolean; ext?: string } | null;
@@ -53,8 +78,52 @@ export default function FilesListScreen() {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [createFolderVisible, setCreateFolderVisible] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [renameTarget, setRenameTarget] = useState<SheetItem>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [moveTarget, setMoveTarget] = useState<SheetItem>(null);
   const createFolder = useCreateFolder();
   const uploadFile = useUploadFile();
+  const updateFile = useUpdateFile();
+  const updateFolder = useUpdateFolder();
+  const moveItems = useMoveItems();
+
+  const startRename = useCallback((item: NonNullable<SheetItem>) => {
+    setSheetItem(null);
+    setRenameValue(item.name);
+    setRenameTarget(item);
+  }, []);
+
+  const submitRename = useCallback(() => {
+    const name = renameValue.trim();
+    if (!renameTarget || !name) return;
+    const onSettled = () => setRenameTarget(null);
+    if (renameTarget.isFolder) {
+      updateFolder.mutate({ folderId: renameTarget.id, name }, { onSettled });
+    } else {
+      updateFile.mutate({ fileId: renameTarget.id, filename: name }, { onSettled });
+    }
+  }, [renameTarget, renameValue, updateFile, updateFolder]);
+
+  const doMove = useCallback(
+    (targetFolderId: string | undefined) => {
+      if (!moveTarget) return;
+      moveItems.mutate(
+        {
+          fileIds: moveTarget.isFolder ? [] : [moveTarget.id],
+          folderIds: moveTarget.isFolder ? [moveTarget.id] : [],
+          targetFolderId,
+        },
+        { onSettled: () => setMoveTarget(null) },
+      );
+    },
+    [moveTarget, moveItems],
+  );
+
+  const copyReferenceLink = useCallback(async (item: NonNullable<SheetItem>) => {
+    const type = item.isFolder ? "FOLDER" : "FILE";
+    await Clipboard.setStringAsync(`urn:uniffy:content:${type}:${item.id}`);
+    Alert.alert("Copied", "Reference link copied to clipboard.");
+  }, []);
   // Folder navigation stack: array of { id, name } for breadcrumb
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
 
@@ -410,6 +479,108 @@ export default function FilesListScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Rename modal */}
+      <Modal
+        visible={!!renameTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameTarget(null)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <Text style={[styles.modalTitle, { color: T.textBright }]}>
+              {renameTarget?.isFolder ? "Rename Folder" : "Rename File"}
+            </Text>
+            <TextInput
+              style={[
+                styles.modalInput,
+                { backgroundColor: T.pageBg, color: T.textBright, borderColor: T.border },
+              ]}
+              value={renameValue}
+              onChangeText={setRenameValue}
+              placeholder="Name"
+              placeholderTextColor={T.textDim}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={submitRename}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: T.pageBg }]}
+                onPress={() => setRenameTarget(null)}
+              >
+                <Text style={[styles.modalBtnText, { color: T.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtn,
+                  { backgroundColor: DOMAIN_COLORS.files, opacity: renameValue.trim() ? 1 : 0.4 },
+                ]}
+                disabled={!renameValue.trim() || updateFile.isPending || updateFolder.isPending}
+                onPress={submitRename}
+              >
+                {updateFile.isPending || updateFolder.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.modalBtnText, { color: "#fff" }]}>Rename</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Move-to-folder modal */}
+      <Modal
+        visible={!!moveTarget}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMoveTarget(null)}
+      >
+        <TouchableOpacity
+          style={styles.moveBackdrop}
+          activeOpacity={1}
+          onPress={() => setMoveTarget(null)}
+        >
+          <View />
+        </TouchableOpacity>
+        <View style={[styles.moveSheet, { backgroundColor: T.surface }]}>
+          <View style={[styles.handle, { backgroundColor: T.border }]} />
+          <Text style={[styles.moveTitle, { color: T.textBright }]}>
+            Move &ldquo;{moveTarget?.name}&rdquo; to
+          </Text>
+          <ScrollView style={{ maxHeight: 360 }}>
+            <TouchableOpacity
+              style={[styles.moveRow, { borderBottomColor: T.border }]}
+              onPress={() => doMove(undefined)}
+              activeOpacity={0.7}
+            >
+              <FolderSimple size={20} color={DOMAIN_COLORS.files} weight="fill" />
+              <Text style={[styles.moveRowText, { color: T.textBright }]}>Files (root)</Text>
+            </TouchableOpacity>
+            {flattenFolders(
+              filesTree.data ?? [],
+              moveTarget?.isFolder ? moveTarget.id : undefined,
+            ).map((opt) => (
+              <TouchableOpacity
+                key={opt.id}
+                style={[styles.moveRow, { borderBottomColor: T.border, paddingLeft: 16 + opt.depth * 18 }]}
+                onPress={() => doMove(opt.id)}
+                activeOpacity={0.7}
+              >
+                <FolderSimple size={20} color={DOMAIN_COLORS.files} weight="fill" />
+                <Text style={[styles.moveRowText, { color: T.textBright }]} numberOfLines={1}>
+                  {opt.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
+
       {/* Item action sheet (dots menu / long press) */}
       <ActionSheet
         visible={!!sheetItem}
@@ -426,9 +597,27 @@ export default function FilesListScreen() {
         actions={
           sheetItem?.isFolder
             ? [
-                { icon: "edit-2", label: "Rename folder", onPress: () => {} },
-                { icon: "share-2", label: "Share folder", onPress: () => {} },
-                { icon: "download", label: "Download folder", onPress: () => {} },
+                {
+                  icon: "edit-2",
+                  label: "Rename folder",
+                  onPress: () => sheetItem && startRename(sheetItem),
+                },
+                {
+                  icon: "folder",
+                  label: "Move to folder",
+                  onPress: () => {
+                    if (sheetItem) {
+                      const it = sheetItem;
+                      setSheetItem(null);
+                      setMoveTarget(it);
+                    }
+                  },
+                },
+                {
+                  icon: "at-sign",
+                  label: "Copy reference link",
+                  onPress: () => sheetItem && copyReferenceLink(sheetItem),
+                },
                 {
                   icon: "trash-2",
                   label: "Delete folder",
@@ -451,11 +640,27 @@ export default function FilesListScreen() {
                     router.push(`/files/${id}` as any);
                   },
                 },
-                { icon: "download", label: "Download", onPress: () => {} },
-                { icon: "at-sign", label: "Copy reference link", onPress: () => {} },
-                { icon: "share-2", label: "Share with team", onPress: () => {} },
-                { icon: "star", label: "Add to starred", onPress: () => {} },
-                { icon: "folder", label: "Move to folder", onPress: () => {} },
+                {
+                  icon: "edit-2",
+                  label: "Rename file",
+                  onPress: () => sheetItem && startRename(sheetItem),
+                },
+                {
+                  icon: "folder",
+                  label: "Move to folder",
+                  onPress: () => {
+                    if (sheetItem) {
+                      const it = sheetItem;
+                      setSheetItem(null);
+                      setMoveTarget(it);
+                    }
+                  },
+                },
+                {
+                  icon: "at-sign",
+                  label: "Copy reference link",
+                  onPress: () => sheetItem && copyReferenceLink(sheetItem),
+                },
                 {
                   icon: "trash-2",
                   label: "Delete file",
@@ -630,6 +835,36 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: "flex-end",
   },
+  moveBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
+  moveSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 28,
+    maxHeight: "70%",
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  moveTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  moveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  moveRowText: { fontSize: 15, fontFamily: "Inter_500Medium", flex: 1 },
   modalBtn: {
     paddingHorizontal: 20,
     paddingVertical: 10,

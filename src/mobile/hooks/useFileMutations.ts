@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { filesApi } from "@/api/filesApi";
-import { VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
+import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 
 export function useDeleteFile() {
   const { organizationId } = useAuth();
@@ -73,6 +73,43 @@ export function useDeleteFolder() {
   });
 }
 
+export function useUpdateFile() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { fileId: string; filename: string }) =>
+      filesApi.updateFile({
+        fileId: args.fileId,
+        organizationId: organizationId!,
+        filename: args.filename,
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      queryClient.invalidateQueries({ queryKey: ["files-tree"] });
+      queryClient.invalidateQueries({ queryKey: ["file", organizationId, variables.fileId] });
+    },
+  });
+}
+
+export function useUpdateFolder() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { folderId: string; name: string }) =>
+      filesApi.updateFolder({
+        folderId: args.folderId,
+        organizationId: organizationId!,
+        name: args.name,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      queryClient.invalidateQueries({ queryKey: ["files-tree"] });
+    },
+  });
+}
+
 export interface UploadFileArgs {
   uri: string;
   filename: string;
@@ -96,7 +133,7 @@ export function useUploadFile() {
         mimeType: args.mimeType,
         totalSize: BigInt(args.size),
         folderId: args.folderId,
-        visibility: VisibilityScope.PRIVATE,
+        accessMode: AccessMode.OWNER_ONLY,
       });
 
       const { uploadId, chunkSize, totalChunks } = initResponse;
@@ -142,7 +179,7 @@ export function useMoveItems() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { fileIds?: string[]; folderIds?: string[]; targetFolderId: string }) =>
+    mutationFn: (args: { fileIds?: string[]; folderIds?: string[]; targetFolderId?: string }) =>
       filesApi.moveItems({
         organizationId: organizationId!,
         fileIds: args.fileIds ?? [],
