@@ -63,7 +63,6 @@ export default function NoteEditorScreen() {
   // Populate fields when editing an existing note
   useEffect(() => {
     if (isEditMode && noteQuery.data && !initialized) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when note data loads
       setTitle(noteQuery.data.title);
       initFromCanonical(noteQuery.data.content);
       setInitialized(true);

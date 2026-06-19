@@ -6,10 +6,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Star, DotsThree, PencilSimple, ShareNetwork, CaretRight } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { CommentButton } from "@/components/CommentsSheet";
+import { ShareSheet } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@/components/ActionSheet";
 import { getDomainColor, getDomainSoftColor, DOMAIN_ICON } from "@/components/ReferenceChip";
 import { Avatar } from "@/components/Avatar";
@@ -26,6 +31,7 @@ export default function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const auth = useAuth();
   const noteQuery = useNote(id);
   const backlinksQuery = useNoteBacklinks(id);
@@ -69,7 +75,7 @@ export default function NoteDetailScreen() {
       label: "Edit",
       onPress: () => router.push(`/notes/edit?noteId=${note.id}` as any),
     },
-    { IconComponent: ShareNetwork, label: "Share", onPress: () => {} },
+    { IconComponent: ShareNetwork, label: "Share", onPress: () => setShareOpen(true) },
     { IconComponent: DotsThree, label: "More", onPress: () => setSheetOpen(true) },
   ];
 
@@ -81,6 +87,11 @@ export default function NoteDetailScreen() {
         icon="notes"
         rightActions={
           <>
+            <CommentButton
+              contentType={ContentType.NOTE}
+              contentId={note.id}
+              color={DOMAIN_COLORS.notes}
+            />
             <TouchableOpacity
               onPress={() => toggleBookmark.mutate(noteUrn)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -190,9 +201,12 @@ export default function NoteDetailScreen() {
             icon: "at-sign",
             label: "Copy reference link",
             sublabel: `@${note.title.toLowerCase().replace(/ /g, "-")}`,
-            onPress: () => {},
+            onPress: () => {
+              Clipboard.setStringAsync(noteUrn);
+              Alert.alert("Copied", "Reference link copied to clipboard.");
+            },
           },
-          { icon: "share-2", label: "Share with team", onPress: () => {} },
+          { icon: "share-2", label: "Share with team", onPress: () => setShareOpen(true) },
           {
             icon: "star",
             label: isBookmarked ? "Remove from favorites" : "Add to favorites",
@@ -215,6 +229,14 @@ export default function NoteDetailScreen() {
             },
           },
         ]}
+      />
+
+      <ShareSheet
+        visible={shareOpen}
+        onClose={() => setShareOpen(false)}
+        contentType={ContentType.NOTE}
+        contentId={note.id}
+        color={DOMAIN_COLORS.notes}
       />
     </View>
   );

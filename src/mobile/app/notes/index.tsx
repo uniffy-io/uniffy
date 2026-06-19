@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import {
   MagnifyingGlass,
@@ -18,8 +19,11 @@ import {
   Atom,
 } from "phosphor-react-native";
 import { router } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import { DomainHeader } from "@/components/DomainHeader";
 import { ActionSheet } from "@/components/ActionSheet";
+import { ShareSheet } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
 import { DOMAIN_COLORS } from "@/constants/theme";
@@ -65,6 +69,7 @@ export default function NotesListScreen() {
   const notesTree = useNotesTree();
   const deleteNote = useDeleteNote();
   const [sheetNote, setSheetNote] = useState<{ id: string; title: string } | null>(null);
+  const [shareNoteId, setShareNoteId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const { folderChips, notes } = useMemo(() => {
@@ -113,7 +118,10 @@ export default function NotesListScreen() {
         icon="notes"
         rightActions={
           <>
-            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={() => router.push("/search" as any)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <MagnifyingGlass size={19} color={T.text} weight="bold" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -208,9 +216,18 @@ export default function NotesListScreen() {
             icon: "at-sign",
             label: "Copy reference link",
             sublabel: `@${sheetNote?.title?.toLowerCase().replace(/ /g, "-")}`,
-            onPress: () => {},
+            onPress: () => {
+              if (sheetNote) {
+                Clipboard.setStringAsync(`urn:uniffy:content:NOTE:${sheetNote.id}`);
+                Alert.alert("Copied", "Reference link copied to clipboard.");
+              }
+            },
           },
-          { icon: "share-2", label: "Share with team", onPress: () => {} },
+          {
+            icon: "share-2",
+            label: "Share with team",
+            onPress: () => setShareNoteId(sheetNote?.id ?? null),
+          },
           { icon: "star", label: "Add to favorites", onPress: () => {} },
           {
             icon: "trash-2",
@@ -224,6 +241,14 @@ export default function NotesListScreen() {
             },
           },
         ]}
+      />
+
+      <ShareSheet
+        visible={!!shareNoteId}
+        onClose={() => setShareNoteId(null)}
+        contentType={ContentType.NOTE}
+        contentId={shareNoteId ?? ""}
+        color={DOMAIN_COLORS.notes}
       />
     </View>
   );

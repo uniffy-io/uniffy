@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { notesApi } from "@/api/notesApi";
-import { noteToPlain, formatRelativeTime, stripMarkdown } from "@/lib/noteSerializer";
+import { noteToPlain, formatRelativeTime, stripMarkdown, NoteVisibility } from "@/lib/noteSerializer";
 import type { SerializedNote } from "@/lib/noteSerializer";
-import { VisibilityScope, NodeType } from "@uniffy/proto/notes/v1/notes_pb";
+import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 
 export interface TreeNode {
   id: string;
@@ -95,21 +95,21 @@ function organizeSections(notes: SerializedNote[], userId: string): TreeSection[
     if (note.isDeleted) continue;
 
     switch (note.visibility) {
-      case VisibilityScope.PRIVATE:
+      case NoteVisibility.PRIVATE:
         if (note.ownerId === userId) {
           personal.push(note);
         } else {
           shared.push(note);
         }
         break;
-      case VisibilityScope.GROUP:
+      case NoteVisibility.GROUP:
         if (note.ownerId === userId) {
           organization.push(note);
         } else {
           shared.push(note);
         }
         break;
-      case VisibilityScope.ORGANIZATION:
+      case NoteVisibility.ORGANIZATION:
         organization.push(note);
         break;
       default:
