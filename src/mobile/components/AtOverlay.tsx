@@ -143,7 +143,7 @@ export function AtOverlay() {
       {query.length > 0 && (
         <View style={[styles.resultsHeader, { borderBottomColor: T.border }]}>
           <Text style={[styles.resultsLabel, { color: T.textDim }]}>
-            RESULTS FOR "{query.toUpperCase()}"
+            {`RESULTS FOR "${query.toUpperCase()}"`}
           </Text>
         </View>
       )}

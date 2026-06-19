@@ -11,6 +11,7 @@ import {
 import {
   Devices,
   Bell,
+  ShieldCheck,
   Moon,
   Lightning,
   Question,
@@ -80,7 +81,31 @@ export function YouScreen() {
             <CaretRight size={15} color={T.textDim} weight="regular" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[
+              styles.settingRow,
+              { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
+            ]}
+            onPress={() => router.push("/you/security" as any)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+              <ShieldCheck size={15} color={T.text} weight="regular" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingLabel, { color: T.textBright }]}>Security</Text>
+              <Text style={[styles.settingSub, { color: T.textDim }]}>
+                Two-factor authentication
+              </Text>
+            </View>
+            <CaretRight size={15} color={T.textDim} weight="regular" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/you/notifications" as any)}
+          >
             <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
               <Bell size={15} color={T.text} weight="regular" />
             </View>

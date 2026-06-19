@@ -7,7 +7,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/context/auth-context";
 import { useUniffy } from "@/context/uniffy-context";
-import { At } from "phosphor-react-native";
+import { At, MagnifyingGlass, BookmarkSimple, BellSimple } from "phosphor-react-native";
+import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 
 export const TOP_NAV_CONTENT_HEIGHT = 44;
 
@@ -18,6 +19,8 @@ export function TopNav() {
   const topPad = Platform.OS === "web" ? 20 : insets.top;
   const { user } = useAuth();
   const { atPosition, atOpen, openAt, closeAt } = useUniffy();
+  const unreadQuery = useUnreadNotificationCount();
+  const unread = unreadQuery.data ?? 0;
 
   const handleAtPress = () => {
     if (atOpen) {
@@ -78,12 +81,40 @@ export function TopNav() {
         )}
       </View>
 
-      {/* Right: avatar */}
+      {/* Right: search, bookmarks, avatar */}
       <View style={[styles.side, styles.sideRight]}>
+        <TouchableOpacity
+          onPress={() => router.push("/search" as any)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <MagnifyingGlass size={20} color={T.text} weight="bold" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push("/bookmarks" as any)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <BookmarkSimple size={20} color={T.text} weight="regular" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push("/notifications" as any)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <View>
+            <BellSimple size={20} color={T.text} weight="regular" />
+            {unread > 0 && (
+              <View style={[styles.badge, { backgroundColor: T.red, borderColor: T.bg }]}>
+                <Text style={styles.badgeText}>{unread > 9 ? "9+" : unread}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push("/you" as any)}
           activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 16, right: 8 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Avatar
             name={user?.fullName || user?.username || "User"}
@@ -135,4 +166,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1.5,
   },
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -6,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 7.5,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  badgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
 });

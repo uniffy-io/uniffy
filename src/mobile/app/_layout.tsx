@@ -116,6 +116,8 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="auth" options={{ headerShown: false, animation: "fade" }} />
+        <Stack.Screen name="accept-invite" options={{ headerShown: false, animation: "fade" }} />
+        <Stack.Screen name="enroll-mfa" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="select-org" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="notes/index" />
@@ -125,14 +127,23 @@ function RootLayoutNav() {
         <Stack.Screen name="files/[id]" />
         <Stack.Screen name="chat/index" />
         <Stack.Screen name="chat/[id]" />
+        <Stack.Screen name="chat/create" />
+        <Stack.Screen name="agents/index" />
         <Stack.Screen name="calendar/index" />
         <Stack.Screen name="calendar/[id]" />
         <Stack.Screen name="projects/index" />
         <Stack.Screen name="projects/[id]" />
         <Stack.Screen name="projects/task/[id]" />
+        <Stack.Screen name="search/index" />
+        <Stack.Screen name="bookmarks/index" />
+        <Stack.Screen name="tags/index" />
+        <Stack.Screen name="tags/[id]" />
+        <Stack.Screen name="notifications/index" />
         <Stack.Screen name="you/index" />
         <Stack.Screen name="you/sessions" />
         <Stack.Screen name="you/appearance" />
+        <Stack.Screen name="you/notifications" />
+        <Stack.Screen name="you/security" />
       </Stack>
       {showAppChrome && <BottomNav />}
       {showAppChrome && <AtFab />}
