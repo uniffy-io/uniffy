@@ -17,6 +17,9 @@ import {
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { CommentButton } from "@/components/CommentsSheet";
+import { ShareButton } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
 import { DOMAIN_COLORS } from "@/constants/theme";
@@ -70,7 +73,20 @@ export default function EventDetailScreen() {
         icon="calendar"
         rightActions={
           <>
-            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <CommentButton
+              contentType={ContentType.CALENDAR_EVENT}
+              contentId={event.id}
+              color={DOMAIN_COLORS.calendar}
+            />
+            <ShareButton
+              contentType={ContentType.CALENDAR_EVENT}
+              contentId={event.id}
+              color={DOMAIN_COLORS.calendar}
+            />
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/calendar/create", params: { eventId: event.id } })}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <PencilSimple size={18} color={T.text} weight="duotone" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -226,7 +242,11 @@ export default function EventDetailScreen() {
         icon="calendar"
         iconColor={eventColor}
         actions={[
-          { icon: "edit-2", label: "Edit event", onPress: () => {} },
+          {
+            icon: "edit-2",
+            label: "Edit event",
+            onPress: () => router.push({ pathname: "/calendar/create", params: { eventId: event.id } }),
+          },
           { icon: "at-sign", label: "Copy reference link", onPress: () => {} },
           { icon: "user-plus", label: "Invite more people", onPress: () => {} },
           ...(hasMeetingUrl

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,14 @@ import {
 } from "react-native";
 import { CalendarBlank, Clock, MapPin, Tag, Palette } from "phosphor-react-native";
 import { MentionTextInput } from "@/components/MentionTextInput";
-import { router } from "expo-router";
+import { CalendarPicker } from "@/components/CalendarPicker";
+import { TimePicker } from "@/components/TimePicker";
+import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import { DOMAIN_COLORS } from "@/constants/theme";
-import { useCalendars, useCategories } from "@/hooks/useCalendar";
-import { useCreateEvent } from "@/hooks/useCalendarMutations";
+import { useCalendars, useCategories, useEvent } from "@/hooks/useCalendar";
+import { useCreateEvent, useUpdateEvent } from "@/hooks/useCalendarMutations";
 
 function roundToNext30(date: Date): Date {
   const d = new Date(date);
@@ -41,46 +43,23 @@ function parseDateTime(dateStr: string, timeStr: string): Date {
   return new Date(`${dateStr}T${timeStr}:00`);
 }
 
-function formatTimeDisplay(timeStr: string): string {
-  const [hStr, mStr] = timeStr.split(":");
-  const h = parseInt(hStr, 10);
-  const m = mStr;
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 || 12;
-  return m === "00" ? `${hour} ${ampm}` : `${hour}:${m} ${ampm}`;
-}
-
-function formatDateDisplay(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-}
-
 export default function CreateEventScreen() {
   const T = useTheme();
+  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  const isEditing = !!eventId;
+
   const calendarsQuery = useCalendars();
   const categoriesQuery = useCategories();
+  const eventQuery = useEvent(eventId);
   const createEvent = useCreateEvent();
+  const updateEvent = useUpdateEvent();
 
   const defaultStart = roundToNext30(new Date());
   const defaultEnd = new Date(defaultStart.getTime() + 60 * 60 * 1000); // +1 hour
 
   const [title, setTitle] = useState("");
   const descriptionRef = useRef("");
+  const [initialDescription, setInitialDescription] = useState<string | undefined>(undefined);
   const [dateStr, setDateStr] = useState(formatDateForInput(defaultStart));
   const [startTime, setStartTime] = useState(formatTimeForInput(defaultStart));
   const [endTime, setEndTime] = useState(formatTimeForInput(defaultEnd));
@@ -89,30 +68,66 @@ export default function CreateEventScreen() {
   const [isAllDay, setIsAllDay] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
 
+  // Prefill once the event to edit has loaded.
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    const event = eventQuery.data;
+    if (!event || prefilledRef.current) return;
+    prefilledRef.current = true;
+    const start = new Date(event.startTime);
+    const end = new Date(event.endTime);
+    setTitle(event.title);
+    descriptionRef.current = event.description ?? "";
+    setInitialDescription(event.description || undefined);
+    setDateStr(formatDateForInput(start));
+    setStartTime(formatTimeForInput(start));
+    setEndTime(formatTimeForInput(end));
+    setLocation(event.location ?? "");
+    setMeetingUrl(event.meetingUrl ?? "");
+    setIsAllDay(event.isAllDay);
+    setSelectedCategoryId(event.categoryId || undefined);
+  }, [eventQuery.data]);
+
   const categories = categoriesQuery.data ?? [];
   const defaultCalendar = calendarsQuery.data?.find((c) => c.isDefault) ?? calendarsQuery.data?.[0];
 
-  const canSave = title.trim().length > 0 && !createEvent.isPending;
+  const isSaving = createEvent.isPending || updateEvent.isPending;
+  const canSave = title.trim().length > 0 && !isSaving;
 
   const handleSave = async () => {
-    if (!canSave || !defaultCalendar) return;
+    if (!canSave) return;
 
     const start = parseDateTime(dateStr, startTime);
     const end = parseDateTime(dateStr, endTime);
 
     try {
-      await createEvent.mutateAsync({
-        title: title.trim(),
-        description: descriptionRef.current.trim() || undefined,
-        startTime: start.toISOString(),
-        endTime: end.toISOString(),
-        isAllDay,
-        calendarId: defaultCalendar.id,
-        categoryId: selectedCategoryId,
-        location: location.trim() || undefined,
-        meetingUrl: meetingUrl.trim() || undefined,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
+      if (isEditing && eventId) {
+        await updateEvent.mutateAsync({
+          eventId,
+          title: title.trim(),
+          description: descriptionRef.current.trim(),
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          isAllDay,
+          categoryId: selectedCategoryId,
+          location: location.trim(),
+          meetingUrl: meetingUrl.trim(),
+        });
+      } else {
+        if (!defaultCalendar) return;
+        await createEvent.mutateAsync({
+          title: title.trim(),
+          description: descriptionRef.current.trim() || undefined,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          isAllDay,
+          calendarId: defaultCalendar.id,
+          categoryId: selectedCategoryId,
+          location: location.trim() || undefined,
+          meetingUrl: meetingUrl.trim() || undefined,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+      }
       router.back();
     } catch {
       // Error handled by query
@@ -122,7 +137,7 @@ export default function CreateEventScreen() {
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
-        title="New Event"
+        title={isEditing ? "Edit Event" : "New Event"}
         color={DOMAIN_COLORS.calendar}
         icon="calendar"
         rightActions={
@@ -131,7 +146,7 @@ export default function CreateEventScreen() {
             disabled={!canSave}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {createEvent.isPending ? (
+            {isSaving ? (
               <ActivityIndicator size="small" color={T.accent} />
             ) : (
               <Text style={[styles.saveBtn, { color: canSave ? T.accent : T.textDim }]}>Save</Text>
@@ -148,7 +163,7 @@ export default function CreateEventScreen() {
           onChangeText={setTitle}
           placeholder="Event title"
           placeholderTextColor={T.textDim}
-          autoFocus
+          autoFocus={!isEditing}
           returnKeyType="next"
         />
 
@@ -172,9 +187,13 @@ export default function CreateEventScreen() {
 
           <View style={styles.fieldRow}>
             <CalendarBlank size={18} color={T.textDim} weight="duotone" />
-            <Text style={[styles.fieldValue, { color: T.textBright }]}>
-              {formatDateDisplay(dateStr)}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <CalendarPicker
+                value={dateStr}
+                onChange={(d) => d && setDateStr(d)}
+                accentColor={DOMAIN_COLORS.calendar}
+              />
+            </View>
           </View>
 
           {!isAllDay && (
@@ -183,17 +202,25 @@ export default function CreateEventScreen() {
               <View style={styles.fieldRow}>
                 <Clock size={18} color={T.textDim} weight="duotone" />
                 <View style={styles.timeRow}>
-                  <TouchableOpacity style={[styles.timeChip, { backgroundColor: T.pageBg }]}>
-                    <Text style={[styles.timeChipText, { color: T.textBright }]}>
-                      {formatTimeDisplay(startTime)}
-                    </Text>
-                  </TouchableOpacity>
+                  <TimePicker
+                    value={startTime}
+                    onChange={(t) => {
+                      // keep the original duration when the start moves
+                      const prevStart = parseDateTime(dateStr, startTime);
+                      const prevEnd = parseDateTime(dateStr, endTime);
+                      const durationMs = Math.max(0, prevEnd.getTime() - prevStart.getTime());
+                      setStartTime(t);
+                      const newEnd = new Date(parseDateTime(dateStr, t).getTime() + durationMs);
+                      setEndTime(formatTimeForInput(newEnd));
+                    }}
+                    accentColor={DOMAIN_COLORS.calendar}
+                  />
                   <Text style={[styles.timeDash, { color: T.textDim }]}>-</Text>
-                  <TouchableOpacity style={[styles.timeChip, { backgroundColor: T.pageBg }]}>
-                    <Text style={[styles.timeChipText, { color: T.textBright }]}>
-                      {formatTimeDisplay(endTime)}
-                    </Text>
-                  </TouchableOpacity>
+                  <TimePicker
+                    value={endTime}
+                    onChange={setEndTime}
+                    accentColor={DOMAIN_COLORS.calendar}
+                  />
                 </View>
               </View>
 
@@ -289,6 +316,7 @@ export default function CreateEventScreen() {
         <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
           <MentionTextInput
             style={[styles.descInput, { color: T.textBright }]}
+            initialContent={initialDescription}
             onCanonicalChange={(c) => {
               descriptionRef.current = c;
             }}
