@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -19,11 +19,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { CommentButton } from "@/components/CommentsSheet";
+import { ShareButton } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { ActionSheet } from "@/components/ActionSheet";
 import { CalendarPicker } from "@/components/CalendarPicker";
 import { useTheme } from "@/hooks/useTheme";
 import { DOMAIN_COLORS, BOTTOM_NAV_HEIGHT } from "@/constants/theme";
 import { useTask, useProject, useProjectTasks, useTaskActivities } from "@/hooks/useProjects";
-import { useUpdateTask } from "@/hooks/useProjectMutations";
+import { useUpdateTask, useDeleteTask } from "@/hooks/useProjectMutations";
 import {
   getStatusOptions,
   getPriorityOptions,
@@ -58,6 +62,8 @@ export default function TaskDetailScreen() {
   const activitiesQuery = useTaskActivities(id);
   const activities = activitiesQuery.data ?? [];
   const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
@@ -101,9 +107,24 @@ export default function TaskDetailScreen() {
         color={projectColor}
         icon="projects"
         rightActions={
-          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <DotsThree size={22} color={T.text} weight="bold" />
-          </TouchableOpacity>
+          <>
+            <CommentButton
+              contentType={ContentType.TASK}
+              contentId={task.id}
+              color={projectColor}
+            />
+            <ShareButton
+              contentType={ContentType.TASK}
+              contentId={task.id}
+              color={projectColor}
+            />
+            <TouchableOpacity
+              onPress={() => setSheetOpen(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <DotsThree size={22} color={T.text} weight="bold" />
+            </TouchableOpacity>
+          </>
         }
       />
 
@@ -318,6 +339,33 @@ export default function TaskDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ActionSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={task.title}
+        subtitle={statusOpt?.label}
+        icon="projects"
+        iconColor={projectColor}
+        actions={[
+          {
+            icon: "edit-2",
+            label: "Edit task",
+            onPress: () => router.push({ pathname: "/projects/task/create" as any, params: { taskId: task.id } }),
+          },
+          {
+            icon: "trash-2",
+            label: "Delete task",
+            isDanger: true,
+            onPress: () => {
+              deleteTask.mutate(
+                { taskId: task.id, projectId: task.projectId },
+                { onSuccess: () => router.back() },
+              );
+            },
+          },
+        ]}
+      />
     </View>
   );
 }

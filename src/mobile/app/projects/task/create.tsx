@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,20 +14,27 @@ import { DomainHeader } from "@/components/DomainHeader";
 import { CalendarPicker } from "@/components/CalendarPicker";
 import { useTheme } from "@/hooks/useTheme";
 import { DOMAIN_COLORS } from "@/constants/theme";
-import { useProject } from "@/hooks/useProjects";
-import { useCreateTask } from "@/hooks/useProjectMutations";
+import { useProject, useTask } from "@/hooks/useProjects";
+import { useCreateTask, useUpdateTask } from "@/hooks/useProjectMutations";
 import { getStatusOptions, getPriorityOptions } from "@/lib/projectsSerializer";
 
 export default function CreateTaskScreen() {
-  const { projectId, status: initialStatus } = useLocalSearchParams<{
-    projectId: string;
-    status?: string;
-  }>();
+  const {
+    projectId: projectIdParam,
+    taskId,
+    status: initialStatus,
+  } = useLocalSearchParams<{ projectId?: string; taskId?: string; status?: string }>();
+  const isEditing = !!taskId;
   const T = useTheme();
+
+  const taskQuery = useTask(taskId);
+  const task = taskQuery.data;
+  const projectId = isEditing ? task?.projectId : projectIdParam;
 
   const projectQuery = useProject(projectId);
   const project = projectQuery.data;
   const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
 
   const statusOptions = project ? getStatusOptions(project) : [];
   const priorityOptions = project ? getPriorityOptions(project) : [];
@@ -35,6 +42,7 @@ export default function CreateTaskScreen() {
 
   const [title, setTitle] = useState("");
   const descriptionRef = useRef("");
+  const [initialDescription, setInitialDescription] = useState<string | undefined>(undefined);
   const [selectedStatus, setSelectedStatus] = useState<string>(
     initialStatus ?? statusOptions[0]?.id ?? "",
   );
@@ -42,32 +50,62 @@ export default function CreateTaskScreen() {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<string | null>(null);
 
-  // Update default status when project loads
-  React.useEffect(() => {
-    if (statusOptions.length > 0 && !selectedStatus) {
+  // Update default status when creating and the project loads
+  useEffect(() => {
+    if (!isEditing && statusOptions.length > 0 && !selectedStatus) {
       setSelectedStatus(initialStatus ?? statusOptions[0].id);
     }
-  }, [statusOptions, initialStatus, selectedStatus]);
+  }, [isEditing, statusOptions, initialStatus, selectedStatus]);
 
-  const canSave = title.trim().length > 0 && !!projectId && !createTask.isPending;
+  // Prefill once the task to edit has loaded
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (!task || prefilledRef.current) return;
+    prefilledRef.current = true;
+    setTitle(task.title);
+    descriptionRef.current = task.description ?? "";
+    setInitialDescription(task.description || undefined);
+    setSelectedStatus(task.status ?? "");
+    setSelectedPriority(task.priority ?? "");
+    setStartDate(task.startDate);
+    setDueDate(task.dueDate);
+  }, [task]);
+
+  const isSaving = createTask.isPending || updateTask.isPending;
+  const canSave = title.trim().length > 0 && !isSaving && (isEditing ? !!taskId : !!projectId);
 
   function handleSave() {
     if (!canSave) return;
-    createTask.mutate(
-      {
-        projectId: projectId!,
-        title: title.trim(),
-        description: descriptionRef.current.trim() || undefined,
-        status: selectedStatus || undefined,
-        priority: selectedPriority || undefined,
-        startDate: startDate ?? undefined,
-        dueDate: dueDate ?? undefined,
-      },
-      { onSuccess: () => router.back() },
-    );
+    if (isEditing && taskId) {
+      updateTask.mutate(
+        {
+          taskId,
+          title: title.trim(),
+          description: descriptionRef.current.trim(),
+          status: selectedStatus || undefined,
+          priority: selectedPriority || undefined,
+          startDate,
+          dueDate,
+        },
+        { onSuccess: () => router.back() },
+      );
+    } else {
+      createTask.mutate(
+        {
+          projectId: projectId!,
+          title: title.trim(),
+          description: descriptionRef.current.trim() || undefined,
+          status: selectedStatus || undefined,
+          priority: selectedPriority || undefined,
+          startDate: startDate ?? undefined,
+          dueDate: dueDate ?? undefined,
+        },
+        { onSuccess: () => router.back() },
+      );
+    }
   }
 
-  if (projectQuery.isLoading) {
+  if (projectQuery.isLoading || (isEditing && taskQuery.isLoading)) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
         <ActivityIndicator size="large" color={DOMAIN_COLORS.projects} />
@@ -78,7 +116,7 @@ export default function CreateTaskScreen() {
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
-        title="New Task"
+        title={isEditing ? "Edit Task" : "New Task"}
         color={projectColor}
         icon="projects"
         subtitle={project?.name}
@@ -88,7 +126,7 @@ export default function CreateTaskScreen() {
             disabled={!canSave}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {createTask.isPending ? (
+            {isSaving ? (
               <ActivityIndicator size="small" color={projectColor} />
             ) : (
               <Text style={[styles.saveBtn, { color: canSave ? projectColor : T.textDim }]}>
@@ -111,7 +149,7 @@ export default function CreateTaskScreen() {
             onChangeText={setTitle}
             placeholder="Task title"
             placeholderTextColor={T.textDim}
-            autoFocus
+            autoFocus={!isEditing}
           />
         </View>
 
@@ -207,6 +245,7 @@ export default function CreateTaskScreen() {
               styles.textArea,
               { backgroundColor: T.surface, borderColor: T.border, color: T.textBright },
             ]}
+            initialContent={initialDescription}
             onCanonicalChange={(c) => {
               descriptionRef.current = c;
             }}

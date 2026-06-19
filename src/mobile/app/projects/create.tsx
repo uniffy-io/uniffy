@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,11 +29,12 @@ import {
   Buildings,
 } from "phosphor-react-native";
 import type { IconProps } from "phosphor-react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import { DOMAIN_COLORS, CATEGORY_COLORS } from "@/constants/theme";
-import { useCreateProject } from "@/hooks/useProjectMutations";
+import { useProject } from "@/hooks/useProjects";
+import { useCreateProject, useUpdateProject } from "@/hooks/useProjectMutations";
 
 const ICON_OPTIONS: { name: string; Component: React.ComponentType<IconProps> }[] = [
   { name: "kanban", Component: Kanban },
@@ -55,34 +56,67 @@ const ICON_OPTIONS: { name: string; Component: React.ComponentType<IconProps> }[
 
 export default function CreateProjectScreen() {
   const T = useTheme();
+  const { projectId } = useLocalSearchParams<{ projectId?: string }>();
+  const isEditing = !!projectId;
+  const projectQuery = useProject(projectId);
   const createProject = useCreateProject();
+  const updateProject = useUpdateProject();
 
   const [name, setName] = useState("");
   const descriptionRef = useRef("");
+  const [initialDescription, setInitialDescription] = useState<string | undefined>(undefined);
   const [selectedIcon, setSelectedIcon] = useState("kanban");
   const [selectedColor, setSelectedColor] = useState(CATEGORY_COLORS[0].hex);
   const [visibility, setVisibility] = useState<"PRIVATE" | "ORGANIZATION">("PRIVATE");
 
-  const canSave = name.trim().length > 0 && !createProject.isPending;
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    const project = projectQuery.data;
+    if (!project || prefilledRef.current) return;
+    prefilledRef.current = true;
+    setName(project.name);
+    descriptionRef.current = project.description ?? "";
+    setInitialDescription(project.description || undefined);
+    if (project.icon) setSelectedIcon(project.icon);
+    if (project.color) setSelectedColor(project.color);
+    setVisibility(project.visibility);
+  }, [projectQuery.data]);
+
+  const isSaving = createProject.isPending || updateProject.isPending;
+  const canSave = name.trim().length > 0 && !isSaving;
 
   function handleSave() {
     if (!canSave) return;
-    createProject.mutate(
-      {
-        name: name.trim(),
-        description: descriptionRef.current.trim() || undefined,
-        icon: selectedIcon,
-        color: selectedColor,
-        visibility,
-      },
-      { onSuccess: () => router.back() },
-    );
+    if (isEditing && projectId) {
+      updateProject.mutate(
+        {
+          projectId,
+          name: name.trim(),
+          description: descriptionRef.current.trim(),
+          icon: selectedIcon,
+          color: selectedColor,
+          visibility,
+        },
+        { onSuccess: () => router.back() },
+      );
+    } else {
+      createProject.mutate(
+        {
+          name: name.trim(),
+          description: descriptionRef.current.trim() || undefined,
+          icon: selectedIcon,
+          color: selectedColor,
+          visibility,
+        },
+        { onSuccess: () => router.back() },
+      );
+    }
   }
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
-        title="New Project"
+        title={isEditing ? "Edit Project" : "New Project"}
         color={DOMAIN_COLORS.projects}
         icon="projects"
         rightActions={
@@ -91,7 +125,7 @@ export default function CreateProjectScreen() {
             disabled={!canSave}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {createProject.isPending ? (
+            {isSaving ? (
               <ActivityIndicator size="small" color={DOMAIN_COLORS.projects} />
             ) : (
               <Text
@@ -116,7 +150,7 @@ export default function CreateProjectScreen() {
             onChangeText={setName}
             placeholder="Project name"
             placeholderTextColor={T.textDim}
-            autoFocus
+            autoFocus={!isEditing}
           />
         </View>
 
@@ -128,6 +162,7 @@ export default function CreateProjectScreen() {
               styles.textArea,
               { backgroundColor: T.surface, borderColor: T.border, color: T.textBright },
             ]}
+            initialContent={initialDescription}
             onCanonicalChange={(c) => {
               descriptionRef.current = c;
             }}

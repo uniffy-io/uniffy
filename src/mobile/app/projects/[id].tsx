@@ -14,10 +14,14 @@ import { Funnel, DotsThree, Plus, ArrowUp, Warning, CalendarBlank } from "phosph
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { CommentButton } from "@/components/CommentsSheet";
+import { ShareButton } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
 import { DOMAIN_COLORS, BOTTOM_NAV_HEIGHT } from "@/constants/theme";
 import { useProject, useProjectTasks } from "@/hooks/useProjects";
-import { useMoveTask } from "@/hooks/useProjectMutations";
+import { useMoveTask, useDeleteProject } from "@/hooks/useProjectMutations";
 import {
   getStatusOptions,
   getPriorityOptions,
@@ -122,10 +126,12 @@ export default function ProjectBoardScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const [activeView, setActiveView] = useState<ViewMode>("Table");
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const projectQuery = useProject(id);
   const tasksQuery = useProjectTasks(id);
   const moveTask = useMoveTask();
+  const deleteProject = useDeleteProject();
 
   const project = projectQuery.data;
   const tasks = tasksQuery.data ?? [];
@@ -167,10 +173,23 @@ export default function ProjectBoardScreen() {
         subtitle={`${stats.progress}% complete - ${stats.done}/${stats.total} tasks`}
         rightActions={
           <>
+            <CommentButton
+              contentType={ContentType.PROJECT}
+              contentId={project.id}
+              color={projectColor}
+            />
+            <ShareButton
+              contentType={ContentType.PROJECT}
+              contentId={project.id}
+              color={projectColor}
+            />
             <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Funnel size={18} color={T.text} weight="duotone" />
             </TouchableOpacity>
-            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={() => setSheetOpen(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <DotsThree size={22} color={T.text} weight="bold" />
             </TouchableOpacity>
           </>
@@ -353,6 +372,30 @@ export default function ProjectBoardScreen() {
           })}
         </ScrollView>
       ) : null}
+
+      <ActionSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={project.name}
+        subtitle={`${stats.done}/${stats.total} tasks`}
+        icon="projects"
+        iconColor={projectColor}
+        actions={[
+          {
+            icon: "edit-2",
+            label: "Edit project",
+            onPress: () => router.push({ pathname: "/projects/create" as any, params: { projectId: id } }),
+          },
+          {
+            icon: "trash-2",
+            label: "Delete project",
+            isDanger: true,
+            onPress: () => {
+              deleteProject.mutate(id, { onSuccess: () => router.back() });
+            },
+          },
+        ]}
+      />
     </View>
   );
 }

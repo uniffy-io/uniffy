@@ -21,7 +21,7 @@ export function useCreateProject() {
         description: args.description,
         icon: args.icon,
         color: args.color,
-        visibility: args.visibility ? visibilityStringToProto(args.visibility) : undefined,
+        accessMode: args.visibility ? visibilityStringToProto(args.visibility) : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -49,7 +49,7 @@ export function useUpdateProject() {
         description: args.description,
         icon: args.icon,
         color: args.color,
-        visibility: args.visibility ? visibilityStringToProto(args.visibility) : undefined,
+        accessMode: args.visibility ? visibilityStringToProto(args.visibility) : undefined,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -134,7 +134,7 @@ export function useUpdateTask() {
         description: args.description,
         status: args.status,
         priority: args.priority,
-        assigneeIds: args.assigneeIds,
+        assigneeIds: args.assigneeIds ? { ids: args.assigneeIds } : undefined,
         startDate: args.startDate !== undefined ? (args.startDate ?? "") : undefined,
         dueDate: args.dueDate !== undefined ? (args.dueDate ?? "") : undefined,
         sortOrder: args.sortOrder,
