@@ -1,9 +1,11 @@
 version: v2
 plugins:
-    # Python
-    - remote: buf.build/protocolbuffers/python
+    # Python (pin to the protobuf runtime version in pyproject so regen stays
+    # reproducible; an unpinned remote tracks latest and bumps the gencode
+    # version guard ahead of the installed runtime)
+    - remote: buf.build/protocolbuffers/python:v35.0
       out: src/gen/python/src/uniffy_proto
-    - remote: buf.build/protocolbuffers/pyi
+    - remote: buf.build/protocolbuffers/pyi:v35.0
       out: src/gen/python/src/uniffy_proto
     - local: .venv/bin/protoc-gen-connectrpc
       out: src/gen/python/src/uniffy_proto

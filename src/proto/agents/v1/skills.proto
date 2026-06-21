@@ -24,6 +24,47 @@ service SkillsService {
 
   // Delete an organization skill
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse) {}
+
+  // List the skills a user can invoke on-demand against a given agent
+  // (the agent's resolved set: explicitly enabled + always-active). Powers
+  // the "/" slash-command menu in the agent composers. Lean payload - no
+  // skill content is shipped; the content loads only when the turn runs.
+  rpc ListRunnableSkills(ListRunnableSkillsRequest) returns (ListRunnableSkillsResponse) {}
+
+  // Create a pending draft (library "New skill" / "Edit as draft"). The draft
+  // is never auto-activated; it becomes a skill only on SaveSkillDraft.
+  rpc CreateSkillDraft(CreateSkillDraftRequest) returns (CreateSkillDraftResponse) {}
+
+  // Get a single draft by id.
+  rpc GetSkillDraft(GetSkillDraftRequest) returns (GetSkillDraftResponse) {}
+
+  // List pending drafts for review (the drafts inbox).
+  rpc ListSkillDrafts(ListSkillDraftsRequest) returns (ListSkillDraftsResponse) {}
+
+  // Save a pending draft: a create draft becomes a new skill at version 1; an
+  // edit/evolve draft appends a new version to its target skill.
+  rpc SaveSkillDraft(SaveSkillDraftRequest) returns (SaveSkillDraftResponse) {}
+
+  // Discard a pending draft (soft delete; never activates anything).
+  rpc DiscardSkillDraft(DiscardSkillDraftRequest) returns (DiscardSkillDraftResponse) {}
+
+  // List a skill's immutable version history (newest first), with the current
+  // main-version pointer so the timeline can render the "Main" badge.
+  rpc ListSkillVersions(ListSkillVersionsRequest) returns (ListSkillVersionsResponse) {}
+
+  // Get a single version of a skill by version number.
+  rpc GetSkillVersion(GetSkillVersionRequest) returns (GetSkillVersionResponse) {}
+
+  // Set the main version the runtime uses: pin a version, or let it follow the
+  // latest edit automatically.
+  rpc SetMainSkillVersion(SetMainSkillVersionRequest) returns (SetMainSkillVersionResponse) {}
+
+  // Revert a skill to an earlier version by copying that version's content into
+  // a new version at the head of the history.
+  rpc RevertSkill(RevertSkillRequest) returns (RevertSkillResponse) {}
+
+  // Per-skill usage + feedback aggregates for the org admin metrics view.
+  rpc GetSkillMetrics(GetSkillMetricsRequest) returns (GetSkillMetricsResponse) {}
 }
 
 // Source of a skill definition
@@ -48,6 +89,66 @@ message SkillInfo {
   google.protobuf.Timestamp updated_at = 10;
   // Owner user ID for personal skills (null for org/bundled skills)
   optional string owner_id = 11;
+  // Short trigger guidance shown in the progressive-disclosure metadata index.
+  string when_to_use = 12;
+  // Tool names that must be enabled for the skill to appear (conditional activation).
+  repeated string requires_tools = 13;
+  // Optional surface/content-type gates for conditional activation.
+  repeated string requires_context = 14;
+  string status = 15; // active | archived
+  string origin = 16; // user | agent_proposed | agent_evolved | bundled
+  int32 latest_version_number = 17;
+  // The version the agent actually uses (the main version). Defaults to the
+  // latest until the user pins one.
+  int32 active_version_number = 18;
+  bool active_version_pinned = 19;
+}
+
+// One immutable version snapshot of a skill.
+message SkillVersion {
+  string id = 1;
+  string skill_id = 2;
+  int32 version_number = 3;
+  string name = 4;
+  string display_name = 5;
+  string description = 6;
+  string content = 7;
+  string when_to_use = 8;
+  repeated string requires_tools = 9;
+  repeated string requires_context = 10;
+  optional string author_id = 11;
+  string author_kind = 12; // user | agent
+  string change_summary = 13;
+  optional string parent_version_id = 14;
+  google.protobuf.Timestamp created_at = 15;
+}
+
+// A pending skill draft awaiting user review. One shape for user-authored and
+// agent-proposed drafts; saved only on an explicit user action.
+message SkillDraft {
+  string id = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  optional string target_skill_id = 4; // null = a create draft
+  string kind = 5; // create | edit | evolve
+  optional string proposed_by_agent_id = 6;
+  optional string session_id = 7;
+  optional string channel_id = 8;
+  optional string origin_chat_message_id = 9;
+  repeated string evidence_message_ids = 10;
+  string rationale = 11;
+  string name = 12;
+  string display_name = 13;
+  string description = 14;
+  string content = 15;
+  string when_to_use = 16;
+  repeated string requires_tools = 17;
+  repeated string requires_context = 18;
+  string suggested_scope = 19; // personal | organization
+  bool suggested_always_active = 20;
+  string status = 21; // pending | saved | discarded
+  google.protobuf.Timestamp created_at = 22;
+  google.protobuf.Timestamp updated_at = 23;
 }
 
 // --- Requests and Responses ---
@@ -107,4 +208,167 @@ message DeleteSkillRequest {
 
 message DeleteSkillResponse {
   bool success = 1;
+}
+
+// A skill entry for the slash-command menu. Carries only what the menu
+// renders and what a follow-up invocation needs (the id); no content.
+message RunnableSkill {
+  string id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  string when_to_use = 5;
+}
+
+message ListRunnableSkillsRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message ListRunnableSkillsResponse {
+  repeated RunnableSkill skills = 1;
+}
+
+message CreateSkillDraftRequest {
+  string organization_id = 1;
+  string kind = 2; // create | edit | evolve
+  optional string target_skill_id = 3; // required for edit/evolve
+  string name = 4;
+  string display_name = 5;
+  string description = 6;
+  string content = 7;
+  string when_to_use = 8;
+  repeated string requires_tools = 9;
+  repeated string requires_context = 10;
+  string suggested_scope = 11; // personal | organization
+  bool suggested_always_active = 12;
+  string rationale = 13;
+}
+
+message CreateSkillDraftResponse {
+  SkillDraft draft = 1;
+}
+
+message GetSkillDraftRequest {
+  string organization_id = 1;
+  string draft_id = 2;
+}
+
+message GetSkillDraftResponse {
+  SkillDraft draft = 1;
+}
+
+message ListSkillDraftsRequest {
+  string organization_id = 1;
+  optional string status = 2; // defaults to "pending"
+  optional common.v1.PaginationRequest pagination = 3;
+}
+
+message ListSkillDraftsResponse {
+  repeated SkillDraft drafts = 1;
+  common.v1.PaginationResponse pagination = 2;
+}
+
+// The review card sends the full, possibly user-edited field set so the saved
+// version reflects the reviewer's edits without a separate update round-trip.
+message SaveSkillDraftRequest {
+  string organization_id = 1;
+  string draft_id = 2;
+  string name = 3;
+  string display_name = 4;
+  string description = 5;
+  string content = 6;
+  string when_to_use = 7;
+  repeated string requires_tools = 8;
+  repeated string requires_context = 9;
+  string suggested_scope = 10; // personal | organization
+  bool suggested_always_active = 11;
+  string change_summary = 12;
+}
+
+message SaveSkillDraftResponse {
+  SkillInfo skill = 1;
+  SkillVersion version = 2;
+}
+
+message DiscardSkillDraftRequest {
+  string organization_id = 1;
+  string draft_id = 2;
+}
+
+message DiscardSkillDraftResponse {
+  bool success = 1;
+}
+
+message ListSkillVersionsRequest {
+  string organization_id = 1;
+  string skill_id = 2;
+  optional common.v1.PaginationRequest pagination = 3;
+}
+
+message ListSkillVersionsResponse {
+  repeated SkillVersion versions = 1;
+  common.v1.PaginationResponse pagination = 2;
+  // The current main-version pointer, echoed so the timeline can mark the main
+  // version and drive the follow-latest toggle without a second round-trip.
+  int32 active_version_number = 3;
+  bool active_version_pinned = 4;
+  int32 latest_version_number = 5;
+}
+
+message GetSkillVersionRequest {
+  string organization_id = 1;
+  string skill_id = 2;
+  int32 version_number = 3;
+}
+
+message GetSkillVersionResponse {
+  SkillVersion version = 1;
+}
+
+message SetMainSkillVersionRequest {
+  string organization_id = 1;
+  string skill_id = 2;
+  // Pinned as the main version when follow_latest is false; ignored otherwise.
+  optional int32 version_number = 3;
+  // When true, unpin so the main version tracks the latest edit automatically.
+  bool follow_latest = 4;
+}
+
+message SetMainSkillVersionResponse {
+  SkillInfo skill = 1;
+}
+
+message RevertSkillRequest {
+  string organization_id = 1;
+  string skill_id = 2;
+  int32 version_number = 3;
+}
+
+message RevertSkillResponse {
+  SkillInfo skill = 1;
+  SkillVersion version = 2;
+}
+
+// Usage + quality aggregate for one skill, drawn from agents_skill_usages.
+message SkillMetric {
+  string skill_id = 1;
+  string display_name = 2;
+  string origin = 3; // user | agent_proposed | agent_evolved | bundled
+  int32 injected_count = 4;
+  int32 viewed_count = 5;
+  int32 invoked_count = 6;
+}
+
+message GetSkillMetricsRequest {
+  string organization_id = 1;
+}
+
+message GetSkillMetricsResponse {
+  repeated SkillMetric metrics = 1;
+  // Org-wide agent-message feedback tallies over the same window.
+  int32 positive_feedback_count = 2;
+  int32 negative_feedback_count = 3;
+  // Count of pending agent-proposed/evolved drafts awaiting review.
+  int32 pending_agent_drafts = 4;
 }

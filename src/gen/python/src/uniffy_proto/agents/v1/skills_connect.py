@@ -33,6 +33,39 @@ class SkillsService(Protocol):
     async def delete_skill(self, request: agents_dot_v1_dot_skills__pb2.DeleteSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.DeleteSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_runnable_skills(self, request: agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def create_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_skill_drafts(self, request: agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def save_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def discard_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_skill_versions(self, request: agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_skill_version(self, request: agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def set_main_skill_version(self, request: agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def revert_skill(self, request: agents_dot_v1_dot_skills__pb2.RevertSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.RevertSkillResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_skill_metrics(self, request: agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
     def __init__(self, service: SkillsService | AsyncGenerator[SkillsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -88,6 +121,116 @@ class SkillsServiceASGIApplication(ConnectASGIApplication[SkillsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_skill,
+                ),
+                "/agents.v1.SkillsService/ListRunnableSkills": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListRunnableSkills",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_runnable_skills,
+                ),
+                "/agents.v1.SkillsService/CreateSkillDraft": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_skill_draft,
+                ),
+                "/agents.v1.SkillsService/GetSkillDraft": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_skill_draft,
+                ),
+                "/agents.v1.SkillsService/ListSkillDrafts": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListSkillDrafts",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_skill_drafts,
+                ),
+                "/agents.v1.SkillsService/SaveSkillDraft": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SaveSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.save_skill_draft,
+                ),
+                "/agents.v1.SkillsService/DiscardSkillDraft": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DiscardSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.discard_skill_draft,
+                ),
+                "/agents.v1.SkillsService/ListSkillVersions": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListSkillVersions",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_skill_versions,
+                ),
+                "/agents.v1.SkillsService/GetSkillVersion": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetSkillVersion",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_skill_version,
+                ),
+                "/agents.v1.SkillsService/SetMainSkillVersion": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetMainSkillVersion",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest,
+                        output=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_main_skill_version,
+                ),
+                "/agents.v1.SkillsService/RevertSkill": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RevertSkill",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.RevertSkillRequest,
+                        output=agents_dot_v1_dot_skills__pb2.RevertSkillResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.revert_skill,
+                ),
+                "/agents.v1.SkillsService/GetSkillMetrics": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetSkillMetrics",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_skill_metrics,
                 ),
             },
             interceptors=interceptors,
@@ -203,6 +346,226 @@ class SkillsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_runnable_skills(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListRunnableSkills",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest,
+                output=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def create_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_skill_drafts(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSkillDrafts",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest,
+                output=agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def save_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SaveSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def discard_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DiscardSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_skill_versions(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSkillVersions",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest,
+                output=agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_skill_version(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillVersion",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_main_skill_version(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMainSkillVersion",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest,
+                output=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def revert_skill(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.RevertSkillRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.RevertSkillResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevertSkill",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.RevertSkillRequest,
+                output=agents_dot_v1_dot_skills__pb2.RevertSkillResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_skill_metrics(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillMetrics",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -217,6 +580,28 @@ class SkillsServiceSync(Protocol):
     def update_skill(self, request: agents_dot_v1_dot_skills__pb2.UpdateSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.UpdateSkillResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_skill(self, request: agents_dot_v1_dot_skills__pb2.DeleteSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.DeleteSkillResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_runnable_skills(self, request: agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_skill_drafts(self, request: agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def save_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def discard_skill_draft(self, request: agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_skill_versions(self, request: agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_skill_version(self, request: agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_main_skill_version(self, request: agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def revert_skill(self, request: agents_dot_v1_dot_skills__pb2.RevertSkillRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.RevertSkillResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_skill_metrics(self, request: agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest, ctx: RequestContext) -> agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -273,6 +658,116 @@ class SkillsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_skill,
+                ),
+                "/agents.v1.SkillsService/ListRunnableSkills": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListRunnableSkills",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_runnable_skills,
+                ),
+                "/agents.v1.SkillsService/CreateSkillDraft": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_skill_draft,
+                ),
+                "/agents.v1.SkillsService/GetSkillDraft": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_skill_draft,
+                ),
+                "/agents.v1.SkillsService/ListSkillDrafts": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListSkillDrafts",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_skill_drafts,
+                ),
+                "/agents.v1.SkillsService/SaveSkillDraft": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SaveSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.save_skill_draft,
+                ),
+                "/agents.v1.SkillsService/DiscardSkillDraft": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DiscardSkillDraft",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest,
+                        output=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.discard_skill_draft,
+                ),
+                "/agents.v1.SkillsService/ListSkillVersions": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListSkillVersions",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_skill_versions,
+                ),
+                "/agents.v1.SkillsService/GetSkillVersion": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetSkillVersion",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_skill_version,
+                ),
+                "/agents.v1.SkillsService/SetMainSkillVersion": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetMainSkillVersion",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest,
+                        output=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_main_skill_version,
+                ),
+                "/agents.v1.SkillsService/RevertSkill": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RevertSkill",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.RevertSkillRequest,
+                        output=agents_dot_v1_dot_skills__pb2.RevertSkillResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.revert_skill,
+                ),
+                "/agents.v1.SkillsService/GetSkillMetrics": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetSkillMetrics",
+                        service_name="agents.v1.SkillsService",
+                        input=agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest,
+                        output=agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_skill_metrics,
                 ),
             },
             interceptors=interceptors,
@@ -382,6 +877,226 @@ class SkillsServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.SkillsService",
                 input=agents_dot_v1_dot_skills__pb2.DeleteSkillRequest,
                 output=agents_dot_v1_dot_skills__pb2.DeleteSkillResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_runnable_skills(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListRunnableSkills",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsRequest,
+                output=agents_dot_v1_dot_skills__pb2.ListRunnableSkillsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def create_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.CreateSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.CreateSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_skill_drafts(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSkillDrafts",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.ListSkillDraftsRequest,
+                output=agents_dot_v1_dot_skills__pb2.ListSkillDraftsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def save_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SaveSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.SaveSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.SaveSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def discard_skill_draft(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DiscardSkillDraft",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftRequest,
+                output=agents_dot_v1_dot_skills__pb2.DiscardSkillDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_skill_versions(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListSkillVersions",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.ListSkillVersionsRequest,
+                output=agents_dot_v1_dot_skills__pb2.ListSkillVersionsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_skill_version(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillVersion",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillVersionRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillVersionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_main_skill_version(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMainSkillVersion",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionRequest,
+                output=agents_dot_v1_dot_skills__pb2.SetMainSkillVersionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def revert_skill(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.RevertSkillRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.RevertSkillResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RevertSkill",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.RevertSkillRequest,
+                output=agents_dot_v1_dot_skills__pb2.RevertSkillResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_skill_metrics(
+        self,
+        request: agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSkillMetrics",
+                service_name="agents.v1.SkillsService",
+                input=agents_dot_v1_dot_skills__pb2.GetSkillMetricsRequest,
+                output=agents_dot_v1_dot_skills__pb2.GetSkillMetricsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

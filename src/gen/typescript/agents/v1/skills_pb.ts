@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/skills.proto.
  */
 export const file_agents_v1_skills: GenFile = /*@__PURE__*/
-  fileDesc("ChZhZ2VudHMvdjEvc2tpbGxzLnByb3RvEglhZ2VudHMudjEi1gIKCVNraWxsSW5mbxIKCgJpZBgBIAEoCRIcCg9vcmdhbml6YXRpb25faWQYAiABKAlIAIgBARIMCgRuYW1lGAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIPCgdjb250ZW50GAYgASgJEiYKBnNvdXJjZRgHIAEoDjIWLmFnZW50cy52MS5Ta2lsbFNvdXJjZRIVCg1hbHdheXNfYWN0aXZlGAggASgIEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhUKCG93bmVyX2lkGAsgASgJSAGIAQFCEgoQX29yZ2FuaXphdGlvbl9pZEILCglfb3duZXJfaWQiyQEKEkNyZWF0ZVNraWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSDwoHY29udGVudBgFIAEoCRIaCg1hbHdheXNfYWN0aXZlGAYgASgISACIAQESFQoIb3duZXJfaWQYByABKAlIAYgBAUIQCg5fYWx3YXlzX2FjdGl2ZUILCglfb3duZXJfaWQiOgoTQ3JlYXRlU2tpbGxSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8iNwoQR2V0U2tpbGxSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8iOgoTVXBkYXRlU2tpbGxSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8iPAoPR2V0U2tpbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCSJyChFMaXN0U2tpbGxzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSNQoKcGFnaW5hdGlvbhgCIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBQg0KC19wYWdpbmF0aW9uIm0KEkxpc3RTa2lsbHNSZXNwb25zZRIkCgZza2lsbHMYASADKAsyFC5hZ2VudHMudjEuU2tpbGxJbmZvEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlIoECChJVcGRhdGVTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhEKBG5hbWUYAyABKAlIAIgBARIZCgxkaXNwbGF5X25hbWUYBCABKAlIAYgBARIYCgtkZXNjcmlwdGlvbhgFIAEoCUgCiAEBEhQKB2NvbnRlbnQYBiABKAlIA4gBARIaCg1hbHdheXNfYWN0aXZlGAcgASgISASIAQFCBwoFX25hbWVCDwoNX2Rpc3BsYXlfbmFtZUIOCgxfZGVzY3JpcHRpb25CCgoIX2NvbnRlbnRCEAoOX2Fsd2F5c19hY3RpdmUiPwoSRGVsZXRlU2tpbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCSImChNEZWxldGVTa2lsbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgqfwoLU2tpbGxTb3VyY2USHAoYU0tJTExfU09VUkNFX1VOU1BFQ0lGSUVEEAASGAoUU0tJTExfU09VUkNFX0JVTkRMRUQQARIdChlTS0lMTF9TT1VSQ0VfT1JHQU5JWkFUSU9OEAISGQoVU0tJTExfU09VUkNFX1BFUlNPTkFMEAMykwMKDVNraWxsc1NlcnZpY2USTgoLQ3JlYXRlU2tpbGwSHS5hZ2VudHMudjEuQ3JlYXRlU2tpbGxSZXF1ZXN0Gh4uYWdlbnRzLnYxLkNyZWF0ZVNraWxsUmVzcG9uc2UiABJFCghHZXRTa2lsbBIaLmFnZW50cy52MS5HZXRTa2lsbFJlcXVlc3QaGy5hZ2VudHMudjEuR2V0U2tpbGxSZXNwb25zZSIAEksKCkxpc3RTa2lsbHMSHC5hZ2VudHMudjEuTGlzdFNraWxsc1JlcXVlc3QaHS5hZ2VudHMudjEuTGlzdFNraWxsc1Jlc3BvbnNlIgASTgoLVXBkYXRlU2tpbGwSHS5hZ2VudHMudjEuVXBkYXRlU2tpbGxSZXF1ZXN0Gh4uYWdlbnRzLnYxLlVwZGF0ZVNraWxsUmVzcG9uc2UiABJOCgtEZWxldGVTa2lsbBIdLmFnZW50cy52MS5EZWxldGVTa2lsbFJlcXVlc3QaHi5hZ2VudHMudjEuRGVsZXRlU2tpbGxSZXNwb25zZSIAQjtaOWdpdGh1Yi5jb20vQXRoZW5uYU1pbmQvdW5pZmZ5LXByb3RvLWdvL2FnZW50cy92MTthZ2VudHN2MWIGcHJvdG8z", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChZhZ2VudHMvdjEvc2tpbGxzLnByb3RvEglhZ2VudHMudjEimgQKCVNraWxsSW5mbxIKCgJpZBgBIAEoCRIcCg9vcmdhbml6YXRpb25faWQYAiABKAlIAIgBARIMCgRuYW1lGAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIPCgdjb250ZW50GAYgASgJEiYKBnNvdXJjZRgHIAEoDjIWLmFnZW50cy52MS5Ta2lsbFNvdXJjZRIVCg1hbHdheXNfYWN0aXZlGAggASgIEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhUKCG93bmVyX2lkGAsgASgJSAGIAQESEwoLd2hlbl90b191c2UYDCABKAkSFgoOcmVxdWlyZXNfdG9vbHMYDSADKAkSGAoQcmVxdWlyZXNfY29udGV4dBgOIAMoCRIOCgZzdGF0dXMYDyABKAkSDgoGb3JpZ2luGBAgASgJEh0KFWxhdGVzdF92ZXJzaW9uX251bWJlchgRIAEoBRIdChVhY3RpdmVfdmVyc2lvbl9udW1iZXIYEiABKAUSHQoVYWN0aXZlX3ZlcnNpb25fcGlubmVkGBMgASgIQhIKEF9vcmdhbml6YXRpb25faWRCCwoJX293bmVyX2lkIo4DCgxTa2lsbFZlcnNpb24SCgoCaWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSFgoOdmVyc2lvbl9udW1iZXIYAyABKAUSDAoEbmFtZRgEIAEoCRIUCgxkaXNwbGF5X25hbWUYBSABKAkSEwoLZGVzY3JpcHRpb24YBiABKAkSDwoHY29udGVudBgHIAEoCRITCgt3aGVuX3RvX3VzZRgIIAEoCRIWCg5yZXF1aXJlc190b29scxgJIAMoCRIYChByZXF1aXJlc19jb250ZXh0GAogAygJEhYKCWF1dGhvcl9pZBgLIAEoCUgAiAEBEhMKC2F1dGhvcl9raW5kGAwgASgJEhYKDmNoYW5nZV9zdW1tYXJ5GA0gASgJEh4KEXBhcmVudF92ZXJzaW9uX2lkGA4gASgJSAGIAQESLgoKY3JlYXRlZF9hdBgPIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDAoKX2F1dGhvcl9pZEIUChJfcGFyZW50X3ZlcnNpb25faWQiuwUKClNraWxsRHJhZnQSCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCG93bmVyX2lkGAMgASgJEhwKD3RhcmdldF9za2lsbF9pZBgEIAEoCUgAiAEBEgwKBGtpbmQYBSABKAkSIQoUcHJvcG9zZWRfYnlfYWdlbnRfaWQYBiABKAlIAYgBARIXCgpzZXNzaW9uX2lkGAcgASgJSAKIAQESFwoKY2hhbm5lbF9pZBgIIAEoCUgDiAEBEiMKFm9yaWdpbl9jaGF0X21lc3NhZ2VfaWQYCSABKAlIBIgBARIcChRldmlkZW5jZV9tZXNzYWdlX2lkcxgKIAMoCRIRCglyYXRpb25hbGUYCyABKAkSDAoEbmFtZRgMIAEoCRIUCgxkaXNwbGF5X25hbWUYDSABKAkSEwoLZGVzY3JpcHRpb24YDiABKAkSDwoHY29udGVudBgPIAEoCRITCgt3aGVuX3RvX3VzZRgQIAEoCRIWCg5yZXF1aXJlc190b29scxgRIAMoCRIYChByZXF1aXJlc19jb250ZXh0GBIgAygJEhcKD3N1Z2dlc3RlZF9zY29wZRgTIAEoCRIfChdzdWdnZXN0ZWRfYWx3YXlzX2FjdGl2ZRgUIAEoCBIOCgZzdGF0dXMYFSABKAkSLgoKY3JlYXRlZF9hdBgWIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgXIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCEgoQX3RhcmdldF9za2lsbF9pZEIXChVfcHJvcG9zZWRfYnlfYWdlbnRfaWRCDQoLX3Nlc3Npb25faWRCDQoLX2NoYW5uZWxfaWRCGQoXX29yaWdpbl9jaGF0X21lc3NhZ2VfaWQiyQEKEkNyZWF0ZVNraWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSDwoHY29udGVudBgFIAEoCRIaCg1hbHdheXNfYWN0aXZlGAYgASgISACIAQESFQoIb3duZXJfaWQYByABKAlIAYgBAUIQCg5fYWx3YXlzX2FjdGl2ZUILCglfb3duZXJfaWQiOgoTQ3JlYXRlU2tpbGxSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8iNwoQR2V0U2tpbGxSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8iOgoTVXBkYXRlU2tpbGxSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8iPAoPR2V0U2tpbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCSJyChFMaXN0U2tpbGxzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSNQoKcGFnaW5hdGlvbhgCIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBQg0KC19wYWdpbmF0aW9uIm0KEkxpc3RTa2lsbHNSZXNwb25zZRIkCgZza2lsbHMYASADKAsyFC5hZ2VudHMudjEuU2tpbGxJbmZvEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlIoECChJVcGRhdGVTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhEKBG5hbWUYAyABKAlIAIgBARIZCgxkaXNwbGF5X25hbWUYBCABKAlIAYgBARIYCgtkZXNjcmlwdGlvbhgFIAEoCUgCiAEBEhQKB2NvbnRlbnQYBiABKAlIA4gBARIaCg1hbHdheXNfYWN0aXZlGAcgASgISASIAQFCBwoFX25hbWVCDwoNX2Rpc3BsYXlfbmFtZUIOCgxfZGVzY3JpcHRpb25CCgoIX2NvbnRlbnRCEAoOX2Fsd2F5c19hY3RpdmUiPwoSRGVsZXRlU2tpbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCSImChNEZWxldGVTa2lsbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiaQoNUnVubmFibGVTa2lsbBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRITCgt3aGVuX3RvX3VzZRgFIAEoCSJGChlMaXN0UnVubmFibGVTa2lsbHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCSJGChpMaXN0UnVubmFibGVTa2lsbHNSZXNwb25zZRIoCgZza2lsbHMYASADKAsyGC5hZ2VudHMudjEuUnVubmFibGVTa2lsbCLQAgoXQ3JlYXRlU2tpbGxEcmFmdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEgwKBGtpbmQYAiABKAkSHAoPdGFyZ2V0X3NraWxsX2lkGAMgASgJSACIAQESDAoEbmFtZRgEIAEoCRIUCgxkaXNwbGF5X25hbWUYBSABKAkSEwoLZGVzY3JpcHRpb24YBiABKAkSDwoHY29udGVudBgHIAEoCRITCgt3aGVuX3RvX3VzZRgIIAEoCRIWCg5yZXF1aXJlc190b29scxgJIAMoCRIYChByZXF1aXJlc19jb250ZXh0GAogAygJEhcKD3N1Z2dlc3RlZF9zY29wZRgLIAEoCRIfChdzdWdnZXN0ZWRfYWx3YXlzX2FjdGl2ZRgMIAEoCBIRCglyYXRpb25hbGUYDSABKAlCEgoQX3RhcmdldF9za2lsbF9pZCJAChhDcmVhdGVTa2lsbERyYWZ0UmVzcG9uc2USJAoFZHJhZnQYASABKAsyFS5hZ2VudHMudjEuU2tpbGxEcmFmdCJBChRHZXRTa2lsbERyYWZ0UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIZHJhZnRfaWQYAiABKAkiPQoVR2V0U2tpbGxEcmFmdFJlc3BvbnNlEiQKBWRyYWZ0GAEgASgLMhUuYWdlbnRzLnYxLlNraWxsRHJhZnQilwEKFkxpc3RTa2lsbERyYWZ0c1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhMKBnN0YXR1cxgCIAEoCUgAiAEBEjUKCnBhZ2luYXRpb24YAyABKAsyHC5jb21tb24udjEuUGFnaW5hdGlvblJlcXVlc3RIAYgBAUIJCgdfc3RhdHVzQg0KC19wYWdpbmF0aW9uInMKF0xpc3RTa2lsbERyYWZ0c1Jlc3BvbnNlEiUKBmRyYWZ0cxgBIAMoCzIVLmFnZW50cy52MS5Ta2lsbERyYWZ0EjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlIqUCChVTYXZlU2tpbGxEcmFmdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGRyYWZ0X2lkGAIgASgJEgwKBG5hbWUYAyABKAkSFAoMZGlzcGxheV9uYW1lGAQgASgJEhMKC2Rlc2NyaXB0aW9uGAUgASgJEg8KB2NvbnRlbnQYBiABKAkSEwoLd2hlbl90b191c2UYByABKAkSFgoOcmVxdWlyZXNfdG9vbHMYCCADKAkSGAoQcmVxdWlyZXNfY29udGV4dBgJIAMoCRIXCg9zdWdnZXN0ZWRfc2NvcGUYCiABKAkSHwoXc3VnZ2VzdGVkX2Fsd2F5c19hY3RpdmUYCyABKAgSFgoOY2hhbmdlX3N1bW1hcnkYDCABKAkiZwoWU2F2ZVNraWxsRHJhZnRSZXNwb25zZRIjCgVza2lsbBgBIAEoCzIULmFnZW50cy52MS5Ta2lsbEluZm8SKAoHdmVyc2lvbhgCIAEoCzIXLmFnZW50cy52MS5Ta2lsbFZlcnNpb24iRQoYRGlzY2FyZFNraWxsRHJhZnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghkcmFmdF9pZBgCIAEoCSIsChlEaXNjYXJkU2tpbGxEcmFmdFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiiwEKGExpc3RTa2lsbFZlcnNpb25zUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIc2tpbGxfaWQYAiABKAkSNQoKcGFnaW5hdGlvbhgDIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBQg0KC19wYWdpbmF0aW9uItYBChlMaXN0U2tpbGxWZXJzaW9uc1Jlc3BvbnNlEikKCHZlcnNpb25zGAEgAygLMhcuYWdlbnRzLnYxLlNraWxsVmVyc2lvbhIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZRIdChVhY3RpdmVfdmVyc2lvbl9udW1iZXIYAyABKAUSHQoVYWN0aXZlX3ZlcnNpb25fcGlubmVkGAQgASgIEh0KFWxhdGVzdF92ZXJzaW9uX251bWJlchgFIAEoBSJbChZHZXRTa2lsbFZlcnNpb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCRIWCg52ZXJzaW9uX251bWJlchgDIAEoBSJDChdHZXRTa2lsbFZlcnNpb25SZXNwb25zZRIoCgd2ZXJzaW9uGAEgASgLMhcuYWdlbnRzLnYxLlNraWxsVmVyc2lvbiKOAQoaU2V0TWFpblNraWxsVmVyc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhsKDnZlcnNpb25fbnVtYmVyGAMgASgFSACIAQESFQoNZm9sbG93X2xhdGVzdBgEIAEoCEIRCg9fdmVyc2lvbl9udW1iZXIiQgobU2V0TWFpblNraWxsVmVyc2lvblJlc3BvbnNlEiMKBXNraWxsGAEgASgLMhQuYWdlbnRzLnYxLlNraWxsSW5mbyJXChJSZXZlcnRTa2lsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHNraWxsX2lkGAIgASgJEhYKDnZlcnNpb25fbnVtYmVyGAMgASgFImQKE1JldmVydFNraWxsUmVzcG9uc2USIwoFc2tpbGwYASABKAsyFC5hZ2VudHMudjEuU2tpbGxJbmZvEigKB3ZlcnNpb24YAiABKAsyFy5hZ2VudHMudjEuU2tpbGxWZXJzaW9uIooBCgtTa2lsbE1ldHJpYxIQCghza2lsbF9pZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSDgoGb3JpZ2luGAMgASgJEhYKDmluamVjdGVkX2NvdW50GAQgASgFEhQKDHZpZXdlZF9jb3VudBgFIAEoBRIVCg1pbnZva2VkX2NvdW50GAYgASgFIjEKFkdldFNraWxsTWV0cmljc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIqIBChdHZXRTa2lsbE1ldHJpY3NSZXNwb25zZRInCgdtZXRyaWNzGAEgAygLMhYuYWdlbnRzLnYxLlNraWxsTWV0cmljEh8KF3Bvc2l0aXZlX2ZlZWRiYWNrX2NvdW50GAIgASgFEh8KF25lZ2F0aXZlX2ZlZWRiYWNrX2NvdW50GAMgASgFEhwKFHBlbmRpbmdfYWdlbnRfZHJhZnRzGAQgASgFKn8KC1NraWxsU291cmNlEhwKGFNLSUxMX1NPVVJDRV9VTlNQRUNJRklFRBAAEhgKFFNLSUxMX1NPVVJDRV9CVU5ETEVEEAESHQoZU0tJTExfU09VUkNFX09SR0FOSVpBVElPThACEhkKFVNLSUxMX1NPVVJDRV9QRVJTT05BTBADMpYLCg1Ta2lsbHNTZXJ2aWNlEk4KC0NyZWF0ZVNraWxsEh0uYWdlbnRzLnYxLkNyZWF0ZVNraWxsUmVxdWVzdBoeLmFnZW50cy52MS5DcmVhdGVTa2lsbFJlc3BvbnNlIgASRQoIR2V0U2tpbGwSGi5hZ2VudHMudjEuR2V0U2tpbGxSZXF1ZXN0GhsuYWdlbnRzLnYxLkdldFNraWxsUmVzcG9uc2UiABJLCgpMaXN0U2tpbGxzEhwuYWdlbnRzLnYxLkxpc3RTa2lsbHNSZXF1ZXN0Gh0uYWdlbnRzLnYxLkxpc3RTa2lsbHNSZXNwb25zZSIAEk4KC1VwZGF0ZVNraWxsEh0uYWdlbnRzLnYxLlVwZGF0ZVNraWxsUmVxdWVzdBoeLmFnZW50cy52MS5VcGRhdGVTa2lsbFJlc3BvbnNlIgASTgoLRGVsZXRlU2tpbGwSHS5hZ2VudHMudjEuRGVsZXRlU2tpbGxSZXF1ZXN0Gh4uYWdlbnRzLnYxLkRlbGV0ZVNraWxsUmVzcG9uc2UiABJjChJMaXN0UnVubmFibGVTa2lsbHMSJC5hZ2VudHMudjEuTGlzdFJ1bm5hYmxlU2tpbGxzUmVxdWVzdBolLmFnZW50cy52MS5MaXN0UnVubmFibGVTa2lsbHNSZXNwb25zZSIAEl0KEENyZWF0ZVNraWxsRHJhZnQSIi5hZ2VudHMudjEuQ3JlYXRlU2tpbGxEcmFmdFJlcXVlc3QaIy5hZ2VudHMudjEuQ3JlYXRlU2tpbGxEcmFmdFJlc3BvbnNlIgASVAoNR2V0U2tpbGxEcmFmdBIfLmFnZW50cy52MS5HZXRTa2lsbERyYWZ0UmVxdWVzdBogLmFnZW50cy52MS5HZXRTa2lsbERyYWZ0UmVzcG9uc2UiABJaCg9MaXN0U2tpbGxEcmFmdHMSIS5hZ2VudHMudjEuTGlzdFNraWxsRHJhZnRzUmVxdWVzdBoiLmFnZW50cy52MS5MaXN0U2tpbGxEcmFmdHNSZXNwb25zZSIAElcKDlNhdmVTa2lsbERyYWZ0EiAuYWdlbnRzLnYxLlNhdmVTa2lsbERyYWZ0UmVxdWVzdBohLmFnZW50cy52MS5TYXZlU2tpbGxEcmFmdFJlc3BvbnNlIgASYAoRRGlzY2FyZFNraWxsRHJhZnQSIy5hZ2VudHMudjEuRGlzY2FyZFNraWxsRHJhZnRSZXF1ZXN0GiQuYWdlbnRzLnYxLkRpc2NhcmRTa2lsbERyYWZ0UmVzcG9uc2UiABJgChFMaXN0U2tpbGxWZXJzaW9ucxIjLmFnZW50cy52MS5MaXN0U2tpbGxWZXJzaW9uc1JlcXVlc3QaJC5hZ2VudHMudjEuTGlzdFNraWxsVmVyc2lvbnNSZXNwb25zZSIAEloKD0dldFNraWxsVmVyc2lvbhIhLmFnZW50cy52MS5HZXRTa2lsbFZlcnNpb25SZXF1ZXN0GiIuYWdlbnRzLnYxLkdldFNraWxsVmVyc2lvblJlc3BvbnNlIgASZgoTU2V0TWFpblNraWxsVmVyc2lvbhIlLmFnZW50cy52MS5TZXRNYWluU2tpbGxWZXJzaW9uUmVxdWVzdBomLmFnZW50cy52MS5TZXRNYWluU2tpbGxWZXJzaW9uUmVzcG9uc2UiABJOCgtSZXZlcnRTa2lsbBIdLmFnZW50cy52MS5SZXZlcnRTa2lsbFJlcXVlc3QaHi5hZ2VudHMudjEuUmV2ZXJ0U2tpbGxSZXNwb25zZSIAEloKD0dldFNraWxsTWV0cmljcxIhLmFnZW50cy52MS5HZXRTa2lsbE1ldHJpY3NSZXF1ZXN0GiIuYWdlbnRzLnYxLkdldFNraWxsTWV0cmljc1Jlc3BvbnNlIgBCO1o5Z2l0aHViLmNvbS9BdGhlbm5hTWluZC91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * Skill definition returned to clients
@@ -84,6 +84,59 @@ export type SkillInfo = Message<"agents.v1.SkillInfo"> & {
    * @generated from field: optional string owner_id = 11;
    */
   ownerId?: string | undefined;
+
+  /**
+   * Short trigger guidance shown in the progressive-disclosure metadata index.
+   *
+   * @generated from field: string when_to_use = 12;
+   */
+  whenToUse: string;
+
+  /**
+   * Tool names that must be enabled for the skill to appear (conditional activation).
+   *
+   * @generated from field: repeated string requires_tools = 13;
+   */
+  requiresTools: string[];
+
+  /**
+   * Optional surface/content-type gates for conditional activation.
+   *
+   * @generated from field: repeated string requires_context = 14;
+   */
+  requiresContext: string[];
+
+  /**
+   * active | archived
+   *
+   * @generated from field: string status = 15;
+   */
+  status: string;
+
+  /**
+   * user | agent_proposed | agent_evolved | bundled
+   *
+   * @generated from field: string origin = 16;
+   */
+  origin: string;
+
+  /**
+   * @generated from field: int32 latest_version_number = 17;
+   */
+  latestVersionNumber: number;
+
+  /**
+   * The version the agent actually uses (the main version). Defaults to the
+   * latest until the user pins one.
+   *
+   * @generated from field: int32 active_version_number = 18;
+   */
+  activeVersionNumber: number;
+
+  /**
+   * @generated from field: bool active_version_pinned = 19;
+   */
+  activeVersionPinned: boolean;
 };
 
 /**
@@ -92,6 +145,235 @@ export type SkillInfo = Message<"agents.v1.SkillInfo"> & {
  */
 export const SkillInfoSchema: GenMessage<SkillInfo> = /*@__PURE__*/
   messageDesc(file_agents_v1_skills, 0);
+
+/**
+ * One immutable version snapshot of a skill.
+ *
+ * @generated from message agents.v1.SkillVersion
+ */
+export type SkillVersion = Message<"agents.v1.SkillVersion"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string skill_id = 2;
+   */
+  skillId: string;
+
+  /**
+   * @generated from field: int32 version_number = 3;
+   */
+  versionNumber: number;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string display_name = 5;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string description = 6;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string content = 7;
+   */
+  content: string;
+
+  /**
+   * @generated from field: string when_to_use = 8;
+   */
+  whenToUse: string;
+
+  /**
+   * @generated from field: repeated string requires_tools = 9;
+   */
+  requiresTools: string[];
+
+  /**
+   * @generated from field: repeated string requires_context = 10;
+   */
+  requiresContext: string[];
+
+  /**
+   * @generated from field: optional string author_id = 11;
+   */
+  authorId?: string | undefined;
+
+  /**
+   * user | agent
+   *
+   * @generated from field: string author_kind = 12;
+   */
+  authorKind: string;
+
+  /**
+   * @generated from field: string change_summary = 13;
+   */
+  changeSummary: string;
+
+  /**
+   * @generated from field: optional string parent_version_id = 14;
+   */
+  parentVersionId?: string | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 15;
+   */
+  createdAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message agents.v1.SkillVersion.
+ * Use `create(SkillVersionSchema)` to create a new message.
+ */
+export const SkillVersionSchema: GenMessage<SkillVersion> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 1);
+
+/**
+ * A pending skill draft awaiting user review. One shape for user-authored and
+ * agent-proposed drafts; saved only on an explicit user action.
+ *
+ * @generated from message agents.v1.SkillDraft
+ */
+export type SkillDraft = Message<"agents.v1.SkillDraft"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string organization_id = 2;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string owner_id = 3;
+   */
+  ownerId: string;
+
+  /**
+   * null = a create draft
+   *
+   * @generated from field: optional string target_skill_id = 4;
+   */
+  targetSkillId?: string | undefined;
+
+  /**
+   * create | edit | evolve
+   *
+   * @generated from field: string kind = 5;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: optional string proposed_by_agent_id = 6;
+   */
+  proposedByAgentId?: string | undefined;
+
+  /**
+   * @generated from field: optional string session_id = 7;
+   */
+  sessionId?: string | undefined;
+
+  /**
+   * @generated from field: optional string channel_id = 8;
+   */
+  channelId?: string | undefined;
+
+  /**
+   * @generated from field: optional string origin_chat_message_id = 9;
+   */
+  originChatMessageId?: string | undefined;
+
+  /**
+   * @generated from field: repeated string evidence_message_ids = 10;
+   */
+  evidenceMessageIds: string[];
+
+  /**
+   * @generated from field: string rationale = 11;
+   */
+  rationale: string;
+
+  /**
+   * @generated from field: string name = 12;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string display_name = 13;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string description = 14;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string content = 15;
+   */
+  content: string;
+
+  /**
+   * @generated from field: string when_to_use = 16;
+   */
+  whenToUse: string;
+
+  /**
+   * @generated from field: repeated string requires_tools = 17;
+   */
+  requiresTools: string[];
+
+  /**
+   * @generated from field: repeated string requires_context = 18;
+   */
+  requiresContext: string[];
+
+  /**
+   * personal | organization
+   *
+   * @generated from field: string suggested_scope = 19;
+   */
+  suggestedScope: string;
+
+  /**
+   * @generated from field: bool suggested_always_active = 20;
+   */
+  suggestedAlwaysActive: boolean;
+
+  /**
+   * pending | saved | discarded
+   *
+   * @generated from field: string status = 21;
+   */
+  status: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 22;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 23;
+   */
+  updatedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message agents.v1.SkillDraft.
+ * Use `create(SkillDraftSchema)` to create a new message.
+ */
+export const SkillDraftSchema: GenMessage<SkillDraft> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 2);
 
 /**
  * @generated from message agents.v1.CreateSkillRequest
@@ -140,7 +422,7 @@ export type CreateSkillRequest = Message<"agents.v1.CreateSkillRequest"> & {
  * Use `create(CreateSkillRequestSchema)` to create a new message.
  */
 export const CreateSkillRequestSchema: GenMessage<CreateSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 1);
+  messageDesc(file_agents_v1_skills, 3);
 
 /**
  * @generated from message agents.v1.CreateSkillResponse
@@ -157,7 +439,7 @@ export type CreateSkillResponse = Message<"agents.v1.CreateSkillResponse"> & {
  * Use `create(CreateSkillResponseSchema)` to create a new message.
  */
 export const CreateSkillResponseSchema: GenMessage<CreateSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 2);
+  messageDesc(file_agents_v1_skills, 4);
 
 /**
  * @generated from message agents.v1.GetSkillResponse
@@ -174,7 +456,7 @@ export type GetSkillResponse = Message<"agents.v1.GetSkillResponse"> & {
  * Use `create(GetSkillResponseSchema)` to create a new message.
  */
 export const GetSkillResponseSchema: GenMessage<GetSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 3);
+  messageDesc(file_agents_v1_skills, 5);
 
 /**
  * @generated from message agents.v1.UpdateSkillResponse
@@ -191,7 +473,7 @@ export type UpdateSkillResponse = Message<"agents.v1.UpdateSkillResponse"> & {
  * Use `create(UpdateSkillResponseSchema)` to create a new message.
  */
 export const UpdateSkillResponseSchema: GenMessage<UpdateSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 4);
+  messageDesc(file_agents_v1_skills, 6);
 
 /**
  * @generated from message agents.v1.GetSkillRequest
@@ -213,7 +495,7 @@ export type GetSkillRequest = Message<"agents.v1.GetSkillRequest"> & {
  * Use `create(GetSkillRequestSchema)` to create a new message.
  */
 export const GetSkillRequestSchema: GenMessage<GetSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 5);
+  messageDesc(file_agents_v1_skills, 7);
 
 /**
  * @generated from message agents.v1.ListSkillsRequest
@@ -235,7 +517,7 @@ export type ListSkillsRequest = Message<"agents.v1.ListSkillsRequest"> & {
  * Use `create(ListSkillsRequestSchema)` to create a new message.
  */
 export const ListSkillsRequestSchema: GenMessage<ListSkillsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 6);
+  messageDesc(file_agents_v1_skills, 8);
 
 /**
  * @generated from message agents.v1.ListSkillsResponse
@@ -257,7 +539,7 @@ export type ListSkillsResponse = Message<"agents.v1.ListSkillsResponse"> & {
  * Use `create(ListSkillsResponseSchema)` to create a new message.
  */
 export const ListSkillsResponseSchema: GenMessage<ListSkillsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 7);
+  messageDesc(file_agents_v1_skills, 9);
 
 /**
  * @generated from message agents.v1.UpdateSkillRequest
@@ -304,7 +586,7 @@ export type UpdateSkillRequest = Message<"agents.v1.UpdateSkillRequest"> & {
  * Use `create(UpdateSkillRequestSchema)` to create a new message.
  */
 export const UpdateSkillRequestSchema: GenMessage<UpdateSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 8);
+  messageDesc(file_agents_v1_skills, 10);
 
 /**
  * @generated from message agents.v1.DeleteSkillRequest
@@ -326,7 +608,7 @@ export type DeleteSkillRequest = Message<"agents.v1.DeleteSkillRequest"> & {
  * Use `create(DeleteSkillRequestSchema)` to create a new message.
  */
 export const DeleteSkillRequestSchema: GenMessage<DeleteSkillRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 9);
+  messageDesc(file_agents_v1_skills, 11);
 
 /**
  * @generated from message agents.v1.DeleteSkillResponse
@@ -343,7 +625,726 @@ export type DeleteSkillResponse = Message<"agents.v1.DeleteSkillResponse"> & {
  * Use `create(DeleteSkillResponseSchema)` to create a new message.
  */
 export const DeleteSkillResponseSchema: GenMessage<DeleteSkillResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_skills, 10);
+  messageDesc(file_agents_v1_skills, 12);
+
+/**
+ * A skill entry for the slash-command menu. Carries only what the menu
+ * renders and what a follow-up invocation needs (the id); no content.
+ *
+ * @generated from message agents.v1.RunnableSkill
+ */
+export type RunnableSkill = Message<"agents.v1.RunnableSkill"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string display_name = 3;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string description = 4;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string when_to_use = 5;
+   */
+  whenToUse: string;
+};
+
+/**
+ * Describes the message agents.v1.RunnableSkill.
+ * Use `create(RunnableSkillSchema)` to create a new message.
+ */
+export const RunnableSkillSchema: GenMessage<RunnableSkill> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 13);
+
+/**
+ * @generated from message agents.v1.ListRunnableSkillsRequest
+ */
+export type ListRunnableSkillsRequest = Message<"agents.v1.ListRunnableSkillsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId: string;
+};
+
+/**
+ * Describes the message agents.v1.ListRunnableSkillsRequest.
+ * Use `create(ListRunnableSkillsRequestSchema)` to create a new message.
+ */
+export const ListRunnableSkillsRequestSchema: GenMessage<ListRunnableSkillsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 14);
+
+/**
+ * @generated from message agents.v1.ListRunnableSkillsResponse
+ */
+export type ListRunnableSkillsResponse = Message<"agents.v1.ListRunnableSkillsResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.RunnableSkill skills = 1;
+   */
+  skills: RunnableSkill[];
+};
+
+/**
+ * Describes the message agents.v1.ListRunnableSkillsResponse.
+ * Use `create(ListRunnableSkillsResponseSchema)` to create a new message.
+ */
+export const ListRunnableSkillsResponseSchema: GenMessage<ListRunnableSkillsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 15);
+
+/**
+ * @generated from message agents.v1.CreateSkillDraftRequest
+ */
+export type CreateSkillDraftRequest = Message<"agents.v1.CreateSkillDraftRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * create | edit | evolve
+   *
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * required for edit/evolve
+   *
+   * @generated from field: optional string target_skill_id = 3;
+   */
+  targetSkillId?: string | undefined;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string display_name = 5;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string description = 6;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string content = 7;
+   */
+  content: string;
+
+  /**
+   * @generated from field: string when_to_use = 8;
+   */
+  whenToUse: string;
+
+  /**
+   * @generated from field: repeated string requires_tools = 9;
+   */
+  requiresTools: string[];
+
+  /**
+   * @generated from field: repeated string requires_context = 10;
+   */
+  requiresContext: string[];
+
+  /**
+   * personal | organization
+   *
+   * @generated from field: string suggested_scope = 11;
+   */
+  suggestedScope: string;
+
+  /**
+   * @generated from field: bool suggested_always_active = 12;
+   */
+  suggestedAlwaysActive: boolean;
+
+  /**
+   * @generated from field: string rationale = 13;
+   */
+  rationale: string;
+};
+
+/**
+ * Describes the message agents.v1.CreateSkillDraftRequest.
+ * Use `create(CreateSkillDraftRequestSchema)` to create a new message.
+ */
+export const CreateSkillDraftRequestSchema: GenMessage<CreateSkillDraftRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 16);
+
+/**
+ * @generated from message agents.v1.CreateSkillDraftResponse
+ */
+export type CreateSkillDraftResponse = Message<"agents.v1.CreateSkillDraftResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillDraft draft = 1;
+   */
+  draft?: SkillDraft | undefined;
+};
+
+/**
+ * Describes the message agents.v1.CreateSkillDraftResponse.
+ * Use `create(CreateSkillDraftResponseSchema)` to create a new message.
+ */
+export const CreateSkillDraftResponseSchema: GenMessage<CreateSkillDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 17);
+
+/**
+ * @generated from message agents.v1.GetSkillDraftRequest
+ */
+export type GetSkillDraftRequest = Message<"agents.v1.GetSkillDraftRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string draft_id = 2;
+   */
+  draftId: string;
+};
+
+/**
+ * Describes the message agents.v1.GetSkillDraftRequest.
+ * Use `create(GetSkillDraftRequestSchema)` to create a new message.
+ */
+export const GetSkillDraftRequestSchema: GenMessage<GetSkillDraftRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 18);
+
+/**
+ * @generated from message agents.v1.GetSkillDraftResponse
+ */
+export type GetSkillDraftResponse = Message<"agents.v1.GetSkillDraftResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillDraft draft = 1;
+   */
+  draft?: SkillDraft | undefined;
+};
+
+/**
+ * Describes the message agents.v1.GetSkillDraftResponse.
+ * Use `create(GetSkillDraftResponseSchema)` to create a new message.
+ */
+export const GetSkillDraftResponseSchema: GenMessage<GetSkillDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 19);
+
+/**
+ * @generated from message agents.v1.ListSkillDraftsRequest
+ */
+export type ListSkillDraftsRequest = Message<"agents.v1.ListSkillDraftsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * defaults to "pending"
+   *
+   * @generated from field: optional string status = 2;
+   */
+  status?: string | undefined;
+
+  /**
+   * @generated from field: optional common.v1.PaginationRequest pagination = 3;
+   */
+  pagination?: PaginationRequest | undefined;
+};
+
+/**
+ * Describes the message agents.v1.ListSkillDraftsRequest.
+ * Use `create(ListSkillDraftsRequestSchema)` to create a new message.
+ */
+export const ListSkillDraftsRequestSchema: GenMessage<ListSkillDraftsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 20);
+
+/**
+ * @generated from message agents.v1.ListSkillDraftsResponse
+ */
+export type ListSkillDraftsResponse = Message<"agents.v1.ListSkillDraftsResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.SkillDraft drafts = 1;
+   */
+  drafts: SkillDraft[];
+
+  /**
+   * @generated from field: common.v1.PaginationResponse pagination = 2;
+   */
+  pagination?: PaginationResponse | undefined;
+};
+
+/**
+ * Describes the message agents.v1.ListSkillDraftsResponse.
+ * Use `create(ListSkillDraftsResponseSchema)` to create a new message.
+ */
+export const ListSkillDraftsResponseSchema: GenMessage<ListSkillDraftsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 21);
+
+/**
+ * The review card sends the full, possibly user-edited field set so the saved
+ * version reflects the reviewer's edits without a separate update round-trip.
+ *
+ * @generated from message agents.v1.SaveSkillDraftRequest
+ */
+export type SaveSkillDraftRequest = Message<"agents.v1.SaveSkillDraftRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string draft_id = 2;
+   */
+  draftId: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string display_name = 4;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string description = 5;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string content = 6;
+   */
+  content: string;
+
+  /**
+   * @generated from field: string when_to_use = 7;
+   */
+  whenToUse: string;
+
+  /**
+   * @generated from field: repeated string requires_tools = 8;
+   */
+  requiresTools: string[];
+
+  /**
+   * @generated from field: repeated string requires_context = 9;
+   */
+  requiresContext: string[];
+
+  /**
+   * personal | organization
+   *
+   * @generated from field: string suggested_scope = 10;
+   */
+  suggestedScope: string;
+
+  /**
+   * @generated from field: bool suggested_always_active = 11;
+   */
+  suggestedAlwaysActive: boolean;
+
+  /**
+   * @generated from field: string change_summary = 12;
+   */
+  changeSummary: string;
+};
+
+/**
+ * Describes the message agents.v1.SaveSkillDraftRequest.
+ * Use `create(SaveSkillDraftRequestSchema)` to create a new message.
+ */
+export const SaveSkillDraftRequestSchema: GenMessage<SaveSkillDraftRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 22);
+
+/**
+ * @generated from message agents.v1.SaveSkillDraftResponse
+ */
+export type SaveSkillDraftResponse = Message<"agents.v1.SaveSkillDraftResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillInfo skill = 1;
+   */
+  skill?: SkillInfo | undefined;
+
+  /**
+   * @generated from field: agents.v1.SkillVersion version = 2;
+   */
+  version?: SkillVersion | undefined;
+};
+
+/**
+ * Describes the message agents.v1.SaveSkillDraftResponse.
+ * Use `create(SaveSkillDraftResponseSchema)` to create a new message.
+ */
+export const SaveSkillDraftResponseSchema: GenMessage<SaveSkillDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 23);
+
+/**
+ * @generated from message agents.v1.DiscardSkillDraftRequest
+ */
+export type DiscardSkillDraftRequest = Message<"agents.v1.DiscardSkillDraftRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string draft_id = 2;
+   */
+  draftId: string;
+};
+
+/**
+ * Describes the message agents.v1.DiscardSkillDraftRequest.
+ * Use `create(DiscardSkillDraftRequestSchema)` to create a new message.
+ */
+export const DiscardSkillDraftRequestSchema: GenMessage<DiscardSkillDraftRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 24);
+
+/**
+ * @generated from message agents.v1.DiscardSkillDraftResponse
+ */
+export type DiscardSkillDraftResponse = Message<"agents.v1.DiscardSkillDraftResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+};
+
+/**
+ * Describes the message agents.v1.DiscardSkillDraftResponse.
+ * Use `create(DiscardSkillDraftResponseSchema)` to create a new message.
+ */
+export const DiscardSkillDraftResponseSchema: GenMessage<DiscardSkillDraftResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 25);
+
+/**
+ * @generated from message agents.v1.ListSkillVersionsRequest
+ */
+export type ListSkillVersionsRequest = Message<"agents.v1.ListSkillVersionsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string skill_id = 2;
+   */
+  skillId: string;
+
+  /**
+   * @generated from field: optional common.v1.PaginationRequest pagination = 3;
+   */
+  pagination?: PaginationRequest | undefined;
+};
+
+/**
+ * Describes the message agents.v1.ListSkillVersionsRequest.
+ * Use `create(ListSkillVersionsRequestSchema)` to create a new message.
+ */
+export const ListSkillVersionsRequestSchema: GenMessage<ListSkillVersionsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 26);
+
+/**
+ * @generated from message agents.v1.ListSkillVersionsResponse
+ */
+export type ListSkillVersionsResponse = Message<"agents.v1.ListSkillVersionsResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.SkillVersion versions = 1;
+   */
+  versions: SkillVersion[];
+
+  /**
+   * @generated from field: common.v1.PaginationResponse pagination = 2;
+   */
+  pagination?: PaginationResponse | undefined;
+
+  /**
+   * The current main-version pointer, echoed so the timeline can mark the main
+   * version and drive the follow-latest toggle without a second round-trip.
+   *
+   * @generated from field: int32 active_version_number = 3;
+   */
+  activeVersionNumber: number;
+
+  /**
+   * @generated from field: bool active_version_pinned = 4;
+   */
+  activeVersionPinned: boolean;
+
+  /**
+   * @generated from field: int32 latest_version_number = 5;
+   */
+  latestVersionNumber: number;
+};
+
+/**
+ * Describes the message agents.v1.ListSkillVersionsResponse.
+ * Use `create(ListSkillVersionsResponseSchema)` to create a new message.
+ */
+export const ListSkillVersionsResponseSchema: GenMessage<ListSkillVersionsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 27);
+
+/**
+ * @generated from message agents.v1.GetSkillVersionRequest
+ */
+export type GetSkillVersionRequest = Message<"agents.v1.GetSkillVersionRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string skill_id = 2;
+   */
+  skillId: string;
+
+  /**
+   * @generated from field: int32 version_number = 3;
+   */
+  versionNumber: number;
+};
+
+/**
+ * Describes the message agents.v1.GetSkillVersionRequest.
+ * Use `create(GetSkillVersionRequestSchema)` to create a new message.
+ */
+export const GetSkillVersionRequestSchema: GenMessage<GetSkillVersionRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 28);
+
+/**
+ * @generated from message agents.v1.GetSkillVersionResponse
+ */
+export type GetSkillVersionResponse = Message<"agents.v1.GetSkillVersionResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillVersion version = 1;
+   */
+  version?: SkillVersion | undefined;
+};
+
+/**
+ * Describes the message agents.v1.GetSkillVersionResponse.
+ * Use `create(GetSkillVersionResponseSchema)` to create a new message.
+ */
+export const GetSkillVersionResponseSchema: GenMessage<GetSkillVersionResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 29);
+
+/**
+ * @generated from message agents.v1.SetMainSkillVersionRequest
+ */
+export type SetMainSkillVersionRequest = Message<"agents.v1.SetMainSkillVersionRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string skill_id = 2;
+   */
+  skillId: string;
+
+  /**
+   * Pinned as the main version when follow_latest is false; ignored otherwise.
+   *
+   * @generated from field: optional int32 version_number = 3;
+   */
+  versionNumber?: number | undefined;
+
+  /**
+   * When true, unpin so the main version tracks the latest edit automatically.
+   *
+   * @generated from field: bool follow_latest = 4;
+   */
+  followLatest: boolean;
+};
+
+/**
+ * Describes the message agents.v1.SetMainSkillVersionRequest.
+ * Use `create(SetMainSkillVersionRequestSchema)` to create a new message.
+ */
+export const SetMainSkillVersionRequestSchema: GenMessage<SetMainSkillVersionRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 30);
+
+/**
+ * @generated from message agents.v1.SetMainSkillVersionResponse
+ */
+export type SetMainSkillVersionResponse = Message<"agents.v1.SetMainSkillVersionResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillInfo skill = 1;
+   */
+  skill?: SkillInfo | undefined;
+};
+
+/**
+ * Describes the message agents.v1.SetMainSkillVersionResponse.
+ * Use `create(SetMainSkillVersionResponseSchema)` to create a new message.
+ */
+export const SetMainSkillVersionResponseSchema: GenMessage<SetMainSkillVersionResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 31);
+
+/**
+ * @generated from message agents.v1.RevertSkillRequest
+ */
+export type RevertSkillRequest = Message<"agents.v1.RevertSkillRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string skill_id = 2;
+   */
+  skillId: string;
+
+  /**
+   * @generated from field: int32 version_number = 3;
+   */
+  versionNumber: number;
+};
+
+/**
+ * Describes the message agents.v1.RevertSkillRequest.
+ * Use `create(RevertSkillRequestSchema)` to create a new message.
+ */
+export const RevertSkillRequestSchema: GenMessage<RevertSkillRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 32);
+
+/**
+ * @generated from message agents.v1.RevertSkillResponse
+ */
+export type RevertSkillResponse = Message<"agents.v1.RevertSkillResponse"> & {
+  /**
+   * @generated from field: agents.v1.SkillInfo skill = 1;
+   */
+  skill?: SkillInfo | undefined;
+
+  /**
+   * @generated from field: agents.v1.SkillVersion version = 2;
+   */
+  version?: SkillVersion | undefined;
+};
+
+/**
+ * Describes the message agents.v1.RevertSkillResponse.
+ * Use `create(RevertSkillResponseSchema)` to create a new message.
+ */
+export const RevertSkillResponseSchema: GenMessage<RevertSkillResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 33);
+
+/**
+ * Usage + quality aggregate for one skill, drawn from agents_skill_usages.
+ *
+ * @generated from message agents.v1.SkillMetric
+ */
+export type SkillMetric = Message<"agents.v1.SkillMetric"> & {
+  /**
+   * @generated from field: string skill_id = 1;
+   */
+  skillId: string;
+
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+
+  /**
+   * user | agent_proposed | agent_evolved | bundled
+   *
+   * @generated from field: string origin = 3;
+   */
+  origin: string;
+
+  /**
+   * @generated from field: int32 injected_count = 4;
+   */
+  injectedCount: number;
+
+  /**
+   * @generated from field: int32 viewed_count = 5;
+   */
+  viewedCount: number;
+
+  /**
+   * @generated from field: int32 invoked_count = 6;
+   */
+  invokedCount: number;
+};
+
+/**
+ * Describes the message agents.v1.SkillMetric.
+ * Use `create(SkillMetricSchema)` to create a new message.
+ */
+export const SkillMetricSchema: GenMessage<SkillMetric> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 34);
+
+/**
+ * @generated from message agents.v1.GetSkillMetricsRequest
+ */
+export type GetSkillMetricsRequest = Message<"agents.v1.GetSkillMetricsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * Describes the message agents.v1.GetSkillMetricsRequest.
+ * Use `create(GetSkillMetricsRequestSchema)` to create a new message.
+ */
+export const GetSkillMetricsRequestSchema: GenMessage<GetSkillMetricsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 35);
+
+/**
+ * @generated from message agents.v1.GetSkillMetricsResponse
+ */
+export type GetSkillMetricsResponse = Message<"agents.v1.GetSkillMetricsResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.SkillMetric metrics = 1;
+   */
+  metrics: SkillMetric[];
+
+  /**
+   * Org-wide agent-message feedback tallies over the same window.
+   *
+   * @generated from field: int32 positive_feedback_count = 2;
+   */
+  positiveFeedbackCount: number;
+
+  /**
+   * @generated from field: int32 negative_feedback_count = 3;
+   */
+  negativeFeedbackCount: number;
+
+  /**
+   * Count of pending agent-proposed/evolved drafts awaiting review.
+   *
+   * @generated from field: int32 pending_agent_drafts = 4;
+   */
+  pendingAgentDrafts: number;
+};
+
+/**
+ * Describes the message agents.v1.GetSkillMetricsResponse.
+ * Use `create(GetSkillMetricsResponseSchema)` to create a new message.
+ */
+export const GetSkillMetricsResponseSchema: GenMessage<GetSkillMetricsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_skills, 36);
 
 /**
  * Source of a skill definition
@@ -440,6 +1441,124 @@ export const SkillsService: GenService<{
     methodKind: "unary";
     input: typeof DeleteSkillRequestSchema;
     output: typeof DeleteSkillResponseSchema;
+  },
+  /**
+   * List the skills a user can invoke on-demand against a given agent
+   * (the agent's resolved set: explicitly enabled + always-active). Powers
+   * the "/" slash-command menu in the agent composers. Lean payload - no
+   * skill content is shipped; the content loads only when the turn runs.
+   *
+   * @generated from rpc agents.v1.SkillsService.ListRunnableSkills
+   */
+  listRunnableSkills: {
+    methodKind: "unary";
+    input: typeof ListRunnableSkillsRequestSchema;
+    output: typeof ListRunnableSkillsResponseSchema;
+  },
+  /**
+   * Create a pending draft (library "New skill" / "Edit as draft"). The draft
+   * is never auto-activated; it becomes a skill only on SaveSkillDraft.
+   *
+   * @generated from rpc agents.v1.SkillsService.CreateSkillDraft
+   */
+  createSkillDraft: {
+    methodKind: "unary";
+    input: typeof CreateSkillDraftRequestSchema;
+    output: typeof CreateSkillDraftResponseSchema;
+  },
+  /**
+   * Get a single draft by id.
+   *
+   * @generated from rpc agents.v1.SkillsService.GetSkillDraft
+   */
+  getSkillDraft: {
+    methodKind: "unary";
+    input: typeof GetSkillDraftRequestSchema;
+    output: typeof GetSkillDraftResponseSchema;
+  },
+  /**
+   * List pending drafts for review (the drafts inbox).
+   *
+   * @generated from rpc agents.v1.SkillsService.ListSkillDrafts
+   */
+  listSkillDrafts: {
+    methodKind: "unary";
+    input: typeof ListSkillDraftsRequestSchema;
+    output: typeof ListSkillDraftsResponseSchema;
+  },
+  /**
+   * Save a pending draft: a create draft becomes a new skill at version 1; an
+   * edit/evolve draft appends a new version to its target skill.
+   *
+   * @generated from rpc agents.v1.SkillsService.SaveSkillDraft
+   */
+  saveSkillDraft: {
+    methodKind: "unary";
+    input: typeof SaveSkillDraftRequestSchema;
+    output: typeof SaveSkillDraftResponseSchema;
+  },
+  /**
+   * Discard a pending draft (soft delete; never activates anything).
+   *
+   * @generated from rpc agents.v1.SkillsService.DiscardSkillDraft
+   */
+  discardSkillDraft: {
+    methodKind: "unary";
+    input: typeof DiscardSkillDraftRequestSchema;
+    output: typeof DiscardSkillDraftResponseSchema;
+  },
+  /**
+   * List a skill's immutable version history (newest first), with the current
+   * main-version pointer so the timeline can render the "Main" badge.
+   *
+   * @generated from rpc agents.v1.SkillsService.ListSkillVersions
+   */
+  listSkillVersions: {
+    methodKind: "unary";
+    input: typeof ListSkillVersionsRequestSchema;
+    output: typeof ListSkillVersionsResponseSchema;
+  },
+  /**
+   * Get a single version of a skill by version number.
+   *
+   * @generated from rpc agents.v1.SkillsService.GetSkillVersion
+   */
+  getSkillVersion: {
+    methodKind: "unary";
+    input: typeof GetSkillVersionRequestSchema;
+    output: typeof GetSkillVersionResponseSchema;
+  },
+  /**
+   * Set the main version the runtime uses: pin a version, or let it follow the
+   * latest edit automatically.
+   *
+   * @generated from rpc agents.v1.SkillsService.SetMainSkillVersion
+   */
+  setMainSkillVersion: {
+    methodKind: "unary";
+    input: typeof SetMainSkillVersionRequestSchema;
+    output: typeof SetMainSkillVersionResponseSchema;
+  },
+  /**
+   * Revert a skill to an earlier version by copying that version's content into
+   * a new version at the head of the history.
+   *
+   * @generated from rpc agents.v1.SkillsService.RevertSkill
+   */
+  revertSkill: {
+    methodKind: "unary";
+    input: typeof RevertSkillRequestSchema;
+    output: typeof RevertSkillResponseSchema;
+  },
+  /**
+   * Per-skill usage + feedback aggregates for the org admin metrics view.
+   *
+   * @generated from rpc agents.v1.SkillsService.GetSkillMetrics
+   */
+  getSkillMetrics: {
+    methodKind: "unary";
+    input: typeof GetSkillMetricsRequestSchema;
+    output: typeof GetSkillMetricsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_skills, 0);

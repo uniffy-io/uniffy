@@ -313,9 +313,12 @@ type MessageInfo struct {
 	PreviousContent *string `protobuf:"bytes,18,opt,name=previous_content,json=previousContent,proto3,oneof" json:"previous_content,omitempty"`
 	// True if this assistant turn was cancelled by the user before
 	// completion. The UI renders it as a "cancelled" placeholder.
-	WasCancelled  bool `protobuf:"varint,19,opt,name=was_cancelled,json=wasCancelled,proto3" json:"was_cancelled,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	WasCancelled bool `protobuf:"varint,19,opt,name=was_cancelled,json=wasCancelled,proto3" json:"was_cancelled,omitempty"`
+	// The caller's own thumbs rating on this message ("up" | "down" | "").
+	// Only assistant messages carry feedback; empty when the caller hasn't rated.
+	FeedbackRating string `protobuf:"bytes,20,opt,name=feedback_rating,json=feedbackRating,proto3" json:"feedback_rating,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MessageInfo) Reset() {
@@ -479,6 +482,13 @@ func (x *MessageInfo) GetWasCancelled() bool {
 		return x.WasCancelled
 	}
 	return false
+}
+
+func (x *MessageInfo) GetFeedbackRating() string {
+	if x != nil {
+		return x.FeedbackRating
+	}
+	return ""
 }
 
 type CreateSessionRequest struct {
@@ -2089,6 +2099,188 @@ func (x *RetryMessageResponse) GetFileIds() []string {
 	return nil
 }
 
+// One user's thumbs rating on an agent message.
+type MessageFeedback struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Rating        string                 `protobuf:"bytes,2,opt,name=rating,proto3" json:"rating,omitempty"` // up | down
+	Comment       string                 `protobuf:"bytes,3,opt,name=comment,proto3" json:"comment,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageFeedback) Reset() {
+	*x = MessageFeedback{}
+	mi := &file_agents_v1_sessions_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageFeedback) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageFeedback) ProtoMessage() {}
+
+func (x *MessageFeedback) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_sessions_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageFeedback.ProtoReflect.Descriptor instead.
+func (*MessageFeedback) Descriptor() ([]byte, []int) {
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *MessageFeedback) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *MessageFeedback) GetRating() string {
+	if x != nil {
+		return x.Rating
+	}
+	return ""
+}
+
+func (x *MessageFeedback) GetComment() string {
+	if x != nil {
+		return x.Comment
+	}
+	return ""
+}
+
+func (x *MessageFeedback) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type SubmitMessageFeedbackRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	MessageId      string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Rating         string                 `protobuf:"bytes,3,opt,name=rating,proto3" json:"rating,omitempty"` // up | down, or "" to clear
+	Comment        *string                `protobuf:"bytes,4,opt,name=comment,proto3,oneof" json:"comment,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SubmitMessageFeedbackRequest) Reset() {
+	*x = SubmitMessageFeedbackRequest{}
+	mi := &file_agents_v1_sessions_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitMessageFeedbackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitMessageFeedbackRequest) ProtoMessage() {}
+
+func (x *SubmitMessageFeedbackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_sessions_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitMessageFeedbackRequest.ProtoReflect.Descriptor instead.
+func (*SubmitMessageFeedbackRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *SubmitMessageFeedbackRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SubmitMessageFeedbackRequest) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *SubmitMessageFeedbackRequest) GetRating() string {
+	if x != nil {
+		return x.Rating
+	}
+	return ""
+}
+
+func (x *SubmitMessageFeedbackRequest) GetComment() string {
+	if x != nil && x.Comment != nil {
+		return *x.Comment
+	}
+	return ""
+}
+
+type SubmitMessageFeedbackResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unset when the rating was cleared.
+	Feedback      *MessageFeedback `protobuf:"bytes,1,opt,name=feedback,proto3,oneof" json:"feedback,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitMessageFeedbackResponse) Reset() {
+	*x = SubmitMessageFeedbackResponse{}
+	mi := &file_agents_v1_sessions_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitMessageFeedbackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitMessageFeedbackResponse) ProtoMessage() {}
+
+func (x *SubmitMessageFeedbackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_sessions_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitMessageFeedbackResponse.ProtoReflect.Descriptor instead.
+func (*SubmitMessageFeedbackResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *SubmitMessageFeedbackResponse) GetFeedback() *MessageFeedback {
+	if x != nil {
+		return x.Feedback
+	}
+	return nil
+}
+
 var File_agents_v1_sessions_proto protoreflect.FileDescriptor
 
 const file_agents_v1_sessions_proto_rawDesc = "" +
@@ -2115,7 +2307,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0f\n" +
 	"\r_display_nameB\x11\n" +
 	"\x0f_model_overrideB\x12\n" +
-	"\x10_last_model_used\"\xd3\x06\n" +
+	"\x10_last_model_used\"\xfc\x06\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2141,7 +2333,8 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x0eis_invalidated\x18\x10 \x01(\bR\risInvalidated\x12<\n" +
 	"\tedited_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\beditedAt\x88\x01\x01\x12.\n" +
 	"\x10previous_content\x18\x12 \x01(\tH\aR\x0fpreviousContent\x88\x01\x01\x12#\n" +
-	"\rwas_cancelled\x18\x13 \x01(\bR\fwasCancelledB\n" +
+	"\rwas_cancelled\x18\x13 \x01(\bR\fwasCancelled\x12'\n" +
+	"\x0ffeedback_rating\x18\x14 \x01(\tR\x0efeedbackRatingB\n" +
 	"\n" +
 	"\b_contentB\b\n" +
 	"\x06_modelB\f\n" +
@@ -2303,7 +2496,25 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"message_id\x18\x02 \x01(\tR\tmessageId\"K\n" +
 	"\x14RetryMessageResponse\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x19\n" +
-	"\bfile_ids\x18\x02 \x03(\tR\afileIds*u\n" +
+	"\bfile_ids\x18\x02 \x03(\tR\afileIds\"\x9d\x01\n" +
+	"\x0fMessageFeedback\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x16\n" +
+	"\x06rating\x18\x02 \x01(\tR\x06rating\x12\x18\n" +
+	"\acomment\x18\x03 \x01(\tR\acomment\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xa9\x01\n" +
+	"\x1cSubmitMessageFeedbackRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x16\n" +
+	"\x06rating\x18\x03 \x01(\tR\x06rating\x12\x1d\n" +
+	"\acomment\x18\x04 \x01(\tH\x00R\acomment\x88\x01\x01B\n" +
+	"\n" +
+	"\b_comment\"i\n" +
+	"\x1dSubmitMessageFeedbackResponse\x12;\n" +
+	"\bfeedback\x18\x01 \x01(\v2\x1a.agents.v1.MessageFeedbackH\x00R\bfeedback\x88\x01\x01B\v\n" +
+	"\t_feedback*u\n" +
 	"\vSessionKind\x12\x1c\n" +
 	"\x18SESSION_KIND_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13SESSION_KIND_DIRECT\x10\x01\x12\x16\n" +
@@ -2315,7 +2526,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x16MESSAGE_ROLE_ASSISTANT\x10\x02\x12\x15\n" +
 	"\x11MESSAGE_ROLE_TOOL\x10\x03\x12\x17\n" +
 	"\x13MESSAGE_ROLE_SYSTEM\x10\x04\x12\x18\n" +
-	"\x14MESSAGE_ROLE_SUMMARY\x10\x052\xfb\b\n" +
+	"\x14MESSAGE_ROLE_SUMMARY\x10\x052\xe9\t\n" +
 	"\x0fSessionsService\x12T\n" +
 	"\rCreateSession\x12\x1f.agents.v1.CreateSessionRequest\x1a .agents.v1.CreateSessionResponse\"\x00\x12K\n" +
 	"\n" +
@@ -2331,7 +2542,8 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x0eCompactSession\x12 .agents.v1.CompactSessionRequest\x1a!.agents.v1.CompactSessionResponse\"\x00\x12N\n" +
 	"\vEditMessage\x12\x1d.agents.v1.EditMessageRequest\x1a\x1e.agents.v1.EditMessageResponse\"\x00\x12T\n" +
 	"\rDeleteMessage\x12\x1f.agents.v1.DeleteMessageRequest\x1a .agents.v1.DeleteMessageResponse\"\x00\x12Q\n" +
-	"\fRetryMessage\x12\x1e.agents.v1.RetryMessageRequest\x1a\x1f.agents.v1.RetryMessageResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\fRetryMessage\x12\x1e.agents.v1.RetryMessageRequest\x1a\x1f.agents.v1.RetryMessageResponse\"\x00\x12l\n" +
+	"\x15SubmitMessageFeedback\x12'.agents.v1.SubmitMessageFeedbackRequest\x1a(.agents.v1.SubmitMessageFeedbackResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_sessions_proto_rawDescOnce sync.Once
@@ -2346,7 +2558,7 @@ func file_agents_v1_sessions_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_sessions_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agents_v1_sessions_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_agents_v1_sessions_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_agents_v1_sessions_proto_goTypes = []any{
 	(SessionKind)(0),                       // 0: agents.v1.SessionKind
 	(MessageRole)(0),                       // 1: agents.v1.MessageRole
@@ -2378,64 +2590,71 @@ var file_agents_v1_sessions_proto_goTypes = []any{
 	(*DeleteMessageResponse)(nil),          // 27: agents.v1.DeleteMessageResponse
 	(*RetryMessageRequest)(nil),            // 28: agents.v1.RetryMessageRequest
 	(*RetryMessageResponse)(nil),           // 29: agents.v1.RetryMessageResponse
-	(*timestamppb.Timestamp)(nil),          // 30: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),           // 31: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),          // 32: common.v1.PaginationResponse
+	(*MessageFeedback)(nil),                // 30: agents.v1.MessageFeedback
+	(*SubmitMessageFeedbackRequest)(nil),   // 31: agents.v1.SubmitMessageFeedbackRequest
+	(*SubmitMessageFeedbackResponse)(nil),  // 32: agents.v1.SubmitMessageFeedbackResponse
+	(*timestamppb.Timestamp)(nil),          // 33: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),           // 34: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),          // 35: common.v1.PaginationResponse
 }
 var file_agents_v1_sessions_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.SessionInfo.kind:type_name -> agents.v1.SessionKind
-	30, // 1: agents.v1.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	30, // 2: agents.v1.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 1: agents.v1.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	33, // 2: agents.v1.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: agents.v1.MessageInfo.role:type_name -> agents.v1.MessageRole
-	30, // 4: agents.v1.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
-	30, // 5: agents.v1.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
+	33, // 4: agents.v1.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
+	33, // 5: agents.v1.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
 	0,  // 6: agents.v1.CreateSessionRequest.kind:type_name -> agents.v1.SessionKind
 	2,  // 7: agents.v1.CreateSessionResponse.session:type_name -> agents.v1.SessionInfo
 	2,  // 8: agents.v1.GetSessionResponse.session:type_name -> agents.v1.SessionInfo
 	2,  // 9: agents.v1.UpdateSessionResponse.session:type_name -> agents.v1.SessionInfo
-	31, // 10: agents.v1.ListSessionsRequest.pagination:type_name -> common.v1.PaginationRequest
+	34, // 10: agents.v1.ListSessionsRequest.pagination:type_name -> common.v1.PaginationRequest
 	0,  // 11: agents.v1.ListSessionsRequest.kind:type_name -> agents.v1.SessionKind
 	2,  // 12: agents.v1.ListSessionsResponse.sessions:type_name -> agents.v1.SessionInfo
-	32, // 13: agents.v1.ListSessionsResponse.pagination:type_name -> common.v1.PaginationResponse
+	35, // 13: agents.v1.ListSessionsResponse.pagination:type_name -> common.v1.PaginationResponse
 	1,  // 14: agents.v1.AddMessageRequest.role:type_name -> agents.v1.MessageRole
 	3,  // 15: agents.v1.AddMessageResponse.message:type_name -> agents.v1.MessageInfo
-	31, // 16: agents.v1.ListMessagesRequest.pagination:type_name -> common.v1.PaginationRequest
+	34, // 16: agents.v1.ListMessagesRequest.pagination:type_name -> common.v1.PaginationRequest
 	3,  // 17: agents.v1.ListMessagesResponse.messages:type_name -> agents.v1.MessageInfo
-	32, // 18: agents.v1.ListMessagesResponse.pagination:type_name -> common.v1.PaginationResponse
+	35, // 18: agents.v1.ListMessagesResponse.pagination:type_name -> common.v1.PaginationResponse
 	3,  // 19: agents.v1.GetSessionContextResponse.messages:type_name -> agents.v1.MessageInfo
 	21, // 20: agents.v1.CompactSessionResponse.stats:type_name -> agents.v1.GetSessionContextStatsResponse
 	3,  // 21: agents.v1.EditMessageResponse.message:type_name -> agents.v1.MessageInfo
-	4,  // 22: agents.v1.SessionsService.CreateSession:input_type -> agents.v1.CreateSessionRequest
-	8,  // 23: agents.v1.SessionsService.GetSession:input_type -> agents.v1.GetSessionRequest
-	9,  // 24: agents.v1.SessionsService.ListSessions:input_type -> agents.v1.ListSessionsRequest
-	11, // 25: agents.v1.SessionsService.UpdateSession:input_type -> agents.v1.UpdateSessionRequest
-	12, // 26: agents.v1.SessionsService.ArchiveSession:input_type -> agents.v1.ArchiveSessionRequest
-	14, // 27: agents.v1.SessionsService.AddMessage:input_type -> agents.v1.AddMessageRequest
-	16, // 28: agents.v1.SessionsService.ListMessages:input_type -> agents.v1.ListMessagesRequest
-	18, // 29: agents.v1.SessionsService.GetSessionContext:input_type -> agents.v1.GetSessionContextRequest
-	20, // 30: agents.v1.SessionsService.GetSessionContextStats:input_type -> agents.v1.GetSessionContextStatsRequest
-	22, // 31: agents.v1.SessionsService.CompactSession:input_type -> agents.v1.CompactSessionRequest
-	24, // 32: agents.v1.SessionsService.EditMessage:input_type -> agents.v1.EditMessageRequest
-	26, // 33: agents.v1.SessionsService.DeleteMessage:input_type -> agents.v1.DeleteMessageRequest
-	28, // 34: agents.v1.SessionsService.RetryMessage:input_type -> agents.v1.RetryMessageRequest
-	5,  // 35: agents.v1.SessionsService.CreateSession:output_type -> agents.v1.CreateSessionResponse
-	6,  // 36: agents.v1.SessionsService.GetSession:output_type -> agents.v1.GetSessionResponse
-	10, // 37: agents.v1.SessionsService.ListSessions:output_type -> agents.v1.ListSessionsResponse
-	7,  // 38: agents.v1.SessionsService.UpdateSession:output_type -> agents.v1.UpdateSessionResponse
-	13, // 39: agents.v1.SessionsService.ArchiveSession:output_type -> agents.v1.ArchiveSessionResponse
-	15, // 40: agents.v1.SessionsService.AddMessage:output_type -> agents.v1.AddMessageResponse
-	17, // 41: agents.v1.SessionsService.ListMessages:output_type -> agents.v1.ListMessagesResponse
-	19, // 42: agents.v1.SessionsService.GetSessionContext:output_type -> agents.v1.GetSessionContextResponse
-	21, // 43: agents.v1.SessionsService.GetSessionContextStats:output_type -> agents.v1.GetSessionContextStatsResponse
-	23, // 44: agents.v1.SessionsService.CompactSession:output_type -> agents.v1.CompactSessionResponse
-	25, // 45: agents.v1.SessionsService.EditMessage:output_type -> agents.v1.EditMessageResponse
-	27, // 46: agents.v1.SessionsService.DeleteMessage:output_type -> agents.v1.DeleteMessageResponse
-	29, // 47: agents.v1.SessionsService.RetryMessage:output_type -> agents.v1.RetryMessageResponse
-	35, // [35:48] is the sub-list for method output_type
-	22, // [22:35] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	33, // 22: agents.v1.MessageFeedback.created_at:type_name -> google.protobuf.Timestamp
+	30, // 23: agents.v1.SubmitMessageFeedbackResponse.feedback:type_name -> agents.v1.MessageFeedback
+	4,  // 24: agents.v1.SessionsService.CreateSession:input_type -> agents.v1.CreateSessionRequest
+	8,  // 25: agents.v1.SessionsService.GetSession:input_type -> agents.v1.GetSessionRequest
+	9,  // 26: agents.v1.SessionsService.ListSessions:input_type -> agents.v1.ListSessionsRequest
+	11, // 27: agents.v1.SessionsService.UpdateSession:input_type -> agents.v1.UpdateSessionRequest
+	12, // 28: agents.v1.SessionsService.ArchiveSession:input_type -> agents.v1.ArchiveSessionRequest
+	14, // 29: agents.v1.SessionsService.AddMessage:input_type -> agents.v1.AddMessageRequest
+	16, // 30: agents.v1.SessionsService.ListMessages:input_type -> agents.v1.ListMessagesRequest
+	18, // 31: agents.v1.SessionsService.GetSessionContext:input_type -> agents.v1.GetSessionContextRequest
+	20, // 32: agents.v1.SessionsService.GetSessionContextStats:input_type -> agents.v1.GetSessionContextStatsRequest
+	22, // 33: agents.v1.SessionsService.CompactSession:input_type -> agents.v1.CompactSessionRequest
+	24, // 34: agents.v1.SessionsService.EditMessage:input_type -> agents.v1.EditMessageRequest
+	26, // 35: agents.v1.SessionsService.DeleteMessage:input_type -> agents.v1.DeleteMessageRequest
+	28, // 36: agents.v1.SessionsService.RetryMessage:input_type -> agents.v1.RetryMessageRequest
+	31, // 37: agents.v1.SessionsService.SubmitMessageFeedback:input_type -> agents.v1.SubmitMessageFeedbackRequest
+	5,  // 38: agents.v1.SessionsService.CreateSession:output_type -> agents.v1.CreateSessionResponse
+	6,  // 39: agents.v1.SessionsService.GetSession:output_type -> agents.v1.GetSessionResponse
+	10, // 40: agents.v1.SessionsService.ListSessions:output_type -> agents.v1.ListSessionsResponse
+	7,  // 41: agents.v1.SessionsService.UpdateSession:output_type -> agents.v1.UpdateSessionResponse
+	13, // 42: agents.v1.SessionsService.ArchiveSession:output_type -> agents.v1.ArchiveSessionResponse
+	15, // 43: agents.v1.SessionsService.AddMessage:output_type -> agents.v1.AddMessageResponse
+	17, // 44: agents.v1.SessionsService.ListMessages:output_type -> agents.v1.ListMessagesResponse
+	19, // 45: agents.v1.SessionsService.GetSessionContext:output_type -> agents.v1.GetSessionContextResponse
+	21, // 46: agents.v1.SessionsService.GetSessionContextStats:output_type -> agents.v1.GetSessionContextStatsResponse
+	23, // 47: agents.v1.SessionsService.CompactSession:output_type -> agents.v1.CompactSessionResponse
+	25, // 48: agents.v1.SessionsService.EditMessage:output_type -> agents.v1.EditMessageResponse
+	27, // 49: agents.v1.SessionsService.DeleteMessage:output_type -> agents.v1.DeleteMessageResponse
+	29, // 50: agents.v1.SessionsService.RetryMessage:output_type -> agents.v1.RetryMessageResponse
+	32, // 51: agents.v1.SessionsService.SubmitMessageFeedback:output_type -> agents.v1.SubmitMessageFeedbackResponse
+	38, // [38:52] is the sub-list for method output_type
+	24, // [24:38] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_sessions_proto_init() }
@@ -2450,13 +2669,15 @@ func file_agents_v1_sessions_proto_init() {
 	file_agents_v1_sessions_proto_msgTypes[9].OneofWrappers = []any{}
 	file_agents_v1_sessions_proto_msgTypes[12].OneofWrappers = []any{}
 	file_agents_v1_sessions_proto_msgTypes[14].OneofWrappers = []any{}
+	file_agents_v1_sessions_proto_msgTypes[29].OneofWrappers = []any{}
+	file_agents_v1_sessions_proto_msgTypes[30].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_sessions_proto_rawDesc), len(file_agents_v1_sessions_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   28,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

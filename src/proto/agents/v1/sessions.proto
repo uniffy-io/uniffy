@@ -56,6 +56,10 @@ service SessionsService {
   // preceding user message and returns that. Refused if a run is
   // currently in flight on this session.
   rpc RetryMessage(RetryMessageRequest) returns (RetryMessageResponse) {}
+
+  // Record (or clear) the caller's thumbs up/down on an agent message. The
+  // signal feeds the skill-evolution analyzer; an empty rating clears it.
+  rpc SubmitMessageFeedback(SubmitMessageFeedbackRequest) returns (SubmitMessageFeedbackResponse) {}
 }
 
 // Kind of session
@@ -123,6 +127,9 @@ message MessageInfo {
   // True if this assistant turn was cancelled by the user before
   // completion. The UI renders it as a "cancelled" placeholder.
   bool was_cancelled = 19;
+  // The caller's own thumbs rating on this message ("up" | "down" | "").
+  // Only assistant messages carry feedback; empty when the caller hasn't rated.
+  string feedback_rating = 20;
 }
 
 message CreateSessionRequest {
@@ -306,4 +313,24 @@ message RetryMessageResponse {
   string content = 1;
   // File ids that were attached to the original user message.
   repeated string file_ids = 2;
+}
+
+// One user's thumbs rating on an agent message.
+message MessageFeedback {
+  string message_id = 1;
+  string rating = 2; // up | down
+  string comment = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message SubmitMessageFeedbackRequest {
+  string organization_id = 1;
+  string message_id = 2;
+  string rating = 3; // up | down, or "" to clear
+  optional string comment = 4;
+}
+
+message SubmitMessageFeedbackResponse {
+  // Unset when the rating was cleared.
+  optional MessageFeedback feedback = 1;
 }
