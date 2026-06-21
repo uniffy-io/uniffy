@@ -32,6 +32,8 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
     ListSessionsResponse,
     RetryMessageRequest,
     RetryMessageResponse,
+    SubmitMessageFeedbackRequest,
+    SubmitMessageFeedbackResponse,
     UpdateSessionRequest,
     UpdateSessionResponse,
 )
@@ -44,6 +46,7 @@ from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
 from uniffy.domains.agents.runtime.operations import _get_model_context_window
 from uniffy.domains.agents.sessions.converters import (
+    message_feedback_to_proto,
     message_role_from_proto,
     message_to_proto,
     session_kind_from_proto,
@@ -475,9 +478,16 @@ class SessionsHandlers:
                     page_size=page_size,
                     include_compacted=include_compacted,
                 )
+                ratings = await ops.get_user_feedback_for_messages(
+                    user_id=user_id,
+                    message_ids=[m.id for m in messages if m.role == "assistant"],
+                )
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 return ListMessagesResponse(
-                    messages=[message_to_proto(m) for m in messages],
+                    messages=[
+                        message_to_proto(m, feedback_rating=ratings.get(m.id, ""))
+                        for m in messages
+                    ],
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -871,4 +881,46 @@ class SessionsHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error retrying message: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def submit_message_feedback(
+        self,
+        request: SubmitMessageFeedbackRequest,
+        ctx: RequestContext,
+    ) -> SubmitMessageFeedbackResponse:
+        """Handle submit_message_feedback RPC call (thumbs up/down)."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        comment = request.comment if request.HasField("comment") else ""
+
+        try:
+            async with open_session() as session:
+                ops = SessionOperations(session)
+                feedback = await ops.submit_message_feedback(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    message_id=message_id,
+                    rating=request.rating,
+                    comment=comment,
+                )
+                response = SubmitMessageFeedbackResponse()
+                if feedback is not None:
+                    response.feedback.CopyFrom(message_feedback_to_proto(feedback))
+                return response
+
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Message not found")
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error submitting message feedback: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 
 
 @dataclass
@@ -201,6 +202,17 @@ class RuntimeFailoverEvent(RuntimeStreamEvent):
     to_model: str
     reason: str
     attempt: int
+
+
+@dataclass
+class RuntimeSkillDraftEvent(RuntimeStreamEvent):
+    """The agent proposed a skill draft for the user to review.
+
+    The draft is persisted (status=pending) but never auto-activated; the
+    client renders an editable review card and commits via SaveSkillDraft.
+    """
+
+    draft: AgentSkillDraft
 
 
 @dataclass

@@ -42,7 +42,11 @@ from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.agents.converters import agent_to_proto
 from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.agents.runtime.prompt import build_system_prompt
+from uniffy.domains.agents.runtime.prompt import (
+    build_system_prompt,
+    skill_passes_activation,
+    to_skill_prompt_entry,
+)
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -561,7 +565,13 @@ class AgentsHandlers:
                     organization_id=org_id,
                     enabled_skill_ids=agent.enabled_skills or [],
                 )
-                skill_contents = [s.content for s in skills if s.content]
+                skill_entries = [
+                    to_skill_prompt_entry(s)
+                    for s in skills
+                    if skill_passes_activation(
+                        s, enabled_tools=agent.enabled_tools or [], surface="session"
+                    )
+                ]
 
                 memory_context = await self._fetch_memory_context_for_preview(
                     session=session,
@@ -582,7 +592,7 @@ class AgentsHandlers:
                     user_name=user.full_name or user.username,
                     user_role=user_role,
                     enabled_tools=agent.enabled_tools or [],
-                    skill_contents=skill_contents or None,
+                    skills=skill_entries or None,
                     memory_context=memory_context or None,
                     prompt_content=prompt_content,
                 )

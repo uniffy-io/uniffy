@@ -51,8 +51,11 @@ from uniffy.domains.agents.runtime.destinations import (
 from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
 from uniffy.domains.agents.runtime.prompt import (
+    SkillPromptEntry,
     build_chat_context_section,
     build_system_prompt,
+    skill_passes_activation,
+    to_skill_prompt_entry,
 )
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeConfirmationRequiredEvent,
@@ -75,6 +78,7 @@ from uniffy.domains.agents.sessions.operations import (
     apply_emergency_truncation,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.domains.agents.skills.usage import record_skill_event, record_skill_injections
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolResult
 from uniffy.domains.agents.tools.executor import ToolExecutor
 from uniffy.domains.agents.tools.registry import ToolRegistry, get_tool_registry, to_api_name
@@ -375,6 +379,7 @@ class RuntimeOperations:
         content: str,
         files: list[FileContext] | None = None,
         user_timezone: str | None = None,
+        invoked_skill_id: UUID | None = None,
     ) -> tuple[AgentMessage, AgentMessage, str]:
         """Execute the full send-message flow with tool use loop."""
         membership = await self._org_ops.require_org_member(user_id, organization_id)
@@ -428,7 +433,28 @@ class RuntimeOperations:
             organization_id=organization_id,
             enabled_skill_ids=agent.enabled_skills or [],
         )
-        skill_contents = [s.content for s in skills if s.content]
+        active_skills = [
+            s
+            for s in skills
+            if skill_passes_activation(s, enabled_tools=enabled_tools, surface="session")
+        ]
+        skill_entries = [to_skill_prompt_entry(s) for s in active_skills]
+        await record_skill_injections(
+            self._session,
+            skills=active_skills,
+            agent_id=agent.id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_id=session_id,
+        )
+        invoked_entry = await self._resolve_invoked_skill(
+            skills=skills,
+            invoked_skill_id=invoked_skill_id,
+            agent_id=agent.id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_id=session_id,
+        )
 
         memory_context = await self._fetch_memory_context(
             agent_id=agent_session.agent_id,
@@ -449,7 +475,8 @@ class RuntimeOperations:
             user_name=user.full_name or user.username,
             user_role=user_role,
             enabled_tools=enabled_tools,
-            skill_contents=skill_contents or None,
+            skills=skill_entries or None,
+            invoked_skill=invoked_entry,
             memory_context=memory_context or None,
             prompt_content=prompt_content,
             user_timezone=user_timezone,
@@ -471,6 +498,16 @@ class RuntimeOperations:
         await self._session_ops.enqueue_compaction_if_needed(
             session_id=session_id,
             token_budget=token_budget,
+        )
+
+        # 8d. Queue a debounced skill-evolution analysis (worker gates on the
+        # per-org opt-in and budget before doing any LLM work).
+        await self._session_ops.enqueue_skill_analysis(
+            destination_kind="session",
+            destination_id=session_id,
+            user_id=user_id,
+            agent_id=agent.id,
+            organization_id=organization_id,
         )
 
         # 9. Load context, then apply emergency truncation when the worker
@@ -977,6 +1014,7 @@ class RuntimeOperations:
         content: str,
         files: list[FileContext] | None = None,
         user_timezone: str | None = None,
+        invoked_skill_id: UUID | None = None,
         rerun_anchor: AgentMessage | None = None,
     ) -> AsyncIterator[RuntimeStreamEvent]:
         """Execute the send-message flow with streaming token output.
@@ -1098,7 +1136,29 @@ class RuntimeOperations:
             organization_id=organization_id,
             enabled_skill_ids=agent.enabled_skills or [],
         )
-        skill_contents = [s.content for s in skills if s.content]
+        skill_surface = "chat" if isinstance(destination, ChatDestination) else "session"
+        active_skills = [
+            s
+            for s in skills
+            if skill_passes_activation(s, enabled_tools=enabled_tools, surface=skill_surface)
+        ]
+        skill_entries = [to_skill_prompt_entry(s) for s in active_skills]
+        await record_skill_injections(
+            self._session,
+            skills=active_skills,
+            agent_id=agent.id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_id=session_id,
+        )
+        invoked_entry = await self._resolve_invoked_skill(
+            skills=skills,
+            invoked_skill_id=invoked_skill_id,
+            agent_id=agent.id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_id=session_id,
+        )
 
         memory_context = await self._fetch_memory_context(
             agent_id=agent_id,
@@ -1127,7 +1187,8 @@ class RuntimeOperations:
             user_name=user.full_name or user.username,
             user_role=user_role,
             enabled_tools=enabled_tools,
-            skill_contents=skill_contents or None,
+            skills=skill_entries or None,
+            invoked_skill=invoked_entry,
             memory_context=memory_context or None,
             prompt_content=prompt_content,
             user_timezone=user_timezone,
@@ -1147,6 +1208,26 @@ class RuntimeOperations:
 
         # Schedule async compaction when over budget (no LLM call here).
         await writer.compact_if_needed(token_budget=token_budget)
+
+        # Queue a debounced skill-evolution analysis. Covers both the agent
+        # ChatView (session) and team-chat (channel) since both stream here;
+        # the worker gates on the per-org opt-in and budget before any LLM call.
+        if session_id is not None:
+            await self._session_ops.enqueue_skill_analysis(
+                destination_kind="session",
+                destination_id=session_id,
+                user_id=user_id,
+                agent_id=agent.id,
+                organization_id=organization_id,
+            )
+        elif channel_id is not None:
+            await self._session_ops.enqueue_skill_analysis(
+                destination_kind="channel",
+                destination_id=channel_id,
+                user_id=user_id,
+                agent_id=agent.id,
+                organization_id=organization_id,
+            )
 
         context_messages, _ = await writer.load_context_messages(
             token_budget=token_budget,
@@ -1582,6 +1663,11 @@ class RuntimeOperations:
                 results_content[tc.id] = content
                 results_success[tc.id] = tool_result.success
 
+                # A write tool may queue runtime events (e.g. a proposed skill
+                # draft); forward them right after its result, then clear.
+                while base_ctx.pending_events:
+                    yield base_ctx.pending_events.pop(0)
+
             tool_result_blocks: list[dict] = [
                 {
                     "type": "tool_result",
@@ -1765,6 +1851,42 @@ class RuntimeOperations:
                 error = event.error
 
         yield _StreamResult(completion=completion, error=error)
+
+    async def _resolve_invoked_skill(
+        self,
+        *,
+        skills: list,
+        invoked_skill_id: UUID | None,
+        agent_id: UUID,
+        user_id: UUID,
+        organization_id: UUID,
+        session_id: UUID | None,
+    ) -> SkillPromptEntry | None:
+        """Force-resolve an on-demand invoked skill from the agent's own set.
+
+        The access gate is set membership: only a skill already resolved for
+        the agent (enabled + always-active) can be invoked, so a user cannot
+        reach an arbitrary org skill by id. Returns the full-content entry and
+        records the ``invoked=true`` usage row (the strongest evolution signal).
+        """
+        if invoked_skill_id is None:
+            return None
+        match = next((s for s in skills if s.id == invoked_skill_id), None)
+        if match is None:
+            logger.warning(f"Invoked skill {invoked_skill_id} not in agent's resolved set; ignoring")
+            return None
+        await record_skill_event(
+            self._session,
+            skill_id=match.id,
+            skill_version=int(getattr(match, "latest_version_number", 0) or 0),
+            agent_id=agent_id,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_id=session_id,
+            invoked=True,
+            commit=False,
+        )
+        return to_skill_prompt_entry(match)
 
     async def _fetch_memory_context(
         self,

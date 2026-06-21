@@ -5,11 +5,13 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.valkey.queue import get_queue_safe
 from uniffy.core.valkey.streams import session_has_active_run
@@ -28,6 +30,11 @@ VALID_MESSAGE_ROLES = {"user", "assistant", "tool", "system", "summary"}
 # to the current conversation, not to history a model has long since
 # moved past.
 EDIT_WINDOW_SECONDS = 600
+
+# Defer window for the skill-evolution analyzer. A stable job id plus this
+# defer collapse a burst of turns into a single analysis run once the
+# conversation goes quiet, keeping LLM cost bounded.
+SKILL_ANALYSIS_DEBOUNCE_SECONDS = 90
 
 
 # Hard cap on rows handed to the LLM when the async compaction worker
@@ -915,6 +922,131 @@ class SessionOperations:
             )
             return False
         return True
+
+    async def enqueue_skill_analysis(
+        self,
+        *,
+        destination_kind: str,
+        destination_id: UUID,
+        user_id: UUID,
+        agent_id: UUID,
+        organization_id: UUID,
+    ) -> bool:
+        """Queue a debounced skill-evolution analysis for an idle conversation.
+
+        Best-effort and cheap: a stable job id plus a defer window collapse a
+        burst of turns into one run. The worker gates on the per-org opt-in and
+        the daily budget before any LLM work, so enqueuing is safe even when
+        evolution is disabled.
+        """
+        queue = await get_queue_safe("egress")
+        if queue is None:
+            return False
+        try:
+            await queue.enqueue_job(
+                "analyze_session_for_skills",
+                destination_kind,
+                str(destination_id),
+                str(user_id),
+                str(agent_id),
+                str(organization_id),
+                _job_id=f"analyze_skills:{destination_kind}:{destination_id}",
+                _defer_by=SKILL_ANALYSIS_DEBOUNCE_SECONDS,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "analyze_session_for_skills enqueue failed",
+                destination_id=str(destination_id),
+            )
+            return False
+        return True
+
+    async def submit_message_feedback(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        message_id: UUID,
+        rating: str,
+        comment: str = "",
+    ) -> AgentMessageFeedback | None:
+        """Upsert (or clear) the caller's thumbs rating on an assistant message.
+
+        Only assistant messages are ratable. An empty rating clears the row; a
+        thumbs-down queues a skill-evolution pass for the session.
+        """
+        await self._org_ops.require_org_member(user_id, organization_id)
+        clean = (rating or "").strip().lower()
+        if clean not in ("", "up", "down"):
+            raise ValidationError("rating", "rating must be 'up', 'down', or empty")
+
+        msg, agent_session = await self._load_message(
+            user_id=user_id,
+            organization_id=organization_id,
+            message_id=message_id,
+        )
+        if msg.role != "assistant":
+            raise ValidationError("role", "feedback is only supported on agent messages")
+
+        if not clean:
+            await self._session.execute(
+                delete(AgentMessageFeedback).where(
+                    AgentMessageFeedback.message_id == message_id,
+                    AgentMessageFeedback.user_id == user_id,
+                )
+            )
+            await self._session.commit()
+            return None
+
+        comment_clean = (comment or "").strip() or None
+        now = datetime.now(UTC)
+        stmt = (
+            pg_insert(AgentMessageFeedback)
+            .values(
+                message_id=message_id,
+                user_id=user_id,
+                rating=clean,
+                comment=comment_clean,
+                created_at=now,
+            )
+            .on_conflict_do_update(
+                index_elements=["message_id", "user_id"],
+                set_={"rating": clean, "comment": comment_clean, "created_at": now},
+            )
+        )
+        await self._session.execute(stmt)
+        await self._session.commit()
+
+        if clean == "down":
+            await self.enqueue_skill_analysis(
+                destination_kind="session",
+                destination_id=agent_session.id,
+                user_id=user_id,
+                agent_id=agent_session.agent_id,
+                organization_id=organization_id,
+            )
+
+        result = await self._session.execute(
+            select(AgentMessageFeedback).where(
+                AgentMessageFeedback.message_id == message_id,
+                AgentMessageFeedback.user_id == user_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_user_feedback_for_messages(
+        self, *, user_id: UUID, message_ids: list[UUID]
+    ) -> dict[UUID, str]:
+        """Map message_id -> the caller's rating for a page of messages."""
+        if not message_ids:
+            return {}
+        result = await self._session.execute(
+            select(AgentMessageFeedback.message_id, AgentMessageFeedback.rating).where(
+                AgentMessageFeedback.user_id == user_id,
+                AgentMessageFeedback.message_id.in_(message_ids),
+            )
+        )
+        return {mid: rating for mid, rating in result.all()}
 
     async def compact_session_if_needed(
         self,

@@ -104,6 +104,7 @@ async def run_agent_session(
     files: list[dict[str, Any]] | None,
     user_timezone: str | None,
     rerun_message_id: str | None = None,
+    invoked_skill_id: str | None = None,
 ) -> dict[str, Any]:
     """Drive one agent run; subscribers attach to `agent:run:{run_id}` for events."""
     try:
@@ -173,6 +174,7 @@ async def run_agent_session(
                     content=content,
                     files=file_contexts,
                     user_timezone=user_timezone,
+                    invoked_skill_id=UUID(invoked_skill_id) if invoked_skill_id else None,
                 )
             async for event in event_stream:
                 await publisher.publish(event)
