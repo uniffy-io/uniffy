@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CircleNotch, Plus, ClockCounterClockwise } from "@phosphor-icons/react";
+import { CircleNotch, Plus, ClockCounterClockwise, PencilSimple } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Input } from "@/components/ui/input";
@@ -48,11 +48,11 @@ export function SkillsView() {
     const agentsMap = useAppSelector(selectAllAgents);
     const selectedAgentId = useAppSelector(selectSelectedAgentId);
 
-    const [newDraft, setNewDraft] = useState<SerializedSkillDraft | null>(null);
+    const [editorDraft, setEditorDraft] = useState<SerializedSkillDraft | null>(null);
     const [creatingDraft, setCreatingDraft] = useState(false);
     const [historySkill, setHistorySkill] = useState<SerializedSkill | null>(null);
     const [skillsTab, setSkillsTab] = useState<"active" | "drafts">("active");
-    const newDraftSavedRef = useRef(false);
+    const editorSavedRef = useRef(false);
 
     const inboxCount = useAppSelector(selectInboxCount);
 
@@ -122,19 +122,49 @@ export function SkillsView() {
             const draft = await dispatch(
                 createSkillDraft({ kind: "create", name: "", displayName: "", content: "" }),
             ).unwrap();
-            newDraftSavedRef.current = false;
-            setNewDraft(draft);
+            editorSavedRef.current = false;
+            setEditorDraft(draft);
         } finally {
             setCreatingDraft(false);
         }
     };
 
-    // Closing the New-skill editor without saving drops the empty seed draft so
-    // it never lingers in the review inbox.
-    const handleCloseNewDraft = () => {
-        const draft = newDraft;
-        setNewDraft(null);
-        if (draft && !newDraftSavedRef.current) {
+    // Manual edit: seed an edit draft from the skill's current fields and open the
+    // shared editor. Saving routes through SaveSkillDraft, which gates the scope,
+    // validates, and snapshots a new version.
+    const handleEditSkill = async (skill: SerializedSkill) => {
+        if (creatingDraft) return;
+        setCreatingDraft(true);
+        try {
+            const draft = await dispatch(
+                createSkillDraft({
+                    kind: "edit",
+                    targetSkillId: skill.id,
+                    name: skill.name,
+                    displayName: skill.displayName,
+                    description: skill.description,
+                    content: skill.content,
+                    whenToUse: skill.whenToUse,
+                    requiresTools: skill.requiresTools,
+                    requiresContext: skill.requiresContext,
+                    suggestedScope:
+                        skill.source === SkillSource.ORGANIZATION ? "organization" : "personal",
+                    suggestedAlwaysActive: skill.alwaysActive,
+                }),
+            ).unwrap();
+            editorSavedRef.current = false;
+            setEditorDraft(draft);
+        } finally {
+            setCreatingDraft(false);
+        }
+    };
+
+    // Closing the editor without saving drops the seed draft so it never lingers
+    // in the review inbox.
+    const handleCloseEditor = () => {
+        const draft = editorDraft;
+        setEditorDraft(null);
+        if (draft && !editorSavedRef.current) {
             dispatch(discardSkillDraft(draft.id));
         }
     };
@@ -279,6 +309,17 @@ export function SkillsView() {
                                             <ClockCounterClockwise size={14} />
                                             v{skill.activeVersionNumber || 1}
                                         </button>
+                                        {skill.source !== SkillSource.BUNDLED && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleEditSkill(skill)}
+                                                disabled={creatingDraft}
+                                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                                            >
+                                                <PencilSimple size={14} />
+                                                Edit
+                                            </button>
+                                        )}
                                     </div>
                                     <button
                                         type="button"
@@ -316,12 +357,12 @@ export function SkillsView() {
                 )}
             </div>
 
-            {newDraft && (
+            {editorDraft && (
                 <SkillDraftEditorModal
-                    draft={newDraft}
-                    onClose={handleCloseNewDraft}
+                    draft={editorDraft}
+                    onClose={handleCloseEditor}
                     onSaved={() => {
-                        newDraftSavedRef.current = true;
+                        editorSavedRef.current = true;
                         dispatch(fetchSkills());
                     }}
                 />

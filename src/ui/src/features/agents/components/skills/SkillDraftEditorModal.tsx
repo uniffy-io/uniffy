@@ -41,6 +41,13 @@ export function SkillDraftEditorModal({
     const canSave = name.trim().length > 0 && displayName.trim().length > 0 && busy === null;
     const isEdit = draft.kind !== 'create';
     const fromAgent = Boolean(draft.proposedByAgentId);
+    const title = isEdit
+        ? fromAgent
+            ? 'Review skill update'
+            : 'Edit skill'
+        : fromAgent
+          ? 'Review proposed skill'
+          : 'New skill';
 
     const handleSave = async () => {
         if (!canSave) return;
@@ -87,7 +94,7 @@ export function SkillDraftEditorModal({
                     <Lightning size={20} weight="fill" className="text-primary shrink-0" />
                     <div className="min-w-0">
                         <h2 className="text-base font-semibold text-foreground truncate">
-                            {isEdit ? 'Review skill update' : 'Review proposed skill'}
+                            {title}
                         </h2>
                         {fromAgent && (
                             <p className="text-xs text-muted-foreground">
