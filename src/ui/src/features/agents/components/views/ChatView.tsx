@@ -3,7 +3,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { PaperPlaneRight, Paperclip, FileText, Wrench, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, Eye, PencilSimple, Stop, Trash } from "@phosphor-icons/react";
+import { PaperPlaneRight, Paperclip, FileText, Wrench, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, Eye, PencilSimple, Stop, Trash, Lightning, ThumbsUp, ThumbsDown } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -21,6 +21,12 @@ import { parseUrn, urnToPath } from "@/shared/utils/urn";
 import { navigateTo, openInNewTab } from "@/shared/utils/navigation";
 import { useTextareaMention } from "@/features/agents/hooks/useTextareaMention";
 import { ChatMentionPopup } from "@/features/agents/components/chat/ChatMentionPopup";
+import { useTextareaSlash } from "@/features/agents/hooks/useTextareaSlash";
+import { SkillSlashPopup } from "@/features/agents/components/chat/SkillSlashPopup";
+import { fetchRunnableSkills, type SerializedRunnableSkill } from "@/features/agents/store/agentRunnableSkillsThunks";
+import { selectRunnableSkillsForAgent } from "@/features/agents/store/agentRunnableSkillsSlice";
+import { ProposedSkillDraftCard } from "@/features/agents/components/skills/ProposedSkillDraftCard";
+import { selectSessionDrafts } from "@/features/agents/store/agentSkillDraftsSlice";
 import {
     selectChatMessage,
     selectSidebarContent,
@@ -50,6 +56,7 @@ import {
     editAgentMessage,
     deleteAgentMessage,
     retryAgentMessage,
+    submitMessageFeedback,
     rerunFromMessage,
     MessageRole,
 } from "@/features/agents/store/agentMessagesThunks";
@@ -347,6 +354,17 @@ function MessageActions({ message }: { message: SerializedMessage }) {
             dispatch(setChatMessage(result.payload.content));
         }
     };
+    const handleFeedback = (rating: "up" | "down") => {
+        // Clicking the active thumb clears it; otherwise sets the new rating.
+        const next = message.feedbackRating === rating ? "" : rating;
+        dispatch(
+            submitMessageFeedback({
+                sessionId: message.sessionId,
+                messageId: message.id,
+                rating: next,
+            }),
+        );
+    };
 
     if (editing) {
         return (
@@ -359,10 +377,13 @@ function MessageActions({ message }: { message: SerializedMessage }) {
         );
     }
 
+    const hasRating = !isUser && !!message.feedbackRating;
+
     return (
         <div
             className={cn(
-                "flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity",
+                "flex items-center gap-0.5 transition-opacity",
+                hasRating ? "opacity-100" : "opacity-0 group-hover:opacity-100",
                 isUser ? "order-first" : "",
             )}
         >
@@ -386,6 +407,38 @@ function MessageActions({ message }: { message: SerializedMessage }) {
             >
                 <ArrowsClockwise size={14} />
             </button>
+            {!isUser && (
+                <>
+                    <button
+                        type="button"
+                        onClick={() => handleFeedback("up")}
+                        disabled={isStreaming || isOptimistic}
+                        className={cn(
+                            "p-1.5 rounded-md hover:bg-muted disabled:opacity-50",
+                            message.feedbackRating === "up"
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-muted-foreground hover:text-foreground",
+                        )}
+                        title="Good response"
+                    >
+                        <ThumbsUp size={14} weight={message.feedbackRating === "up" ? "fill" : "regular"} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleFeedback("down")}
+                        disabled={isStreaming || isOptimistic}
+                        className={cn(
+                            "p-1.5 rounded-md hover:bg-muted disabled:opacity-50",
+                            message.feedbackRating === "down"
+                                ? "text-red-500"
+                                : "text-muted-foreground hover:text-foreground",
+                        )}
+                        title="Bad response"
+                    >
+                        <ThumbsDown size={14} weight={message.feedbackRating === "down" ? "fill" : "regular"} />
+                    </button>
+                </>
+            )}
             {isUser && (
                 <button
                     type="button"
@@ -829,6 +882,7 @@ function ChatPanel() {
     const isStreaming = useAppSelector(selectIsStreaming);
     const activeRunId = useAppSelector(selectActiveRunId);
     const pendingConfirmation = useAppSelector(selectPendingConfirmation);
+    const sessionDrafts = useAppSelector(selectSessionDrafts(activeSessionId));
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
     // Reconnect via SubscribeToRun if a run_id is already in the slice at mount
@@ -926,6 +980,63 @@ function ChatPanel() {
         value: chatMessage,
         onChange: (val) => dispatch(setChatMessage(val)),
     });
+
+    const slash = useTextareaSlash({
+        textareaRef,
+        value: chatMessage,
+        onChange: (val) => dispatch(setChatMessage(val)),
+    });
+    const [pendingInvokedSkill, setPendingInvokedSkill] = useState<SerializedRunnableSkill | null>(null);
+    const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(activeSession?.agentId));
+
+    useEffect(() => {
+        if (activeSession?.agentId) {
+            dispatch(fetchRunnableSkills({ agentId: activeSession.agentId }));
+        }
+    }, [activeSession?.agentId, dispatch]);
+
+    useEffect(() => {
+        setPendingInvokedSkill(null);
+    }, [activeSessionId]);
+
+    const handleSlashSelect = useCallback((skill: SerializedRunnableSkill) => {
+        setPendingInvokedSkill(skill);
+        slash.clearSlashToken();
+    }, [slash]);
+
+    const composerChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        mention.handleChange(e);
+        if (!mention.isActive) slash.handleChange(e);
+        autoResizeTextarea();
+    }, [mention, slash, autoResizeTextarea]);
+
+    const renderSlashPopup = () =>
+        slash.isActive && !mention.isActive ? (
+            <SkillSlashPopup
+                skills={runnableSkills}
+                query={slash.slashQuery}
+                onSelect={handleSlashSelect}
+                onClose={slash.close}
+            />
+        ) : null;
+
+    const renderInvokedSkillChip = () =>
+        pendingInvokedSkill ? (
+            <div className="flex">
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 border border-primary/30 pl-2 pr-1 py-1 text-xs">
+                    <Lightning size={12} weight="fill" className="text-primary" />
+                    <span className="font-mono text-foreground">/{pendingInvokedSkill.name}</span>
+                    <button
+                        type="button"
+                        onClick={() => setPendingInvokedSkill(null)}
+                        className="p-0.5 rounded hover:bg-primary/20 transition-colors"
+                        title="Remove skill"
+                    >
+                        <X size={12} className="text-muted-foreground" />
+                    </button>
+                </span>
+            </div>
+        ) : null;
 
     const handleScroll = useCallback(() => {
         const el = scrollContainerRef.current;
@@ -1055,7 +1166,9 @@ function ChatPanel() {
             sessionId: activeSessionId,
             content,
             fileIds: fileIds.length > 0 ? fileIds : undefined,
+            invokedSkillId: pendingInvokedSkill?.id,
         }));
+        setPendingInvokedSkill(null);
     };
 
     const handleConfirmationResponse = (approved: boolean) => {
@@ -1085,6 +1198,7 @@ function ChatPanel() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (slash.handleKeyDown(e)) return;
         if (mention.handleKeyDown(e)) return;
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -1344,17 +1458,16 @@ function ChatPanel() {
                                         ))}
                                     </div>
                                 )}
+                                {renderInvokedSkillChip()}
                                 <div className="relative flex flex-col bg-muted border border-border rounded-lg focus-within:ring-1 focus-within:ring-ring">
+                                    {renderSlashPopup()}
                                     <textarea
                                         ref={textareaRef}
                                         className="w-full bg-transparent px-3 pt-2 pb-10 text-sm resize-none text-foreground placeholder:text-muted-foreground focus:outline-none"
-                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... Use @ to mention content"}
+                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... @ to mention, / to run a skill"}
                                         rows={3}
                                         value={chatMessage}
-                                        onChange={(e) => {
-                                            mention.handleChange(e);
-                                            autoResizeTextarea();
-                                        }}
+                                        onChange={composerChange}
                                         onKeyDown={handleKeyDown}
                                         onPaste={handlePaste}
                                         disabled={isStreaming}
@@ -1459,6 +1572,10 @@ function ChatPanel() {
                                         )}
 
                                         <StreamingBubble content={streamingContent} />
+
+                                        {sessionDrafts.map((draft) => (
+                                            <ProposedSkillDraftCard key={draft.id} draft={draft} />
+                                        ))}
                                     </div>
 
                                     <div ref={messagesEndRef} />
@@ -1556,17 +1673,16 @@ function ChatPanel() {
                                         ))}
                                     </div>
                                 )}
+                                {renderInvokedSkillChip()}
                                 <div className="relative flex flex-col bg-muted border border-border rounded-lg focus-within:ring-1 focus-within:ring-ring">
+                                    {renderSlashPopup()}
                                     <textarea
                                         ref={textareaRef}
                                         className="w-full bg-transparent px-3 pt-2 pb-10 text-sm resize-none text-foreground placeholder:text-muted-foreground focus:outline-none"
-                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... Use @ to mention content"}
+                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... @ to mention, / to run a skill"}
                                         rows={3}
                                         value={chatMessage}
-                                        onChange={(e) => {
-                                            mention.handleChange(e);
-                                            autoResizeTextarea();
-                                        }}
+                                        onChange={composerChange}
                                         onKeyDown={handleKeyDown}
                                         onPaste={handlePaste}
                                         disabled={isStreaming}

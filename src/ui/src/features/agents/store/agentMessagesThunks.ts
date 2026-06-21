@@ -19,6 +19,8 @@ import {
     streamError,
     streamCancelled,
 } from '@/features/agents/store/agentMessagesSlice';
+import { upsertProposedDraft } from '@/features/agents/store/agentSkillDraftsSlice';
+import { skillDraftToPlain } from '@/features/agents/store/agentSkillDraftsThunks';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -54,6 +56,7 @@ export const messageToPlain = (msg: MessageInfo) => ({
     editedAt: timestampToPlain(msg.editedAt),
     previousContent: msg.previousContent,
     wasCancelled: msg.wasCancelled,
+    feedbackRating: msg.feedbackRating || '',
 });
 
 export type SerializedMessage = ReturnType<typeof messageToPlain>;
@@ -99,6 +102,7 @@ export const streamSendMessage = createAsyncThunk<
         sessionId: string;
         content: string;
         fileIds?: string[];
+        invokedSkillId?: string;
     },
     { state: RootState; rejectValue: string }
 >('agentMessages/streamSendMessage', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -117,6 +121,7 @@ export const streamSendMessage = createAsyncThunk<
             content: params.content,
             fileIds: params.fileIds ?? [],
             userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            invokedSkillId: params.invokedSkillId,
         });
 
         // RAF-batched token flush caps React re-renders at ~60fps regardless of token arrival rate.
@@ -188,6 +193,14 @@ export const streamSendMessage = createAsyncThunk<
                     toolArgsJson: event.event.value.toolArgsJson,
                     description: event.event.value.description,
                 }));
+            } else if (event.event.case === 'skillDraft') {
+                const draft = event.event.value.draft;
+                if (draft) {
+                    dispatch(upsertProposedDraft({
+                        draft: skillDraftToPlain(draft),
+                        sessionId: params.sessionId,
+                    }));
+                }
             } else if (event.event.case === 'error') {
                 if (rafId !== null) cancelAnimationFrame(rafId);
                 flushTokens();
@@ -287,6 +300,14 @@ export const rerunFromMessage = createAsyncThunk<
                     toolArgsJson: event.event.value.toolArgsJson,
                     description: event.event.value.description,
                 }));
+            } else if (event.event.case === 'skillDraft') {
+                const draft = event.event.value.draft;
+                if (draft) {
+                    dispatch(upsertProposedDraft({
+                        draft: skillDraftToPlain(draft),
+                        sessionId: params.sessionId,
+                    }));
+                }
             } else if (event.event.case === 'error') {
                 if (rafId !== null) cancelAnimationFrame(rafId);
                 flushTokens();
@@ -370,6 +391,30 @@ export const deleteAgentMessage = createAsyncThunk<
     } catch (error) {
         return rejectWithValue(
             error instanceof Error ? error.message : 'Failed to delete message',
+        );
+    }
+});
+
+export const submitMessageFeedback = createAsyncThunk<
+    { sessionId: string; messageId: string; rating: string },
+    { sessionId: string; messageId: string; rating: string },
+    { state: RootState; rejectValue: string }
+>('agentMessages/submitFeedback', async (params, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        await sessionsApi.submitMessageFeedback({
+            organizationId,
+            messageId: params.messageId,
+            rating: params.rating,
+        });
+        return {
+            sessionId: params.sessionId,
+            messageId: params.messageId,
+            rating: params.rating,
+        };
+    } catch (error) {
+        return rejectWithValue(
+            error instanceof Error ? error.message : 'Failed to submit feedback',
         );
     }
 });

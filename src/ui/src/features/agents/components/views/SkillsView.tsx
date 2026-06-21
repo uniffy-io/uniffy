@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from "react";
-import { CircleNotch } from "@phosphor-icons/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CircleNotch, Plus, ClockCounterClockwise } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     selectSkillSearch,
     setSkillSearch,
@@ -14,6 +15,17 @@ import {
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import { selectAllAgents } from "@/features/agents/store/agentsSlice";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import {
+    createSkillDraft,
+    discardSkillDraft,
+    type SerializedSkillDraft,
+} from "@/features/agents/store/agentSkillDraftsThunks";
+import { SkillDraftEditorModal } from "@/features/agents/components/skills/SkillDraftEditorModal";
+import { SkillVersionHistoryModal } from "@/features/agents/components/skills/SkillVersionHistoryModal";
+import { SkillDraftsInbox } from "@/features/agents/components/skills/SkillDraftsInbox";
+import { selectInboxCount } from "@/features/agents/store/agentSkillDraftsSlice";
+import { fetchSkillDrafts } from "@/features/agents/store/agentSkillDraftsThunks";
+import type { SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
 import { fetchAgents, updateAgent } from "@/features/agents/store/agentsThunks";
 import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 
@@ -36,6 +48,14 @@ export function SkillsView() {
     const agentsMap = useAppSelector(selectAllAgents);
     const selectedAgentId = useAppSelector(selectSelectedAgentId);
 
+    const [newDraft, setNewDraft] = useState<SerializedSkillDraft | null>(null);
+    const [creatingDraft, setCreatingDraft] = useState(false);
+    const [historySkill, setHistorySkill] = useState<SerializedSkill | null>(null);
+    const [skillsTab, setSkillsTab] = useState<"active" | "drafts">("active");
+    const newDraftSavedRef = useRef(false);
+
+    const inboxCount = useAppSelector(selectInboxCount);
+
     const agents = useMemo(() => Object.values(agentsMap), [agentsMap]);
     const skills = useMemo(() => Object.values(skillsMap), [skillsMap]);
     const selectedAgent = useMemo(
@@ -46,6 +66,7 @@ export function SkillsView() {
     useEffect(() => {
         dispatch(fetchSkills());
         dispatch(fetchAgents());
+        dispatch(fetchSkillDrafts({ status: "pending" }));
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Auto-select default or first agent when none is selected
@@ -94,6 +115,30 @@ export function SkillsView() {
         [agents],
     );
 
+    const handleNewSkill = async () => {
+        if (creatingDraft) return;
+        setCreatingDraft(true);
+        try {
+            const draft = await dispatch(
+                createSkillDraft({ kind: "create", name: "", displayName: "", content: "" }),
+            ).unwrap();
+            newDraftSavedRef.current = false;
+            setNewDraft(draft);
+        } finally {
+            setCreatingDraft(false);
+        }
+    };
+
+    // Closing the New-skill editor without saving drops the empty seed draft so
+    // it never lingers in the review inbox.
+    const handleCloseNewDraft = () => {
+        const draft = newDraft;
+        setNewDraft(null);
+        if (draft && !newDraftSavedRef.current) {
+            dispatch(discardSkillDraft(draft.id));
+        }
+    };
+
     if (loading && skills.length === 0) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -112,29 +157,76 @@ export function SkillsView() {
                     Manage agent skills and capabilities
                 </p>
 
-                <div className="mt-3 flex items-center gap-3">
-                    <Select
-                        value={selectedAgentId ?? undefined}
-                        onChange={(val) => dispatch(setSelectedAgent(val))}
-                        options={agentOptions}
-                        placeholder="Select agent..."
-                    />
-                    <div className="flex-1 max-w-md">
-                        <Input
-                            value={skillSearch}
-                            onChange={(e) =>
-                                dispatch(setSkillSearch(e.target.value))
-                            }
-                            placeholder="Search skills..."
-                        />
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                        {activeCount} active / {skills.length} total
-                    </span>
+                <div className="mt-3 flex items-center gap-1 border-b border-border -mb-px">
+                    <button
+                        type="button"
+                        onClick={() => setSkillsTab("active")}
+                        className={cn(
+                            "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                            skillsTab === "active"
+                                ? "border-primary text-foreground"
+                                : "border-transparent text-muted-foreground hover:text-foreground",
+                        )}
+                    >
+                        Library
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setSkillsTab("drafts")}
+                        className={cn(
+                            "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5",
+                            skillsTab === "drafts"
+                                ? "border-primary text-foreground"
+                                : "border-transparent text-muted-foreground hover:text-foreground",
+                        )}
+                    >
+                        Drafts
+                        {inboxCount > 0 && (
+                            <Badge className="bg-primary/10 text-primary border-transparent px-1.5 py-0">
+                                {inboxCount}
+                            </Badge>
+                        )}
+                    </button>
                 </div>
+
+                {skillsTab === "active" && (
+                    <div className="mt-3 flex items-center gap-3">
+                        <Select
+                            value={selectedAgentId ?? undefined}
+                            onChange={(val) => dispatch(setSelectedAgent(val))}
+                            options={agentOptions}
+                            placeholder="Select agent..."
+                        />
+                        <div className="flex-1 max-w-md">
+                            <Input
+                                value={skillSearch}
+                                onChange={(e) =>
+                                    dispatch(setSkillSearch(e.target.value))
+                                }
+                                placeholder="Search skills..."
+                            />
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                            {activeCount} active / {skills.length} total
+                        </span>
+                        <Button
+                            size="sm"
+                            onClick={handleNewSkill}
+                            disabled={creatingDraft}
+                            className="ml-auto"
+                        >
+                            <Plus size={16} className="mr-1" />
+                            {creatingDraft ? "Opening..." : "New skill"}
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
+                {skillsTab === "drafts" ? (
+                    <SkillDraftsInbox onSkillSaved={() => dispatch(fetchSkills())} />
+                ) : (
+                <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredSkills.map((skill) => {
                         const isActive = skill.alwaysActive || enabledSkillIds.has(skill.id);
@@ -179,6 +271,14 @@ export function SkillsView() {
                                                 Always loaded
                                             </Badge>
                                         )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setHistorySkill(skill)}
+                                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            <ClockCounterClockwise size={14} />
+                                            v{skill.activeVersionNumber || 1}
+                                        </button>
                                     </div>
                                     <button
                                         type="button"
@@ -212,7 +312,27 @@ export function SkillsView() {
                         <p className="text-muted-foreground">No skills found</p>
                     </div>
                 )}
+                </>
+                )}
             </div>
+
+            {newDraft && (
+                <SkillDraftEditorModal
+                    draft={newDraft}
+                    onClose={handleCloseNewDraft}
+                    onSaved={() => {
+                        newDraftSavedRef.current = true;
+                        dispatch(fetchSkills());
+                    }}
+                />
+            )}
+
+            {historySkill && (
+                <SkillVersionHistoryModal
+                    skill={historySkill}
+                    onClose={() => setHistorySkill(null)}
+                />
+            )}
         </div>
     );
 }

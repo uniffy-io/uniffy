@@ -27,6 +27,9 @@ export const skillToPlain = (skill: SkillInfo) => ({
     content: skill.content,
     source: skill.source,
     alwaysActive: skill.alwaysActive,
+    latestVersionNumber: skill.latestVersionNumber,
+    activeVersionNumber: skill.activeVersionNumber,
+    activeVersionPinned: skill.activeVersionPinned,
     createdAt: timestampToPlain(skill.createdAt),
     updatedAt: timestampToPlain(skill.updatedAt),
 });

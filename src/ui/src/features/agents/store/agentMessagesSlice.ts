@@ -6,6 +6,7 @@ import {
     editAgentMessage,
     fetchMessages,
     retryAgentMessage,
+    submitMessageFeedback,
 } from '@/features/agents/store/agentMessagesThunks';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 
@@ -265,6 +266,11 @@ export const agentMessagesSlice = createSlice({
                 if (!list) return;
                 const anchor = list.find((m) => m.id === anchorMessageId);
                 invalidateAfter(list, anchor?.createdAt, false);
+            })
+            .addCase(submitMessageFeedback.fulfilled, (state, action) => {
+                const { sessionId, messageId, rating } = action.payload;
+                const msg = state.messagesBySession[sessionId]?.find((m) => m.id === messageId);
+                if (msg) msg.feedbackRating = rating;
             });
     },
 });
