@@ -146,6 +146,7 @@ export const agentMessagesSlice = createSlice({
                 editedAt: undefined,
                 previousContent: undefined,
                 wasCancelled: false,
+                feedbackRating: '',
             });
         },
         reconcileStoredMessage: (state, action: PayloadAction<{ sessionId: string; message: SerializedMessage }>) => {
