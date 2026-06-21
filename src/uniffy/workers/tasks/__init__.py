@@ -13,6 +13,7 @@ from uniffy.workers.tasks.agent_cron import (
     execute_single_agent_cron_task,
 )
 from uniffy.workers.tasks.agent_run import delete_run_stream, run_agent_session
+from uniffy.workers.tasks.agent_skill_analysis import analyze_session_for_skills
 from uniffy.workers.tasks.base import (
     core_on_shutdown,
     core_on_startup,
@@ -72,6 +73,7 @@ CORE_TASKS = (
 EGRESS_TASKS = (
     respond_to_chat_message,
     compact_session,
+    analyze_session_for_skills,
     execute_single_agent_cron_task,
     run_agent_session,
     delete_run_stream,
@@ -80,6 +82,7 @@ EGRESS_TASKS = (
 __all__ = [
     "CORE_TASKS",
     "EGRESS_TASKS",
+    "analyze_session_for_skills",
     "auto_unmute_channels",
     "check_calendar_reminders",
     "check_task_due_dates",
