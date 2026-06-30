@@ -27,6 +27,7 @@ import { fetchRunnableSkills, type SerializedRunnableSkill } from "@/features/ag
 import { selectRunnableSkillsForAgent } from "@/features/agents/store/agentRunnableSkillsSlice";
 import { ProposedSkillDraftCard } from "@/features/agents/components/skills/ProposedSkillDraftCard";
 import { selectSessionDrafts } from "@/features/agents/store/agentSkillDraftsSlice";
+import type { SerializedSkillDraft } from "@/features/agents/store/agentSkillDraftsThunks";
 import {
     selectChatMessage,
     selectSidebarContent,
@@ -113,6 +114,10 @@ function formatTime(ts?: { seconds: number; nanos: number }): string {
         hour: "numeric",
         minute: "2-digit",
     });
+}
+
+function tsSeconds(ts?: { seconds: number; nanos: number }): number {
+    return ts?.seconds ?? 0;
 }
 
 function formatTokenCount(tokens: number): string {
@@ -209,7 +214,7 @@ function UserBubble({ message }: { message: SerializedMessage }) {
 
     return (
         <div className="group flex flex-col items-end">
-            <div className="flex items-end gap-1">
+            <div className="flex items-end gap-1 w-full justify-end">
                 <MessageActions message={message} />
                 <div className="max-w-[70%] bg-chat-user text-chat-user-foreground rounded-2xl rounded-br-sm px-4 py-2">
                     {useRichEditor ? (
@@ -285,7 +290,7 @@ function AssistantBubble({ message }: { message: SerializedMessage }) {
 
     return (
         <div className="group flex flex-col items-start">
-            <div className="flex items-end gap-1">
+            <div className="flex items-end gap-1 w-full justify-start">
                 <div
                     className={cn(
                         "max-w-[70%] rounded-2xl rounded-bl-sm",
@@ -1223,6 +1228,32 @@ function ChatPanel() {
 
     const agentName = activeAgent?.name ?? "Chat";
 
+    // Place each proposed-skill card inline, right after the assistant reply
+    // that announced it, instead of stacking every draft at the bottom of the
+    // thread. A draft is created mid-turn (when the propose tool runs), so its
+    // turn's concluding assistant message is the first non-tool assistant
+    // message at or after the draft's timestamp. Drafts with no such message in
+    // the loaded thread (background-analyzer proposals created after the
+    // conversation) stay unanchored and fall to the end.
+    const draftAnchors = useMemo(() => {
+        const byMessageId = new Map<string, SerializedSkillDraft[]>();
+        const anchored = new Set<string>();
+        for (const draft of sessionDrafts) {
+            const reply = messages.find(
+                (m) =>
+                    m.role === MessageRole.ASSISTANT &&
+                    !m.toolCallId &&
+                    tsSeconds(m.createdAt) >= tsSeconds(draft.createdAt),
+            );
+            if (!reply) continue;
+            const list = byMessageId.get(reply.id) ?? [];
+            list.push(draft);
+            byMessageId.set(reply.id, list);
+            anchored.add(draft.id);
+        }
+        return { byMessageId, anchored };
+    }, [sessionDrafts, messages]);
+
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <input
@@ -1541,6 +1572,13 @@ function ChatPanel() {
                                     <div ref={contentWrapperRef} className="flex flex-col space-y-4">
                                         {(() => {
                                             const elements: React.ReactNode[] = [];
+                                            const pushDraftsAfter = (messageId: string) => {
+                                                for (const draft of draftAnchors.byMessageId.get(messageId) ?? []) {
+                                                    elements.push(
+                                                        <ProposedSkillDraftCard key={`draft-${draft.id}`} draft={draft} />,
+                                                    );
+                                                }
+                                            };
                                             let i = 0;
                                             while (i < messages.length) {
                                                 const message = messages[i];
@@ -1558,6 +1596,7 @@ function ChatPanel() {
                                                     // Skip intermediate tool-loop assistant messages (toolCallId set) - their content is preamble repeated before each tool call.
                                                     if (!message.toolCallId) {
                                                         elements.push(<AssistantBubble key={message.id} message={message} />);
+                                                        pushDraftsAfter(message.id);
                                                     }
                                                     i++;
                                                 }
@@ -1583,9 +1622,11 @@ function ChatPanel() {
 
                                         <StreamingBubble content={streamingContent} />
 
-                                        {sessionDrafts.map((draft) => (
-                                            <ProposedSkillDraftCard key={draft.id} draft={draft} />
-                                        ))}
+                                        {sessionDrafts
+                                            .filter((draft) => !draftAnchors.anchored.has(draft.id))
+                                            .map((draft) => (
+                                                <ProposedSkillDraftCard key={draft.id} draft={draft} />
+                                            ))}
                                     </div>
 
                                     <div ref={messagesEndRef} />

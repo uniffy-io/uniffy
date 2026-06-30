@@ -1,17 +1,30 @@
 import { useState } from 'react';
-import { Lightning, Check, X } from '@phosphor-icons/react';
+import { Lightning, Check, X, Trash } from '@phosphor-icons/react';
+import { useAppDispatch } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { SkillDraftEditorModal } from '@/features/agents/components/skills/SkillDraftEditorModal';
+import { discardSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
 import type { SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
 
 // Inline review card for a skill the agent proposed during the conversation.
 // It stays in the thread after the turn so the user can review whenever; the
 // draft is never active until saved.
 export function ProposedSkillDraftCard({ draft }: { draft: SerializedSkillDraft }) {
+    const dispatch = useAppDispatch();
     const [editing, setEditing] = useState(false);
+    const [discarding, setDiscarding] = useState(false);
 
     const title = draft.displayName || draft.name || 'Proposed skill';
     const isEdit = draft.kind !== 'create';
+
+    const handleDiscard = async () => {
+        setDiscarding(true);
+        try {
+            await dispatch(discardSkillDraft(draft.id)).unwrap();
+        } finally {
+            setDiscarding(false);
+        }
+    };
 
     return (
         <div
@@ -38,9 +51,19 @@ export function ProposedSkillDraftCard({ draft }: { draft: SerializedSkillDraft 
                             <button
                                 type="button"
                                 onClick={() => setEditing(true)}
-                                className="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                                disabled={discarding}
+                                className="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                             >
                                 Review &amp; save
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDiscard}
+                                disabled={discarding}
+                                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                            >
+                                <Trash size={13} />
+                                Discard
                             </button>
                         </div>
                     ) : (
