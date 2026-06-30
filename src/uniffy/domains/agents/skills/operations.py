@@ -692,7 +692,17 @@ class SkillOperations:
         author_id = None if author_kind == "agent" else user_id
         was_always_active = False
 
-        if draft.kind == "create":
+        # A create draft whose name already belongs to a skill the reviewer can
+        # edit is reconciled into an edit of that skill: two skills can never
+        # share a machine name in an org, so saving it versions the existing
+        # skill instead of failing with a duplicate-name error.
+        reconcile_id = draft.target_skill_id
+        if draft.kind == "create" and reconcile_id is None:
+            collision = await self._find_skill_by_name(organization_id, clean.name)
+            if collision is not None:
+                reconcile_id = collision.id
+
+        if draft.kind == "create" and reconcile_id is None:
             scope = (
                 suggested_scope
                 if suggested_scope in ("personal", "organization")
@@ -736,26 +746,43 @@ class SkillOperations:
             skill = await self._load_skill_for_edit(
                 user_id=user_id,
                 organization_id=organization_id,
-                skill_id=draft.target_skill_id,
+                skill_id=reconcile_id,
             )
             if clean.name != skill.name:
                 await self._require_unique_name(organization_id, clean.name, exclude_id=skill.id)
             was_always_active = skill.always_active
+            new_tools = list(requires_tools or [])
+            new_context = list(requires_context or [])
+            # always_active is a row flag, not a versioned field, so an
+            # always-active-only edit updates the row without cutting a new
+            # version. A version is snapshotted only when versioned content moves.
+            versioned_changed = (
+                clean.name != skill.name
+                or clean.display_name != skill.display_name
+                or clean.description != (skill.description or "")
+                or clean.content != (skill.content or "")
+                or clean.when_to_use != (skill.when_to_use or "")
+                or new_tools != list(skill.requires_tools or [])
+                or new_context != list(skill.requires_context or [])
+            )
             skill.name = clean.name
             skill.display_name = clean.display_name
             skill.description = clean.description
             skill.content = clean.content
             skill.when_to_use = clean.when_to_use
-            skill.requires_tools = list(requires_tools or [])
-            skill.requires_context = list(requires_context or [])
+            skill.requires_tools = new_tools
+            skill.requires_context = new_context
             skill.always_active = bool(suggested_always_active)
             skill.updated_at = datetime.now(UTC)
-            version = await self._snapshot_version(
-                skill,
-                author_id=author_id,
-                author_kind=author_kind,
-                change_summary=change_summary or "Edited via draft",
-            )
+            if versioned_changed:
+                version = await self._snapshot_version(
+                    skill,
+                    author_id=author_id,
+                    author_kind=author_kind,
+                    change_summary=change_summary or "Edited via draft",
+                )
+            else:
+                version = await self._load_active_version(skill)
             audit_action = Action.AGENT_SKILL_UPDATED
 
         draft.status = "saved"
@@ -1078,6 +1105,17 @@ class SkillOperations:
             raise NotFoundError("AgentSkillVersion", f"{skill_id}:{version_number}")
         return version
 
+    async def _load_active_version(self, skill: AgentSkill) -> AgentSkillVersion:
+        """Return the skill's current main (active) version, falling back to the latest."""
+        if skill.active_version_id is not None:
+            version = await self._session.get(AgentSkillVersion, skill.active_version_id)
+            if version is not None:
+                return version
+        version = await self._get_version_or_none(skill.id, skill.latest_version_number or 1)
+        if version is None:
+            raise NotFoundError("AgentSkillVersion", str(skill.id))
+        return version
+
     async def _get_version_or_none(
         self, skill_id: UUID, version_number: int
     ) -> AgentSkillVersion | None:
@@ -1138,6 +1176,18 @@ class SkillOperations:
             raise ValidationError(
                 "name", f"Skill name '{name}' already exists in this organization"
             )
+
+    async def _find_skill_by_name(
+        self, organization_id: UUID, name: str
+    ) -> AgentSkill | None:
+        """Return the org's skill with this exact machine name, if any."""
+        result = await self._session.execute(
+            select(AgentSkill).where(
+                AgentSkill.organization_id == organization_id,
+                AgentSkill.name == name,
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def _load_editable_skill(
         self, organization_id: UUID, target_skill_id: UUID | None

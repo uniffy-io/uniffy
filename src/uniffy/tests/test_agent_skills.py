@@ -569,6 +569,92 @@ def _edit_ops(monkeypatch):
     return ops
 
 
+class TestSaveSkillDraftEdit:
+    def _setup(self, monkeypatch):
+        import uniffy.domains.agents.skills.operations as ops_mod
+
+        ops = _edit_ops(monkeypatch)
+        monkeypatch.setattr(ops_mod, "check_admin_content", MagicMock())
+        monkeypatch.setattr(ops_mod, "clean_skill_write", lambda **kw: NS(**kw))
+        ops._org_ops = MagicMock()
+        ops._org_ops.require_org_member = AsyncMock()
+        ops._org_ops.require_org_admin = AsyncMock()
+        skill = AgentSkill(
+            id=uuid4(),
+            organization_id=uuid4(),
+            name="report",
+            display_name="Report",
+            description="desc",
+            content="BODY",
+            source="organization",
+            when_to_use="when",
+            requires_tools=[],
+            requires_context=[],
+            always_active=False,
+            latest_version_number=2,
+            active_version_id=uuid4(),
+            active_version_pinned=False,
+        )
+        draft = NS(
+            id=uuid4(),
+            kind="edit",
+            proposed_by_agent_id=None,
+            target_skill_id=skill.id,
+            status="pending",
+            channel_id=None,
+            origin_chat_message_id=None,
+        )
+        ops._get_owned_draft = AsyncMock(return_value=draft)
+        ops._load_skill_for_edit = AsyncMock(return_value=skill)
+        ops._notify_chat_draft_resolved = AsyncMock()
+        return ops, skill, draft
+
+    def _save(self, ops, skill, draft, *, content, always_active):
+        return _run(
+            ops.save_skill_draft(
+                user_id=uuid4(),
+                organization_id=skill.organization_id,
+                draft_id=draft.id,
+                name="report",
+                display_name="Report",
+                description="desc",
+                content=content,
+                when_to_use="when",
+                requires_tools=[],
+                requires_context=[],
+                suggested_scope="organization",
+                suggested_always_active=always_active,
+            )
+        )
+
+    def test_always_active_only_edit_skips_version(self, monkeypatch) -> None:
+        ops, skill, draft = self._setup(monkeypatch)
+        ops._snapshot_version = AsyncMock()
+        existing = NS(version_number=2)
+        ops._load_active_version = AsyncMock(return_value=existing)
+
+        _, version = self._save(ops, skill, draft, content="BODY", always_active=True)
+
+        # Toggling always_active touches the row but cuts no new version.
+        ops._snapshot_version.assert_not_awaited()
+        ops._load_active_version.assert_awaited_once()
+        assert version is existing
+        assert skill.always_active is True
+        assert draft.status == "saved"
+
+    def test_content_change_creates_version(self, monkeypatch) -> None:
+        ops, skill, draft = self._setup(monkeypatch)
+        new_version = NS(version_number=3)
+        ops._snapshot_version = AsyncMock(return_value=new_version)
+        ops._load_active_version = AsyncMock()
+
+        _, version = self._save(ops, skill, draft, content="NEW BODY", always_active=False)
+
+        ops._snapshot_version.assert_awaited_once()
+        ops._load_active_version.assert_not_awaited()
+        assert version is new_version
+
+
 class TestResolveActiveVersionNumber:
     def test_unpinned_returns_latest(self) -> None:
         from uniffy.domains.agents.skills.operations import SkillOperations
