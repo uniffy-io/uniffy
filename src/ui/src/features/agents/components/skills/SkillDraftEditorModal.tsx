@@ -3,6 +3,7 @@ import { Lightning, Trash } from '@phosphor-icons/react';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { Modal } from '@/components/ui/modal';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch } from '@/app/hooks';
 import {
@@ -161,14 +162,15 @@ export function SkillDraftEditorModal({
                         {!isEdit && (
                             <label className="flex items-center gap-2 text-sm text-foreground">
                                 <span className="text-muted-foreground">Scope</span>
-                                <select
+                                <Select
                                     value={scope}
-                                    onChange={(e) => setScope(e.target.value)}
-                                    className="bg-muted border border-border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                >
-                                    <option value="personal">Personal</option>
-                                    <option value="organization">Organization</option>
-                                </select>
+                                    onChange={setScope}
+                                    size="sm"
+                                    options={[
+                                        { value: 'personal', label: 'Personal' },
+                                        { value: 'organization', label: 'Organization' },
+                                    ]}
+                                />
                             </label>
                         )}
                         <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">

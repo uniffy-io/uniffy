@@ -16,6 +16,7 @@ interface SelectProps<T extends string | number = string> {
     placeholder?: string;
     disabled?: boolean;
     className?: string;
+    triggerClassName?: string;
     size?: 'sm' | 'md';
 }
 
@@ -33,6 +34,7 @@ export function Select<T extends string | number = string>({
     placeholder = 'Select...',
     disabled = false,
     className,
+    triggerClassName,
     size = 'md',
 }: SelectProps<T>) {
     const [isOpen, setIsOpen] = useState(false);
@@ -192,7 +194,8 @@ export function Select<T extends string | number = string>({
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                     'hover:bg-muted/50',
                     sizeClasses[size],
-                    'min-w-[100px]'
+                    'min-w-[100px]',
+                    triggerClassName
                 )}
             >
                 <span className="flex items-center gap-2 truncate">

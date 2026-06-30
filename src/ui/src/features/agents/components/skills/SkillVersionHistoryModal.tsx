@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ClockCounterClockwise, PushPin, ArrowCounterClockwise, CircleNotch } from '@phosphor-icons/react';
 import { SkillSource } from '@uniffy/proto/agents/v1/skills_pb';
 import { Modal } from '@/components/ui/modal';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/shared/utils/cn';
 import { formatProtoDateTime } from '@/shared/utils/dateFormatting';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -123,33 +124,27 @@ export function SkillVersionHistoryModal({ skill, onClose }: SkillVersionHistory
                         <div className="space-y-2">
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 <span>Compare</span>
-                                <select
+                                <Select
                                     value={compare.base}
-                                    onChange={(e) =>
-                                        setCompare({ ...compare, base: Number(e.target.value) })
-                                    }
-                                    className="bg-muted border border-border rounded px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                >
-                                    {versions.map((v) => (
-                                        <option key={v.id} value={v.versionNumber}>
-                                            v{v.versionNumber}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(value) => setCompare({ ...compare, base: value })}
+                                    size="sm"
+                                    triggerClassName="min-w-0 w-20"
+                                    options={versions.map((v) => ({
+                                        value: v.versionNumber,
+                                        label: `v${v.versionNumber}`,
+                                    }))}
+                                />
                                 <span>with</span>
-                                <select
+                                <Select
                                     value={compare.target}
-                                    onChange={(e) =>
-                                        setCompare({ ...compare, target: Number(e.target.value) })
-                                    }
-                                    className="bg-muted border border-border rounded px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                >
-                                    {versions.map((v) => (
-                                        <option key={v.id} value={v.versionNumber}>
-                                            v{v.versionNumber}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(value) => setCompare({ ...compare, target: value })}
+                                    size="sm"
+                                    triggerClassName="min-w-0 w-20"
+                                    options={versions.map((v) => ({
+                                        value: v.versionNumber,
+                                        label: `v${v.versionNumber}`,
+                                    }))}
+                                />
                             </div>
                             <div className="max-h-72 overflow-hidden flex flex-col">
                                 <SkillVersionDiff

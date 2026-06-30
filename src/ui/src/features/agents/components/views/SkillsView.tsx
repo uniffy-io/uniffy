@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CircleNotch, Plus, ClockCounterClockwise, PencilSimple } from "@phosphor-icons/react";
+import { CircleNotch, Plus, ClockCounterClockwise, PencilSimple, Lightning, Trash } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
     selectSkillSearch,
     setSkillSearch,
@@ -14,7 +15,7 @@ import {
 } from "@/features/agents/store/agentsUiSlice";
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import { selectAllAgents } from "@/features/agents/store/agentsSlice";
-import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import { deleteSkill, fetchSkills } from "@/features/agents/store/agentSkillsThunks";
 import {
     createSkillDraft,
     discardSkillDraft,
@@ -35,6 +36,8 @@ function getSourceLabel(source: number): string {
             return "Bundled";
         case SkillSource.ORGANIZATION:
             return "Organization";
+        case SkillSource.PERSONAL:
+            return "Personal";
         default:
             return "Unknown";
     }
@@ -51,6 +54,8 @@ export function SkillsView() {
     const [editorDraft, setEditorDraft] = useState<SerializedSkillDraft | null>(null);
     const [creatingDraft, setCreatingDraft] = useState(false);
     const [historySkill, setHistorySkill] = useState<SerializedSkill | null>(null);
+    const [deletingSkill, setDeletingSkill] = useState<SerializedSkill | null>(null);
+    const [deleteBusy, setDeleteBusy] = useState(false);
     const [skillsTab, setSkillsTab] = useState<"active" | "drafts">("active");
     const editorSavedRef = useRef(false);
 
@@ -169,6 +174,17 @@ export function SkillsView() {
         }
     };
 
+    const handleConfirmDelete = async () => {
+        if (!deletingSkill) return;
+        setDeleteBusy(true);
+        try {
+            await dispatch(deleteSkill(deletingSkill.id)).unwrap();
+            setDeletingSkill(null);
+        } finally {
+            setDeleteBusy(false);
+        }
+    };
+
     if (loading && skills.length === 0) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -266,8 +282,8 @@ export function SkillsView() {
                                 className="bg-card border border-border rounded-lg overflow-hidden"
                             >
                                 <div className="px-4 py-3 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-sm font-bold text-foreground">
-                                        {skill.displayName.charAt(0).toUpperCase()}
+                                    <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                                        <Lightning size={18} weight="fill" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium truncate text-foreground">
@@ -289,8 +305,15 @@ export function SkillsView() {
                                 </div>
 
                                 <div className="px-4 py-3">
-                                    <p className="text-sm text-muted-foreground line-clamp-2">
-                                        {skill.description}
+                                    <p
+                                        className={cn(
+                                            "text-sm line-clamp-2 min-h-10",
+                                            skill.description
+                                                ? "text-muted-foreground"
+                                                : "text-muted-foreground/60 italic"
+                                        )}
+                                    >
+                                        {skill.description || "No description provided"}
                                     </p>
                                 </div>
 
@@ -310,35 +333,49 @@ export function SkillsView() {
                                             v{skill.activeVersionNumber || 1}
                                         </button>
                                         {skill.source !== SkillSource.BUNDLED && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleEditSkill(skill)}
-                                                disabled={creatingDraft}
-                                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                                            >
-                                                <PencilSimple size={14} />
-                                                Edit
-                                            </button>
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEditSkill(skill)}
+                                                    disabled={creatingDraft}
+                                                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                                                >
+                                                    <PencilSimple size={14} />
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDeletingSkill(skill)}
+                                                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash size={14} />
+                                                    Delete
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                     <button
                                         type="button"
+                                        role="switch"
+                                        aria-checked={isActive}
                                         onClick={() => handleToggle(skill.id)}
                                         disabled={skill.alwaysActive}
                                         className={cn(
-                                            "relative w-8 h-4 rounded-full transition-colors cursor-pointer",
+                                            "relative inline-flex shrink-0 w-9 h-5 rounded-full transition-colors",
                                             isActive
                                                 ? "bg-green-500"
                                                 : "bg-muted-foreground/30",
-                                            skill.alwaysActive && "cursor-not-allowed opacity-50"
+                                            skill.alwaysActive
+                                                ? "cursor-not-allowed opacity-50"
+                                                : "cursor-pointer"
                                         )}
                                     >
                                         <span
                                             className={cn(
-                                                "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform",
+                                                "pointer-events-none absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform",
                                                 isActive
                                                     ? "translate-x-4"
-                                                    : "translate-x-0.5"
+                                                    : "translate-x-0"
                                             )}
                                         />
                                     </button>
@@ -374,6 +411,22 @@ export function SkillsView() {
                     onClose={() => setHistorySkill(null)}
                 />
             )}
+
+            <ConfirmDialog
+                isOpen={deletingSkill !== null}
+                onClose={() => setDeletingSkill(null)}
+                onConfirm={handleConfirmDelete}
+                title="Delete skill"
+                message={
+                    <>
+                        Delete <span className="font-medium text-foreground">{deletingSkill?.displayName}</span>?
+                        This removes the skill and all its versions, and unenrolls it from every agent. This cannot be undone.
+                    </>
+                }
+                confirmLabel="Delete"
+                variant="danger"
+                loading={deleteBusy}
+            />
         </div>
     );
 }
