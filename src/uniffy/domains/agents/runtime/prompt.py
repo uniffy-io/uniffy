@@ -282,7 +282,10 @@ def _build_skill_section(skills: list[SkillPromptEntry]) -> str | None:
         lines = [
             "The following skills are available but not yet loaded. A skill is "
             f"NOT a tool -- to use one, first call the `{SKILL_VIEW_TOOL}` tool "
-            "with its name to load the full instructions, then follow them:",
+            "with its name to load the full instructions, then follow them. When "
+            "the user's request matches a skill's trigger below, load and follow "
+            "that skill before replying, instead of answering from memory or "
+            "proposing a new or changed skill for something it already covers:",
             "",
         ]
         for s in available:
@@ -292,7 +295,9 @@ def _build_skill_section(skills: list[SkillPromptEntry]) -> str | None:
                 entry += f": {description}"
             when = s.when_to_use.strip()
             if when:
-                entry += f" -- use when {when}"
+                # Avoid "use when when ..." when the guidance already leads with "when".
+                lead = "" if when[:5].lower() == "when " else "use when "
+                entry += f" -- {lead}{when}"
             lines.append(entry)
         parts.append("\n".join(lines))
 

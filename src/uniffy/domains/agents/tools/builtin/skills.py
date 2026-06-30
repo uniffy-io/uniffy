@@ -66,12 +66,14 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
 
     ops = SkillOperations(ctx.session)
 
-    # An optional target skill name turns this into an edit proposal, scoped to
-    # the skills this agent can actually see (no editing arbitrary org skills).
+    # Resolve whether this proposal edits a skill the agent can see (no editing
+    # arbitrary org skills). An explicit target_skill_name matches by machine
+    # name or display name; failing that, a proposal whose machine name collides
+    # with a visible skill is treated as an edit of it - two skills can never
+    # share a name in an org, so a same-named "create" would only fail at save.
     target_skill_id = None
     kind = "create"
-    target_name = (args.get("target_skill_name") or "").strip()
-    if target_name and ctx.agent_id is not None:
+    if ctx.agent_id is not None:
         from uniffy.domains.agents.cache import fetch_agent_row
 
         agent = await fetch_agent_row(ctx.session, ctx.agent_id, ctx.organization_id)
@@ -80,7 +82,20 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
                 organization_id=ctx.organization_id,
                 enabled_skill_ids=agent.enabled_skills or [],
             )
-            match = next((s for s in visible if s.name == target_name), None)
+            target_name = (args.get("target_skill_name") or "").strip().lower()
+            match = None
+            if target_name:
+                match = next(
+                    (
+                        s
+                        for s in visible
+                        if s.name.lower() == target_name
+                        or (s.display_name or "").lower() == target_name
+                    ),
+                    None,
+                )
+            if match is None:
+                match = next((s for s in visible if s.name.lower() == name.lower()), None)
             if match is not None:
                 target_skill_id = match.id
                 kind = "edit"
@@ -123,9 +138,11 @@ propose_skill = ToolDefinition(
     description=(
         "Propose a reusable skill (a set of markdown instructions) for the user to review "
         "and save. Use this when the user teaches you a repeatable workflow, a preference, or "
-        "a procedure worth remembering across conversations. The draft is NOT active until the "
-        "user reviews and saves it - tell them you have drafted it. To suggest changing an "
-        "existing skill, pass its machine name as target_skill_name."
+        "a procedure worth remembering across conversations. Do NOT propose a skill for "
+        "something an advertised skill already covers - load that skill with view_skill and "
+        "follow it instead. The draft is NOT active until the user reviews and saves it - tell "
+        "them you have drafted it. To suggest changing an existing skill, pass its machine "
+        "name as target_skill_name."
     ),
     parameter_schema={
         "type": "object",
