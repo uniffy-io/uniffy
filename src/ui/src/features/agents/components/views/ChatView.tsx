@@ -1736,6 +1736,7 @@ function ChatPanel() {
 
 export function ChatView() {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
     const activeSessionId = useAppSelector(selectActiveSessionId);
 
@@ -1756,9 +1757,12 @@ export function ChatView() {
 
     const handleStartChat = useCallback(
         (agentId: string) => {
-            dispatch(createSession({ agentId, kind: SessionKind.DIRECT }));
+            dispatch(createSession({ agentId, kind: SessionKind.DIRECT }))
+                .unwrap()
+                .then((session) => navigate(`/agents/chat/${session.id}`))
+                .catch(() => {});
         },
-        [dispatch],
+        [dispatch, navigate],
     );
 
     const showSidebar = !isZenMode;
