@@ -70,7 +70,7 @@ class SessionInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., user_id: _Optional[str] = ..., kind: _Optional[_Union[SessionKind, str]] = ..., display_name: _Optional[str] = ..., model_override: _Optional[str] = ..., total_input_tokens: _Optional[int] = ..., total_output_tokens: _Optional[int] = ..., message_count: _Optional[int] = ..., last_model_used: _Optional[str] = ..., is_archived: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class MessageInfo(_message.Message):
-    __slots__ = ("id", "session_id", "role", "content", "input_tokens", "output_tokens", "model", "tool_name", "tool_call_id", "tool_args_json", "tool_result", "is_thinking", "is_compacted", "created_at", "file_ids", "is_invalidated", "edited_at", "previous_content", "was_cancelled", "feedback_rating")
+    __slots__ = ("id", "session_id", "role", "content", "input_tokens", "output_tokens", "model", "tool_name", "tool_call_id", "tool_args_json", "tool_result", "is_thinking", "is_compacted", "created_at", "file_ids", "is_invalidated", "edited_at", "previous_content", "was_cancelled", "feedback_rating", "invoked_skill_name")
     ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
@@ -91,6 +91,7 @@ class MessageInfo(_message.Message):
     PREVIOUS_CONTENT_FIELD_NUMBER: _ClassVar[int]
     WAS_CANCELLED_FIELD_NUMBER: _ClassVar[int]
     FEEDBACK_RATING_FIELD_NUMBER: _ClassVar[int]
+    INVOKED_SKILL_NAME_FIELD_NUMBER: _ClassVar[int]
     id: str
     session_id: str
     role: MessageRole
@@ -111,7 +112,8 @@ class MessageInfo(_message.Message):
     previous_content: str
     was_cancelled: bool
     feedback_rating: str
-    def __init__(self, id: _Optional[str] = ..., session_id: _Optional[str] = ..., role: _Optional[_Union[MessageRole, str]] = ..., content: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., model: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., tool_result: _Optional[str] = ..., is_thinking: _Optional[bool] = ..., is_compacted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_ids: _Optional[_Iterable[str]] = ..., is_invalidated: _Optional[bool] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., previous_content: _Optional[str] = ..., was_cancelled: _Optional[bool] = ..., feedback_rating: _Optional[str] = ...) -> None: ...
+    invoked_skill_name: str
+    def __init__(self, id: _Optional[str] = ..., session_id: _Optional[str] = ..., role: _Optional[_Union[MessageRole, str]] = ..., content: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., model: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., tool_result: _Optional[str] = ..., is_thinking: _Optional[bool] = ..., is_compacted: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., file_ids: _Optional[_Iterable[str]] = ..., is_invalidated: _Optional[bool] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., previous_content: _Optional[str] = ..., was_cancelled: _Optional[bool] = ..., feedback_rating: _Optional[str] = ..., invoked_skill_name: _Optional[str] = ...) -> None: ...
 
 class CreateSessionRequest(_message.Message):
     __slots__ = ("organization_id", "agent_id", "kind", "display_name", "model_override")

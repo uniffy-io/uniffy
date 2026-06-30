@@ -103,8 +103,8 @@ export const agentMessagesSlice = createSlice({
             state.activeRunId = null;
             writePersistedRunId(null);
         },
-        addOptimisticUserMessage: (state, action: PayloadAction<{ sessionId: string; content: string; fileIds?: string[] }>) => {
-            const { sessionId, content, fileIds } = action.payload;
+        addOptimisticUserMessage: (state, action: PayloadAction<{ sessionId: string; content: string; fileIds?: string[]; invokedSkillName?: string }>) => {
+            const { sessionId, content, fileIds, invokedSkillName } = action.payload;
             if (!state.messagesBySession[sessionId]) {
                 state.messagesBySession[sessionId] = [];
             }
@@ -147,6 +147,7 @@ export const agentMessagesSlice = createSlice({
                 previousContent: undefined,
                 wasCancelled: false,
                 feedbackRating: '',
+                invokedSkillName: invokedSkillName || '',
             });
         },
         reconcileStoredMessage: (state, action: PayloadAction<{ sessionId: string; message: SerializedMessage }>) => {

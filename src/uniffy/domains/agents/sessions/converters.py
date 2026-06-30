@@ -209,6 +209,8 @@ def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> Mes
         info.previous_content = message.previous_content
     if feedback_rating:
         info.feedback_rating = feedback_rating
+    if message.invoked_skill_name:
+        info.invoked_skill_name = message.invoked_skill_name
 
     return info
 

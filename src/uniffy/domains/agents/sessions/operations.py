@@ -328,6 +328,7 @@ class SessionOperations:
         tool_result: str | None = None,
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
+        invoked_skill_name: str | None = None,
     ) -> AgentMessage:
         """Add a message and update session aggregates (tokens, count, model)."""
         await self._org_ops.require_org_member(user_id, organization_id)
@@ -361,6 +362,7 @@ class SessionOperations:
             tool_result=tool_result,
             file_ids=file_ids,
             is_thinking=is_thinking,
+            invoked_skill_name=invoked_skill_name,
         )
         self._session.add(message)
 

@@ -228,7 +228,16 @@ function UserBubble({ message }: { message: SerializedMessage }) {
                     )}
                 </div>
             </div>
-            <span className="text-xs text-muted-foreground text-right mt-1">
+            <span className="text-xs text-muted-foreground text-right mt-1 flex items-center gap-1 justify-end">
+                {message.invokedSkillName && (
+                    <>
+                        <span className="inline-flex items-center gap-0.5 text-primary">
+                            <Lightning size={11} weight="fill" />
+                            {message.invokedSkillName}
+                        </span>
+                        <span aria-hidden>·</span>
+                    </>
+                )}
                 {formatTime(message.createdAt)}
                 {wasEdited && <span className="ml-1 italic">(edited)</span>}
             </span>
@@ -1167,6 +1176,7 @@ function ChatPanel() {
             content,
             fileIds: fileIds.length > 0 ? fileIds : undefined,
             invokedSkillId: pendingInvokedSkill?.id,
+            invokedSkillName: pendingInvokedSkill?.displayName,
         }));
         setPendingInvokedSkill(null);
     };

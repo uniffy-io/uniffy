@@ -317,8 +317,11 @@ type MessageInfo struct {
 	// The caller's own thumbs rating on this message ("up" | "down" | "").
 	// Only assistant messages carry feedback; empty when the caller hasn't rated.
 	FeedbackRating string `protobuf:"bytes,20,opt,name=feedback_rating,json=feedbackRating,proto3" json:"feedback_rating,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Display name of the skill the user ran via the slash menu for this turn.
+	// Only user messages carry it; empty when no skill was invoked.
+	InvokedSkillName string `protobuf:"bytes,21,opt,name=invoked_skill_name,json=invokedSkillName,proto3" json:"invoked_skill_name,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *MessageInfo) Reset() {
@@ -487,6 +490,13 @@ func (x *MessageInfo) GetWasCancelled() bool {
 func (x *MessageInfo) GetFeedbackRating() string {
 	if x != nil {
 		return x.FeedbackRating
+	}
+	return ""
+}
+
+func (x *MessageInfo) GetInvokedSkillName() string {
+	if x != nil {
+		return x.InvokedSkillName
 	}
 	return ""
 }
@@ -2307,7 +2317,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0f\n" +
 	"\r_display_nameB\x11\n" +
 	"\x0f_model_overrideB\x12\n" +
-	"\x10_last_model_used\"\xfc\x06\n" +
+	"\x10_last_model_used\"\xaa\a\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2334,7 +2344,8 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\tedited_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\beditedAt\x88\x01\x01\x12.\n" +
 	"\x10previous_content\x18\x12 \x01(\tH\aR\x0fpreviousContent\x88\x01\x01\x12#\n" +
 	"\rwas_cancelled\x18\x13 \x01(\bR\fwasCancelled\x12'\n" +
-	"\x0ffeedback_rating\x18\x14 \x01(\tR\x0efeedbackRatingB\n" +
+	"\x0ffeedback_rating\x18\x14 \x01(\tR\x0efeedbackRating\x12,\n" +
+	"\x12invoked_skill_name\x18\x15 \x01(\tR\x10invokedSkillNameB\n" +
 	"\n" +
 	"\b_contentB\b\n" +
 	"\x06_modelB\f\n" +

@@ -57,6 +57,7 @@ export const messageToPlain = (msg: MessageInfo) => ({
     previousContent: msg.previousContent,
     wasCancelled: msg.wasCancelled,
     feedbackRating: msg.feedbackRating || '',
+    invokedSkillName: msg.invokedSkillName || '',
 });
 
 export type SerializedMessage = ReturnType<typeof messageToPlain>;
@@ -103,6 +104,7 @@ export const streamSendMessage = createAsyncThunk<
         content: string;
         fileIds?: string[];
         invokedSkillId?: string;
+        invokedSkillName?: string;
     },
     { state: RootState; rejectValue: string }
 >('agentMessages/streamSendMessage', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -113,6 +115,7 @@ export const streamSendMessage = createAsyncThunk<
             sessionId: params.sessionId,
             content: params.content,
             fileIds: params.fileIds,
+            invokedSkillName: params.invokedSkillName,
         }));
 
         const stream = runtimeApi.streamSendMessage({

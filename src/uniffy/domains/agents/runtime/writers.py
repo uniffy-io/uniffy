@@ -63,6 +63,7 @@ class MessageWriter(Protocol):
         tool_result: str | None = None,
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
+        invoked_skill_name: str | None = None,
     ) -> AgentMessage:
         """Persist a message and return an `AgentMessage`-shaped envelope."""
 
@@ -150,6 +151,7 @@ class SessionMessageWriter:
         tool_result: str | None = None,
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
+        invoked_skill_name: str | None = None,
     ) -> AgentMessage:
         return await self._session_ops.add_message(
             user_id=self._user_id,
@@ -167,6 +169,7 @@ class SessionMessageWriter:
             tool_result=tool_result,
             is_thinking=is_thinking,
             file_ids=file_ids,
+            invoked_skill_name=invoked_skill_name,
         )
 
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
@@ -306,6 +309,7 @@ class ChatChannelMessageWriter:
         tool_result: str | None = None,
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
+        invoked_skill_name: str | None = None,
     ) -> AgentMessage:
         """Persist a runtime-step message into `chat_messages`.
 
@@ -321,6 +325,7 @@ class ChatChannelMessageWriter:
                 role="user",
                 content=content,
                 file_ids=file_ids,
+                invoked_skill_name=invoked_skill_name,
             )
 
         kind = _metadata_kind_for(role, tool_call_id)

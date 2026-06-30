@@ -55,6 +55,10 @@ class AgentMessage(SQLModel, table=True):
         default=None,
         sa_column=Column(Text, nullable=True),
     )
+    invoked_skill_name: str | None = Field(
+        default=None,
+        sa_column=Column(String(255), nullable=True),
+    )
     file_ids: list[str] | None = Field(
         default=None,
         sa_column=Column(JSONB, nullable=True),

@@ -549,6 +549,7 @@ class RuntimeOperations:
             role="user",
             content=stored_content,
             file_ids=[f.file_id for f in files] if files else None,
+            invoked_skill_name=invoked_entry.display_name if invoked_entry else None,
         )
 
         # 13. Call LLM (with tools if configured) and track timing
@@ -1265,6 +1266,7 @@ class RuntimeOperations:
                 role="user",
                 content=stored_content,
                 file_ids=[f.file_id for f in files] if files else None,
+                invoked_skill_name=invoked_entry.display_name if invoked_entry else None,
             )
             yield RuntimeMessageStoredEvent(message=user_message)
         else:
