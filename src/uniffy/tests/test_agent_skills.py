@@ -525,7 +525,14 @@ class TestProposeSkillTool:
         )
         fake_ops = MagicMock()
         fake_ops.propose_skill_draft = AsyncMock(return_value=draft)
+        fake_ops.get_skills_for_agent = AsyncMock(return_value=[])
         monkeypatch.setattr(ops_mod, "SkillOperations", lambda _session: fake_ops)
+
+        import uniffy.domains.agents.cache as cache_mod
+
+        monkeypatch.setattr(
+            cache_mod, "fetch_agent_row", AsyncMock(return_value=NS(enabled_skills=[]))
+        )
 
         ctx = self._ctx()
         result = _run(
