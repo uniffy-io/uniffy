@@ -12,6 +12,8 @@ from uuid import uuid4
 from uniffy.core.models.chat.message import SenderType
 from uniffy.domains.agents.skills.analysis import SkillEvolutionAnalyzer
 
+_INTERNAL_META = {"kind": "final", "visibility": "agent_internal"}
+
 
 def _run(coro):
     return asyncio.run(coro)
@@ -35,7 +37,7 @@ class TestGatherChannelSignals:
         # Newest-first, as the created_at.desc() query returns them; the gatherer
         # reverses into chronological order before building the transcript.
         rows = [
-            _msg(SenderType.AGENT, "INTERNAL_TEXT", {"kind": "final", "visibility": "agent_internal"}),
+            _msg(SenderType.AGENT, "INTERNAL_TEXT", _INTERNAL_META),
             _msg(SenderType.AGENT, "CONTEXTRESET_TEXT", {"kind": "context_reset"}),
             _msg(SenderType.AGENT, "SUMMARY_TEXT", {"kind": "summary"}),
             _msg(SenderType.AGENT, "TOOLRESULT_TEXT", {"kind": "tool_result"}),
@@ -65,7 +67,7 @@ class TestGatherChannelSignals:
             _msg(SenderType.AGENT, "TOOLRESULT_TEXT", {"kind": "tool_result"}),
             _msg(SenderType.AGENT, "SUMMARY_TEXT", {"kind": "summary"}),
             _msg(SenderType.AGENT, "CONTEXTRESET_TEXT", {"kind": "context_reset"}),
-            _msg(SenderType.AGENT, "INTERNAL_TEXT", {"kind": "final", "visibility": "agent_internal"}),
+            _msg(SenderType.AGENT, "INTERNAL_TEXT", _INTERNAL_META),
         ]
         signals = _run(
             _analyzer_over(rows).gather_channel_signals(

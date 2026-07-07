@@ -230,7 +230,9 @@ class TestNameCollisionShadowing:
         for ordered in ([bundled, org], [org, bundled]):
             fake_ops = MagicMock()
             fake_ops.get_skills_for_agent = AsyncMock(return_value=ordered)
-            monkeypatch.setattr(ops_mod, "SkillOperations", lambda _session: fake_ops)
+            monkeypatch.setattr(
+                ops_mod, "SkillOperations", lambda _session, _ops=fake_ops: _ops
+            )
 
             result = _run(_execute_view_skill(ctx, {"name": "report"}))
 
