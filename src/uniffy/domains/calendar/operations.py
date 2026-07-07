@@ -22,6 +22,7 @@ from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
+    ValidationError,
 )
 from uniffy.core.events import (
     NotificationEvent,
@@ -159,6 +160,29 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
         )
+
+        if room_id:
+            # Detect the conflict before the event is committed so the
+            # composite create_event(..., room_id=...) flow doesn't leave
+            # an orphan event behind on a booking collision.
+            from uniffy.core.types import RoomStatus
+            from uniffy.domains.rooms import queries as room_queries
+            from uniffy.domains.rooms.operations import RoomOperations
+
+            room_ops = RoomOperations(self.session)
+            room = await room_ops.get_by_id(user_id, organization_id, room_id)
+            if room.status != RoomStatus.ACTIVE:
+                raise ValidationError(
+                    "room",
+                    f"Room '{room.name}' is not available for booking "
+                    f"(status: {room.status.value}).",
+                )
+            if await room_queries.check_booking_conflict(
+                self.session, room_id, start_time, end_time
+            ):
+                raise ValidationError(
+                    "room", "Room is already booked for this time slot."
+                )
 
         if attendee_ids:
             attendee_ids = await self._expand_group_attendees(attendee_ids)

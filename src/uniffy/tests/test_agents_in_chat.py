@@ -506,16 +506,19 @@ class TestChatWriterApprovalAccessors:
 
 
 class TestSessionWriterApprovalAccessors:
-    def test_scope_is_session_and_hints_are_none(self) -> None:
+    def test_scope_is_session_and_actor_is_user(self) -> None:
         session_id = uuid7()
+        user_id = uuid7()
         w = SessionMessageWriter(
             session_ops=MagicMock(),
-            user_id=uuid7(),
+            user_id=user_id,
             organization_id=uuid7(),
             session_id=session_id,
         )
         assert w.approval_scope_id == session_id
-        assert w.approval_actor_user_id is None
+        # RespondToConfirmation gates on this matching the caller's id;
+        # returning None would lock the human out of their own approval.
+        assert w.approval_actor_user_id == user_id
         assert w.approval_agent_id is None
         assert w.approval_channel_id is None
 

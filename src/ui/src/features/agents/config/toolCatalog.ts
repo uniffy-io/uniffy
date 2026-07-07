@@ -71,13 +71,24 @@ export const TOOL_SECTIONS: ToolCategorySection[] = [
                 tools: [
                     { name: "calendar.list_events", displayName: "List Events", description: "List events in a date range with optional calendar and category filters", destructive: false },
                     { name: "calendar.read_event", displayName: "Read Event", description: "Read full event details including attendees, recurrence, and description", destructive: false },
-                    { name: "calendar.create_event", displayName: "Create Event", description: "Create events with attendees, recurrence, location, reminders, and categories", destructive: false },
+                    { name: "calendar.create_event", displayName: "Create Event", description: "Create events with attendees, recurrence, location, reminders, categories, and optional room booking via room_id", destructive: false },
                     { name: "calendar.update_event", displayName: "Edit Event", description: "Update any event field: times, attendees, recurrence, category, visibility", destructive: false },
                     { name: "calendar.delete_event", displayName: "Delete Event", description: "Delete a calendar event permanently", destructive: true },
                     { name: "calendar.add_attendees", displayName: "Add Attendees", description: "Invite users to an event as required or optional attendees", destructive: false },
                     { name: "calendar.remove_attendees", displayName: "Remove Attendees", description: "Remove attendees from an event", destructive: false },
                     { name: "calendar.rsvp", displayName: "RSVP", description: "Accept, tentatively accept, or decline an event invitation", destructive: false },
                     { name: "calendar.list_categories", displayName: "List Categories", description: "List available event categories for color coding", destructive: false },
+                ],
+            },
+            {
+                group: "Rooms",
+                tools: [
+                    { name: "rooms.list_rooms", displayName: "List Rooms", description: "List meeting rooms with optional capacity, amenity, building, or floor filters", destructive: false },
+                    { name: "rooms.get_room", displayName: "Get Room", description: "Get a room's details and upcoming bookings", destructive: false },
+                    { name: "rooms.list_bookings", displayName: "List Bookings", description: "List room bookings filtered by room, date range, or status", destructive: false },
+                    { name: "rooms.find_available", displayName: "Find Available Rooms", description: "Find rooms free over a time window, with optional capacity and amenity filters", destructive: false },
+                    { name: "rooms.book_room", displayName: "Book Room", description: "Reserve a room for a time slot", destructive: false },
+                    { name: "rooms.cancel_booking", displayName: "Cancel Booking", description: "Cancel a room booking permanently", destructive: true },
                 ],
             },
             {

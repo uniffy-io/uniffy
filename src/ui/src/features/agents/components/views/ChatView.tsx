@@ -1066,6 +1066,24 @@ function ChatPanel() {
         }
     }, [activeSessionId, dispatch]);
 
+    const lastPinnedSessionRef = useRef<string | null>(null);
+    useEffect(() => {
+        lastPinnedSessionRef.current = null;
+    }, [activeSessionId]);
+
+    useEffect(() => {
+        if (!activeSessionId || messages.length === 0) return;
+        if (lastPinnedSessionRef.current === activeSessionId) return;
+        lastPinnedSessionRef.current = activeSessionId;
+
+        // Entering a session lands at the newest message. Marking near-bottom
+        // hands late image/file layout growth to the content ResizeObserver,
+        // which keeps the pin until the user scrolls away.
+        isNearBottomRef.current = true;
+        const el = scrollContainerRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+    }, [activeSessionId, messages.length]);
+
     const prevStreamingRef = useRef(false);
     useEffect(() => {
         if (prevStreamingRef.current && !isStreaming && activeSessionId) {

@@ -122,7 +122,10 @@ class SessionMessageWriter:
 
     @property
     def approval_actor_user_id(self) -> UUID | None:
-        return None
+        # The RespondToConfirmation handler rejects responses whose
+        # caller does not match this id. Returning None would make every
+        # Allow click fail with PERMISSION_DENIED.
+        return self._user_id
 
     @property
     def approval_agent_id(self) -> UUID | None:

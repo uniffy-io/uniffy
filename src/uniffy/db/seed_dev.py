@@ -4,6 +4,8 @@ import os
 
 from loguru import logger
 
+from uniffy.core.types import RoomType
+
 
 async def seed_development_data(
     session,
@@ -150,6 +152,8 @@ async def seed_development_data(
 
     await _seed_dev_agents(session, default_org, admin_user, provider_keys)
 
+    await _seed_dev_rooms(session, default_org, admin_user)
+
 
 async def _seed_provider_keys(session, default_org, admin_user) -> list:
     """Seed LLM provider keys for the default org from `*_API_KEY` env vars."""
@@ -279,6 +283,154 @@ PROVIDER_AGENT_CONFIGS: dict[str, dict[str, str]] = {
         "theme_color": "#4285f4",
     },
 }
+
+
+MOCK_ROOMS: list[dict] = [
+    {
+        "name": "Phone Booth A",
+        "description": "Solo phone booth for quick 1:1s and focused calls.",
+        "room_type": RoomType.OFFICE,
+        "capacity": 1,
+        "building": "HQ",
+        "floor": "1",
+        "location": "HQ, Floor 1, near reception",
+        "amenities": ["phone", "soundproof"],
+    },
+    {
+        "name": "Phone Booth B",
+        "description": "Second solo booth - sound-dampened with a small desk.",
+        "room_type": RoomType.OFFICE,
+        "capacity": 1,
+        "building": "HQ",
+        "floor": "1",
+        "location": "HQ, Floor 1, west wing",
+        "amenities": ["phone", "soundproof", "monitor"],
+    },
+    {
+        "name": "Huddle Room",
+        "description": "Small huddle space for 2-3 people. Whiteboard and TV.",
+        "room_type": RoomType.MEETING_ROOM,
+        "capacity": 3,
+        "building": "HQ",
+        "floor": "1",
+        "location": "HQ, Floor 1, east wing",
+        "amenities": ["whiteboard", "tv", "video"],
+    },
+    {
+        "name": "Sync Room",
+        "description": "4-person meeting room with a circular table.",
+        "room_type": RoomType.MEETING_ROOM,
+        "capacity": 4,
+        "building": "HQ",
+        "floor": "2",
+        "location": "HQ, Floor 2, north corner",
+        "amenities": ["whiteboard", "video"],
+    },
+    {
+        "name": "Standup Room",
+        "description": "Standing meeting room - no chairs, quick sessions only.",
+        "room_type": RoomType.MEETING_ROOM,
+        "capacity": 6,
+        "building": "HQ",
+        "floor": "2",
+        "location": "HQ, Floor 2, west wing",
+        "amenities": ["whiteboard", "tv"],
+    },
+    {
+        "name": "Boardroom",
+        "description": "Executive boardroom with conference video and projector.",
+        "room_type": RoomType.CONFERENCE_ROOM,
+        "capacity": 12,
+        "building": "HQ",
+        "floor": "3",
+        "location": "HQ, Floor 3, executive suite",
+        "amenities": ["whiteboard", "video", "projector", "phone", "catering"],
+    },
+    {
+        "name": "Conference Room A",
+        "description": "Large conference room for cross-team meetings.",
+        "room_type": RoomType.CONFERENCE_ROOM,
+        "capacity": 16,
+        "building": "HQ",
+        "floor": "2",
+        "location": "HQ, Floor 2, central",
+        "amenities": ["whiteboard", "video", "projector", "phone"],
+    },
+    {
+        "name": "Conference Room B",
+        "description": "Conference room with dual displays for hybrid meetings.",
+        "room_type": RoomType.CONFERENCE_ROOM,
+        "capacity": 14,
+        "building": "Annex",
+        "floor": "1",
+        "location": "Annex, Floor 1",
+        "amenities": ["whiteboard", "video", "projector"],
+    },
+    {
+        "name": "Training Room",
+        "description": "Workshop and training space with movable furniture.",
+        "room_type": RoomType.CONFERENCE_ROOM,
+        "capacity": 24,
+        "building": "Annex",
+        "floor": "2",
+        "location": "Annex, Floor 2",
+        "amenities": ["whiteboard", "video", "projector", "wifi-extender"],
+    },
+    {
+        "name": "All Hands Hall",
+        "description": "Auditorium-style room for org-wide events and demos.",
+        "room_type": RoomType.OTHER,
+        "capacity": 80,
+        "building": "Annex",
+        "floor": "3",
+        "location": "Annex, Floor 3, top floor",
+        "amenities": ["stage", "video", "projector", "phone", "live-stream"],
+    },
+]
+
+
+async def _seed_dev_rooms(session, default_org, admin_user) -> None:
+    """Seed mock rooms for the rooms agent tools; skips names that already exist."""
+    from sqlalchemy import select
+
+    from uniffy.core.models.rooms.room import Room
+    from uniffy.core.types import AccessMode, ContentRole
+    from uniffy.domains.rooms.operations import RoomOperations
+
+    existing_names = {
+        row[0]
+        for row in (
+            await session.execute(
+                select(Room.name).where(
+                    Room.organization_id == default_org.id,
+                    Room.is_deleted.is_(False),
+                )
+            )
+        ).all()
+    }
+
+    ops = RoomOperations(session)
+    created = 0
+    for spec in MOCK_ROOMS:
+        if spec["name"] in existing_names:
+            continue
+        await ops.create_room(
+            user_id=admin_user.id,
+            organization_id=default_org.id,
+            name=spec["name"],
+            description=spec["description"],
+            room_type=spec["room_type"],
+            capacity=spec["capacity"],
+            floor=spec["floor"],
+            building=spec["building"],
+            location=spec["location"],
+            amenities=list(spec["amenities"]),
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
+        )
+        created += 1
+
+    logger.info(f"Seeded {created} mock rooms")
 
 
 async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list) -> None:
