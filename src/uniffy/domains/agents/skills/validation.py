@@ -112,3 +112,64 @@ def clean_skill_write(
         content=clean_content,
         when_to_use=clean_when,
     )
+
+
+@dataclass
+class CleanSkillUpdate:
+    """Cleaned partial-update fields; ``None`` marks a field the caller left alone."""
+
+    name: str | None = None
+    display_name: str | None = None
+    description: str | None = None
+    content: str | None = None
+    when_to_use: str | None = None
+
+
+def clean_skill_update(
+    *,
+    name: str | None = None,
+    display_name: str | None = None,
+    description: str | None = None,
+    content: str | None = None,
+    when_to_use: str | None = None,
+) -> CleanSkillUpdate:
+    """Clean only the fields a partial update supplies (``None`` = untouched).
+
+    Applies the same caps, control-char stripping, and hard delimiter-injection
+    rejection as ``clean_skill_write`` so a partial update cannot slip content
+    past the guards a full write enforces.
+    """
+    out = CleanSkillUpdate()
+    injected: list[str] = []
+    if name is not None:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ValidationError("name", "Skill name cannot be empty")
+        _require_max("name", clean_name, SKILL_NAME_MAX)
+        out.name = clean_name
+    if display_name is not None:
+        clean_display = display_name.strip()
+        if not clean_display:
+            raise ValidationError("display_name", "Skill display name cannot be empty")
+        _require_max("display_name", clean_display, SKILL_DISPLAY_NAME_MAX)
+        out.display_name = clean_display
+    if description is not None:
+        clean_desc = sanitize_skill_text(description)
+        _require_max("description", clean_desc, SKILL_DESCRIPTION_MAX)
+        out.description = clean_desc
+        injected.append(clean_desc)
+    if content is not None:
+        clean_content = sanitize_skill_text(content)
+        _require_max("content", clean_content, SKILL_CONTENT_MAX)
+        out.content = clean_content
+        injected.append(clean_content)
+    if when_to_use is not None:
+        clean_when = sanitize_skill_text(when_to_use)
+        _require_max("when_to_use", clean_when, SKILL_WHEN_TO_USE_MAX)
+        out.when_to_use = clean_when
+        injected.append(clean_when)
+    if has_hard_injection(*injected):
+        raise ValidationError(
+            "content", "Skill content contains a disallowed system-prompt delimiter"
+        )
+    return out

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from uuid import UUID
 
 from uniffy.domains.agents.tools.registry import get_tool_registry
 
@@ -12,6 +13,7 @@ SKILL_VIEW_TOOL = "skills.view_skill"
 class SkillPromptEntry:
     """A skill resolved for prompt injection, already filtered by conditional activation."""
 
+    id: UUID
     name: str
     display_name: str
     description: str
@@ -35,6 +37,7 @@ def skill_passes_activation(skill, *, enabled_tools, surface: str) -> bool:
 
 def to_skill_prompt_entry(skill) -> SkillPromptEntry:
     return SkillPromptEntry(
+        id=skill.id,
         name=skill.name,
         display_name=getattr(skill, "display_name", "") or skill.name,
         description=getattr(skill, "description", "") or "",
@@ -126,8 +129,10 @@ def build_system_prompt(
     # Section 5: Active skill instructions (progressive disclosure). An
     # on-demand invoked skill is rendered separately in full, so it is
     # excluded from the advertised index to avoid injecting it twice.
-    invoked_name = invoked_skill.name if invoked_skill else None
-    advertised = [s for s in skills if s.name != invoked_name] if skills else []
+    # Dedupe by id, not name: org and bundled skills can legally share a
+    # machine name, so a name match would drop a distinct same-named skill.
+    invoked_id = invoked_skill.id if invoked_skill else None
+    advertised = [s for s in skills if s.id != invoked_id] if skills else []
     if advertised:
         skill_section = _build_skill_section(advertised)
         if skill_section:

@@ -26,7 +26,14 @@ async def _execute_view_skill(ctx: ToolContext, args: dict) -> ToolResult:
         organization_id=ctx.organization_id,
         enabled_skill_ids=agent.enabled_skills or [],
     )
-    skill = next((s for s in skills if s.name == name), None)
+    # An org skill shadows a bundled skill of the same name: the two partial
+    # unique indexes let both exist, so resolve deterministically to the
+    # org-scoped row (organization_id set) over the bundled one (None).
+    matches = [s for s in skills if s.name == name]
+    skill = next(
+        (s for s in matches if s.organization_id is not None),
+        matches[0] if matches else None,
+    )
     if skill is None:
         return ToolResult(
             success=False,
@@ -117,7 +124,6 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
         content=content,
         when_to_use=(args.get("when_to_use") or "").strip(),
         suggested_scope=scope,
-        suggested_always_active=bool(args.get("suggested_always_active")),
         rationale=(args.get("rationale") or "").strip(),
     )
 

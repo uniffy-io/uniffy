@@ -51,6 +51,7 @@ from uniffy.domains.agents.runtime.destinations import (
 from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
 from uniffy.domains.agents.runtime.prompt import (
+    SKILL_VIEW_TOOL,
     SkillPromptEntry,
     build_chat_context_section,
     build_system_prompt,
@@ -90,6 +91,31 @@ logger = logger.bind(component="agents.runtime.operations")
 
 MAX_TOOL_ITERATIONS = 10
 READ_TOOL_POOL_SIZE = 5
+
+
+def _resolve_tool_schemas(
+    registry: ToolRegistry,
+    enabled_tools: list[str],
+    skill_entries: list[SkillPromptEntry],
+    invoked_skill: SkillPromptEntry | None,
+) -> list[dict] | None:
+    """Build the LLM tool schemas, auto-appending view_skill when skills are advertised.
+
+    view_skill is framework plumbing, not a user-selectable capability: it is
+    absent from ``enabled_tools`` and the agent-builder catalog on purpose. The
+    progressive-disclosure index instructs the model to load an advertised skill
+    by calling view_skill, so the tool MUST reach the schema whenever any
+    advertised (non-always-active, non-invoked) skill is present, or that
+    instruction points at a tool the model does not have.
+    """
+    schemas = registry.get_anthropic_schemas(enabled_tools)
+    invoked_id = invoked_skill.id if invoked_skill else None
+    advertises = any(
+        not entry.always_active and entry.id != invoked_id for entry in skill_entries
+    )
+    if advertises and SKILL_VIEW_TOOL not in enabled_tools:
+        schemas.extend(registry.get_anthropic_schemas([SKILL_VIEW_TOOL]))
+    return schemas or None
 
 
 def _split_read_write(
@@ -425,7 +451,6 @@ class RuntimeOperations:
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
-        tool_schemas = registry.get_anthropic_schemas(enabled_tools) or None
 
         skills = await fetch_agent_skills(
             self._skill_ops,
@@ -454,6 +479,9 @@ class RuntimeOperations:
             user_id=user_id,
             organization_id=organization_id,
             session_id=session_id,
+        )
+        tool_schemas = _resolve_tool_schemas(
+            registry, enabled_tools, skill_entries, invoked_entry
         )
 
         memory_context = await self._fetch_memory_context(
@@ -1129,7 +1157,6 @@ class RuntimeOperations:
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
-        tool_schemas = registry.get_anthropic_schemas(enabled_tools) or None
 
         skills = await fetch_agent_skills(
             self._skill_ops,
@@ -1159,6 +1186,9 @@ class RuntimeOperations:
             user_id=user_id,
             organization_id=organization_id,
             session_id=session_id,
+        )
+        tool_schemas = _resolve_tool_schemas(
+            registry, enabled_tools, skill_entries, invoked_entry
         )
 
         memory_context = await self._fetch_memory_context(

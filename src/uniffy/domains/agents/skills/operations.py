@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, inspect as sa_inspect, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,10 +26,28 @@ from uniffy.domains.agents.content_policy import check_admin_content
 from uniffy.domains.agents.skills.validation import (
     SKILL_DISPLAY_NAME_MAX,
     SKILL_NAME_MAX,
+    clean_skill_update,
     clean_skill_write,
     sanitize_skill_text,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
+
+
+def _overlay_skill_copy(skill: AgentSkill, version: AgentSkillVersion) -> AgentSkill:
+    """Copy a skill row into a session-free instance carrying the version's fields.
+
+    The copy is never added to a session, so resolving a pinned skill for the
+    prompt cannot flush the pinned version back over the skill's head row.
+    """
+    data = {
+        attr.key: getattr(skill, attr.key)
+        for attr in sa_inspect(skill).mapper.column_attrs
+    }
+    data["content"] = version.content
+    data["when_to_use"] = version.when_to_use
+    data["requires_tools"] = list(version.requires_tools or [])
+    data["requires_context"] = list(version.requires_context or [])
+    return AgentSkill(**data)
 
 
 class SkillOperations:
@@ -331,47 +349,51 @@ class SkillOperations:
                 raise PermissionDeniedError("update", "Cannot update bundled skills")
             raise NotFoundError("AgentSkill", str(skill_id))
 
+        # Partial updates are held to the same caps and hard-injection guard as a
+        # full write, so a raw UpdateSkill cannot land content a CreateSkill would
+        # reject. The softer warn-only content policy still runs below.
+        clean = clean_skill_update(
+            name=name,
+            display_name=display_name,
+            description=description,
+            content=content,
+        )
+
         was_always_active = skill.always_active
         versioned_changes: list[str] = []
 
-        if name is not None:
-            if not name.strip():
-                raise ValidationError("name", "Skill name cannot be empty")
-            # Check uniqueness if name is changing
-            if name.strip() != skill.name:
+        if clean.name is not None:
+            if clean.name != skill.name:
                 existing = await self._session.execute(
                     select(AgentSkill).where(
                         AgentSkill.organization_id == organization_id,
-                        AgentSkill.name == name.strip(),
+                        AgentSkill.name == clean.name,
                         AgentSkill.id != skill_id,
                     )
                 )
                 if existing.scalar_one_or_none():
                     raise ValidationError(
-                        "name", f"Skill name '{name}' already exists in this organization"
+                        "name", f"Skill name '{clean.name}' already exists in this organization"
                     )
                 versioned_changes.append("name")
-            skill.name = name.strip()
+            skill.name = clean.name
 
-        if display_name is not None:
-            if not display_name.strip():
-                raise ValidationError("display_name", "Skill display name cannot be empty")
-            if display_name.strip() != skill.display_name:
+        if clean.display_name is not None:
+            if clean.display_name != skill.display_name:
                 versioned_changes.append("display name")
-            skill.display_name = display_name.strip()
+            skill.display_name = clean.display_name
 
-        if description is not None:
-            if description != skill.description:
+        if clean.description is not None:
+            if clean.description != (skill.description or ""):
                 versioned_changes.append("description")
-            skill.description = description
+            skill.description = clean.description
 
-        if content is not None:
-            # Content policy check on skill content (warn-only)
-            if content:
-                check_admin_content(content, "skill_content")
-            if content != skill.content:
+        if clean.content is not None:
+            if clean.content:
+                check_admin_content(clean.content, "skill_content")
+            if clean.content != (skill.content or ""):
                 versioned_changes.append("content")
-            skill.content = content
+            skill.content = clean.content
 
         if always_active is not None:
             skill.always_active = always_active
@@ -386,13 +408,12 @@ class SkillOperations:
                 change_summary=f"Updated {', '.join(versioned_changes)}",
             )
 
-        # Build audit details from changed fields
         audit_changes: dict = {}
-        if name is not None:
-            audit_changes["name"] = name
-        if display_name is not None:
-            audit_changes["display_name"] = display_name
-        if content is not None:
+        if clean.name is not None:
+            audit_changes["name"] = clean.name
+        if clean.display_name is not None:
+            audit_changes["display_name"] = clean.display_name
+        if clean.content is not None:
             audit_changes["content_updated"] = True
         if always_active is not None:
             audit_changes["always_active"] = always_active
@@ -568,8 +589,10 @@ class SkillOperations:
         description: str = "",
         content: str = "",
         when_to_use: str = "",
+        requires_tools: list[str] | None = None,
+        requires_context: list[str] | None = None,
         suggested_scope: str = "personal",
-        suggested_always_active: bool = False,
+        suggested_always_active: bool | None = None,
         rationale: str = "",
     ) -> AgentSkillDraft:
         """Persist an agent-proposed draft (status=pending); never auto-activates.
@@ -577,6 +600,27 @@ class SkillOperations:
         Called from the ``skills.propose_skill`` tool inside a run that has
         already gated the acting user, so it does no permission check of its own.
         """
+        seed_tools = requires_tools
+        seed_context = requires_context
+        seed_always = suggested_always_active
+        # An edit/evolve proposal only changes content and metadata; the target's
+        # tool/context requirements and always-active flag belong to the skill,
+        # so inherit them unless the caller set them explicitly. Otherwise saving
+        # the draft would blank the target's config, dropping it from prompts.
+        if (
+            kind in ("edit", "evolve")
+            and target_skill_id is not None
+            and (seed_tools is None or seed_context is None or seed_always is None)
+        ):
+            target = await self._load_skill_for_seed(organization_id, target_skill_id)
+            if target is not None:
+                if seed_tools is None:
+                    seed_tools = list(target.requires_tools or [])
+                if seed_context is None:
+                    seed_context = list(target.requires_context or [])
+                if seed_always is None:
+                    seed_always = bool(target.always_active)
+
         draft = AgentSkillDraft(
             organization_id=organization_id,
             owner_id=user_id,
@@ -590,8 +634,10 @@ class SkillOperations:
             description=sanitize_skill_text(description),
             content=sanitize_skill_text(content),
             when_to_use=sanitize_skill_text(when_to_use),
+            requires_tools=list(seed_tools or []),
+            requires_context=list(seed_context or []),
             suggested_scope=suggested_scope,
-            suggested_always_active=suggested_always_active,
+            suggested_always_active=bool(seed_always),
             status="pending",
         )
         self._session.add(draft)
@@ -1177,6 +1223,21 @@ class SkillOperations:
                 "name", f"Skill name '{name}' already exists in this organization"
             )
 
+    async def _load_skill_for_seed(
+        self, organization_id: UUID, skill_id: UUID
+    ) -> AgentSkill | None:
+        """Read an org or bundled skill by id to seed a draft; no permission gate."""
+        result = await self._session.execute(
+            select(AgentSkill).where(
+                AgentSkill.id == skill_id,
+                or_(
+                    AgentSkill.organization_id == organization_id,
+                    AgentSkill.organization_id.is_(None),
+                ),
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def _find_skill_by_name(
         self, organization_id: UUID, name: str
     ) -> AgentSkill | None:
@@ -1307,8 +1368,7 @@ class SkillOperations:
                 seen_ids.add(skill.id)
                 skills.append(skill)
 
-        await self._overlay_active_versions(skills)
-        return skills
+        return await self._overlay_active_versions(skills)
 
     async def _snapshot_version(
         self,
@@ -1410,24 +1470,36 @@ class SkillOperations:
             channel_id=draft.channel_id,
         )
 
-    async def _overlay_active_versions(self, skills: list[AgentSkill]) -> None:
-        """Replace each skill's content/metadata with its pinned main version, in place.
+    async def _overlay_active_versions(
+        self, skills: list[AgentSkill]
+    ) -> list[AgentSkill]:
+        """Resolve pinned skills against their main version on detached copies.
 
-        The runtime uses the main (active) version, never blindly the latest. A
-        skill with no resolved version keeps its own row fields as the fallback.
+        The runtime uses the main (active) version, never blindly the latest. An
+        unpinned skill's head row already carries its active-version content, so
+        it passes through untouched and cheaply. A skill pinned to a non-head
+        version is returned as a session-free copy with the pinned fields applied:
+        mutating the persistent row here would let a later commit on the same
+        session flush the pinned content over the skill's head row.
         """
-        version_ids = [s.active_version_id for s in skills if s.active_version_id]
-        if not version_ids:
-            return
+        pinned = [s for s in skills if s.active_version_pinned and s.active_version_id]
+        if not pinned:
+            return skills
         result = await self._session.execute(
-            select(AgentSkillVersion).where(AgentSkillVersion.id.in_(version_ids))
+            select(AgentSkillVersion).where(
+                AgentSkillVersion.id.in_([s.active_version_id for s in pinned])
+            )
         )
         versions = {v.id: v for v in result.scalars().all()}
+        overlaid: list[AgentSkill] = []
         for skill in skills:
-            version = versions.get(skill.active_version_id) if skill.active_version_id else None
+            version = (
+                versions.get(skill.active_version_id)
+                if skill.active_version_pinned and skill.active_version_id
+                else None
+            )
             if version is None:
+                overlaid.append(skill)
                 continue
-            skill.content = version.content
-            skill.when_to_use = version.when_to_use
-            skill.requires_tools = list(version.requires_tools or [])
-            skill.requires_context = list(version.requires_context or [])
+            overlaid.append(_overlay_skill_copy(skill, version))
+        return overlaid

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from loguru import logger
 from sqlalchemy import and_, delete, func, or_, select
@@ -31,10 +31,15 @@ VALID_MESSAGE_ROLES = {"user", "assistant", "tool", "system", "summary"}
 # moved past.
 EDIT_WINDOW_SECONDS = 600
 
-# Defer window for the skill-evolution analyzer. A stable job id plus this
-# defer collapse a burst of turns into a single analysis run once the
-# conversation goes quiet, keeping LLM cost bounded.
+# Defer window for the skill-evolution analyzer. Each trigger enqueues its own
+# job deferred by this many seconds; the worker exits unless the conversation
+# has stayed quiet for the full window, so a burst of turns collapses to one
+# real run without relying on ARQ to extend a shared job's defer.
 SKILL_ANALYSIS_DEBOUNCE_SECONDS = 90
+
+
+def _skill_analysis_job_id(destination_kind: str, destination_id: UUID, salt: str) -> str:
+    return f"analyze_skills:{destination_kind}:{destination_id}:{salt}"
 
 
 # Hard cap on rows handed to the LLM when the async compaction worker
@@ -934,16 +939,21 @@ class SessionOperations:
         agent_id: UUID,
         organization_id: UUID,
     ) -> bool:
-        """Queue a debounced skill-evolution analysis for an idle conversation.
+        """Queue a debounced skill-evolution analysis for a conversation turn.
 
-        Best-effort and cheap: a stable job id plus a defer window collapse a
-        burst of turns into one run. The worker gates on the per-org opt-in and
-        the daily budget before any LLM work, so enqueuing is safe even when
+        Best-effort and cheap. The worker gates on the per-org opt-in and the
+        daily budget before any LLM work, so enqueuing is safe even when
         evolution is disabled.
         """
         queue = await get_queue_safe("egress")
         if queue is None:
             return False
+        # A fresh salt per trigger gives each turn its own job id. ARQ never
+        # extends the defer of an existing id and caches a finished job's result
+        # for WORKER_KEEP_RESULT seconds, so a reused id would fire against a
+        # partial transcript and then block re-enqueues for that window. The
+        # worker self-debounces the resulting burst down to one real run.
+        job_id = _skill_analysis_job_id(destination_kind, destination_id, uuid4().hex)
         try:
             await queue.enqueue_job(
                 "analyze_session_for_skills",
@@ -952,7 +962,7 @@ class SessionOperations:
                 str(user_id),
                 str(agent_id),
                 str(organization_id),
-                _job_id=f"analyze_skills:{destination_kind}:{destination_id}",
+                _job_id=job_id,
                 _defer_by=SKILL_ANALYSIS_DEBOUNCE_SECONDS,
             )
         except Exception:

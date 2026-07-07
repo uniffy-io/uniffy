@@ -1,22 +1,29 @@
 """ARQ task: analyze an idle conversation and propose skill drafts.
 
-Gated by a per-org opt-in and a daily budget; idempotent via a Valkey
-`SET NX` lock. Every suggestion lands as a pending draft - the task never
+Each conversation turn enqueues its own deferred job; this task self-debounces
+by exiting unless the conversation has stayed quiet for the full debounce
+window, and is idempotent via a Valkey `SET NX` lock. Gated by a per-org opt-in
+and a daily budget. Every suggestion lands as a pending draft - the task never
 activates a skill (that is always an explicit `SaveSkillDraft`).
 """
 
 import contextlib
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.db.session import open_session
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
+from uniffy.domains.agents.sessions.operations import SKILL_ANALYSIS_DEBOUNCE_SECONDS
 from uniffy.domains.agents.skills.analysis import (
     SkillEvolutionAnalyzer,
     consume_analysis_budget,
@@ -54,6 +61,35 @@ async def _release_lock(kind: str, destination_id: UUID) -> None:
         await client.delete(_LOCK_KEY_TEMPLATE.format(kind=kind, destination_id=destination_id))
 
 
+async def _latest_activity_at(
+    session: AsyncSession, destination_kind: str, destination_id: UUID
+) -> datetime | None:
+    if destination_kind == "session":
+        stmt = select(func.max(AgentMessage.created_at)).where(
+            AgentMessage.session_id == destination_id
+        )
+    else:
+        stmt = select(func.max(ChatMessage.created_at)).where(
+            ChatMessage.channel_id == destination_id,
+            ChatMessage.is_deleted == False,  # noqa: E712
+        )
+    return (await session.execute(stmt)).scalar()
+
+
+def _conversation_is_quiet(
+    latest_activity: datetime | None, now: datetime, debounce_seconds: int
+) -> bool:
+    """True when the newest message predates the debounce window.
+
+    A message inside the window means a later salted job will analyze the
+    fresher transcript, so this job exits instead of running against a still
+    active conversation.
+    """
+    if latest_activity is None:
+        return True
+    return (now - latest_activity).total_seconds() >= debounce_seconds
+
+
 async def analyze_session_for_skills(
     ctx: dict[str, Any],
     destination_kind: str,
@@ -77,6 +113,12 @@ async def analyze_session_for_skills(
 
     try:
         async with open_session() as session:
+            latest_activity = await _latest_activity_at(session, destination_kind, dest)
+            if not _conversation_is_quiet(
+                latest_activity, datetime.now(UTC), SKILL_ANALYSIS_DEBOUNCE_SECONDS
+            ):
+                return {"status": "skipped", "reason": "still_active"}
+
             if not await is_skill_evolution_enabled(session, org_id):
                 return {"status": "skipped", "reason": "disabled"}
 

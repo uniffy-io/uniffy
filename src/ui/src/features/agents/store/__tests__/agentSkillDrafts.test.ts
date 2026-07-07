@@ -11,6 +11,7 @@ import {
 import {
     skillDraftToPlain,
     fetchSkillDrafts,
+    fetchSkillDraft,
     saveSkillDraft,
     discardSkillDraft,
     createSkillDraft,
@@ -157,5 +158,33 @@ describe('agentSkillDrafts slice', () => {
             }),
         );
         expect(state.inboxIds).toEqual(['new']);
+    });
+
+    it('fetching a single draft for the editor carries the plain draft but does not touch the store', () => {
+        let state = agentSkillDraftsReducer(
+            undefined,
+            upsertProposedDraft({ draft: draft('d1'), sessionId: SESSION }),
+        );
+        const action = fetchSkillDraft.fulfilled(draft('d2'), 'req', 'd2');
+        expect(action.payload.id).toBe('d2');
+        state = agentSkillDraftsReducer(state, action);
+        expect(state.inboxIds).toEqual(['d1']);
+        expect(state.byId['d2']).toBeUndefined();
+        expect(state.idsBySession[SESSION]).toEqual(['d1']);
+    });
+
+    it('a rejected single-draft fetch leaves the store intact', () => {
+        let state = agentSkillDraftsReducer(
+            undefined,
+            upsertProposedDraft({ draft: draft('d1'), sessionId: SESSION }),
+        );
+        state = agentSkillDraftsReducer(
+            state,
+            fetchSkillDraft.rejected(new Error('nope'), 'req', 'd2'),
+        );
+        const root = { agentSkillDrafts: state } as never;
+        expect(selectInboxCount(root)).toBe(1);
+        expect(selectInboxDrafts(root).map((d) => d.id)).toEqual(['d1']);
+        expect(state.byId['d1'].status).toBe('pending');
     });
 });

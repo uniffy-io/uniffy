@@ -73,6 +73,21 @@ export const fetchSkillDrafts = createAsyncThunk<
     }
 });
 
+export const fetchSkillDraft = createAsyncThunk<
+    SerializedSkillDraft,
+    string,
+    { state: RootState; rejectValue: string }
+>('agentSkillDrafts/fetchOne', async (draftId, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await skillsApi.getSkillDraft({ organizationId, draftId });
+        if (!response.draft) throw new Error('No draft in response');
+        return skillDraftToPlain(response.draft);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch draft');
+    }
+});
+
 export const createSkillDraft = createAsyncThunk<
     SerializedSkillDraft,
     {

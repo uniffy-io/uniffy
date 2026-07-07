@@ -228,7 +228,12 @@ class SkillEvolutionAnalyzer:
         lines: list[str] = []
         for msg in reversed(rows):
             meta = msg.message_metadata or {}
-            if meta.get("visibility") == "agent_internal" or meta.get("kind"):
+            # A channel agent stamps a 'kind' on every row it writes; only
+            # kind='final' replies are the human-facing turns, so keep those
+            # and the user rows (which carry no kind) while dropping internal
+            # visibility and non-final agent rows (tool_call/tool_result/summary/...).
+            kind = meta.get("kind")
+            if meta.get("visibility") == "agent_internal" or (kind and kind != "final"):
                 continue
             body = (msg.content or "").strip()
             if not body:

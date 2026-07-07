@@ -9,8 +9,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { respondToAgentConfirmation, stopAgentRun } from '@/features/chat/store/chatThunks';
 import { selectMessagesForChannel, selectTypingUsers } from '@/features/chat/store/chatMessagesSlice';
 import { formatMediaTime } from '@/shared/utils/dateFormatting';
-import { skillsApi } from '@/features/agents/api/skillsApi';
-import { skillDraftToPlain, type SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
+import { fetchSkillDraft, type SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
 import { SkillDraftEditorModal } from '@/features/agents/components/skills/SkillDraftEditorModal';
 import type { ChatMessage } from '@/features/chat/types';
 
@@ -498,6 +497,7 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
 }
 
 function SkillDraftCard({ message }: { message: ChatMessage }) {
+    const dispatch = useAppDispatch();
     const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId ?? '');
 
@@ -518,8 +518,10 @@ function SkillDraftCard({ message }: { message: ChatMessage }) {
         if (!draftId || !organizationId || loading) return;
         setLoading(true);
         try {
-            const response = await skillsApi.getSkillDraft({ organizationId, draftId });
-            if (response.draft) setEditingDraft(skillDraftToPlain(response.draft));
+            const draft = await dispatch(fetchSkillDraft(draftId)).unwrap();
+            setEditingDraft(draft);
+        } catch {
+            // errorToastMiddleware surfaces the failure; leave the modal closed.
         } finally {
             setLoading(false);
         }
