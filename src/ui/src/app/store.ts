@@ -30,6 +30,10 @@ import { agentsReducer } from '@/features/agents/store/agentsSlice';
 import { agentSessionsReducer } from '@/features/agents/store/agentSessionsSlice';
 import { agentMessagesReducer } from '@/features/agents/store/agentMessagesSlice';
 import { agentSkillsReducer } from '@/features/agents/store/agentSkillsSlice';
+import { agentRunnableSkillsReducer } from '@/features/agents/store/agentRunnableSkillsSlice';
+import { agentSkillDraftsReducer } from '@/features/agents/store/agentSkillDraftsSlice';
+import { agentSkillVersionsReducer } from '@/features/agents/store/agentSkillVersionsSlice';
+import { agentSkillMetricsReducer } from '@/features/agents/store/agentSkillMetricsSlice';
 import { agentPromptsReducer } from '@/features/agents/store/agentPromptsSlice';
 import { agentProvidersReducer } from '@/features/agents/store/agentProvidersSlice';
 import { agentUsageReducer } from '@/features/agents/store/agentUsageSlice';
@@ -163,6 +167,10 @@ const rootReducer = combineReducers({
   agentSessions: agentSessionsReducer,
   agentMessages: agentMessagesReducer,
   agentSkills: agentSkillsReducer,
+  agentRunnableSkills: agentRunnableSkillsReducer,
+  agentSkillDrafts: agentSkillDraftsReducer,
+  agentSkillVersions: agentSkillVersionsReducer,
+  agentSkillMetrics: agentSkillMetricsReducer,
   agentPrompts: agentPromptsReducer,
   agentProviders: agentProvidersReducer,
   agentUsage: agentUsageReducer,

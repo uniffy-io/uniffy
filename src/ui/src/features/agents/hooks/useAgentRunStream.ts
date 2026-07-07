@@ -15,6 +15,8 @@ import {
     streamError,
 } from '@/features/agents/store/agentMessagesSlice';
 import { messageToPlain } from '@/features/agents/store/agentMessagesThunks';
+import { upsertProposedDraft } from '@/features/agents/store/agentSkillDraftsSlice';
+import { skillDraftToPlain } from '@/features/agents/store/agentSkillDraftsThunks';
 
 export interface UseAgentRunStreamResult {
     isStreaming: boolean;
@@ -111,6 +113,14 @@ export function useAgentRunStream(
                             toolArgsJson: event.event.value.toolArgsJson,
                             description: event.event.value.description,
                         }));
+                    } else if (event.event.case === 'skillDraft') {
+                        const draft = event.event.value.draft;
+                        if (draft) {
+                            dispatch(upsertProposedDraft({
+                                draft: skillDraftToPlain(draft),
+                                sessionId,
+                            }));
+                        }
                     } else if (event.event.case === 'error') {
                         if (rafId !== null) cancelAnimationFrame(rafId);
                         flushTokens();

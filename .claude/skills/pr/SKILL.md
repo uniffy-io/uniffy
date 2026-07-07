@@ -39,6 +39,12 @@ Create or update a GitHub Pull Request for the current branch.
 7. **Generate PR description.** Write a concise, accurate description following this format:
 
    ```
+   ## What this does
+
+   <2-4 plain-language sentences a non-engineer can read. Explain what the change
+   does for the user or the product and why it matters. No jargon, no file names,
+   no class or function names - describe behavior, not implementation.>
+
    ## Summary
 
    - <1-3 bullet points covering the main changes across ALL commits>
@@ -46,6 +52,8 @@ Create or update a GitHub Pull Request for the current branch.
    ```
 
    Rules for the description:
+   - The "What this does" section always comes first and stays plain-language;
+     anyone reading only that section should understand the point of the PR.
    - The summary should cover ALL commits on the branch, not just the latest.
    - Test plan items should be concrete and testable.
    - Never use emojis.

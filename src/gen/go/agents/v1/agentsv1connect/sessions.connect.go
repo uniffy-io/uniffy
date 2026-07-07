@@ -72,6 +72,9 @@ const (
 	// SessionsServiceRetryMessageProcedure is the fully-qualified name of the SessionsService's
 	// RetryMessage RPC.
 	SessionsServiceRetryMessageProcedure = "/agents.v1.SessionsService/RetryMessage"
+	// SessionsServiceSubmitMessageFeedbackProcedure is the fully-qualified name of the
+	// SessionsService's SubmitMessageFeedback RPC.
+	SessionsServiceSubmitMessageFeedbackProcedure = "/agents.v1.SessionsService/SubmitMessageFeedback"
 )
 
 // SessionsServiceClient is a client for the agents.v1.SessionsService service.
@@ -111,6 +114,9 @@ type SessionsServiceClient interface {
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error)
+	// Record (or clear) the caller's thumbs up/down on an agent message. The
+	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	SubmitMessageFeedback(context.Context, *connect.Request[v1.SubmitMessageFeedbackRequest]) (*connect.Response[v1.SubmitMessageFeedbackResponse], error)
 }
 
 // NewSessionsServiceClient constructs a client for the agents.v1.SessionsService service. By
@@ -202,6 +208,12 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(sessionsServiceMethods.ByName("RetryMessage")),
 			connect.WithClientOptions(opts...),
 		),
+		submitMessageFeedback: connect.NewClient[v1.SubmitMessageFeedbackRequest, v1.SubmitMessageFeedbackResponse](
+			httpClient,
+			baseURL+SessionsServiceSubmitMessageFeedbackProcedure,
+			connect.WithSchema(sessionsServiceMethods.ByName("SubmitMessageFeedback")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -220,6 +232,7 @@ type sessionsServiceClient struct {
 	editMessage            *connect.Client[v1.EditMessageRequest, v1.EditMessageResponse]
 	deleteMessage          *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
 	retryMessage           *connect.Client[v1.RetryMessageRequest, v1.RetryMessageResponse]
+	submitMessageFeedback  *connect.Client[v1.SubmitMessageFeedbackRequest, v1.SubmitMessageFeedbackResponse]
 }
 
 // CreateSession calls agents.v1.SessionsService.CreateSession.
@@ -287,6 +300,11 @@ func (c *sessionsServiceClient) RetryMessage(ctx context.Context, req *connect.R
 	return c.retryMessage.CallUnary(ctx, req)
 }
 
+// SubmitMessageFeedback calls agents.v1.SessionsService.SubmitMessageFeedback.
+func (c *sessionsServiceClient) SubmitMessageFeedback(ctx context.Context, req *connect.Request[v1.SubmitMessageFeedbackRequest]) (*connect.Response[v1.SubmitMessageFeedbackResponse], error) {
+	return c.submitMessageFeedback.CallUnary(ctx, req)
+}
+
 // SessionsServiceHandler is an implementation of the agents.v1.SessionsService service.
 type SessionsServiceHandler interface {
 	// Create a new session (find-or-create for DIRECT kind)
@@ -324,6 +342,9 @@ type SessionsServiceHandler interface {
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error)
+	// Record (or clear) the caller's thumbs up/down on an agent message. The
+	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	SubmitMessageFeedback(context.Context, *connect.Request[v1.SubmitMessageFeedbackRequest]) (*connect.Response[v1.SubmitMessageFeedbackResponse], error)
 }
 
 // NewSessionsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -411,6 +432,12 @@ func NewSessionsServiceHandler(svc SessionsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(sessionsServiceMethods.ByName("RetryMessage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	sessionsServiceSubmitMessageFeedbackHandler := connect.NewUnaryHandler(
+		SessionsServiceSubmitMessageFeedbackProcedure,
+		svc.SubmitMessageFeedback,
+		connect.WithSchema(sessionsServiceMethods.ByName("SubmitMessageFeedback")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.SessionsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SessionsServiceCreateSessionProcedure:
@@ -439,6 +466,8 @@ func NewSessionsServiceHandler(svc SessionsServiceHandler, opts ...connect.Handl
 			sessionsServiceDeleteMessageHandler.ServeHTTP(w, r)
 		case SessionsServiceRetryMessageProcedure:
 			sessionsServiceRetryMessageHandler.ServeHTTP(w, r)
+		case SessionsServiceSubmitMessageFeedbackProcedure:
+			sessionsServiceSubmitMessageFeedbackHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -498,4 +527,8 @@ func (UnimplementedSessionsServiceHandler) DeleteMessage(context.Context, *conne
 
 func (UnimplementedSessionsServiceHandler) RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.RetryMessage is not implemented"))
+}
+
+func (UnimplementedSessionsServiceHandler) SubmitMessageFeedback(context.Context, *connect.Request[v1.SubmitMessageFeedbackRequest]) (*connect.Response[v1.SubmitMessageFeedbackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.SubmitMessageFeedback is not implemented"))
 }

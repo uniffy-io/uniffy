@@ -13,6 +13,7 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
     SESSION_KIND_GLOBAL,
     SESSION_KIND_GROUP,
     SESSION_KIND_UNSPECIFIED,
+    MessageFeedback,
     MessageInfo,
     MessageRole,
     SessionInfo,
@@ -21,6 +22,7 @@ from uniffy_proto.agents.v1.sessions_pb2 import (
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession
 
 SESSION_KIND_TO_PROTO: dict[str, SessionKind] = {
@@ -161,19 +163,11 @@ def session_to_proto(session: AgentSession) -> SessionInfo:
     return info
 
 
-def message_to_proto(message: AgentMessage) -> MessageInfo:
+def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> MessageInfo:
     """Convert a AgentMessage model to proto MessageInfo.
 
-    Parameters
-    ----------
-    message : AgentMessage
-        Database model instance.
-
-    Returns
-    -------
-    MessageInfo
-        Proto message.
-
+    ``feedback_rating`` is the caller's own thumbs rating ("up"/"down"/""),
+    resolved by the handler so the client can render the persisted thumb state.
     """
     info = MessageInfo(
         id=str(message.id),
@@ -213,5 +207,19 @@ def message_to_proto(message: AgentMessage) -> MessageInfo:
         info.edited_at.CopyFrom(datetime_to_timestamp(message.edited_at))
     if message.previous_content is not None:
         info.previous_content = message.previous_content
+    if feedback_rating:
+        info.feedback_rating = feedback_rating
+    if message.invoked_skill_name:
+        info.invoked_skill_name = message.invoked_skill_name
 
     return info
+
+
+def message_feedback_to_proto(feedback: AgentMessageFeedback) -> MessageFeedback:
+    """Convert a stored thumbs rating to proto."""
+    return MessageFeedback(
+        message_id=str(feedback.message_id),
+        rating=feedback.rating,
+        comment=feedback.comment or "",
+        created_at=datetime_to_timestamp(feedback.created_at),
+    )

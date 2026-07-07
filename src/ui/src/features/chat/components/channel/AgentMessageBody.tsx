@@ -1,7 +1,7 @@
 /** Renders an agent-authored ChatMessage by dispatching on `metadata.kind`. */
 
 import { useEffect, useState } from 'react';
-import { Wrench, CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, CircleNotch, Image as ImageIcon, Stop, Clock } from '@phosphor-icons/react';
+import { Wrench, CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, CircleNotch, Image as ImageIcon, Stop, Clock, Lightning } from '@phosphor-icons/react';
 import { StreamingMessage } from '@/features/chat/components/channel/StreamingMessage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
@@ -9,6 +9,8 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { respondToAgentConfirmation, stopAgentRun } from '@/features/chat/store/chatThunks';
 import { selectMessagesForChannel, selectTypingUsers } from '@/features/chat/store/chatMessagesSlice';
 import { formatMediaTime } from '@/shared/utils/dateFormatting';
+import { fetchSkillDraft, type SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
+import { SkillDraftEditorModal } from '@/features/agents/components/skills/SkillDraftEditorModal';
 import type { ChatMessage } from '@/features/chat/types';
 
 interface AgentMessageBodyProps {
@@ -56,6 +58,8 @@ export function AgentMessageBody({ message }: AgentMessageBodyProps) {
             return <ConfirmationRequestCard message={message} />;
         case 'confirmation_resolved':
             return <ConfirmationResolvedRow message={message} />;
+        case 'skill_draft':
+            return <SkillDraftCard message={message} />;
         case 'final':
         default: {
             // Route every final message through StreamingMessage so the word-reveal animation runs even when the full reply arrives in one chunk.
@@ -488,6 +492,95 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
                     )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+function SkillDraftCard({ message }: { message: ChatMessage }) {
+    const dispatch = useAppDispatch();
+    const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId ?? '');
+
+    const draftId = readString(message.metadata, 'draft_id') ?? '';
+    const title = readString(message.metadata, 'draft_display_name')
+        ?? readString(message.metadata, 'draft_name')
+        ?? 'Proposed skill';
+    const description = readString(message.metadata, 'draft_description');
+    const draftKind = readString(message.metadata, 'draft_kind') ?? 'create';
+    const status = readString(message.metadata, 'draft_status') ?? 'pending';
+    const actorUserId = readString(message.metadata, 'actor_user_id') ?? '';
+
+    const isActor = !!currentUserId && currentUserId === actorUserId;
+    const [loading, setLoading] = useState(false);
+    const [editingDraft, setEditingDraft] = useState<SerializedSkillDraft | null>(null);
+
+    const openReview = async () => {
+        if (!draftId || !organizationId || loading) return;
+        setLoading(true);
+        try {
+            const draft = await dispatch(fetchSkillDraft(draftId)).unwrap();
+            setEditingDraft(draft);
+        } catch {
+            // errorToastMiddleware surfaces the failure; leave the modal closed.
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div
+            className="flex flex-col items-start"
+            data-testid={`chat-skill-draft-${message.id}`}
+            data-actor={isActor ? 'self' : 'other'}
+        >
+            <div className="max-w-[70%] bg-card border-2 border-primary/40 rounded-lg overflow-hidden">
+                <div className="px-3 py-2.5 space-y-2">
+                    <div className="flex items-start gap-2.5">
+                        <Lightning size={18} weight="fill" className="text-primary shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                            <p className="text-[13px] font-medium text-foreground">
+                                {draftKind === 'create' ? 'Proposed skill' : 'Proposed skill update'}: {title}
+                            </p>
+                            {description && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                                    {description}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {status === 'pending' ? (
+                        isActor ? (
+                            <Button
+                                onClick={openReview}
+                                size="sm"
+                                disabled={loading}
+                                data-testid={`chat-skill-draft-review-${message.id}`}
+                            >
+                                {loading ? 'Opening...' : 'Review & save'}
+                            </Button>
+                        ) : (
+                            <p className="text-[11px] text-muted-foreground italic">
+                                Waiting for the requester to review...
+                            </p>
+                        )
+                    ) : (
+                        <div
+                            className={cn(
+                                'inline-flex items-center gap-1 text-[11px]',
+                                status === 'saved' ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground',
+                            )}
+                        >
+                            {status === 'saved' ? <Check size={13} /> : <X size={13} />}
+                            {status === 'saved' ? 'Saved to skills' : 'Discarded'}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {editingDraft && (
+                <SkillDraftEditorModal draft={editingDraft} onClose={() => setEditingDraft(null)} />
+            )}
         </div>
     );
 }

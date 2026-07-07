@@ -66,6 +66,17 @@ TYPING_HEARTBEAT_SECONDS = 8
 CANCEL_POLL_SECONDS = 1.5
 
 
+def _parse_invoked_skill_id(metadata: dict | None) -> UUID | None:
+    """Pull an on-demand invoked skill id off a trigger message's metadata."""
+    raw = (metadata or {}).get("invoked_skill_id")
+    if not raw:
+        return None
+    try:
+        return UUID(str(raw))
+    except ValueError:
+        return None
+
+
 class AgentChatBridge:
     """Facade between chat messages and the agent runtime."""
 
@@ -107,6 +118,7 @@ class AgentChatBridge:
         member_ids = await self._load_user_member_ids(channel_id)
         user_id = trigger.sender_id
         thread_root_id = trigger.root_id
+        invoked_skill_id = _parse_invoked_skill_id(trigger.message_metadata)
         # Snapshot ORM-backed values now. A mid-run cancel rolls the session back,
         # which expires every attribute; the cleanup path can't drive an async
         # lazy-load (it raises MissingGreenlet), so the cleanup must read locals only.
@@ -175,6 +187,7 @@ class AgentChatBridge:
                 organization_id=organization_id,
                 content=trigger.content,
                 files=files,
+                invoked_skill_id=invoked_skill_id,
             ):
                 await publisher.publish(event)
 

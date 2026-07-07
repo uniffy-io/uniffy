@@ -1,4 +1,5 @@
 from agents.v1 import sessions_pb2 as _sessions_pb2
+from agents.v1 import skills_pb2 as _skills_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -162,20 +163,22 @@ class CronTaskUsage(_message.Message):
     def __init__(self, cron_task_id: _Optional[str] = ..., task_name: _Optional[str] = ..., agent_name: _Optional[str] = ..., total_runs: _Optional[int] = ..., successes: _Optional[int] = ..., failures: _Optional[int] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
-    __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context")
+    __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context", "invoked_skill_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     FILE_IDS_FIELD_NUMBER: _ClassVar[int]
     USER_TIMEZONE_FIELD_NUMBER: _ClassVar[int]
     CHAT_CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    INVOKED_SKILL_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     session_id: str
     content: str
     file_ids: _containers.RepeatedScalarFieldContainer[str]
     user_timezone: str
     chat_context: ChatChannelContext
-    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ...) -> None: ...
+    invoked_skill_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ..., invoked_skill_id: _Optional[str] = ...) -> None: ...
 
 class RerunFromMessageRequest(_message.Message):
     __slots__ = ("organization_id", "message_id", "user_timezone")
@@ -188,20 +191,22 @@ class RerunFromMessageRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., message_id: _Optional[str] = ..., user_timezone: _Optional[str] = ...) -> None: ...
 
 class StreamSendMessageRequest(_message.Message):
-    __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context")
+    __slots__ = ("organization_id", "session_id", "content", "file_ids", "user_timezone", "chat_context", "invoked_skill_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     FILE_IDS_FIELD_NUMBER: _ClassVar[int]
     USER_TIMEZONE_FIELD_NUMBER: _ClassVar[int]
     CHAT_CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    INVOKED_SKILL_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     session_id: str
     content: str
     file_ids: _containers.RepeatedScalarFieldContainer[str]
     user_timezone: str
     chat_context: ChatChannelContext
-    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ...) -> None: ...
+    invoked_skill_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., content: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., user_timezone: _Optional[str] = ..., chat_context: _Optional[_Union[ChatChannelContext, _Mapping]] = ..., invoked_skill_id: _Optional[str] = ...) -> None: ...
 
 class ChatChannelContext(_message.Message):
     __slots__ = ("channel_id", "agent_id", "trigger_message_id", "context_urn")
@@ -266,7 +271,7 @@ class RespondToConfirmationResponse(_message.Message):
     def __init__(self, accepted: _Optional[bool] = ...) -> None: ...
 
 class AgentStreamEvent(_message.Message):
-    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "run_id")
+    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "skill_draft", "run_id")
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
     TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
@@ -275,6 +280,7 @@ class AgentStreamEvent(_message.Message):
     ERROR_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
     FAILOVER_FIELD_NUMBER: _ClassVar[int]
+    SKILL_DRAFT_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     token: StreamTokenEvent
     tool_call: StreamToolCallEvent
@@ -284,8 +290,9 @@ class AgentStreamEvent(_message.Message):
     error: StreamErrorEvent
     confirmation_required: StreamConfirmationRequiredEvent
     failover: StreamFailoverEvent
+    skill_draft: StreamSkillDraftEvent
     run_id: str
-    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., skill_draft: _Optional[_Union[StreamSkillDraftEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class StreamSendMessageResponse(_message.Message):
     __slots__ = ("event",)
@@ -378,3 +385,9 @@ class StreamFailoverEvent(_message.Message):
     reason: str
     attempt: int
     def __init__(self, from_provider_key_id: _Optional[str] = ..., to_provider_key_id: _Optional[str] = ..., to_model: _Optional[str] = ..., reason: _Optional[str] = ..., attempt: _Optional[int] = ...) -> None: ...
+
+class StreamSkillDraftEvent(_message.Message):
+    __slots__ = ("draft",)
+    DRAFT_FIELD_NUMBER: _ClassVar[int]
+    draft: _skills_pb2.SkillDraft
+    def __init__(self, draft: _Optional[_Union[_skills_pb2.SkillDraft, _Mapping]] = ...) -> None: ...

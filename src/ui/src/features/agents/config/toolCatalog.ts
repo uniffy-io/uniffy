@@ -102,6 +102,12 @@ export const TOOL_SECTIONS: ToolCategorySection[] = [
                 ],
             },
             {
+                group: "Skills",
+                tools: [
+                    { name: "skills.propose_skill", displayName: "Propose Skill", description: "Draft a new or edited skill for the user to review and save", destructive: false },
+                ],
+            },
+            {
                 group: "Scheduling",
                 tools: [
                     { name: "cron.create", displayName: "Create Scheduled Task", description: "Create a recurring scheduled task with a cron expression", destructive: false },
