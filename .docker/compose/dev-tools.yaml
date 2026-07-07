@@ -19,7 +19,7 @@ services:
       dockerfile: .docker/dev/mcp-playwright.Dockerfile
     image: uniffy-mcp-playwright
     container_name: uniffy-mcp-playwright
-    profiles: ["dev"]
+    profiles: ["dev", "all"]
     restart: unless-stopped
     command: ["--port", "8931", "--host", "0.0.0.0", "--browser", "chromium", "--headless", "--user-data-dir", "/profile"]
     ports:
@@ -45,7 +45,7 @@ services:
       dockerfile: .docker/dev/mcp-playwright.Dockerfile
     image: uniffy-mcp-playwright
     container_name: uniffy-mcp-playwright-b
-    profiles: ["dev"]
+    profiles: ["dev", "all"]
     restart: unless-stopped
     command: ["--port", "8932", "--host", "0.0.0.0", "--browser", "chromium", "--headless", "--user-data-dir", "/profile"]
     ports:

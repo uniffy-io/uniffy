@@ -1,7 +1,10 @@
-# Caddyfile for production build testing
-# Serves UI and proxies API requests to backend
+# Local dev edge - one origin for UI, API, and LiveKit signaling, mirroring
+# the self-host customer topology (Caddy in front of everything).
+# Browser entry point: http://localhost
+# Direct ports (5173 vite, 8000 backend, 7880 livekit) stay published for
+# tooling; the edge is the canonical path.
 
-localhost {
+:80 {
 	# ConnectRPC services - proxy to backend
 	# Matches paths like /notes.v1.NotesService/*
 	@connectrpc path_regexp connectrpc ^/[a-z]+\.[a-z0-9]+\.[A-Za-z]+Service/.*
@@ -9,12 +12,11 @@ localhost {
 		reverse_proxy backend:8000
 	}
 
-	# API routes - proxy to backend
+	# API routes incl. /api/realtime websocket - proxy to backend
 	handle /api/* {
 		reverse_proxy backend:8000
 	}
 
-	# Health check
 	handle /health {
 		reverse_proxy backend:8000
 	}
@@ -24,8 +26,8 @@ localhost {
 		reverse_proxy livekit:7880
 	}
 
-	# Everything else - serve from UI
+	# Everything else - vite dev server (HMR websocket included)
 	handle {
-		reverse_proxy ui:80
+		reverse_proxy ui:5173
 	}
 }

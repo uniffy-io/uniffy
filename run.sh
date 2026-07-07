@@ -60,9 +60,6 @@ help() {
   echo ""
   echo -e "  ${CYAN}Calls${NC}"
   echo -e "  ${CYAN}livekit-logs${NC}    Tail LiveKit server logs"
-  echo -e "  ${CYAN}calls-turn-up${NC}   Start coturn (TURN/STUN relay) for cross-NAT testing"
-  echo -e "  ${CYAN}calls-turn-down${NC} Stop coturn"
-  echo -e "  ${CYAN}calls-turn-logs${NC} Tail coturn logs"
   echo ""
   echo -e "  ${CYAN}Data${NC}"
   echo -e "  ${CYAN}data-reset${NC}      Wipe postgres + valkey + meilisearch + rustfs volumes; restart backend"
@@ -149,11 +146,10 @@ clean() {
 
 dev() {
   echo "Starting containerized dev stack..."
-  echo "  Backend:  http://localhost:8000"
-  echo "  Frontend: http://localhost:5173"
+  echo "  App:      http://localhost (edge: UI + API + LiveKit signaling)"
   echo "  Landing:  http://localhost:4321"
-  echo "  LiveKit:  ws://localhost:7880"
   echo "  Workers:  core + egress (metrics 9091, 9092)"
+  echo "  Direct:   backend :8000, vite :5173, livekit :7880 (tooling only)"
   echo ""
   echo "First start: builds dev images + runs uv sync + pnpm install (~3-5 min)."
   echo "Subsequent starts skip install when lockfiles are unchanged."
@@ -301,22 +297,6 @@ EOF
   echo "  docker compose logs -f backend"
 }
 
-calls_turn_up() {
-  echo "Starting coturn (TURN/STUN relay)..."
-  docker compose --profile calls-turn up -d coturn
-  echo "coturn:    udp/3478, tcp/3478, udp/49160-49200"
-  echo "Add ICE servers in your client to use it."
-}
-
-calls_turn_down() {
-  echo "Stopping coturn..."
-  docker compose --profile calls-turn down
-}
-
-calls_turn_logs() {
-  docker compose --profile calls-turn logs -f coturn
-}
-
 worker_core() {
   echo "Starting core background worker..."
   uv run python -m uniffy --worker-core
@@ -453,8 +433,5 @@ landing-preview) landing_preview ;;
 landing-deploy) landing_deploy ;;
 livekit-logs) livekit_logs ;;
 data-reset) data_reset ;;
-calls-turn-up) calls_turn_up ;;
-calls-turn-down) calls_turn_down ;;
-calls-turn-logs) calls_turn_logs ;;
 help | *) help ;;
 esac

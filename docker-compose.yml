@@ -4,16 +4,16 @@ name: uniffy-local
 # Run any subset directly:  docker compose -f .docker/compose/<name>.yaml up
 # Or all at once:           docker compose up
 #
-# Profiles for opt-in services:
-#   --profile mcp           mcp-playwright (Claude Code -> browser)
-#   --profile calls-turn    coturn TURN relay
+# Profiles:
+#   (none)          infra only: postgres, valkey, meilisearch, livekit, rustfs, admin UIs
+#   --profile dev   infra + dev stack: edge, backend, workers, ui, landing, mcp-playwright
+#   --profile all   everything
 #
-# Helpers in run.sh: mcp-up/down/logs, calls-turn-up/down/logs, livekit-logs
+# Helpers in run.sh: dev, dev-down, dev-logs, livekit-logs
 
 include:
-  - .docker/compose/core.yaml          # postgres, valkey, meilisearch
+  - .docker/compose/core.yaml          # postgres, valkey, meilisearch, livekit
   - .docker/compose/storage.yaml       # rustfs (S3-compatible)
   - .docker/compose/admin.yaml         # pgadmin, redisinsight (db inspection UIs)
-  - .docker/compose/calls.yaml         # livekit (always on), coturn (profile: calls-turn)
   - .docker/compose/dev-tools.yaml     # mcp-playwright (profile: mcp)
-  - .docker/compose/dev.yaml           # backend, worker-core, worker-egress, ui (profile: dev)
+  - .docker/compose/dev.yaml           # edge, backend, workers, ui (profile: dev)
