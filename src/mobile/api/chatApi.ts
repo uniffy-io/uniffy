@@ -5,11 +5,15 @@ import {
   ListChannelsRequestSchema,
   GetChannelRequestSchema,
   CreateChannelRequestSchema,
+  UpdateChannelRequestSchema,
   ArchiveChannelRequestSchema,
   DeleteChannelRequestSchema,
   JoinChannelRequestSchema,
   LeaveChannelRequestSchema,
   GetMembersRequestSchema,
+  AddMembersRequestSchema,
+  RemoveMembersRequestSchema,
+  UpdateChannelMemberRequestSchema,
   SendMessageRequestSchema,
   GetMessagesRequestSchema,
   UpdateMessageRequestSchema,
@@ -17,7 +21,10 @@ import {
   PinMessageRequestSchema,
   UnpinMessageRequestSchema,
   GetPinnedMessagesRequestSchema,
+  GetThreadRequestSchema,
+  GetThreadMessagesRequestSchema,
   GetThreadsInboxRequestSchema,
+  MarkThreadReadRequestSchema,
   AddReactionRequestSchema,
   RemoveReactionRequestSchema,
   SetTypingRequestSchema,
@@ -26,6 +33,8 @@ import {
   CreateAgentChatRequestSchema,
   ListAgentChatsRequestSchema,
   StopAgentRunRequestSchema,
+  RespondToAgentConfirmationRequestSchema,
+  GetChannelPendingApprovalsRequestSchema,
   ListCategoriesRequestSchema,
   CreateCategoryRequestSchema,
   UpdateCategoryRequestSchema,
@@ -42,6 +51,8 @@ export const chatApi = {
   getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) => client.getChannel(req),
   createChannel: (req: MessageInitShape<typeof CreateChannelRequestSchema>) =>
     client.createChannel(req),
+  updateChannel: (req: MessageInitShape<typeof UpdateChannelRequestSchema>) =>
+    client.updateChannel(req),
   archiveChannel: (req: MessageInitShape<typeof ArchiveChannelRequestSchema>) =>
     client.archiveChannel(req),
   deleteChannel: (req: MessageInitShape<typeof DeleteChannelRequestSchema>) =>
@@ -51,6 +62,11 @@ export const chatApi = {
   leaveChannel: (req: MessageInitShape<typeof LeaveChannelRequestSchema>) =>
     client.leaveChannel(req),
   getMembers: (req: MessageInitShape<typeof GetMembersRequestSchema>) => client.getMembers(req),
+  addMembers: (req: MessageInitShape<typeof AddMembersRequestSchema>) => client.addMembers(req),
+  removeMembers: (req: MessageInitShape<typeof RemoveMembersRequestSchema>) =>
+    client.removeMembers(req),
+  updateChannelMember: (req: MessageInitShape<typeof UpdateChannelMemberRequestSchema>) =>
+    client.updateChannelMember(req),
 
   sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) => client.sendMessage(req),
   getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) => client.getMessages(req),
@@ -63,8 +79,13 @@ export const chatApi = {
     client.unpinMessage(req),
   getPinnedMessages: (req: MessageInitShape<typeof GetPinnedMessagesRequestSchema>) =>
     client.getPinnedMessages(req),
+  getThread: (req: MessageInitShape<typeof GetThreadRequestSchema>) => client.getThread(req),
+  getThreadMessages: (req: MessageInitShape<typeof GetThreadMessagesRequestSchema>) =>
+    client.getThreadMessages(req),
   getThreadsInbox: (req: MessageInitShape<typeof GetThreadsInboxRequestSchema>) =>
     client.getThreadsInbox(req),
+  markThreadRead: (req: MessageInitShape<typeof MarkThreadReadRequestSchema>) =>
+    client.markThreadRead(req),
 
   addReaction: (req: MessageInitShape<typeof AddReactionRequestSchema>) => client.addReaction(req),
   removeReaction: (req: MessageInitShape<typeof RemoveReactionRequestSchema>) =>
@@ -82,6 +103,12 @@ export const chatApi = {
     client.listAgentChats(req),
   stopAgentRun: (req: MessageInitShape<typeof StopAgentRunRequestSchema>) =>
     client.stopAgentRun(req),
+  respondToAgentConfirmation: (
+    req: MessageInitShape<typeof RespondToAgentConfirmationRequestSchema>,
+  ) => client.respondToAgentConfirmation(req),
+  getChannelPendingApprovals: (
+    req: MessageInitShape<typeof GetChannelPendingApprovalsRequestSchema>,
+  ) => client.getChannelPendingApprovals(req),
 
   listCategories: (req: MessageInitShape<typeof ListCategoriesRequestSchema>) =>
     client.listCategories(req),

@@ -118,6 +118,49 @@ export interface UploadFileArgs {
   folderId?: string;
 }
 
+/** Chunked upload of a local asset. Returns the completed File row. */
+export async function uploadAsset(
+  organizationId: string,
+  args: UploadFileArgs,
+  onProgress?: (percent: number) => void,
+) {
+  // Read bytes first: pickers do not always report a size, and initiate needs
+  // an accurate total.
+  const fileResponse = await fetch(args.uri);
+  const arrayBuffer = await fileResponse.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  const initResponse = await filesApi.initiateUpload({
+    organizationId,
+    filename: args.filename,
+    mimeType: args.mimeType,
+    totalSize: BigInt(bytes.length),
+    folderId: args.folderId,
+    accessMode: AccessMode.OWNER_ONLY,
+  });
+
+  const { uploadId, chunkSize, totalChunks } = initResponse;
+
+  const size = Number(chunkSize);
+  for (let i = 0; i < Number(totalChunks); i++) {
+    const start = i * size;
+    const end = Math.min(start + size, bytes.length);
+    const chunk = bytes.slice(start, end);
+    const isLast = i === Number(totalChunks) - 1;
+
+    await filesApi.uploadChunk({
+      uploadId,
+      chunkNumber: i + 1,
+      data: chunk,
+      isLast,
+    });
+
+    onProgress?.(Math.round(((i + 1) / Number(totalChunks)) * 100));
+  }
+
+  return filesApi.completeUpload({ uploadId });
+}
+
 export function useUploadFile() {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
@@ -126,40 +169,7 @@ export function useUploadFile() {
   const mutation = useMutation({
     mutationFn: async (args: UploadFileArgs) => {
       setProgress(0);
-
-      const initResponse = await filesApi.initiateUpload({
-        organizationId: organizationId!,
-        filename: args.filename,
-        mimeType: args.mimeType,
-        totalSize: BigInt(args.size),
-        folderId: args.folderId,
-        accessMode: AccessMode.OWNER_ONLY,
-      });
-
-      const { uploadId, chunkSize, totalChunks } = initResponse;
-
-      const fileResponse = await fetch(args.uri);
-      const arrayBuffer = await fileResponse.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-
-      const size = Number(chunkSize);
-      for (let i = 0; i < Number(totalChunks); i++) {
-        const start = i * size;
-        const end = Math.min(start + size, bytes.length);
-        const chunk = bytes.slice(start, end);
-        const isLast = i === Number(totalChunks) - 1;
-
-        await filesApi.uploadChunk({
-          uploadId,
-          chunkNumber: i + 1,
-          data: chunk,
-          isLast,
-        });
-
-        setProgress(Math.round(((i + 1) / Number(totalChunks)) * 100));
-      }
-
-      return filesApi.completeUpload({ uploadId });
+      return uploadAsset(organizationId!, args, setProgress);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files"] });

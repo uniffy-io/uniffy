@@ -13,6 +13,7 @@ import type {
   ReactionGroup as ProtoReactionGroup,
   ThreadInboxItem as ProtoThreadInboxItem,
   ChatChannelCategory as ProtoChatChannelCategory,
+  PendingAgentApproval as ProtoPendingAgentApproval,
 } from "@uniffy/proto/chat/v1/chat_pb";
 
 export type ChannelType = "PUBLIC" | "PRIVATE" | "DIRECT" | "GROUP_DM";
@@ -31,6 +32,14 @@ export interface SerializedReplyContext {
   id: string;
   senderName: string;
   contentPreview: string;
+}
+
+export interface SerializedAttachment {
+  id: string;
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
 }
 
 export interface SerializedChannel {
@@ -80,6 +89,8 @@ export interface SerializedMessage {
   reactions: SerializedReaction[];
   senderName: string;
   senderAvatarUrl: string | null;
+  /** Populated by a separate BatchListAttachments fetch, not the message proto. */
+  attachments: SerializedAttachment[];
 }
 
 export interface SerializedMember {
@@ -197,7 +208,9 @@ export function channelToPlain(proto: ProtoChatChannel): SerializedChannel {
     lastMessageAtSeconds: tsToSeconds(proto.lastMessageAt) || tsToSeconds(proto.lastRootMessageAt),
     dmMemberIds: [...proto.dmMemberIds],
     currentUserRole:
-      proto.currentUserRole !== undefined ? CHANNEL_ROLE_MAP[proto.currentUserRole] ?? null : null,
+      proto.currentUserRole !== undefined
+        ? (CHANNEL_ROLE_MAP[proto.currentUserRole] ?? null)
+        : null,
     isMember: proto.isMember ?? false,
     displayName: customName || proto.name,
     unreadCount: 0,
@@ -242,6 +255,7 @@ export function messageToPlain(proto: ProtoChatMessage): SerializedMessage {
     reactions: proto.reactions.map(reactionToPlain),
     senderName: proto.senderName || "Unknown",
     senderAvatarUrl: proto.senderAvatarUrl || null,
+    attachments: [],
   };
 }
 
@@ -288,6 +302,28 @@ export function threadInboxItemToPlain(proto: ProtoThreadInboxItem): SerializedT
   };
 }
 
+export interface SerializedPendingApproval {
+  requestId: string;
+  agentId: string;
+  messageId: string;
+  toolName: string;
+  argsPreview: string;
+  actorUserId: string;
+  requestedAtSeconds: number;
+}
+
+export function approvalToPlain(proto: ProtoPendingAgentApproval): SerializedPendingApproval {
+  return {
+    requestId: proto.requestId,
+    agentId: proto.agentId,
+    messageId: proto.messageId,
+    toolName: proto.toolName,
+    argsPreview: proto.argsPreview,
+    actorUserId: proto.actorUserId,
+    requestedAtSeconds: tsToSeconds(proto.requestedAt),
+  };
+}
+
 export function channelTypeToProto(type: ChannelType): ProtoChannelType {
   switch (type) {
     case "PRIVATE":
@@ -298,6 +334,17 @@ export function channelTypeToProto(type: ChannelType): ProtoChannelType {
       return ProtoChannelType.GROUP_DM;
     default:
       return ProtoChannelType.PUBLIC;
+  }
+}
+
+export function notificationLevelToProto(level: NotificationLevel): ProtoNotificationLevel {
+  switch (level) {
+    case "MENTIONS":
+      return ProtoNotificationLevel.MENTIONS;
+    case "NONE":
+      return ProtoNotificationLevel.NONE;
+    default:
+      return ProtoNotificationLevel.ALL;
   }
 }
 

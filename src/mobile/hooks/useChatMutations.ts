@@ -1,9 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AgentConfirmationDecision } from "@uniffy/proto/chat/v1/chat_pb";
 import { useAuth } from "@/context/auth-context";
 import { chatApi } from "@/api/chatApi";
-import { channelTypeToProto, type ChannelType, type SerializedMessage } from "@/lib/chatSerializer";
+import {
+  channelTypeToProto,
+  notificationLevelToProto,
+  type ChannelType,
+  type NotificationLevel,
+  type SerializedMessage,
+} from "@/lib/chatSerializer";
 
-function messagesKey(orgId: string | null, channelId: string) {
+export function messagesKey(orgId: string | null, channelId: string) {
   return ["chat", "messages", orgId, channelId];
 }
 
@@ -23,10 +30,10 @@ export function useSendMessage(channelId: string) {
       }),
     onMutate: async (args) => {
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<SerializedMessage[]>(key);
       const nowSeconds = Math.floor(Date.now() / 1000);
+      const optimisticId = `optimistic-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
       const optimistic: SerializedMessage = {
-        id: `optimistic-${nowSeconds}-${Math.round(nowSeconds % 100000)}`,
+        id: optimisticId,
         channelId,
         senderId: user?.id ?? "",
         senderType: "USER",
@@ -37,7 +44,13 @@ export function useSendMessage(channelId: string) {
         editedAtSeconds: null,
         isDeleted: false,
         isPinned: false,
-        metadata: { optimistic: "1" },
+        // attachmentIds ride along so a failed send can be retried intact.
+        metadata: {
+          optimistic: "1",
+          ...(args.attachmentFileIds?.length
+            ? { attachmentIds: args.attachmentFileIds.join(",") }
+            : {}),
+        },
         createdAtSeconds: nowSeconds,
         createdAtIso: new Date(nowSeconds * 1000).toISOString(),
         timeLabel: "Sending...",
@@ -45,17 +58,45 @@ export function useSendMessage(channelId: string) {
         reactions: [],
         senderName: user?.fullName || user?.username || "You",
         senderAvatarUrl: user?.avatarUrl || null,
+        attachments: [],
       };
       queryClient.setQueryData<SerializedMessage[]>(key, (old) => [optimistic, ...(old ?? [])]);
-      return { previous };
+      return { optimisticId };
     },
+    // Failed sends stay in the list flagged for retry/discard instead of vanishing.
+    // useMessages carries the flagged rows across poll refetches.
     onError: (_err, _args, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(key, ctx.previous);
+      if (!ctx) return;
+      queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
+        (old ?? []).map((m) =>
+          m.id === ctx.optimisticId
+            ? { ...m, metadata: { ...m.metadata, failed: "1" }, timeLabel: "Not sent" }
+            : m,
+        ),
+      );
     },
-    onSettled: () => {
+    onSuccess: (_res, _args, ctx) => {
+      if (ctx) {
+        queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
+          (old ?? []).filter((m) => m.id !== ctx.optimisticId),
+        );
+      }
       queryClient.invalidateQueries({ queryKey: key });
     },
   });
+}
+
+/** Remove a failed optimistic message from the cache (discard, or clear before retry). */
+export function useDiscardFailedMessage(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+  const key = messagesKey(organizationId, channelId);
+
+  return (messageId: string) => {
+    queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
+      (old ?? []).filter((m) => m.id !== messageId),
+    );
+  };
 }
 
 export function useDeleteMessage(channelId: string) {
@@ -144,6 +185,66 @@ export function usePinMessage(channelId: string) {
   });
 }
 
+export function useSendThreadReply(channelId: string, rootMessageId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { content: string; attachmentFileIds?: string[] }) =>
+      chatApi.sendMessage({
+        organizationId: organizationId!,
+        channelId,
+        content: args.content,
+        rootId: rootMessageId,
+        attachmentFileIds: args.attachmentFileIds,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat", "threadMessages", organizationId, channelId, rootMessageId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["chat", "thread", organizationId, channelId, rootMessageId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["chat", "threads", organizationId] });
+      // The root message's reply count lives in the channel list too.
+      queryClient.invalidateQueries({ queryKey: messagesKey(organizationId, channelId) });
+    },
+  });
+}
+
+export function useMarkThreadRead() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (rootMessageId: string) =>
+      chatApi.markThreadRead({ organizationId: organizationId!, rootMessageId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "threads", organizationId] });
+    },
+  });
+}
+
+export function useRespondToAgentConfirmation(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { messageId: string; requestId: string; approve: boolean }) =>
+      chatApi.respondToAgentConfirmation({
+        organizationId: organizationId!,
+        channelId,
+        messageId: args.messageId,
+        requestId: args.requestId,
+        decision: args.approve ? AgentConfirmationDecision.APPROVE : AgentConfirmationDecision.DENY,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "approvals", organizationId, channelId] });
+      queryClient.invalidateQueries({ queryKey: messagesKey(organizationId, channelId) });
+    },
+  });
+}
+
 export function useMarkChannelRead(channelId: string) {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
@@ -210,8 +311,7 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (name: string) =>
-      chatApi.createCategory({ organizationId: organizationId!, name }),
+    mutationFn: (name: string) => chatApi.createCategory({ organizationId: organizationId!, name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "categories", organizationId] });
     },
@@ -241,6 +341,160 @@ export function useLeaveChannel() {
       chatApi.leaveChannel({ organizationId: organizationId!, channelId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+    },
+  });
+}
+
+export function useUpdateChannel(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { name?: string; description?: string }) =>
+      chatApi.updateChannel({
+        organizationId: organizationId!,
+        channelId,
+        name: args.name,
+        description: args.description,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "channel", organizationId, channelId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+    },
+  });
+}
+
+export function useArchiveChannel() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (channelId: string) =>
+      chatApi.archiveChannel({ organizationId: organizationId!, channelId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+    },
+  });
+}
+
+export function useDeleteChannel() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (channelId: string) =>
+      chatApi.deleteChannel({ organizationId: organizationId!, channelId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+    },
+  });
+}
+
+export function useAddMembers(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userIds: string[]) =>
+      chatApi.addMembers({ organizationId: organizationId!, channelId, userIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "members", organizationId, channelId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "channel", organizationId, channelId] });
+    },
+  });
+}
+
+export function useRemoveMembers(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userIds: string[]) =>
+      chatApi.removeMembers({ organizationId: organizationId!, channelId, userIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "members", organizationId, channelId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "channel", organizationId, channelId] });
+    },
+  });
+}
+
+export function useUpdateChannelMember(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: {
+      userId: string;
+      isMuted?: boolean;
+      notificationLevel?: NotificationLevel;
+      mutedUntilSeconds?: number;
+    }) =>
+      chatApi.updateChannelMember({
+        organizationId: organizationId!,
+        channelId,
+        userId: args.userId,
+        isMuted: args.isMuted,
+        notificationLevel:
+          args.notificationLevel !== undefined
+            ? notificationLevelToProto(args.notificationLevel)
+            : undefined,
+        mutedUntil:
+          args.mutedUntilSeconds !== undefined
+            ? { seconds: BigInt(args.mutedUntilSeconds), nanos: 0 }
+            : undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "members", organizationId, channelId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "unread", organizationId] });
+    },
+  });
+}
+
+export function useUpdateCategory() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { categoryId: string; name: string }) =>
+      chatApi.updateCategory({
+        organizationId: organizationId!,
+        categoryId: args.categoryId,
+        name: args.name,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "categories", organizationId] });
+    },
+  });
+}
+
+export function useDeleteCategory() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (categoryId: string) =>
+      chatApi.deleteCategory({ organizationId: organizationId!, categoryId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "categories", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+    },
+  });
+}
+
+export function useMoveChannelToCategory() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { channelId: string; categoryId?: string }) =>
+      chatApi.moveChannelToCategory({
+        organizationId: organizationId!,
+        channelId: args.channelId,
+        categoryId: args.categoryId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "categories", organizationId] });
     },
   });
 }

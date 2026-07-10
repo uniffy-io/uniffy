@@ -472,8 +472,7 @@ class ChannelHandlers:
                 channel_ids = [c.id for c, _ in rows]
                 dm_ids_by_channel: dict[UUID, list[str]] = {}
                 if channel_ids:
-                    cached_map = await get_cached_dm_peers_many(channel_ids)
-                    missing = [cid for cid in channel_ids if cid not in cached_map]
+                    cached_map, missing = await get_cached_dm_peers_many(channel_ids)
                     if missing:
                         member_rows = await session.execute(
                             select(

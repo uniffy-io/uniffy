@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
+  Alert,
 } from "react-native";
 import {
   Plus,
@@ -24,6 +25,7 @@ import {
   ChatText,
   FolderPlus,
   X,
+  Check,
   MagnifyingGlass,
 } from "phosphor-react-native";
 import { router } from "expo-router";
@@ -31,7 +33,7 @@ import { DomainHeader } from "@/components/DomainHeader";
 import { Avatar } from "@/components/Avatar";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import {
   useChannels,
   useAgentChats,
@@ -39,12 +41,20 @@ import {
   useBrowseChannels,
   useCategories,
 } from "@/hooks/useChat";
-import { useJoinChannel, useCreateCategory, useCreateDm } from "@/hooks/useChatMutations";
+import {
+  useJoinChannel,
+  useCreateCategory,
+  useCreateDm,
+  useUpdateCategory,
+  useDeleteCategory,
+} from "@/hooks/useChatMutations";
+import { useChatStream } from "@/hooks/useChatStream";
 import { useDirectory } from "@/hooks/usePermissions";
 import {
   formatChannelActivity,
   type SerializedChannel,
   type SerializedThreadInboxItem,
+  type SerializedCategory,
 } from "@/lib/chatSerializer";
 
 type Tab = "all" | "threads" | "unreads";
@@ -73,6 +83,7 @@ export default function ChatListScreen() {
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newDmOpen, setNewDmOpen] = useState(false);
 
+  useChatStream();
   const { channels, isLoading, isFetching, refetch } = useChannels();
   const { agentChats: agentChatList } = useAgentChats();
   const categories = useCategories();
@@ -81,6 +92,33 @@ export default function ChatListScreen() {
   const joinChannel = useJoinChannel();
   const createCategory = useCreateCategory();
   const createDm = useCreateDm();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
+
+  const [renameCategoryTarget, setRenameCategoryTarget] = useState<SerializedCategory | null>(null);
+
+  const promptCategoryActions = useCallback(
+    (category: SerializedCategory) => {
+      Alert.alert(category.name, undefined, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Rename", onPress: () => setRenameCategoryTarget(category) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert("Delete category", "Channels move back to the top level.", [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: () => deleteCategory.mutate(category.id),
+              },
+            ]),
+        },
+      ]);
+    },
+    [deleteCategory],
+  );
 
   const openChannel = useCallback((id: string) => router.push(`/chat/${id}` as any), []);
 
@@ -108,7 +146,11 @@ export default function ChatListScreen() {
     return cats.map((cat) => ({
       category: cat,
       channels: channels.filter(
-        (c) => !c.isAgentDm && c.categoryId === cat.id && c.channelType !== "DIRECT" && c.channelType !== "GROUP_DM",
+        (c) =>
+          !c.isAgentDm &&
+          c.categoryId === cat.id &&
+          c.channelType !== "DIRECT" &&
+          c.channelType !== "GROUP_DM",
       ),
     }));
   }, [categories.data, channels]);
@@ -143,7 +185,7 @@ export default function ChatListScreen() {
   const header = (
     <DomainHeader
       title="Chat"
-      color={DOMAIN_COLORS.chat}
+      color={T.domains.chat}
       icon="chat"
       rightActions={
         <>
@@ -151,13 +193,13 @@ export default function ChatListScreen() {
             onPress={() => setBrowsing((v) => !v)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Compass size={21} color={browsing ? DOMAIN_COLORS.chat : T.text} weight="duotone" />
+            <Compass size={21} color={browsing ? T.domains.chat : T.text} weight="duotone" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setNewCategoryOpen(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Plus size={21} color={DOMAIN_COLORS.chat} weight="bold" />
+            <Plus size={21} color={T.domains.chat} weight="bold" />
           </TouchableOpacity>
         </>
       }
@@ -171,19 +213,21 @@ export default function ChatListScreen() {
         <View style={[styles.browseBar, { borderBottomColor: T.border }]}>
           <Text style={[styles.browseTitle, { color: T.textBright }]}>Browse channels</Text>
           <TouchableOpacity onPress={() => setBrowsing(false)}>
-            <Text style={[styles.browseClose, { color: DOMAIN_COLORS.chat }]}>Done</Text>
+            <Text style={[styles.browseClose, { color: T.domains.chat }]}>Done</Text>
           </TouchableOpacity>
         </View>
         {browse.isLoading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color={DOMAIN_COLORS.chat} />
+            <ActivityIndicator size="large" color={T.domains.chat} />
           </View>
         ) : (
           <FlatList
             data={browseList}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={browseList.length === 0 ? styles.emptyContent : styles.listContent}
+            contentContainerStyle={
+              browseList.length === 0 ? styles.emptyContent : styles.listContent
+            }
             renderItem={({ item }) => (
               <BrowseRow
                 channel={item}
@@ -219,7 +263,7 @@ export default function ChatListScreen() {
               style={[
                 styles.filterPill,
                 active
-                  ? { backgroundColor: DOMAIN_COLORS.chat }
+                  ? { backgroundColor: T.domains.chat }
                   : {
                       backgroundColor: T.surface,
                       borderColor: T.border,
@@ -238,7 +282,14 @@ export default function ChatListScreen() {
       </View>
 
       {tab === "threads" ? (
-        <ThreadsList threads={threads.data ?? []} loading={threads.isLoading} T={T} onOpen={openChannel} />
+        <ThreadsList
+          threads={threads.data ?? []}
+          loading={threads.isLoading}
+          T={T}
+          onOpen={(item) =>
+            router.push(`/chat/thread/${item.rootMessageId}?channelId=${item.channelId}` as never)
+          }
+        />
       ) : tab === "unreads" ? (
         <FlatList
           data={unreadList}
@@ -250,13 +301,15 @@ export default function ChatListScreen() {
           contentContainerStyle={unreadList.length === 0 ? styles.emptyContent : styles.listContent}
           ListEmptyComponent={
             <View style={styles.sectionEmpty}>
-              <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>You are all caught up</Text>
+              <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>
+                You are all caught up
+              </Text>
             </View>
           }
         />
       ) : isLoading && channels.length === 0 ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.chat} />
+          <ActivityIndicator size="large" color={T.domains.chat} />
         </View>
       ) : channels.length === 0 && agentChats.length === 0 ? (
         <EmptyChannels T={T} />
@@ -268,8 +321,8 @@ export default function ChatListScreen() {
             <RefreshControl
               refreshing={isFetching && !isLoading}
               onRefresh={() => refetch()}
-              tintColor={DOMAIN_COLORS.chat}
-              colors={[DOMAIN_COLORS.chat]}
+              tintColor={T.domains.chat}
+              colors={[T.domains.chat]}
             />
           }
         >
@@ -293,6 +346,7 @@ export default function ChatListScreen() {
               count={catChannels.length}
               collapsed={!!collapsed[`cat-${category.id}`]}
               onToggle={() => toggle(`cat-${category.id}`)}
+              onLongPress={() => promptCategoryActions(category)}
               T={T}
               onAdd={() => router.push("/chat/create" as any)}
             >
@@ -330,14 +384,34 @@ export default function ChatListScreen() {
         </ScrollView>
       )}
 
-      <NewCategoryModal
+      <CategoryNameModal
         visible={newCategoryOpen}
         T={T}
         pending={createCategory.isPending}
+        title="New category"
+        cta="Create category"
         onClose={() => setNewCategoryOpen(false)}
-        onCreate={(name) =>
+        onSubmit={(name) =>
           createCategory.mutate(name, { onSuccess: () => setNewCategoryOpen(false) })
         }
+      />
+
+      <CategoryNameModal
+        key={renameCategoryTarget?.id ?? "rename"}
+        visible={!!renameCategoryTarget}
+        T={T}
+        pending={updateCategory.isPending}
+        title="Rename category"
+        cta="Rename"
+        initialName={renameCategoryTarget?.name}
+        onClose={() => setRenameCategoryTarget(null)}
+        onSubmit={(name) => {
+          if (!renameCategoryTarget) return;
+          updateCategory.mutate(
+            { categoryId: renameCategoryTarget.id, name },
+            { onSuccess: () => setRenameCategoryTarget(null) },
+          );
+        }}
       />
 
       <NewDmModal
@@ -345,8 +419,8 @@ export default function ChatListScreen() {
         T={T}
         pending={createDm.isPending}
         onClose={() => setNewDmOpen(false)}
-        onPick={(userId) =>
-          createDm.mutate([userId], {
+        onCreate={(userIds) =>
+          createDm.mutate(userIds, {
             onSuccess: (res) => {
               setNewDmOpen(false);
               if (res.channel?.id) openChannel(res.channel.id);
@@ -358,20 +432,26 @@ export default function ChatListScreen() {
   );
 }
 
-function NewCategoryModal({
+function CategoryNameModal({
   visible,
   T,
   pending,
+  title,
+  cta,
+  initialName,
   onClose,
-  onCreate,
+  onSubmit,
 }: {
   visible: boolean;
   T: ThemeColors;
   pending: boolean;
+  title: string;
+  cta: string;
+  initialName?: string;
   onClose: () => void;
-  onCreate: (name: string) => void;
+  onSubmit: (name: string) => void;
 }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName ?? "");
   const trimmed = name.trim();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -379,8 +459,8 @@ function NewCategoryModal({
       <View style={[styles.sheet, { backgroundColor: T.surface }]}>
         <View style={[styles.handle, { backgroundColor: T.border }]} />
         <View style={styles.sheetHeader}>
-          <FolderPlus size={20} color={DOMAIN_COLORS.chat} weight="duotone" />
-          <Text style={[styles.sheetTitle, { color: T.textBright }]}>New category</Text>
+          <FolderPlus size={20} color={T.domains.chat} weight="duotone" />
+          <Text style={[styles.sheetTitle, { color: T.textBright }]}>{title}</Text>
         </View>
         <TextInput
           value={name}
@@ -388,19 +468,22 @@ function NewCategoryModal({
           placeholder="Category name"
           placeholderTextColor={T.textDim}
           autoFocus
-          style={[styles.modalInput, { color: T.textBright, backgroundColor: T.bg, borderColor: T.border }]}
+          style={[
+            styles.modalInput,
+            { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+          ]}
         />
         <TouchableOpacity
-          style={[styles.modalCta, { backgroundColor: trimmed ? DOMAIN_COLORS.chat : T.surfaceHover }]}
+          style={[styles.modalCta, { backgroundColor: trimmed ? T.domains.chat : T.surfaceHover }]}
           disabled={!trimmed || pending}
           onPress={() => {
-            onCreate(trimmed);
+            onSubmit(trimmed);
             setName("");
           }}
           activeOpacity={0.8}
         >
           <Text style={[styles.modalCtaText, { color: trimmed ? "#fff" : T.textDim }]}>
-            {pending ? "Creating..." : "Create category"}
+            {pending ? "Saving..." : cta}
           </Text>
         </TouchableOpacity>
       </View>
@@ -413,22 +496,33 @@ function NewDmModal({
   T,
   pending,
   onClose,
-  onPick,
+  onCreate,
 }: {
   visible: boolean;
   T: ThemeColors;
   pending: boolean;
   onClose: () => void;
-  onPick: (userId: string) => void;
+  onCreate: (userIds: string[]) => void;
 }) {
   const directory = useDirectory();
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const users = useMemo(() => {
     const q = search.trim().toLowerCase();
     return directory.subjects
       .filter((s) => s.kind === "USER")
-      .filter((s) => !q || s.name.toLowerCase().includes(q) || (s.email ?? "").toLowerCase().includes(q));
+      .filter(
+        (s) => !q || s.name.toLowerCase().includes(q) || (s.email ?? "").toLowerCase().includes(q),
+      );
   }, [directory.subjects, search]);
+
+  const toggleUser = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -456,25 +550,38 @@ function NewDmModal({
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           style={styles.dmList}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.dmRow, { borderBottomColor: T.border }]}
-              onPress={() => !pending && onPick(item.id)}
-              activeOpacity={0.7}
-            >
-              <Avatar name={item.name} avatarUrl={item.avatarUrl} size={36} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.dmName, { color: T.textBright }]} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                {item.email ? (
-                  <Text style={[styles.dmEmail, { color: T.textDim }]} numberOfLines={1}>
-                    {item.email}
+          renderItem={({ item }) => {
+            const active = selected.has(item.id);
+            return (
+              <TouchableOpacity
+                style={[styles.dmRow, { borderBottomColor: T.border }]}
+                onPress={() => toggleUser(item.id)}
+                activeOpacity={0.7}
+              >
+                <Avatar name={item.name} avatarUrl={item.avatarUrl} size={36} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dmName, { color: T.textBright }]} numberOfLines={1}>
+                    {item.name}
                   </Text>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-          )}
+                  {item.email ? (
+                    <Text style={[styles.dmEmail, { color: T.textDim }]} numberOfLines={1}>
+                      {item.email}
+                    </Text>
+                  ) : null}
+                </View>
+                <View
+                  style={[
+                    styles.dmCheckbox,
+                    active
+                      ? { backgroundColor: T.domains.chat, borderColor: T.domains.chat }
+                      : { borderColor: T.border },
+                  ]}
+                >
+                  {active ? <Check size={12} color="#fff" weight="bold" /> : null}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
           ListEmptyComponent={
             <View style={styles.sectionEmpty}>
               <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>
@@ -483,6 +590,27 @@ function NewDmModal({
             </View>
           }
         />
+        <TouchableOpacity
+          style={[
+            styles.modalCta,
+            { backgroundColor: selected.size > 0 ? T.domains.chat : T.surfaceHover },
+          ]}
+          disabled={selected.size === 0 || pending}
+          onPress={() => {
+            onCreate([...selected]);
+            setSelected(new Set());
+            setSearch("");
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.modalCtaText, { color: selected.size > 0 ? "#fff" : T.textDim }]}>
+            {pending
+              ? "Starting..."
+              : selected.size > 1
+                ? `Start group chat (${selected.size})`
+                : "Start chat"}
+          </Text>
+        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -493,6 +621,7 @@ function CategorySection({
   count,
   collapsed,
   onToggle,
+  onLongPress,
   onAdd,
   T,
   children,
@@ -501,6 +630,7 @@ function CategorySection({
   count: number;
   collapsed: boolean;
   onToggle: () => void;
+  onLongPress?: () => void;
   onAdd?: () => void;
   T: ThemeColors;
   children: React.ReactNode;
@@ -508,7 +638,13 @@ function CategorySection({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
-        <TouchableOpacity style={styles.sectionHeader} onPress={onToggle} activeOpacity={0.6}>
+        <TouchableOpacity
+          style={styles.sectionHeader}
+          onPress={onToggle}
+          onLongPress={onLongPress}
+          delayLongPress={300}
+          activeOpacity={0.6}
+        >
           {collapsed ? (
             <CaretRight size={13} color={T.textDim} weight="bold" />
           ) : (
@@ -543,12 +679,12 @@ function ThreadsList({
   threads: SerializedThreadInboxItem[];
   loading: boolean;
   T: ThemeColors;
-  onOpen: (channelId: string) => void;
+  onOpen: (item: SerializedThreadInboxItem) => void;
 }) {
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={DOMAIN_COLORS.chat} />
+        <ActivityIndicator size="large" color={T.domains.chat} />
       </View>
     );
   }
@@ -561,17 +697,17 @@ function ThreadsList({
       renderItem={({ item }) => (
         <TouchableOpacity
           style={[styles.row, { borderBottomColor: T.border }]}
-          onPress={() => onOpen(item.channelId)}
+          onPress={() => onOpen(item)}
           activeOpacity={0.7}
         >
-          <View style={[styles.rowIcon, { backgroundColor: DOMAIN_COLORS.chatSoft }]}>
-            <ChatText size={16} color={DOMAIN_COLORS.chat} weight="fill" />
+          <View style={[styles.rowIcon, { backgroundColor: T.domains.chatSoft }]}>
+            <ChatText size={16} color={T.domains.chat} weight="fill" />
           </View>
           <View style={styles.rowBody}>
             <Text
               style={[
                 styles.rowTitle,
-                { color: T.textBright, fontFamily: item.hasUnread ? "Inter_700Bold" : "Inter_600SemiBold" },
+                { color: T.textBright, fontFamily: item.hasUnread ? FONT.bold : FONT.semibold },
               ]}
               numberOfLines={1}
             >
@@ -582,7 +718,7 @@ function ThreadsList({
             </Text>
           </View>
           <View style={styles.rowRight}>
-            <Text style={[styles.rowTime, { color: item.hasUnread ? DOMAIN_COLORS.chat : T.textDim }]}>
+            <Text style={[styles.rowTime, { color: item.hasUnread ? T.domains.chat : T.textDim }]}>
               {item.activityLabel}
             </Text>
             <Text style={[styles.rowReplies, { color: T.textDim }]}>
@@ -593,7 +729,7 @@ function ThreadsList({
       )}
       ListEmptyComponent={
         <View style={styles.sectionEmpty}>
-          <ChatText size={32} color={DOMAIN_COLORS.chat} weight="duotone" />
+          <ChatText size={32} color={T.domains.chat} weight="duotone" />
           <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>No threads yet</Text>
         </View>
       }
@@ -617,14 +753,14 @@ function ChannelRow({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: DOMAIN_COLORS.chatSoft }]}>
-        <ChannelIcon channel={channel} color={DOMAIN_COLORS.chat} />
+      <View style={[styles.rowIcon, { backgroundColor: T.domains.chatSoft }]}>
+        <ChannelIcon channel={channel} color={T.domains.chat} />
       </View>
       <View style={styles.rowBody}>
         <Text
           style={[
             styles.rowTitle,
-            { color: T.textBright, fontFamily: hasUnread ? "Inter_700Bold" : "Inter_600SemiBold" },
+            { color: T.textBright, fontFamily: hasUnread ? FONT.bold : FONT.semibold },
           ]}
           numberOfLines={1}
         >
@@ -638,7 +774,7 @@ function ChannelRow({
       </View>
       <View style={styles.rowRight}>
         {channel.lastMessageAtSeconds ? (
-          <Text style={[styles.rowTime, { color: hasUnread ? DOMAIN_COLORS.chat : T.textDim }]}>
+          <Text style={[styles.rowTime, { color: hasUnread ? T.domains.chat : T.textDim }]}>
             {formatChannelActivity(channel.lastMessageAtSeconds)}
           </Text>
         ) : null}
@@ -646,10 +782,12 @@ function ChannelRow({
           <View
             style={[
               styles.badge,
-              { backgroundColor: channel.mentionCount > 0 ? T.red : DOMAIN_COLORS.chat },
+              { backgroundColor: channel.mentionCount > 0 ? T.red : T.domains.chat },
             ]}
           >
-            <Text style={styles.badgeText}>{channel.unreadCount > 99 ? "99+" : channel.unreadCount}</Text>
+            <Text style={styles.badgeText}>
+              {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -676,8 +814,8 @@ function BrowseRow({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: DOMAIN_COLORS.chatSoft }]}>
-        <ChannelIcon channel={channel} color={DOMAIN_COLORS.chat} />
+      <View style={[styles.rowIcon, { backgroundColor: T.domains.chatSoft }]}>
+        <ChannelIcon channel={channel} color={T.domains.chat} />
       </View>
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, { color: T.textBright }]} numberOfLines={1}>
@@ -688,7 +826,7 @@ function BrowseRow({
         </Text>
       </View>
       <TouchableOpacity
-        style={[styles.joinBtn, { backgroundColor: DOMAIN_COLORS.chat }]}
+        style={[styles.joinBtn, { backgroundColor: T.domains.chat }]}
         onPress={onJoin}
         disabled={joining}
         activeOpacity={0.8}
@@ -702,15 +840,15 @@ function BrowseRow({
 function EmptyChannels({ T }: { T: ThemeColors }) {
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: DOMAIN_COLORS.chatSoft }]}>
-        <ChatTeardropText size={36} color={DOMAIN_COLORS.chat} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.chatSoft }]}>
+        <ChatTeardropText size={36} color={T.domains.chat} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No channels yet</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
         Create a channel or browse public ones to start chatting
       </Text>
       <TouchableOpacity
-        style={[styles.emptyCta, { backgroundColor: DOMAIN_COLORS.chat }]}
+        style={[styles.emptyCta, { backgroundColor: T.domains.chat }]}
         onPress={() => router.push("/chat/create" as any)}
         activeOpacity={0.8}
       >
@@ -737,7 +875,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  filterPillText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  filterPillText: { fontSize: 13, fontFamily: FONT.medium },
   browseBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -746,8 +884,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  browseTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  browseClose: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  browseTitle: { fontSize: 15, fontFamily: FONT.semibold },
+  browseClose: { fontSize: 14, fontFamily: FONT.semibold },
   listContent: { paddingBottom: 24 },
   emptyContent: { flexGrow: 1 },
   section: { paddingTop: 6 },
@@ -759,9 +897,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
-  sectionLabel: { fontSize: 12, fontFamily: "Inter_700Bold", letterSpacing: 0.5, textTransform: "uppercase" },
-  sectionCount: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  sectionEmptyInline: { fontSize: 13, fontFamily: "Inter_400Regular", paddingHorizontal: 38, paddingBottom: 8 },
+  sectionLabel: {
+    fontSize: 12,
+    fontFamily: FONT.bold,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  sectionCount: { fontSize: 12, fontFamily: FONT.medium },
+  sectionEmptyInline: {
+    fontSize: 13,
+    fontFamily: FONT.regular,
+    paddingHorizontal: 38,
+    paddingBottom: 8,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -780,10 +928,10 @@ const styles = StyleSheet.create({
   },
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 15 },
-  rowSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  rowSub: { fontSize: 12, fontFamily: FONT.regular },
   rowRight: { alignItems: "flex-end", gap: 5, flexShrink: 0 },
-  rowTime: { fontSize: 11, fontFamily: "Inter_500Medium" },
-  rowReplies: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  rowTime: { fontSize: 11, fontFamily: FONT.medium },
+  rowReplies: { fontSize: 11, fontFamily: FONT.regular },
   badge: {
     minWidth: 20,
     height: 20,
@@ -792,11 +940,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeText: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
+  badgeText: { color: "#fff", fontSize: 11, fontFamily: FONT.bold },
   joinBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8 },
-  joinBtnText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  joinBtnText: { color: "#fff", fontSize: 13, fontFamily: FONT.semibold },
   sectionEmpty: { paddingTop: 40, alignItems: "center", gap: 10 },
-  sectionEmptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  sectionEmptyText: { fontSize: 14, fontFamily: FONT.regular },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 12, paddingHorizontal: 40 },
   emptyIconWrap: {
@@ -807,14 +955,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center" },
   emptyCta: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 10 },
-  emptyCtaText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  emptyCtaText: { fontSize: 14, fontFamily: FONT.semibold, color: "#fff" },
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32, paddingHorizontal: 16 },
+  sheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+    paddingHorizontal: 16,
+  },
   dmSheet: { height: "75%" },
-  handle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 8, marginBottom: 12 },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 12,
+  },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -822,14 +982,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 14,
   },
-  sheetTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", flex: 1 },
+  sheetTitle: { fontSize: 16, fontFamily: FONT.semibold, flex: 1 },
   modalInput: {
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   modalCta: {
     marginTop: 14,
@@ -837,7 +997,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  modalCtaText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  modalCtaText: { fontSize: 15, fontFamily: FONT.semibold },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -847,7 +1007,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", padding: 0 },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: FONT.regular, padding: 0 },
   dmList: { marginTop: 8 },
   dmRow: {
     flexDirection: "row",
@@ -856,6 +1016,14 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  dmName: { fontSize: 15, fontFamily: "Inter_500Medium" },
-  dmEmail: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  dmName: { fontSize: 15, fontFamily: FONT.medium },
+  dmEmail: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
+  dmCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

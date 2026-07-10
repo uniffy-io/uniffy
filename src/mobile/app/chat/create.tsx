@@ -7,14 +7,12 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Hash, Lock } from "phosphor-react-native";
 import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useCreateChannel } from "@/hooks/useChatMutations";
 import type { ChannelType } from "@/lib/chatSerializer";
 
@@ -51,17 +49,14 @@ export default function CreateChannelScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: T.pageBg }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="New channel"
-        color={DOMAIN_COLORS.chat}
+        color={T.domains.chat}
         icon="chat"
         rightActions={
           <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: canSave ? DOMAIN_COLORS.chat : T.surfaceHover }]}
+            style={[styles.saveBtn, { backgroundColor: canSave ? T.domains.chat : T.surfaceHover }]}
             onPress={handleCreate}
             disabled={!canSave}
             activeOpacity={0.8}
@@ -69,7 +64,9 @@ export default function CreateChannelScreen() {
             {createChannel.isPending ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={[styles.saveBtnText, { color: canSave ? "#fff" : T.textDim }]}>Create</Text>
+              <Text style={[styles.saveBtnText, { color: canSave ? "#fff" : T.textDim }]}>
+                Create
+              </Text>
             )}
           </TouchableOpacity>
         }
@@ -101,8 +98,8 @@ export default function CreateChannelScreen() {
                 style={[
                   styles.typeCard,
                   {
-                    backgroundColor: active ? DOMAIN_COLORS.chatSoft : T.surface,
-                    borderColor: active ? DOMAIN_COLORS.chat : T.border,
+                    backgroundColor: active ? T.domains.chatSoft : T.surface,
+                    borderColor: active ? T.domains.chat : T.border,
                   },
                 ]}
                 onPress={() => setType(t.key)}
@@ -110,12 +107,12 @@ export default function CreateChannelScreen() {
               >
                 <t.Icon
                   size={20}
-                  color={active ? DOMAIN_COLORS.chat : T.textDim}
+                  color={active ? T.domains.chat : T.textDim}
                   weight={active ? "fill" : "bold"}
                 />
                 <View style={{ flex: 1 }}>
                   <Text
-                    style={[styles.typeLabel, { color: active ? DOMAIN_COLORS.chat : T.textBright }]}
+                    style={[styles.typeLabel, { color: active ? T.domains.chat : T.textBright }]}
                   >
                     {t.label}
                   </Text>
@@ -139,14 +136,14 @@ export default function CreateChannelScreen() {
           multiline
         />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 20 },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, marginBottom: 8 },
+  label: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8, marginBottom: 8 },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -156,7 +153,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     height: 48,
   },
-  nameInput: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium" },
+  nameInput: { flex: 1, fontSize: 15, fontFamily: FONT.medium },
   typeGroup: { gap: 10 },
   typeCard: {
     flexDirection: "row",
@@ -166,17 +163,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  typeLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  typeHint: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  typeLabel: { fontSize: 15, fontFamily: FONT.semibold },
+  typeHint: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   descInput: {
     minHeight: 90,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     padding: 14,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     textAlignVertical: "top",
   },
-  saveBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8, minWidth: 64, alignItems: "center" },
-  saveBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  saveBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 8,
+    minWidth: 64,
+    alignItems: "center",
+  },
+  saveBtnText: { fontSize: 14, fontFamily: FONT.semibold },
 });

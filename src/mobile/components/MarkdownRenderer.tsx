@@ -1,11 +1,14 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 import { ReferenceChip } from "@/components/ReferenceChip";
 import type { Domain } from "@/lib/types";
 
 const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+
+const MONO_FONT = Platform.select({ ios: "Menlo", default: "monospace" });
 
 const CONTENT_TYPE_TO_DOMAIN: Record<string, Domain> = {
   NOTE: "notes",
@@ -13,10 +16,21 @@ const CONTENT_TYPE_TO_DOMAIN: Record<string, Domain> = {
   CHAT: "chat",
   CALENDAR_EVENT: "calendar",
   PROJECT: "projects",
+  AGENT: "agents",
 };
+
+// Domains with a /{domain}/[id] detail route mentions can navigate to.
+const NAVIGABLE_DOMAINS: ReadonlySet<Domain> = new Set([
+  "notes",
+  "files",
+  "chat",
+  "calendar",
+  "projects",
+]);
 
 type InlinePart =
   | { type: "text"; text: string; bold: boolean; italic: boolean }
+  | { type: "code"; text: string }
   | { type: "mention"; label: string; urn: string };
 
 type ThemeColors = ReturnType<typeof useTheme>;
@@ -40,6 +54,24 @@ function parseInlineWithMentions(text: string): InlinePart[] {
 }
 
 function parseInlineFormatting(text: string): InlinePart[] {
+  // Code spans first: their contents are exempt from bold/italic parsing.
+  const parts: InlinePart[] = [];
+  const codeSplit = text.split(/(`[^`]+`)/g);
+  for (let i = 0; i < codeSplit.length; i++) {
+    const segment = codeSplit[i];
+    if (!segment) continue;
+    if (i % 2 === 1) {
+      parts.push({ type: "code", text: segment.slice(1, -1) });
+    } else {
+      for (const part of parseEmphasis(segment)) {
+        parts.push(part);
+      }
+    }
+  }
+  return parts.length > 0 ? parts : [{ type: "text", text, bold: false, italic: false }];
+}
+
+function parseEmphasis(text: string): InlinePart[] {
   const parts: InlinePart[] = [];
   const re = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*))/g;
   let lastIndex = 0;
@@ -61,7 +93,7 @@ function parseInlineFormatting(text: string): InlinePart[] {
   if (lastIndex < text.length) {
     parts.push({ type: "text", text: text.substring(lastIndex), bold: false, italic: false });
   }
-  return parts.length > 0 ? parts : [{ type: "text", text, bold: false, italic: false }];
+  return parts;
 }
 
 function hasMentions(parts: InlinePart[]): boolean {
@@ -70,12 +102,22 @@ function hasMentions(parts: InlinePart[]): boolean {
 
 function renderTextParts(parts: InlinePart[], T: ThemeColors, kp: number | string = 0) {
   return parts.map((part, i) => {
+    if (part.type === "code") {
+      return (
+        <Text
+          key={`${kp}-${i}`}
+          style={[styles.inlineCode, { backgroundColor: T.surfaceHover, color: T.textBright }]}
+        >
+          {part.text}
+        </Text>
+      );
+    }
     if (part.type !== "text") return null;
     if (part.bold && part.italic) {
       return (
         <Text
           key={`${kp}-${i}`}
-          style={{ fontFamily: "Inter_700Bold", fontStyle: "italic", color: T.textBright }}
+          style={{ fontFamily: FONT.bold, fontStyle: "italic", color: T.textBright }}
         >
           {part.text}
         </Text>
@@ -83,7 +125,7 @@ function renderTextParts(parts: InlinePart[], T: ThemeColors, kp: number | strin
     }
     if (part.bold) {
       return (
-        <Text key={`${kp}-${i}`} style={{ fontFamily: "Inter_700Bold", color: T.textBright }}>
+        <Text key={`${kp}-${i}`} style={{ fontFamily: FONT.bold, color: T.textBright }}>
           {part.text}
         </Text>
       );
@@ -111,18 +153,43 @@ function renderMixedParts(
       const urnMatch = part.urn.match(/urn:uniffy:content:([^:]+):(.+)/);
       const domain = urnMatch ? CONTENT_TYPE_TO_DOMAIN[urnMatch[1]] : null;
       const refId = urnMatch ? urnMatch[2] : null;
+      if (!domain) {
+        // No mobile surface for this type (e.g. USER) - style it, don't chip it.
+        return (
+          <Text
+            key={`${kp}-m${i}`}
+            style={[textStyle, { fontFamily: FONT.semibold, color: T.accent }]}
+          >
+            @{part.label}
+          </Text>
+        );
+      }
       const handlePress = onMentionPress
         ? () => onMentionPress(part.urn, part.label)
-        : domain && refId
+        : refId && NAVIGABLE_DOMAINS.has(domain)
           ? () => router.push(`/${domain}/${refId}` as any)
           : undefined;
       return (
         <ReferenceChip
           key={`${kp}-m${i}`}
-          domain={domain || "notes"}
+          domain={domain}
           label={part.label}
           onPress={handlePress}
         />
+      );
+    }
+    if (part.type === "code") {
+      return (
+        <Text
+          key={`${kp}-${i}`}
+          style={[
+            textStyle,
+            styles.inlineCode,
+            { backgroundColor: T.surfaceHover, color: T.textBright },
+          ]}
+        >
+          {part.text}
+        </Text>
       );
     }
     if (!part.text) return null;
@@ -130,7 +197,7 @@ function renderMixedParts(
       return (
         <Text
           key={`${kp}-${i}`}
-          style={[textStyle, { fontFamily: "Inter_700Bold", fontStyle: "italic" }]}
+          style={[textStyle, { fontFamily: FONT.bold, fontStyle: "italic" }]}
         >
           {part.text}
         </Text>
@@ -140,7 +207,7 @@ function renderMixedParts(
       return (
         <Text
           key={`${kp}-${i}`}
-          style={[textStyle, { fontFamily: "Inter_700Bold", color: T.textBright }]}
+          style={[textStyle, { fontFamily: FONT.bold, color: T.textBright }]}
         >
           {part.text}
         </Text>
@@ -180,6 +247,22 @@ function renderLineContent(
   return (
     <View key={index} style={[styles.inlineRow, wrapperStyle]}>
       {renderMixedParts(parts, T, textStyle, onMentionPress, index)}
+    </View>
+  );
+}
+
+function renderCodeBlock(code: string, language: string, key: number, T: ThemeColors) {
+  return (
+    <View
+      key={`code-${key}`}
+      style={[styles.codeBlock, { borderColor: T.border, backgroundColor: T.surface }]}
+    >
+      {language ? (
+        <Text style={[styles.codeBlockLang, { color: T.textDim }]}>{language}</Text>
+      ) : null}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+        <Text style={[styles.codeBlockText, { color: T.textBright }]}>{code}</Text>
+      </ScrollView>
     </View>
   );
 }
@@ -407,6 +490,20 @@ export function MarkdownRenderer({ content, onMentionPress }: MarkdownRendererPr
   while (i < lines.length) {
     const line = lines[i];
 
+    if (line.trimStart().startsWith("```")) {
+      const blockStart = i;
+      const language = line.trim().slice(3).trim();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // consume the closing fence (or run past the end for an unterminated block)
+      elements.push(renderCodeBlock(codeLines.join("\n"), language, blockStart, T));
+      continue;
+    }
+
     if (line.trimStart().startsWith("|")) {
       const tableStart = i;
       const tableLines: string[] = [];
@@ -430,37 +527,37 @@ const styles = StyleSheet.create({
   inlineRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4 },
   mdH1: {
     fontSize: 22,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
     lineHeight: 30,
     marginTop: 16,
     marginBottom: 6,
   },
   mdH2: {
     fontSize: 18,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
     lineHeight: 26,
     marginTop: 14,
     marginBottom: 4,
   },
   mdH3: {
     fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     lineHeight: 22,
     marginTop: 12,
     marginBottom: 4,
   },
   mdH4: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     lineHeight: 20,
     marginTop: 10,
     marginBottom: 2,
   },
-  bodyText: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 24 },
+  bodyText: { fontSize: 15, fontFamily: FONT.regular, lineHeight: 24 },
   mdBlockquote: { borderLeftWidth: 3, paddingLeft: 12, marginVertical: 6 },
   mdBlockquoteText: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     lineHeight: 24,
     fontStyle: "italic",
   },
@@ -472,8 +569,8 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
   mdBullet: { width: 5, height: 5, borderRadius: 2.5, marginTop: 10 },
-  mdListText: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 24 },
-  mdNumberLabel: { fontSize: 15, fontFamily: "Inter_500Medium", lineHeight: 24, minWidth: 20 },
+  mdListText: { flex: 1, fontSize: 15, fontFamily: FONT.regular, lineHeight: 24 },
+  mdNumberLabel: { fontSize: 15, fontFamily: FONT.medium, lineHeight: 24, minWidth: 20 },
   mdCheckItem: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -490,10 +587,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  mdCheckMark: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
-  mdCheckText: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 24 },
+  mdCheckMark: { color: "#fff", fontSize: 11, fontFamily: FONT.bold },
+  mdCheckText: { flex: 1, fontSize: 15, fontFamily: FONT.regular, lineHeight: 24 },
   mdHr: { height: StyleSheet.hairlineWidth, marginVertical: 12 },
   mdEmptyLine: { height: 10 },
+  inlineCode: { fontFamily: MONO_FONT, fontSize: 13 },
+  codeBlock: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginVertical: 6,
+  },
+  codeBlockLang: { fontSize: 11, fontFamily: FONT.medium, marginBottom: 6 },
+  codeBlockText: { fontFamily: MONO_FONT, fontSize: 13, lineHeight: 19 },
   table: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
@@ -502,6 +609,6 @@ const styles = StyleSheet.create({
   },
   tableRow: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth },
   tableCell: { flex: 1, paddingHorizontal: 10, paddingVertical: 8 },
-  tableCellText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  tableCellTextBold: { fontSize: 13, fontFamily: "Inter_600SemiBold", lineHeight: 18 },
+  tableCellText: { fontSize: 13, fontFamily: FONT.regular, lineHeight: 18 },
+  tableCellTextBold: { fontSize: 13, fontFamily: FONT.semibold, lineHeight: 18 },
 });
