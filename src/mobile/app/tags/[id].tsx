@@ -13,10 +13,11 @@ import { Tag as TagIcon } from "phosphor-react-native";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useTagContent } from "@/hooks/useTags";
 import type { SerializedTaggedItem } from "@/lib/tagSerializer";
 import type { Domain } from "@/lib/types";
-import { DOMAIN_ICON, getDomainColor, getDomainSoftColor } from "@/components/ReferenceChip";
+import { DOMAIN_ICON } from "@/components/ReferenceChip";
 
 export default function TagContentScreen() {
   const T = useTheme();
@@ -87,8 +88,8 @@ function ContentRow({
 }) {
   const domain = (item.domain ?? "notes") as Domain;
   const Icon = DOMAIN_ICON[domain];
-  const domainColor = getDomainColor(domain);
-  const softColor = getDomainSoftColor(domain);
+  const domainColor = T.domains[domain];
+  const softColor = T.domains[`${domain}Soft`];
   return (
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: T.border }]}
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 24 },
   emptyContent: { flexGrow: 1 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: 40 },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  emptyText: { fontSize: 14, fontFamily: FONT.regular },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -132,8 +133,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   icon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  snippet: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  title: { fontSize: 14, fontFamily: FONT.medium },
+  snippet: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   badge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
-  badgeText: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.4 },
+  badgeText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
 });

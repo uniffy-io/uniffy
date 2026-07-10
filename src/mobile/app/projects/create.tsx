@@ -32,7 +32,8 @@ import type { IconProps } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, CATEGORY_COLORS } from "@/constants/theme";
+import { CATEGORY_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useProject } from "@/hooks/useProjects";
 import { useCreateProject, useUpdateProject } from "@/hooks/useProjectMutations";
 
@@ -117,7 +118,7 @@ export default function CreateProjectScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={isEditing ? "Edit Project" : "New Project"}
-        color={DOMAIN_COLORS.projects}
+        color={T.domains.projects}
         icon="projects"
         rightActions={
           <TouchableOpacity
@@ -126,11 +127,9 @@ export default function CreateProjectScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color={DOMAIN_COLORS.projects} />
+              <ActivityIndicator size="small" color={T.domains.projects} />
             ) : (
-              <Text
-                style={[styles.saveBtn, { color: canSave ? DOMAIN_COLORS.projects : T.textDim }]}
-              >
+              <Text style={[styles.saveBtn, { color: canSave ? T.domains.projects : T.textDim }]}>
                 Save
               </Text>
             )}
@@ -282,17 +281,17 @@ export default function CreateProjectScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 20, gap: 20 },
-  label: { fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  label: { fontSize: 12, fontFamily: FONT.semibold, letterSpacing: 0.5 },
   input: {
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   textArea: { minHeight: 80 },
-  saveBtn: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  saveBtn: { fontSize: 15, fontFamily: FONT.semibold },
   iconGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   iconBtn: {
     width: 40,
@@ -324,5 +323,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  visibilityText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  visibilityText: { fontSize: 14, fontFamily: FONT.medium },
 });

@@ -16,11 +16,11 @@ import { CommentButton } from "@/components/CommentsSheet";
 import { ShareSheet } from "@/components/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@/components/ActionSheet";
-import { getDomainColor, getDomainSoftColor, DOMAIN_ICON } from "@/components/ReferenceChip";
+import { DOMAIN_ICON } from "@/components/ReferenceChip";
 import { Avatar } from "@/components/Avatar";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useNote, useNoteBacklinks } from "@/hooks/useNotes";
 import { useDeleteNote } from "@/hooks/useNoteMutations";
 import { useAuth } from "@/context/auth-context";
@@ -44,9 +44,9 @@ export default function NoteDetailScreen() {
   if (noteQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Notes" color={DOMAIN_COLORS.notes} icon="notes" />
+        <DomainHeader title="Notes" color={T.domains.notes} icon="notes" />
         <View style={styles.notFound}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.notes} />
+          <ActivityIndicator size="large" color={T.domains.notes} />
         </View>
       </View>
     );
@@ -57,7 +57,7 @@ export default function NoteDetailScreen() {
   if (!note) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Notes" color={DOMAIN_COLORS.notes} icon="notes" />
+        <DomainHeader title="Notes" color={T.domains.notes} icon="notes" />
         <View style={styles.notFound}>
           <Text style={{ color: T.textDim }}>Note not found</Text>
         </View>
@@ -83,14 +83,14 @@ export default function NoteDetailScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Notes"
-        color={DOMAIN_COLORS.notes}
+        color={T.domains.notes}
         icon="notes"
         rightActions={
           <>
             <CommentButton
               contentType={ContentType.NOTE}
               contentId={note.id}
-              color={DOMAIN_COLORS.notes}
+              color={T.domains.notes}
             />
             <TouchableOpacity
               onPress={() => toggleBookmark.mutate(noteUrn)}
@@ -98,7 +98,7 @@ export default function NoteDetailScreen() {
             >
               <Star
                 size={19}
-                color={isBookmarked ? DOMAIN_COLORS.notes : T.textDim}
+                color={isBookmarked ? T.domains.notes : T.textDim}
                 weight={isBookmarked ? "fill" : "duotone"}
               />
             </TouchableOpacity>
@@ -143,8 +143,8 @@ export default function NoteDetailScreen() {
               REFERENCED BY {backlinks.length} ITEMS
             </Text>
             {backlinks.map((ref, i) => {
-              const color = getDomainColor("notes");
-              const softColor = getDomainSoftColor("notes");
+              const color = T.domains.notes;
+              const softColor = T.domains.notesSoft;
               const RefIcon = DOMAIN_ICON["notes"];
               return (
                 <TouchableOpacity
@@ -187,7 +187,7 @@ export default function NoteDetailScreen() {
         title={note.title}
         subtitle={`${note.outgoingReferences.length} references · ${editedAt}`}
         icon="notes"
-        iconColor={DOMAIN_COLORS.notes}
+        iconColor={T.domains.notes}
         actions={[
           {
             icon: "edit-2",
@@ -236,7 +236,7 @@ export default function NoteDetailScreen() {
         onClose={() => setShareOpen(false)}
         contentType={ContentType.NOTE}
         contentId={note.id}
-        color={DOMAIN_COLORS.notes}
+        color={T.domains.notes}
       />
     </View>
   );
@@ -245,16 +245,16 @@ export default function NoteDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   notFound: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 24, fontFamily: "Inter_700Bold", lineHeight: 32 },
+  title: { fontSize: 24, fontFamily: FONT.bold, lineHeight: 32 },
   authorRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  authorName: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  editTime: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  authorName: { fontSize: 13, fontFamily: FONT.medium },
+  editTime: { fontSize: 13, fontFamily: FONT.regular },
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  tagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  tagText: { fontSize: 12, fontFamily: FONT.medium },
   body: { gap: 4 },
   refsSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 20, gap: 10 },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8 },
   refRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  refTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  refTitle: { fontSize: 13, fontFamily: FONT.semibold },
   actionBar: {
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -278,5 +278,5 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   actionBtn: { flex: 1, alignItems: "center", gap: 4 },
-  actionLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  actionLabel: { fontSize: 11, fontFamily: FONT.medium },
 });

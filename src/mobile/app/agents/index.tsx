@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { getAccessToken } from "@/lib/auth";
 import { useAuth } from "@/context/auth-context";
 import { useAgents, useStartAgentChat } from "@/hooks/useAgents";
@@ -54,11 +54,11 @@ export default function AgentsListScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <DomainHeader title="Agents" color={DOMAIN_COLORS.chat} icon="chat" />
+      <DomainHeader title="Agents" color={T.domains.agents} icon="agents" />
 
       {agents.isLoading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.chat} />
+          <ActivityIndicator size="large" color={T.domains.agents} />
         </View>
       ) : (
         <FlatList
@@ -72,8 +72,8 @@ export default function AgentsListScreen() {
             <RefreshControl
               refreshing={agents.isFetching && !agents.isLoading}
               onRefresh={() => agents.refetch()}
-              tintColor={DOMAIN_COLORS.chat}
-              colors={[DOMAIN_COLORS.chat]}
+              tintColor={T.domains.agents}
+              colors={[T.domains.agents]}
             />
           }
         />
@@ -106,7 +106,10 @@ function AgentRow({
       <View style={[styles.avatar, { backgroundColor: agent.themeColor + "22" }]}>
         {imageUri ? (
           <Image
-            source={{ uri: imageUri, headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` } }}
+            source={{
+              uri: imageUri,
+              headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
+            }}
             style={styles.avatarImg}
             contentFit="cover"
           />
@@ -122,8 +125,8 @@ function AgentRow({
             {agent.name}
           </Text>
           {agent.isDefault ? (
-            <View style={[styles.defaultTag, { backgroundColor: DOMAIN_COLORS.chatSoft }]}>
-              <Text style={[styles.defaultTagText, { color: DOMAIN_COLORS.chat }]}>DEFAULT</Text>
+            <View style={[styles.defaultTag, { backgroundColor: T.domains.agentsSoft }]}>
+              <Text style={[styles.defaultTagText, { color: T.domains.agents }]}>DEFAULT</Text>
             </View>
           ) : null}
         </View>
@@ -140,8 +143,8 @@ function AgentRow({
 function EmptyAgents({ T }: { T: ThemeColors }) {
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: DOMAIN_COLORS.chatSoft }]}>
-        <Sparkle size={36} color={DOMAIN_COLORS.chat} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.agentsSoft }]}>
+        <Sparkle size={36} color={T.domains.agents} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No agents yet</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
@@ -176,11 +179,17 @@ const styles = StyleSheet.create({
   avatarEmoji: { fontSize: 24 },
   body: { flex: 1, gap: 3 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  name: { fontSize: 15, fontFamily: "Inter_600SemiBold", flexShrink: 1 },
+  name: { fontSize: 15, fontFamily: FONT.semibold, flexShrink: 1 },
   defaultTag: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
-  defaultTagText: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.4 },
-  desc: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17 },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
+  defaultTagText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
+  desc: { fontSize: 12, fontFamily: FONT.regular, lineHeight: 17 },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingHorizontal: 40,
+  },
   emptyIconWrap: {
     width: 76,
     height: 76,
@@ -189,6 +198,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center", lineHeight: 20 },
 });

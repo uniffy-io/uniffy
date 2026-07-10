@@ -30,7 +30,7 @@ import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useNotesGraph } from "@/hooks/useNotesGraph";
 import type { SimNode } from "@/hooks/useNotesGraph";
 
@@ -366,14 +366,14 @@ export default function NotesGraphScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Knowledge Graph"
-        color={DOMAIN_COLORS.notes}
+        color={T.domains.notes}
         icon="notes"
         onBack={() => router.back()}
       />
 
       {graph.isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.notes} />
+          <ActivityIndicator size="large" color={T.domains.notes} />
         </View>
       ) : graph.data && graph.data.nodes.length === 0 ? (
         <EmptyGraph T={T} />
@@ -425,7 +425,7 @@ export default function NotesGraphScreen() {
                             y1={s.y}
                             x2={t.x}
                             y2={t.y}
-                            stroke={DOMAIN_COLORS.notes}
+                            stroke={T.domains.notes}
                             strokeWidth={8}
                             strokeOpacity={0.12}
                             strokeLinecap="round"
@@ -436,7 +436,7 @@ export default function NotesGraphScreen() {
                             y1={s.y}
                             x2={t.x}
                             y2={t.y}
-                            stroke={DOMAIN_COLORS.notes}
+                            stroke={T.domains.notes}
                             strokeWidth={2}
                             strokeOpacity={0.5}
                             strokeLinecap="round"
@@ -448,7 +448,7 @@ export default function NotesGraphScreen() {
                             ax2,
                             ay2,
                             edgePhaseSelectedRef.current,
-                            DOMAIN_COLORS.notes,
+                            T.domains.notes,
                           )}
                         </G>
                       );
@@ -516,7 +516,7 @@ export default function NotesGraphScreen() {
                           y={node.y + r + 10}
                           textAnchor="middle"
                           fontSize={9}
-                          fontFamily="Inter_400Regular"
+                          fontFamily={FONT.regular}
                           fill={T.isDark ? "rgba(255,255,255,0.75)" : "rgba(30,30,40,0.8)"}
                         >
                           {node.label.length > 16 ? node.label.slice(0, 14) + "\u2026" : node.label}
@@ -584,7 +584,7 @@ export default function NotesGraphScreen() {
               </View>
               {selectedNode.isNote && (
                 <TouchableOpacity
-                  style={[styles.nodeCardBtn, { backgroundColor: DOMAIN_COLORS.notes }]}
+                  style={[styles.nodeCardBtn, { backgroundColor: T.domains.notes }]}
                   onPress={() => {
                     setSelectedNode(null);
                     router.push(`/notes/${selectedNode.id}` as any);
@@ -605,8 +605,8 @@ export default function NotesGraphScreen() {
 function EmptyGraph({ T }: { T: ThemeColors & { isDark: boolean } }) {
   return (
     <View style={styles.center}>
-      <View style={[styles.emptyIcon, { backgroundColor: DOMAIN_COLORS.notesSoft }]}>
-        <NotePencil size={36} color={DOMAIN_COLORS.notes} weight="duotone" />
+      <View style={[styles.emptyIcon, { backgroundColor: T.domains.notesSoft }]}>
+        <NotePencil size={36} color={T.domains.notes} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No graph yet</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
@@ -635,10 +635,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
   emptySubtitle: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
     top: 12,
     left: 16,
   },
-  statsText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  statsText: { fontSize: 11, fontFamily: FONT.regular },
   zoomControls: {
     position: "absolute",
     bottom: 24,
@@ -692,12 +692,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   nodeCardBody: { flex: 1, gap: 2 },
-  nodeCardTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  nodeCardMeta: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  nodeCardTitle: { fontSize: 14, fontFamily: FONT.semibold },
+  nodeCardMeta: { fontSize: 12, fontFamily: FONT.regular },
   nodeCardBtn: {
     borderRadius: 10,
     paddingVertical: 9,
     alignItems: "center",
   },
-  nodeCardBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  nodeCardBtnText: { fontSize: 13, fontFamily: FONT.semibold, color: "#fff" },
 });

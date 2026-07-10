@@ -11,11 +11,19 @@ import {
   Modal,
   Alert,
 } from "react-native";
-import { MagnifyingGlass, X, Plus, Tag as TagIcon, PencilSimple, Trash } from "phosphor-react-native";
+import {
+  MagnifyingGlass,
+  X,
+  Plus,
+  Tag as TagIcon,
+  PencilSimple,
+  Trash,
+} from "phosphor-react-native";
 import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useTags, useTagMutations } from "@/hooks/useTags";
 import { TAG_COLORS, type SerializedTag } from "@/lib/tagSerializer";
 
@@ -160,10 +168,18 @@ function TagRow({
         ) : null}
       </View>
       <Text style={[styles.count, { color: T.textDim }]}>{tag.usageCount}</Text>
-      <TouchableOpacity onPress={onEdit} hitSlop={{ top: 10, bottom: 10, left: 8, right: 4 }} style={styles.iconBtn}>
+      <TouchableOpacity
+        onPress={onEdit}
+        hitSlop={{ top: 10, bottom: 10, left: 8, right: 4 }}
+        style={styles.iconBtn}
+      >
         <PencilSimple size={16} color={T.textDim} weight="duotone" />
       </TouchableOpacity>
-      <TouchableOpacity onPress={onDelete} hitSlop={{ top: 10, bottom: 10, left: 4, right: 8 }} style={styles.iconBtn}>
+      <TouchableOpacity
+        onPress={onDelete}
+        hitSlop={{ top: 10, bottom: 10, left: 4, right: 8 }}
+        style={styles.iconBtn}
+      >
         <Trash size={16} color="#FA5252" weight="duotone" />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -229,7 +245,10 @@ function TagEditorModal({
             onChangeText={setName}
             placeholder="Tag name"
             placeholderTextColor={T.textDim}
-            style={[styles.editorInput, { color: T.textBright, backgroundColor: T.bg, borderColor: T.border }]}
+            style={[
+              styles.editorInput,
+              { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+            ]}
             autoFocus
           />
           <TextInput
@@ -237,7 +256,10 @@ function TagEditorModal({
             onChangeText={setDescription}
             placeholder="Description (optional)"
             placeholderTextColor={T.textDim}
-            style={[styles.editorInput, { color: T.textBright, backgroundColor: T.bg, borderColor: T.border }]}
+            style={[
+              styles.editorInput,
+              { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+            ]}
           />
 
           <Text style={[styles.editorLabel, { color: T.textDim }]}>COLOR</Text>
@@ -284,7 +306,9 @@ function EmptyTags({ T, query }: { T: ThemeColors; query: string }) {
         {query.trim() ? "No matching tags" : "No tags yet"}
       </Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
-        {query.trim() ? "Try a different search" : "Create a tag to organize content across the workspace"}
+        {query.trim()
+          ? "Try a different search"
+          : "Create a tag to organize content across the workspace"}
       </Text>
     </View>
   );
@@ -292,7 +316,11 @@ function EmptyTags({ T, query }: { T: ThemeColors; query: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -302,7 +330,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   listContent: { paddingBottom: 24 },
   emptyContent: { flexGrow: 1 },
@@ -316,9 +344,9 @@ const styles = StyleSheet.create({
   },
   colorDot: { width: 14, height: 14, borderRadius: 7 },
   body: { flex: 1, gap: 2 },
-  name: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  desc: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  count: { fontSize: 13, fontFamily: "Inter_600SemiBold", minWidth: 20, textAlign: "right" },
+  name: { fontSize: 15, fontFamily: FONT.semibold },
+  desc: { fontSize: 12, fontFamily: FONT.regular },
+  count: { fontSize: 13, fontFamily: FONT.semibold, minWidth: 20, textAlign: "right" },
   iconBtn: { padding: 4 },
   modalBackdrop: {
     flex: 1,
@@ -329,21 +357,33 @@ const styles = StyleSheet.create({
   },
   editorCard: { width: "100%", borderRadius: 16, padding: 20, gap: 12 },
   editorHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  editorTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  editorTitle: { fontSize: 16, fontFamily: FONT.bold },
   editorInput: {
     height: 46,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
-  editorLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, marginTop: 4 },
+  editorLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8, marginTop: 4 },
   colorGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   colorOption: { width: 30, height: 30, borderRadius: 15, borderWidth: 2 },
-  editorBtn: { height: 46, borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 6 },
-  editorBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
+  editorBtn: {
+    height: 46,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  editorBtnText: { fontSize: 15, fontFamily: FONT.semibold },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingHorizontal: 40,
+  },
   emptyIconWrap: {
     width: 76,
     height: 76,
@@ -352,6 +392,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center", lineHeight: 20 },
 });

@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/Avatar";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { useMembers, useDirectory, useMemberMutations } from "@/hooks/usePermissions";
 import {
@@ -135,12 +136,17 @@ export function ShareSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalRoot}>
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: T.pageBg, paddingBottom: insets.bottom || 8 }]}>
+        <View
+          style={[styles.sheet, { backgroundColor: T.pageBg, paddingBottom: insets.bottom || 8 }]}
+        >
           <View style={[styles.header, { borderBottomColor: T.border }]}>
             <View style={[styles.handle, { backgroundColor: T.border }]} />
             <View style={styles.headerRow}>
               <Text style={[styles.title, { color: T.textBright }]}>Share</Text>
-              <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <X size={20} color={T.textDim} weight="bold" />
               </TouchableOpacity>
             </View>
@@ -171,7 +177,11 @@ export function ShareSheet({
                       onPress={() => handleSelectMode(m.key)}
                       activeOpacity={0.7}
                     >
-                      <Icon size={20} color={active ? color : T.textDim} weight={active ? "fill" : "regular"} />
+                      <Icon
+                        size={20}
+                        color={active ? color : T.textDim}
+                        weight={active ? "fill" : "regular"}
+                      />
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.modeLabel, { color: active ? color : T.textBright }]}>
                           {m.label}
@@ -195,12 +205,19 @@ export function ShareSheet({
                           key={r}
                           style={[
                             styles.rolePill,
-                            { backgroundColor: active ? color : T.bg, borderColor: active ? color : T.border },
+                            {
+                              backgroundColor: active ? color : T.bg,
+                              borderColor: active ? color : T.border,
+                            },
                           ]}
-                          onPress={() => setAccessMode.mutate({ mode: "OPEN_TO_ORG", baselineRole: r })}
+                          onPress={() =>
+                            setAccessMode.mutate({ mode: "OPEN_TO_ORG", baselineRole: r })
+                          }
                           activeOpacity={0.7}
                         >
-                          <Text style={[styles.rolePillText, { color: active ? "#fff" : T.textDim }]}>
+                          <Text
+                            style={[styles.rolePillText, { color: active ? "#fff" : T.textDim }]}
+                          >
                             {ROLE_LABEL[r]}
                           </Text>
                         </TouchableOpacity>
@@ -213,7 +230,11 @@ export function ShareSheet({
               <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 22 }]}>PEOPLE</Text>
 
               <View style={[styles.ownerRow, { borderBottomColor: T.border }]}>
-                <Avatar name={ownerName} avatarUrl={directory.byId.get(policy?.ownerId ?? "")?.avatarUrl} size={34} />
+                <Avatar
+                  name={ownerName}
+                  avatarUrl={directory.byId.get(policy?.ownerId ?? "")?.avatarUrl}
+                  size={34}
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
                     {ownerName}
@@ -235,7 +256,9 @@ export function ShareSheet({
                   manage={manage}
                   callerIsOwner={callerIsOwner}
                   expanded={expandedId === m.subjectId}
-                  onToggleExpand={() => setExpandedId((id) => (id === m.subjectId ? null : m.subjectId))}
+                  onToggleExpand={() =>
+                    setExpandedId((id) => (id === m.subjectId ? null : m.subjectId))
+                  }
                   onChangeRole={(role) => {
                     updateRole.mutate({ subjectId: m.subjectId, subjectKind: m.subjectType, role });
                     setExpandedId(null);
@@ -246,22 +269,39 @@ export function ShareSheet({
                   }}
                   onTransfer={() => {
                     setExpandedId(null);
-                    Alert.alert("Transfer ownership", `Make ${resolveName(m.subjectId)} the owner? You will become an admin.`, [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Transfer", style: "destructive", onPress: () => transferOwnership.mutate(m.subjectId) },
-                    ]);
+                    Alert.alert(
+                      "Transfer ownership",
+                      `Make ${resolveName(m.subjectId)} the owner? You will become an admin.`,
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Transfer",
+                          style: "destructive",
+                          onPress: () => transferOwnership.mutate(m.subjectId),
+                        },
+                      ],
+                    );
                   }}
                 />
               ))}
 
               {members.length === 0 ? (
-                <Text style={[styles.noMembers, { color: T.textDim }]}>No one else has access yet</Text>
+                <Text style={[styles.noMembers, { color: T.textDim }]}>
+                  No one else has access yet
+                </Text>
               ) : null}
 
               {manage ? (
                 <>
-                  <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 22 }]}>ADD PEOPLE</Text>
-                  <View style={[styles.searchRow, { backgroundColor: T.surface, borderColor: T.border }]}>
+                  <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 22 }]}>
+                    ADD PEOPLE
+                  </Text>
+                  <View
+                    style={[
+                      styles.searchRow,
+                      { backgroundColor: T.surface, borderColor: T.border },
+                    ]}
+                  >
                     <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
                     <TextInput
                       value={search}
@@ -295,7 +335,10 @@ export function ShareSheet({
                         <Avatar name={s.name} avatarUrl={s.avatarUrl} size={32} />
                       )}
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
+                        <Text
+                          style={[styles.memberName, { color: T.textBright }]}
+                          numberOfLines={1}
+                        >
                           {s.name}
                         </Text>
                         <Text style={[styles.memberSub, { color: T.textDim }]} numberOfLines={1}>
@@ -305,7 +348,9 @@ export function ShareSheet({
                       <Text style={[styles.addLabel, { color }]}>Add</Text>
                     </TouchableOpacity>
                   ))}
-                  {search.trim().length > 0 && searchResults.length === 0 && !directory.isLoading ? (
+                  {search.trim().length > 0 &&
+                  searchResults.length === 0 &&
+                  !directory.isLoading ? (
                     <Text style={[styles.noMembers, { color: T.textDim }]}>No matches</Text>
                   ) : null}
                 </>
@@ -384,7 +429,10 @@ function MemberRow({
                 key={r}
                 style={[
                   styles.roleOption,
-                  { backgroundColor: active ? color : T.bg, borderColor: active ? color : T.border },
+                  {
+                    backgroundColor: active ? color : T.bg,
+                    borderColor: active ? color : T.border,
+                  },
                 ]}
                 onPress={() => onChangeRole(r)}
                 activeOpacity={0.7}
@@ -420,19 +468,31 @@ function MemberRow({
 const styles = StyleSheet.create({
   modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { maxHeight: "88%", borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" },
+  sheet: {
+    maxHeight: "88%",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: "hidden",
+  },
   header: { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 10 },
-  handle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 8, marginBottom: 8 },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 8,
+  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
   },
-  title: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  title: { fontSize: 16, fontFamily: FONT.bold },
   loadingWrap: { padding: 40, alignItems: "center" },
   content: { padding: 16 },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, marginBottom: 10 },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8, marginBottom: 10 },
   modeGroup: { gap: 8 },
   modeCard: {
     flexDirection: "row",
@@ -442,13 +502,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  modeLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  modeDesc: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  modeLabel: { fontSize: 14, fontFamily: FONT.semibold },
+  modeDesc: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   baselineRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
-  baselineLabel: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  baselineLabel: { fontSize: 13, fontFamily: FONT.medium },
   rolePills: { flexDirection: "row", gap: 6, flex: 1 },
   rolePill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
-  rolePillText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  rolePillText: { fontSize: 12, fontFamily: FONT.medium },
   ownerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -458,15 +518,26 @@ const styles = StyleSheet.create({
   },
   memberRow: { borderBottomWidth: StyleSheet.hairlineWidth },
   memberMain: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11 },
-  memberName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  memberSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
-  groupAvatar: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  roleChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth },
-  roleChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  memberName: { fontSize: 14, fontFamily: FONT.semibold },
+  memberSub: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
+  groupAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  roleChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  roleChipText: { fontSize: 12, fontFamily: FONT.semibold },
   roleOptions: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 12 },
   roleOption: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
-  roleOptionText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  noMembers: { fontSize: 13, fontFamily: "Inter_400Regular", paddingVertical: 12 },
+  roleOptionText: { fontSize: 12, fontFamily: FONT.medium },
+  noMembers: { fontSize: 13, fontFamily: FONT.regular, paddingVertical: 12 },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -476,7 +547,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -484,5 +555,5 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  addLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  addLabel: { fontSize: 13, fontFamily: FONT.semibold },
 });

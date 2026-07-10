@@ -63,7 +63,9 @@ export function useCommentMutations(contentType: ContentType, contentId: string)
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: key(organizationId, contentType, contentId) });
-    queryClient.invalidateQueries({ queryKey: ["comment-count", organizationId, contentType, contentId] });
+    queryClient.invalidateQueries({
+      queryKey: ["comment-count", organizationId, contentType, contentId],
+    });
   };
 
   const create = useMutation({
@@ -98,9 +100,15 @@ export function useCommentMutations(contentType: ContentType, contentId: string)
   const setResolved = useMutation({
     mutationFn: async (args: { commentId: string; resolved: boolean }) => {
       if (args.resolved) {
-        await commentsApi.resolveComment({ organizationId: organizationId!, commentId: args.commentId });
+        await commentsApi.resolveComment({
+          organizationId: organizationId!,
+          commentId: args.commentId,
+        });
       } else {
-        await commentsApi.reopenComment({ organizationId: organizationId!, commentId: args.commentId });
+        await commentsApi.reopenComment({
+          organizationId: organizationId!,
+          commentId: args.commentId,
+        });
       }
     },
     onSuccess: invalidate,

@@ -26,7 +26,7 @@ import { ShareSheet } from "@/components/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useDeleteNote } from "@/hooks/useNoteMutations";
 import { useNotesTree } from "@/hooks/useNotesTree";
 import type { TreeNode, TreeSection } from "@/hooks/useNotesTree";
@@ -114,7 +114,7 @@ export default function NotesListScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Notes"
-        color={DOMAIN_COLORS.notes}
+        color={T.domains.notes}
         icon="notes"
         rightActions={
           <>
@@ -154,7 +154,7 @@ export default function NotesListScreen() {
               style={[
                 styles.filterPill,
                 active
-                  ? { backgroundColor: DOMAIN_COLORS.notes }
+                  ? { backgroundColor: T.domains.notes }
                   : {
                       backgroundColor: T.surface,
                       borderColor: T.border,
@@ -174,7 +174,7 @@ export default function NotesListScreen() {
 
       {notesTree.isLoading && !notesTree.data ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.notes} />
+          <ActivityIndicator size="large" color={T.domains.notes} />
         </View>
       ) : (
         <FlatList
@@ -189,8 +189,8 @@ export default function NotesListScreen() {
             <RefreshControl
               refreshing={notesTree.isFetching && !notesTree.isLoading}
               onRefresh={() => notesTree.refetch()}
-              tintColor={DOMAIN_COLORS.notes}
-              colors={[DOMAIN_COLORS.notes]}
+              tintColor={T.domains.notes}
+              colors={[T.domains.notes]}
             />
           }
         />
@@ -201,7 +201,7 @@ export default function NotesListScreen() {
         onClose={() => setSheetNote(null)}
         title={sheetNote?.title ?? ""}
         icon="notes"
-        iconColor={DOMAIN_COLORS.notes}
+        iconColor={T.domains.notes}
         actions={[
           {
             icon: "edit-2",
@@ -248,7 +248,7 @@ export default function NotesListScreen() {
         onClose={() => setShareNoteId(null)}
         contentType={ContentType.NOTE}
         contentId={shareNoteId ?? ""}
-        color={DOMAIN_COLORS.notes}
+        color={T.domains.notes}
       />
     </View>
   );
@@ -274,8 +274,8 @@ function NoteRow({
       onLongPress={onLongPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.noteRowIcon, { backgroundColor: DOMAIN_COLORS.notesSoft }]}>
-        <NotePencil size={16} color={DOMAIN_COLORS.notes} weight="fill" />
+      <View style={[styles.noteRowIcon, { backgroundColor: T.domains.notesSoft }]}>
+        <NotePencil size={16} color={T.domains.notes} weight="fill" />
       </View>
       <View style={styles.noteRowBody}>
         <Text style={[styles.noteRowTitle, { color: T.textBright }]} numberOfLines={1}>
@@ -314,7 +314,7 @@ function FolderChips({ folders, T }: { folders: TreeNode[]; T: ThemeColors }) {
           onPress={() => router.push(`/notes/folder/${folder.id}` as any)}
           activeOpacity={0.7}
         >
-          <FolderSimple size={14} color={DOMAIN_COLORS.notes} weight="fill" />
+          <FolderSimple size={14} color={T.domains.notes} weight="fill" />
           <Text style={[styles.chipLabel, { color: T.textBright }]} numberOfLines={1}>
             {folder.title || "Untitled"}
           </Text>
@@ -337,15 +337,15 @@ function EmptyNotes({ filter }: { filter: FilterKey }) {
   }
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: DOMAIN_COLORS.notesSoft }]}>
-        <NotePencil size={36} color={DOMAIN_COLORS.notes} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.notesSoft }]}>
+        <NotePencil size={36} color={T.domains.notes} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No notes yet</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
         Create your first note to get started
       </Text>
       <TouchableOpacity
-        style={[styles.emptyCta, { backgroundColor: DOMAIN_COLORS.notes }]}
+        style={[styles.emptyCta, { backgroundColor: T.domains.notes }]}
         onPress={() => router.push("/notes/edit" as any)}
         activeOpacity={0.8}
       >
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   filterPillText: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   listContent: { paddingBottom: 24 },
   emptyContent: { flex: 1 },
@@ -396,10 +396,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   noteRowBody: { flex: 1, gap: 2 },
-  noteRowTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  noteRowSnippet: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  noteRowTitle: { fontSize: 15, fontFamily: FONT.semibold },
+  noteRowSnippet: { fontSize: 12, fontFamily: FONT.regular },
   noteRowRight: { alignItems: "flex-end", gap: 4, flexShrink: 0 },
-  noteRowTime: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  noteRowTime: { fontSize: 11, fontFamily: FONT.regular },
   chipsScroll: { flexGrow: 0 },
   chipsContent: {
     paddingHorizontal: 16,
@@ -417,12 +417,12 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     maxWidth: 160,
   },
-  chipLabel: { fontSize: 13, fontFamily: "Inter_500Medium", flexShrink: 1 },
+  chipLabel: { fontSize: 13, fontFamily: FONT.medium, flexShrink: 1 },
   sectionEmpty: {
     paddingTop: 40,
     alignItems: "center",
   },
-  sectionEmptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  sectionEmptyText: { fontSize: 14, fontFamily: FONT.regular },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyIconWrap: {
     width: 76,
@@ -432,14 +432,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center" },
   emptyCta: {
     marginTop: 8,
     paddingHorizontal: 24,
     paddingVertical: 11,
     borderRadius: 10,
   },
-  emptyCtaText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  emptyCtaText: { fontSize: 14, fontFamily: FONT.semibold, color: "#fff" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
 });

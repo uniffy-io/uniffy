@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { notesApi } from "@/api/notesApi";
-import { noteToPlain, formatRelativeTime, stripMarkdown, NoteVisibility } from "@/lib/noteSerializer";
+import {
+  noteToPlain,
+  formatRelativeTime,
+  stripMarkdown,
+  NoteVisibility,
+} from "@/lib/noteSerializer";
 import type { SerializedNote } from "@/lib/noteSerializer";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 

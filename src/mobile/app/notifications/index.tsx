@@ -28,6 +28,7 @@ import { DomainHeader } from "@/components/DomainHeader";
 import { Avatar } from "@/components/Avatar";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -74,7 +75,11 @@ export default function NotificationsScreen() {
         ...(!item.isRead
           ? [{ text: "Mark as read", onPress: () => markRead.mutate(item.id) }]
           : []),
-        { text: "Delete", style: "destructive" as const, onPress: () => deleteNotification.mutate(item.id) },
+        {
+          text: "Delete",
+          style: "destructive" as const,
+          onPress: () => deleteNotification.mutate(item.id),
+        },
         { text: "Cancel", style: "cancel" as const },
       ]);
     },
@@ -128,7 +133,11 @@ export default function NotificationsScreen() {
                 styles.filterPill,
                 active
                   ? { backgroundColor: T.accent }
-                  : { backgroundColor: T.surface, borderColor: T.border, borderWidth: StyleSheet.hairlineWidth },
+                  : {
+                      backgroundColor: T.surface,
+                      borderColor: T.border,
+                      borderWidth: StyleSheet.hairlineWidth,
+                    },
               ]}
               onPress={() => setTab(key)}
               activeOpacity={0.7}
@@ -179,11 +188,16 @@ function NotificationRow({
   onLongPress: () => void;
 }) {
   const Icon = ICON_MAP[item.iconKind] ?? Megaphone;
+  const accent =
+    item.tone === "danger" ? T.red : item.tone === "warning" ? T.yellow : T.domains[item.domain];
   return (
     <TouchableOpacity
       style={[
         styles.row,
-        { borderBottomColor: T.border, backgroundColor: item.isRead ? "transparent" : T.accentSoft },
+        {
+          borderBottomColor: T.border,
+          backgroundColor: item.isRead ? "transparent" : T.accentSoft,
+        },
       ]}
       onPress={onPress}
       onLongPress={onLongPress}
@@ -191,21 +205,25 @@ function NotificationRow({
     >
       {item.actorAvatarUrl || item.actorName ? (
         <View style={styles.avatarWrap}>
-          <Avatar name={item.actorName || "?"} avatarUrl={item.actorAvatarUrl ?? undefined} size={38} />
-          <View style={[styles.iconBadge, { backgroundColor: item.accentColor, borderColor: T.pageBg }]}>
+          <Avatar
+            name={item.actorName || "?"}
+            avatarUrl={item.actorAvatarUrl ?? undefined}
+            size={38}
+          />
+          <View style={[styles.iconBadge, { backgroundColor: accent, borderColor: T.pageBg }]}>
             <Icon size={10} color="#fff" weight="fill" />
           </View>
         </View>
       ) : (
-        <View style={[styles.iconCircle, { backgroundColor: item.accentColor + "22" }]}>
-          <Icon size={18} color={item.accentColor} weight="duotone" />
+        <View style={[styles.iconCircle, { backgroundColor: accent + "22" }]}>
+          <Icon size={18} color={accent} weight="duotone" />
         </View>
       )}
       <View style={styles.body}>
         <Text
           style={[
             styles.title,
-            { color: T.textBright, fontFamily: item.isRead ? "Inter_500Medium" : "Inter_700Bold" },
+            { color: T.textBright, fontFamily: item.isRead ? FONT.medium : FONT.bold },
           ]}
           numberOfLines={2}
         >
@@ -244,11 +262,11 @@ function EmptyNotifications({ T, unreadOnly }: { T: ThemeColors; unreadOnly: boo
 const styles = StyleSheet.create({
   container: { flex: 1 },
   markAllBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  markAllText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  markAllText: { fontSize: 13, fontFamily: FONT.semibold },
   filterBar: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
   filterBarContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: "row" },
   filterPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  filterPillText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  filterPillText: { fontSize: 13, fontFamily: FONT.medium },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   listContent: { paddingBottom: 24 },
   emptyContent: { flexGrow: 1 },
@@ -272,13 +290,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconCircle: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   body: { flex: 1, gap: 2 },
   title: { fontSize: 14, lineHeight: 19 },
-  bodyText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  time: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+  bodyText: { fontSize: 13, fontFamily: FONT.regular, lineHeight: 18 },
+  time: { fontSize: 11, fontFamily: FONT.regular, marginTop: 2 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingHorizontal: 40,
+  },
   emptyIconWrap: {
     width: 76,
     height: 76,
@@ -287,6 +317,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center", lineHeight: 20 },
 });

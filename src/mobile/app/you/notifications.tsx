@@ -1,9 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { settingsApi } from "@/api/settingsApi";
 
@@ -172,7 +181,9 @@ function ToggleRow({
     <View
       style={[
         styles.toggleRow,
-        border ? { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth } : null,
+        border
+          ? { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth }
+          : null,
       ]}
     >
       <View style={{ flex: 1 }}>
@@ -193,15 +204,27 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: 20 },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, marginBottom: 8 },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8, marginBottom: 8 },
   card: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  toggleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 13 },
-  toggleLabel: { fontSize: 15, fontFamily: "Inter_500Medium" },
-  toggleSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  toggleLabel: { fontSize: 15, fontFamily: FONT.medium },
+  toggleSub: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   freqRow: { paddingHorizontal: 14, paddingVertical: 13, gap: 10 },
-  freqLabel: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  freqLabel: { fontSize: 14, fontFamily: FONT.medium },
   freqPills: { flexDirection: "row", gap: 8 },
   freqPill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8, borderWidth: 1 },
-  freqPillText: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  note: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 20, lineHeight: 18, textAlign: "center" },
+  freqPillText: { fontSize: 13, fontFamily: FONT.medium },
+  note: {
+    fontSize: 12,
+    fontFamily: FONT.regular,
+    marginTop: 20,
+    lineHeight: 18,
+    textAlign: "center",
+  },
 });

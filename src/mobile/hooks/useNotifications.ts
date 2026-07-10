@@ -33,7 +33,7 @@ export function useNotifications(unreadOnly: boolean) {
   });
 }
 
-/** Polls the unread badge count for the TopNav bell. */
+/** Polls the unread badge count for the Home and notifications badges. */
 export function useUnreadNotificationCount() {
   const { organizationId, isAuthenticated } = useAuth();
 

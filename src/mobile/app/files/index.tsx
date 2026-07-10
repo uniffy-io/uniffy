@@ -28,7 +28,8 @@ import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, FILE_COLORS } from "@/constants/theme";
+import { FILE_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useFilesTree } from "@/hooks/useFiles";
 import type { PlainTreeNode } from "@/lib/fileSerializer";
 import {
@@ -188,8 +189,8 @@ export default function FilesListScreen() {
       onLongPress={() => setSheetItem({ id: node.id, name: node.name, isFolder: true })}
       activeOpacity={0.7}
     >
-      <View style={[styles.folderIcon, { backgroundColor: DOMAIN_COLORS.filesSoft }]}>
-        <FolderSimple size={24} color={DOMAIN_COLORS.files} weight="fill" />
+      <View style={[styles.folderIcon, { backgroundColor: T.domains.filesSoft }]}>
+        <FolderSimple size={24} color={T.domains.files} weight="fill" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.itemName, { color: T.textBright }]} numberOfLines={1}>
@@ -217,7 +218,7 @@ export default function FilesListScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.gridCardTop}>
-        <FolderSimple size={40} color={DOMAIN_COLORS.files} weight="fill" />
+        <FolderSimple size={40} color={T.domains.files} weight="fill" />
         <TouchableOpacity
           onPress={() => setSheetItem({ id: node.id, name: node.name, isFolder: true })}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -303,7 +304,7 @@ export default function FilesListScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={currentFolderName}
-        color={DOMAIN_COLORS.files}
+        color={T.domains.files}
         icon="files"
         onBack={folderStack.length > 0 ? navigateBack : undefined}
         rightActions={
@@ -343,7 +344,7 @@ export default function FilesListScreen() {
         <View
           style={[styles.uploadBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}
         >
-          <ActivityIndicator size="small" color={DOMAIN_COLORS.files} />
+          <ActivityIndicator size="small" color={T.domains.files} />
           <Text style={[styles.uploadText, { color: T.text }]}>
             Uploading{uploadFile.progress > 0 ? ` ${uploadFile.progress}%` : "..."}
           </Text>
@@ -352,7 +353,7 @@ export default function FilesListScreen() {
 
       {filesTree.isLoading && !filesTree.data && (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.files} />
+          <ActivityIndicator size="large" color={T.domains.files} />
         </View>
       )}
 
@@ -363,8 +364,8 @@ export default function FilesListScreen() {
           <RefreshControl
             refreshing={filesTree.isFetching && !filesTree.isLoading}
             onRefresh={() => filesTree.refetch()}
-            tintColor={DOMAIN_COLORS.files}
-            colors={[DOMAIN_COLORS.files]}
+            tintColor={T.domains.files}
+            colors={[T.domains.files]}
           />
         }
       >
@@ -456,7 +457,7 @@ export default function FilesListScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtn,
-                  { backgroundColor: DOMAIN_COLORS.files, opacity: newFolderName.trim() ? 1 : 0.4 },
+                  { backgroundColor: T.domains.files, opacity: newFolderName.trim() ? 1 : 0.4 },
                 ]}
                 disabled={!newFolderName.trim() || createFolder.isPending}
                 onPress={() => {
@@ -517,7 +518,7 @@ export default function FilesListScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtn,
-                  { backgroundColor: DOMAIN_COLORS.files, opacity: renameValue.trim() ? 1 : 0.4 },
+                  { backgroundColor: T.domains.files, opacity: renameValue.trim() ? 1 : 0.4 },
                 ]}
                 disabled={!renameValue.trim() || updateFile.isPending || updateFolder.isPending}
                 onPress={submitRename}
@@ -558,7 +559,7 @@ export default function FilesListScreen() {
               onPress={() => doMove(undefined)}
               activeOpacity={0.7}
             >
-              <FolderSimple size={20} color={DOMAIN_COLORS.files} weight="fill" />
+              <FolderSimple size={20} color={T.domains.files} weight="fill" />
               <Text style={[styles.moveRowText, { color: T.textBright }]}>Files (root)</Text>
             </TouchableOpacity>
             {flattenFolders(
@@ -567,11 +568,14 @@ export default function FilesListScreen() {
             ).map((opt) => (
               <TouchableOpacity
                 key={opt.id}
-                style={[styles.moveRow, { borderBottomColor: T.border, paddingLeft: 16 + opt.depth * 18 }]}
+                style={[
+                  styles.moveRow,
+                  { borderBottomColor: T.border, paddingLeft: 16 + opt.depth * 18 },
+                ]}
                 onPress={() => doMove(opt.id)}
                 activeOpacity={0.7}
               >
-                <FolderSimple size={20} color={DOMAIN_COLORS.files} weight="fill" />
+                <FolderSimple size={20} color={T.domains.files} weight="fill" />
                 <Text style={[styles.moveRowText, { color: T.textBright }]} numberOfLines={1}>
                   {opt.name}
                 </Text>
@@ -589,10 +593,10 @@ export default function FilesListScreen() {
         icon="files"
         iconColor={
           sheetItem?.isFolder
-            ? DOMAIN_COLORS.files
+            ? T.domains.files
             : sheetItem?.ext
               ? getFileColor(sheetItem.ext)
-              : DOMAIN_COLORS.files
+              : T.domains.files
         }
         actions={
           sheetItem?.isFolder
@@ -683,8 +687,8 @@ function EmptyState({ isSubfolder }: { isSubfolder: boolean }) {
   const T = useTheme();
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: DOMAIN_COLORS.filesSoft }]}>
-        <FolderSimple size={36} color={DOMAIN_COLORS.files} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.filesSoft }]}>
+        <FolderSimple size={36} color={T.domains.files} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>
         {isSubfolder ? "This folder is empty" : "No files yet"}
@@ -714,7 +718,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  sortText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  sortText: { fontSize: 13, fontFamily: FONT.medium },
   listContent: { paddingHorizontal: 16 },
   gridContent: { padding: 16, gap: 16 },
   gridWrap: {
@@ -752,9 +756,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  fileExt: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
-  itemName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  itemMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 3 },
+  fileExt: { fontSize: 10, fontFamily: FONT.bold, letterSpacing: 0.5 },
+  itemName: { fontSize: 15, fontFamily: FONT.semibold },
+  itemMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 3 },
   // ---- Grid cards ----
   gridCard: {
     width: "47%",
@@ -777,8 +781,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  gridCardName: { fontSize: 13, fontFamily: "Inter_600SemiBold", lineHeight: 18 },
-  gridCardMeta: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  gridCardName: { fontSize: 13, fontFamily: FONT.semibold, lineHeight: 18 },
+  gridCardMeta: { fontSize: 11, fontFamily: FONT.regular },
   // ---- Empty ----
   emptyState: {
     alignItems: "center",
@@ -794,8 +798,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
   uploadBar: {
     flexDirection: "row",
@@ -805,7 +809,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  uploadText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  uploadText: { fontSize: 13, fontFamily: FONT.medium },
   // ---- Create folder modal ----
   modalOverlay: {
     flex: 1,
@@ -821,10 +825,10 @@ const styles = StyleSheet.create({
     gap: 18,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  modalTitle: { fontSize: 18, fontFamily: FONT.bold },
   modalInput: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
@@ -852,7 +856,7 @@ const styles = StyleSheet.create({
   },
   moveTitle: {
     fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
@@ -864,7 +868,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  moveRowText: { fontSize: 15, fontFamily: "Inter_500Medium", flex: 1 },
+  moveRowText: { fontSize: 15, fontFamily: FONT.medium, flex: 1 },
   modalBtn: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -872,5 +876,5 @@ const styles = StyleSheet.create({
     minWidth: 80,
     alignItems: "center",
   },
-  modalBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  modalBtnText: { fontSize: 14, fontFamily: FONT.semibold },
 });

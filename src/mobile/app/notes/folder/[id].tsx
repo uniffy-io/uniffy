@@ -14,7 +14,7 @@ import { DomainHeader } from "@/components/DomainHeader";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useDeleteNote } from "@/hooks/useNoteMutations";
 import { useNotesTree } from "@/hooks/useNotesTree";
 import type { TreeNode } from "@/hooks/useNotesTree";
@@ -89,7 +89,7 @@ export default function NotesFolderScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={folderTitle}
-        color={DOMAIN_COLORS.notes}
+        color={T.domains.notes}
         icon="notes"
         onBack={() => router.back()}
         rightActions={
@@ -104,7 +104,7 @@ export default function NotesFolderScreen() {
 
       {notesTree.isLoading && !notesTree.data ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.notes} />
+          <ActivityIndicator size="large" color={T.domains.notes} />
         </View>
       ) : (
         <FlatList
@@ -122,8 +122,8 @@ export default function NotesFolderScreen() {
             <RefreshControl
               refreshing={notesTree.isFetching && !notesTree.isLoading}
               onRefresh={() => notesTree.refetch()}
-              tintColor={DOMAIN_COLORS.notes}
-              colors={[DOMAIN_COLORS.notes]}
+              tintColor={T.domains.notes}
+              colors={[T.domains.notes]}
             />
           }
         />
@@ -134,7 +134,7 @@ export default function NotesFolderScreen() {
         onClose={() => setSheetNote(null)}
         title={sheetNote?.title ?? ""}
         icon="notes"
-        iconColor={DOMAIN_COLORS.notes}
+        iconColor={T.domains.notes}
         actions={[
           {
             icon: "edit-2",
@@ -172,8 +172,8 @@ function FolderRow({ node, T, onPress }: { node: TreeNode; T: ThemeColors; onPre
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.folderIcon, { backgroundColor: DOMAIN_COLORS.notesSoft }]}>
-        <FolderSimple size={22} color={DOMAIN_COLORS.notes} weight="fill" />
+      <View style={[styles.folderIcon, { backgroundColor: T.domains.notesSoft }]}>
+        <FolderSimple size={22} color={T.domains.notes} weight="fill" />
       </View>
       <View style={styles.rowBody}>
         <Text style={[styles.folderTitle, { color: T.textBright }]} numberOfLines={1}>
@@ -210,8 +210,8 @@ function NoteRow({
       onLongPress={onLongPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.noteIcon, { backgroundColor: DOMAIN_COLORS.notesSoft }]}>
-        <NotePencil size={16} color={DOMAIN_COLORS.notes} weight="fill" />
+      <View style={[styles.noteIcon, { backgroundColor: T.domains.notesSoft }]}>
+        <NotePencil size={16} color={T.domains.notes} weight="fill" />
       </View>
       <View style={styles.rowBody}>
         <Text style={[styles.noteTitle, { color: T.textBright }]} numberOfLines={1}>
@@ -255,8 +255,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  folderTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  folderMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  folderTitle: { fontSize: 15, fontFamily: FONT.semibold },
+  folderMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
   noteRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -274,11 +274,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   rowBody: { flex: 1, gap: 2 },
-  noteTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  noteSnippet: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  noteTitle: { fontSize: 15, fontFamily: FONT.semibold },
+  noteSnippet: { fontSize: 12, fontFamily: FONT.regular },
   noteRight: { alignItems: "flex-end", gap: 4, flexShrink: 0 },
-  noteTime: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  noteTime: { fontSize: 11, fontFamily: FONT.regular },
   emptyWrap: { paddingTop: 60, alignItems: "center" },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  emptyText: { fontSize: 14, fontFamily: FONT.regular },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
 });

@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import { useAuth } from "@/context/auth-context";
 import { calendarApi } from "@/api/calendarApi";
-import { eventToPlain, calendarToPlain, categoryToPlain } from "@/lib/calendarSerializer";
+import { eventToPlain, categoryToPlain } from "@/lib/calendarSerializer";
 
 function isoToTimestamp(iso: string) {
   const date = new Date(iso);
@@ -44,21 +44,6 @@ export function useEvent(eventId: string | undefined) {
       return eventToPlain(response.event);
     },
     enabled: !!organizationId && !!eventId,
-  });
-}
-
-export function useCalendars() {
-  const { organizationId } = useAuth();
-
-  return useQuery({
-    queryKey: ["calendars", organizationId],
-    queryFn: async () => {
-      const response = await calendarApi.listCalendars({
-        organizationId: organizationId!,
-      });
-      return response.calendars.map(calendarToPlain);
-    },
-    enabled: !!organizationId,
   });
 }
 

@@ -18,7 +18,8 @@ import { CommentButton } from "@/components/CommentsSheet";
 import { ShareButton } from "@/components/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, FILE_COLORS } from "@/constants/theme";
+import { FILE_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { ENV } from "@/constants/env";
 import { getAccessToken } from "@/lib/auth";
 import { useFile } from "@/hooks/useFiles";
@@ -40,9 +41,9 @@ export default function FileDetailScreen() {
   if (fileQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Files" color={DOMAIN_COLORS.files} icon="files" />
+        <DomainHeader title="Files" color={T.domains.files} icon="files" />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.files} />
+          <ActivityIndicator size="large" color={T.domains.files} />
         </View>
       </View>
     );
@@ -77,19 +78,19 @@ export default function FileDetailScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Files"
-        color={DOMAIN_COLORS.files}
+        color={T.domains.files}
         icon="files"
         rightActions={
           <>
             <CommentButton
               contentType={ContentType.FILE}
               contentId={file.id}
-              color={DOMAIN_COLORS.files}
+              color={T.domains.files}
             />
             <ShareButton
               contentType={ContentType.FILE}
               contentId={file.id}
-              color={DOMAIN_COLORS.files}
+              color={T.domains.files}
             />
             <TouchableOpacity
               onPress={() => setSheetOpen(true)}
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  previewExt: { fontSize: 18, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  previewExt: { fontSize: 18, fontFamily: FONT.bold, letterSpacing: 1 },
   previewImage: { width: "100%", height: 260, borderRadius: 12 },
   previewActions: { flexDirection: "row", gap: 12 },
   previewBtn: {
@@ -244,9 +245,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
   },
-  previewBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  fileTitle: { fontSize: 20, fontFamily: "Inter_700Bold", lineHeight: 28 },
-  fileMeta: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4 },
+  previewBtnText: { fontSize: 14, fontFamily: FONT.semibold, color: "#fff" },
+  fileTitle: { fontSize: 20, fontFamily: FONT.bold, lineHeight: 28 },
+  fileMeta: { fontSize: 13, fontFamily: FONT.regular, marginTop: 4 },
   uploaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -262,15 +263,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  uploaderInitial: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  uploaderName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  uploaderMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  uploaderInitial: { fontSize: 14, fontFamily: FONT.semibold },
+  uploaderName: { fontSize: 14, fontFamily: FONT.semibold },
+  uploaderMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   descriptionCard: {
     padding: 14,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  descriptionText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  descriptionText: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 20 },
   detailsCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   detailRow: {
     flexDirection: "row",
@@ -278,11 +279,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  detailLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  detailValue: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  detailLabel: { fontSize: 13, fontFamily: FONT.regular },
+  detailValue: { fontSize: 13, fontFamily: FONT.medium },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8 },
   tagsSection: { gap: 10 },
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  tagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  tagText: { fontSize: 12, fontFamily: FONT.medium },
 });

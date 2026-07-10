@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/Avatar";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { useComments, useCommentCount, useCommentMutations } from "@/hooks/useComments";
 import type { SerializedComment } from "@/lib/commentSerializer";
@@ -170,7 +171,10 @@ function CommentsSheet({
               <Text style={[styles.sheetTitle, { color: T.textBright }]}>
                 Comments{thread.data ? ` (${thread.data.totalCount})` : ""}
               </Text>
-              <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <X size={20} color={T.textDim} weight="bold" />
               </TouchableOpacity>
             </View>
@@ -185,7 +189,9 @@ function CommentsSheet({
               data={comments}
               renderItem={renderItem}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={comments.length === 0 ? styles.emptyContent : styles.listContent}
+              contentContainerStyle={
+                comments.length === 0 ? styles.emptyContent : styles.listContent
+              }
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
@@ -200,7 +206,9 @@ function CommentsSheet({
           )}
 
           {(replyTo || editing) && (
-            <View style={[styles.contextBar, { backgroundColor: T.surface, borderTopColor: T.border }]}>
+            <View
+              style={[styles.contextBar, { backgroundColor: T.surface, borderTopColor: T.border }]}
+            >
               <Text style={[styles.contextText, { color: T.textDim }]} numberOfLines={1}>
                 {editing ? "Editing comment" : `Replying to ${replyTo?.authorName}`}
               </Text>
@@ -219,7 +227,11 @@ function CommentsSheet({
           <View
             style={[
               styles.composer,
-              { backgroundColor: T.surface, borderTopColor: T.border, paddingBottom: 8 + (insets.bottom || 4) },
+              {
+                backgroundColor: T.surface,
+                borderTopColor: T.border,
+                paddingBottom: 8 + (insets.bottom || 4),
+              },
             ]}
           >
             <TextInput
@@ -227,7 +239,10 @@ function CommentsSheet({
               onChangeText={setDraft}
               placeholder="Add a comment..."
               placeholderTextColor={T.textDim}
-              style={[styles.input, { color: T.textBright, backgroundColor: T.bg, borderColor: T.border }]}
+              style={[
+                styles.input,
+                { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+              ]}
               multiline
             />
             <TouchableOpacity
@@ -274,7 +289,11 @@ function CommentNode({
   return (
     <View style={[styles.commentNode, isReply && { marginLeft: 38, marginTop: 10 }]}>
       <View style={styles.commentRow}>
-        <Avatar name={comment.authorName} avatarUrl={comment.authorAvatarUrl ?? undefined} size={30} />
+        <Avatar
+          name={comment.authorName}
+          avatarUrl={comment.authorAvatarUrl ?? undefined}
+          size={30}
+        />
         <View style={{ flex: 1 }}>
           <View style={styles.commentHeader}>
             <Text style={[styles.author, { color: T.textBright }]} numberOfLines={1}>
@@ -309,7 +328,12 @@ function CommentNode({
                   activeOpacity={0.7}
                 >
                   <Text style={styles.reactionEmoji}>{r.emoji}</Text>
-                  <Text style={[styles.reactionCount, { color: r.currentUserReacted ? color : T.textDim }]}>
+                  <Text
+                    style={[
+                      styles.reactionCount,
+                      { color: r.currentUserReacted ? color : T.textDim },
+                    ]}
+                  >
                     {r.count}
                   </Text>
                 </TouchableOpacity>
@@ -351,7 +375,9 @@ function CommentNode({
                   color={comment.isResolved ? "#10b981" : T.textDim}
                   weight="duotone"
                 />
-                <Text style={[styles.actionText, { color: comment.isResolved ? "#10b981" : T.textDim }]}>
+                <Text
+                  style={[styles.actionText, { color: comment.isResolved ? "#10b981" : T.textDim }]}
+                >
                   {comment.isResolved ? "Reopen" : "Resolve"}
                 </Text>
               </TouchableOpacity>
@@ -402,32 +428,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
+  headerBadgeText: { color: "#fff", fontSize: 9, fontFamily: FONT.bold },
   modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: { height: "86%", borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" },
   sheetHeader: { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 10 },
-  handle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 8, marginBottom: 8 },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 8,
+  },
   sheetHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
   },
-  sheetTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  sheetTitle: { fontSize: 16, fontFamily: FONT.bold },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   listContent: { padding: 16, gap: 18 },
   emptyContent: { flexGrow: 1 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: 40 },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyText: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center" },
   commentNode: {},
   commentRow: { flexDirection: "row", gap: 10 },
   commentHeader: { flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" },
-  author: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  time: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  resolvedTag: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  resolvedText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#10b981" },
-  body: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20, marginTop: 3 },
+  author: { fontSize: 13, fontFamily: FONT.semibold },
+  time: { fontSize: 11, fontFamily: FONT.regular },
+  resolvedTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  resolvedText: { fontSize: 10, fontFamily: FONT.semibold, color: "#10b981" },
+  body: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 20, marginTop: 3 },
   reactionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 },
   reactionChip: {
     flexDirection: "row",
@@ -439,7 +479,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   reactionEmoji: { fontSize: 13 },
-  reactionCount: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  reactionCount: { fontSize: 12, fontFamily: FONT.semibold },
   emojiBar: {
     flexDirection: "row",
     gap: 12,
@@ -453,7 +493,7 @@ const styles = StyleSheet.create({
   emojiBig: { fontSize: 20 },
   actionRow: { flexDirection: "row", alignItems: "center", gap: 16, marginTop: 8 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  actionText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  actionText: { fontSize: 12, fontFamily: FONT.medium },
   contextBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -462,7 +502,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  contextText: { fontSize: 12, fontFamily: "Inter_500Medium", flex: 1 },
+  contextText: { fontSize: 12, fontFamily: FONT.medium, flex: 1 },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -481,7 +521,13 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
-  sendBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

@@ -14,13 +14,14 @@ import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { bookmarksApi } from "@/api/bookmarksApi";
 import { searchApi } from "@/api/searchApi";
 import { useToggleBookmark } from "@/hooks/useBookmarks";
 import { idFromUrn, typeToDomain, mobileRouteFor } from "@/lib/searchSerializer";
 import type { Domain } from "@/lib/types";
-import { DOMAIN_ICON, getDomainColor, getDomainSoftColor } from "@/components/ReferenceChip";
+import { DOMAIN_ICON } from "@/components/ReferenceChip";
 
 interface BookmarkItem {
   urn: string;
@@ -124,8 +125,8 @@ function BookmarkRow({
 }) {
   const domain = (item.domain ?? "notes") as Domain;
   const Icon = DOMAIN_ICON[domain];
-  const domainColor = getDomainColor(domain);
-  const softColor = getDomainSoftColor(domain);
+  const domainColor = T.domains[domain];
+  const softColor = T.domains[`${domain}Soft`];
   return (
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: T.border }]}
@@ -189,13 +190,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   icon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 4 },
+  title: { fontSize: 14, fontFamily: FONT.medium, marginBottom: 4 },
   meta: { flexDirection: "row", alignItems: "center", gap: 6 },
   badge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
-  badgeText: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.4 },
-  sub: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
+  badgeText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
+  sub: { fontSize: 11, fontFamily: FONT.regular, flex: 1 },
   removeBtn: { padding: 4 },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingHorizontal: 40,
+  },
   emptyIconWrap: {
     width: 76,
     height: 76,
@@ -204,6 +211,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center", lineHeight: 20 },
 });

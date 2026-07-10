@@ -12,7 +12,7 @@ import { Plus, CaretLeft, CaretRight } from "phosphor-react-native";
 import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useEventsInRange, useCategories } from "@/hooks/useCalendar";
 import type { SerializedEvent, SerializedCategory } from "@/lib/calendarSerializer";
 
@@ -85,12 +85,13 @@ function getMinutesSinceMidnight(iso: string): number {
 function getEventColor(
   event: SerializedEvent,
   categoriesMap: Map<string, SerializedCategory>,
+  fallback: string,
 ): string {
   if (event.categoryId) {
     const cat = categoriesMap.get(event.categoryId);
     if (cat?.color) return cat.color;
   }
-  return DOMAIN_COLORS.calendar;
+  return fallback;
 }
 
 const MAX_EVENTS_PER_CELL = 3;
@@ -174,7 +175,7 @@ function MonthGrid({
         {DAY_LABELS.map((d, i) => (
           <Text
             key={d}
-            style={[styles.monthDayHeader, { color: i === 4 ? DOMAIN_COLORS.calendar : T.textDim }]}
+            style={[styles.monthDayHeader, { color: i === 4 ? T.domains.calendar : T.textDim }]}
           >
             {d.charAt(0)}
           </Text>
@@ -203,7 +204,7 @@ function MonthGrid({
                   <View
                     style={[
                       styles.monthCellCircle,
-                      isToday && { backgroundColor: DOMAIN_COLORS.calendar },
+                      isToday && { backgroundColor: T.domains.calendar },
                     ]}
                   >
                     <Text
@@ -224,7 +225,7 @@ function MonthGrid({
                 </View>
                 <View style={styles.monthCellEvents}>
                   {visibleEvents.map((evt) => {
-                    const color = getEventColor(evt, categoriesMap);
+                    const color = getEventColor(evt, categoriesMap, T.domains.calendar);
                     return (
                       <View
                         key={evt.id}
@@ -371,7 +372,7 @@ export default function CalendarScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Calendar"
-        color={DOMAIN_COLORS.calendar}
+        color={T.domains.calendar}
         icon="calendar"
         rightActions={
           <TouchableOpacity
@@ -400,7 +401,7 @@ export default function CalendarScreen() {
               onPress={() => setViewMode(mode)}
               style={[
                 styles.viewToggleBtn,
-                viewMode === mode && { backgroundColor: DOMAIN_COLORS.calendar },
+                viewMode === mode && { backgroundColor: T.domains.calendar },
               ]}
             >
               <Text
@@ -478,7 +479,7 @@ export default function CalendarScreen() {
                   <Text
                     style={[
                       styles.dayLabel,
-                      { color: isSelected ? DOMAIN_COLORS.calendar : T.textDim },
+                      { color: isSelected ? T.domains.calendar : T.textDim },
                     ]}
                   >
                     {DAY_LABELS[i]}
@@ -486,7 +487,7 @@ export default function CalendarScreen() {
                   <View
                     style={[
                       styles.dayCircle,
-                      isSelected && { backgroundColor: DOMAIN_COLORS.calendar },
+                      isSelected && { backgroundColor: T.domains.calendar },
                     ]}
                   >
                     <Text
@@ -496,7 +497,7 @@ export default function CalendarScreen() {
                           color: isSelected
                             ? "#fff"
                             : isDayToday
-                              ? DOMAIN_COLORS.calendar
+                              ? T.domains.calendar
                               : T.textBright,
                         },
                       ]}
@@ -508,7 +509,7 @@ export default function CalendarScreen() {
                     <View
                       style={[
                         styles.todayDot,
-                        { backgroundColor: isSelected ? "#fff" : DOMAIN_COLORS.calendar },
+                        { backgroundColor: isSelected ? "#fff" : T.domains.calendar },
                       ]}
                     />
                   )}
@@ -519,7 +520,7 @@ export default function CalendarScreen() {
 
           {eventsQuery.isLoading && !eventsQuery.data ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={DOMAIN_COLORS.calendar} />
+              <ActivityIndicator size="large" color={T.domains.calendar} />
             </View>
           ) : (
             <ScrollView
@@ -530,8 +531,8 @@ export default function CalendarScreen() {
                 <RefreshControl
                   refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
                   onRefresh={() => eventsQuery.refetch()}
-                  tintColor={DOMAIN_COLORS.calendar}
-                  colors={[DOMAIN_COLORS.calendar]}
+                  tintColor={T.domains.calendar}
+                  colors={[T.domains.calendar]}
                 />
               }
             >
@@ -555,17 +556,17 @@ export default function CalendarScreen() {
                 {isSelectedToday && (
                   <View style={[styles.currentTimeRow, { top: currentTimeTop }]}>
                     <View
-                      style={[styles.currentTimeDot, { backgroundColor: DOMAIN_COLORS.calendar }]}
+                      style={[styles.currentTimeDot, { backgroundColor: T.domains.calendar }]}
                     />
                     <View
-                      style={[styles.currentTimeLine, { backgroundColor: DOMAIN_COLORS.calendar }]}
+                      style={[styles.currentTimeLine, { backgroundColor: T.domains.calendar }]}
                     />
                   </View>
                 )}
 
                 {/* Events positioned on the grid */}
                 {dayEvents.map((event) => {
-                  const color = getEventColor(event, categoriesMap);
+                  const color = getEventColor(event, categoriesMap, T.domains.calendar);
                   const startMin = event.startTime ? getMinutesSinceMidnight(event.startTime) : 0;
                   const endMin = event.endTime
                     ? getMinutesSinceMidnight(event.endTime)
@@ -614,7 +615,7 @@ export default function CalendarScreen() {
         <>
           {eventsQuery.isLoading && !eventsQuery.data ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={DOMAIN_COLORS.calendar} />
+              <ActivityIndicator size="large" color={T.domains.calendar} />
             </View>
           ) : (
             <ScrollView
@@ -623,8 +624,8 @@ export default function CalendarScreen() {
                 <RefreshControl
                   refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
                   onRefresh={() => eventsQuery.refetch()}
-                  tintColor={DOMAIN_COLORS.calendar}
-                  colors={[DOMAIN_COLORS.calendar]}
+                  tintColor={T.domains.calendar}
+                  colors={[T.domains.calendar]}
                 />
               }
             >
@@ -664,7 +665,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  todayLink: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  todayLink: { fontSize: 13, fontFamily: FONT.semibold },
   viewToggle: {
     flexDirection: "row",
     borderRadius: 8,
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
   },
   viewToggleBtnText: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   monthNav: {
     flexDirection: "row",
@@ -687,7 +688,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  monthText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  monthText: { fontSize: 16, fontFamily: FONT.semibold },
   weekStrip: {
     flexDirection: "row",
     paddingVertical: 10,
@@ -695,7 +696,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   dayItem: { flex: 1, alignItems: "center", gap: 4 },
-  dayLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  dayLabel: { fontSize: 11, fontFamily: FONT.medium },
   dayCircle: {
     width: 32,
     height: 32,
@@ -703,7 +704,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dayNum: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  dayNum: { fontSize: 14, fontFamily: FONT.semibold },
   todayDot: { width: 4, height: 4, borderRadius: 2 },
   // ---- Time grid (day view) ----
   timeGrid: {
@@ -715,7 +716,7 @@ const styles = StyleSheet.create({
     left: 0,
     width: TIME_COL_WIDTH,
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     textAlign: "right",
     paddingRight: 8,
     lineHeight: 14,
@@ -759,11 +760,11 @@ const styles = StyleSheet.create({
   },
   gridEventTitle: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   gridEventMeta: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 2,
   },
   // ---- Month view ----
@@ -777,7 +778,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     letterSpacing: 0.4,
   },
   monthRow: {
@@ -804,7 +805,7 @@ const styles = StyleSheet.create({
   },
   monthCellNum: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   monthCellEvents: {
     paddingHorizontal: 2,
@@ -817,11 +818,11 @@ const styles = StyleSheet.create({
   },
   monthCellEventText: {
     fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   monthCellMore: {
     fontSize: 9,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
     textAlign: "center",
     paddingTop: 1,
   },
@@ -846,5 +847,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   categoryDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  categoryText: { fontSize: 12, fontFamily: FONT.medium },
 });

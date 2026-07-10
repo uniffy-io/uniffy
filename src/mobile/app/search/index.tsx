@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { searchApi } from "@/api/searchApi";
 import { bookmarksApi } from "@/api/bookmarksApi";
@@ -24,7 +25,7 @@ import type { SerializedSearchResult } from "@/lib/searchSerializer";
 import { parseSearchQuery } from "@/lib/searchQuery";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import type { Domain } from "@/lib/types";
-import { DOMAIN_ICON, getDomainColor, getDomainSoftColor } from "@/components/ReferenceChip";
+import { DOMAIN_ICON } from "@/components/ReferenceChip";
 
 const DEBOUNCE_MS = 220;
 
@@ -172,7 +173,10 @@ export default function SearchScreen() {
             returnKeyType="search"
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={() => setQuery("")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <X size={15} color={T.textDim} weight="bold" />
             </TouchableOpacity>
           )}
@@ -187,7 +191,7 @@ export default function SearchScreen() {
       >
         {FILTERS.map((f) => {
           const active = filter === f.key;
-          const color = f.key === "all" ? T.accent : getDomainColor(f.key as Domain);
+          const color = f.key === "all" ? T.accent : T.domains[f.key as Domain];
           return (
             <TouchableOpacity
               key={f.key}
@@ -201,7 +205,9 @@ export default function SearchScreen() {
               onPress={() => setFilter(f.key)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.filterText, { color: active ? color : T.textDim }]}>{f.label}</Text>
+              <Text style={[styles.filterText, { color: active ? color : T.textDim }]}>
+                {f.label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -261,8 +267,8 @@ function ResultRow({
 }) {
   const domain = (item.domain ?? "notes") as Domain;
   const Icon = DOMAIN_ICON[domain];
-  const domainColor = getDomainColor(domain);
-  const softColor = getDomainSoftColor(domain);
+  const domainColor = T.domains[domain];
+  const softColor = T.domains[`${domain}Soft`];
   return (
     <TouchableOpacity
       style={[styles.resultRow, { borderBottomColor: T.border }]}
@@ -306,7 +312,11 @@ function ResultRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchBarWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchBarWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -316,14 +326,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  input: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
   filterBar: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
   filterBarContent: { paddingHorizontal: 16, gap: 8, paddingVertical: 10, flexDirection: "row" },
   filterPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  hintRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, paddingHorizontal: 16, paddingVertical: 8 },
+  filterText: { fontSize: 12, fontFamily: FONT.medium },
+  hintRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
   hintChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  hintChipText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  hintChipText: { fontSize: 11, fontFamily: FONT.semibold },
   listContent: { paddingBottom: 24 },
   emptyContent: { flexGrow: 1 },
   resultRow: {
@@ -334,13 +350,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  domainIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  resultTitle: { fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 4 },
+  domainIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resultTitle: { fontSize: 14, fontFamily: FONT.medium, marginBottom: 4 },
   resultMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
   domainBadge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
-  domainBadgeText: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.4 },
-  resultSub: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
+  domainBadgeText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
+  resultSub: { fontSize: 11, fontFamily: FONT.regular, flex: 1 },
   bookmarkBtn: { padding: 4 },
   empty: { flex: 1, padding: 40, alignItems: "center", justifyContent: "center" },
-  emptyText: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyText: { fontSize: 15, fontFamily: FONT.regular, textAlign: "center" },
 });

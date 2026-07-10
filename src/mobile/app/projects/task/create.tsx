@@ -13,7 +13,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { CalendarPicker } from "@/components/CalendarPicker";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useProject, useTask } from "@/hooks/useProjects";
 import { useCreateTask, useUpdateTask } from "@/hooks/useProjectMutations";
 import { getStatusOptions, getPriorityOptions } from "@/lib/projectsSerializer";
@@ -38,7 +38,7 @@ export default function CreateTaskScreen() {
 
   const statusOptions = project ? getStatusOptions(project) : [];
   const priorityOptions = project ? getPriorityOptions(project) : [];
-  const projectColor = project?.color || DOMAIN_COLORS.projects;
+  const projectColor = project?.color || T.domains.projects;
 
   const [title, setTitle] = useState("");
   const descriptionRef = useRef("");
@@ -108,7 +108,7 @@ export default function CreateTaskScreen() {
   if (projectQuery.isLoading || (isEditing && taskQuery.isLoading)) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={DOMAIN_COLORS.projects} />
+        <ActivityIndicator size="large" color={T.domains.projects} />
       </View>
     );
   }
@@ -284,17 +284,17 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { alignItems: "center", justifyContent: "center" },
   content: { padding: 20, gap: 20 },
-  label: { fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  label: { fontSize: 12, fontFamily: FONT.semibold, letterSpacing: 0.5 },
   input: {
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   textArea: { minHeight: 100 },
-  saveBtn: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  saveBtn: { fontSize: 15, fontFamily: FONT.semibold },
   pillRow: { gap: 8 },
   pill: {
     flexDirection: "row",
@@ -306,6 +306,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pillDot: { width: 6, height: 6, borderRadius: 3 },
-  pillText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  pillText: { fontSize: 13, fontFamily: FONT.medium },
   datesRow: { flexDirection: "row", gap: 12 },
 });

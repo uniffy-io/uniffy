@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { tagsApi } from "@/api/tagsApi";
-import { tagToPlain, taggedItemToPlain, type SerializedTag, type SerializedTaggedItem } from "@/lib/tagSerializer";
+import {
+  tagToPlain,
+  taggedItemToPlain,
+  type SerializedTag,
+  type SerializedTaggedItem,
+} from "@/lib/tagSerializer";
 import { TagSort } from "@uniffy/proto/tags/v1/tags_pb";
 
 export function useTags(query: string) {
@@ -43,8 +48,7 @@ export function useTagMutations() {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["tags", organizationId] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["tags", organizationId] });
 
   const create = useMutation({
     mutationFn: (args: { name: string; color: string; description?: string }) =>
@@ -70,8 +74,7 @@ export function useTagMutations() {
   });
 
   const remove = useMutation({
-    mutationFn: (tagId: string) =>
-      tagsApi.deleteTag({ organizationId: organizationId!, tagId }),
+    mutationFn: (tagId: string) => tagsApi.deleteTag({ organizationId: organizationId!, tagId }),
     onSuccess: invalidate,
   });
 

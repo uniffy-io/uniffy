@@ -1,19 +1,10 @@
 import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  StyleSheet,
-  Platform,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import {
   Devices,
   Bell,
   ShieldCheck,
   Moon,
-  Lightning,
   Question,
   ChatText,
   Info,
@@ -24,10 +15,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/auth-context";
-import { useUniffy } from "@/context/uniffy-context";
 import { useSessions } from "@/hooks/useSessions";
 import { Avatar } from "@/components/Avatar";
 import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 
 export function YouScreen() {
   const T = useTheme();
@@ -35,7 +26,6 @@ export function YouScreen() {
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { user, logout } = useAuth();
-  const { atPosition, setAtPosition } = useUniffy();
   const { sessions } = useSessions();
 
   const userName = user?.fullName || user?.username || "User";
@@ -123,10 +113,7 @@ export function YouScreen() {
         <Text style={[styles.sectionLabel, { color: T.textDim }]}>APP</Text>
         <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
           <TouchableOpacity
-            style={[
-              styles.settingRow,
-              { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
-            ]}
+            style={styles.settingRow}
             onPress={() => router.push("/you/appearance" as any)}
             activeOpacity={0.7}
           >
@@ -139,24 +126,6 @@ export function YouScreen() {
             </View>
             <CaretRight size={15} color={T.textDim} weight="regular" />
           </TouchableOpacity>
-
-          <View style={styles.settingRow}>
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <Lightning size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>@ Button Position</Text>
-              <Text style={[styles.settingSub, { color: T.textDim }]}>
-                {atPosition === "fab" ? "Floating button" : "Top navigation bar"}
-              </Text>
-            </View>
-            <Switch
-              value={atPosition === "topnav"}
-              onValueChange={(v) => setAtPosition(v ? "topnav" : "fab")}
-              trackColor={{ false: T.border, true: T.accent }}
-              thumbColor="#fff"
-            />
-          </View>
         </View>
       </View>
 
@@ -232,11 +201,11 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 22,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
   },
   profileEmail: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   section: {
     paddingHorizontal: 16,
@@ -245,7 +214,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     letterSpacing: 0.8,
   },
   sectionCard: {
@@ -269,11 +238,11 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   settingSub: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 1,
   },
   signOutBtn: {
@@ -289,7 +258,7 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
     color: "#FA5252",
   },
 });

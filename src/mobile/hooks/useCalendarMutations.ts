@@ -26,7 +26,6 @@ export function useCreateEvent() {
       timezone?: string;
       location?: string;
       meetingUrl?: string;
-      calendarId: string;
       categoryId?: string;
       attendeeIds?: string[];
       tagIds?: string[];
@@ -41,7 +40,6 @@ export function useCreateEvent() {
         timezone: args.timezone,
         location: args.location,
         meetingUrl: args.meetingUrl,
-        calendarId: args.calendarId,
         categoryId: args.categoryId,
         attendeeIds: args.attendeeIds ?? [],
         tagIds: args.tagIds ?? [],

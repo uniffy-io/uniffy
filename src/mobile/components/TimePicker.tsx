@@ -1,6 +1,15 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+} from "react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 
 interface TimePickerProps {
   value: string; // "HH:MM" 24-hour
@@ -77,7 +86,10 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
             <Text
               style={[
                 styles.cellText,
-                { color: isSel ? accent : T.textBright, fontFamily: isSel ? "Inter_700Bold" : "Inter_500Medium" },
+                {
+                  color: isSel ? accent : T.textBright,
+                  fontFamily: isSel ? FONT.bold : FONT.medium,
+                },
               ]}
             >
               {format(item)}
@@ -106,7 +118,12 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
           >
             <Text style={[styles.heading, { color: T.textBright }]}>Select time</Text>
             <View style={styles.columns}>
-              <Column items={HOURS} selected={hour12} onSelect={setHour12} format={(v) => String(v)} />
+              <Column
+                items={HOURS}
+                selected={hour12}
+                onSelect={setHour12}
+                format={(v) => String(v)}
+              />
               <Column
                 items={MINUTES}
                 selected={minute}
@@ -126,7 +143,10 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
                       <Text
                         style={[
                           styles.cellText,
-                          { color: isSel ? accent : T.textBright, fontFamily: isSel ? "Inter_700Bold" : "Inter_500Medium" },
+                          {
+                            color: isSel ? accent : T.textBright,
+                            fontFamily: isSel ? FONT.bold : FONT.medium,
+                          },
                         ]}
                       >
                         {p}
@@ -152,7 +172,7 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
 
 const styles = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  chipText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  chipText: { fontSize: 14, fontFamily: FONT.semibold },
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -168,7 +188,7 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 14,
   },
-  heading: { fontSize: 15, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  heading: { fontSize: 15, fontFamily: FONT.semibold, textAlign: "center" },
   columns: { flexDirection: "row", gap: 8, height: 200 },
   column: { flex: 1 },
   periodColumn: { width: 64, gap: 4 },
@@ -184,5 +204,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  confirmText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  confirmText: { fontSize: 15, fontFamily: FONT.semibold, color: "#fff" },
 });

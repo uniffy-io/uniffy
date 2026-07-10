@@ -19,7 +19,8 @@ import { ShareButton } from "@/components/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useProject, useProjectTasks } from "@/hooks/useProjects";
 import { useMoveTask, useDeleteProject } from "@/hooks/useProjectMutations";
 import {
@@ -155,14 +156,14 @@ export default function ProjectBoardScreen() {
   if (projectQuery.isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={DOMAIN_COLORS.projects} />
+        <ActivityIndicator size="large" color={T.domains.projects} />
       </View>
     );
   }
 
   if (!project) return null;
 
-  const projectColor = project.color || DOMAIN_COLORS.projects;
+  const projectColor = project.color || T.domains.projects;
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -384,7 +385,8 @@ export default function ProjectBoardScreen() {
           {
             icon: "edit-2",
             label: "Edit project",
-            onPress: () => router.push({ pathname: "/projects/create" as any, params: { projectId: id } }),
+            onPress: () =>
+              router.push({ pathname: "/projects/create" as any, params: { projectId: id } }),
           },
           {
             icon: "trash-2",
@@ -413,7 +415,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: -1,
   },
-  viewTabText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  viewTabText: { fontSize: 14, fontFamily: FONT.medium },
   column: {
     width: 260,
     borderRadius: 14,
@@ -424,9 +426,9 @@ const styles = StyleSheet.create({
   },
   colHeader: { flexDirection: "row", alignItems: "center", gap: 6, paddingBottom: 4 },
   colDot: { width: 7, height: 7, borderRadius: 4 },
-  colTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 },
+  colTitle: { fontSize: 13, fontFamily: FONT.semibold, flex: 1 },
   colCount: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
-  colCountText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  colCountText: { fontSize: 11, fontFamily: FONT.medium },
   taskCard: {
     borderRadius: 10,
     padding: 12,
@@ -442,7 +444,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
   },
-  priorityText: { fontSize: 10, fontFamily: "Inter_500Medium" },
+  priorityText: { fontSize: 10, fontFamily: FONT.medium },
   blockedBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -451,12 +453,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
   },
-  taskTitle: { fontSize: 13, fontFamily: "Inter_500Medium", lineHeight: 19 },
+  taskTitle: { fontSize: 13, fontFamily: FONT.medium, lineHeight: 19 },
   taskFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   taskFooterLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   dueDateRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  dueDateText: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  subtaskCount: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  dueDateText: { fontSize: 11, fontFamily: FONT.regular },
+  subtaskCount: { fontSize: 11, fontFamily: FONT.medium },
   assigneeCount: {
     width: 22,
     height: 22,
@@ -464,7 +466,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  assigneeCountText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  assigneeCountText: { fontSize: 10, fontFamily: FONT.semibold },
   addTaskBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -475,7 +477,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
   },
-  addTaskText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  addTaskText: { fontSize: 13, fontFamily: FONT.regular },
   listGroupHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -484,7 +486,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  listGroupTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 },
+  listGroupTitle: { fontSize: 13, fontFamily: FONT.semibold, flex: 1 },
   listRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -494,9 +496,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderLeftWidth: 3,
   },
-  listTaskTitle: { fontSize: 14, fontFamily: "Inter_500Medium", lineHeight: 20 },
+  listTaskTitle: { fontSize: 14, fontFamily: FONT.medium, lineHeight: 20 },
   listTaskMeta: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  listDueDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  listDueDate: { fontSize: 12, fontFamily: FONT.regular },
   listAddBtn: {
     flexDirection: "row",
     alignItems: "center",

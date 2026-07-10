@@ -15,8 +15,8 @@ import { TimePicker } from "@/components/TimePicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS } from "@/constants/theme";
-import { useCalendars, useCategories, useEvent } from "@/hooks/useCalendar";
+import { FONT } from "@/constants/typography";
+import { useCategories, useEvent } from "@/hooks/useCalendar";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/useCalendarMutations";
 
 function roundToNext30(date: Date): Date {
@@ -48,7 +48,6 @@ export default function CreateEventScreen() {
   const { eventId } = useLocalSearchParams<{ eventId?: string }>();
   const isEditing = !!eventId;
 
-  const calendarsQuery = useCalendars();
   const categoriesQuery = useCategories();
   const eventQuery = useEvent(eventId);
   const createEvent = useCreateEvent();
@@ -89,7 +88,6 @@ export default function CreateEventScreen() {
   }, [eventQuery.data]);
 
   const categories = categoriesQuery.data ?? [];
-  const defaultCalendar = calendarsQuery.data?.find((c) => c.isDefault) ?? calendarsQuery.data?.[0];
 
   const isSaving = createEvent.isPending || updateEvent.isPending;
   const canSave = title.trim().length > 0 && !isSaving;
@@ -114,14 +112,14 @@ export default function CreateEventScreen() {
           meetingUrl: meetingUrl.trim(),
         });
       } else {
-        if (!defaultCalendar) return;
+        // calendarId is omitted - the backend resolves the user's default
+        // calendar (calendar management RPCs are deprecated).
         await createEvent.mutateAsync({
           title: title.trim(),
           description: descriptionRef.current.trim() || undefined,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           isAllDay,
-          calendarId: defaultCalendar.id,
           categoryId: selectedCategoryId,
           location: location.trim() || undefined,
           meetingUrl: meetingUrl.trim() || undefined,
@@ -138,7 +136,7 @@ export default function CreateEventScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={isEditing ? "Edit Event" : "New Event"}
-        color={DOMAIN_COLORS.calendar}
+        color={T.domains.calendar}
         icon="calendar"
         rightActions={
           <TouchableOpacity
@@ -176,9 +174,7 @@ export default function CreateEventScreen() {
           >
             <CalendarBlank size={18} color={T.textDim} weight="duotone" />
             <Text style={[styles.fieldLabel, { color: T.textBright }]}>All day</Text>
-            <View
-              style={[styles.toggleTrack, isAllDay && { backgroundColor: DOMAIN_COLORS.calendar }]}
-            >
+            <View style={[styles.toggleTrack, isAllDay && { backgroundColor: T.domains.calendar }]}>
               <View style={[styles.toggleThumb, isAllDay && styles.toggleThumbOn]} />
             </View>
           </TouchableOpacity>
@@ -191,7 +187,7 @@ export default function CreateEventScreen() {
               <CalendarPicker
                 value={dateStr}
                 onChange={(d) => d && setDateStr(d)}
-                accentColor={DOMAIN_COLORS.calendar}
+                accentColor={T.domains.calendar}
               />
             </View>
           </View>
@@ -213,13 +209,13 @@ export default function CreateEventScreen() {
                       const newEnd = new Date(parseDateTime(dateStr, t).getTime() + durationMs);
                       setEndTime(formatTimeForInput(newEnd));
                     }}
-                    accentColor={DOMAIN_COLORS.calendar}
+                    accentColor={T.domains.calendar}
                   />
                   <Text style={[styles.timeDash, { color: T.textDim }]}>-</Text>
                   <TimePicker
                     value={endTime}
                     onChange={setEndTime}
-                    accentColor={DOMAIN_COLORS.calendar}
+                    accentColor={T.domains.calendar}
                   />
                 </View>
               </View>
@@ -324,21 +320,6 @@ export default function CreateEventScreen() {
             placeholderTextColor={T.textDim}
           />
         </View>
-
-        {/* Calendar indicator */}
-        {defaultCalendar && (
-          <View style={[styles.calendarRow, { backgroundColor: T.surface, borderColor: T.border }]}>
-            <View
-              style={[
-                styles.calendarDot,
-                { backgroundColor: defaultCalendar.color || DOMAIN_COLORS.calendar },
-              ]}
-            />
-            <Text style={[styles.calendarName, { color: T.textBright }]}>
-              {defaultCalendar.name}
-            </Text>
-          </View>
-        )}
       </ScrollView>
     </View>
   );
@@ -347,10 +328,10 @@ export default function CreateEventScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { padding: 20, gap: 16 },
-  saveBtn: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  saveBtn: { fontSize: 16, fontFamily: FONT.semibold },
   titleInput: {
     fontSize: 22,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -366,9 +347,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  fieldLabel: { fontSize: 14, fontFamily: "Inter_500Medium", flex: 1 },
-  fieldValue: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  fieldInput: { fontSize: 14, fontFamily: "Inter_400Regular", flex: 1 },
+  fieldLabel: { fontSize: 14, fontFamily: FONT.medium, flex: 1 },
+  fieldValue: { fontSize: 14, fontFamily: FONT.medium },
+  fieldInput: { fontSize: 14, fontFamily: FONT.regular, flex: 1 },
   fieldDivider: { height: StyleSheet.hairlineWidth, marginLeft: 44 },
   toggleRow: {
     flexDirection: "row",
@@ -405,7 +386,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
-  timeChipText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  timeChipText: { fontSize: 14, fontFamily: FONT.semibold },
   timeDash: { fontSize: 14 },
   durationRow: {
     flexDirection: "row",
@@ -419,24 +400,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  durationText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  durationText: { fontSize: 12, fontFamily: FONT.medium },
   descInput: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     padding: 14,
     minHeight: 80,
     lineHeight: 20,
   },
-  calendarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  calendarDot: { width: 12, height: 12, borderRadius: 6 },
-  calendarName: { fontSize: 14, fontFamily: "Inter_500Medium" },
   categoryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -454,5 +425,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   categoryDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryChipText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  categoryChipText: { fontSize: 13, fontFamily: FONT.medium },
 });
