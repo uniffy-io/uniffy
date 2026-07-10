@@ -32,7 +32,11 @@ export function agentToPlain(proto: AgentInfo): SerializedAgent {
 }
 
 /** Authenticated avatar image URL for an agent, when it has an uploaded image. */
-export function agentAvatarUrl(organizationId: string, agentId: string, avatarKey: string): string | null {
+export function agentAvatarUrl(
+  organizationId: string,
+  agentId: string,
+  avatarKey: string,
+): string | null {
   if (!avatarKey) return null;
   return `${ENV.apiUrl}/agents/avatars/${organizationId}/${agentId}`;
 }

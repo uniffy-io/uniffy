@@ -20,6 +20,8 @@ const TYPE_TO_DOMAIN: Partial<Record<SearchResultType, Domain>> = {
   [SearchResultType.CALENDAR_EVENT]: "calendar",
   [SearchResultType.PROJECT]: "projects",
   [SearchResultType.TASK]: "projects",
+  [SearchResultType.AGENT]: "agents",
+  [SearchResultType.AGENT_CHAT]: "agents",
 };
 
 const DOMAIN_TO_TYPES: Record<Domain, SearchResultType[]> = {
@@ -28,6 +30,7 @@ const DOMAIN_TO_TYPES: Record<Domain, SearchResultType[]> = {
   chat: [SearchResultType.CHAT],
   calendar: [SearchResultType.CALENDAR_EVENT],
   projects: [SearchResultType.PROJECT, SearchResultType.TASK],
+  agents: [SearchResultType.AGENT, SearchResultType.AGENT_CHAT],
 };
 
 export function idFromUrn(urn: string): string {

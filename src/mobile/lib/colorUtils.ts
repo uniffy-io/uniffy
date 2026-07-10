@@ -3,7 +3,7 @@ import type { ThemeColors } from "@/constants/theme";
 type Hsl = { h: number; s: number; l: number };
 
 // Accent colors are stored in the shadcn space-separated HSL form, e.g.
-// "262.1 83.3% 57.8%" (hue, saturation%, lightness%).
+// "250.3 100% 64.5%" (hue, saturation%, lightness%).
 function parseHsl(hsl: string): Hsl | null {
   const parts = hsl.trim().split(/\s+/);
   if (parts.length < 3) return null;
@@ -30,11 +30,7 @@ function hslToRgb({ h, s, l }: Hsl): [number, number, number] {
   else if (hp < 5) [r, g, b] = [x, 0, c];
   else [r, g, b] = [c, 0, x];
   const m = lum - c / 2;
-  return [
-    Math.round((r + m) * 255),
-    Math.round((g + m) * 255),
-    Math.round((b + m) * 255),
-  ];
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
 function toHex([r, g, b]: [number, number, number]): string {
@@ -44,16 +40,13 @@ function toHex([r, g, b]: [number, number, number]): string {
 
 export function hslToHex(hsl: string): string {
   const parsed = parseHsl(hsl);
-  if (!parsed) return "#3b82f6";
+  if (!parsed) return "#694aff";
   return toHex(hslToRgb(parsed));
 }
 
 type AccentOverrides = Pick<ThemeColors, "accent" | "accentSoft" | "accentGlow">;
 
-export function buildAccentColors(
-  hsl: string | null,
-  isDark: boolean,
-): Partial<AccentOverrides> {
+export function buildAccentColors(hsl: string | null, isDark: boolean): Partial<AccentOverrides> {
   const parsed = hsl ? parseHsl(hsl) : null;
   if (!parsed) return {};
   const [r, g, b] = hslToRgb(parsed);

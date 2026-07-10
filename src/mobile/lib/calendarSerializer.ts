@@ -1,13 +1,5 @@
-import type {
-  CalendarEvent,
-  Calendar,
-  Category,
-} from "@uniffy/proto/cal/v1/calendar_pb";
-import {
-  AttendeeStatus,
-  RecurrencePattern,
-  ResourceType,
-} from "@uniffy/proto/cal/v1/calendar_pb";
+import type { CalendarEvent, Category } from "@uniffy/proto/cal/v1/calendar_pb";
+import { AttendeeStatus, RecurrencePattern, ResourceType } from "@uniffy/proto/cal/v1/calendar_pb";
 
 export interface SerializedAttendee {
   id: string;
@@ -49,13 +41,6 @@ export interface SerializedCategory {
   name: string;
   color: string;
   icon?: string;
-}
-
-export interface SerializedCalendar {
-  id: string;
-  name: string;
-  color: string;
-  isDefault: boolean;
 }
 
 const ATTENDEE_STATUS: Record<number, string> = {
@@ -140,15 +125,6 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
       name: r.name,
     })),
     tags: event.tags.map((t) => t.name),
-  };
-}
-
-export function calendarToPlain(calendar: Calendar): SerializedCalendar {
-  return {
-    id: calendar.id,
-    name: calendar.name,
-    color: calendar.color,
-    isDefault: calendar.isDefault,
   };
 }
 

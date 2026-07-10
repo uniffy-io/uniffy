@@ -1,7 +1,7 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import type { Notification as ProtoNotification } from "@uniffy/proto/notifications/v1/notifications_pb";
 import { NotificationType } from "@uniffy/proto/notifications/v1/notifications_pb";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import type { DomainKey } from "@/constants/theme";
 
 export type NotificationIconKind =
   | "share"
@@ -25,7 +25,8 @@ export interface SerializedNotification {
   sourceUrn: string;
   route: string | null;
   iconKind: NotificationIconKind;
-  accentColor: string;
+  domain: DomainKey;
+  tone: "danger" | "warning" | null;
 }
 
 function tsToSeconds(ts: Timestamp | undefined): number {
@@ -52,24 +53,26 @@ function stripMentions(text: string): string {
   return text.replace(MENTION_RE, (_, label) => `@${label}`);
 }
 
-const TYPE_META: Record<number, { kind: NotificationIconKind; color: string }> = {
-  [NotificationType.CONTENT_SHARED]: { kind: "share", color: DOMAIN_COLORS.files },
-  [NotificationType.CONTENT_MENTIONED]: { kind: "mention", color: DOMAIN_COLORS.notes },
-  [NotificationType.CONTENT_EDITED]: { kind: "edit", color: DOMAIN_COLORS.notes },
-  [NotificationType.CALENDAR_REMINDER]: { kind: "calendar", color: DOMAIN_COLORS.calendar },
-  [NotificationType.CALENDAR_INVITE]: { kind: "calendar", color: DOMAIN_COLORS.calendar },
-  [NotificationType.CALENDAR_RESPONSE]: { kind: "calendar", color: DOMAIN_COLORS.calendar },
-  [NotificationType.PERMISSION_GRANTED]: { kind: "permission", color: "#10b981" },
-  [NotificationType.PERMISSION_REVOKED]: { kind: "permission", color: "#FA5252" },
-  [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", color: "#f59e0b" },
-  [NotificationType.TASK_ASSIGNED]: { kind: "task", color: DOMAIN_COLORS.projects },
-  [NotificationType.TASK_DUE_SOON]: { kind: "task", color: DOMAIN_COLORS.projects },
-  [NotificationType.TASK_OVERDUE]: { kind: "task", color: "#FA5252" },
-  [NotificationType.CHAT_MENTION]: { kind: "chat", color: DOMAIN_COLORS.chat },
-  [NotificationType.CHAT_DM]: { kind: "chat", color: DOMAIN_COLORS.chat },
-  [NotificationType.CHAT_CHANNEL_INVITE]: { kind: "chat", color: DOMAIN_COLORS.chat },
-  [NotificationType.CHAT_CHANNEL_REMOVED]: { kind: "chat", color: DOMAIN_COLORS.chat },
-  [NotificationType.CHAT_THREAD_REPLY]: { kind: "chat", color: DOMAIN_COLORS.chat },
+type TypeMeta = { kind: NotificationIconKind; domain: DomainKey; tone?: "danger" | "warning" };
+
+const TYPE_META: Record<number, TypeMeta> = {
+  [NotificationType.CONTENT_SHARED]: { kind: "share", domain: "files" },
+  [NotificationType.CONTENT_MENTIONED]: { kind: "mention", domain: "notes" },
+  [NotificationType.CONTENT_EDITED]: { kind: "edit", domain: "notes" },
+  [NotificationType.CALENDAR_REMINDER]: { kind: "calendar", domain: "calendar" },
+  [NotificationType.CALENDAR_INVITE]: { kind: "calendar", domain: "calendar" },
+  [NotificationType.CALENDAR_RESPONSE]: { kind: "calendar", domain: "calendar" },
+  [NotificationType.PERMISSION_GRANTED]: { kind: "permission", domain: "projects" },
+  [NotificationType.PERMISSION_REVOKED]: { kind: "permission", domain: "projects", tone: "danger" },
+  [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", domain: "calendar", tone: "warning" },
+  [NotificationType.TASK_ASSIGNED]: { kind: "task", domain: "projects" },
+  [NotificationType.TASK_DUE_SOON]: { kind: "task", domain: "projects", tone: "warning" },
+  [NotificationType.TASK_OVERDUE]: { kind: "task", domain: "projects", tone: "danger" },
+  [NotificationType.CHAT_MENTION]: { kind: "chat", domain: "chat" },
+  [NotificationType.CHAT_DM]: { kind: "chat", domain: "chat" },
+  [NotificationType.CHAT_CHANNEL_INVITE]: { kind: "chat", domain: "chat" },
+  [NotificationType.CHAT_CHANNEL_REMOVED]: { kind: "chat", domain: "chat", tone: "danger" },
+  [NotificationType.CHAT_THREAD_REPLY]: { kind: "chat", domain: "chat" },
 };
 
 const CONTENT_TYPE_ROUTE: Record<string, (id: string) => string> = {
@@ -92,7 +95,10 @@ export function routeFromUrn(urn: string): string | null {
 }
 
 export function notificationToPlain(proto: ProtoNotification): SerializedNotification {
-  const meta = TYPE_META[proto.notificationType] ?? { kind: "system" as const, color: "#909296" };
+  const meta = TYPE_META[proto.notificationType] ?? {
+    kind: "system" as const,
+    domain: "chat" as const,
+  };
   const createdAtSeconds = tsToSeconds(proto.createdAt);
   return {
     id: proto.id,
@@ -106,6 +112,7 @@ export function notificationToPlain(proto: ProtoNotification): SerializedNotific
     sourceUrn: proto.sourceUrn,
     route: routeFromUrn(proto.sourceUrn),
     iconKind: meta.kind,
-    accentColor: meta.color,
+    domain: meta.domain,
+    tone: meta.tone ?? null,
   };
 }

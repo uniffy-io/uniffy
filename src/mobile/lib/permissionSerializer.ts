@@ -1,4 +1,7 @@
-import type { ContentMember as ProtoMember, ContentAccessPolicy } from "@uniffy/proto/permissions/v1/permissions_pb";
+import type {
+  ContentMember as ProtoMember,
+  ContentAccessPolicy,
+} from "@uniffy/proto/permissions/v1/permissions_pb";
 import { ContentRole, AccessMode, SubjectType } from "@uniffy/proto/common/v1/common_pb";
 
 export type RoleName = "VIEWER" | "COMMENTER" | "EDITOR" | "ADMIN" | "OWNER" | "BLOCKED";
@@ -116,7 +119,7 @@ export function policyToPlain(proto: ContentAccessPolicy): SerializedPolicy {
   const effective =
     proto.effectiveAccessMode !== undefined && proto.effectiveAccessMode !== AccessMode.UNSPECIFIED
       ? ACCESS_NAME[proto.effectiveAccessMode]
-      : ACCESS_NAME[proto.accessMode] ?? "OWNER_ONLY";
+      : (ACCESS_NAME[proto.accessMode] ?? "OWNER_ONLY");
   return {
     ownerId: proto.ownerId,
     accessMode: ACCESS_NAME[proto.accessMode] ?? "OWNER_ONLY",

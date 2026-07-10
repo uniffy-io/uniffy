@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/context/auth-context";
 import { settingsApi } from "@/api/settingsApi";
 import { buildAccentColors } from "@/lib/colorUtils";
-import { DARK, LIGHT, DEFAULT_ACCENT_HSL } from "@/constants/theme";
+import { DARK, LIGHT, DEFAULT_ACCENT_HSL, ACCENT_PRESETS } from "@/constants/theme";
 import type { ThemeColors } from "@/constants/theme";
 
 export type ThemeMode = "system" | "light" | "dark";
@@ -35,6 +35,13 @@ async function removeItem(key: string): Promise<void> {
   await AsyncStorage.removeItem(key);
 }
 
+// Accents persist on the device and in the settings profile; values from
+// retired preset palettes fall back to the brand default instead of pinning
+// an off-brand color forever.
+function isKnownAccent(hsl: string): boolean {
+  return ACCENT_PRESETS.some((preset) => preset.hsl === hsl);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const { isAuthenticated } = useAuth();
@@ -57,7 +64,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (cachedMode === "light" || cachedMode === "dark" || cachedMode === "system") {
         setThemeModeState(cachedMode);
       }
-      if (cachedAccent) {
+      if (cachedAccent && isKnownAccent(cachedAccent)) {
         setAccentColorHslState(cachedAccent);
       }
       if (cachedProfileId) {
@@ -96,7 +103,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        if (appearance?.accentColor) {
+        if (appearance?.accentColor && isKnownAccent(appearance.accentColor)) {
           setAccentColorHslState(appearance.accentColor);
           await storeItem(ACCENT_COLOR_KEY, appearance.accentColor);
         }

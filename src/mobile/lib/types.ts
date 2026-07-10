@@ -1,4 +1,4 @@
-export type Domain = "notes" | "files" | "chat" | "calendar" | "projects";
+export type Domain = "notes" | "files" | "chat" | "calendar" | "projects" | "agents";
 
 export interface CurrentUser {
   id: string;
