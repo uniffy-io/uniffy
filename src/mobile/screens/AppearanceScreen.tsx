@@ -7,23 +7,13 @@ import { useTheme } from "@/hooks/useTheme";
 import { useThemeContext } from "@/context/theme-context";
 import type { ThemeMode } from "@/context/theme-context";
 import { hslToHex } from "@/lib/colorUtils";
-import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { BOTTOM_NAV_HEIGHT, DEFAULT_ACCENT_HSL, ACCENT_PRESETS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 
 const THEME_MODES: { key: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { key: "light", label: "Light", Icon: Sun },
   { key: "dark", label: "Dark", Icon: Moon },
   { key: "system", label: "System", Icon: DeviceMobile },
-];
-
-const ACCENT_PRESETS = [
-  { name: "Blue", hsl: "221.2 83.2% 53.3%" },
-  { name: "Purple", hsl: "262.1 83.3% 57.8%" },
-  { name: "Green", hsl: "142.1 76.2% 36.3%" },
-  { name: "Orange", hsl: "24.6 95% 53.1%" },
-  { name: "Red", hsl: "0 84.2% 60.2%" },
-  { name: "Pink", hsl: "330 81% 60%" },
-  { name: "Teal", hsl: "174 72% 40%" },
-  { name: "Amber", hsl: "38 92% 50%" },
 ];
 
 export function AppearanceScreen() {
@@ -33,7 +23,7 @@ export function AppearanceScreen() {
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
-  const currentAccentHsl = accentColorHsl ?? "262.1 83.3% 57.8%";
+  const currentAccentHsl = accentColorHsl ?? DEFAULT_ACCENT_HSL;
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -158,7 +148,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   section: {
     paddingHorizontal: 16,
@@ -167,7 +157,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     letterSpacing: 0.8,
   },
   modeRow: {
@@ -184,7 +174,7 @@ const styles = StyleSheet.create({
   },
   modeLabel: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   checkCircle: {
     position: "absolute",
@@ -218,7 +208,7 @@ const styles = StyleSheet.create({
   },
   colorName: {
     fontSize: 11,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   previewCard: {
     borderRadius: 12,
@@ -237,7 +227,7 @@ const styles = StyleSheet.create({
   previewAccentText: {
     color: "#fff",
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   previewSoft: {
     paddingHorizontal: 16,
@@ -246,11 +236,11 @@ const styles = StyleSheet.create({
   },
   previewSoftText: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   previewLabel: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     flex: 1,
     minWidth: 150,
   },

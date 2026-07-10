@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "react-native";
 import { reloadAppAsync } from "expo";
 import { DARK, LIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 
 export type ErrorFallbackProps = { error?: Error; resetError?: () => void };
 
@@ -45,12 +46,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     textAlign: "center",
   },
   message: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     textAlign: "center",
   },
   btn: {
@@ -62,6 +63,6 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
 });

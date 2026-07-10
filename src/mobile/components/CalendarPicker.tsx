@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Pressable } from "react-native";
 import { CaretLeft, CaretRight, CalendarBlank } from "phosphor-react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 
 interface CalendarPickerProps {
   value: string | null;
@@ -86,7 +87,7 @@ export function CalendarPicker({
   value,
   onChange,
   placeholder = "Select date",
-  accentColor = "#3b82f6",
+  accentColor = "#694aff",
 }: CalendarPickerProps) {
   const T = useTheme();
   const [visible, setVisible] = useState(false);
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
   },
   triggerText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   overlay: {
     flex: 1,
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   weekRow: {
     flexDirection: "row",
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   grid: {
     flexDirection: "row",
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   },
   dayText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   footer: {
     flexDirection: "row",
@@ -332,6 +333,6 @@ const styles = StyleSheet.create({
   },
   footerBtnText: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
 });

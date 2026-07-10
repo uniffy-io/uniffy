@@ -17,9 +17,12 @@ import {
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { CommentButton } from "@/components/CommentsSheet";
+import { ShareButton } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useEvent, useCategories } from "@/hooks/useCalendar";
 import { useDeleteEvent } from "@/hooks/useCalendarMutations";
 import { useAuth } from "@/context/auth-context";
@@ -43,9 +46,9 @@ export default function EventDetailScreen() {
   if (eventQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Calendar" color={DOMAIN_COLORS.calendar} icon="calendar" />
+        <DomainHeader title="Calendar" color={T.domains.calendar} icon="calendar" />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.calendar} />
+          <ActivityIndicator size="large" color={T.domains.calendar} />
         </View>
       </View>
     );
@@ -56,7 +59,7 @@ export default function EventDetailScreen() {
 
   // Get event color from category
   const category = categoriesQuery.data?.find((c) => c.id === event.categoryId);
-  const eventColor = category?.color || DOMAIN_COLORS.calendar;
+  const eventColor = category?.color || T.domains.calendar;
 
   const hasMeetingUrl = !!event.meetingUrl;
   const isRecurring = !!event.recurrence;
@@ -66,11 +69,26 @@ export default function EventDetailScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Calendar"
-        color={DOMAIN_COLORS.calendar}
+        color={T.domains.calendar}
         icon="calendar"
         rightActions={
           <>
-            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <CommentButton
+              contentType={ContentType.CALENDAR_EVENT}
+              contentId={event.id}
+              color={T.domains.calendar}
+            />
+            <ShareButton
+              contentType={ContentType.CALENDAR_EVENT}
+              contentId={event.id}
+              color={T.domains.calendar}
+            />
+            <TouchableOpacity
+              onPress={() =>
+                router.push({ pathname: "/calendar/create", params: { eventId: event.id } })
+              }
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <PencilSimple size={18} color={T.text} weight="duotone" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -133,8 +151,8 @@ export default function EventDetailScreen() {
             <>
               <View style={[styles.infoDivider, { backgroundColor: T.border }]} />
               <View style={styles.infoRow}>
-                <View style={[styles.infoIcon, { backgroundColor: DOMAIN_COLORS.calendar + "20" }]}>
-                  <MapPin size={14} color={DOMAIN_COLORS.calendar} weight="duotone" />
+                <View style={[styles.infoIcon, { backgroundColor: T.domains.calendar + "20" }]}>
+                  <MapPin size={14} color={T.domains.calendar} weight="duotone" />
                 </View>
                 <Text style={[styles.infoMain, { color: T.textBright }]}>{event.location}</Text>
               </View>
@@ -226,7 +244,12 @@ export default function EventDetailScreen() {
         icon="calendar"
         iconColor={eventColor}
         actions={[
-          { icon: "edit-2", label: "Edit event", onPress: () => {} },
+          {
+            icon: "edit-2",
+            label: "Edit event",
+            onPress: () =>
+              router.push({ pathname: "/calendar/create", params: { eventId: event.id } }),
+          },
           { icon: "at-sign", label: "Copy reference link", onPress: () => {} },
           { icon: "user-plus", label: "Invite more people", onPress: () => {} },
           ...(hasMeetingUrl
@@ -242,7 +265,7 @@ export default function EventDetailScreen() {
           {
             icon: "edit-3",
             label: "Create meeting notes",
-            color: DOMAIN_COLORS.notes,
+            color: T.domains.notes,
             onPress: () => router.push("/notes/edit" as any),
           },
           { icon: "star", label: "Add to favorites", onPress: () => {} },
@@ -268,7 +291,7 @@ const styles = StyleSheet.create({
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
   titleSection: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   colorBar: { width: 4, borderRadius: 2, minHeight: 40, marginTop: 4 },
-  title: { fontSize: 22, fontFamily: "Inter_700Bold", lineHeight: 30, flex: 1 },
+  title: { fontSize: 22, fontFamily: FONT.bold, lineHeight: 30, flex: 1 },
   recurringBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -280,7 +303,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 6,
   },
-  recurringText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  recurringText: { fontSize: 11, fontFamily: FONT.regular },
   infoCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   infoIcon: {
@@ -290,10 +313,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  infoMain: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  infoSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  infoMain: { fontSize: 14, fontFamily: FONT.semibold },
+  infoSub: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   infoDivider: { height: StyleSheet.hairlineWidth, marginLeft: 60 },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8 },
   attendeeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -308,11 +331,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  attendeeInitial: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  attendeeName: { fontSize: 14, fontFamily: "Inter_500Medium", flex: 1 },
+  attendeeInitial: { fontSize: 12, fontFamily: FONT.semibold },
+  attendeeName: { fontSize: 14, fontFamily: FONT.medium, flex: 1 },
   rsvpBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  rsvpText: { fontSize: 11, fontFamily: "Inter_500Medium" },
-  description: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 22 },
+  rsvpText: { fontSize: 11, fontFamily: FONT.medium },
+  description: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 22 },
   linkedRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -321,12 +344,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  linkedName: { fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 },
-  linkedType: { fontSize: 11, fontFamily: "Inter_400Regular", textTransform: "uppercase" },
+  linkedName: { fontSize: 13, fontFamily: FONT.semibold, flex: 1 },
+  linkedType: { fontSize: 11, fontFamily: FONT.regular, textTransform: "uppercase" },
   tagsSection: { gap: 10 },
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  tagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  tagText: { fontSize: 12, fontFamily: FONT.medium },
   categoryBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -338,5 +361,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   categoryBadgeDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryBadgeText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  categoryBadgeText: { fontSize: 13, fontFamily: FONT.semibold },
 });

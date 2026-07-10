@@ -6,8 +6,7 @@ import React, {
   useReducer,
   useState,
 } from "react";
-import type { AuthResponse } from "@uniffy/proto/auth/v1/auth_pb";
-import type { CurrentUserResponse } from "@uniffy/proto/auth/v1/auth_pb";
+import type { GetCurrentUserResponse } from "@uniffy/proto/auth/v1/auth_pb";
 import type { CurrentUser } from "@/lib/types";
 import {
   setAccessToken,
@@ -18,6 +17,13 @@ import {
   clearAuthStorage,
 } from "@/lib/auth";
 import { authApi } from "@/api/authApi";
+
+type AuthTokens = {
+  accessToken: string;
+  refreshToken: string;
+  organizationId?: string;
+  organizationRole?: string;
+};
 
 interface AuthState {
   user: CurrentUser | null;
@@ -70,34 +76,50 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
-function toCurrentUser(response: CurrentUserResponse): CurrentUser {
+function toCurrentUser(response: GetCurrentUserResponse): CurrentUser {
   return {
     id: response.id,
     email: response.email,
     username: response.username,
-    fullName: response.fullName,
-    avatarUrl: response.avatarUrl,
-    accentColor: response.accentColor,
-    fontFamily: response.fontFamily,
+    fullName: response.fullName ?? "",
+    avatarUrl: response.avatarUrl ?? "",
+    accentColor: response.accentColor ?? "",
+    fontFamily: response.fontFamily ?? "",
     isActive: response.isActive,
     isSystemAdmin: response.isSystemAdmin,
     emailVerified: response.emailVerified,
   };
 }
 
+export type LoginResult =
+  | { status: "ok" }
+  | { status: "mfa"; challengeToken: string; methods: string[] }
+  | { status: "enroll"; enrollmentToken: string };
+
 interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  verifyMfa: (challengeToken: string, code: string, method: string) => Promise<void>;
   register: (email: string, username: string, password: string, fullName?: string) => Promise<void>;
+  acceptInvitation: (
+    token: string,
+    username: string,
+    password: string,
+    fullName?: string,
+  ) => Promise<LoginResult>;
+  beginForcedEnrollment: (enrollmentToken: string) => void;
+  completeEnrollment: (tokens: AuthTokens) => Promise<void>;
   selectOrganization: (slug: string) => Promise<void>;
   logout: () => Promise<void>;
   holdNavigation: boolean;
   setHoldNavigation: (v: boolean) => void;
+  loginSplashVisible: boolean;
+  setLoginSplashVisible: (v: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function handleAuthResponse(
-  response: AuthResponse,
+  response: AuthTokens,
   dispatch: React.Dispatch<AuthAction>,
 ): Promise<void> {
   setAccessToken(response.accessToken);
@@ -119,6 +141,7 @@ async function handleAuthResponse(
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [holdNavigation, setHoldNavigation] = useState(false);
+  const [loginSplashVisible, setLoginSplashVisible] = useState(false);
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
     organizationId: null,
@@ -176,8 +199,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     const response = await authApi.login(email, password);
+    switch (response.result.case) {
+      case "authResult":
+        await handleAuthResponse(response.result.value, dispatch);
+        return { status: "ok" };
+      case "mfaChallenge":
+        return {
+          status: "mfa",
+          challengeToken: response.result.value.challengeToken,
+          methods: response.result.value.methods,
+        };
+      case "enrollmentRequired":
+        return {
+          status: "enroll",
+          enrollmentToken: response.result.value.enrollmentToken,
+        };
+      default:
+        throw new Error("Unexpected login response");
+    }
+  }, []);
+
+  const verifyMfa = useCallback(async (challengeToken: string, code: string, method: string) => {
+    const response = await authApi.verifyMfa(challengeToken, code, method);
     await handleAuthResponse(response, dispatch);
   }, []);
 
@@ -188,6 +233,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     [],
   );
+
+  const acceptInvitation = useCallback(
+    async (
+      token: string,
+      username: string,
+      password: string,
+      fullName?: string,
+    ): Promise<LoginResult> => {
+      const response = await authApi.acceptInvitation(token, username, password, fullName);
+      switch (response.result.case) {
+        case "authResult":
+          await handleAuthResponse(response.result.value, dispatch);
+          return { status: "ok" };
+        case "enrollmentRequired":
+          return { status: "enroll", enrollmentToken: response.result.value.enrollmentToken };
+        default:
+          throw new Error("Unexpected invitation response");
+      }
+    },
+    [],
+  );
+
+  // Forced MFA enrollment at login: the enrollment_token authorises only the
+  // MfaService enrollment RPCs, so make it the active bearer until enrollment
+  // completes and real session tokens arrive.
+  const beginForcedEnrollment = useCallback((enrollmentToken: string) => {
+    setAccessToken(enrollmentToken);
+  }, []);
+
+  const completeEnrollment = useCallback(async (tokens: AuthTokens) => {
+    await handleAuthResponse(tokens, dispatch);
+  }, []);
 
   const selectOrganization = useCallback(async (slug: string) => {
     const refreshToken = await getRefreshToken();
@@ -223,11 +300,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     ...state,
     login,
+    verifyMfa,
     register,
+    acceptInvitation,
+    beginForcedEnrollment,
+    completeEnrollment,
     selectOrganization,
     logout,
     holdNavigation,
     setHoldNavigation,
+    loginSplashVisible,
+    setLoginSplashVisible,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

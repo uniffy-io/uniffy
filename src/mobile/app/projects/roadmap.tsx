@@ -13,7 +13,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useProject, useProjectTasks } from "@/hooks/useProjects";
 import { getStatusOptions, getOptionById } from "@/lib/projectsSerializer";
 import type { SerializedTask } from "@/lib/projectsSerializer";
@@ -97,7 +98,7 @@ export default function RoadmapScreen() {
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
   const statusOptions = useMemo(() => (project ? getStatusOptions(project) : []), [project]);
-  const projectColor = project?.color || DOMAIN_COLORS.projects;
+  const projectColor = project?.color || T.domains.projects;
 
   const dayWidth = zoom === "week" ? DAY_WIDTH_WEEK : DAY_WIDTH_MONTH;
   const { start: timelineStart, totalDays } = useMemo(
@@ -109,7 +110,7 @@ export default function RoadmapScreen() {
   if (projectQuery.isLoading || tasksQuery.isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={DOMAIN_COLORS.projects} />
+        <ActivityIndicator size="large" color={T.domains.projects} />
       </View>
     );
   }
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
   loadingContainer: { alignItems: "center", justifyContent: "center" },
   zoomRow: { flexDirection: "row", gap: 4 },
   zoomBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  zoomText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  zoomText: { fontSize: 12, fontFamily: FONT.medium },
   ganttContainer: { flexDirection: "row" },
   labelsColumn: { width: LABEL_WIDTH, borderRightWidth: StyleSheet.hairlineWidth },
   labelHeaderCell: {
@@ -311,16 +312,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  labelHeaderText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  labelHeaderText: { fontSize: 11, fontFamily: FONT.semibold },
   labelCell: {
     height: ROW_HEIGHT,
     justifyContent: "center",
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  labelText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  labelText: { fontSize: 12, fontFamily: FONT.medium },
   timelineHeader: { height: 32, borderBottomWidth: StyleSheet.hairlineWidth },
-  dateHeaderText: { fontSize: 10, fontFamily: "Inter_500Medium", top: 10 },
+  dateHeaderText: { fontSize: 10, fontFamily: FONT.medium, top: 10 },
   timelineRow: {
     height: ROW_HEIGHT,
     justifyContent: "center",
@@ -335,7 +336,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     justifyContent: "center",
   },
-  barText: { fontSize: 10, fontFamily: "Inter_500Medium" },
-  noDatesText: { fontSize: 11, fontFamily: "Inter_400Regular", paddingLeft: 12 },
+  barText: { fontSize: 10, fontFamily: FONT.medium },
+  noDatesText: { fontSize: 11, fontFamily: FONT.regular, paddingLeft: 12 },
   todayLine: { position: "absolute", top: 0, width: 1.5 },
 });

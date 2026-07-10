@@ -10,7 +10,7 @@ import {
   Buildings,
 } from "phosphor-react-native";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import type { TreeNode, TreeSection } from "@/hooks/useNotesTree";
 
 const SECTION_ICONS: Record<
@@ -74,7 +74,7 @@ function TreeNodeRow({
         {isFolder ? (
           <FolderSimple size={16} color={T.textDim} weight="duotone" />
         ) : (
-          <FileText size={16} color={DOMAIN_COLORS.notes} weight="duotone" />
+          <FileText size={16} color={T.domains.notes} weight="duotone" />
         )}
 
         <Text
@@ -191,11 +191,11 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   emptyText: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     paddingLeft: 44,
     paddingVertical: 6,
   },
@@ -214,9 +214,9 @@ const styles = StyleSheet.create({
   nodeTitle: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   nodeTitleFolder: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
 });

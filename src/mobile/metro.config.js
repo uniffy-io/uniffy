@@ -6,10 +6,10 @@ const monorepoRoot = path.resolve(projectRoot, "../..");
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the shared proto package for HMR
-config.watchFolders = [
-  path.resolve(monorepoRoot, "src/gen/typescript"),
-];
+// Watch the whole monorepo so Metro's server root sits at the workspace root;
+// in a pnpm monorepo this is what lets entry/module resolution find packages
+// through the symlinked node_modules. (Covers the shared proto package too.)
+config.watchFolders = [monorepoRoot];
 
 // Resolve packages from both project and monorepo root
 config.resolver.nodeModulesPaths = [

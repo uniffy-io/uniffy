@@ -4,14 +4,14 @@
     "slug": "uniffy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/uniffy-logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "uniffy",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/uniffy-logo.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0D0E11"
+      "backgroundColor": "#0d111e"
     },
     "ios": {
       "supportsTablet": false,
@@ -20,8 +20,8 @@
     "android": {
       "package": "com.uniffy.app",
       "adaptiveIcon": {
-        "backgroundColor": "#1A1B1E",
-        "foregroundImage": "./assets/images/uniffy-logo.png"
+        "backgroundColor": "#0d111e",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
       }
     },
     "web": {

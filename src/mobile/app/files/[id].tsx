@@ -6,13 +6,22 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
-import { DownloadSimple, DotsThree, ArrowSquareOut } from "phosphor-react-native";
+import { Image } from "expo-image";
+import * as Clipboard from "expo-clipboard";
+import { DotsThree, LinkSimple } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { ActionSheet } from "@/components/ActionSheet";
+import { CommentButton } from "@/components/CommentsSheet";
+import { ShareButton } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, FILE_COLORS } from "@/constants/theme";
+import { FILE_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
+import { ENV } from "@/constants/env";
+import { getAccessToken } from "@/lib/auth";
 import { useFile } from "@/hooks/useFiles";
 import { useDeleteFile } from "@/hooks/useFileMutations";
 import { useAuth } from "@/context/auth-context";
@@ -32,9 +41,9 @@ export default function FileDetailScreen() {
   if (fileQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Files" color={DOMAIN_COLORS.files} icon="files" />
+        <DomainHeader title="Files" color={T.domains.files} icon="files" />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.files} />
+          <ActivityIndicator size="large" color={T.domains.files} />
         </View>
       </View>
     );
@@ -45,6 +54,17 @@ export default function FileDetailScreen() {
 
   const fileColor = getFileColor(file.ext);
   const uploaderName = file.ownerInfo?.name || auth.user?.fullName || "Unknown";
+
+  const isImage = file.mimeType.startsWith("image/");
+  // Asset routes accept a Bearer token (cookie or Bearer), so expo-image can
+  // load authenticated bytes directly with an Authorization header.
+  const assetUri = `${ENV.apiUrl}/files/${auth.organizationId ?? ""}/${file.id}`;
+  const authHeaders = { Authorization: `Bearer ${getAccessToken() ?? ""}` };
+
+  const copyReferenceLink = async () => {
+    await Clipboard.setStringAsync(`urn:uniffy:content:FILE:${file.id}`);
+    Alert.alert("Copied", "Reference link copied to clipboard.");
+  };
 
   const DETAILS = [
     { label: "Type", value: file.ext.toUpperCase() + " Document" },
@@ -58,13 +78,20 @@ export default function FileDetailScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Files"
-        color={DOMAIN_COLORS.files}
+        color={T.domains.files}
         icon="files"
         rightActions={
           <>
-            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <DownloadSimple size={19} color={T.text} weight="duotone" />
-            </TouchableOpacity>
+            <CommentButton
+              contentType={ContentType.FILE}
+              contentId={file.id}
+              color={T.domains.files}
+            />
+            <ShareButton
+              contentType={ContentType.FILE}
+              contentId={file.id}
+              color={T.domains.files}
+            />
             <TouchableOpacity
               onPress={() => setSheetOpen(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -77,22 +104,30 @@ export default function FileDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={[styles.previewCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <View style={[styles.previewIcon, { backgroundColor: fileColor + "18" }]}>
-            <Text style={[styles.previewExt, { color: fileColor }]}>{file.ext.toUpperCase()}</Text>
-          </View>
+          {isImage ? (
+            <Image
+              source={{ uri: assetUri, headers: authHeaders }}
+              style={styles.previewImage}
+              contentFit="contain"
+              transition={150}
+            />
+          ) : (
+            <View style={[styles.previewIcon, { backgroundColor: fileColor + "18" }]}>
+              <Text style={[styles.previewExt, { color: fileColor }]}>
+                {file.ext.toUpperCase()}
+              </Text>
+            </View>
+          )}
           <View style={styles.previewActions}>
-            <TouchableOpacity style={[styles.previewBtn, { backgroundColor: T.accent }]}>
-              <ArrowSquareOut size={14} color="#fff" weight="duotone" />
-              <Text style={styles.previewBtnText}>Open</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.previewBtn,
                 { backgroundColor: T.surfaceHover, borderColor: T.border, borderWidth: 1 },
               ]}
+              onPress={copyReferenceLink}
             >
-              <DownloadSimple size={14} color={T.text} weight="duotone" />
-              <Text style={[styles.previewBtnText, { color: T.text }]}>Download</Text>
+              <LinkSimple size={14} color={T.text} weight="duotone" />
+              <Text style={[styles.previewBtnText, { color: T.text }]}>Copy link</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -164,12 +199,7 @@ export default function FileDetailScreen() {
         icon="files"
         iconColor={fileColor}
         actions={[
-          { icon: "external-link", label: "Open file", onPress: () => {} },
-          { icon: "download", label: "Download", onPress: () => {} },
-          { icon: "at-sign", label: "Copy reference link", onPress: () => {} },
-          { icon: "share-2", label: "Share with team", onPress: () => {} },
-          { icon: "star", label: "Add to starred", onPress: () => {} },
-          { icon: "folder", label: "Move to folder", onPress: () => {} },
+          { icon: "at-sign", label: "Copy reference link", onPress: copyReferenceLink },
           {
             icon: "trash-2",
             label: "Delete file",
@@ -204,7 +234,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  previewExt: { fontSize: 18, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  previewExt: { fontSize: 18, fontFamily: FONT.bold, letterSpacing: 1 },
+  previewImage: { width: "100%", height: 260, borderRadius: 12 },
   previewActions: { flexDirection: "row", gap: 12 },
   previewBtn: {
     flexDirection: "row",
@@ -214,9 +245,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
   },
-  previewBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  fileTitle: { fontSize: 20, fontFamily: "Inter_700Bold", lineHeight: 28 },
-  fileMeta: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4 },
+  previewBtnText: { fontSize: 14, fontFamily: FONT.semibold, color: "#fff" },
+  fileTitle: { fontSize: 20, fontFamily: FONT.bold, lineHeight: 28 },
+  fileMeta: { fontSize: 13, fontFamily: FONT.regular, marginTop: 4 },
   uploaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -232,15 +263,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  uploaderInitial: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  uploaderName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  uploaderMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  uploaderInitial: { fontSize: 14, fontFamily: FONT.semibold },
+  uploaderName: { fontSize: 14, fontFamily: FONT.semibold },
+  uploaderMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   descriptionCard: {
     padding: 14,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  descriptionText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  descriptionText: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 20 },
   detailsCard: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   detailRow: {
     flexDirection: "row",
@@ -248,11 +279,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  detailLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  detailValue: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  detailLabel: { fontSize: 13, fontFamily: FONT.regular },
+  detailValue: { fontSize: 13, fontFamily: FONT.medium },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8 },
   tagsSection: { gap: 10 },
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  tagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  tagText: { fontSize: 12, fontFamily: FONT.medium },
 });

@@ -11,7 +11,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import {
   MagnifyingGlass,
   Plus,
@@ -26,7 +28,8 @@ import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, FILE_COLORS } from "@/constants/theme";
+import { FILE_COLORS } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useFilesTree } from "@/hooks/useFiles";
 import type { PlainTreeNode } from "@/lib/fileSerializer";
 import {
@@ -34,11 +37,34 @@ import {
   useDeleteFolder,
   useCreateFolder,
   useUploadFile,
+  useUpdateFile,
+  useUpdateFolder,
+  useMoveItems,
 } from "@/hooks/useFileMutations";
 import * as DocumentPicker from "expo-document-picker";
 
 function getFileColor(ext: string) {
   return FILE_COLORS[ext.toLowerCase()] ?? FILE_COLORS.default;
+}
+
+type FolderOption = { id: string; name: string; depth: number };
+
+// Flat list of folders for the move picker. Skips the subtree rooted at
+// `excludeId` so a folder can never be moved into itself or a descendant.
+function flattenFolders(
+  nodes: PlainTreeNode[],
+  excludeId: string | undefined,
+  depth = 0,
+): FolderOption[] {
+  const out: FolderOption[] = [];
+  for (const node of nodes) {
+    if (!node.isFolder || node.id === excludeId) continue;
+    out.push({ id: node.id, name: node.name, depth });
+    if (node.children.length > 0) {
+      out.push(...flattenFolders(node.children, excludeId, depth + 1));
+    }
+  }
+  return out;
 }
 
 type SheetItem = { id: string; name: string; isFolder: boolean; ext?: string } | null;
@@ -53,8 +79,52 @@ export default function FilesListScreen() {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [createFolderVisible, setCreateFolderVisible] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [renameTarget, setRenameTarget] = useState<SheetItem>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [moveTarget, setMoveTarget] = useState<SheetItem>(null);
   const createFolder = useCreateFolder();
   const uploadFile = useUploadFile();
+  const updateFile = useUpdateFile();
+  const updateFolder = useUpdateFolder();
+  const moveItems = useMoveItems();
+
+  const startRename = useCallback((item: NonNullable<SheetItem>) => {
+    setSheetItem(null);
+    setRenameValue(item.name);
+    setRenameTarget(item);
+  }, []);
+
+  const submitRename = useCallback(() => {
+    const name = renameValue.trim();
+    if (!renameTarget || !name) return;
+    const onSettled = () => setRenameTarget(null);
+    if (renameTarget.isFolder) {
+      updateFolder.mutate({ folderId: renameTarget.id, name }, { onSettled });
+    } else {
+      updateFile.mutate({ fileId: renameTarget.id, filename: name }, { onSettled });
+    }
+  }, [renameTarget, renameValue, updateFile, updateFolder]);
+
+  const doMove = useCallback(
+    (targetFolderId: string | undefined) => {
+      if (!moveTarget) return;
+      moveItems.mutate(
+        {
+          fileIds: moveTarget.isFolder ? [] : [moveTarget.id],
+          folderIds: moveTarget.isFolder ? [moveTarget.id] : [],
+          targetFolderId,
+        },
+        { onSettled: () => setMoveTarget(null) },
+      );
+    },
+    [moveTarget, moveItems],
+  );
+
+  const copyReferenceLink = useCallback(async (item: NonNullable<SheetItem>) => {
+    const type = item.isFolder ? "FOLDER" : "FILE";
+    await Clipboard.setStringAsync(`urn:uniffy:content:${type}:${item.id}`);
+    Alert.alert("Copied", "Reference link copied to clipboard.");
+  }, []);
   // Folder navigation stack: array of { id, name } for breadcrumb
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
 
@@ -119,8 +189,8 @@ export default function FilesListScreen() {
       onLongPress={() => setSheetItem({ id: node.id, name: node.name, isFolder: true })}
       activeOpacity={0.7}
     >
-      <View style={[styles.folderIcon, { backgroundColor: DOMAIN_COLORS.filesSoft }]}>
-        <FolderSimple size={24} color={DOMAIN_COLORS.files} weight="fill" />
+      <View style={[styles.folderIcon, { backgroundColor: T.domains.filesSoft }]}>
+        <FolderSimple size={24} color={T.domains.files} weight="fill" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.itemName, { color: T.textBright }]} numberOfLines={1}>
@@ -148,7 +218,7 @@ export default function FilesListScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.gridCardTop}>
-        <FolderSimple size={40} color={DOMAIN_COLORS.files} weight="fill" />
+        <FolderSimple size={40} color={T.domains.files} weight="fill" />
         <TouchableOpacity
           onPress={() => setSheetItem({ id: node.id, name: node.name, isFolder: true })}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -234,7 +304,7 @@ export default function FilesListScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={currentFolderName}
-        color={DOMAIN_COLORS.files}
+        color={T.domains.files}
         icon="files"
         onBack={folderStack.length > 0 ? navigateBack : undefined}
         rightActions={
@@ -274,7 +344,7 @@ export default function FilesListScreen() {
         <View
           style={[styles.uploadBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}
         >
-          <ActivityIndicator size="small" color={DOMAIN_COLORS.files} />
+          <ActivityIndicator size="small" color={T.domains.files} />
           <Text style={[styles.uploadText, { color: T.text }]}>
             Uploading{uploadFile.progress > 0 ? ` ${uploadFile.progress}%` : "..."}
           </Text>
@@ -283,7 +353,7 @@ export default function FilesListScreen() {
 
       {filesTree.isLoading && !filesTree.data && (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.files} />
+          <ActivityIndicator size="large" color={T.domains.files} />
         </View>
       )}
 
@@ -294,8 +364,8 @@ export default function FilesListScreen() {
           <RefreshControl
             refreshing={filesTree.isFetching && !filesTree.isLoading}
             onRefresh={() => filesTree.refetch()}
-            tintColor={DOMAIN_COLORS.files}
-            colors={[DOMAIN_COLORS.files]}
+            tintColor={T.domains.files}
+            colors={[T.domains.files]}
           />
         }
       >
@@ -387,7 +457,7 @@ export default function FilesListScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtn,
-                  { backgroundColor: DOMAIN_COLORS.files, opacity: newFolderName.trim() ? 1 : 0.4 },
+                  { backgroundColor: T.domains.files, opacity: newFolderName.trim() ? 1 : 0.4 },
                 ]}
                 disabled={!newFolderName.trim() || createFolder.isPending}
                 onPress={() => {
@@ -410,6 +480,111 @@ export default function FilesListScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Rename modal */}
+      <Modal
+        visible={!!renameTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameTarget(null)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <Text style={[styles.modalTitle, { color: T.textBright }]}>
+              {renameTarget?.isFolder ? "Rename Folder" : "Rename File"}
+            </Text>
+            <TextInput
+              style={[
+                styles.modalInput,
+                { backgroundColor: T.pageBg, color: T.textBright, borderColor: T.border },
+              ]}
+              value={renameValue}
+              onChangeText={setRenameValue}
+              placeholder="Name"
+              placeholderTextColor={T.textDim}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={submitRename}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: T.pageBg }]}
+                onPress={() => setRenameTarget(null)}
+              >
+                <Text style={[styles.modalBtnText, { color: T.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtn,
+                  { backgroundColor: T.domains.files, opacity: renameValue.trim() ? 1 : 0.4 },
+                ]}
+                disabled={!renameValue.trim() || updateFile.isPending || updateFolder.isPending}
+                onPress={submitRename}
+              >
+                {updateFile.isPending || updateFolder.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.modalBtnText, { color: "#fff" }]}>Rename</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Move-to-folder modal */}
+      <Modal
+        visible={!!moveTarget}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMoveTarget(null)}
+      >
+        <TouchableOpacity
+          style={styles.moveBackdrop}
+          activeOpacity={1}
+          onPress={() => setMoveTarget(null)}
+        >
+          <View />
+        </TouchableOpacity>
+        <View style={[styles.moveSheet, { backgroundColor: T.surface }]}>
+          <View style={[styles.handle, { backgroundColor: T.border }]} />
+          <Text style={[styles.moveTitle, { color: T.textBright }]}>
+            Move &ldquo;{moveTarget?.name}&rdquo; to
+          </Text>
+          <ScrollView style={{ maxHeight: 360 }}>
+            <TouchableOpacity
+              style={[styles.moveRow, { borderBottomColor: T.border }]}
+              onPress={() => doMove(undefined)}
+              activeOpacity={0.7}
+            >
+              <FolderSimple size={20} color={T.domains.files} weight="fill" />
+              <Text style={[styles.moveRowText, { color: T.textBright }]}>Files (root)</Text>
+            </TouchableOpacity>
+            {flattenFolders(
+              filesTree.data ?? [],
+              moveTarget?.isFolder ? moveTarget.id : undefined,
+            ).map((opt) => (
+              <TouchableOpacity
+                key={opt.id}
+                style={[
+                  styles.moveRow,
+                  { borderBottomColor: T.border, paddingLeft: 16 + opt.depth * 18 },
+                ]}
+                onPress={() => doMove(opt.id)}
+                activeOpacity={0.7}
+              >
+                <FolderSimple size={20} color={T.domains.files} weight="fill" />
+                <Text style={[styles.moveRowText, { color: T.textBright }]} numberOfLines={1}>
+                  {opt.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
+
       {/* Item action sheet (dots menu / long press) */}
       <ActionSheet
         visible={!!sheetItem}
@@ -418,17 +593,35 @@ export default function FilesListScreen() {
         icon="files"
         iconColor={
           sheetItem?.isFolder
-            ? DOMAIN_COLORS.files
+            ? T.domains.files
             : sheetItem?.ext
               ? getFileColor(sheetItem.ext)
-              : DOMAIN_COLORS.files
+              : T.domains.files
         }
         actions={
           sheetItem?.isFolder
             ? [
-                { icon: "edit-2", label: "Rename folder", onPress: () => {} },
-                { icon: "share-2", label: "Share folder", onPress: () => {} },
-                { icon: "download", label: "Download folder", onPress: () => {} },
+                {
+                  icon: "edit-2",
+                  label: "Rename folder",
+                  onPress: () => sheetItem && startRename(sheetItem),
+                },
+                {
+                  icon: "folder",
+                  label: "Move to folder",
+                  onPress: () => {
+                    if (sheetItem) {
+                      const it = sheetItem;
+                      setSheetItem(null);
+                      setMoveTarget(it);
+                    }
+                  },
+                },
+                {
+                  icon: "at-sign",
+                  label: "Copy reference link",
+                  onPress: () => sheetItem && copyReferenceLink(sheetItem),
+                },
                 {
                   icon: "trash-2",
                   label: "Delete folder",
@@ -451,11 +644,27 @@ export default function FilesListScreen() {
                     router.push(`/files/${id}` as any);
                   },
                 },
-                { icon: "download", label: "Download", onPress: () => {} },
-                { icon: "at-sign", label: "Copy reference link", onPress: () => {} },
-                { icon: "share-2", label: "Share with team", onPress: () => {} },
-                { icon: "star", label: "Add to starred", onPress: () => {} },
-                { icon: "folder", label: "Move to folder", onPress: () => {} },
+                {
+                  icon: "edit-2",
+                  label: "Rename file",
+                  onPress: () => sheetItem && startRename(sheetItem),
+                },
+                {
+                  icon: "folder",
+                  label: "Move to folder",
+                  onPress: () => {
+                    if (sheetItem) {
+                      const it = sheetItem;
+                      setSheetItem(null);
+                      setMoveTarget(it);
+                    }
+                  },
+                },
+                {
+                  icon: "at-sign",
+                  label: "Copy reference link",
+                  onPress: () => sheetItem && copyReferenceLink(sheetItem),
+                },
                 {
                   icon: "trash-2",
                   label: "Delete file",
@@ -478,8 +687,8 @@ function EmptyState({ isSubfolder }: { isSubfolder: boolean }) {
   const T = useTheme();
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: DOMAIN_COLORS.filesSoft }]}>
-        <FolderSimple size={36} color={DOMAIN_COLORS.files} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.filesSoft }]}>
+        <FolderSimple size={36} color={T.domains.files} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>
         {isSubfolder ? "This folder is empty" : "No files yet"}
@@ -509,7 +718,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  sortText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  sortText: { fontSize: 13, fontFamily: FONT.medium },
   listContent: { paddingHorizontal: 16 },
   gridContent: { padding: 16, gap: 16 },
   gridWrap: {
@@ -547,9 +756,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  fileExt: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
-  itemName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  itemMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 3 },
+  fileExt: { fontSize: 10, fontFamily: FONT.bold, letterSpacing: 0.5 },
+  itemName: { fontSize: 15, fontFamily: FONT.semibold },
+  itemMeta: { fontSize: 12, fontFamily: FONT.regular, marginTop: 3 },
   // ---- Grid cards ----
   gridCard: {
     width: "47%",
@@ -572,8 +781,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  gridCardName: { fontSize: 13, fontFamily: "Inter_600SemiBold", lineHeight: 18 },
-  gridCardMeta: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  gridCardName: { fontSize: 13, fontFamily: FONT.semibold, lineHeight: 18 },
+  gridCardMeta: { fontSize: 11, fontFamily: FONT.regular },
   // ---- Empty ----
   emptyState: {
     alignItems: "center",
@@ -589,8 +798,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
   uploadBar: {
     flexDirection: "row",
@@ -600,7 +809,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  uploadText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  uploadText: { fontSize: 13, fontFamily: FONT.medium },
   // ---- Create folder modal ----
   modalOverlay: {
     flex: 1,
@@ -616,10 +825,10 @@ const styles = StyleSheet.create({
     gap: 18,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  modalTitle: { fontSize: 18, fontFamily: FONT.bold },
   modalInput: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
@@ -630,6 +839,36 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: "flex-end",
   },
+  moveBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
+  moveSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 28,
+    maxHeight: "70%",
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  moveTitle: {
+    fontSize: 15,
+    fontFamily: FONT.semibold,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  moveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  moveRowText: { fontSize: 15, fontFamily: FONT.medium, flex: 1 },
   modalBtn: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -637,5 +876,5 @@ const styles = StyleSheet.create({
     minWidth: 80,
     alignItems: "center",
   },
-  modalBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  modalBtnText: { fontSize: 14, fontFamily: FONT.semibold },
 });

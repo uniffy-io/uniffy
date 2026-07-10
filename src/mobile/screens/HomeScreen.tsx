@@ -8,7 +8,15 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { NotePencil, CalendarBlank, Kanban, CaretRight } from "phosphor-react-native";
+import {
+  NotePencil,
+  CalendarBlank,
+  Kanban,
+  CaretRight,
+  BookmarkSimple,
+  BellSimple,
+  Hash,
+} from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@/context/auth-context";
@@ -16,12 +24,17 @@ import { useTheme } from "@/hooks/useTheme";
 import { useEventsInRange } from "@/hooks/useCalendar";
 import { useNotesList } from "@/hooks/useNotes";
 import { useProjectsList } from "@/hooks/useProjects";
-import { DOMAIN_COLORS, BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { useChannels } from "@/hooks/useChat";
+import { useUnreadNotificationCount } from "@/hooks/useNotifications";
+import { Avatar } from "@/components/Avatar";
+import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 
 export function HomeScreen() {
   const { user } = useAuth();
   const T = useTheme();
   const insets = useSafeAreaInsets();
+  const topPad = (Platform.OS === "web" ? 8 : insets.top) + 4;
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
@@ -36,10 +49,13 @@ export function HomeScreen() {
   const eventsQuery = useEventsInRange(startIso, endIso);
   const notesQuery = useNotesList("Recent");
   const projectsQuery = useProjectsList();
+  const { channels } = useChannels();
+  const unreadNotifications = useUnreadNotificationCount().data ?? 0;
 
   const events = eventsQuery.data?.slice(0, 5) ?? [];
   const notes = notesQuery.data?.slice(0, 5) ?? [];
   const projects = projectsQuery.data?.slice(0, 4) ?? [];
+  const unreadChannels = channels.filter((c) => c.unreadCount > 0).slice(0, 4);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -51,11 +67,96 @@ export function HomeScreen() {
       contentContainerStyle={{ paddingBottom: bottomPad }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.header, { backgroundColor: T.bg }]}>
-        <Text style={[styles.greeting, { color: T.textBright }]}>
-          {greeting}, <Text style={[styles.greetingName, { color: T.accent }]}>{userName}</Text>
+      <View style={[styles.header, { backgroundColor: T.bg, paddingTop: topPad }]}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.wordmark, { color: T.textBright }]}>uniffy</Text>
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: T.surfaceHover, borderColor: T.border }]}
+              onPress={() => router.push("/bookmarks" as any)}
+              activeOpacity={0.7}
+              accessibilityLabel="Bookmarks"
+            >
+              <BookmarkSimple size={18} color={T.text} weight="bold" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: T.surfaceHover, borderColor: T.border }]}
+              onPress={() => router.push("/notifications" as any)}
+              activeOpacity={0.7}
+              accessibilityLabel="Notifications"
+            >
+              <BellSimple size={18} color={T.text} weight="bold" />
+              {unreadNotifications > 0 && (
+                <View style={[styles.actionBadge, { backgroundColor: T.red, borderColor: T.bg }]}>
+                  <Text style={styles.actionBadgeText}>
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push("/you" as any)}
+              activeOpacity={0.7}
+              accessibilityLabel="Profile and settings"
+            >
+              <Avatar
+                name={user?.fullName || user?.username || "?"}
+                avatarUrl={user?.avatarUrl}
+                size={34}
+                accentColor={T.accent}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.greetingBlock}>
+        <Text style={[styles.greeting, { color: T.textBright }]}>{greeting},</Text>
+        <Text style={[styles.greetingName, { color: T.accent }]} numberOfLines={1}>
+          {userName}
         </Text>
       </View>
+
+      {unreadChannels.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionLabel, { color: T.textDim }]}>UNREAD CHATS</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/chat" as any)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[styles.seeAllText, { color: T.accent }]}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          {unreadChannels.map((channel) => (
+            <TouchableOpacity
+              key={channel.id}
+              style={[styles.chatRow, { backgroundColor: T.surface, borderColor: T.border }]}
+              onPress={() => router.push(`/chat/${channel.id}` as any)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.chatIcon, { backgroundColor: T.domains.chatSoft }]}>
+                <Hash size={16} color={T.domains.chat} weight="bold" />
+              </View>
+              <Text style={[styles.chatName, { color: T.textBright }]} numberOfLines={1}>
+                {channel.name}
+              </Text>
+              <View
+                style={[
+                  styles.chatBadge,
+                  {
+                    backgroundColor: channel.mentionCount > 0 ? T.red : T.domains.chat,
+                  },
+                ]}
+              >
+                <Text style={styles.chatBadgeText}>
+                  {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* Upcoming Events */}
       <View style={styles.section}>
@@ -71,7 +172,7 @@ export function HomeScreen() {
 
         {eventsQuery.isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={DOMAIN_COLORS.calendar} />
+            <ActivityIndicator size="small" color={T.domains.calendar} />
           </View>
         ) : events.length === 0 ? (
           <View style={styles.emptyState}>
@@ -93,7 +194,7 @@ export function HomeScreen() {
                   {
                     backgroundColor: T.surface,
                     borderColor: T.border,
-                    borderLeftColor: DOMAIN_COLORS.calendar,
+                    borderLeftColor: T.domains.calendar,
                   },
                 ]}
                 onPress={() => router.push(`/calendar/${event.id}` as any)}
@@ -107,7 +208,7 @@ export function HomeScreen() {
                     </Text>
                   )}
                 </View>
-                <Text style={[styles.eventTime, { color: DOMAIN_COLORS.calendar }]}>
+                <Text style={[styles.eventTime, { color: T.domains.calendar }]}>
                   {event.dateFormatted?.split(", ")[0] ?? ""}
                 </Text>
               </TouchableOpacity>
@@ -130,7 +231,7 @@ export function HomeScreen() {
 
         {notesQuery.isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={DOMAIN_COLORS.notes} />
+            <ActivityIndicator size="small" color={T.domains.notes} />
           </View>
         ) : notes.length === 0 ? (
           <View style={styles.emptyState}>
@@ -145,11 +246,11 @@ export function HomeScreen() {
               onPress={() => router.push(`/notes/${note.id}` as any)}
               activeOpacity={0.8}
             >
-              <View style={[styles.noteIcon, { backgroundColor: DOMAIN_COLORS.notesSoft }]}>
+              <View style={[styles.noteIcon, { backgroundColor: T.domains.notesSoft }]}>
                 {note.icon?.type === "emoji" ? (
                   <Text style={styles.noteEmoji}>{note.icon.value}</Text>
                 ) : (
-                  <NotePencil size={16} color={DOMAIN_COLORS.notes} weight="duotone" />
+                  <NotePencil size={16} color={T.domains.notes} weight="duotone" />
                 )}
               </View>
               <View style={{ flex: 1 }}>
@@ -182,7 +283,7 @@ export function HomeScreen() {
 
         {projectsQuery.isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={DOMAIN_COLORS.projects} />
+            <ActivityIndicator size="small" color={T.domains.projects} />
           </View>
         ) : projects.length === 0 ? (
           <View style={styles.emptyState}>
@@ -200,7 +301,7 @@ export function HomeScreen() {
               <View
                 style={[
                   styles.projectDot,
-                  { backgroundColor: project.color || DOMAIN_COLORS.projects },
+                  { backgroundColor: project.color || T.domains.projects },
                 ]}
               />
               <View style={{ flex: 1 }}>
@@ -222,16 +323,60 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 14,
+    paddingBottom: 8,
+  },
+  greetingBlock: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    gap: 2,
   },
   greeting: {
-    fontSize: 20,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 22,
+    fontFamily: FONT.semibold,
   },
   greetingName: {
+    fontSize: 26,
+    fontFamily: FONT.bold,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  wordmark: {
     fontSize: 20,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
+    letterSpacing: -0.5,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  actionBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionBadge: {
+    position: "absolute",
+    top: -4,
+    right: -5,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  actionBadgeText: {
+    fontSize: 8,
+    fontFamily: FONT.bold,
+    color: "#ffffff",
   },
   section: {
     paddingHorizontal: 16,
@@ -246,12 +391,12 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     letterSpacing: 0.8,
   },
   seeAllText: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   loadingRow: {
     paddingVertical: 20,
@@ -265,7 +410,40 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
+  },
+  chatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  chatIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatName: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONT.semibold,
+  },
+  chatBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  chatBadgeText: {
+    fontSize: 10,
+    fontFamily: FONT.bold,
+    color: "#ffffff",
   },
   eventCard: {
     borderRadius: 10,
@@ -278,16 +456,16 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   eventMeta: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 2,
   },
   eventTime: {
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   noteRow: {
     flexDirection: "row",
@@ -308,16 +486,16 @@ const styles = StyleSheet.create({
   },
   noteTitle: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   noteSnippet: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 2,
   },
   noteTime: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   projectCard: {
     flexDirection: "row",
@@ -334,11 +512,11 @@ const styles = StyleSheet.create({
   },
   projectName: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   projectMeta: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 1,
   },
 });

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TextInput } from "react-native";
 import { useUniffy } from "@/context/uniffy-context";
+import { useScreenFocusRef } from "@/hooks/useScreenFocusRef";
 
 export const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
 
@@ -12,6 +13,7 @@ export const DOMAIN_TO_CONTENT_TYPE: Record<string, string> = {
   chat: "CHAT",
   calendar: "CALENDAR_EVENT",
   projects: "PROJECT",
+  agents: "AGENT",
 };
 
 /** Parse canonical body into display text and mention entries */
@@ -38,6 +40,7 @@ type Selection = { start: number; end: number };
 
 export function useMentionInput(initialCanonical?: string) {
   const { pendingReference, clearPendingReference } = useUniffy();
+  const screenFocused = useScreenFocusRef();
 
   const mentionsRef = useRef<MentionEntry[]>([]);
   const cursorPosRef = useRef<number>(0);
@@ -70,9 +73,10 @@ export function useMentionInput(initialCanonical?: string) {
     cursorPosRef.current = sel.start;
   }, []);
 
-  // Insert reference inline at cursor
+  // Insert reference inline at cursor. Focus-guarded so a stacked screen's
+  // composer does not also consume a reference picked elsewhere.
   useEffect(() => {
-    if (pendingReference) {
+    if (pendingReference && screenFocused.current) {
       const contentType = DOMAIN_TO_CONTENT_TYPE[pendingReference.domain] || "NOTE";
       const urn = `urn:uniffy:content:${contentType}:${pendingReference.id}`;
       mentionsRef.current.push({ label: pendingReference.label, urn });

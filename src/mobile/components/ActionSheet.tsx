@@ -11,6 +11,7 @@ import {
 import { CaretRight } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 import type { Domain } from "@/lib/types";
 import { DOMAIN_ICON } from "@/components/ReferenceChip";
 import * as Ph from "phosphor-react-native";
@@ -225,11 +226,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   headerSubtitle: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 2,
   },
   actionRow: {
@@ -249,11 +250,11 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   actionSub: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 1,
   },
   dangerDivider: {

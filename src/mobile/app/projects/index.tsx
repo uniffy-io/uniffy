@@ -39,7 +39,8 @@ import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useProjectsList } from "@/hooks/useProjects";
 import { useDeleteProject } from "@/hooks/useProjectMutations";
 import type { SerializedProject } from "@/lib/projectsSerializer";
@@ -90,7 +91,7 @@ function ProjectCard({
   const tasksQuery = useProjectTasks(project.id);
   const tasks = tasksQuery.data ?? [];
   const stats = computeProjectStats(tasks);
-  const projectColor = project.color || DOMAIN_COLORS.projects;
+  const projectColor = project.color || T.domains.projects;
 
   return (
     <TouchableOpacity
@@ -183,7 +184,7 @@ export default function ProjectsListScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Projects"
-        color={DOMAIN_COLORS.projects}
+        color={T.domains.projects}
         icon="projects"
         rightActions={
           <>
@@ -202,7 +203,7 @@ export default function ProjectsListScreen() {
 
       {projectsQuery.isLoading && !projectsQuery.data ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DOMAIN_COLORS.projects} />
+          <ActivityIndicator size="large" color={T.domains.projects} />
         </View>
       ) : (
         <FlatList
@@ -214,21 +215,21 @@ export default function ProjectsListScreen() {
             <RefreshControl
               refreshing={projectsQuery.isFetching && !projectsQuery.isLoading}
               onRefresh={onRefresh}
-              tintColor={DOMAIN_COLORS.projects}
-              colors={[DOMAIN_COLORS.projects]}
+              tintColor={T.domains.projects}
+              colors={[T.domains.projects]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <View style={[styles.emptyIconWrap, { backgroundColor: DOMAIN_COLORS.projectsSoft }]}>
-                <Kanban size={36} color={DOMAIN_COLORS.projects} weight="duotone" />
+              <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.projectsSoft }]}>
+                <Kanban size={36} color={T.domains.projects} weight="duotone" />
               </View>
               <Text style={[styles.emptyTitle, { color: T.textBright }]}>No projects yet</Text>
               <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
                 Create your first project to track work
               </Text>
               <TouchableOpacity
-                style={[styles.emptyCta, { backgroundColor: DOMAIN_COLORS.projects }]}
+                style={[styles.emptyCta, { backgroundColor: T.domains.projects }]}
                 activeOpacity={0.8}
                 onPress={() => router.push("/projects/create" as any)}
               >
@@ -252,7 +253,7 @@ export default function ProjectsListScreen() {
         title={sheetProject?.name ?? ""}
         subtitle={sheetProject ? `${sheetProject.memberIds.length} members` : ""}
         icon="projects"
-        iconColor={sheetProject?.color || DOMAIN_COLORS.projects}
+        iconColor={sheetProject?.color || T.domains.projects}
         actions={[
           {
             icon: "plus-circle",
@@ -277,7 +278,7 @@ export default function ProjectsListScreen() {
           {
             icon: "edit-3",
             label: "Create project notes",
-            color: DOMAIN_COLORS.notes,
+            color: T.domains.notes,
             onPress: () => {
               setSheetProject(null);
               router.push("/notes/edit" as any);
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  projectName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  projectName: { fontSize: 15, fontFamily: FONT.semibold },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   visibilityBadge: {
     flexDirection: "row",
@@ -326,16 +327,16 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
   },
-  visibilityText: { fontSize: 10, fontFamily: "Inter_500Medium" },
-  memberCount: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  descriptionText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  visibilityText: { fontSize: 10, fontFamily: FONT.medium },
+  memberCount: { fontSize: 11, fontFamily: FONT.regular },
+  descriptionText: { fontSize: 13, fontFamily: FONT.regular, lineHeight: 18 },
   progressSection: { flexDirection: "row", alignItems: "center", gap: 10 },
   progressTrack: { flex: 1, height: 5, borderRadius: 3, overflow: "hidden" },
   progressFill: { height: 5, borderRadius: 3 },
-  progressPct: { fontSize: 12, fontFamily: "Inter_600SemiBold", width: 36 },
+  progressPct: { fontSize: 12, fontFamily: FONT.semibold, width: 36 },
   taskStats: { flexDirection: "row", alignItems: "center", gap: 12 },
   taskStat: { flexDirection: "row", alignItems: "center", gap: 4 },
-  taskStatNum: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  taskStatNum: { fontSize: 11, fontFamily: FONT.regular },
   dot: { width: 9, height: 9, borderRadius: 5 },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyIconWrap: {
@@ -346,8 +347,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyTitle: { fontSize: 17, fontFamily: FONT.semibold },
+  emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center" },
   emptyCta: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 10 },
-  emptyCtaText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  emptyCtaText: { fontSize: 14, fontFamily: FONT.semibold, color: "#fff" },
 });

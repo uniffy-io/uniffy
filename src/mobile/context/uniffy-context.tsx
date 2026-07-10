@@ -14,8 +14,6 @@ export type ReferenceItem = {
   domain: Domain;
 };
 
-type AtPosition = "fab" | "topnav";
-
 type UniffyContextType = {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
@@ -31,15 +29,12 @@ type UniffyContextType = {
   pendingReference: ReferenceItem | null;
   insertReference: (item: ReferenceItem) => void;
   clearPendingReference: () => void;
-  atPosition: AtPosition;
-  setAtPosition: (pos: AtPosition) => void;
 };
 
 const UniffyContext = createContext<UniffyContextType | null>(null);
 
 export function UniffyProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
-  const [atPosition, setAtPosition] = useState<AtPosition>("fab");
   const [atOpen, setAtOpen] = useState(false);
   const [atFromEditor, setAtFromEditor] = useState(false);
   const [returnToAt, setReturnToAt] = useState(false);
@@ -83,8 +78,6 @@ export function UniffyProvider({ children }: { children: React.ReactNode }) {
         pendingReference,
         insertReference,
         clearPendingReference,
-        atPosition,
-        setAtPosition,
       }}
     >
       {children}

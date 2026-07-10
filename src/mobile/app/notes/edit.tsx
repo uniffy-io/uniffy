@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
-  KeyboardAvoidingView,
 } from "react-native";
 import {
   ArrowLeft,
@@ -25,13 +24,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 import { useNote } from "@/hooks/useNotes";
 import { useCreateNote, useAutosave } from "@/hooks/useNoteMutations";
 import { useAuth } from "@/context/auth-context";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { useMentionInput, toCanonical } from "@/hooks/useMentionInput";
-
-// --- Editor component ---
 
 export default function NoteEditorScreen() {
   const T = useTheme();
@@ -63,7 +61,6 @@ export default function NoteEditorScreen() {
   // Populate fields when editing an existing note
   useEffect(() => {
     if (isEditMode && noteQuery.data && !initialized) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when note data loads
       setTitle(noteQuery.data.title);
       initFromCanonical(noteQuery.data.content);
       setInitialized(true);
@@ -223,11 +220,7 @@ export default function NoteEditorScreen() {
   ];
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: T.pageBg }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={0}
-    >
+    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: T.bg, borderBottomColor: T.border }]}>
         <TouchableOpacity
@@ -374,7 +367,7 @@ export default function NoteEditorScreen() {
           </ScrollView>
         </View>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -396,11 +389,11 @@ const styles = StyleSheet.create({
   },
   headerLabel: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   wordCount: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 1,
   },
   previewBtn: {
@@ -414,7 +407,7 @@ const styles = StyleSheet.create({
   },
   previewBtnText: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   doneBtn: {
     paddingHorizontal: 16,
@@ -423,7 +416,7 @@ const styles = StyleSheet.create({
   },
   doneBtnText: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     color: "#fff",
   },
   scrollContent: {
@@ -432,7 +425,7 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     fontSize: 24,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
     lineHeight: 32,
     padding: 0,
     marginBottom: 14,
@@ -445,7 +438,7 @@ const styles = StyleSheet.create({
   },
   bodyInput: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     lineHeight: 26,
     padding: 0,
     minHeight: 400,
@@ -470,7 +463,7 @@ const styles = StyleSheet.create({
   },
   previewTitle: {
     fontSize: 24,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
     lineHeight: 32,
     marginBottom: 14,
     paddingBottom: 12,

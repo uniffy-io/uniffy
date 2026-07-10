@@ -46,6 +46,7 @@ export function useToggleBookmark() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookmarks", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["bookmark-items", organizationId] });
       queryClient.invalidateQueries({ queryKey: ["bookmark-check", organizationId] });
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },

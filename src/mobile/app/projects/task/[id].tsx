@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -19,11 +19,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { CommentButton } from "@/components/CommentsSheet";
+import { ShareButton } from "@/components/ShareSheet";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { ActionSheet } from "@/components/ActionSheet";
 import { CalendarPicker } from "@/components/CalendarPicker";
 import { useTheme } from "@/hooks/useTheme";
-import { DOMAIN_COLORS, BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useTask, useProject, useProjectTasks, useTaskActivities } from "@/hooks/useProjects";
-import { useUpdateTask } from "@/hooks/useProjectMutations";
+import { useUpdateTask, useDeleteTask } from "@/hooks/useProjectMutations";
 import {
   getStatusOptions,
   getPriorityOptions,
@@ -58,6 +63,8 @@ export default function TaskDetailScreen() {
   const activitiesQuery = useTaskActivities(id);
   const activities = activitiesQuery.data ?? [];
   const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
@@ -65,7 +72,7 @@ export default function TaskDetailScreen() {
   if (taskQuery.isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={DOMAIN_COLORS.projects} />
+        <ActivityIndicator size="large" color={T.domains.projects} />
       </View>
     );
   }
@@ -76,7 +83,7 @@ export default function TaskDetailScreen() {
   const priorityOptions = project ? getPriorityOptions(project) : [];
   const statusOpt = getOptionById(statusOptions, task.status);
   const priorityOpt = getOptionById(priorityOptions, task.priority);
-  const projectColor = project?.color || DOMAIN_COLORS.projects;
+  const projectColor = project?.color || T.domains.projects;
 
   const subtasks = allTasks.filter((t) => t.parentId === task.id);
   const subtasksDone = subtasks.filter((t) => t.completedAt).length;
@@ -101,9 +108,20 @@ export default function TaskDetailScreen() {
         color={projectColor}
         icon="projects"
         rightActions={
-          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <DotsThree size={22} color={T.text} weight="bold" />
-          </TouchableOpacity>
+          <>
+            <CommentButton
+              contentType={ContentType.TASK}
+              contentId={task.id}
+              color={projectColor}
+            />
+            <ShareButton contentType={ContentType.TASK} contentId={task.id} color={projectColor} />
+            <TouchableOpacity
+              onPress={() => setSheetOpen(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <DotsThree size={22} color={T.text} weight="bold" />
+            </TouchableOpacity>
+          </>
         }
       />
 
@@ -318,6 +336,37 @@ export default function TaskDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ActionSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={task.title}
+        subtitle={statusOpt?.label}
+        icon="projects"
+        iconColor={projectColor}
+        actions={[
+          {
+            icon: "edit-2",
+            label: "Edit task",
+            onPress: () =>
+              router.push({
+                pathname: "/projects/task/create" as any,
+                params: { taskId: task.id },
+              }),
+          },
+          {
+            icon: "trash-2",
+            label: "Delete task",
+            isDanger: true,
+            onPress: () => {
+              deleteTask.mutate(
+                { taskId: task.id, projectId: task.projectId },
+                { onSuccess: () => router.back() },
+              );
+            },
+          },
+        ]}
+      />
     </View>
   );
 }
@@ -335,8 +384,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeDot: { width: 5, height: 5, borderRadius: 3 },
-  badgeText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  title: { fontSize: 22, fontFamily: "Inter_700Bold", lineHeight: 30 },
+  badgeText: { fontSize: 12, fontFamily: FONT.medium },
+  title: { fontSize: 22, fontFamily: FONT.bold, lineHeight: 30 },
   metaCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   metaRow: {
     flexDirection: "row",
@@ -346,12 +395,12 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  metaLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  metaText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
-  description: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 22 },
+  metaLabel: { fontSize: 13, fontFamily: FONT.regular },
+  metaText: { fontSize: 13, fontFamily: FONT.semibold },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8 },
+  description: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 22 },
   datesRow: { flexDirection: "row", gap: 12 },
-  dateLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  dateLabel: { fontSize: 12, fontFamily: FONT.medium },
   blockerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -361,9 +410,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   blockerDot: { width: 8, height: 8, borderRadius: 4 },
-  blockerTitle: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium" },
+  blockerTitle: { flex: 1, fontSize: 13, fontFamily: FONT.medium },
   subtaskHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  subtaskProgress: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  subtaskProgress: { fontSize: 12, fontFamily: FONT.regular },
   subtaskRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   subtaskCheck: {
     width: 18,
@@ -373,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  subtaskTitle: { fontSize: 14, fontFamily: "Inter_400Regular", flex: 1 },
+  subtaskTitle: { fontSize: 14, fontFamily: FONT.regular, flex: 1 },
   activityRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   actorCircle: {
     width: 24,
@@ -382,8 +431,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  actorInitial: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  activityText: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  activityDetail: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
-  activityTime: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  actorInitial: { fontSize: 11, fontFamily: FONT.semibold },
+  activityText: { fontSize: 13, fontFamily: FONT.regular },
+  activityDetail: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
+  activityTime: { fontSize: 11, fontFamily: FONT.regular },
 });

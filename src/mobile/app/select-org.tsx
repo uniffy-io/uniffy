@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Animated,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -13,6 +15,7 @@ import { Buildings, SignOut } from "phosphor-react-native";
 import { useAuth } from "@/context/auth-context";
 import { authApi } from "@/api/authApi";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 
@@ -44,6 +47,16 @@ export default function SelectOrgScreen() {
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const enterAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(enterAnim, {
+      toValue: 1,
+      duration: 450,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [enterAnim]);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +91,18 @@ export default function SelectOrgScreen() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: T.pageBg }]}>
+    <Animated.View
+      style={[
+        styles.root,
+        {
+          backgroundColor: T.pageBg,
+          opacity: enterAnim,
+          transform: [
+            { translateY: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
+          ],
+        },
+      ]}
+    >
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.title, { color: T.textBright }]}>Select workspace</Text>
         {user && (
@@ -158,7 +182,7 @@ export default function SelectOrgScreen() {
         <SignOut size={15} color="#FA5252" weight="bold" />
         <Text style={styles.logoutText}>Sign out</Text>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -171,11 +195,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
   },
   subtitle: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   errorBox: {
     backgroundColor: "rgba(250,82,82,0.12)",
@@ -189,7 +213,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
     color: "#FA5252",
   },
   center: {
@@ -201,7 +225,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     textAlign: "center",
     lineHeight: 22,
   },
@@ -226,7 +250,7 @@ const styles = StyleSheet.create({
   },
   orgInitials: {
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
   },
   orgInfo: {
     flex: 1,
@@ -234,7 +258,7 @@ const styles = StyleSheet.create({
   },
   orgName: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   orgMeta: {
     flexDirection: "row",
@@ -248,7 +272,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   logoutButton: {
     flexDirection: "row",
@@ -262,7 +286,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
     color: "#FA5252",
   },
 });

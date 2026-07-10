@@ -3,7 +3,6 @@ import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import { useAuth } from "@/context/auth-context";
 import { calendarApi } from "@/api/calendarApi";
-import type { VisibilityScope } from "@uniffy/proto/common/v1/common_pb";
 
 function isoToTimestamp(iso: string) {
   const date = new Date(iso);
@@ -27,11 +26,9 @@ export function useCreateEvent() {
       timezone?: string;
       location?: string;
       meetingUrl?: string;
-      calendarId: string;
       categoryId?: string;
       attendeeIds?: string[];
-      tags?: string[];
-      visibility?: VisibilityScope;
+      tagIds?: string[];
     }) =>
       calendarApi.createEvent({
         organizationId: organizationId!,
@@ -43,11 +40,9 @@ export function useCreateEvent() {
         timezone: args.timezone,
         location: args.location,
         meetingUrl: args.meetingUrl,
-        calendarId: args.calendarId,
         categoryId: args.categoryId,
         attendeeIds: args.attendeeIds ?? [],
-        tags: args.tags ?? [],
-        visibility: args.visibility,
+        tagIds: args.tagIds ?? [],
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });
@@ -70,7 +65,6 @@ export function useUpdateEvent() {
       location?: string;
       meetingUrl?: string;
       categoryId?: string;
-      tags?: string[];
     }) =>
       calendarApi.updateEvent({
         organizationId: organizationId!,
@@ -83,7 +77,6 @@ export function useUpdateEvent() {
         location: args.location,
         meetingUrl: args.meetingUrl,
         categoryId: args.categoryId,
-        tags: args.tags,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });

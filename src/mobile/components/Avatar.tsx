@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { FONT } from "@/constants/typography";
 
 const GRADIENT_PAIRS: [string, string][] = [
   ["#7C5CFC", "#E64980"],
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
   },
   initials: {
     color: "#fff",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     textAlignVertical: "center",
   },
 });

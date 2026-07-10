@@ -4,7 +4,7 @@ import { notesApi } from "@/api/notesApi";
 import { bookmarksApi } from "@/api/bookmarksApi";
 import { noteToPlain, formatRelativeTime, stripMarkdown } from "@/lib/noteSerializer";
 import type { SerializedNote } from "@/lib/noteSerializer";
-import { VisibilityScope } from "@uniffy/proto/notes/v1/notes_pb";
+import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 
 export type NoteListItem = SerializedNote & {
   snippet: string;
@@ -41,7 +41,7 @@ export function useNotesList(filter: string) {
       if (filter === "Recent") {
         params.sortBy = "updated_at";
       } else if (filter === "Shared") {
-        params.visibility = VisibilityScope.ORGANIZATION;
+        params.accessMode = AccessMode.OPEN_TO_ORG;
       }
 
       const response = await notesApi.listNotes(params);

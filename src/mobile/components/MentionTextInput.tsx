@@ -2,6 +2,7 @@ import React, { useCallback, useEffect } from "react";
 import { TextInput, StyleSheet } from "react-native";
 import type { TextInputProps, StyleProp, TextStyle } from "react-native";
 import { useMentionInput, toCanonical } from "@/hooks/useMentionInput";
+import { FONT } from "@/constants/typography";
 
 type MentionTextInputProps = {
   initialContent?: string;
@@ -60,7 +61,7 @@ export function MentionTextInput({
 const styles = StyleSheet.create({
   input: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     lineHeight: 20,
   },
 });

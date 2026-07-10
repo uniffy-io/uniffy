@@ -1,8 +1,10 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { ArrowLeft } from "phosphor-react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 import type { Domain } from "@/lib/types";
 import { DOMAIN_ICON } from "@/components/ReferenceChip";
 
@@ -11,6 +13,7 @@ type DomainHeaderProps = {
   color: string;
   icon: Domain | string;
   onBack?: () => void;
+  showBack?: boolean;
   rightActions?: React.ReactNode;
   subtitle?: string;
 };
@@ -20,25 +23,33 @@ export function DomainHeader({
   color,
   icon,
   onBack,
+  showBack = true,
   rightActions,
   subtitle,
 }: DomainHeaderProps) {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const topPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
 
-  const domainKeys: Domain[] = ["notes", "files", "chat", "calendar", "projects"];
-  const isDomain = domainKeys.includes(icon as Domain);
-  const IconComponent = isDomain ? DOMAIN_ICON[icon as Domain] : null;
+  const IconComponent = icon in DOMAIN_ICON ? DOMAIN_ICON[icon as Domain] : null;
 
   return (
-    <View style={[styles.container, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: T.surface, borderBottomColor: T.border, paddingTop: topPad },
+      ]}
+    >
       <View style={styles.row}>
-        <TouchableOpacity
-          onPress={onBack ?? (() => router.back())}
-          style={styles.backBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft size={20} color={T.text} weight="bold" />
-        </TouchableOpacity>
+        {showBack && (
+          <TouchableOpacity
+            onPress={onBack ?? (() => router.back())}
+            style={styles.backBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <ArrowLeft size={20} color={T.text} weight="bold" />
+          </TouchableOpacity>
+        )}
 
         <View style={styles.titleRow}>
           {IconComponent && (
@@ -62,7 +73,6 @@ const styles = StyleSheet.create({
   container: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 12,
   },
   row: {
@@ -88,11 +98,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   subtitle: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   actions: {
     flexDirection: "row",
