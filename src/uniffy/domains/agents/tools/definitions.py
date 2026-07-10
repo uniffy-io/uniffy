@@ -32,6 +32,9 @@ class ToolContext:
     agent_id: UUID | None = None
     session_id: UUID | None = None
     user_timezone: str | None = None
+    # Side-channel for a write tool to surface runtime stream events (e.g. a
+    # proposed skill draft) that the loop drains and forwards to the client.
+    pending_events: list = field(default_factory=list)
 
 
 @dataclass

@@ -10,6 +10,7 @@ import {
   selectActiveTab,
   type AgentsTab,
 } from "@/features/agents/store/agentsUiSlice";
+import { setActiveSession } from "@/features/agents/store/agentSessionsSlice";
 
 const VALID_TABS: AgentsTab[] = [
   "chat",
@@ -47,6 +48,15 @@ export function AgentsPage() {
   useEffect(() => {
     if (tab === "agents" && subId) {
       dispatch(setSelectedAgent(subId));
+    }
+  }, [dispatch, tab, subId]);
+
+  // The chat tab's open session lives in the URL so it survives refresh, deep
+  // links, and back/forward. A bare /agents/chat clears the selection (empty
+  // state), mirroring the chat domain's bare /chat.
+  useEffect(() => {
+    if (tab === "chat") {
+      dispatch(setActiveSession(subId ?? null));
     }
   }, [dispatch, tab, subId]);
 

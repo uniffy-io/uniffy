@@ -19,11 +19,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SkillsService_CreateSkill_FullMethodName = "/agents.v1.SkillsService/CreateSkill"
-	SkillsService_GetSkill_FullMethodName    = "/agents.v1.SkillsService/GetSkill"
-	SkillsService_ListSkills_FullMethodName  = "/agents.v1.SkillsService/ListSkills"
-	SkillsService_UpdateSkill_FullMethodName = "/agents.v1.SkillsService/UpdateSkill"
-	SkillsService_DeleteSkill_FullMethodName = "/agents.v1.SkillsService/DeleteSkill"
+	SkillsService_CreateSkill_FullMethodName         = "/agents.v1.SkillsService/CreateSkill"
+	SkillsService_GetSkill_FullMethodName            = "/agents.v1.SkillsService/GetSkill"
+	SkillsService_ListSkills_FullMethodName          = "/agents.v1.SkillsService/ListSkills"
+	SkillsService_UpdateSkill_FullMethodName         = "/agents.v1.SkillsService/UpdateSkill"
+	SkillsService_DeleteSkill_FullMethodName         = "/agents.v1.SkillsService/DeleteSkill"
+	SkillsService_ListRunnableSkills_FullMethodName  = "/agents.v1.SkillsService/ListRunnableSkills"
+	SkillsService_CreateSkillDraft_FullMethodName    = "/agents.v1.SkillsService/CreateSkillDraft"
+	SkillsService_GetSkillDraft_FullMethodName       = "/agents.v1.SkillsService/GetSkillDraft"
+	SkillsService_ListSkillDrafts_FullMethodName     = "/agents.v1.SkillsService/ListSkillDrafts"
+	SkillsService_SaveSkillDraft_FullMethodName      = "/agents.v1.SkillsService/SaveSkillDraft"
+	SkillsService_DiscardSkillDraft_FullMethodName   = "/agents.v1.SkillsService/DiscardSkillDraft"
+	SkillsService_ListSkillVersions_FullMethodName   = "/agents.v1.SkillsService/ListSkillVersions"
+	SkillsService_GetSkillVersion_FullMethodName     = "/agents.v1.SkillsService/GetSkillVersion"
+	SkillsService_SetMainSkillVersion_FullMethodName = "/agents.v1.SkillsService/SetMainSkillVersion"
+	SkillsService_RevertSkill_FullMethodName         = "/agents.v1.SkillsService/RevertSkill"
+	SkillsService_GetSkillMetrics_FullMethodName     = "/agents.v1.SkillsService/GetSkillMetrics"
 )
 
 // SkillsServiceClient is the client API for SkillsService service.
@@ -43,6 +54,36 @@ type SkillsServiceClient interface {
 	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error)
+	// List the skills a user can invoke on-demand against a given agent
+	// (the agent's resolved set: explicitly enabled + always-active). Powers
+	// the "/" slash-command menu in the agent composers. Lean payload - no
+	// skill content is shipped; the content loads only when the turn runs.
+	ListRunnableSkills(ctx context.Context, in *ListRunnableSkillsRequest, opts ...grpc.CallOption) (*ListRunnableSkillsResponse, error)
+	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
+	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
+	CreateSkillDraft(ctx context.Context, in *CreateSkillDraftRequest, opts ...grpc.CallOption) (*CreateSkillDraftResponse, error)
+	// Get a single draft by id.
+	GetSkillDraft(ctx context.Context, in *GetSkillDraftRequest, opts ...grpc.CallOption) (*GetSkillDraftResponse, error)
+	// List pending drafts for review (the drafts inbox).
+	ListSkillDrafts(ctx context.Context, in *ListSkillDraftsRequest, opts ...grpc.CallOption) (*ListSkillDraftsResponse, error)
+	// Save a pending draft: a create draft becomes a new skill at version 1; an
+	// edit/evolve draft appends a new version to its target skill.
+	SaveSkillDraft(ctx context.Context, in *SaveSkillDraftRequest, opts ...grpc.CallOption) (*SaveSkillDraftResponse, error)
+	// Discard a pending draft (soft delete; never activates anything).
+	DiscardSkillDraft(ctx context.Context, in *DiscardSkillDraftRequest, opts ...grpc.CallOption) (*DiscardSkillDraftResponse, error)
+	// List a skill's immutable version history (newest first), with the current
+	// main-version pointer so the timeline can render the "Main" badge.
+	ListSkillVersions(ctx context.Context, in *ListSkillVersionsRequest, opts ...grpc.CallOption) (*ListSkillVersionsResponse, error)
+	// Get a single version of a skill by version number.
+	GetSkillVersion(ctx context.Context, in *GetSkillVersionRequest, opts ...grpc.CallOption) (*GetSkillVersionResponse, error)
+	// Set the main version the runtime uses: pin a version, or let it follow the
+	// latest edit automatically.
+	SetMainSkillVersion(ctx context.Context, in *SetMainSkillVersionRequest, opts ...grpc.CallOption) (*SetMainSkillVersionResponse, error)
+	// Revert a skill to an earlier version by copying that version's content into
+	// a new version at the head of the history.
+	RevertSkill(ctx context.Context, in *RevertSkillRequest, opts ...grpc.CallOption) (*RevertSkillResponse, error)
+	// Per-skill usage + feedback aggregates for the org admin metrics view.
+	GetSkillMetrics(ctx context.Context, in *GetSkillMetricsRequest, opts ...grpc.CallOption) (*GetSkillMetricsResponse, error)
 }
 
 type skillsServiceClient struct {
@@ -103,6 +144,116 @@ func (c *skillsServiceClient) DeleteSkill(ctx context.Context, in *DeleteSkillRe
 	return out, nil
 }
 
+func (c *skillsServiceClient) ListRunnableSkills(ctx context.Context, in *ListRunnableSkillsRequest, opts ...grpc.CallOption) (*ListRunnableSkillsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRunnableSkillsResponse)
+	err := c.cc.Invoke(ctx, SkillsService_ListRunnableSkills_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) CreateSkillDraft(ctx context.Context, in *CreateSkillDraftRequest, opts ...grpc.CallOption) (*CreateSkillDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateSkillDraftResponse)
+	err := c.cc.Invoke(ctx, SkillsService_CreateSkillDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) GetSkillDraft(ctx context.Context, in *GetSkillDraftRequest, opts ...grpc.CallOption) (*GetSkillDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSkillDraftResponse)
+	err := c.cc.Invoke(ctx, SkillsService_GetSkillDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) ListSkillDrafts(ctx context.Context, in *ListSkillDraftsRequest, opts ...grpc.CallOption) (*ListSkillDraftsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSkillDraftsResponse)
+	err := c.cc.Invoke(ctx, SkillsService_ListSkillDrafts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) SaveSkillDraft(ctx context.Context, in *SaveSkillDraftRequest, opts ...grpc.CallOption) (*SaveSkillDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveSkillDraftResponse)
+	err := c.cc.Invoke(ctx, SkillsService_SaveSkillDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) DiscardSkillDraft(ctx context.Context, in *DiscardSkillDraftRequest, opts ...grpc.CallOption) (*DiscardSkillDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DiscardSkillDraftResponse)
+	err := c.cc.Invoke(ctx, SkillsService_DiscardSkillDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) ListSkillVersions(ctx context.Context, in *ListSkillVersionsRequest, opts ...grpc.CallOption) (*ListSkillVersionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSkillVersionsResponse)
+	err := c.cc.Invoke(ctx, SkillsService_ListSkillVersions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) GetSkillVersion(ctx context.Context, in *GetSkillVersionRequest, opts ...grpc.CallOption) (*GetSkillVersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSkillVersionResponse)
+	err := c.cc.Invoke(ctx, SkillsService_GetSkillVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) SetMainSkillVersion(ctx context.Context, in *SetMainSkillVersionRequest, opts ...grpc.CallOption) (*SetMainSkillVersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetMainSkillVersionResponse)
+	err := c.cc.Invoke(ctx, SkillsService_SetMainSkillVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) RevertSkill(ctx context.Context, in *RevertSkillRequest, opts ...grpc.CallOption) (*RevertSkillResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevertSkillResponse)
+	err := c.cc.Invoke(ctx, SkillsService_RevertSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *skillsServiceClient) GetSkillMetrics(ctx context.Context, in *GetSkillMetricsRequest, opts ...grpc.CallOption) (*GetSkillMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSkillMetricsResponse)
+	err := c.cc.Invoke(ctx, SkillsService_GetSkillMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SkillsServiceServer is the server API for SkillsService service.
 // All implementations must embed UnimplementedSkillsServiceServer
 // for forward compatibility.
@@ -120,6 +271,36 @@ type SkillsServiceServer interface {
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
 	// Delete an organization skill
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
+	// List the skills a user can invoke on-demand against a given agent
+	// (the agent's resolved set: explicitly enabled + always-active). Powers
+	// the "/" slash-command menu in the agent composers. Lean payload - no
+	// skill content is shipped; the content loads only when the turn runs.
+	ListRunnableSkills(context.Context, *ListRunnableSkillsRequest) (*ListRunnableSkillsResponse, error)
+	// Create a pending draft (library "New skill" / "Edit as draft"). The draft
+	// is never auto-activated; it becomes a skill only on SaveSkillDraft.
+	CreateSkillDraft(context.Context, *CreateSkillDraftRequest) (*CreateSkillDraftResponse, error)
+	// Get a single draft by id.
+	GetSkillDraft(context.Context, *GetSkillDraftRequest) (*GetSkillDraftResponse, error)
+	// List pending drafts for review (the drafts inbox).
+	ListSkillDrafts(context.Context, *ListSkillDraftsRequest) (*ListSkillDraftsResponse, error)
+	// Save a pending draft: a create draft becomes a new skill at version 1; an
+	// edit/evolve draft appends a new version to its target skill.
+	SaveSkillDraft(context.Context, *SaveSkillDraftRequest) (*SaveSkillDraftResponse, error)
+	// Discard a pending draft (soft delete; never activates anything).
+	DiscardSkillDraft(context.Context, *DiscardSkillDraftRequest) (*DiscardSkillDraftResponse, error)
+	// List a skill's immutable version history (newest first), with the current
+	// main-version pointer so the timeline can render the "Main" badge.
+	ListSkillVersions(context.Context, *ListSkillVersionsRequest) (*ListSkillVersionsResponse, error)
+	// Get a single version of a skill by version number.
+	GetSkillVersion(context.Context, *GetSkillVersionRequest) (*GetSkillVersionResponse, error)
+	// Set the main version the runtime uses: pin a version, or let it follow the
+	// latest edit automatically.
+	SetMainSkillVersion(context.Context, *SetMainSkillVersionRequest) (*SetMainSkillVersionResponse, error)
+	// Revert a skill to an earlier version by copying that version's content into
+	// a new version at the head of the history.
+	RevertSkill(context.Context, *RevertSkillRequest) (*RevertSkillResponse, error)
+	// Per-skill usage + feedback aggregates for the org admin metrics view.
+	GetSkillMetrics(context.Context, *GetSkillMetricsRequest) (*GetSkillMetricsResponse, error)
 	mustEmbedUnimplementedSkillsServiceServer()
 }
 
@@ -144,6 +325,39 @@ func (UnimplementedSkillsServiceServer) UpdateSkill(context.Context, *UpdateSkil
 }
 func (UnimplementedSkillsServiceServer) DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSkill not implemented")
+}
+func (UnimplementedSkillsServiceServer) ListRunnableSkills(context.Context, *ListRunnableSkillsRequest) (*ListRunnableSkillsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRunnableSkills not implemented")
+}
+func (UnimplementedSkillsServiceServer) CreateSkillDraft(context.Context, *CreateSkillDraftRequest) (*CreateSkillDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSkillDraft not implemented")
+}
+func (UnimplementedSkillsServiceServer) GetSkillDraft(context.Context, *GetSkillDraftRequest) (*GetSkillDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSkillDraft not implemented")
+}
+func (UnimplementedSkillsServiceServer) ListSkillDrafts(context.Context, *ListSkillDraftsRequest) (*ListSkillDraftsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSkillDrafts not implemented")
+}
+func (UnimplementedSkillsServiceServer) SaveSkillDraft(context.Context, *SaveSkillDraftRequest) (*SaveSkillDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveSkillDraft not implemented")
+}
+func (UnimplementedSkillsServiceServer) DiscardSkillDraft(context.Context, *DiscardSkillDraftRequest) (*DiscardSkillDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DiscardSkillDraft not implemented")
+}
+func (UnimplementedSkillsServiceServer) ListSkillVersions(context.Context, *ListSkillVersionsRequest) (*ListSkillVersionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSkillVersions not implemented")
+}
+func (UnimplementedSkillsServiceServer) GetSkillVersion(context.Context, *GetSkillVersionRequest) (*GetSkillVersionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSkillVersion not implemented")
+}
+func (UnimplementedSkillsServiceServer) SetMainSkillVersion(context.Context, *SetMainSkillVersionRequest) (*SetMainSkillVersionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetMainSkillVersion not implemented")
+}
+func (UnimplementedSkillsServiceServer) RevertSkill(context.Context, *RevertSkillRequest) (*RevertSkillResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevertSkill not implemented")
+}
+func (UnimplementedSkillsServiceServer) GetSkillMetrics(context.Context, *GetSkillMetricsRequest) (*GetSkillMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSkillMetrics not implemented")
 }
 func (UnimplementedSkillsServiceServer) mustEmbedUnimplementedSkillsServiceServer() {}
 func (UnimplementedSkillsServiceServer) testEmbeddedByValue()                       {}
@@ -256,6 +470,204 @@ func _SkillsService_DeleteSkill_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SkillsService_ListRunnableSkills_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRunnableSkillsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).ListRunnableSkills(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_ListRunnableSkills_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).ListRunnableSkills(ctx, req.(*ListRunnableSkillsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_CreateSkillDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSkillDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).CreateSkillDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_CreateSkillDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).CreateSkillDraft(ctx, req.(*CreateSkillDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_GetSkillDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).GetSkillDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_GetSkillDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).GetSkillDraft(ctx, req.(*GetSkillDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_ListSkillDrafts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSkillDraftsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).ListSkillDrafts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_ListSkillDrafts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).ListSkillDrafts(ctx, req.(*ListSkillDraftsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_SaveSkillDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveSkillDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).SaveSkillDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_SaveSkillDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).SaveSkillDraft(ctx, req.(*SaveSkillDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_DiscardSkillDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DiscardSkillDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).DiscardSkillDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_DiscardSkillDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).DiscardSkillDraft(ctx, req.(*DiscardSkillDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_ListSkillVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSkillVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).ListSkillVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_ListSkillVersions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).ListSkillVersions(ctx, req.(*ListSkillVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_GetSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).GetSkillVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_GetSkillVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).GetSkillVersion(ctx, req.(*GetSkillVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_SetMainSkillVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetMainSkillVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).SetMainSkillVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_SetMainSkillVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).SetMainSkillVersion(ctx, req.(*SetMainSkillVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_RevertSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevertSkillRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).RevertSkill(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_RevertSkill_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).RevertSkill(ctx, req.(*RevertSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SkillsService_GetSkillMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SkillsServiceServer).GetSkillMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SkillsService_GetSkillMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SkillsServiceServer).GetSkillMetrics(ctx, req.(*GetSkillMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SkillsService_ServiceDesc is the grpc.ServiceDesc for SkillsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -282,6 +694,50 @@ var SkillsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSkill",
 			Handler:    _SkillsService_DeleteSkill_Handler,
+		},
+		{
+			MethodName: "ListRunnableSkills",
+			Handler:    _SkillsService_ListRunnableSkills_Handler,
+		},
+		{
+			MethodName: "CreateSkillDraft",
+			Handler:    _SkillsService_CreateSkillDraft_Handler,
+		},
+		{
+			MethodName: "GetSkillDraft",
+			Handler:    _SkillsService_GetSkillDraft_Handler,
+		},
+		{
+			MethodName: "ListSkillDrafts",
+			Handler:    _SkillsService_ListSkillDrafts_Handler,
+		},
+		{
+			MethodName: "SaveSkillDraft",
+			Handler:    _SkillsService_SaveSkillDraft_Handler,
+		},
+		{
+			MethodName: "DiscardSkillDraft",
+			Handler:    _SkillsService_DiscardSkillDraft_Handler,
+		},
+		{
+			MethodName: "ListSkillVersions",
+			Handler:    _SkillsService_ListSkillVersions_Handler,
+		},
+		{
+			MethodName: "GetSkillVersion",
+			Handler:    _SkillsService_GetSkillVersion_Handler,
+		},
+		{
+			MethodName: "SetMainSkillVersion",
+			Handler:    _SkillsService_SetMainSkillVersion_Handler,
+		},
+		{
+			MethodName: "RevertSkill",
+			Handler:    _SkillsService_RevertSkill_Handler,
+		},
+		{
+			MethodName: "GetSkillMetrics",
+			Handler:    _SkillsService_GetSkillMetrics_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

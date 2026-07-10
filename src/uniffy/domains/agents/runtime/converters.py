@@ -18,6 +18,7 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     StreamErrorEvent,
     StreamFailoverEvent,
     StreamMessageStoredEvent,
+    StreamSkillDraftEvent,
     StreamTokenEvent,
     StreamToolCallEvent,
     StreamToolResultEvent,
@@ -25,18 +26,21 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
 )
 
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.domains.agents.runtime.stream_events import (
     RuntimeConfirmationRequiredEvent,
     RuntimeDoneEvent,
     RuntimeErrorEvent,
     RuntimeFailoverEvent,
     RuntimeMessageStoredEvent,
+    RuntimeSkillDraftEvent,
     RuntimeStreamEvent,
     RuntimeTokenEvent,
     RuntimeToolCallEvent,
     RuntimeToolResultEvent,
 )
 from uniffy.domains.agents.sessions.converters import message_to_proto
+from uniffy.domains.agents.skills.converters import skill_draft_to_proto
 
 
 def send_message_response_to_proto(
@@ -151,6 +155,11 @@ def runtime_stream_event_to_proto(
             ),
         )
 
+    if isinstance(event, RuntimeSkillDraftEvent):
+        return AgentStreamEvent(
+            skill_draft=StreamSkillDraftEvent(draft=skill_draft_to_proto(event.draft)),
+        )
+
     if isinstance(event, RuntimeErrorEvent):
         return AgentStreamEvent(error=StreamErrorEvent(message=event.error))
 
@@ -164,6 +173,7 @@ _EVENT_TYPE_MESSAGE_STORED = "message_stored"
 _EVENT_TYPE_DONE = "done"
 _EVENT_TYPE_CONFIRMATION_REQUIRED = "confirmation_required"
 _EVENT_TYPE_FAILOVER = "failover"
+_EVENT_TYPE_SKILL_DRAFT = "skill_draft"
 _EVENT_TYPE_ERROR = "error"
 
 
@@ -246,6 +256,12 @@ def runtime_stream_event_to_json(event: RuntimeStreamEvent) -> dict[str, Any]:
             "attempt": event.attempt,
         }
 
+    if isinstance(event, RuntimeSkillDraftEvent):
+        return {
+            "type": _EVENT_TYPE_SKILL_DRAFT,
+            "draft": event.draft.model_dump(mode="json"),
+        }
+
     if isinstance(event, RuntimeErrorEvent):
         return {"type": _EVENT_TYPE_ERROR, "error": event.error}
 
@@ -318,6 +334,11 @@ def runtime_stream_event_from_json(payload: dict[str, Any]) -> RuntimeStreamEven
             to_model=payload.get("to_model", ""),
             reason=payload.get("reason", "other"),
             attempt=int(payload.get("attempt", 1)),
+        )
+
+    if event_type == _EVENT_TYPE_SKILL_DRAFT:
+        return RuntimeSkillDraftEvent(
+            draft=AgentSkillDraft.model_validate(payload["draft"]),
         )
 
     if event_type == _EVENT_TYPE_ERROR:

@@ -242,6 +242,10 @@ def _serialize_skill(skill: AgentSkill) -> dict[str, Any]:
         "content": skill.content,
         "source": skill.source,
         "always_active": skill.always_active,
+        "when_to_use": getattr(skill, "when_to_use", "") or "",
+        "requires_tools": list(getattr(skill, "requires_tools", None) or []),
+        "requires_context": list(getattr(skill, "requires_context", None) or []),
+        "latest_version_number": int(getattr(skill, "latest_version_number", 1) or 1),
     }
 
 
@@ -256,6 +260,10 @@ def _deserialize_skill(payload: dict[str, Any]) -> AgentSkill:
         source=payload["source"],
         owner_id=None,
         always_active=payload.get("always_active", False),
+        when_to_use=payload.get("when_to_use", ""),
+        requires_tools=payload.get("requires_tools") or [],
+        requires_context=payload.get("requires_context") or [],
+        latest_version_number=payload.get("latest_version_number", 1),
     )
 
 

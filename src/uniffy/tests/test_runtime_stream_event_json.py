@@ -23,6 +23,7 @@ from uniffy.domains.agents.runtime.stream_events import (
     RuntimeDoneEvent,
     RuntimeErrorEvent,
     RuntimeMessageStoredEvent,
+    RuntimeSkillDraftEvent,
     RuntimeTokenEvent,
     RuntimeToolCallEvent,
     RuntimeToolResultEvent,
@@ -121,6 +122,27 @@ class TestRuntimeStreamEventRoundTrip:
         decoded = runtime_stream_event_from_json(runtime_stream_event_to_json(event))
         assert isinstance(decoded, RuntimeErrorEvent)
         assert decoded.error == "boom"
+
+    def test_skill_draft_round_trip(self) -> None:
+        from uniffy.core.models.agents.skill_draft import AgentSkillDraft
+
+        draft = AgentSkillDraft(
+            id=uuid7(),
+            organization_id=uuid7(),
+            owner_id=uuid7(),
+            kind="create",
+            name="weekly-report",
+            display_name="Weekly Report",
+            content="Steps to write the report",
+            suggested_scope="personal",
+            status="pending",
+        )
+        event = RuntimeSkillDraftEvent(draft=draft)
+        decoded = runtime_stream_event_from_json(runtime_stream_event_to_json(event))
+        assert isinstance(decoded, RuntimeSkillDraftEvent)
+        assert decoded.draft.id == draft.id
+        assert decoded.draft.name == "weekly-report"
+        assert decoded.draft.kind == "create"
 
     def test_unknown_type_raises(self) -> None:
         with pytest.raises(ValueError):

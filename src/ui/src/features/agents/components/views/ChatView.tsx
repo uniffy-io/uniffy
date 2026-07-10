@@ -3,7 +3,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { PaperPlaneRight, Paperclip, FileText, Wrench, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, Eye, PencilSimple, Stop, Trash } from "@phosphor-icons/react";
+import { PaperPlaneRight, Paperclip, FileText, Wrench, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, Eye, PencilSimple, Stop, Trash, Lightning, ThumbsUp, ThumbsDown } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -21,6 +21,13 @@ import { parseUrn, urnToPath } from "@/shared/utils/urn";
 import { navigateTo, openInNewTab } from "@/shared/utils/navigation";
 import { useTextareaMention } from "@/features/agents/hooks/useTextareaMention";
 import { ChatMentionPopup } from "@/features/agents/components/chat/ChatMentionPopup";
+import { useTextareaSlash } from "@/features/agents/hooks/useTextareaSlash";
+import { SkillSlashPopup } from "@/features/agents/components/chat/SkillSlashPopup";
+import { fetchRunnableSkills, type SerializedRunnableSkill } from "@/features/agents/store/agentRunnableSkillsThunks";
+import { selectRunnableSkillsForAgent } from "@/features/agents/store/agentRunnableSkillsSlice";
+import { ProposedSkillDraftCard } from "@/features/agents/components/skills/ProposedSkillDraftCard";
+import { selectSessionDrafts } from "@/features/agents/store/agentSkillDraftsSlice";
+import type { SerializedSkillDraft } from "@/features/agents/store/agentSkillDraftsThunks";
 import {
     selectChatMessage,
     selectSidebarContent,
@@ -50,6 +57,7 @@ import {
     editAgentMessage,
     deleteAgentMessage,
     retryAgentMessage,
+    submitMessageFeedback,
     rerunFromMessage,
     MessageRole,
 } from "@/features/agents/store/agentMessagesThunks";
@@ -106,6 +114,10 @@ function formatTime(ts?: { seconds: number; nanos: number }): string {
         hour: "numeric",
         minute: "2-digit",
     });
+}
+
+function tsSeconds(ts?: { seconds: number; nanos: number }): number {
+    return ts?.seconds ?? 0;
 }
 
 function formatTokenCount(tokens: number): string {
@@ -202,7 +214,7 @@ function UserBubble({ message }: { message: SerializedMessage }) {
 
     return (
         <div className="group flex flex-col items-end">
-            <div className="flex items-end gap-1">
+            <div className="flex items-end gap-1 w-full justify-end">
                 <MessageActions message={message} />
                 <div className="max-w-[70%] bg-chat-user text-chat-user-foreground rounded-2xl rounded-br-sm px-4 py-2">
                     {useRichEditor ? (
@@ -221,7 +233,16 @@ function UserBubble({ message }: { message: SerializedMessage }) {
                     )}
                 </div>
             </div>
-            <span className="text-xs text-muted-foreground text-right mt-1">
+            <span className="text-xs text-muted-foreground text-right mt-1 flex items-center gap-1 justify-end">
+                {message.invokedSkillName && (
+                    <>
+                        <span className="inline-flex items-center gap-0.5 text-primary">
+                            <Lightning size={11} weight="fill" />
+                            {message.invokedSkillName}
+                        </span>
+                        <span aria-hidden>·</span>
+                    </>
+                )}
                 {formatTime(message.createdAt)}
                 {wasEdited && <span className="ml-1 italic">(edited)</span>}
             </span>
@@ -269,7 +290,7 @@ function AssistantBubble({ message }: { message: SerializedMessage }) {
 
     return (
         <div className="group flex flex-col items-start">
-            <div className="flex items-end gap-1">
+            <div className="flex items-end gap-1 w-full justify-start">
                 <div
                     className={cn(
                         "max-w-[70%] rounded-2xl rounded-bl-sm",
@@ -347,6 +368,17 @@ function MessageActions({ message }: { message: SerializedMessage }) {
             dispatch(setChatMessage(result.payload.content));
         }
     };
+    const handleFeedback = (rating: "up" | "down") => {
+        // Clicking the active thumb clears it; otherwise sets the new rating.
+        const next = message.feedbackRating === rating ? "" : rating;
+        dispatch(
+            submitMessageFeedback({
+                sessionId: message.sessionId,
+                messageId: message.id,
+                rating: next,
+            }),
+        );
+    };
 
     if (editing) {
         return (
@@ -359,10 +391,13 @@ function MessageActions({ message }: { message: SerializedMessage }) {
         );
     }
 
+    const hasRating = !isUser && !!message.feedbackRating;
+
     return (
         <div
             className={cn(
-                "flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity",
+                "flex items-center gap-0.5 transition-opacity",
+                hasRating ? "opacity-100" : "opacity-0 group-hover:opacity-100",
                 isUser ? "order-first" : "",
             )}
         >
@@ -386,6 +421,38 @@ function MessageActions({ message }: { message: SerializedMessage }) {
             >
                 <ArrowsClockwise size={14} />
             </button>
+            {!isUser && (
+                <>
+                    <button
+                        type="button"
+                        onClick={() => handleFeedback("up")}
+                        disabled={isStreaming || isOptimistic}
+                        className={cn(
+                            "p-1.5 rounded-md hover:bg-muted disabled:opacity-50",
+                            message.feedbackRating === "up"
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-muted-foreground hover:text-foreground",
+                        )}
+                        title="Good response"
+                    >
+                        <ThumbsUp size={14} weight={message.feedbackRating === "up" ? "fill" : "regular"} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleFeedback("down")}
+                        disabled={isStreaming || isOptimistic}
+                        className={cn(
+                            "p-1.5 rounded-md hover:bg-muted disabled:opacity-50",
+                            message.feedbackRating === "down"
+                                ? "text-red-500"
+                                : "text-muted-foreground hover:text-foreground",
+                        )}
+                        title="Bad response"
+                    >
+                        <ThumbsDown size={14} weight={message.feedbackRating === "down" ? "fill" : "regular"} />
+                    </button>
+                </>
+            )}
             {isUser && (
                 <button
                     type="button"
@@ -829,6 +896,7 @@ function ChatPanel() {
     const isStreaming = useAppSelector(selectIsStreaming);
     const activeRunId = useAppSelector(selectActiveRunId);
     const pendingConfirmation = useAppSelector(selectPendingConfirmation);
+    const sessionDrafts = useAppSelector(selectSessionDrafts(activeSessionId));
     const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
     // Reconnect via SubscribeToRun if a run_id is already in the slice at mount
@@ -927,6 +995,63 @@ function ChatPanel() {
         onChange: (val) => dispatch(setChatMessage(val)),
     });
 
+    const slash = useTextareaSlash({
+        textareaRef,
+        value: chatMessage,
+        onChange: (val) => dispatch(setChatMessage(val)),
+    });
+    const [pendingInvokedSkill, setPendingInvokedSkill] = useState<SerializedRunnableSkill | null>(null);
+    const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(activeSession?.agentId));
+
+    useEffect(() => {
+        if (activeSession?.agentId) {
+            dispatch(fetchRunnableSkills({ agentId: activeSession.agentId }));
+        }
+    }, [activeSession?.agentId, dispatch]);
+
+    useEffect(() => {
+        setPendingInvokedSkill(null);
+    }, [activeSessionId]);
+
+    const handleSlashSelect = useCallback((skill: SerializedRunnableSkill) => {
+        setPendingInvokedSkill(skill);
+        slash.clearSlashToken();
+    }, [slash]);
+
+    const composerChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        mention.handleChange(e);
+        if (!mention.isActive) slash.handleChange(e);
+        autoResizeTextarea();
+    }, [mention, slash, autoResizeTextarea]);
+
+    const renderSlashPopup = () =>
+        slash.isActive && !mention.isActive ? (
+            <SkillSlashPopup
+                skills={runnableSkills}
+                query={slash.slashQuery}
+                onSelect={handleSlashSelect}
+                onClose={slash.close}
+            />
+        ) : null;
+
+    const renderInvokedSkillChip = () =>
+        pendingInvokedSkill ? (
+            <div className="flex">
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 border border-primary/30 pl-2 pr-1 py-1 text-xs">
+                    <Lightning size={12} weight="fill" className="text-primary" />
+                    <span className="font-mono text-foreground">/{pendingInvokedSkill.name}</span>
+                    <button
+                        type="button"
+                        onClick={() => setPendingInvokedSkill(null)}
+                        className="p-0.5 rounded hover:bg-primary/20 transition-colors"
+                        title="Remove skill"
+                    >
+                        <X size={12} className="text-muted-foreground" />
+                    </button>
+                </span>
+            </div>
+        ) : null;
+
     const handleScroll = useCallback(() => {
         const el = scrollContainerRef.current;
         if (!el) return;
@@ -940,6 +1065,24 @@ function ChatPanel() {
             dispatch(fetchSessionContextStats(activeSessionId));
         }
     }, [activeSessionId, dispatch]);
+
+    const lastPinnedSessionRef = useRef<string | null>(null);
+    useEffect(() => {
+        lastPinnedSessionRef.current = null;
+    }, [activeSessionId]);
+
+    useEffect(() => {
+        if (!activeSessionId || messages.length === 0) return;
+        if (lastPinnedSessionRef.current === activeSessionId) return;
+        lastPinnedSessionRef.current = activeSessionId;
+
+        // Entering a session lands at the newest message. Marking near-bottom
+        // hands late image/file layout growth to the content ResizeObserver,
+        // which keeps the pin until the user scrolls away.
+        isNearBottomRef.current = true;
+        const el = scrollContainerRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+    }, [activeSessionId, messages.length]);
 
     const prevStreamingRef = useRef(false);
     useEffect(() => {
@@ -1055,7 +1198,10 @@ function ChatPanel() {
             sessionId: activeSessionId,
             content,
             fileIds: fileIds.length > 0 ? fileIds : undefined,
+            invokedSkillId: pendingInvokedSkill?.id,
+            invokedSkillName: pendingInvokedSkill?.displayName,
         }));
+        setPendingInvokedSkill(null);
     };
 
     const handleConfirmationResponse = (approved: boolean) => {
@@ -1085,6 +1231,7 @@ function ChatPanel() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (slash.handleKeyDown(e)) return;
         if (mention.handleKeyDown(e)) return;
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -1098,6 +1245,32 @@ function ChatPanel() {
     }, [activeSession, agentsMap]);
 
     const agentName = activeAgent?.name ?? "Chat";
+
+    // Place each proposed-skill card inline, right after the assistant reply
+    // that announced it, instead of stacking every draft at the bottom of the
+    // thread. A draft is created mid-turn (when the propose tool runs), so its
+    // turn's concluding assistant message is the first non-tool assistant
+    // message at or after the draft's timestamp. Drafts with no such message in
+    // the loaded thread (background-analyzer proposals created after the
+    // conversation) stay unanchored and fall to the end.
+    const draftAnchors = useMemo(() => {
+        const byMessageId = new Map<string, SerializedSkillDraft[]>();
+        const anchored = new Set<string>();
+        for (const draft of sessionDrafts) {
+            const reply = messages.find(
+                (m) =>
+                    m.role === MessageRole.ASSISTANT &&
+                    !m.toolCallId &&
+                    tsSeconds(m.createdAt) >= tsSeconds(draft.createdAt),
+            );
+            if (!reply) continue;
+            const list = byMessageId.get(reply.id) ?? [];
+            list.push(draft);
+            byMessageId.set(reply.id, list);
+            anchored.add(draft.id);
+        }
+        return { byMessageId, anchored };
+    }, [sessionDrafts, messages]);
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -1344,17 +1517,16 @@ function ChatPanel() {
                                         ))}
                                     </div>
                                 )}
+                                {renderInvokedSkillChip()}
                                 <div className="relative flex flex-col bg-muted border border-border rounded-lg focus-within:ring-1 focus-within:ring-ring">
+                                    {renderSlashPopup()}
                                     <textarea
                                         ref={textareaRef}
                                         className="w-full bg-transparent px-3 pt-2 pb-10 text-sm resize-none text-foreground placeholder:text-muted-foreground focus:outline-none"
-                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... Use @ to mention content"}
+                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... @ to mention, / to run a skill"}
                                         rows={3}
                                         value={chatMessage}
-                                        onChange={(e) => {
-                                            mention.handleChange(e);
-                                            autoResizeTextarea();
-                                        }}
+                                        onChange={composerChange}
                                         onKeyDown={handleKeyDown}
                                         onPaste={handlePaste}
                                         disabled={isStreaming}
@@ -1418,6 +1590,13 @@ function ChatPanel() {
                                     <div ref={contentWrapperRef} className="flex flex-col space-y-4">
                                         {(() => {
                                             const elements: React.ReactNode[] = [];
+                                            const pushDraftsAfter = (messageId: string) => {
+                                                for (const draft of draftAnchors.byMessageId.get(messageId) ?? []) {
+                                                    elements.push(
+                                                        <ProposedSkillDraftCard key={`draft-${draft.id}`} draft={draft} />,
+                                                    );
+                                                }
+                                            };
                                             let i = 0;
                                             while (i < messages.length) {
                                                 const message = messages[i];
@@ -1435,6 +1614,7 @@ function ChatPanel() {
                                                     // Skip intermediate tool-loop assistant messages (toolCallId set) - their content is preamble repeated before each tool call.
                                                     if (!message.toolCallId) {
                                                         elements.push(<AssistantBubble key={message.id} message={message} />);
+                                                        pushDraftsAfter(message.id);
                                                     }
                                                     i++;
                                                 }
@@ -1459,6 +1639,12 @@ function ChatPanel() {
                                         )}
 
                                         <StreamingBubble content={streamingContent} />
+
+                                        {sessionDrafts
+                                            .filter((draft) => !draftAnchors.anchored.has(draft.id))
+                                            .map((draft) => (
+                                                <ProposedSkillDraftCard key={draft.id} draft={draft} />
+                                            ))}
                                     </div>
 
                                     <div ref={messagesEndRef} />
@@ -1556,17 +1742,16 @@ function ChatPanel() {
                                         ))}
                                     </div>
                                 )}
+                                {renderInvokedSkillChip()}
                                 <div className="relative flex flex-col bg-muted border border-border rounded-lg focus-within:ring-1 focus-within:ring-ring">
+                                    {renderSlashPopup()}
                                     <textarea
                                         ref={textareaRef}
                                         className="w-full bg-transparent px-3 pt-2 pb-10 text-sm resize-none text-foreground placeholder:text-muted-foreground focus:outline-none"
-                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... Use @ to mention content"}
+                                        placeholder={pendingFiles.length > 0 ? "Add a message about the attached file(s)..." : "Type a message... @ to mention, / to run a skill"}
                                         rows={3}
                                         value={chatMessage}
-                                        onChange={(e) => {
-                                            mention.handleChange(e);
-                                            autoResizeTextarea();
-                                        }}
+                                        onChange={composerChange}
                                         onKeyDown={handleKeyDown}
                                         onPaste={handlePaste}
                                         disabled={isStreaming}
@@ -1620,6 +1805,7 @@ function ChatPanel() {
 
 export function ChatView() {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const isZenMode = useAppSelector((state) => state.zenMode.isActive);
     const activeSessionId = useAppSelector(selectActiveSessionId);
 
@@ -1640,9 +1826,12 @@ export function ChatView() {
 
     const handleStartChat = useCallback(
         (agentId: string) => {
-            dispatch(createSession({ agentId, kind: SessionKind.DIRECT }));
+            dispatch(createSession({ agentId, kind: SessionKind.DIRECT }))
+                .unwrap()
+                .then((session) => navigate(`/agents/chat/${session.id}`))
+                .catch(() => {});
         },
-        [dispatch],
+        [dispatch, navigate],
     );
 
     const showSidebar = !isZenMode;

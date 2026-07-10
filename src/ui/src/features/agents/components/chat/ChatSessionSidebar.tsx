@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Trash, ChatCircle } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -7,7 +8,6 @@ import { selectAllAgents } from "@/features/agents/store/agentsSlice";
 import {
     selectActiveSessionId,
     selectSortedUserSessions,
-    setActiveSession,
 } from "@/features/agents/store/agentSessionsSlice";
 import {
     createSession,
@@ -148,6 +148,7 @@ function SessionItem({
 
 export function ChatSessionSidebar() {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const agentsMap = useAppSelector(selectAllAgents);
     const sessions = useAppSelector(selectSortedUserSessions);
     const sessionsLoading = useAppSelector((state) => state.agentSessions.loading);
@@ -155,16 +156,19 @@ export function ChatSessionSidebar() {
 
     const handleSelectSession = useCallback(
         (sessionId: string) => {
-            dispatch(setActiveSession(sessionId));
+            navigate(`/agents/chat/${sessionId}`);
         },
-        [dispatch],
+        [navigate],
     );
 
     const handleArchiveSession = useCallback(
         (sessionId: string) => {
             dispatch(archiveSession(sessionId));
+            if (sessionId === activeSessionId) {
+                navigate("/agents/chat");
+            }
         },
-        [dispatch],
+        [dispatch, navigate, activeSessionId],
     );
 
     const handleRenameSession = useCallback(
@@ -176,9 +180,12 @@ export function ChatSessionSidebar() {
 
     const handleNewChat = useCallback(
         (agent: SerializedAgent) => {
-            dispatch(createSession({ agentId: agent.id, kind: SessionKind.DIRECT }));
+            dispatch(createSession({ agentId: agent.id, kind: SessionKind.DIRECT }))
+                .unwrap()
+                .then((session) => navigate(`/agents/chat/${session.id}`))
+                .catch(() => {});
         },
-        [dispatch],
+        [dispatch, navigate],
     );
 
     return (

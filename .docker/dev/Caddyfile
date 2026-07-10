@@ -1,0 +1,33 @@
+# Local dev edge - one origin for UI, API, and LiveKit signaling, mirroring
+# the self-host customer topology (Caddy in front of everything).
+# Browser entry point: http://localhost
+# Direct ports (5173 vite, 8000 backend, 7880 livekit) stay published for
+# tooling; the edge is the canonical path.
+
+:80 {
+	# ConnectRPC services - proxy to backend
+	# Matches paths like /notes.v1.NotesService/*
+	@connectrpc path_regexp connectrpc ^/[a-z]+\.[a-z0-9]+\.[A-Za-z]+Service/.*
+	handle @connectrpc {
+		reverse_proxy backend:8000
+	}
+
+	# API routes incl. /api/realtime websocket - proxy to backend
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	handle /health {
+		reverse_proxy backend:8000
+	}
+
+	# LiveKit signaling (WebSocket) - media goes direct via UDP, not here
+	handle_path /livekit/* {
+		reverse_proxy livekit:7880
+	}
+
+	# Everything else - vite dev server (HMR websocket included)
+	handle {
+		reverse_proxy ui:5173
+	}
+}

@@ -32,6 +32,7 @@ const (
 	SessionsService_EditMessage_FullMethodName            = "/agents.v1.SessionsService/EditMessage"
 	SessionsService_DeleteMessage_FullMethodName          = "/agents.v1.SessionsService/DeleteMessage"
 	SessionsService_RetryMessage_FullMethodName           = "/agents.v1.SessionsService/RetryMessage"
+	SessionsService_SubmitMessageFeedback_FullMethodName  = "/agents.v1.SessionsService/SubmitMessageFeedback"
 )
 
 // SessionsServiceClient is the client API for SessionsService service.
@@ -75,6 +76,9 @@ type SessionsServiceClient interface {
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(ctx context.Context, in *RetryMessageRequest, opts ...grpc.CallOption) (*RetryMessageResponse, error)
+	// Record (or clear) the caller's thumbs up/down on an agent message. The
+	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	SubmitMessageFeedback(ctx context.Context, in *SubmitMessageFeedbackRequest, opts ...grpc.CallOption) (*SubmitMessageFeedbackResponse, error)
 }
 
 type sessionsServiceClient struct {
@@ -215,6 +219,16 @@ func (c *sessionsServiceClient) RetryMessage(ctx context.Context, in *RetryMessa
 	return out, nil
 }
 
+func (c *sessionsServiceClient) SubmitMessageFeedback(ctx context.Context, in *SubmitMessageFeedbackRequest, opts ...grpc.CallOption) (*SubmitMessageFeedbackResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitMessageFeedbackResponse)
+	err := c.cc.Invoke(ctx, SessionsService_SubmitMessageFeedback_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SessionsServiceServer is the server API for SessionsService service.
 // All implementations must embed UnimplementedSessionsServiceServer
 // for forward compatibility.
@@ -256,6 +270,9 @@ type SessionsServiceServer interface {
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(context.Context, *RetryMessageRequest) (*RetryMessageResponse, error)
+	// Record (or clear) the caller's thumbs up/down on an agent message. The
+	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	SubmitMessageFeedback(context.Context, *SubmitMessageFeedbackRequest) (*SubmitMessageFeedbackResponse, error)
 	mustEmbedUnimplementedSessionsServiceServer()
 }
 
@@ -304,6 +321,9 @@ func (UnimplementedSessionsServiceServer) DeleteMessage(context.Context, *Delete
 }
 func (UnimplementedSessionsServiceServer) RetryMessage(context.Context, *RetryMessageRequest) (*RetryMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RetryMessage not implemented")
+}
+func (UnimplementedSessionsServiceServer) SubmitMessageFeedback(context.Context, *SubmitMessageFeedbackRequest) (*SubmitMessageFeedbackResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitMessageFeedback not implemented")
 }
 func (UnimplementedSessionsServiceServer) mustEmbedUnimplementedSessionsServiceServer() {}
 func (UnimplementedSessionsServiceServer) testEmbeddedByValue()                         {}
@@ -560,6 +580,24 @@ func _SessionsService_RetryMessage_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SessionsService_SubmitMessageFeedback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitMessageFeedbackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionsServiceServer).SubmitMessageFeedback(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionsService_SubmitMessageFeedback_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionsServiceServer).SubmitMessageFeedback(ctx, req.(*SubmitMessageFeedbackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SessionsService_ServiceDesc is the grpc.ServiceDesc for SessionsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -618,6 +656,10 @@ var SessionsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RetryMessage",
 			Handler:    _SessionsService_RetryMessage_Handler,
+		},
+		{
+			MethodName: "SubmitMessageFeedback",
+			Handler:    _SessionsService_SubmitMessageFeedback_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

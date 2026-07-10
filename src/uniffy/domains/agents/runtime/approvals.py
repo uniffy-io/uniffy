@@ -143,38 +143,63 @@ class ApprovalStore:
         """Wait for the user to approve or reject a tool call.
 
         Returns True on approve, False on deny, None on timeout. The
-        Valkey row is consulted on wake so a decision recorded by a
-        separate process / RPC call still resolves correctly; if Valkey
-        says ``pending`` but the local event fired, we fall back to the
-        in-memory result.
+        in-process ``asyncio.Event`` is the same-process fast path; in
+        split-process deployments (agent runtime in a worker, the
+        RespondToConfirmation handler on the backend) the decision lands
+        only in Valkey, so this also polls the row on a short interval.
         """
         key = self._key(scope_id, request_id)
         event = self._pending.get(key)
         if not event:
             return None
 
-        try:
-            await asyncio.wait_for(event.wait(), timeout=timeout)
-        except TimeoutError:
-            await self._cleanup(key)
-            return None
+        deadline = time.monotonic() + timeout
+        poll_interval = 0.5
+
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                await self._cleanup(key)
+                return None
+
+            try:
+                await asyncio.wait_for(
+                    event.wait(),
+                    timeout=min(poll_interval, remaining),
+                )
+                break
+            except TimeoutError:
+                pass
+
+            valkey_status = await self._read_valkey_status(key)
+            if valkey_status is not None:
+                await self._cleanup(key)
+                return valkey_status
 
         result = self._results.get(key)
 
-        try:
-            valkey_entry = await cache_get(key)
-            if isinstance(valkey_entry, dict):
-                status = valkey_entry.get("status")
-                if status == "approved":
-                    result = True
-                elif status == "denied":
-                    result = False
-        except Exception:
-            APPROVAL_STORE_VALKEY_UNREACHABLE_TOTAL.labels(op="wait").inc()
-            logger.warning(f"Approval wait: Valkey read failed for {key}")
+        valkey_status = await self._read_valkey_status(key)
+        if valkey_status is not None:
+            result = valkey_status
 
         await self._cleanup(key)
         return result
+
+    async def _read_valkey_status(self, key: str) -> bool | None:
+        """Return True for approved, False for denied, None for pending / unreadable."""
+        try:
+            valkey_entry = await cache_get(key)
+        except Exception:
+            APPROVAL_STORE_VALKEY_UNREACHABLE_TOTAL.labels(op="wait").inc()
+            logger.warning(f"Approval wait: Valkey read failed for {key}")
+            return None
+        if isinstance(valkey_entry, dict):
+            status = valkey_entry.get("status")
+            if status == "approved":
+                return True
+            if status == "denied":
+                return False
+        return None
 
     async def respond(
         self,

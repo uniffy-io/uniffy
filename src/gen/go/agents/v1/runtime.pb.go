@@ -832,9 +832,13 @@ type SendMessageRequest struct {
 	// context from chat_messages (scoped per the channel binding) and writes
 	// outputs back as chat messages via the AgentChatBridge. Mutually
 	// exclusive with session_id at the handler boundary.
-	ChatContext   *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ChatContext *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
+	// A skill the user invoked on-demand for this turn (slash command). Its
+	// full content is force-injected and promoted past conditional gating;
+	// ignored when the skill is not in the agent's resolved set.
+	InvokedSkillId *string `protobuf:"bytes,7,opt,name=invoked_skill_id,json=invokedSkillId,proto3,oneof" json:"invoked_skill_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SendMessageRequest) Reset() {
@@ -907,6 +911,13 @@ func (x *SendMessageRequest) GetChatContext() *ChatChannelContext {
 		return x.ChatContext
 	}
 	return nil
+}
+
+func (x *SendMessageRequest) GetInvokedSkillId() string {
+	if x != nil && x.InvokedSkillId != nil {
+		return *x.InvokedSkillId
+	}
+	return ""
 }
 
 type RerunFromMessageRequest struct {
@@ -988,9 +999,13 @@ type StreamSendMessageRequest struct {
 	// context from chat_messages (scoped per the channel binding) and writes
 	// outputs back as chat messages via the AgentChatBridge. Mutually
 	// exclusive with session_id at the handler boundary.
-	ChatContext   *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ChatContext *ChatChannelContext `protobuf:"bytes,6,opt,name=chat_context,json=chatContext,proto3,oneof" json:"chat_context,omitempty"`
+	// A skill the user invoked on-demand for this turn (slash command). Its
+	// full content is force-injected and promoted past conditional gating;
+	// ignored when the skill is not in the agent's resolved set.
+	InvokedSkillId *string `protobuf:"bytes,7,opt,name=invoked_skill_id,json=invokedSkillId,proto3,oneof" json:"invoked_skill_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *StreamSendMessageRequest) Reset() {
@@ -1063,6 +1078,13 @@ func (x *StreamSendMessageRequest) GetChatContext() *ChatChannelContext {
 		return x.ChatContext
 	}
 	return nil
+}
+
+func (x *StreamSendMessageRequest) GetInvokedSkillId() string {
+	if x != nil && x.InvokedSkillId != nil {
+		return *x.InvokedSkillId
+	}
+	return ""
 }
 
 // ChatChannelContext binds an agent invocation to a chat channel and
@@ -1479,6 +1501,7 @@ type AgentStreamEvent struct {
 	//	*AgentStreamEvent_Error
 	//	*AgentStreamEvent_ConfirmationRequired
 	//	*AgentStreamEvent_Failover
+	//	*AgentStreamEvent_SkillDraft
 	Event         isAgentStreamEvent_Event `protobuf_oneof:"event"`
 	RunId         string                   `protobuf:"bytes,8,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1594,6 +1617,15 @@ func (x *AgentStreamEvent) GetFailover() *StreamFailoverEvent {
 	return nil
 }
 
+func (x *AgentStreamEvent) GetSkillDraft() *StreamSkillDraftEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_SkillDraft); ok {
+			return x.SkillDraft
+		}
+	}
+	return nil
+}
+
 func (x *AgentStreamEvent) GetRunId() string {
 	if x != nil {
 		return x.RunId
@@ -1637,6 +1669,10 @@ type AgentStreamEvent_Failover struct {
 	Failover *StreamFailoverEvent `protobuf:"bytes,9,opt,name=failover,proto3,oneof"`
 }
 
+type AgentStreamEvent_SkillDraft struct {
+	SkillDraft *StreamSkillDraftEvent `protobuf:"bytes,10,opt,name=skill_draft,json=skillDraft,proto3,oneof"`
+}
+
 func (*AgentStreamEvent_Token) isAgentStreamEvent_Event() {}
 
 func (*AgentStreamEvent_ToolCall) isAgentStreamEvent_Event() {}
@@ -1652,6 +1688,8 @@ func (*AgentStreamEvent_Error) isAgentStreamEvent_Event() {}
 func (*AgentStreamEvent_ConfirmationRequired) isAgentStreamEvent_Event() {}
 
 func (*AgentStreamEvent_Failover) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_SkillDraft) isAgentStreamEvent_Event() {}
 
 type StreamSendMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2250,11 +2288,58 @@ func (x *StreamFailoverEvent) GetAttempt() int32 {
 	return 0
 }
 
+// Emitted when the agent proposes a skill draft for the user to review. The
+// draft is persisted (status=pending) but never auto-activated; the client
+// renders an editable review card and saves via SaveSkillDraft.
+type StreamSkillDraftEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Draft         *SkillDraft            `protobuf:"bytes,1,opt,name=draft,proto3" json:"draft,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamSkillDraftEvent) Reset() {
+	*x = StreamSkillDraftEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamSkillDraftEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamSkillDraftEvent) ProtoMessage() {}
+
+func (x *StreamSkillDraftEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamSkillDraftEvent.ProtoReflect.Descriptor instead.
+func (*StreamSkillDraftEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *StreamSkillDraftEvent) GetDraft() *SkillDraft {
+	if x != nil {
+		return x.Draft
+	}
+	return nil
+}
+
 var File_agents_v1_runtime_proto protoreflect.FileDescriptor
 
 const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\n" +
-	"\x17agents/v1/runtime.proto\x12\tagents.v1\x1a\x18agents/v1/sessions.proto\"o\n" +
+	"\x17agents/v1/runtime.proto\x12\tagents.v1\x1a\x18agents/v1/sessions.proto\x1a\x16agents/v1/skills.proto\"o\n" +
 	"\x14GetUsageStatsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04days\x18\x02 \x01(\x05R\x04days\x12\x1a\n" +
@@ -2340,7 +2425,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\tsuccesses\x18\x05 \x01(\x03R\tsuccesses\x12\x1a\n" +
 	"\bfailures\x18\x06 \x01(\x03R\bfailures\x12!\n" +
 	"\finput_tokens\x18\a \x01(\x03R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\b \x01(\x03R\foutputTokens\"\x8e\x02\n" +
+	"\routput_tokens\x18\b \x01(\x03R\foutputTokens\"\xd2\x02\n" +
 	"\x12SendMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -2348,13 +2433,15 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x19\n" +
 	"\bfile_ids\x18\x04 \x03(\tR\afileIds\x12#\n" +
 	"\ruser_timezone\x18\x05 \x01(\tR\fuserTimezone\x12E\n" +
-	"\fchat_context\x18\x06 \x01(\v2\x1d.agents.v1.ChatChannelContextH\x00R\vchatContext\x88\x01\x01B\x0f\n" +
-	"\r_chat_context\"\x86\x01\n" +
+	"\fchat_context\x18\x06 \x01(\v2\x1d.agents.v1.ChatChannelContextH\x00R\vchatContext\x88\x01\x01\x12-\n" +
+	"\x10invoked_skill_id\x18\a \x01(\tH\x01R\x0einvokedSkillId\x88\x01\x01B\x0f\n" +
+	"\r_chat_contextB\x13\n" +
+	"\x11_invoked_skill_id\"\x86\x01\n" +
 	"\x17RerunFromMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x02 \x01(\tR\tmessageId\x12#\n" +
-	"\ruser_timezone\x18\x03 \x01(\tR\fuserTimezone\"\x94\x02\n" +
+	"\ruser_timezone\x18\x03 \x01(\tR\fuserTimezone\"\xd8\x02\n" +
 	"\x18StreamSendMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -2362,8 +2449,10 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x19\n" +
 	"\bfile_ids\x18\x04 \x03(\tR\afileIds\x12#\n" +
 	"\ruser_timezone\x18\x05 \x01(\tR\fuserTimezone\x12E\n" +
-	"\fchat_context\x18\x06 \x01(\v2\x1d.agents.v1.ChatChannelContextH\x00R\vchatContext\x88\x01\x01B\x0f\n" +
-	"\r_chat_context\"\xb2\x01\n" +
+	"\fchat_context\x18\x06 \x01(\v2\x1d.agents.v1.ChatChannelContextH\x00R\vchatContext\x88\x01\x01\x12-\n" +
+	"\x10invoked_skill_id\x18\a \x01(\tH\x01R\x0einvokedSkillId\x88\x01\x01B\x0f\n" +
+	"\r_chat_contextB\x13\n" +
+	"\x11_invoked_skill_id\"\xb2\x01\n" +
 	"\x12ChatChannelContext\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x19\n" +
@@ -2393,7 +2482,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x14CancelStreamResponse\x12\x1c\n" +
 	"\tcancelled\x18\x01 \x01(\bR\tcancelled\";\n" +
 	"\x1dRespondToConfirmationResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xc1\x04\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\"\x86\x05\n" +
 	"\x10AgentStreamEvent\x123\n" +
 	"\x05token\x18\x01 \x01(\v2\x1b.agents.v1.StreamTokenEventH\x00R\x05token\x12=\n" +
 	"\ttool_call\x18\x02 \x01(\v2\x1e.agents.v1.StreamToolCallEventH\x00R\btoolCall\x12C\n" +
@@ -2403,7 +2492,10 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x04done\x18\x05 \x01(\v2\x1a.agents.v1.StreamDoneEventH\x00R\x04done\x123\n" +
 	"\x05error\x18\x06 \x01(\v2\x1b.agents.v1.StreamErrorEventH\x00R\x05error\x12a\n" +
 	"\x15confirmation_required\x18\a \x01(\v2*.agents.v1.StreamConfirmationRequiredEventH\x00R\x14confirmationRequired\x12<\n" +
-	"\bfailover\x18\t \x01(\v2\x1e.agents.v1.StreamFailoverEventH\x00R\bfailover\x12\x15\n" +
+	"\bfailover\x18\t \x01(\v2\x1e.agents.v1.StreamFailoverEventH\x00R\bfailover\x12C\n" +
+	"\vskill_draft\x18\n" +
+	" \x01(\v2 .agents.v1.StreamSkillDraftEventH\x00R\n" +
+	"skillDraft\x12\x15\n" +
 	"\x06run_id\x18\b \x01(\tR\x05runIdB\a\n" +
 	"\x05event\"N\n" +
 	"\x19StreamSendMessageResponse\x121\n" +
@@ -2444,7 +2536,9 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x12to_provider_key_id\x18\x02 \x01(\tR\x0ftoProviderKeyId\x12\x19\n" +
 	"\bto_model\x18\x03 \x01(\tR\atoModel\x12\x16\n" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x18\n" +
-	"\aattempt\x18\x05 \x01(\x05R\aattempt2\x97\x05\n" +
+	"\aattempt\x18\x05 \x01(\x05R\aattempt\"D\n" +
+	"\x15StreamSkillDraftEvent\x12+\n" +
+	"\x05draft\x18\x01 \x01(\v2\x15.agents.v1.SkillDraftR\x05draft2\x97\x05\n" +
 	"\x0eRuntimeService\x12N\n" +
 	"\vSendMessage\x12\x1d.agents.v1.SendMessageRequest\x1a\x1e.agents.v1.SendMessageResponse\"\x00\x12b\n" +
 	"\x11StreamSendMessage\x12#.agents.v1.StreamSendMessageRequest\x1a$.agents.v1.StreamSendMessageResponse\"\x000\x01\x12_\n" +
@@ -2466,7 +2560,7 @@ func file_agents_v1_runtime_proto_rawDescGZIP() []byte {
 	return file_agents_v1_runtime_proto_rawDescData
 }
 
-var file_agents_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_agents_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_agents_v1_runtime_proto_goTypes = []any{
 	(*GetUsageStatsRequest)(nil),            // 0: agents.v1.GetUsageStatsRequest
 	(*GetUsageStatsResponse)(nil),           // 1: agents.v1.GetUsageStatsResponse
@@ -2498,7 +2592,9 @@ var file_agents_v1_runtime_proto_goTypes = []any{
 	(*StreamErrorEvent)(nil),                // 27: agents.v1.StreamErrorEvent
 	(*StreamConfirmationRequiredEvent)(nil), // 28: agents.v1.StreamConfirmationRequiredEvent
 	(*StreamFailoverEvent)(nil),             // 29: agents.v1.StreamFailoverEvent
-	(*MessageInfo)(nil),                     // 30: agents.v1.MessageInfo
+	(*StreamSkillDraftEvent)(nil),           // 30: agents.v1.StreamSkillDraftEvent
+	(*MessageInfo)(nil),                     // 31: agents.v1.MessageInfo
+	(*SkillDraft)(nil),                      // 32: agents.v1.SkillDraft
 }
 var file_agents_v1_runtime_proto_depIdxs = []int32{
 	2,  // 0: agents.v1.GetUsageStatsResponse.daily_usage:type_name -> agents.v1.DailyUsage
@@ -2509,8 +2605,8 @@ var file_agents_v1_runtime_proto_depIdxs = []int32{
 	7,  // 5: agents.v1.GetUsageStatsResponse.cron_usage:type_name -> agents.v1.CronTaskUsage
 	11, // 6: agents.v1.SendMessageRequest.chat_context:type_name -> agents.v1.ChatChannelContext
 	11, // 7: agents.v1.StreamSendMessageRequest.chat_context:type_name -> agents.v1.ChatChannelContext
-	30, // 8: agents.v1.SendMessageResponse.user_message:type_name -> agents.v1.MessageInfo
-	30, // 9: agents.v1.SendMessageResponse.assistant_message:type_name -> agents.v1.MessageInfo
+	31, // 8: agents.v1.SendMessageResponse.user_message:type_name -> agents.v1.MessageInfo
+	31, // 9: agents.v1.SendMessageResponse.assistant_message:type_name -> agents.v1.MessageInfo
 	22, // 10: agents.v1.AgentStreamEvent.token:type_name -> agents.v1.StreamTokenEvent
 	23, // 11: agents.v1.AgentStreamEvent.tool_call:type_name -> agents.v1.StreamToolCallEvent
 	24, // 12: agents.v1.AgentStreamEvent.tool_result:type_name -> agents.v1.StreamToolResultEvent
@@ -2519,30 +2615,32 @@ var file_agents_v1_runtime_proto_depIdxs = []int32{
 	27, // 15: agents.v1.AgentStreamEvent.error:type_name -> agents.v1.StreamErrorEvent
 	28, // 16: agents.v1.AgentStreamEvent.confirmation_required:type_name -> agents.v1.StreamConfirmationRequiredEvent
 	29, // 17: agents.v1.AgentStreamEvent.failover:type_name -> agents.v1.StreamFailoverEvent
-	18, // 18: agents.v1.StreamSendMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
-	18, // 19: agents.v1.RerunFromMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
-	18, // 20: agents.v1.SubscribeToRunResponse.event:type_name -> agents.v1.AgentStreamEvent
-	30, // 21: agents.v1.StreamMessageStoredEvent.message:type_name -> agents.v1.MessageInfo
-	30, // 22: agents.v1.StreamDoneEvent.assistant_message:type_name -> agents.v1.MessageInfo
-	8,  // 23: agents.v1.RuntimeService.SendMessage:input_type -> agents.v1.SendMessageRequest
-	10, // 24: agents.v1.RuntimeService.StreamSendMessage:input_type -> agents.v1.StreamSendMessageRequest
-	9,  // 25: agents.v1.RuntimeService.RerunFromMessage:input_type -> agents.v1.RerunFromMessageRequest
-	14, // 26: agents.v1.RuntimeService.SubscribeToRun:input_type -> agents.v1.SubscribeToRunRequest
-	15, // 27: agents.v1.RuntimeService.CancelStream:input_type -> agents.v1.CancelStreamRequest
-	13, // 28: agents.v1.RuntimeService.RespondToConfirmation:input_type -> agents.v1.RespondToConfirmationRequest
-	0,  // 29: agents.v1.RuntimeService.GetUsageStats:input_type -> agents.v1.GetUsageStatsRequest
-	12, // 30: agents.v1.RuntimeService.SendMessage:output_type -> agents.v1.SendMessageResponse
-	19, // 31: agents.v1.RuntimeService.StreamSendMessage:output_type -> agents.v1.StreamSendMessageResponse
-	20, // 32: agents.v1.RuntimeService.RerunFromMessage:output_type -> agents.v1.RerunFromMessageResponse
-	21, // 33: agents.v1.RuntimeService.SubscribeToRun:output_type -> agents.v1.SubscribeToRunResponse
-	16, // 34: agents.v1.RuntimeService.CancelStream:output_type -> agents.v1.CancelStreamResponse
-	17, // 35: agents.v1.RuntimeService.RespondToConfirmation:output_type -> agents.v1.RespondToConfirmationResponse
-	1,  // 36: agents.v1.RuntimeService.GetUsageStats:output_type -> agents.v1.GetUsageStatsResponse
-	30, // [30:37] is the sub-list for method output_type
-	23, // [23:30] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	30, // 18: agents.v1.AgentStreamEvent.skill_draft:type_name -> agents.v1.StreamSkillDraftEvent
+	18, // 19: agents.v1.StreamSendMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
+	18, // 20: agents.v1.RerunFromMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
+	18, // 21: agents.v1.SubscribeToRunResponse.event:type_name -> agents.v1.AgentStreamEvent
+	31, // 22: agents.v1.StreamMessageStoredEvent.message:type_name -> agents.v1.MessageInfo
+	31, // 23: agents.v1.StreamDoneEvent.assistant_message:type_name -> agents.v1.MessageInfo
+	32, // 24: agents.v1.StreamSkillDraftEvent.draft:type_name -> agents.v1.SkillDraft
+	8,  // 25: agents.v1.RuntimeService.SendMessage:input_type -> agents.v1.SendMessageRequest
+	10, // 26: agents.v1.RuntimeService.StreamSendMessage:input_type -> agents.v1.StreamSendMessageRequest
+	9,  // 27: agents.v1.RuntimeService.RerunFromMessage:input_type -> agents.v1.RerunFromMessageRequest
+	14, // 28: agents.v1.RuntimeService.SubscribeToRun:input_type -> agents.v1.SubscribeToRunRequest
+	15, // 29: agents.v1.RuntimeService.CancelStream:input_type -> agents.v1.CancelStreamRequest
+	13, // 30: agents.v1.RuntimeService.RespondToConfirmation:input_type -> agents.v1.RespondToConfirmationRequest
+	0,  // 31: agents.v1.RuntimeService.GetUsageStats:input_type -> agents.v1.GetUsageStatsRequest
+	12, // 32: agents.v1.RuntimeService.SendMessage:output_type -> agents.v1.SendMessageResponse
+	19, // 33: agents.v1.RuntimeService.StreamSendMessage:output_type -> agents.v1.StreamSendMessageResponse
+	20, // 34: agents.v1.RuntimeService.RerunFromMessage:output_type -> agents.v1.RerunFromMessageResponse
+	21, // 35: agents.v1.RuntimeService.SubscribeToRun:output_type -> agents.v1.SubscribeToRunResponse
+	16, // 36: agents.v1.RuntimeService.CancelStream:output_type -> agents.v1.CancelStreamResponse
+	17, // 37: agents.v1.RuntimeService.RespondToConfirmation:output_type -> agents.v1.RespondToConfirmationResponse
+	1,  // 38: agents.v1.RuntimeService.GetUsageStats:output_type -> agents.v1.GetUsageStatsResponse
+	32, // [32:39] is the sub-list for method output_type
+	25, // [25:32] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_runtime_proto_init() }
@@ -2551,6 +2649,7 @@ func file_agents_v1_runtime_proto_init() {
 		return
 	}
 	file_agents_v1_sessions_proto_init()
+	file_agents_v1_skills_proto_init()
 	file_agents_v1_runtime_proto_msgTypes[8].OneofWrappers = []any{}
 	file_agents_v1_runtime_proto_msgTypes[10].OneofWrappers = []any{}
 	file_agents_v1_runtime_proto_msgTypes[11].OneofWrappers = []any{}
@@ -2563,6 +2662,7 @@ func file_agents_v1_runtime_proto_init() {
 		(*AgentStreamEvent_Error)(nil),
 		(*AgentStreamEvent_ConfirmationRequired)(nil),
 		(*AgentStreamEvent_Failover)(nil),
+		(*AgentStreamEvent_SkillDraft)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2570,7 +2670,7 @@ func file_agents_v1_runtime_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_runtime_proto_rawDesc), len(file_agents_v1_runtime_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   30,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

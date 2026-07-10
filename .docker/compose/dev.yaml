@@ -1,4 +1,5 @@
-# Containerized dev stack - backend, worker-core, worker-egress, ui, landing.
+# Containerized dev stack - edge (Caddy), backend, worker-core,
+# worker-egress, ui, landing.
 # All services bind-mount the repo, watch for changes, and reload.
 # Dependency installs (uv sync, pnpm install) are skipped on subsequent
 # starts when the lockfile hash is unchanged.
@@ -8,15 +9,20 @@
 #   docker compose --profile dev up         brings up infra + dev services
 #   ./run.sh dev                            equivalent shortcut
 #
+# Entry point is the edge at http://localhost - one origin for UI, API,
+# and LiveKit signaling, mirroring the self-host customer topology.
+# Direct ports (5173 vite, 8000 backend, 7880 livekit) stay published
+# for tooling.
+#
 # Works identically on:
 #   1. native localhost
 #   2. SSH'd remote dev box with port forwarding:
-#      ssh -L 5173:localhost:5173 -L 8000:localhost:8000 \
-#          -L 7880:localhost:7880 -L 7882:localhost:7882 \
-#          dev-machine
-#   Browser on your laptop hits http://localhost:5173 and connects through
-#   the tunnel to the remote stack. UDP (LiveKit media on 7882) does not
-#   tunnel cleanly via SSH; use a VPN to the dev machine for call media.
+#      ssh -L 8080:localhost:80 -L 7881:localhost:7881 dev-machine
+#   Browser on your laptop hits http://localhost:8080 and connects through
+#   the tunnel. Call media: 7882/udp cannot ride SSH, but LiveKit
+#   advertises loopback ICE candidates (node-ip 127.0.0.1), so the browser
+#   fails UDP fast and falls back to ICE/TCP on the tunneled 7881 - calls
+#   work, just with TCP latency. Use a VPN for real media behavior.
 
 x-backend-base: &backend-base
     build:
@@ -41,7 +47,7 @@ x-backend-base: &backend-base
             condition: service_healthy
         meilisearch:
             condition: service_healthy
-    profiles: [dev]
+    profiles: [dev, all]
     logging:
         driver: json-file
         options:
@@ -49,6 +55,25 @@ x-backend-base: &backend-base
             max-file: "3"
 
 services:
+    edge:
+        image: caddy:2-alpine
+        container_name: uniffy-dev-edge
+        restart: unless-stopped
+        ports:
+            - "80:80"
+        volumes:
+            - ../dev/Caddyfile:/etc/caddy/Caddyfile:ro
+        depends_on:
+            - backend
+            - ui
+        networks: [uniffy-network]
+        profiles: [dev, all]
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
+
     backend:
         <<: *backend-base
         container_name: uniffy-dev-backend
@@ -104,7 +129,7 @@ services:
         depends_on:
             - backend
         networks: [uniffy-network]
-        profiles: [dev]
+        profiles: [dev, all]
         logging: &node-logging
             driver: json-file
             options:
@@ -128,7 +153,7 @@ services:
         ports:
             - "4321:4321"
         networks: [uniffy-network]
-        profiles: [dev]
+        profiles: [dev, all]
         logging: *node-logging
 
 networks:

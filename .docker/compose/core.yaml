@@ -1,4 +1,5 @@
-# Core data services - postgres, valkey (cache + LiveKit registry), meilisearch.
+# Core services - postgres, valkey (cache + LiveKit registry), meilisearch,
+# livekit (SFU with embedded TURN; room registry on valkey DB 1, app uses DB 0).
 # Always-on. Run standalone: docker compose -f .docker/compose/core.yaml up
 
 x-defaults: &defaults
@@ -28,7 +29,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # 18+ images keep the cluster in a major-version subdirectory, so the
+      # mount lives one level up from the old /var/lib/postgresql/data -
+      # that path makes the entrypoint refuse to start (docker-library/postgres#1259)
+      - postgres_data:/var/lib/postgresql
       - ../init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
     healthcheck:
       <<: *hc-defaults
@@ -71,6 +75,77 @@ services:
     healthcheck:
       <<: *hc-defaults
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+
+  livekit:
+    <<: *defaults
+    image: livekit/livekit-server:v1.11.0
+    container_name: uniffy-livekit
+    command: --config /etc/livekit.yaml --node-ip 127.0.0.1
+    ports:
+      - "7880:7880" # signaling (HTTP/WebSocket, proxied by the dev edge)
+      - "7881:7881" # ICE/TCP fallback
+      - "7882:7882/udp" # ICE/UDP media (single-port mux)
+      - "3478:3478/udp" # embedded TURN
+    configs:
+      - source: livekit_config
+        target: /etc/livekit.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      valkey:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:7880",
+        ]
+
+configs:
+  livekit_config:
+    content: |
+      port: 7880
+      bind_addresses:
+        - ""
+
+      rtc:
+        tcp_port: 7881
+        udp_port: 7882
+        use_external_ip: false
+        enable_loopback_candidate: true
+
+      keys:
+        devkey: devsecret-change-me-in-prod-32chars-min
+
+      redis:
+        address: valkey:6379
+        password: uniffy-valkey-dev
+        db: 1
+
+      turn:
+        enabled: true
+        udp_port: 3478
+
+      webhook:
+        api_key: devkey
+        urls:
+          - http://host.docker.internal:8000/internal/webhooks/livekit
+
+      logging:
+        level: info
+        json: false
+
+      room:
+        empty_timeout: 60
+        departure_timeout: 30
+        max_participants: 50
+
+      development: true
 
 volumes:
   postgres_data:

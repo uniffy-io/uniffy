@@ -19,6 +19,11 @@ localhost {
 		reverse_proxy backend:8000
 	}
 
+	# LiveKit signaling (WebSocket) - media goes direct via UDP, not here
+	handle_path /livekit/* {
+		reverse_proxy livekit:7880
+	}
+
 	# Everything else - serve from UI
 	handle {
 		reverse_proxy ui:80

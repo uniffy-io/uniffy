@@ -111,6 +111,7 @@ async def _enqueue_run(
     files_payload: list[dict[str, Any]] | None,
     user_timezone: str | None,
     rerun_message_id: UUID | None = None,
+    invoked_skill_id: UUID | None = None,
 ) -> None:
     """Enqueue ``run_agent_session`` on the egress fleet."""
     queue = get_queue("egress")
@@ -124,6 +125,7 @@ async def _enqueue_run(
         files_payload,
         user_timezone,
         str(rerun_message_id) if rerun_message_id else None,
+        str(invoked_skill_id) if invoked_skill_id else None,
     )
 
 
@@ -595,6 +597,13 @@ class RuntimeHandlers:
         files_payload = _file_contexts_to_payload(files)
         run_id = generate_id()
 
+        invoked_skill_id: UUID | None = None
+        if request.invoked_skill_id:
+            try:
+                invoked_skill_id = UUID(request.invoked_skill_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid invoked_skill_id format")
+
         await set_run_state(
             run_id=run_id,
             user_id=user_id,
@@ -613,6 +622,7 @@ class RuntimeHandlers:
                 content=request.content.strip(),
                 files_payload=files_payload,
                 user_timezone=request.user_timezone or None,
+                invoked_skill_id=invoked_skill_id,
             )
         except Exception as exc:
             AGENT_RUN_ENQUEUE_FAILURES_TOTAL.inc()

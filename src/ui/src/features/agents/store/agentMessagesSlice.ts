@@ -6,6 +6,7 @@ import {
     editAgentMessage,
     fetchMessages,
     retryAgentMessage,
+    submitMessageFeedback,
 } from '@/features/agents/store/agentMessagesThunks';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 
@@ -102,8 +103,8 @@ export const agentMessagesSlice = createSlice({
             state.activeRunId = null;
             writePersistedRunId(null);
         },
-        addOptimisticUserMessage: (state, action: PayloadAction<{ sessionId: string; content: string; fileIds?: string[] }>) => {
-            const { sessionId, content, fileIds } = action.payload;
+        addOptimisticUserMessage: (state, action: PayloadAction<{ sessionId: string; content: string; fileIds?: string[]; invokedSkillName?: string }>) => {
+            const { sessionId, content, fileIds, invokedSkillName } = action.payload;
             if (!state.messagesBySession[sessionId]) {
                 state.messagesBySession[sessionId] = [];
             }
@@ -145,6 +146,8 @@ export const agentMessagesSlice = createSlice({
                 editedAt: undefined,
                 previousContent: undefined,
                 wasCancelled: false,
+                feedbackRating: '',
+                invokedSkillName: invokedSkillName || '',
             });
         },
         reconcileStoredMessage: (state, action: PayloadAction<{ sessionId: string; message: SerializedMessage }>) => {
@@ -265,6 +268,11 @@ export const agentMessagesSlice = createSlice({
                 if (!list) return;
                 const anchor = list.find((m) => m.id === anchorMessageId);
                 invalidateAfter(list, anchor?.createdAt, false);
+            })
+            .addCase(submitMessageFeedback.fulfilled, (state, action) => {
+                const { sessionId, messageId, rating } = action.payload;
+                const msg = state.messagesBySession[sessionId]?.find((m) => m.id === messageId);
+                if (msg) msg.feedbackRating = rating;
             });
     },
 });

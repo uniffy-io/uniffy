@@ -1,8 +1,50 @@
 """System prompt assembler for agent runtime."""
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from uuid import UUID
 
 from uniffy.domains.agents.tools.registry import get_tool_registry
+
+SKILL_VIEW_TOOL = "skills.view_skill"
+
+
+@dataclass(frozen=True)
+class SkillPromptEntry:
+    """A skill resolved for prompt injection, already filtered by conditional activation."""
+
+    id: UUID
+    name: str
+    display_name: str
+    description: str
+    when_to_use: str
+    content: str
+    always_active: bool
+
+
+def skill_passes_activation(skill, *, enabled_tools, surface: str) -> bool:
+    """True when the skill's required tools are enabled and its required context fits the surface.
+
+    Accepts any object exposing ``requires_tools`` / ``requires_context`` (the
+    ``AgentSkill`` row or a cache-rehydrated copy). Empty requirements always pass.
+    """
+    req_tools = list(getattr(skill, "requires_tools", None) or [])
+    if req_tools and not set(req_tools).issubset(set(enabled_tools or [])):
+        return False
+    req_context = list(getattr(skill, "requires_context", None) or [])
+    return not (req_context and surface not in req_context)
+
+
+def to_skill_prompt_entry(skill) -> SkillPromptEntry:
+    return SkillPromptEntry(
+        id=skill.id,
+        name=skill.name,
+        display_name=getattr(skill, "display_name", "") or skill.name,
+        description=getattr(skill, "description", "") or "",
+        when_to_use=getattr(skill, "when_to_use", "") or "",
+        content=getattr(skill, "content", "") or "",
+        always_active=bool(getattr(skill, "always_active", False)),
+    )
 
 
 def build_system_prompt(
@@ -13,7 +55,8 @@ def build_system_prompt(
     user_name: str | None = None,
     user_role: str | None = None,
     enabled_tools: list[str] | None = None,
-    skill_contents: list[str] | None = None,
+    skills: list[SkillPromptEntry] | None = None,
+    invoked_skill: SkillPromptEntry | None = None,
     memory_context: list[str] | None = None,
     prompt_content: str | None = None,
     user_timezone: str | None = None,
@@ -41,8 +84,13 @@ def build_system_prompt(
     enabled_tools : list[str] | None
         Tool names enabled for this agent. When provided, tool
         descriptions are included in the prompt.
-    skill_contents : list[str] | None
-        Markdown instruction content from active skills.
+    skills : list[SkillPromptEntry] | None
+        Skills resolved for this turn (already activation-filtered).
+        ``always_active`` skills inject their full content; the rest are
+        advertised as a metadata index the agent expands via ``view_skill``.
+    invoked_skill : SkillPromptEntry | None
+        A skill the user invoked on-demand (slash command). Force-injected
+        in full with an "execute now" directive, deduped against ``skills``.
     memory_context : list[str] | None
         Relevant memory entries to include in context.
     prompt_content : str | None
@@ -78,12 +126,19 @@ def build_system_prompt(
     if user_section:
         sections.append(user_section)
 
-    # Section 5: Active skill instructions
-    if skill_contents:
-        sections.append(
-            "The following skill instructions are active for this session:\n\n"
-            + "\n\n---\n\n".join(skill_contents)
-        )
+    # Section 5: Active skill instructions (progressive disclosure). An
+    # on-demand invoked skill is rendered separately in full, so it is
+    # excluded from the advertised index to avoid injecting it twice.
+    # Dedupe by id, not name: org and bundled skills can legally share a
+    # machine name, so a name match would drop a distinct same-named skill.
+    invoked_id = invoked_skill.id if invoked_skill else None
+    advertised = [s for s in skills if s.id != invoked_id] if skills else []
+    if advertised:
+        skill_section = _build_skill_section(advertised)
+        if skill_section:
+            sections.append(skill_section)
+    if invoked_skill:
+        sections.append(_build_invoked_skill_section(invoked_skill))
 
     # Section 6: Memory context
     if memory_context:
@@ -215,6 +270,53 @@ def _describe_trigger_rule(rule: str | None, in_thread: bool) -> str:
         "thread": "a reply in a thread you're following",
     }
     return mapping.get(rule or "", "a chat trigger")
+
+
+def _build_skill_section(skills: list[SkillPromptEntry]) -> str | None:
+    """Render always-active skills as full content and the rest as a view_skill index."""
+    always_blocks = [s.content for s in skills if s.always_active and s.content]
+    available = [s for s in skills if not s.always_active]
+
+    parts: list[str] = []
+    if always_blocks:
+        parts.append(
+            "The following skill instructions are active for this session:\n\n"
+            + "\n\n---\n\n".join(always_blocks)
+        )
+    if available:
+        lines = [
+            "The following skills are available but not yet loaded. A skill is "
+            f"NOT a tool -- to use one, first call the `{SKILL_VIEW_TOOL}` tool "
+            "with its name to load the full instructions, then follow them. When "
+            "the user's request matches a skill's trigger below, load and follow "
+            "that skill before replying, instead of answering from memory or "
+            "proposing a new or changed skill for something it already covers:",
+            "",
+        ]
+        for s in available:
+            entry = f"- `{s.name}` ({s.display_name})"
+            description = s.description.strip()
+            if description:
+                entry += f": {description}"
+            when = s.when_to_use.strip()
+            if when:
+                # Avoid "use when when ..." when the guidance already leads with "when".
+                lead = "" if when[:5].lower() == "when " else "use when "
+                entry += f" -- {lead}{when}"
+            lines.append(entry)
+        parts.append("\n".join(lines))
+
+    return "\n\n".join(parts) if parts else None
+
+
+def _build_invoked_skill_section(skill: SkillPromptEntry) -> str:
+    """Render a user-invoked skill in full with an execute-now directive."""
+    header = (
+        f"The user explicitly invoked the `{skill.name}` ({skill.display_name}) skill for "
+        "this message. Follow these instructions to carry out the request now, unless the "
+        "user's actual message clearly asks for something else:"
+    )
+    return f"{header}\n\n{skill.content}" if skill.content else header
 
 
 def _build_user_section(

@@ -4,7 +4,11 @@ import {
     Coins,
     CurrencyDollar,
     Gauge,
+    Lightbulb,
     Robot,
+    Sparkle,
+    ThumbsDown,
+    ThumbsUp,
     Trash,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -34,15 +38,25 @@ import {
     setDisplayCurrency,
 } from '@/features/admin/store/agentsGovernanceThunks';
 import type { RateLimitState } from '@/features/admin/store/agentsGovernanceSlice';
+import { fetchSkillMetrics } from '@/features/agents/store/agentSkillMetricsThunks';
+import { selectSkillMetricsState } from '@/features/agents/store/agentSkillMetricsSlice';
 
-type TabId = 'general' | 'budget' | 'rate-limits' | 'currencies';
+type TabId = 'general' | 'budget' | 'rate-limits' | 'currencies' | 'skills';
 
 const TABS: { id: TabId; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'budget', label: 'Budget' },
     { id: 'rate-limits', label: 'Rate limits' },
     { id: 'currencies', label: 'Currencies' },
+    { id: 'skills', label: 'Skills' },
 ];
+
+const SKILL_ORIGIN_LABELS: Record<string, string> = {
+    user: 'User',
+    agent_proposed: 'Agent proposed',
+    agent_evolved: 'Agent evolved',
+    bundled: 'Bundled',
+};
 
 const RATE_LIMIT_LABELS: Record<number, { name: string; description: string }> = {
     1: {
@@ -106,6 +120,124 @@ export function AgentsPage() {
             {activeTab === 'budget' && <BudgetTab />}
             {activeTab === 'rate-limits' && <RateLimitsTab />}
             {activeTab === 'currencies' && <CurrenciesTab />}
+            {activeTab === 'skills' && <SkillsMetricsTab />}
+        </div>
+    );
+}
+
+function SkillsMetricsTab() {
+    const dispatch = useAppDispatch();
+    const orgId = useAppSelector((s) => s.auth.currentOrganizationId);
+    const { metrics, positiveFeedback, negativeFeedback, pendingAgentDrafts, loading, loaded } =
+        useAppSelector(selectSkillMetricsState);
+
+    useEffect(() => {
+        if (!orgId) return;
+        dispatch(fetchSkillMetrics());
+    }, [dispatch, orgId]);
+
+    return (
+        <section className="border border-border rounded-xl bg-card">
+            <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                <Lightbulb size={20} weight="duotone" className="text-amber-500" />
+                <div>
+                    <h2 className="text-base font-semibold">Skill usage and quality</h2>
+                    <p className="text-xs text-muted-foreground">
+                        How often each skill is injected into prompts, opened by an agent, or
+                        invoked on demand, plus the org-wide feedback the evolution analyzer learns
+                        from.
+                    </p>
+                </div>
+            </header>
+
+            <div className="px-5 py-4 space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <StatCard
+                        icon={<ThumbsUp size={16} className="text-green-600 dark:text-green-400" />}
+                        label="Positive feedback"
+                        value={positiveFeedback}
+                    />
+                    <StatCard
+                        icon={<ThumbsDown size={16} className="text-red-500" />}
+                        label="Negative feedback"
+                        value={negativeFeedback}
+                    />
+                    <StatCard
+                        icon={<Sparkle size={16} className="text-primary" />}
+                        label="Agent drafts pending"
+                        value={pendingAgentDrafts}
+                    />
+                </div>
+
+                <div className="border border-border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                            <tr>
+                                <th className="text-left px-3 py-2">Skill</th>
+                                <th className="text-left px-3 py-2 hidden md:table-cell">Origin</th>
+                                <th className="text-right px-3 py-2">Injected</th>
+                                <th className="text-right px-3 py-2">Viewed</th>
+                                <th className="text-right px-3 py-2">Invoked</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {loading && !loaded ? (
+                                <tr>
+                                    <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">
+                                        Loading...
+                                    </td>
+                                </tr>
+                            ) : metrics.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">
+                                        No skill usage recorded yet.
+                                    </td>
+                                </tr>
+                            ) : (
+                                metrics.map((m) => (
+                                    <tr key={m.skillId}>
+                                        <td className="px-3 py-2 font-medium text-foreground">
+                                            {m.displayName}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs text-muted-foreground hidden md:table-cell">
+                                            {SKILL_ORIGIN_LABELS[m.origin] ?? m.origin}
+                                        </td>
+                                        <td className="px-3 py-2 text-right tabular-nums">
+                                            {m.injectedCount}
+                                        </td>
+                                        <td className="px-3 py-2 text-right tabular-nums">
+                                            {m.viewedCount}
+                                        </td>
+                                        <td className="px-3 py-2 text-right tabular-nums">
+                                            {m.invokedCount}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function StatCard({
+    icon,
+    label,
+    value,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value: number;
+}) {
+    return (
+        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {icon}
+                {label}
+            </div>
+            <div className="text-2xl font-semibold tabular-nums mt-1">{value}</div>
         </div>
     );
 }

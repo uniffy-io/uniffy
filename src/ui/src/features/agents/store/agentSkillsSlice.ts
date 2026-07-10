@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import type { SerializedSkill } from '@/features/agents/store/agentSkillsThunks';
 import { fetchSkills, createSkill, updateSkill, deleteSkill } from '@/features/agents/store/agentSkillsThunks';
+import { setMainSkillVersion, revertSkill } from '@/features/agents/store/agentSkillVersionsThunks';
 
 interface AgentSkillsState {
     skills: Record<string, SerializedSkill>;
@@ -44,6 +45,12 @@ export const agentSkillsSlice = createSlice({
             })
             .addCase(deleteSkill.fulfilled, (state, action) => {
                 delete state.skills[action.payload];
+            })
+            .addCase(setMainSkillVersion.fulfilled, (state, action) => {
+                state.skills[action.payload.skill.id] = action.payload.skill;
+            })
+            .addCase(revertSkill.fulfilled, (state, action) => {
+                state.skills[action.payload.skill.id] = action.payload.skill;
             });
     },
 });
