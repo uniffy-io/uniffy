@@ -18,8 +18,8 @@ import { useUniffy } from "@/context/uniffy-context";
 import { useSearch } from "@/hooks/useSearch";
 import { useTheme } from "@/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
-import { DOMAIN_ICON, getDomainColor, getDomainSoftColor } from "@/components/ReferenceChip";
-import { TOP_NAV_CONTENT_HEIGHT } from "@/components/TopNav";
+import { FONT } from "@/constants/typography";
+import { DOMAIN_ICON } from "@/components/ReferenceChip";
 import type { Domain } from "@/lib/types";
 import type { SerializedSearchResult } from "@/lib/searchSerializer";
 
@@ -38,7 +38,6 @@ export function AtOverlay() {
   const {
     atOpen,
     atFromEditor,
-    atPosition,
     closeAt,
     returnToAt,
     setReturnToAt,
@@ -53,7 +52,7 @@ export function AtOverlay() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const inputRef = useRef<TextInput>(null);
 
-  const topNavHeight = (Platform.OS === "web" ? 20 : insets.top) + TOP_NAV_CONTENT_HEIGHT;
+  const topPad = Platform.OS === "web" ? 8 : insets.top;
   const navBottom = BOTTOM_NAV_HEIGHT + (Platform.OS === "web" ? 34 : insets.bottom);
 
   useEffect(() => {
@@ -113,12 +112,9 @@ export function AtOverlay() {
 
   return (
     <Animated.View
-      style={[
-        styles.overlay,
-        { top: topNavHeight, backgroundColor: T.pageBg, opacity, transform: [{ translateY }] },
-      ]}
+      style={[styles.overlay, { backgroundColor: T.pageBg, opacity, transform: [{ translateY }] }]}
     >
-      <View style={[styles.topBar, { paddingTop: 12, borderBottomColor: T.border }]}>
+      <View style={[styles.topBar, { paddingTop: topPad + 4, borderBottomColor: T.border }]}>
         <View style={[styles.searchRow, { backgroundColor: T.surface, borderColor: T.border }]}>
           <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
           <TextInput
@@ -137,7 +133,6 @@ export function AtOverlay() {
             </TouchableOpacity>
           )}
         </View>
-        {atPosition === "fab" && <View style={styles.closeButtonSpacer} />}
       </View>
 
       {query.length > 0 && (
@@ -157,7 +152,7 @@ export function AtOverlay() {
           contentContainerStyle={styles.filterContent}
           renderItem={({ item: f }) => {
             const active = f.key === activeFilter;
-            const color = f.key === "all" ? T.accent : getDomainColor(f.key as Domain);
+            const color = f.key === "all" ? T.accent : T.domains[f.key];
             return (
               <TouchableOpacity
                 onPress={() => setActiveFilter(f.key)}
@@ -186,8 +181,8 @@ export function AtOverlay() {
         renderItem={({ item }) => {
           const domain = item.domain as Domain;
           const IconComponent = DOMAIN_ICON[domain];
-          const domainColor = getDomainColor(domain);
-          const softColor = getDomainSoftColor(domain);
+          const domainColor = T.domains[domain];
+          const softColor = T.domains[`${domain}Soft`];
           return (
             <View style={[styles.resultRow, { borderBottomColor: T.border }]}>
               <View style={[styles.domainIcon, { backgroundColor: softColor }]}>
@@ -252,11 +247,8 @@ export function AtOverlay() {
 
 const styles = StyleSheet.create({
   overlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 250,
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 150,
   },
   topBar: {
     flexDirection: "row",
@@ -277,15 +269,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 42,
   },
-  closeButtonSpacer: {
-    width: 36,
-    height: 36,
-    flexShrink: 0,
-  },
   input: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
   resultsHeader: {
     paddingHorizontal: 16,
@@ -294,7 +281,7 @@ const styles = StyleSheet.create({
   },
   resultsLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     letterSpacing: 0.8,
   },
   filterBar: {
@@ -314,7 +301,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   resultRow: {
     flexDirection: "row",
@@ -333,7 +320,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
     marginBottom: 4,
   },
   resultMeta: {
@@ -348,12 +335,12 @@ const styles = StyleSheet.create({
   },
   domainBadgeText: {
     fontSize: 9,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
     letterSpacing: 0.4,
   },
   resultSub: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     flex: 1,
   },
   actionButtons: {
@@ -370,7 +357,7 @@ const styles = StyleSheet.create({
   },
   actionBtnAt: {
     fontSize: 15,
-    fontFamily: "Inter_700Bold",
+    fontFamily: FONT.bold,
     lineHeight: 18,
   },
   empty: {
@@ -379,6 +366,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
 });
