@@ -112,6 +112,8 @@ interface AuthContextValue extends AuthState {
   logout: () => Promise<void>;
   holdNavigation: boolean;
   setHoldNavigation: (v: boolean) => void;
+  loginSplashVisible: boolean;
+  setLoginSplashVisible: (v: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -139,6 +141,7 @@ async function handleAuthResponse(
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [holdNavigation, setHoldNavigation] = useState(false);
+  const [loginSplashVisible, setLoginSplashVisible] = useState(false);
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
     organizationId: null,
@@ -218,13 +221,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const verifyMfa = useCallback(
-    async (challengeToken: string, code: string, method: string) => {
-      const response = await authApi.verifyMfa(challengeToken, code, method);
-      await handleAuthResponse(response, dispatch);
-    },
-    [],
-  );
+  const verifyMfa = useCallback(async (challengeToken: string, code: string, method: string) => {
+    const response = await authApi.verifyMfa(challengeToken, code, method);
+    await handleAuthResponse(response, dispatch);
+  }, []);
 
   const register = useCallback(
     async (email: string, username: string, password: string, fullName?: string) => {
@@ -309,6 +309,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     holdNavigation,
     setHoldNavigation,
+    loginSplashVisible,
+    setLoginSplashVisible,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

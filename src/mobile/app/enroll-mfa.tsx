@@ -4,6 +4,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ShieldCheck } from "phosphor-react-native";
 import { MfaEnrollFlow } from "@/components/MfaEnrollFlow";
+import { BRAND } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 
 /**
@@ -43,10 +45,10 @@ export default function EnrollMfaScreen() {
         <Text style={styles.bannerText}>Your organization requires two-factor authentication</Text>
       </View>
       {ready ? (
-        <MfaEnrollFlow color="#3b82f6" onDone={finish} />
+        <MfaEnrollFlow color={BRAND.violet} onDone={finish} />
       ) : (
         <View style={styles.center}>
-          <ActivityIndicator color="#3b82f6" />
+          <ActivityIndicator color={BRAND.violet} />
         </View>
       )}
       <TouchableOpacity style={styles.cancel} onPress={cancel} activeOpacity={0.7}>
@@ -57,17 +59,17 @@ export default function EnrollMfaScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0D0E11" },
+  root: { flex: 1, backgroundColor: BRAND.midnight },
   banner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#3b82f6",
+    backgroundColor: BRAND.violet,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  bannerText: { flex: 1, color: "#fff", fontSize: 13, fontFamily: "Inter_500Medium", lineHeight: 18 },
+  bannerText: { flex: 1, color: "#fff", fontSize: 13, fontFamily: FONT.medium, lineHeight: 18 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   cancel: { padding: 18, alignItems: "center" },
-  cancelText: { fontSize: 14, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.5)" },
+  cancelText: { fontSize: 14, fontFamily: FONT.medium, color: "rgba(255,255,255,0.5)" },
 });

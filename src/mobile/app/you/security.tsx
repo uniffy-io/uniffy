@@ -12,11 +12,19 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
-import { ShieldCheck, ShieldWarning, ArrowsClockwise, Trash, X, Check } from "phosphor-react-native";
+import {
+  ShieldCheck,
+  ShieldWarning,
+  ArrowsClockwise,
+  Trash,
+  X,
+  Check,
+} from "phosphor-react-native";
 import { DomainHeader } from "@/components/DomainHeader";
 import { MfaEnrollFlow } from "@/components/MfaEnrollFlow";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { mfaApi } from "@/api/mfaApi";
 
@@ -234,7 +242,10 @@ function CodePromptModal({
             placeholder="6-digit code"
             placeholderTextColor={T.textDim}
             keyboardType="number-pad"
-            style={[styles.promptInput, { color: T.textBright, backgroundColor: T.bg, borderColor: T.border }]}
+            style={[
+              styles.promptInput,
+              { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+            ]}
             maxLength={8}
             autoFocus
           />
@@ -246,7 +257,10 @@ function CodePromptModal({
             <TouchableOpacity
               style={[
                 styles.promptConfirm,
-                { backgroundColor: danger ? "#FA5252" : T.accent, opacity: code.trim().length < 6 ? 0.4 : 1 },
+                {
+                  backgroundColor: danger ? "#FA5252" : T.accent,
+                  opacity: code.trim().length < 6 ? 0.4 : 1,
+                },
               ]}
               onPress={submit}
               disabled={code.trim().length < 6 || busy}
@@ -303,9 +317,7 @@ function RecoveryCodesModal({
               setCopied(true);
             }}
           >
-            {copied ? (
-              <Check size={16} color={accent} weight="bold" />
-            ) : null}
+            {copied ? <Check size={16} color={accent} weight="bold" /> : null}
             <Text style={[styles.copyText, { color: copied ? accent : T.text }]}>
               {copied ? "Copied" : "Copy all codes"}
             </Text>
@@ -320,14 +332,20 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: 20 },
-  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, marginBottom: 10 },
+  sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8, marginBottom: 10 },
   card: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 14 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  statusIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  statusTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  statusSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 17 },
+  statusIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusTitle: { fontSize: 15, fontFamily: FONT.semibold },
+  statusSub: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2, lineHeight: 17 },
   primaryBtn: { height: 46, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  primaryBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  primaryBtnText: { fontSize: 15, fontFamily: FONT.semibold, color: "#fff" },
   recoveryRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -338,9 +356,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginTop: 18,
   },
-  recoveryLabel: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  recoveryCount: { fontSize: 18, fontFamily: "Inter_700Bold" },
-  warnText: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 8, lineHeight: 17 },
+  recoveryLabel: { fontSize: 14, fontFamily: FONT.medium },
+  recoveryCount: { fontSize: 18, fontFamily: FONT.bold },
+  warnText: { fontSize: 12, fontFamily: FONT.regular, marginTop: 8, lineHeight: 17 },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -351,7 +369,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginTop: 12,
   },
-  actionText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  actionText: { fontSize: 15, fontFamily: FONT.medium },
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -361,25 +379,43 @@ const styles = StyleSheet.create({
   },
   promptCard: { width: "100%", borderRadius: 16, padding: 20, gap: 12 },
   codesHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  promptTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  promptSub: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  promptTitle: { fontSize: 16, fontFamily: FONT.bold },
+  promptSub: { fontSize: 13, fontFamily: FONT.regular, lineHeight: 18 },
   promptInput: {
     height: 48,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     letterSpacing: 3,
   },
-  promptErr: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  promptErr: { fontSize: 13, fontFamily: FONT.medium },
   promptActions: { flexDirection: "row", gap: 10, marginTop: 4 },
-  promptCancel: { flex: 1, height: 46, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  promptCancelText: { fontSize: 15, fontFamily: "Inter_500Medium" },
-  promptConfirm: { flex: 1, height: 46, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  promptConfirmText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  codesBox: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 7, alignItems: "center" },
-  codeText: { fontSize: 14, fontFamily: "Inter_600SemiBold", letterSpacing: 1.2 },
+  promptCancel: {
+    flex: 1,
+    height: 46,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promptCancelText: { fontSize: 15, fontFamily: FONT.medium },
+  promptConfirm: {
+    flex: 1,
+    height: 46,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promptConfirmText: { fontSize: 15, fontFamily: FONT.semibold, color: "#fff" },
+  codesBox: {
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    gap: 7,
+    alignItems: "center",
+  },
+  codeText: { fontSize: 14, fontFamily: FONT.semibold, letterSpacing: 1.2 },
   copyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -389,5 +425,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  copyText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  copyText: { fontSize: 14, fontFamily: FONT.medium },
 });

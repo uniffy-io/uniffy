@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Buildings, EnvelopeSimple } from "phosphor-react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { authApi } from "@/api/authApi";
 
@@ -73,9 +74,17 @@ export default function AcceptInviteScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await acceptInvitation(token, username.trim(), password, fullName.trim() || undefined);
+      const result = await acceptInvitation(
+        token,
+        username.trim(),
+        password,
+        fullName.trim() || undefined,
+      );
       if (result.status === "enroll") {
-        router.replace({ pathname: "/enroll-mfa", params: { token: result.enrollmentToken } } as any);
+        router.replace({
+          pathname: "/enroll-mfa",
+          params: { token: result.enrollmentToken },
+        } as any);
       } else {
         setHoldNavigation(false);
         router.replace("/" as any);
@@ -94,7 +103,10 @@ export default function AcceptInviteScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: T.pageBg, paddingTop: insets.top + 8 }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={[styles.heading, { color: T.textBright }]}>Accept invitation</Text>
 
@@ -110,10 +122,16 @@ export default function AcceptInviteScreen() {
                 placeholder="Invitation code"
                 placeholderTextColor={T.textDim}
                 autoCapitalize="none"
-                style={[styles.input, { color: T.textBright, backgroundColor: T.surface, borderColor: T.border }]}
+                style={[
+                  styles.input,
+                  { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+                ]}
               />
               <TouchableOpacity
-                style={[styles.btn, { backgroundColor: tokenInput.trim() ? T.accent : T.surfaceHover }]}
+                style={[
+                  styles.btn,
+                  { backgroundColor: tokenInput.trim() ? T.accent : T.surfaceHover },
+                ]}
                 onPress={() => loadPreview(tokenInput.trim())}
                 disabled={!tokenInput.trim()}
               >
@@ -128,11 +146,15 @@ export default function AcceptInviteScreen() {
             </View>
           ) : preview ? (
             <>
-              <View style={[styles.previewCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+              <View
+                style={[styles.previewCard, { backgroundColor: T.surface, borderColor: T.border }]}
+              >
                 <View style={[styles.orgIcon, { backgroundColor: T.accentSoft }]}>
                   <Buildings size={22} color={T.accent} weight="duotone" />
                 </View>
-                <Text style={[styles.orgName, { color: T.textBright }]}>{preview.organizationName}</Text>
+                <Text style={[styles.orgName, { color: T.textBright }]}>
+                  {preview.organizationName}
+                </Text>
                 {preview.inviterDisplayName ? (
                   <Text style={[styles.inviter, { color: T.textDim }]}>
                     Invited by {preview.inviterDisplayName}
@@ -153,7 +175,10 @@ export default function AcceptInviteScreen() {
                 placeholder="Username"
                 placeholderTextColor={T.textDim}
                 autoCapitalize="none"
-                style={[styles.input, { color: T.textBright, backgroundColor: T.surface, borderColor: T.border }]}
+                style={[
+                  styles.input,
+                  { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+                ]}
               />
               <TextInput
                 value={fullName}
@@ -161,7 +186,10 @@ export default function AcceptInviteScreen() {
                 placeholder="Full name (optional)"
                 placeholderTextColor={T.textDim}
                 autoCapitalize="words"
-                style={[styles.input, { color: T.textBright, backgroundColor: T.surface, borderColor: T.border }]}
+                style={[
+                  styles.input,
+                  { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+                ]}
               />
               <TextInput
                 value={password}
@@ -169,13 +197,19 @@ export default function AcceptInviteScreen() {
                 placeholder="Password (min 8 characters)"
                 placeholderTextColor={T.textDim}
                 secureTextEntry
-                style={[styles.input, { color: T.textBright, backgroundColor: T.surface, borderColor: T.border }]}
+                style={[
+                  styles.input,
+                  { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+                ]}
               />
 
               <TouchableOpacity
                 style={[
                   styles.btn,
-                  { backgroundColor: username.trim() && password.length >= 8 ? T.accent : T.surfaceHover },
+                  {
+                    backgroundColor:
+                      username.trim() && password.length >= 8 ? T.accent : T.surfaceHover,
+                  },
                 ]}
                 onPress={accept}
                 disabled={!username.trim() || password.length < 8 || submitting}
@@ -215,19 +249,25 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { padding: 24, gap: 14 },
   center: { paddingVertical: 40, alignItems: "center" },
-  heading: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  sub: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
-  err: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  heading: { fontSize: 22, fontFamily: FONT.bold },
+  sub: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 20 },
+  err: { fontSize: 13, fontFamily: FONT.medium },
   input: {
     height: 48,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
   },
-  btn: { height: 48, borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 4 },
-  btnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  btn: {
+    height: 48,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  btnText: { fontSize: 15, fontFamily: FONT.semibold },
   previewCard: {
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
@@ -235,9 +275,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  orgIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  orgName: { fontSize: 17, fontFamily: "Inter_700Bold", marginTop: 4 },
-  inviter: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  orgIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orgName: { fontSize: 17, fontFamily: FONT.bold, marginTop: 4 },
+  inviter: { fontSize: 13, fontFamily: FONT.regular },
   emailRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -248,7 +294,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     justifyContent: "center",
   },
-  emailText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  emailText: { fontSize: 13, fontFamily: FONT.medium },
   backBtn: { alignItems: "center", paddingVertical: 12, marginTop: 4 },
-  backText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  backText: { fontSize: 14, fontFamily: FONT.medium },
 });

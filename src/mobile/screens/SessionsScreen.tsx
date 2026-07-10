@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useSessions } from "@/hooks/useSessions";
 import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
+import { FONT } from "@/constants/typography";
 
 function getDeviceIcon(label: string) {
   const lower = label.toLowerCase();
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   loadingContainer: {
     flex: 1,
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
   },
   deviceLabel: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
   },
   currentBadge: {
     paddingHorizontal: 8,
@@ -213,11 +214,11 @@ const styles = StyleSheet.create({
   },
   currentBadgeText: {
     fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
   },
   lastActivity: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: FONT.regular,
     marginTop: 2,
   },
   revokeBtn: {
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   },
   revokeAllText: {
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
+    fontFamily: FONT.medium,
     color: "#FA5252",
   },
 });

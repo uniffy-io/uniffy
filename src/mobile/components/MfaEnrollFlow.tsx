@@ -12,6 +12,7 @@ import { SvgXml } from "react-native-svg";
 import * as Clipboard from "expo-clipboard";
 import { ShieldCheck, Copy, Check, Key } from "phosphor-react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { mfaApi } from "@/api/mfaApi";
 
@@ -111,7 +112,8 @@ export function MfaEnrollFlow({ color, onDone }: { color: string; onDone: () => 
           <ShieldCheck size={30} color={color} weight="duotone" />
           <Text style={[styles.title, { color: T.textBright }]}>Two-factor is on</Text>
           <Text style={[styles.subtitle, { color: T.textDim }]}>
-            Save these recovery codes somewhere safe. Each works once if you lose your authenticator.
+            Save these recovery codes somewhere safe. Each works once if you lose your
+            authenticator.
           </Text>
         </View>
         <View style={[styles.codesBox, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -187,7 +189,10 @@ export function MfaEnrollFlow({ color, onDone }: { color: string; onDone: () => 
         placeholder="6-digit code"
         placeholderTextColor={T.textDim}
         keyboardType="number-pad"
-        style={[styles.input, { color: T.textBright, backgroundColor: T.surface, borderColor: T.border }]}
+        style={[
+          styles.input,
+          { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+        ]}
         maxLength={8}
       />
 
@@ -220,10 +225,10 @@ const styles = StyleSheet.create({
   center: { padding: 40, alignItems: "center", gap: 16 },
   content: { padding: 20, gap: 12 },
   headerWrap: { alignItems: "center", gap: 6, marginBottom: 6 },
-  title: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 19 },
+  title: { fontSize: 17, fontFamily: FONT.semibold },
+  subtitle: { fontSize: 13, fontFamily: FONT.regular, textAlign: "center", lineHeight: 19 },
   qrWrap: { alignSelf: "center", padding: 12, borderRadius: 12 },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  label: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8 },
   secretRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -233,19 +238,25 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  secretText: { flex: 1, fontSize: 14, fontFamily: "Inter_600SemiBold", letterSpacing: 1 },
+  secretText: { flex: 1, fontSize: 14, fontFamily: FONT.semibold, letterSpacing: 1 },
   input: {
     height: 48,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: FONT.semibold,
     letterSpacing: 3,
   },
-  errText: { fontSize: 13, fontFamily: "Inter_500Medium", textAlign: "center" },
-  btn: { height: 48, borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  btnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  errText: { fontSize: 13, fontFamily: FONT.medium, textAlign: "center" },
+  btn: {
+    height: 48,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  btnText: { fontSize: 15, fontFamily: FONT.semibold, color: "#fff" },
   codesBox: {
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
@@ -253,7 +264,7 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
   },
-  codeText: { fontSize: 15, fontFamily: "Inter_600SemiBold", letterSpacing: 1.5 },
+  codeText: { fontSize: 15, fontFamily: FONT.semibold, letterSpacing: 1.5 },
   copyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -263,5 +274,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  copyText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  copyText: { fontSize: 14, fontFamily: FONT.medium },
 });

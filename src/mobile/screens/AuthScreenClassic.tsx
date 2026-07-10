@@ -1,3 +1,6 @@
+// Alternate login screen (dark network-canvas design), kept as a selectable
+// fallback. To use it instead of the brand gradient design, render
+// <AuthScreenClassic /> from app/auth.tsx.
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -6,7 +9,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Envelope, Lock, User, IdentificationCard, ShieldCheck } from "phosphor-react-native";
-import { BRAND } from "@/constants/theme";
+import { NetworkCanvas } from "@/components/NetworkCanvas";
 import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { authApi } from "@/api/authApi";
@@ -27,17 +29,13 @@ type Mode = "login" | "register";
 
 type MfaChallengeState = { challengeToken: string; methods: string[] };
 
-// Lightened violet for small text - pure BRAND.violet is only 3.61:1 on
-// Midnight, below the 4.5:1 text threshold.
-const LINK_VIOLET = "#9b85ff";
-
 function parseAuthError(err: any): string {
   const msg = err?.message || "Something went wrong";
   const match = msg.includes("[") ? msg.match(/\] (.+)/) : null;
   return match ? match[1] : msg;
 }
 
-export default function AuthScreen() {
+export function AuthScreenClassic() {
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
   const { login, verifyMfa, register, setHoldNavigation, setLoginSplashVisible } = useAuth();
@@ -163,40 +161,16 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Freeform brand gradient: a violet dome with blue, green, orange, and
-          pink blooms that dissolve into Midnight before the form card. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <LinearGradient
-          colors={["rgba(105,74,255,0.55)", "rgba(105,74,255,0)"]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 0.62 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={["rgba(74,125,255,0.35)", "rgba(74,125,255,0)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0.7, y: 0.42 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={["rgba(1,183,127,0.28)", "rgba(1,183,127,0)"]}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0.62, y: 0.28 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={["rgba(251,97,39,0.18)", "rgba(251,97,39,0)"]}
-          start={{ x: 1, y: 0.18 }}
-          end={{ x: 0.5, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={["rgba(253,126,234,0.30)", "rgba(253,126,234,0)"]}
-          start={{ x: 0.95, y: 0.06 }}
-          end={{ x: 0.25, y: 0.45 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
+      {/* Dark background gradient */}
+      <LinearGradient
+        colors={["#09090b", "#171723", "#1a1a2e"]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+
+      {/* Simulation canvas background */}
+      <NetworkCanvas />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -207,25 +181,15 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Fixed-height header anchors the card top so it only grows downward */}
-          <View
-            style={[styles.header, { height: Math.max(screenHeight * 0.32, insets.top + 210) }]}
-          >
-            <Image
-              source={require("../assets/images/uniffy-logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.wordmark}>uniffy</Text>
-            <Text style={styles.tagline}>Teamwork - simplified, amplified, unified.</Text>
-          </View>
+          {/* Fixed spacer — anchors card top so it only grows downward */}
+          <View style={{ height: Math.max(screenHeight * 0.3, insets.top + 80) }} />
 
           {/* Form card */}
           <View style={styles.card}>
             {mfaChallenge ? (
               <>
                 <View style={styles.mfaHeader}>
-                  <ShieldCheck size={28} color={LINK_VIOLET} weight="duotone" />
+                  <ShieldCheck size={28} color="#ffffff" weight="duotone" />
                   <Text style={styles.mfaTitle}>Two-factor authentication</Text>
                   <Text style={styles.mfaSubtitle}>
                     {mfaMethod === "totp"
@@ -241,7 +205,7 @@ export default function AuthScreen() {
                 )}
 
                 <AuthInput
-                  icon={<Lock size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
+                  icon={<Lock size={18} color="rgba(255,255,255,0.4)" weight="duotone" />}
                   placeholder={mfaMethod === "totp" ? "Authenticator code" : "Recovery code"}
                   value={mfaCode}
                   onChangeText={setMfaCode}
@@ -285,7 +249,7 @@ export default function AuthScreen() {
             ) : forgotMode ? (
               <>
                 <View style={styles.mfaHeader}>
-                  <Lock size={28} color={LINK_VIOLET} weight="duotone" />
+                  <Lock size={28} color="#ffffff" weight="duotone" />
                   <Text style={styles.mfaTitle}>Reset password</Text>
                   <Text style={styles.mfaSubtitle}>
                     {resetSent
@@ -297,7 +261,7 @@ export default function AuthScreen() {
                 {!resetSent && (
                   <>
                     <AuthInput
-                      icon={<Envelope size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
+                      icon={<Envelope size={18} color="rgba(255,255,255,0.4)" weight="duotone" />}
                       placeholder="Email"
                       value={email}
                       onChangeText={setEmail}
@@ -354,7 +318,7 @@ export default function AuthScreen() {
 
                 {/* Fields */}
                 <AuthInput
-                  icon={<Envelope size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
+                  icon={<Envelope size={18} color="rgba(255,255,255,0.4)" weight="duotone" />}
                   placeholder="Email"
                   value={email}
                   onChangeText={setEmail}
@@ -364,7 +328,7 @@ export default function AuthScreen() {
                 />
 
                 <AuthInput
-                  icon={<Lock size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
+                  icon={<Lock size={18} color="rgba(255,255,255,0.4)" weight="duotone" />}
                   placeholder="Password"
                   value={password}
                   onChangeText={setPassword}
@@ -374,7 +338,7 @@ export default function AuthScreen() {
                 {mode === "register" && (
                   <>
                     <AuthInput
-                      icon={<User size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
+                      icon={<User size={18} color="rgba(255,255,255,0.4)" weight="duotone" />}
                       placeholder="Username"
                       value={username}
                       onChangeText={setUsername}
@@ -384,7 +348,7 @@ export default function AuthScreen() {
                       icon={
                         <IdentificationCard
                           size={18}
-                          color="rgba(238,238,238,0.4)"
+                          color="rgba(255,255,255,0.4)"
                           weight="duotone"
                         />
                       }
@@ -460,7 +424,7 @@ function AuthInput({
       <TextInput
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor="rgba(238,238,238,0.35)"
+        placeholderTextColor="rgba(255,255,255,0.3)"
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
@@ -469,7 +433,7 @@ function AuthInput({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
-        selectionColor={BRAND.violet}
+        selectionColor="rgba(255,255,255,0.5)"
       />
     </View>
   );
@@ -478,47 +442,25 @@ function AuthInput({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: BRAND.midnight,
+    backgroundColor: "#09090b",
   },
   flex: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
   },
-  header: {
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 28,
-  },
-  logo: {
-    width: 76,
-    height: 76,
-    marginBottom: 10,
-  },
-  wordmark: {
-    fontSize: 34,
-    fontFamily: FONT.bold,
-    color: BRAND.white,
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    fontSize: 13,
-    fontFamily: FONT.medium,
-    color: "rgba(238,238,238,0.55)",
-    marginTop: 6,
-  },
   card: {
-    backgroundColor: "rgba(13,17,30,0.62)",
-    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(238,238,238,0.10)",
+    borderColor: "rgba(255,255,255,0.08)",
     padding: 20,
     gap: 14,
   },
   pillContainer: {
     flexDirection: "row",
-    backgroundColor: "rgba(238,238,238,0.07)",
-    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 10,
     padding: 3,
     position: "relative",
     marginBottom: 4,
@@ -527,9 +469,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 3,
     bottom: 3,
-    width: "49%",
-    backgroundColor: BRAND.violet,
-    borderRadius: 9,
+    width: "51%",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 8,
   },
   pillButton: {
     flex: 1,
@@ -539,7 +481,7 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 14,
     fontFamily: FONT.medium,
-    color: "rgba(238,238,238,0.5)",
+    color: "rgba(255,255,255,0.4)",
   },
   pillTextActive: {
     color: "#ffffff",
@@ -547,7 +489,7 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     backgroundColor: "rgba(250,82,82,0.12)",
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "rgba(250,82,82,0.2)",
     paddingHorizontal: 14,
@@ -561,17 +503,17 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(238,238,238,0.05)",
-    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(238,238,238,0.10)",
+    borderColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 12,
     height: 48,
     gap: 10,
   },
   inputRowFocused: {
-    borderColor: "rgba(105,74,255,0.9)",
-    backgroundColor: "rgba(105,74,255,0.08)",
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
   inputIcon: {
     width: 20,
@@ -581,13 +523,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontFamily: FONT.regular,
-    color: BRAND.white,
+    color: "#ffffff",
     height: "100%",
   },
   submitButton: {
-    backgroundColor: BRAND.violet,
-    borderRadius: 12,
-    height: 50,
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
@@ -598,12 +540,12 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 15,
     fontFamily: FONT.semibold,
-    color: "#ffffff",
+    color: "#09090b",
   },
   footerText: {
     fontSize: 11,
     fontFamily: FONT.regular,
-    color: "rgba(238,238,238,0.3)",
+    color: "rgba(255,255,255,0.25)",
     textAlign: "center",
     lineHeight: 16,
     marginTop: 2,
@@ -616,26 +558,26 @@ const styles = StyleSheet.create({
   mfaTitle: {
     fontSize: 16,
     fontFamily: FONT.semibold,
-    color: BRAND.white,
+    color: "#ffffff",
   },
   mfaSubtitle: {
     fontSize: 13,
     fontFamily: FONT.regular,
-    color: "rgba(238,238,238,0.5)",
+    color: "rgba(255,255,255,0.5)",
     textAlign: "center",
     lineHeight: 18,
   },
   mfaBack: {
     fontSize: 13,
     fontFamily: FONT.medium,
-    color: "rgba(238,238,238,0.6)",
+    color: "rgba(255,255,255,0.6)",
     textAlign: "center",
     paddingVertical: 4,
   },
   linkText: {
     fontSize: 13,
     fontFamily: FONT.medium,
-    color: LINK_VIOLET,
+    color: "rgba(255,255,255,0.55)",
     textAlign: "center",
     paddingVertical: 2,
   },
