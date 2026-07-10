@@ -26,6 +26,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
+from uniffy.core.models.calls import CallEndReason
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_category import ChatChannelCategory
 from uniffy.core.models.chat.channel_member import (
@@ -36,6 +37,10 @@ from uniffy.core.models.login.user import User
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, SubjectType, generate_id, slugify
 from uniffy.core.valkey.mentions import publish_mention_state
+from uniffy.domains.calls.operations import (
+    end_active_call_for_channel,
+    kick_user_from_active_call,
+)
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import (
     fetch_channel_members,
@@ -665,6 +670,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         await invalidate_cached_channel(channel.id)
 
+        await end_active_call_for_channel(
+            self.session, channel.id, CallEndReason.CHANNEL_ARCHIVED
+        )
+
         await self._broadcast_channel_removed(channel)
 
     async def delete_channel(
@@ -703,6 +712,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_channel(channel.id)
         await invalidate_cached_member_ids(channel.id)
         await invalidate_cached_dm_peers(channel.id)
+
+        await end_active_call_for_channel(
+            self.session, channel.id, CallEndReason.CHANNEL_ARCHIVED
+        )
 
         await self._broadcast_channel_removed(channel)
 
@@ -858,6 +871,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         await invalidate_cached_member_ids(channel_id)
         await invalidate_visible_sets_for_user(organization_id, user_id)
 
+        await kick_user_from_active_call(self.session, channel_id, user_id)
+
         await self._publish_member_event(channel_id, user_id, joined=False)
         await self._refresh_channel_live_state(channel)
 
@@ -1006,6 +1021,9 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 if removed_id is not None:
                     await invalidate_visible_sets_for_user(
                         organization_id, removed_id
+                    )
+                    await kick_user_from_active_call(
+                        self.session, channel_id, removed_id
                     )
 
             await self._publish_members_changed(
@@ -1788,9 +1806,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
             await invalidate_cached_member_ids(channel_id)
 
+            removed_user_ids = [sid for (t, sid) in removable if t == SubjectType.USER]
+            for removed_user_id in removed_user_ids:
+                await kick_user_from_active_call(self.session, channel_id, removed_user_id)
+
             await self._publish_members_changed(
                 channel_id,
-                [sid for (t, sid) in removable if t == SubjectType.USER],
+                removed_user_ids,
                 added=False,
             )
 

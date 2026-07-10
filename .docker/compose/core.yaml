@@ -117,7 +117,11 @@ configs:
         tcp_port: 7881
         udp_port: 7882
         use_external_ip: false
-        enable_loopback_candidate: true
+        # No loopback candidate: it makes pion bind a second 7882 socket on
+        # container lo, and with --node-ip both sockets advertise the same
+        # address - ICE then sends from the unroutable loopback socket and
+        # ignores inbound checks on the eth0 socket. Docker DNAT delivers to
+        # the container IP in every dev mode, so loopback is never needed.
 
       keys:
         devkey: devsecret-change-me-in-prod-32chars-min

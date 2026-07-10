@@ -49,6 +49,8 @@ import { chatThreadsReducer } from '@/features/chat/store/chatThreadsSlice';
 import { chatUiReducer } from '@/features/chat/store/chatUiSlice';
 import { tagsReducer } from '@/features/tags/store/tagsSlice';
 import { recordingReducer } from '@/features/recording';
+import { callsReducer } from '@/features/calls/store/callsSlice';
+import { callPreferencesReducer } from '@/features/calls/store/callPreferencesSlice';
 
 /** Access tokens live in memory only to reduce XSS surface; refresh token recovers them on reload. */
 const authSecurityTransform = createTransform(
@@ -197,6 +199,8 @@ const rootReducer = combineReducers({
   chatUi: chatUiReducer,
   tags: tagsReducer,
   recording: recordingReducer,
+  calls: callsReducer,
+  callPreferences: callPreferencesReducer,
 });
 
 const migrations: MigrationManifest = {
@@ -245,7 +249,7 @@ const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: 'root',
   version: 3,
   storage,
-  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi', 'chatUi', 'recording'],
+  whitelist: ['auth', 'theme', 'editor', 'calendarUi', 'projectsUi', 'agentsUi', 'chatUi', 'recording', 'callPreferences'],
   transforms: [authSecurityTransform, calendarUiTransform, projectsUiTransform, agentsUiTransform, recordingTransform],
   migrate: createMigrate(migrations, { debug: false }),
 };

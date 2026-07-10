@@ -19,7 +19,7 @@ const ACCENT_COLORS = [
 
 function hslToHex(hsl: string): string {
     const parts = hsl.split(' ');
-    if (parts.length !== 3) return '#3c83f5';
+    if (parts.length !== 3) return '#684aff';
 
     const h = parseFloat(parts[0]) / 360;
     const s = parseFloat(parts[1]) / 100;
@@ -224,7 +224,7 @@ export function AppearanceSection() {
                     <div className="relative">
                         <input
                             type="color"
-                            value={appearance.accentColor ? hslToHex(appearance.accentColor) : '#3c83f5'}
+                            value={appearance.accentColor ? hslToHex(appearance.accentColor) : '#684aff'}
                             onChange={(e) => handleAccentColorChange(hexToHsl(e.target.value))}
                             disabled={saving}
                             className="w-16 h-16 rounded-xl cursor-pointer bg-transparent p-1 transition-colors"

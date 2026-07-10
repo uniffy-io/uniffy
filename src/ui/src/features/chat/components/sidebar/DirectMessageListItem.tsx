@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { SpeakerSlash, PencilSimple } from '@phosphor-icons/react';
+import { ChannelCallIndicator } from '@/features/calls/components/ChannelCallIndicator';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { type ChatChannel } from '@/features/chat/types';
@@ -145,6 +146,8 @@ export function DirectMessageListItem({
               compact
             />
           )}
+
+          <ChannelCallIndicator channelId={channel.id} />
 
           {isMuted && (
             <SpeakerSlash size={12} className="shrink-0 text-muted-foreground/50" />

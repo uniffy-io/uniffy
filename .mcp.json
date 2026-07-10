@@ -1,12 +1,12 @@
 {
-  "mcpServers": {
-    "playwright": {
-      "type": "sse",
-      "url": "http://localhost:8931/sse"
-    },
-    "playwright-b": {
-      "type": "sse",
-      "url": "http://localhost:8932/sse"
+    "mcpServers": {
+        "playwright": {
+            "type": "sse",
+            "url": "http://localhost:8931/sse"
+        },
+        "playwright-b": {
+            "type": "sse",
+            "url": "http://localhost:8932/sse"
+        }
     }
-  }
 }

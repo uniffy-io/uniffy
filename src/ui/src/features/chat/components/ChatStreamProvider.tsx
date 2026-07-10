@@ -28,6 +28,8 @@ import { updateChannel, incrementUnreadCount, addChannel, removeChannel } from '
 import { chatApi } from '@/features/chat/api/chatApi';
 import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
 import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
+import { handleCallStreamEvent } from '@/features/calls/streamHandlers';
+import { syncActiveCalls } from '@/features/calls/store/callsThunks';
 import type { AppDispatch } from '@/app/store';
 import type { StreamUserChatEventsResponse } from '@uniffy/proto/chat/v1/chat_stream_pb';
 
@@ -48,6 +50,8 @@ function handleChannelEvent(
   if (event.payload.case !== 'channelEvent' || !event.payload.value) return;
   const ce = event.payload.value;
   const channelId = ce.channelId;
+
+  if (handleCallStreamEvent(ce, dispatch)) return;
 
   // Member events apply globally, not just the active channel.
   if (ce.eventType === ChatEventType.MEMBER_JOINED) {
@@ -364,16 +368,31 @@ function usePersistentChatStream() {
         controller = new AbortController();
         _activeController = controller;
 
+        let sawEvent = false;
         try {
           const stream = chatStreamApi.streamUserChatEvents(
             { organizationId: organizationId! },
             controller.signal,
           );
 
-          backoff = INITIAL_BACKOFF_MS;
+          // The stream is a latency optimization, not the source of truth:
+          // events published while disconnected are gone. Resync call state on
+          // every (re)connect (keeps initial load and reconnect recovery prompt);
+          // the thunk swallows its own failures. The escalating backoff below
+          // bounds this to one sync per connect attempt during an outage.
+          void dispatch(syncActiveCalls());
 
           for await (const event of stream) {
             if (!mounted) break;
+
+            if (!sawEvent) {
+              // Reset the backoff only once the stream actually delivers an event
+              // (a real event or the 30s heartbeat). An open-then-drop connection
+              // - HTTP up, pub/sub down - never reaches here, so it keeps
+              // escalating instead of resetting to 1s and looping ListActiveCalls.
+              sawEvent = true;
+              backoff = INITIAL_BACKOFF_MS;
+            }
 
             switch (event.eventType) {
               case UserChatEventType.UNREAD_COUNT_CHANGED: {

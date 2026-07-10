@@ -169,6 +169,13 @@ class Action:
     CHAT_CHANNEL_MEMBER_KICKED = "chat_channel.member_kicked"
     CHAT_MESSAGE_DELETED_BY_ADMIN = "chat_message.deleted_by_admin"
 
+    # Calls (join/leave stay unaudited - calls_participants is the durable
+    # attendance record; the audit log carries lifecycle + moderation only)
+    CALL_STARTED = "call.started"
+    CALL_ENDED = "call.ended"
+    CALL_PARTICIPANT_KICKED = "call.participant_kicked"
+    CALL_PARTICIPANT_MUTED = "call.participant_muted"
+
     # Mail
     MAIL_SENT = "mail.sent"
     MAIL_SEND_FAILED = "mail.send_failed"

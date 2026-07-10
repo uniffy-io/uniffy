@@ -27,6 +27,7 @@ from uniffy_proto.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy_proto.auth.v1.mfa_connect import MfaServiceASGIApplication
 from uniffy_proto.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy_proto.cal.v1.calendar_connect import CalendarServiceASGIApplication
+from uniffy_proto.calls.v1.calls_connect import CallServiceASGIApplication
 from uniffy_proto.chat.v1.chat_connect import ChatServiceASGIApplication
 from uniffy_proto.chat.v1.chat_stream_connect import ChatStreamServiceASGIApplication
 from uniffy_proto.comments.v1.comments_connect import CommentsServiceASGIApplication
@@ -87,6 +88,7 @@ from uniffy.core.valkey import (
     init_streams_client,
     signal_pubsub_shutdown,
 )
+from uniffy.core.webhooks import register_webhook_provider, webhooks_router
 from uniffy.db import close_db, init_db, open_session, seed_initial_data
 from uniffy.domains.agents.agents.http_routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
@@ -109,6 +111,9 @@ from uniffy.domains.auth.mfa.service import MfaServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calendar.service import CalendarServiceImpl
+from uniffy.domains.calls.config import LiveKitConfigError
+from uniffy.domains.calls.service import CallServiceImpl
+from uniffy.domains.calls.webhook import LiveKitWebhookProvider
 from uniffy.domains.chat.service import ChatServiceImpl
 from uniffy.domains.chat.streaming.service import ChatStreamServiceImpl
 from uniffy.domains.comments.service import CommentsServiceImpl
@@ -266,7 +271,7 @@ def _get_cors_origins() -> list[str]:
     environment = os.getenv("ENVIRONMENT", "development").lower()
     if not raw:
         if environment == "development":
-            return ["http://localhost:5173", "http://localhost:3000"]
+            return ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"]
         raise RuntimeError(
             "CORS_ORIGINS must be set to an explicit comma-separated list "
             "outside development (e.g. https://app.example.com)"
@@ -350,9 +355,7 @@ async def lifespan(app: FastAPI):
     try:
         await subscribe_deployment_dek_invalidations()
     except Exception as e:
-        logger.warning(
-            f"Deployment DEK invalidation subscriber not available: {e}"
-        )
+        logger.warning(f"Deployment DEK invalidation subscriber not available: {e}")
 
     try:
         from uniffy.core.realtime import ydoc_manager as _rt_manager  # noqa: F401
@@ -435,6 +438,14 @@ def create_app() -> FastAPI:
     api_dispatcher = _create_api_dispatcher()
     app.mount("/api", api_dispatcher)
 
+    # Signature-verified inbound webhooks; reached directly on the internal
+    # network, never proxied by the edge.
+    try:
+        register_webhook_provider("livekit", LiveKitWebhookProvider())
+    except LiveKitConfigError as exc:
+        logger.warning(f"LiveKit not configured, calls disabled: {exc}")
+    app.include_router(webhooks_router)
+
     @app.get("/healthz")
     async def health_check():
         return {"status": "ok", "service": "uniffy"}
@@ -494,9 +505,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         "/chat.v1.ChatStreamService",
         StreamDisconnectMiddleware(
             StreamRevokeWatchMiddleware(
-                ChatStreamServiceASGIApplication(
-                    ChatStreamServiceImpl(), interceptors=interceptors
-                )
+                ChatStreamServiceASGIApplication(ChatStreamServiceImpl(), interceptors=interceptors)
             )
         ),
     )
@@ -514,9 +523,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/organizations.v1.OrganizationsService",
-        OrganizationsServiceASGIApplication(
-            OrganizationsServiceImpl(), interceptors=interceptors
-        ),
+        OrganizationsServiceASGIApplication(OrganizationsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/groups.v1.GroupsService",
@@ -536,15 +543,11 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/mail.v1.OrgMailService",
-        OrgMailServiceASGIApplication(
-            OrgMailServiceImpl(), interceptors=interceptors
-        ),
+        OrgMailServiceASGIApplication(OrgMailServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemMailService",
-        SystemMailServiceASGIApplication(
-            SystemMailServiceImpl(), interceptors=interceptors
-        ),
+        SystemMailServiceASGIApplication(SystemMailServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemEncryptionService",
@@ -554,9 +557,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemConfigService",
-        SystemConfigServiceASGIApplication(
-            SystemConfigServiceImpl(), interceptors=interceptors
-        ),
+        SystemConfigServiceASGIApplication(SystemConfigServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemOrganizationsService",
@@ -566,21 +567,15 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/superadmin.v1.SystemUsersService",
-        SystemUsersServiceASGIApplication(
-            SystemUsersServiceImpl(), interceptors=interceptors
-        ),
+        SystemUsersServiceASGIApplication(SystemUsersServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/superadmin.v1.SupportService",
-        SupportServiceASGIApplication(
-            SupportServiceImpl(), interceptors=interceptors
-        ),
+        SupportServiceASGIApplication(SupportServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/superadmin.v1.PlatformAuditService",
-        PlatformAuditServiceASGIApplication(
-            PlatformAuditServiceImpl(), interceptors=interceptors
-        ),
+        PlatformAuditServiceASGIApplication(PlatformAuditServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/comments.v1.CommentsService",
@@ -603,6 +598,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/rooms.v1.RoomsService",
         RoomsServiceASGIApplication(RoomsServiceImpl(), interceptors=interceptors),
+    )
+    dispatcher.add_service(
+        "/calls.v1.CallService",
+        CallServiceASGIApplication(CallServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.ProvidersService",
@@ -638,9 +637,7 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     )
     dispatcher.add_service(
         "/agents.v1.RateLimitsService",
-        RateLimitsServiceASGIApplication(
-            RateLimitsServiceImpl(), interceptors=interceptors
-        ),
+        RateLimitsServiceASGIApplication(RateLimitsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.RuntimeService",

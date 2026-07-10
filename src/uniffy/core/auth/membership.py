@@ -13,6 +13,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.valkey.cache import CACHE_MISS, cache_get, cache_set
 
@@ -23,41 +24,53 @@ def _membership_cache_key(user_id: UUID, organization_id: UUID) -> str:
     return f"auth:membership:{user_id}:{organization_id}"
 
 
+async def _load_active(
+    session: AsyncSession, user_id: UUID, organization_id: UUID
+) -> bool:
+    from uniffy.core.models.login.organization import Organization
+    from uniffy.core.models.login.organization_member import OrganizationMember
+
+    org = (
+        await session.execute(
+            select(Organization).where(Organization.id == organization_id)
+        )
+    ).scalar_one_or_none()
+    if not org or org.deleted_at is not None or org.is_suspended:
+        return False
+    membership = (
+        await session.execute(
+            select(OrganizationMember).where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+            )
+        )
+    ).scalar_one_or_none()
+    return bool(membership and membership.is_active)
+
+
 async def is_active_member(
     user_id: UUID,
     organization_id: UUID,
+    session: AsyncSession | None = None,
 ) -> bool:
     """Return True if the user is still an active member of the org.
 
     Reads through a 30s Valkey cache; falls through to PG on cache miss
-    (and on any cache fault since the ops tier fails fast).
+    (and on any cache fault since the ops tier fails fast). Callers that
+    already hold a session pass it in; otherwise one is opened.
     """
     key = _membership_cache_key(user_id, organization_id)
     cached = await cache_get(key)
     if cached is not CACHE_MISS:
         return bool(cached and cached.get("active"))
 
-    from uniffy.core.models.login.organization import Organization
-    from uniffy.core.models.login.organization_member import OrganizationMember
-    from uniffy.db import open_session
+    if session is not None:
+        active = await _load_active(session, user_id, organization_id)
+    else:
+        from uniffy.db import open_session
 
-    active = False
-    async with open_session() as session:
-        org = (
-            await session.execute(
-                select(Organization).where(Organization.id == organization_id)
-            )
-        ).scalar_one_or_none()
-        if org and org.deleted_at is None and not org.is_suspended:
-            membership = (
-                await session.execute(
-                    select(OrganizationMember).where(
-                        OrganizationMember.user_id == user_id,
-                        OrganizationMember.organization_id == organization_id,
-                    )
-                )
-            ).scalar_one_or_none()
-            active = bool(membership and membership.is_active)
+        async with open_session() as owned:
+            active = await _load_active(owned, user_id, organization_id)
 
     await cache_set(key, {"active": active}, ttl=MEMBERSHIP_CACHE_TTL)
     return active

@@ -11,6 +11,7 @@ import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearE
 import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
 import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
+import { CallSection } from '@/features/calls/components/CallView';
 
 const TYPING_THROTTLE_MS = 3000;
 
@@ -149,6 +150,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
       data-channel-id={effectiveChannelId ?? ''}
     >
       <ChannelHeader channelId={effectiveChannelId ?? undefined} showCloseButton={showCloseButton} onClose={onClose} />
+      {effectiveChannelId && <CallSection channelId={effectiveChannelId} />}
       <MessageList channelId={effectiveChannelId ?? undefined} />
       <MessageCompose
         channelName={channelDisplayName}

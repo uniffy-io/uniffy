@@ -75,7 +75,7 @@ export default defineConfig(({ command, mode }) => {
   server: {
     host: '0.0.0.0',
     port: 5173,
-    allowedHosts: ["dev.local.uniffy.io", "localhost", "host.docker.internal"],
+    allowedHosts: ["localhost", "host.docker.internal"],
     proxy: {
       '/api/realtime': {
         target: process.env.API_PROXY_TARGET || 'http://localhost:8000',

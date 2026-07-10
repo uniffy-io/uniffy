@@ -28,6 +28,7 @@ import { clearComments } from '@/features/comments';
 import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
 import { clearAgentMessages } from '@/features/agents/store/agentMessagesSlice';
 import { clearTags } from '@/features/tags/store/tagsSlice';
+import { clearCalls } from '@/features/calls/store/callsSlice';
 import { clearMemoryAccessToken } from '@/config/api';
 import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
@@ -121,6 +122,7 @@ export function UserMenu() {
         dispatch(clearChatUi());
         dispatch(clearAgentMessages());
         dispatch(clearTags());
+        dispatch(clearCalls());
         clearNotesCache().catch(console.error);
         clearBlobCache();
         navigate('/auth');

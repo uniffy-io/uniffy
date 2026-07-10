@@ -14,6 +14,8 @@ import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { StreamingProvider } from '@/components/streaming/StreamingProvider';
 import { FileViewerModal } from '@/features/files';
 import { UploadTray } from '@/features/files/components/upload/UploadTray';
+import { CallProvider } from '@/features/calls/components/CallProvider';
+import { CallDock } from '@/features/calls/components/CallDock';
 import { UploadBoot } from '@/features/files/components/upload/UploadBoot';
 import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { PageLoader } from '@/components/feedback/PageLoader';
@@ -209,6 +211,11 @@ export function App() {
                         Mounted outside Routes so uploads survive navigation across every domain. */}
                     <UploadBoot />
                     <UploadTray />
+
+                    <CallProvider>
+                    {/* Global call chrome: bottom strip, ringing toasts, pre-join, room audio.
+                        Inside the router because the strip navigates back to the call channel. */}
+                    <CallDock />
 
                     <AccessPolicyDialogProvider>
                     <AccessPolicyDialog />
@@ -611,6 +618,7 @@ export function App() {
                     </Routes>
                     </MentionStateProvider>
                     </AccessPolicyDialogProvider>
+                    </CallProvider>
                 </BrowserRouter>
             </ErrorBoundary>
         </AuthInitializer>

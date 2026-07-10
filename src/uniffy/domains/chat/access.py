@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.cache import get_or_load_org_admin
+from uniffy.core.auth.membership import is_active_member
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
@@ -23,6 +24,7 @@ class ChatAccessChecker:
         self._membership_cache: dict[tuple[UUID, SubjectType, UUID], ChatChannelMember | None] = {}
         self._org_admin_cache: dict[tuple[UUID, UUID], bool] = {}
         self._domain_admin_cache: dict[tuple[UUID, UUID], bool] = {}
+        self._org_member_cache: dict[tuple[UUID, UUID], bool] = {}
 
     async def get_channel(self, channel_id: UUID, organization_id: UUID) -> ChatChannel:
         """Fetch channel via L0 request cache -> L1 Valkey (stampede-protected) -> PG."""
@@ -95,6 +97,14 @@ class ChatAccessChecker:
         self._domain_admin_cache[key] = result
         return result
 
+    async def is_org_member(self, user_id: UUID, organization_id: UUID) -> bool:
+        key = (user_id, organization_id)
+        if key in self._org_member_cache:
+            return self._org_member_cache[key]
+        result = await is_active_member(user_id, organization_id, session=self.session)
+        self._org_member_cache[key] = result
+        return result
+
     async def check_access(
         self,
         user_id: UUID,
@@ -106,7 +116,11 @@ class ChatAccessChecker:
         if await self.is_chat_domain_admin(user_id, organization_id):
             return
         if channel.channel_type == ChannelType.PUBLIC:
-            return
+            # Open to the org means the org, not any authenticated user:
+            # the request org id is caller-supplied, so membership is the gate.
+            if await self.is_org_member(user_id, organization_id):
+                return
+            raise PermissionDeniedError("access", "channel")
         member = await self.get_membership(channel.id, user_id)
         if not member:
             raise PermissionDeniedError("access", "channel")

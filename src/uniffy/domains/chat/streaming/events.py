@@ -24,6 +24,14 @@ AGENT_TOOL_CALL = "agent_tool_call"
 AGENT_CONFIRMATION_REQUESTED = "agent_confirmation_requested"
 AGENT_CONFIRMATION_RESOLVED = "agent_confirmation_resolved"
 
+CALL_STARTED = "call_started"
+CALL_ENDED = "call_ended"
+CALL_PARTICIPANT_JOINED = "call_participant_joined"
+CALL_PARTICIPANT_LEFT = "call_participant_left"
+CALL_PARTICIPANT_STATE = "call_participant_state"
+CALL_RING = "call_ring"
+CALL_HOST_CHANGED = "call_host_changed"
+
 UNREAD_COUNT_CHANGED = "unread_count_changed"
 THREAD_ACTIVITY = "thread_activity"
 MENTION_RECEIVED = "mention_received"
@@ -211,6 +219,50 @@ def build_agent_confirmation_resolved_payload(
         "decision": decision,
         "decided_by_user_id": str(decided_by_user_id),
         "decided_at": decided_at.isoformat(),
+    }
+
+
+def build_call_lifecycle_payload(call: dict[str, Any]) -> dict[str, Any]:
+    """CALL_STARTED / CALL_ENDED; `call` is the snapshot dict from calls converters."""
+    return {"call": call}
+
+
+def build_call_participant_payload(
+    call_id: UUID,
+    participant: dict[str, Any],
+    active_participant_count: int,
+) -> dict[str, Any]:
+    return {
+        "call_id": str(call_id),
+        "participant": participant,
+        "active_participant_count": active_participant_count,
+    }
+
+
+def build_call_ring_payload(
+    call_id: UUID,
+    channel_name: str,
+    call_type: str,
+    caller_user_id: UUID,
+    caller_name: str,
+    caller_avatar_url: str | None,
+    expires_at: datetime,
+) -> dict[str, Any]:
+    return {
+        "call_id": str(call_id),
+        "channel_name": channel_name,
+        "call_type": call_type,
+        "caller_user_id": str(caller_user_id),
+        "caller_name": caller_name,
+        "caller_avatar_url": caller_avatar_url or "",
+        "expires_at": expires_at.isoformat(),
+    }
+
+
+def build_call_host_changed_payload(call_id: UUID, new_host_user_id: UUID) -> dict[str, Any]:
+    return {
+        "call_id": str(call_id),
+        "new_host_user_id": str(new_host_user_id),
     }
 
 

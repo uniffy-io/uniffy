@@ -9,6 +9,18 @@ from datetime import UTC, datetime
 from connectrpc.request import RequestContext
 from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
+from uniffy_proto.calls.v1.calls_pb2 import (
+    Call as ProtoCall,
+)
+from uniffy_proto.calls.v1.calls_pb2 import (
+    CallEndReason as ProtoCallEndReason,
+)
+from uniffy_proto.calls.v1.calls_pb2 import (
+    CallParticipant as ProtoCallParticipant,
+)
+from uniffy_proto.calls.v1.calls_pb2 import (
+    CallType as ProtoCallType,
+)
 from uniffy_proto.chat.v1.chat_pb2 import AgentConfirmationDecision
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatChannel as ProtoChatChannel,
@@ -25,6 +37,10 @@ from uniffy_proto.chat.v1.chat_stream_pb2 import (
     AgentTokenDeltaPayload,
     AgentToolCallPayload,
     AgentTypingPayload,
+    CallHostChangedPayload,
+    CallLifecyclePayload,
+    CallParticipantEventPayload,
+    CallRingPayload,
     ChatEvent,
     ChatEventType,
     MemberPayload,
@@ -292,7 +308,139 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             event.agent_confirmation_resolved.decided_at.CopyFrom(ts)
         return event
 
+    if event_type == evt.CALL_STARTED or event_type == evt.CALL_ENDED:
+        is_started = event_type == evt.CALL_STARTED
+        return ChatEvent(
+            event_type=(
+                ChatEventType.CHAT_EVENT_TYPE_CALL_STARTED
+                if is_started
+                else ChatEventType.CHAT_EVENT_TYPE_CALL_ENDED
+            ),
+            timestamp=_now_ts(),
+            channel_id=cid,
+            call_lifecycle=CallLifecyclePayload(
+                call=_build_call_proto(payload.get("call") or {}),
+            ),
+        )
+
+    if event_type in (
+        evt.CALL_PARTICIPANT_JOINED,
+        evt.CALL_PARTICIPANT_LEFT,
+        evt.CALL_PARTICIPANT_STATE,
+    ):
+        call_event_types = {
+            evt.CALL_PARTICIPANT_JOINED: ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_JOINED,
+            evt.CALL_PARTICIPANT_LEFT: ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_LEFT,
+            evt.CALL_PARTICIPANT_STATE: ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE,
+        }
+        return ChatEvent(
+            event_type=call_event_types[event_type],
+            timestamp=_now_ts(),
+            channel_id=cid,
+            call_participant=CallParticipantEventPayload(
+                call_id=payload.get("call_id", ""),
+                participant=_build_call_participant_proto(payload.get("participant") or {}),
+                active_participant_count=int(payload.get("active_participant_count", 0)),
+            ),
+        )
+
+    if event_type == evt.CALL_RING:
+        event = ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_CALL_RING,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            call_ring=CallRingPayload(
+                call_id=payload.get("call_id", ""),
+                channel_name=payload.get("channel_name", ""),
+                call_type=_CALL_TYPE_STR_TO_PROTO.get(
+                    payload.get("call_type", ""), ProtoCallType.CALL_TYPE_UNSPECIFIED
+                ),
+                caller_user_id=payload.get("caller_user_id", ""),
+                caller_name=payload.get("caller_name", ""),
+                caller_avatar_url=payload.get("caller_avatar_url") or "",
+            ),
+        )
+        if payload.get("expires_at"):
+            ts = Timestamp()
+            ts.FromDatetime(datetime.fromisoformat(payload["expires_at"]))
+            event.call_ring.expires_at.CopyFrom(ts)
+        return event
+
+    if event_type == evt.CALL_HOST_CHANGED:
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_CALL_HOST_CHANGED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            call_host_changed=CallHostChangedPayload(
+                call_id=payload.get("call_id", ""),
+                new_host_user_id=payload.get("new_host_user_id", ""),
+            ),
+        )
+
     return None
+
+
+_CALL_TYPE_STR_TO_PROTO = {
+    "DIRECT": ProtoCallType.CALL_TYPE_DIRECT,
+    "GROUP_DM": ProtoCallType.CALL_TYPE_GROUP_DM,
+    "CHANNEL": ProtoCallType.CALL_TYPE_CHANNEL,
+}
+
+_CALL_END_REASON_STR_TO_PROTO = {
+    "HOST_ENDED": ProtoCallEndReason.CALL_END_REASON_HOST_ENDED,
+    "ALL_LEFT": ProtoCallEndReason.CALL_END_REASON_ALL_LEFT,
+    "MAX_DURATION": ProtoCallEndReason.CALL_END_REASON_MAX_DURATION,
+    "SOLO_TIMEOUT": ProtoCallEndReason.CALL_END_REASON_SOLO_TIMEOUT,
+    "CHANNEL_ARCHIVED": ProtoCallEndReason.CALL_END_REASON_CHANNEL_ARCHIVED,
+}
+
+
+def _build_call_participant_proto(participant: dict) -> ProtoCallParticipant:
+    proto = ProtoCallParticipant(
+        user_id=participant.get("user_id", ""),
+        device_id=participant.get("device_id", ""),
+        identity=participant.get("identity", ""),
+        display_name=participant.get("display_name", ""),
+        avatar_url=participant.get("avatar_url") or "",
+        device_label=participant.get("device_label") or "",
+        mic_enabled=bool(participant.get("mic_enabled", True)),
+        camera_enabled=bool(participant.get("camera_enabled", False)),
+        screen_sharing=bool(participant.get("screen_sharing", False)),
+    )
+    if participant.get("joined_at"):
+        ts = Timestamp()
+        ts.FromDatetime(datetime.fromisoformat(participant["joined_at"]))
+        proto.joined_at.CopyFrom(ts)
+    return proto
+
+
+def _build_call_proto(call: dict) -> ProtoCall:
+    proto = ProtoCall(
+        id=call.get("call_id", ""),
+        organization_id=call.get("organization_id", ""),
+        channel_id=call.get("channel_id", ""),
+        call_type=_CALL_TYPE_STR_TO_PROTO.get(
+            call.get("call_type", ""), ProtoCallType.CALL_TYPE_UNSPECIFIED
+        ),
+        initiator_user_id=call.get("initiator_user_id", ""),
+        host_user_id=call.get("host_user_id", ""),
+        participants=[
+            _build_call_participant_proto(p) for p in call.get("participants", [])
+        ],
+    )
+    if call.get("started_at"):
+        ts = Timestamp()
+        ts.FromDatetime(datetime.fromisoformat(call["started_at"]))
+        proto.started_at.CopyFrom(ts)
+    if call.get("ended_at"):
+        ts = Timestamp()
+        ts.FromDatetime(datetime.fromisoformat(call["ended_at"]))
+        proto.ended_at.CopyFrom(ts)
+    if call.get("end_reason"):
+        proto.end_reason = _CALL_END_REASON_STR_TO_PROTO.get(
+            call["end_reason"], ProtoCallEndReason.CALL_END_REASON_UNSPECIFIED
+        )
+    return proto
 
 
 _SENDER_TYPE_STR_TO_PROTO = {
@@ -420,6 +568,13 @@ _CHANNEL_EVENT_TYPES = {
     evt.AGENT_TOOL_CALL,
     evt.AGENT_CONFIRMATION_REQUESTED,
     evt.AGENT_CONFIRMATION_RESOLVED,
+    evt.CALL_STARTED,
+    evt.CALL_ENDED,
+    evt.CALL_PARTICIPANT_JOINED,
+    evt.CALL_PARTICIPANT_LEFT,
+    evt.CALL_PARTICIPANT_STATE,
+    evt.CALL_RING,
+    evt.CALL_HOST_CHANGED,
 }
 
 

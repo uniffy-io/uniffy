@@ -167,27 +167,27 @@
 
 /* Default values (fallback) - Light theme */
 :root {
-  --primary: 217 91% 50%;
+  --primary: 250 100% 64.5%;
   --primary-foreground: 210 40% 98%;
-  --background: 220 20% 99%;
-  --foreground: 222 47% 11%;
-  --muted: 220 14% 93%;
-  --muted-foreground: 220 10% 42%;
-  --accent: 220 14% 94%;
-  --accent-foreground: 222 47% 11%;
-  --card: 220 16% 96%;
-  --card-foreground: 222 47% 11%;
-  --border: 220 12% 86%;
-  --input: 220 14% 91%;
-  --ring: 217 91% 50%;
-  --chat-user: 220 14% 92%;
-  --chat-user-foreground: 222 47% 11%;
+  --background: 0 0% 94.9%;
+  --foreground: 0 0% 11%;
+  --muted: 0 0% 92%;
+  --muted-foreground: 0 0% 42%;
+  --accent: 0 0% 93%;
+  --accent-foreground: 0 0% 11%;
+  --card: 0 0% 98%;
+  --card-foreground: 0 0% 11%;
+  --border: 0 0% 85%;
+  --input: 0 0% 91%;
+  --ring: 250 100% 64.5%;
+  --chat-user: 0 0% 92%;
+  --chat-user-foreground: 0 0% 11%;
 }
 
 .dark {
-  --primary: 217 91% 60%;
+  --primary: 250 100% 64.5%;
   --primary-foreground: 210 40% 98%;
-  --background: 215 28% 7%;
+  --background: 223.3 40.9% 8.6%;
   --foreground: 210 29% 93%;
   --muted: 215 18% 16%;
   --muted-foreground: 215 10% 65%;
@@ -197,7 +197,7 @@
   --card-foreground: 210 29% 93%;
   --border: 212 12% 21%;
   --input: 215 25% 9%;
-  --ring: 217 91% 58%;
+  --ring: 250 100% 64.5%;
   --chat-user: 215 20% 13%;
   --chat-user-foreground: 210 29% 93%;
 }

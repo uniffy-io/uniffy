@@ -22,6 +22,7 @@ from uniffy.workers.tasks.base import (
     on_job_end,
     on_job_start,
 )
+from uniffy.workers.tasks.calls import cleanup_orphan_call_rooms, reconcile_calls
 from uniffy.workers.tasks.chat_mute import auto_unmute_channels
 from uniffy.workers.tasks.content_extraction import extract_document_content
 from uniffy.workers.tasks.extraction import extract_audio_metadata, extract_image_metadata
@@ -86,6 +87,7 @@ __all__ = [
     "auto_unmute_channels",
     "check_calendar_reminders",
     "check_task_due_dates",
+    "cleanup_orphan_call_rooms",
     "compact_session",
     "core_on_shutdown",
     "core_on_startup",
@@ -110,6 +112,7 @@ __all__ = [
     "process_notification_event",
     "reap_expired_multipart_uploads",
     "recalculate_all_storage_usage",
+    "reconcile_calls",
     "reindex_org_content_for_defaults",
     "reindex_tag_doc",
     "reindex_tag_urns",

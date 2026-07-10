@@ -62,6 +62,7 @@ dependencies = [
   "croniter>=6.0.0",
   "google-genai>=1.20.0",
   "connectrpc>=0.10.0",
+  "pyqwest>=0.6.2",
   # Realtime collaboration (CRDT)
   "pycrdt>=0.13.0",
   "pycrdt-websocket>=0.16.1",

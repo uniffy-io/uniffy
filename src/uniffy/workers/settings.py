@@ -35,6 +35,7 @@ from uniffy.workers.tasks import (
     auto_unmute_channels,
     check_calendar_reminders,
     check_task_due_dates,
+    cleanup_orphan_call_rooms,
     core_on_shutdown,
     core_on_startup,
     egress_on_shutdown,
@@ -47,6 +48,7 @@ from uniffy.workers.tasks import (
     on_job_start,
     reap_expired_multipart_uploads,
     recalculate_all_storage_usage,
+    reconcile_calls,
 )
 
 _redis_settings = ValkeyConfig.from_env().to_arq_redis_settings()
@@ -71,6 +73,8 @@ class CoreWorkerSettings:
         cron(reap_expired_multipart_uploads, minute={0}),
         cron(notify_pending_org_purges, hour=2, minute=15),
         cron(expire_support_sessions, minute=None),
+        cron(reconcile_calls, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
+        cron(cleanup_orphan_call_rooms, minute={30}),
     ]
     on_startup = core_on_startup
     on_shutdown = core_on_shutdown

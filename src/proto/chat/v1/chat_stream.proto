@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package chat.v1;
 
+import "calls/v1/calls.proto";
 import "chat/v1/chat.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -47,6 +48,17 @@ enum ChatEventType {
   CHAT_EVENT_TYPE_AGENT_TOOL_CALL = 15;
   CHAT_EVENT_TYPE_AGENT_CONFIRMATION_REQUESTED = 16;
   CHAT_EVENT_TYPE_AGENT_CONFIRMATION_RESOLVED = 17;
+  // Call lifecycle events. STARTED/ENDED carry the call snapshot;
+  // PARTICIPANT_* fan out per join/leave/state change so the channel
+  // list indicator and in-channel call section stay live without polling.
+  // RING targets only the callees being invited (DMs and small channels).
+  CHAT_EVENT_TYPE_CALL_STARTED = 24;
+  CHAT_EVENT_TYPE_CALL_ENDED = 25;
+  CHAT_EVENT_TYPE_CALL_PARTICIPANT_JOINED = 26;
+  CHAT_EVENT_TYPE_CALL_PARTICIPANT_LEFT = 27;
+  CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE = 28;
+  CHAT_EVENT_TYPE_CALL_RING = 29;
+  CHAT_EVENT_TYPE_CALL_HOST_CHANGED = 30;
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.
@@ -82,6 +94,14 @@ message ChatEvent {
     AgentConfirmationResolvedPayload agent_confirmation_resolved = 21;
     // MEMBERS_ADDED, MEMBERS_REMOVED
     MembersChangedPayload members_changed = 22;
+    // CALL_STARTED, CALL_ENDED
+    CallLifecyclePayload call_lifecycle = 23;
+    // CALL_PARTICIPANT_JOINED, CALL_PARTICIPANT_LEFT, CALL_PARTICIPANT_STATE
+    CallParticipantEventPayload call_participant = 24;
+    // CALL_RING
+    CallRingPayload call_ring = 25;
+    // CALL_HOST_CHANGED
+    CallHostChangedPayload call_host_changed = 26;
   }
 }
 
@@ -195,6 +215,41 @@ message AgentConfirmationResolvedPayload {
   AgentConfirmationDecision decision = 3;
   string decided_by_user_id = 4;
   google.protobuf.Timestamp decided_at = 5;
+}
+
+// CALL EVENT PAYLOADS
+
+// CallLifecyclePayload announces call start and end. The snapshot carries
+// active participants so the channel indicator renders without a follow-up
+// GetActiveCall.
+message CallLifecyclePayload {
+  calls.v1.Call call = 1;
+}
+
+// CallParticipantEventPayload covers join, leave, and mic/camera/screen
+// state changes. `active_participant_count` saves receivers from tracking
+// the roster themselves.
+message CallParticipantEventPayload {
+  string call_id = 1;
+  calls.v1.CallParticipant participant = 2;
+  int32 active_participant_count = 3;
+}
+
+// CallRingPayload invites a specific callee. Fanned out only to users being
+// rung, never the whole channel.
+message CallRingPayload {
+  string call_id = 1;
+  string channel_name = 2;
+  calls.v1.CallType call_type = 3;
+  string caller_user_id = 4;
+  string caller_name = 5;
+  optional string caller_avatar_url = 6;
+  google.protobuf.Timestamp expires_at = 7;
+}
+
+message CallHostChangedPayload {
+  string call_id = 1;
+  string new_host_user_id = 2;
 }
 
 // USER-LEVEL EVENT STREAMING

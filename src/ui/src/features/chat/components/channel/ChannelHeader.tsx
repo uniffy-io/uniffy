@@ -13,6 +13,7 @@ import {
   X,
   LinkSimple,
   Gauge,
+  Phone,
 } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useTagsByIds } from '@/features/tags/store/selectors';
@@ -49,6 +50,11 @@ import { Input } from '@/components/ui/input';
 import { renameAgentChat } from '@/features/chat/store/chatThunks';
 import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
 import { TagChip } from '@/features/tags';
+import {
+  prejoinOpened,
+  selectActiveCallForChannel,
+  selectCallSession,
+} from '@/features/calls/store/callsSlice';
 
 const headerButtonClass = cn(
   'group/btn relative flex items-center justify-center h-7 w-7 rounded-md',
@@ -219,6 +225,13 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
 
   const channelTags = useTagsByIds(activeChannel?.tagIds ?? []);
 
+  const activeCall = useAppSelector((state) =>
+    activeChannel ? selectActiveCallForChannel(state, activeChannel.id) : null,
+  );
+  const callSession = useAppSelector(selectCallSession);
+  const inCallHere =
+    callSession.channelId === activeChannel?.id && callSession.status !== 'idle';
+
   if (!activeChannel) return null;
 
   const isPrivate = activeChannel.channelType === 'PRIVATE';
@@ -304,6 +317,28 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
         <div className="flex-1" />
 
         <div className="flex items-center gap-1.5">
+          {!isAgentDm && !inCallHere && (
+            <button
+              type="button"
+              onClick={() => dispatch(prejoinOpened(activeChannel.id))}
+              className={cn(
+                activeCall ? headerChipClass : headerButtonClass,
+                activeCall &&
+                  'text-emerald-500 border-emerald-500/40 hover:text-emerald-500 hover:border-emerald-500/60',
+              )}
+              aria-label={activeCall ? 'Join live call' : 'Start call'}
+              title={activeCall ? 'Join live call' : 'Start call'}
+              data-testid="chat-channel-call-button"
+              data-state={activeCall ? 'live' : 'idle'}
+            >
+              <Phone size={16} weight={activeCall ? 'fill' : 'regular'} />
+              {activeCall && (
+                <span className="font-medium tabular-nums">
+                  {activeCall.participants.length}
+                </span>
+              )}
+            </button>
+          )}
           {isAgentDm && agent && (
             <button
               type="button"

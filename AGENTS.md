@@ -28,23 +28,6 @@ Every feature must work in BOTH deployment modes. The same codebase ships as:
 
 When a design decision pulls in opposite directions (e.g. "ship Resend SDK for great cloud deliverability" vs "use generic SMTP so self-hosters can plug in Postfix"), pick the option that satisfies both unless one is impossible - then make the more general path the default and gate the specialized path behind a flag. Recent example: we dropped the Resend SDK in favor of SMTP (Resend ships an SMTP relay) so one backend covers every provider on both products.
 
-## Shell dialect / OS and approval guard
-
-- Do NOT use `sed` for file display, line ranges, path cleanup, or simple
-  text preview. Replace `sed -n 'A,Bp' path` with the native `Read` tool
-  using `offset=A` and `limit=B-A+1`.
-- Use native `Read` for file slices, `Grep`/`rg` for search, and `Glob` or
-  `find` for inventory. Do not ask the user to approve `sed` when a native
-  tool can do the read.
-- If a shell command triggers approval only because it used `sed`, cancel
-  it and rerun using `Read`, `Grep`/`rg`, `find`, or shell parameter
-  expansion.
-- `sed` is allowed only when the task is specifically about sed behavior or
-  no native/read-only equivalent exists. Even then, it must be non-mutating:
-  no `-i`, no output redirection to tracked files, no `w`/`e` sed commands,
-  and no shell execution unless the user explicitly authorizes that exact
-  command and scope.
----
 
 ## Commands
 
@@ -86,13 +69,15 @@ Run before committing:
 
 ---
 
-## Plans and Backlogs
-
+## Plans, Backlogs and Reviews
+ 
 All plans and backlogs live in `.claude/plans/`. Use kebab-case filenames.
 
 **Plans** are pre-implementation blueprints. Created once, read during execution.
 
 **Backlogs** are living progress trackers for multi-session work. They track what is done, what is in progress, and what remains so any agent or human can resume where the last session left off.
+
+**Reviews** live in `.claude/reviews/`. They are saved snapshot of a review when you are aksed to do a security, performance, implementation, etc ... review. Always save the review final statement in the reviews folder using kebab-case filenames as well. Respond also with the same saved content to the user at the end of your review
 
 ### When to create a backlog
 
@@ -111,12 +96,16 @@ Create a backlog in `.claude/plans/backlogs/{name}-backlog.md` when the work spa
 - When `/execute` is run on a multi-phase plan, create a companion backlog in `.claude/plans/backlogs/` if one does not exist.
 - Convert relative dates to absolute dates in session notes (e.g., "today" -> "2026-04-12").
 
+### Reviews rules
+
+- A few sentences per finding, with appropriete technical details where it makes sense, like file names, function names, class names, and their lines, etc...
+- The bug / finding should be clearly described with a proposal of how to be fixed which should be strictly checked during your review session, no gueses. 
+
 ---
 
 ## Critical Rules
 
 0. Skip emojis in code, documents, comments, and commit messages - they tend to add noise without clarity.
-0. Prefer a single hyphen (-) in responses; double-hyphens (--) and em-dashes get visually noisy.
 1. Run `./run.sh proto` after editing `.proto` files so generated code stays in sync.
 2. Async patterns are the default in the backend - they compose well with the rest of the stack.
 3. Permission checks belong inside domain operations; that is where the access policy is well-typed.

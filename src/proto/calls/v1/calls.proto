@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+package calls.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/calls/v1;callsv1";
+
+enum CallType {
+  CALL_TYPE_UNSPECIFIED = 0;
+  CALL_TYPE_DIRECT = 1;
+  CALL_TYPE_GROUP_DM = 2;
+  CALL_TYPE_CHANNEL = 3;
+}
+
+enum CallEndReason {
+  CALL_END_REASON_UNSPECIFIED = 0;
+  CALL_END_REASON_HOST_ENDED = 1;
+  CALL_END_REASON_ALL_LEFT = 2;
+  CALL_END_REASON_MAX_DURATION = 3;
+  CALL_END_REASON_SOLO_TIMEOUT = 4;
+  CALL_END_REASON_CHANNEL_ARCHIVED = 5;
+}
+
+// CallService manages call lifecycle. Join-shaped RPCs return `ws_url` +
+// `livekit_token`; media and TURN negotiation happen over LiveKit signaling,
+// so there is no ice_servers field anywhere. `ws_url` is either a path the
+// client resolves against window.location (same-origin edge route) or an
+// absolute ws(s):// override for split-origin deployments.
+service CallService {
+  // Idempotent per channel: if the channel already has an active call the
+  // caller is joined to it instead of a second call being created.
+  rpc InitiateCall(InitiateCallRequest) returns (InitiateCallResponse);
+  rpc JoinCall(JoinCallRequest) returns (JoinCallResponse);
+  rpc LeaveCall(LeaveCallRequest) returns (LeaveCallResponse);
+  // Host or elevated (org admin / chat domain admin) only.
+  rpc EndCall(EndCallRequest) returns (EndCallResponse);
+  // Silent mid-call token rotation before the 6h expiry.
+  rpc RefreshCallToken(RefreshCallTokenRequest) returns (RefreshCallTokenResponse);
+  rpc GetActiveCall(GetActiveCallRequest) returns (GetActiveCallResponse);
+  // Snapshot of active calls across the caller's channels. Clients resync
+  // indicator state from this on stream reconnect; stream events are a
+  // latency optimization, not the source of truth.
+  rpc ListActiveCalls(ListActiveCallsRequest) returns (ListActiveCallsResponse);
+  // Callee declines a ringing invite; no participant row is created.
+  rpc DeclineCall(DeclineCallRequest) returns (DeclineCallResponse);
+  rpc KickParticipant(KickParticipantRequest) returns (KickParticipantResponse);
+  rpc MuteParticipant(MuteParticipantRequest) returns (MuteParticipantResponse);
+  // The client reports its own mic/camera/screen state; this is the roster's
+  // source of truth because LiveKit emits no mute webhook (a muted mic track
+  // stays published, so mute state cannot be inferred server-side). Fans out
+  // CALL_PARTICIPANT_STATE only when a flag actually changed.
+  rpc ReportMediaState(ReportMediaStateRequest) returns (ReportMediaStateResponse);
+}
+
+message Call {
+  string id = 1;
+  string organization_id = 2;
+  string channel_id = 3;
+  CallType call_type = 4;
+  string initiator_user_id = 5;
+  string host_user_id = 6;
+  google.protobuf.Timestamp started_at = 7;
+  optional google.protobuf.Timestamp ended_at = 8;
+  optional CallEndReason end_reason = 9;
+  // Active participants only (left_at unset).
+  repeated CallParticipant participants = 10;
+}
+
+message CallParticipant {
+  string user_id = 1;
+  string device_id = 2;
+  // LiveKit identity: "{user_id}:{device_id}".
+  string identity = 3;
+  string display_name = 4;
+  optional string avatar_url = 5;
+  optional string device_label = 6;
+  google.protobuf.Timestamp joined_at = 7;
+  bool mic_enabled = 8;
+  bool camera_enabled = 9;
+  bool screen_sharing = 10;
+}
+
+message InitiateCallRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Client-generated stable UUID persisted in localStorage.
+  string device_id = 3;
+  optional string device_label = 4;
+}
+
+message InitiateCallResponse {
+  Call call = 1;
+  string ws_url = 2;
+  string livekit_token = 3;
+  // True when an active call already existed and the caller joined it.
+  bool joined_existing = 4;
+}
+
+message JoinCallRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string device_id = 3;
+  optional string device_label = 4;
+}
+
+message JoinCallResponse {
+  Call call = 1;
+  string ws_url = 2;
+  string livekit_token = 3;
+}
+
+message LeaveCallRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string device_id = 3;
+}
+
+message LeaveCallResponse {
+  bool success = 1;
+}
+
+message EndCallRequest {
+  string organization_id = 1;
+  string call_id = 2;
+}
+
+message EndCallResponse {
+  bool success = 1;
+}
+
+message RefreshCallTokenRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string device_id = 3;
+}
+
+message RefreshCallTokenResponse {
+  string livekit_token = 1;
+}
+
+message GetActiveCallRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+}
+
+message GetActiveCallResponse {
+  optional Call call = 1;
+}
+
+message ListActiveCallsRequest {
+  string organization_id = 1;
+}
+
+message ListActiveCallsResponse {
+  repeated Call calls = 1;
+}
+
+message DeclineCallRequest {
+  string organization_id = 1;
+  string call_id = 2;
+}
+
+message DeclineCallResponse {
+  bool success = 1;
+}
+
+message KickParticipantRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string identity = 3;
+}
+
+message KickParticipantResponse {
+  bool success = 1;
+}
+
+message MuteParticipantRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string identity = 3;
+}
+
+message MuteParticipantResponse {
+  bool success = 1;
+}
+
+message ReportMediaStateRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string device_id = 3;
+  bool mic_enabled = 4;
+  bool camera_enabled = 5;
+  bool screen_sharing = 6;
+}
+
+message ReportMediaStateResponse {
+  bool success = 1;
+}

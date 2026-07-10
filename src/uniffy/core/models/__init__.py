@@ -19,6 +19,14 @@ from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
+from uniffy.core.models.calls import (
+    Call,
+    CallEndReason,
+    CallParticipant,
+    CallType,
+    ChannelCallSettings,
+    OrgCallPolicy,
+)
 from uniffy.core.models.chat import (
     ChannelRole,
     ChatChannel,
@@ -207,6 +215,13 @@ __all__ = [
     "ChannelRole",
     "ChatNotificationLevel",
     "SenderType",
+    # Calls
+    "Call",
+    "CallEndReason",
+    "CallParticipant",
+    "CallType",
+    "ChannelCallSettings",
+    "OrgCallPolicy",
     # Tags
     "Tag",
     "TagAssignment",

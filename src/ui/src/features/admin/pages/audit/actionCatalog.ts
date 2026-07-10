@@ -236,6 +236,18 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
         ],
     },
     {
+        domain: 'call',
+        label: 'Calls',
+        badgeClass:
+            'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+        actions: [
+            { value: 'call.started', label: 'Started' },
+            { value: 'call.ended', label: 'Ended' },
+            { value: 'call.participant_kicked', label: 'Participant kicked' },
+            { value: 'call.participant_muted', label: 'Participant muted' },
+        ],
+    },
+    {
         domain: 'mail',
         label: 'Email',
         badgeClass:
@@ -340,4 +352,5 @@ export const RESOURCE_TYPES: readonly { value: string; label: string }[] = [
     { value: 'CHAT_CHANNEL', label: 'Chat channel' },
     { value: 'CHAT_MESSAGE', label: 'Chat message' },
     { value: 'ROOM', label: 'Room' },
+    { value: 'CALL', label: 'Call' },
 ];
