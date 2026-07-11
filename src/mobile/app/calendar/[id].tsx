@@ -17,6 +17,7 @@ import {
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { CommentButton } from "@/components/CommentsSheet";
 import { ShareButton } from "@/components/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -200,7 +201,7 @@ export default function EventDetailScreen() {
         {event.description ? (
           <View style={{ gap: 8 }}>
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>DESCRIPTION</Text>
-            <Text style={[styles.description, { color: T.text }]}>{event.description}</Text>
+            <MarkdownRenderer content={event.description} />
           </View>
         ) : null}
 
@@ -335,7 +336,6 @@ const styles = StyleSheet.create({
   attendeeName: { fontSize: 14, fontFamily: FONT.medium, flex: 1 },
   rsvpBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   rsvpText: { fontSize: 11, fontFamily: FONT.medium },
-  description: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 22 },
   linkedRow: {
     flexDirection: "row",
     alignItems: "center",

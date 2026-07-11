@@ -209,24 +209,28 @@ export function CalendarPicker({
                 return (
                   <TouchableOpacity
                     key={i}
-                    style={[
-                      styles.dayCell,
-                      isSelected && { backgroundColor: accentColor },
-                      isToday && !isSelected && { borderColor: accentColor, borderWidth: 1 },
-                    ]}
+                    style={styles.dayCell}
                     onPress={() => selectDate(cell)}
                     activeOpacity={0.7}
                   >
-                    <Text
+                    <View
                       style={[
-                        styles.dayText,
-                        { color: cell.isCurrentMonth ? T.textBright : T.textDim },
-                        isSelected && { color: "#fff" },
-                        isToday && !isSelected && { color: accentColor },
+                        styles.dayCircle,
+                        isSelected && { backgroundColor: accentColor },
+                        isToday && !isSelected && { borderColor: accentColor, borderWidth: 1 },
                       ]}
                     >
-                      {cell.day}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.dayText,
+                          { color: cell.isCurrentMonth ? T.textBright : T.textDim },
+                          isSelected && { color: "#fff" },
+                          isToday && !isSelected && { color: accentColor },
+                        ]}
+                      >
+                        {cell.day}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -314,7 +318,13 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
+  },
+  dayCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dayText: {
     fontSize: 14,

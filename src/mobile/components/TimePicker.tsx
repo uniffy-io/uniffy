@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   Modal,
   StyleSheet,
@@ -48,17 +49,46 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
   const [hour12, setHour12] = useState(current.hour12);
   const [minute, setMinute] = useState(current.minute);
   const [period, setPeriod] = useState<"AM" | "PM">(current.period);
+  const [typed, setTyped] = useState(value);
 
   const openPicker = () => {
     const c = parse(value);
     setHour12(c.hour12);
     setMinute(c.minute);
     setPeriod(c.period);
+    setTyped(value);
     setOpen(true);
   };
 
+  // Wheels and the text field set the same time; keep the typed value in sync
+  // so either can drive the result (the field allows any exact minute).
+  const setFromWheel = (h12: number, min: number, per: "AM" | "PM") => {
+    setHour12(h12);
+    setMinute(min);
+    setPeriod(per);
+    setTyped(compose(h12, min, per));
+  };
+
+  const onTypeTime = (text: string) => {
+    const digits = text.replace(/\D/g, "").slice(0, 4);
+    const formatted = digits.length > 2 ? `${digits.slice(0, -2)}:${digits.slice(-2)}` : digits;
+    setTyped(formatted);
+    const m = formatted.match(/^(\d{1,2}):(\d{2})$/);
+    if (m && parseInt(m[1], 10) <= 23 && parseInt(m[2], 10) <= 59) {
+      const h = parseInt(m[1], 10);
+      setPeriod(h >= 12 ? "PM" : "AM");
+      setHour12(h % 12 || 12);
+      setMinute(parseInt(m[2], 10));
+    }
+  };
+
   const confirm = () => {
-    onChange(compose(hour12, minute, period));
+    const m = typed.match(/^(\d{1,2}):(\d{2})$/);
+    if (m && parseInt(m[1], 10) <= 23 && parseInt(m[2], 10) <= 59) {
+      onChange(`${m[1].padStart(2, "0")}:${m[2]}`);
+    } else {
+      onChange(compose(hour12, minute, period));
+    }
     setOpen(false);
   };
 
@@ -117,17 +147,29 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
             onPress={(e) => e.stopPropagation()}
           >
             <Text style={[styles.heading, { color: T.textBright }]}>Select time</Text>
+            <TextInput
+              value={typed}
+              onChangeText={onTypeTime}
+              keyboardType="number-pad"
+              placeholder="HH:MM"
+              placeholderTextColor={T.textDim}
+              maxLength={5}
+              style={[
+                styles.typedInput,
+                { color: T.textBright, backgroundColor: T.pageBg, borderColor: T.border },
+              ]}
+            />
             <View style={styles.columns}>
               <Column
                 items={HOURS}
                 selected={hour12}
-                onSelect={setHour12}
+                onSelect={(v) => setFromWheel(v, minute, period)}
                 format={(v) => String(v)}
               />
               <Column
                 items={MINUTES}
                 selected={minute}
-                onSelect={setMinute}
+                onSelect={(v) => setFromWheel(hour12, v, period)}
                 format={(v) => String(v).padStart(2, "0")}
               />
               <View style={styles.periodColumn}>
@@ -137,7 +179,7 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
                     <TouchableOpacity
                       key={p}
                       style={[styles.cell, isSel && { backgroundColor: accent + "22" }]}
-                      onPress={() => setPeriod(p)}
+                      onPress={() => setFromWheel(hour12, minute, p)}
                       activeOpacity={0.7}
                     >
                       <Text
@@ -189,6 +231,16 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   heading: { fontSize: 15, fontFamily: FONT.semibold, textAlign: "center" },
+  typedInput: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 20,
+    fontFamily: FONT.semibold,
+    textAlign: "center",
+    letterSpacing: 2,
+  },
   columns: { flexDirection: "row", gap: 8, height: 200 },
   column: { flex: 1 },
   periodColumn: { width: 64, gap: 4 },
