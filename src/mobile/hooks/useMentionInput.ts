@@ -94,7 +94,10 @@ export function useMentionInput(initialCanonical?: string) {
       setSelection({ start: newPos, end: newPos });
       cursorPosRef.current = newPos;
       clearPendingReference();
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.setSelection(newPos, newPos);
+      }, 50);
     }
   }, [pendingReference]);
 
