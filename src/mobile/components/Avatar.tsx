@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { FONT } from "@/constants/typography";
+import { PresenceDot } from "@/components/PresenceDot";
 
 const GRADIENT_PAIRS: [string, string][] = [
   ["#7C5CFC", "#E64980"],
@@ -39,15 +40,65 @@ type AvatarProps = {
   avatarUrl?: string;
   size?: number;
   accentColor?: string;
+  /** Emoji fallback (agent avatars) - beats initials when there is no image. */
+  emoji?: string;
+  /** Presence status string ("online", "away", ...) - renders a corner dot. */
+  presence?: string | null;
+  presenceRingColor?: string;
 };
 
-export function Avatar({ name, avatarUrl, size = 32, accentColor }: AvatarProps) {
+export function Avatar({
+  name,
+  avatarUrl,
+  size = 32,
+  accentColor,
+  emoji,
+  presence,
+  presenceRingColor,
+}: AvatarProps) {
   const fontSize = size * 0.35;
   const borderRadius = size * 0.25;
+
+  if (presence) {
+    return (
+      <View style={{ width: size, height: size }}>
+        <Avatar
+          name={name}
+          avatarUrl={avatarUrl}
+          size={size}
+          accentColor={accentColor}
+          emoji={emoji}
+        />
+        <PresenceDot
+          status={presence}
+          size={Math.max(10, Math.round(size * 0.3))}
+          ringColor={presenceRingColor}
+        />
+      </View>
+    );
+  }
 
   if (avatarUrl) {
     return (
       <Image source={{ uri: avatarUrl }} style={{ width: size, height: size, borderRadius }} />
+    );
+  }
+
+  if (emoji) {
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            width: size,
+            height: size,
+            borderRadius,
+            backgroundColor: accentColor ? accentColor + "22" : "rgba(128,128,128,0.15)",
+          },
+        ]}
+      >
+        <Text style={{ fontSize: size * 0.55, lineHeight: size }}>{emoji}</Text>
+      </View>
     );
   }
 
