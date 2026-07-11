@@ -14,6 +14,7 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     GetActiveCallRequest,
     GetActiveCallResponse,
     GetOrgCallPolicyRequest,
+    GetOrgCallPolicyResponse,
     InitiateCallRequest,
     InitiateCallResponse,
     JoinCallRequest,
@@ -26,12 +27,12 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     ListActiveCallsResponse,
     MuteParticipantRequest,
     MuteParticipantResponse,
-    OrgCallPolicyResponse,
     RefreshCallTokenRequest,
     RefreshCallTokenResponse,
     ReportMediaStateRequest,
     ReportMediaStateResponse,
     UpdateOrgCallPolicyRequest,
+    UpdateOrgCallPolicyResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -265,7 +266,7 @@ class CallHandlers:
 
     async def get_org_call_policy(
         self, request: GetOrgCallPolicyRequest, ctx: RequestContext
-    ) -> OrgCallPolicyResponse:
+    ) -> GetOrgCallPolicyResponse:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -276,11 +277,11 @@ class CallHandlers:
                 )
             except Exception as exc:
                 raise _map_domain_error("get_org_call_policy", exc) from exc
-        return OrgCallPolicyResponse(policy=org_policy_to_proto(policy))
+        return GetOrgCallPolicyResponse(policy=org_policy_to_proto(policy))
 
     async def update_org_call_policy(
         self, request: UpdateOrgCallPolicyRequest, ctx: RequestContext
-    ) -> OrgCallPolicyResponse:
+    ) -> UpdateOrgCallPolicyResponse:
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
@@ -304,7 +305,7 @@ class CallHandlers:
                 )
             except Exception as exc:
                 raise _map_domain_error("update_org_call_policy", exc) from exc
-        return OrgCallPolicyResponse(policy=org_policy_to_proto(policy))
+        return UpdateOrgCallPolicyResponse(policy=org_policy_to_proto(policy))
 
     async def report_media_state(
         self, request: ReportMediaStateRequest, ctx: RequestContext

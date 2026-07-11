@@ -35,5 +35,8 @@
             "mcp__playwright__*"
         ]
     },
-    "outputStyle": "default"
+  "enabledMcpjsonServers": [
+    "playwright",
+    "playwright-b"
+  ]
 }

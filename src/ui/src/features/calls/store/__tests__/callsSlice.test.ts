@@ -16,6 +16,7 @@ import {
   clearCalls,
 } from '@/features/calls/store/callsSlice';
 import type { CallData, CallParticipantData, RingInvite } from '@/features/calls/types';
+import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
 
 const participant = (over: Partial<CallParticipantData> = {}): CallParticipantData => ({
   userId: 'u1',
@@ -74,7 +75,7 @@ describe('callsSlice', () => {
 
   it('sets endedInfo only when the user was in the ended call', () => {
     let state = callsReducer(init(), callUpserted(call()));
-    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1' }));
+    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1', screenShareQualityCap: ScreenShareQuality.UNSPECIFIED }));
     state = callsReducer(state, sessionConnected());
     state = callsReducer(
       state,
@@ -131,7 +132,7 @@ describe('callsSlice', () => {
     state = callsReducer(state, ringDismissed('call-1'));
     expect(state.ringInvites).toHaveLength(0);
 
-    state = callsReducer(state, sessionConnecting({ callId: 'call-2', channelId: 'chan-2' }));
+    state = callsReducer(state, sessionConnecting({ callId: 'call-2', channelId: 'chan-2', screenShareQualityCap: ScreenShareQuality.UNSPECIFIED }));
     state = callsReducer(state, ringReceived(invite({ callId: 'call-2' })));
     expect(state.ringInvites).toHaveLength(0);
   });
@@ -171,7 +172,7 @@ describe('callsSlice', () => {
 
   it('surfaces endedInfo when the session call vanished from a sync', () => {
     let state = callsReducer(init(), callUpserted(call()));
-    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1' }));
+    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1', screenShareQualityCap: ScreenShareQuality.UNSPECIFIED }));
     state = callsReducer(state, sessionConnected());
 
     state = callsReducer(state, activeCallsSynced([]));
@@ -181,7 +182,7 @@ describe('callsSlice', () => {
 
   it('keeps the session untouched when a sync still contains its call', () => {
     let state = callsReducer(init(), callUpserted(call()));
-    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1' }));
+    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1', screenShareQualityCap: ScreenShareQuality.UNSPECIFIED }));
     state = callsReducer(state, sessionConnected());
 
     state = callsReducer(state, activeCallsSynced([call()]));
@@ -190,7 +191,7 @@ describe('callsSlice', () => {
   });
 
   it('resets the session to idle', () => {
-    let state = callsReducer(init(), sessionConnecting({ callId: 'call-1', channelId: 'chan-1' }));
+    let state = callsReducer(init(), sessionConnecting({ callId: 'call-1', channelId: 'chan-1', screenShareQualityCap: ScreenShareQuality.UNSPECIFIED }));
     state = callsReducer(state, sessionReset());
     expect(state.session.status).toBe('idle');
     expect(state.session.callId).toBeNull();
@@ -198,7 +199,7 @@ describe('callsSlice', () => {
 
   it('wipes every slice field on sign-out', () => {
     let state = callsReducer(init(), callUpserted(call()));
-    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1' }));
+    state = callsReducer(state, sessionConnecting({ callId: 'call-1', channelId: 'chan-1', screenShareQualityCap: ScreenShareQuality.UNSPECIFIED }));
     state = callsReducer(state, sessionConnected());
     state = callsReducer(state, ringReceived(invite({ callId: 'call-9' })));
 

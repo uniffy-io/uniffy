@@ -309,7 +309,7 @@ class GetOrgCallPolicyRequest(_message.Message):
     organization_id: str
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
-class OrgCallPolicyResponse(_message.Message):
+class GetOrgCallPolicyResponse(_message.Message):
     __slots__ = ("policy",)
     POLICY_FIELD_NUMBER: _ClassVar[int]
     policy: OrgCallPolicy
@@ -332,3 +332,9 @@ class UpdateOrgCallPolicyRequest(_message.Message):
     max_screen_share_quality_group: ScreenShareQuality
     max_screen_share_quality_channel: ScreenShareQuality
     def __init__(self, organization_id: _Optional[str] = ..., calls_enabled: _Optional[bool] = ..., max_participants: _Optional[int] = ..., max_duration_minutes: _Optional[int] = ..., max_screen_share_quality_direct: _Optional[_Union[ScreenShareQuality, str]] = ..., max_screen_share_quality_group: _Optional[_Union[ScreenShareQuality, str]] = ..., max_screen_share_quality_channel: _Optional[_Union[ScreenShareQuality, str]] = ...) -> None: ...
+
+class UpdateOrgCallPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: OrgCallPolicy
+    def __init__(self, policy: _Optional[_Union[OrgCallPolicy, _Mapping]] = ...) -> None: ...

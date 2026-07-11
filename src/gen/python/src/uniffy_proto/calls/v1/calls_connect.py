@@ -48,10 +48,10 @@ class CallService(Protocol):
     async def mute_participant(self, request: calls_dot_v1_dot_calls__pb2.MuteParticipantRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.MuteParticipantResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    async def get_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    async def update_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def report_media_state(self, request: calls_dot_v1_dot_calls__pb2.ReportMediaStateRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.ReportMediaStateResponse:
@@ -168,7 +168,7 @@ class CallServiceASGIApplication(ConnectASGIApplication[CallService]):
                         name="GetOrgCallPolicy",
                         service_name="calls.v1.CallService",
                         input=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest,
-                        output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                        output=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_org_call_policy,
@@ -178,7 +178,7 @@ class CallServiceASGIApplication(ConnectASGIApplication[CallService]):
                         name="UpdateOrgCallPolicy",
                         service_name="calls.v1.CallService",
                         input=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest,
-                        output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                        output=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_org_call_policy,
@@ -413,14 +413,14 @@ class CallServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    ) -> calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrgCallPolicy",
                 service_name="calls.v1.CallService",
                 input=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest,
-                output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                output=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -433,14 +433,14 @@ class CallServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    ) -> calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrgCallPolicy",
                 service_name="calls.v1.CallService",
                 input=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest,
-                output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                output=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -492,9 +492,9 @@ class CallServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def mute_participant(self, request: calls_dot_v1_dot_calls__pb2.MuteParticipantRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.MuteParticipantResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    def get_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    def update_org_call_policy(self, request: calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def report_media_state(self, request: calls_dot_v1_dot_calls__pb2.ReportMediaStateRequest, ctx: RequestContext) -> calls_dot_v1_dot_calls__pb2.ReportMediaStateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -609,7 +609,7 @@ class CallServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetOrgCallPolicy",
                         service_name="calls.v1.CallService",
                         input=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest,
-                        output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                        output=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_org_call_policy,
@@ -619,7 +619,7 @@ class CallServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateOrgCallPolicy",
                         service_name="calls.v1.CallService",
                         input=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest,
-                        output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                        output=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_org_call_policy,
@@ -854,14 +854,14 @@ class CallServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    ) -> calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetOrgCallPolicy",
                 service_name="calls.v1.CallService",
                 input=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyRequest,
-                output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                output=calls_dot_v1_dot_calls__pb2.GetOrgCallPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -874,14 +874,14 @@ class CallServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse:
+    ) -> calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateOrgCallPolicy",
                 service_name="calls.v1.CallService",
                 input=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyRequest,
-                output=calls_dot_v1_dot_calls__pb2.OrgCallPolicyResponse,
+                output=calls_dot_v1_dot_calls__pb2.UpdateOrgCallPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

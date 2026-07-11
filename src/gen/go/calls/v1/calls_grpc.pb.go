@@ -64,8 +64,8 @@ type CallServiceClient interface {
 	MuteParticipant(ctx context.Context, in *MuteParticipantRequest, opts ...grpc.CallOption) (*MuteParticipantResponse, error)
 	// Org call policy management. Org admin / owner only; gated on membership
 	// role, not the content permission system (this is an org-level power).
-	GetOrgCallPolicy(ctx context.Context, in *GetOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error)
-	UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error)
+	GetOrgCallPolicy(ctx context.Context, in *GetOrgCallPolicyRequest, opts ...grpc.CallOption) (*GetOrgCallPolicyResponse, error)
+	UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*UpdateOrgCallPolicyResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -181,9 +181,9 @@ func (c *callServiceClient) MuteParticipant(ctx context.Context, in *MutePartici
 	return out, nil
 }
 
-func (c *callServiceClient) GetOrgCallPolicy(ctx context.Context, in *GetOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error) {
+func (c *callServiceClient) GetOrgCallPolicy(ctx context.Context, in *GetOrgCallPolicyRequest, opts ...grpc.CallOption) (*GetOrgCallPolicyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrgCallPolicyResponse)
+	out := new(GetOrgCallPolicyResponse)
 	err := c.cc.Invoke(ctx, CallService_GetOrgCallPolicy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -191,9 +191,9 @@ func (c *callServiceClient) GetOrgCallPolicy(ctx context.Context, in *GetOrgCall
 	return out, nil
 }
 
-func (c *callServiceClient) UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error) {
+func (c *callServiceClient) UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*UpdateOrgCallPolicyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrgCallPolicyResponse)
+	out := new(UpdateOrgCallPolicyResponse)
 	err := c.cc.Invoke(ctx, CallService_UpdateOrgCallPolicy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -241,8 +241,8 @@ type CallServiceServer interface {
 	MuteParticipant(context.Context, *MuteParticipantRequest) (*MuteParticipantResponse, error)
 	// Org call policy management. Org admin / owner only; gated on membership
 	// role, not the content permission system (this is an org-level power).
-	GetOrgCallPolicy(context.Context, *GetOrgCallPolicyRequest) (*OrgCallPolicyResponse, error)
-	UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*OrgCallPolicyResponse, error)
+	GetOrgCallPolicy(context.Context, *GetOrgCallPolicyRequest) (*GetOrgCallPolicyResponse, error)
+	UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*UpdateOrgCallPolicyResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -288,10 +288,10 @@ func (UnimplementedCallServiceServer) KickParticipant(context.Context, *KickPart
 func (UnimplementedCallServiceServer) MuteParticipant(context.Context, *MuteParticipantRequest) (*MuteParticipantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MuteParticipant not implemented")
 }
-func (UnimplementedCallServiceServer) GetOrgCallPolicy(context.Context, *GetOrgCallPolicyRequest) (*OrgCallPolicyResponse, error) {
+func (UnimplementedCallServiceServer) GetOrgCallPolicy(context.Context, *GetOrgCallPolicyRequest) (*GetOrgCallPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrgCallPolicy not implemented")
 }
-func (UnimplementedCallServiceServer) UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*OrgCallPolicyResponse, error) {
+func (UnimplementedCallServiceServer) UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*UpdateOrgCallPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrgCallPolicy not implemented")
 }
 func (UnimplementedCallServiceServer) ReportMediaState(context.Context, *ReportMediaStateRequest) (*ReportMediaStateResponse, error) {
