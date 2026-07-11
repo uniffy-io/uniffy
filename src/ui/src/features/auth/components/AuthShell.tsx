@@ -15,7 +15,7 @@ function BrandContent() {
                 style={{ animation: 'auth-slide-up 0.6s ease-out 0.2s forwards' }}
             >
                 <div className="flex items-center gap-4">
-                    <UniffyLogo className="w-12 h-12" variant="dark" />
+                    <UniffyLogo className="w-12 h-12" />
                     <span className="text-white text-3xl font-bold tracking-tight">uniffy</span>
                 </div>
             </div>
