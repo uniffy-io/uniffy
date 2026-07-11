@@ -13,6 +13,14 @@ function humanizeToolName(toolName: string): string {
   return verb.charAt(0).toUpperCase() + verb.slice(1);
 }
 
+function expiryLabel(expiresAtSeconds: number | null): string | null {
+  if (!expiresAtSeconds) return null;
+  const remainingMin = Math.floor((expiresAtSeconds * 1000 - Date.now()) / 60000);
+  if (remainingMin <= 0) return "Expired";
+  if (remainingMin < 60) return `Expires in ${remainingMin}m`;
+  return `Expires in ${Math.round(remainingMin / 60)}h`;
+}
+
 export function AgentApprovalCard({
   approval,
   T,
@@ -29,6 +37,7 @@ export function AgentApprovalCard({
   const [showArgs, setShowArgs] = useState(false);
   const hasArgs =
     !!approval.argsPreview && approval.argsPreview !== "{}" && approval.argsPreview !== "None";
+  const expiry = expiryLabel(approval.expiresAtSeconds);
 
   return (
     <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.yellow + "80" }]}>
@@ -40,6 +49,7 @@ export function AgentApprovalCard({
           </Text>
           <Text style={[styles.toolName, { color: T.textDim }]} numberOfLines={1}>
             {approval.toolName}
+            {expiry ? `  ·  ${expiry}` : ""}
           </Text>
         </View>
       </View>
