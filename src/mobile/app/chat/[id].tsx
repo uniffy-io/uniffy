@@ -29,6 +29,8 @@ import {
   ArrowBendUpLeft,
   WarningCircle,
   X,
+  Gauge,
+  Phone,
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,11 +38,16 @@ import { DomainHeader } from "@/components/DomainHeader";
 import { Avatar } from "@/components/Avatar";
 import { ChatComposer } from "@/components/ChatComposer";
 import { EmojiPickerSheet } from "@/components/EmojiPickerSheet";
-import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { MarkdownRenderer, MentionLine } from "@/components/MarkdownRenderer";
 import { MessageAttachments } from "@/components/MessageAttachments";
 import { AgentMessageBody, isSpecialAgentKind } from "@/components/AgentMessageBody";
 import { AgentApprovalCard } from "@/components/AgentApprovalCard";
+import { AgentContextSheet } from "@/components/AgentContextSheet";
 import { ChannelDetailsSheet } from "@/components/ChannelDetailsSheet";
+import { PreJoinSheet } from "@/components/calls/PreJoinSheet";
+import { useCall } from "@/context/call-context";
+import { useActiveCall } from "@/hooks/useCallsState";
+import { usePresences } from "@/hooks/usePresence";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
 import { FONT } from "@/constants/typography";
@@ -64,6 +71,7 @@ import {
   useDiscardFailedMessage,
   useRespondToAgentConfirmation,
   useUpdateChannel,
+  useRenameAgentChat,
   useArchiveChannel,
   useDeleteChannel,
   useAddMembers,
@@ -73,8 +81,13 @@ import {
   useLeaveChannel,
 } from "@/hooks/useChatMutations";
 import { useDirectory } from "@/hooks/usePermissions";
-import { useStopAgentRun } from "@/hooks/useAgents";
-import { useChatStream, typingKey, agentRunKey, type TypingEntry } from "@/hooks/useChatStream";
+import { useAgents, useStopAgentRun } from "@/hooks/useAgents";
+import {
+  useChatStream,
+  typingKey,
+  useRunningAgents,
+  type TypingEntry,
+} from "@/hooks/useChatStream";
 import { useComposerAttachments } from "@/hooks/useComposerAttachments";
 import { useScreenFocusRef } from "@/hooks/useScreenFocusRef";
 import { chatApi } from "@/api/chatApi";
@@ -143,6 +156,7 @@ export default function ChatConversationScreen() {
   const stopAgent = useStopAgentRun();
   const respondToConfirmation = useRespondToAgentConfirmation(channelId);
   const updateChannel = useUpdateChannel(channelId);
+  const renameAgentChat = useRenameAgentChat(channelId);
   const archiveChannel = useArchiveChannel();
   const deleteChannel = useDeleteChannel();
   const addMembers = useAddMembers(channelId);
@@ -152,6 +166,7 @@ export default function ChatConversationScreen() {
   const leaveChannel = useLeaveChannel();
   const categoriesQuery = useCategories();
   const directory = useDirectory();
+  const agentsQuery = useAgents();
 
   const [draft, setDraft] = useState("");
   const mentionsRef = useRef<MentionEntry[]>([]);
@@ -163,6 +178,11 @@ export default function ChatConversationScreen() {
   const [emojiTarget, setEmojiTarget] = useState<SerializedMessage | "compose" | null>(null);
   const [pinnedOpen, setPinnedOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [contextAgentId, setContextAgentId] = useState<string | null>(null);
+  const [prejoinOpen, setPrejoinOpen] = useState(false);
+  const { session: callSession, setMinimized, available: callsAvailable } = useCall();
+  const activeCall = useActiveCall(channelId);
+  const inCallHere = callSession.channelId === channelId && callSession.status !== "idle";
   const attachments = useComposerAttachments();
   const screenFocused = useScreenFocusRef();
 
@@ -207,16 +227,37 @@ export default function ChatConversationScreen() {
     [toolResultsById],
   );
 
+  const humanSenderIds = useMemo(
+    () => [...new Set(messages.filter((m) => m.senderType === "USER").map((m) => m.senderId))],
+    [messages],
+  );
+  const presenceByUser = usePresences(humanSenderIds);
+
   // Stream-fed run state when the stream is connected; falls back to the
-  // last-message heuristic on polling.
-  const agentRunQuery = useQuery<boolean>({
-    queryKey: agentRunKey(organizationId ?? "", channelId),
-    queryFn: () => false,
-    enabled: false,
-    staleTime: Infinity,
-  });
-  const agentRunning =
-    agentRunQuery.data ?? (channel?.isAgentDm ? messages[0]?.senderType === "USER" : false);
+  // last-message heuristic on polling (agent DMs only - group channels have
+  // no reliable heuristic without the stream).
+  const streamRunningAgents = useRunningAgents(channelId);
+  const runningAgentIds = useMemo(() => {
+    if (streamRunningAgents !== undefined) return streamRunningAgents;
+    const dmFallbackRunning = channel?.isAgentDm && messages[0]?.senderType === "USER";
+    return dmFallbackRunning && channel?.agentId ? [channel.agentId] : [];
+  }, [streamRunningAgents, channel?.isAgentDm, channel?.agentId, messages]);
+  const agentRunning = runningAgentIds.length > 0;
+
+  const agentById = useMemo(() => {
+    const map = new Map((agentsQuery.data ?? []).map((a) => [a.id, a]));
+    return map;
+  }, [agentsQuery.data]);
+
+  const sheetDirectory = useMemo(
+    () => [
+      ...directory.subjects
+        .filter((s) => s.kind === "USER")
+        .map((s) => ({ ...s, kind: "USER" as const })),
+      ...(agentsQuery.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: "AGENT" as const })),
+    ],
+    [directory.subjects, agentsQuery.data],
+  );
 
   // Snapshot the unread count on entry, before mark-as-read zeroes it out.
   const entryUnreadRef = useRef<number | null>(null);
@@ -401,6 +442,21 @@ export default function ChatConversationScreen() {
     [channelId],
   );
 
+  // In the inverted list an item grows and shrinks from its TOP edge (the
+  // older side), so an expanding tool payload explodes upward and a collapse
+  // strands the viewport. Shifting the offset by the payload height keeps the
+  // card header anchored: expand unfolds downward, collapse folds back up.
+  const listRef = useRef<FlatList<SerializedMessage>>(null);
+  const scrollOffsetRef = useRef(0);
+  const adjustScrollForDetails = useCallback((delta: number) => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({
+        offset: Math.max(0, scrollOffsetRef.current + delta),
+        animated: false,
+      });
+    });
+  }, []);
+
   const renderItem = useCallback(
     ({ item, index }: { item: SerializedMessage; index: number }) => {
       const older = messages[index + 1];
@@ -419,12 +475,24 @@ export default function ChatConversationScreen() {
             organizationId={organizationId ?? ""}
             showHeader={showHeader}
             isOwn={item.senderId === user?.id}
+            senderPresence={
+              item.senderType === "USER" ? (presenceByUser[item.senderId] ?? "offline") : null
+            }
             agentActive={agentRunning}
+            agentEmoji={
+              item.senderType === "AGENT"
+                ? (agentById.get(item.senderId)?.avatarEmoji ?? null)
+                : null
+            }
+            agentName={
+              item.senderType === "AGENT" ? (agentById.get(item.senderId)?.name ?? null) : null
+            }
             toolResultFor={toolResultFor}
             onLongPress={() => setActionMessage(item)}
             onPressFailed={() => promptFailedSend(item)}
             onPressThread={() => openThread(item.id)}
             onToggleReaction={(emoji) => handleReact(item, emoji)}
+            onDetailsToggled={adjustScrollForDetails}
           />
         </View>
       );
@@ -438,8 +506,11 @@ export default function ChatConversationScreen() {
       firstUnreadId,
       promptFailedSend,
       agentRunning,
+      agentById,
       toolResultFor,
       openThread,
+      adjustScrollForDetails,
+      presenceByUser,
     ],
   );
 
@@ -466,6 +537,35 @@ export default function ChatConversationScreen() {
         icon="chat"
         rightActions={
           <>
+            {callsAvailable && channel && !channel.isAgentDm ? (
+              <TouchableOpacity
+                onPress={() => (inCallHere ? setMinimized(false) : setPrejoinOpen(true))}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={activeCall ? "Join live call" : "Start call"}
+              >
+                {activeCall ? (
+                  <View style={styles.liveCallAction}>
+                    <Phone size={18} color={T.green} weight="fill" />
+                    <Text style={[styles.liveCallCount, { color: T.green }]}>
+                      {activeCall.participants.length}
+                    </Text>
+                  </View>
+                ) : (
+                  <Phone size={18} color={T.textDim} weight="bold" />
+                )}
+              </TouchableOpacity>
+            ) : null}
+            {channel?.isAgentDm && channel.agentId ? (
+              <TouchableOpacity
+                onPress={() => setContextAgentId(channel.agentId)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Agent context usage"
+              >
+                <Gauge size={18} color={T.textDim} weight="bold" />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               onPress={() => setPinnedOpen(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -489,18 +589,34 @@ export default function ChatConversationScreen() {
           <ActivityIndicator size="large" color={T.domains.chat} />
         </View>
       ) : messages.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <ChatCircle size={40} color={T.domains.chat} weight="duotone" />
-          <Text style={[styles.emptyTitle, { color: T.textBright }]}>No messages yet</Text>
-          <Text style={[styles.emptySub, { color: T.textDim }]}>
-            Say hello to start the conversation
-          </Text>
-        </View>
+        channel?.isAgentDm ? (
+          <View style={styles.emptyWrap}>
+            <Robot size={40} color={T.domains.agents} weight="duotone" />
+            <Text style={[styles.emptyTitle, { color: T.textBright }]}>
+              {(channel.agentId && agentById.get(channel.agentId)?.name) || title}
+            </Text>
+            <Text style={[styles.emptySub, { color: T.textDim }]}>
+              {(channel.agentId && agentById.get(channel.agentId)?.description) ||
+                "Ask anything - replies land here as chat messages"}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.emptyWrap}>
+            <ChatCircle size={40} color={T.domains.chat} weight="duotone" />
+            <Text style={[styles.emptyTitle, { color: T.textBright }]}>No messages yet</Text>
+            <Text style={[styles.emptySub, { color: T.textDim }]}>
+              Say hello to start the conversation
+            </Text>
+          </View>
+        )
       ) : (
         <FlatList
+          ref={listRef}
           data={messages}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
+          onScroll={(e) => (scrollOffsetRef.current = e.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
           inverted
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
@@ -535,14 +651,33 @@ export default function ChatConversationScreen() {
         />
       ))}
 
-      {channel?.isAgentDm && channel.agentId && agentRunning ? (
+      {runningAgentIds.map((agentId) => (
         <TouchableOpacity
+          key={agentId}
           style={[styles.stopPill, { backgroundColor: T.surface, borderColor: T.border }]}
-          onPress={() => stopAgent.mutate({ channelId, agentId: channel.agentId! })}
+          onPress={() => stopAgent.mutate({ channelId, agentId })}
           activeOpacity={0.7}
         >
           <Stop size={14} color={T.red} weight="fill" />
-          <Text style={[styles.stopText, { color: T.text }]}>Stop agent</Text>
+          <Text style={[styles.stopText, { color: T.text }]}>
+            Stop {agentById.get(agentId)?.name ?? "agent"}
+          </Text>
+        </TouchableOpacity>
+      ))}
+
+      {callsAvailable && activeCall && !inCallHere ? (
+        <TouchableOpacity
+          style={[styles.stopPill, { backgroundColor: T.surface, borderColor: T.green }]}
+          onPress={() => setPrejoinOpen(true)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Join the live call"
+        >
+          <Phone size={14} color={T.green} weight="fill" />
+          <Text style={[styles.stopText, { color: T.text }]}>
+            Join call · {activeCall.participants.length}{" "}
+            {activeCall.participants.length === 1 ? "person" : "people"}
+          </Text>
         </TouchableOpacity>
       ) : null}
 
@@ -667,9 +802,11 @@ export default function ChatConversationScreen() {
           members={membersQuery.data ?? []}
           categories={categoriesQuery.data ?? []}
           currentUserId={user?.id ?? ""}
-          directory={directory.subjects.filter((s) => s.kind === "USER")}
+          directory={sheetDirectory}
           onClose={() => setDetailsOpen(false)}
-          onRename={(name) => updateChannel.mutate({ name })}
+          onRename={(name) =>
+            channel.isAgentDm ? renameAgentChat.mutate(name) : updateChannel.mutate({ name })
+          }
           onSetNotificationLevel={(level) =>
             updateChannelMember.mutate({ userId: user?.id ?? "", notificationLevel: level })
           }
@@ -681,8 +818,12 @@ export default function ChatConversationScreen() {
             })
           }
           onUnmute={() => updateChannelMember.mutate({ userId: user?.id ?? "", isMuted: false })}
-          onAddMembers={(userIds) => addMembers.mutate(userIds)}
-          onRemoveMember={(userId) => removeMembers.mutate([userId])}
+          onAddMembers={(subjects) => addMembers.mutate(subjects)}
+          onRemoveMember={(subject) => removeMembers.mutate([subject])}
+          onShowAgentContext={(agentId) => {
+            setDetailsOpen(false);
+            setContextAgentId(agentId);
+          }}
           onMoveToCategory={(categoryId) => moveChannelToCategory.mutate({ channelId, categoryId })}
           onArchive={() => {
             setDetailsOpen(false);
@@ -698,6 +839,29 @@ export default function ChatConversationScreen() {
           }}
         />
       ) : null}
+
+      {contextAgentId ? (
+        <AgentContextSheet
+          visible={!!contextAgentId}
+          T={T}
+          channelId={channelId}
+          agentId={contextAgentId}
+          agentName={
+            agentById.get(contextAgentId)?.name ??
+            membersQuery.data?.find((m) => m.subjectId === contextAgentId)?.displayName
+          }
+          onClose={() => setContextAgentId(null)}
+        />
+      ) : null}
+
+      <PreJoinSheet
+        visible={prejoinOpen}
+        T={T}
+        channelId={channelId}
+        channelName={title}
+        callId={activeCall?.id}
+        onClose={() => setPrejoinOpen(false)}
+      />
     </View>
   );
 }
@@ -842,11 +1006,15 @@ function MessageRow({
   showHeader,
   isOwn,
   agentActive,
+  agentEmoji,
+  agentName,
   toolResultFor,
   onLongPress,
   onPressFailed,
   onPressThread,
   onToggleReaction,
+  onDetailsToggled,
+  senderPresence,
 }: {
   message: SerializedMessage;
   T: ThemeColors;
@@ -854,14 +1022,19 @@ function MessageRow({
   showHeader: boolean;
   isOwn: boolean;
   agentActive: boolean;
+  agentEmoji?: string | null;
+  agentName?: string | null;
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
   onLongPress: () => void;
   onPressFailed: () => void;
   onPressThread: () => void;
   onToggleReaction: (emoji: string) => void;
+  onDetailsToggled?: (heightDelta: number) => void;
+  senderPresence?: string | null;
 }) {
   const { display } = useMemo(() => parseMentions(message.content), [message.content]);
   const isAgent = message.senderType === "AGENT";
+  const senderName = (isAgent && agentName) || message.senderName;
   const isSystem = message.senderType === "SYSTEM";
   const failed = message.metadata?.failed === "1";
   const pending = message.metadata?.optimistic === "1" && !failed;
@@ -871,7 +1044,11 @@ function MessageRow({
   if (isSystem) {
     return (
       <View style={styles.systemRow}>
-        <Text style={[styles.systemText, { color: T.textDim }]}>{display}</Text>
+        <MentionLine
+          content={message.content}
+          textStyle={[styles.systemText, { color: T.textDim }]}
+          wrapperStyle={styles.systemLine}
+        />
       </View>
     );
   }
@@ -886,10 +1063,13 @@ function MessageRow({
       <View style={styles.msgAvatar}>
         {showHeader ? (
           <Avatar
-            name={message.senderName}
+            name={senderName}
             avatarUrl={message.senderAvatarUrl ?? undefined}
             size={36}
-            accentColor={isAgent ? T.domains.chat : undefined}
+            accentColor={isAgent ? T.domains.agents : undefined}
+            emoji={isAgent ? (agentEmoji ?? undefined) : undefined}
+            presence={senderPresence}
+            presenceRingColor={T.pageBg}
           />
         ) : null}
       </View>
@@ -897,7 +1077,7 @@ function MessageRow({
         {showHeader ? (
           <View style={styles.msgHeader}>
             <Text style={[styles.msgSender, { color: T.textBright }]} numberOfLines={1}>
-              {message.senderName}
+              {senderName}
             </Text>
             {isAgent ? (
               <View style={[styles.agentTag, { backgroundColor: T.domains.chatSoft }]}>
@@ -924,6 +1104,7 @@ function MessageRow({
             T={T}
             agentActive={agentActive}
             toolResultFor={toolResultFor}
+            onDetailsToggled={onDetailsToggled}
           />
         ) : jumbo ? (
           <Text style={[styles.jumboEmoji, pending && styles.pendingBody]}>{display.trim()}</Text>
@@ -1172,6 +1353,7 @@ const styles = StyleSheet.create({
   replyContextName: { fontSize: 12, fontFamily: FONT.semibold },
   replyContextText: { fontSize: 12, fontFamily: FONT.regular },
   systemRow: { paddingHorizontal: 16, paddingVertical: 6, alignItems: "center" },
+  systemLine: { justifyContent: "center" },
   systemText: { fontSize: 12, fontFamily: FONT.regular, fontStyle: "italic" },
   reactionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
   reactionChip: {
@@ -1197,6 +1379,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stopText: { fontSize: 13, fontFamily: FONT.semibold },
+  liveCallAction: { flexDirection: "row", alignItems: "center", gap: 3 },
+  liveCallCount: { fontSize: 12, fontFamily: FONT.semibold },
   banner: {
     flexDirection: "row",
     alignItems: "center",

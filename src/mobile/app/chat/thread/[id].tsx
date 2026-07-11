@@ -23,6 +23,7 @@ import type { ThemeColors } from "@/constants/theme";
 import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { useUniffy } from "@/context/uniffy-context";
+import { useAgents } from "@/hooks/useAgents";
 import { useThread, useThreadMessages } from "@/hooks/useChat";
 import { useSendThreadReply, useMarkThreadRead, useDeleteMessage } from "@/hooks/useChatMutations";
 import { useChatStream } from "@/hooks/useChatStream";
@@ -108,6 +109,15 @@ export default function ChatThreadScreen() {
   const root = threadQuery.data?.rootMessage ?? null;
   const replyCount = threadQuery.data?.replyCount ?? replies.length;
 
+  const agentsQuery = useAgents();
+  const agentFor = useCallback(
+    (message: SerializedMessage) =>
+      message.senderType === "AGENT"
+        ? (agentsQuery.data?.find((a) => a.id === message.senderId) ?? null)
+        : null,
+    [agentsQuery.data],
+  );
+
   const handleSend = useCallback(() => {
     const text = draft.trim();
     const attachmentFileIds = attachments.readyFileIds;
@@ -152,17 +162,20 @@ export default function ChatThreadScreen() {
         !older ||
         older.senderId !== item.senderId ||
         item.createdAtSeconds - older.createdAtSeconds > GROUP_WINDOW_SECONDS;
+      const agent = agentFor(item);
       return (
         <ThreadMessageRow
           message={item}
           T={T}
           organizationId={organizationId ?? ""}
           showHeader={showHeader}
+          agentEmoji={agent?.avatarEmoji ?? null}
+          agentName={agent?.name ?? null}
           onLongPress={() => handleLongPress(item)}
         />
       );
     },
-    [replies, T, organizationId, handleLongPress],
+    [replies, T, organizationId, handleLongPress, agentFor],
   );
 
   const canSend = !attachments.uploading && (!!draft.trim() || attachments.readyFileIds.length > 0);
@@ -198,6 +211,8 @@ export default function ChatThreadScreen() {
                   T={T}
                   organizationId={organizationId ?? ""}
                   showHeader
+                  agentEmoji={agentFor(root)?.avatarEmoji ?? null}
+                  agentName={agentFor(root)?.name ?? null}
                   onLongPress={() => handleLongPress(root)}
                 />
                 <View style={styles.repliesDivider}>
@@ -253,15 +268,20 @@ function ThreadMessageRow({
   T,
   organizationId,
   showHeader,
+  agentEmoji,
+  agentName,
   onLongPress,
 }: {
   message: SerializedMessage;
   T: ThemeColors;
   organizationId: string;
   showHeader: boolean;
+  agentEmoji?: string | null;
+  agentName?: string | null;
   onLongPress: () => void;
 }) {
   const isAgent = message.senderType === "AGENT";
+  const senderName = (isAgent && agentName) || message.senderName;
   return (
     <TouchableOpacity
       onLongPress={onLongPress}
@@ -272,10 +292,11 @@ function ThreadMessageRow({
       <View style={styles.msgAvatar}>
         {showHeader ? (
           <Avatar
-            name={message.senderName}
+            name={senderName}
             avatarUrl={message.senderAvatarUrl ?? undefined}
             size={32}
-            accentColor={isAgent ? T.domains.chat : undefined}
+            accentColor={isAgent ? T.domains.agents : undefined}
+            emoji={isAgent ? (agentEmoji ?? undefined) : undefined}
           />
         ) : null}
       </View>
@@ -283,7 +304,7 @@ function ThreadMessageRow({
         {showHeader ? (
           <View style={styles.msgHeader}>
             <Text style={[styles.msgSender, { color: T.textBright }]} numberOfLines={1}>
-              {message.senderName}
+              {senderName}
             </Text>
             <Text style={[styles.msgTime, { color: T.textDim }]}>{message.timeLabel}</Text>
           </View>

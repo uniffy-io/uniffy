@@ -25,10 +25,13 @@ import {
   BellSlash,
   Bell,
   MagnifyingGlass,
+  Gauge,
 } from "phosphor-react-native";
 import { Avatar } from "@/components/Avatar";
 import type { ThemeColors } from "@/constants/theme";
 import { FONT } from "@/constants/typography";
+import type { ChatMemberSubject } from "@/hooks/useChatMutations";
+import { usePresences } from "@/hooks/usePresence";
 import type {
   SerializedChannel,
   SerializedMember,
@@ -47,6 +50,7 @@ export type DirectorySubject = {
   name: string;
   email?: string;
   avatarUrl?: string;
+  kind?: "USER" | "AGENT";
 };
 
 export function ChannelDetailsSheet({
@@ -68,6 +72,7 @@ export function ChannelDetailsSheet({
   onArchive,
   onDelete,
   onLeave,
+  onShowAgentContext,
 }: {
   visible: boolean;
   T: ThemeColors;
@@ -81,21 +86,30 @@ export function ChannelDetailsSheet({
   onSetNotificationLevel: (level: NotificationLevel) => void;
   onMute: (untilSeconds: number | null) => void;
   onUnmute: () => void;
-  onAddMembers: (userIds: string[]) => void;
-  onRemoveMember: (userId: string) => void;
+  onAddMembers: (subjects: ChatMemberSubject[]) => void;
+  onRemoveMember: (subject: ChatMemberSubject) => void;
   onMoveToCategory: (categoryId: string | undefined) => void;
   onArchive: () => void;
   onDelete: () => void;
   onLeave: () => void;
+  onShowAgentContext?: (agentId: string) => void;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [addingMembers, setAddingMembers] = useState(false);
   const [pickingCategory, setPickingCategory] = useState(false);
 
+  const memberUserIds = useMemo(
+    () => (visible ? members.filter((m) => m.subjectType === "USER").map((m) => m.subjectId) : []),
+    [members, visible],
+  );
+  const presenceByUser = usePresences(memberUserIds);
+
   const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
   const canManage =
     !isDm && (channel.currentUserRole === "OWNER" || channel.currentUserRole === "ADMIN");
+  // Agent DM names are per-user custom names, so the human member can always rename.
+  const canRename = canManage || channel.isAgentDm;
   const selfMember = members.find((m) => m.subjectId === currentUserId);
 
   const TypeIcon = channel.isAgentDm
@@ -149,7 +163,7 @@ export function ChannelDetailsSheet({
                   <TouchableOpacity
                     onPress={() => {
                       const trimmed = nameDraft.trim();
-                      if (trimmed && trimmed !== channel.name) onRename(trimmed);
+                      if (trimmed && trimmed !== channel.displayName) onRename(trimmed);
                       setRenaming(false);
                     }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -162,10 +176,10 @@ export function ChannelDetailsSheet({
                   <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
                     {channel.displayName}
                   </Text>
-                  {canManage ? (
+                  {canRename ? (
                     <TouchableOpacity
                       onPress={() => {
-                        setNameDraft(channel.name);
+                        setNameDraft(channel.isAgentDm ? channel.displayName : channel.name);
                         setRenaming(true);
                       }}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -254,17 +268,40 @@ export function ChannelDetailsSheet({
           </View>
           {members.map((m) => (
             <View key={m.subjectId} style={[styles.memberRow, { borderTopColor: T.border }]}>
-              <Avatar name={m.displayName} avatarUrl={m.avatarUrl ?? undefined} size={30} />
+              <Avatar
+                name={m.displayName}
+                avatarUrl={m.avatarUrl ?? undefined}
+                size={30}
+                presence={
+                  m.subjectType === "USER" ? (presenceByUser[m.subjectId] ?? "offline") : null
+                }
+                presenceRingColor={T.surface}
+              />
               <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
                 {m.displayName}
                 {m.subjectId === currentUserId ? " (you)" : ""}
               </Text>
+              {m.subjectType === "AGENT" ? (
+                <View style={[styles.roleTag, { backgroundColor: T.domains.agentsSoft }]}>
+                  <Text style={[styles.roleTagText, { color: T.domains.agents }]}>AGENT</Text>
+                </View>
+              ) : null}
               {m.role !== "MEMBER" ? (
                 <View style={[styles.roleTag, { backgroundColor: T.domains.chatSoft }]}>
                   <Text style={[styles.roleTagText, { color: T.domains.chat }]}>{m.role}</Text>
                 </View>
               ) : null}
-              {canManage && m.subjectId !== currentUserId && m.subjectType === "USER" ? (
+              {m.subjectType === "AGENT" && onShowAgentContext ? (
+                <TouchableOpacity
+                  onPress={() => onShowAgentContext(m.subjectId)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Context usage for ${m.displayName}`}
+                >
+                  <Gauge size={16} color={T.textDim} weight="duotone" />
+                </TouchableOpacity>
+              ) : null}
+              {canManage && m.subjectId !== currentUserId ? (
                 <TouchableOpacity
                   onPress={() =>
                     Alert.alert("Remove member", `Remove ${m.displayName} from the channel?`, [
@@ -272,7 +309,7 @@ export function ChannelDetailsSheet({
                       {
                         text: "Remove",
                         style: "destructive",
-                        onPress: () => onRemoveMember(m.subjectId),
+                        onPress: () => onRemoveMember({ kind: m.subjectType, id: m.subjectId }),
                       },
                     ])
                   }
@@ -334,9 +371,9 @@ export function ChannelDetailsSheet({
         directory={directory}
         existingIds={members.map((m) => m.subjectId)}
         onClose={() => setAddingMembers(false)}
-        onAdd={(ids) => {
+        onAdd={(subjects) => {
           setAddingMembers(false);
-          if (ids.length > 0) onAddMembers(ids);
+          if (subjects.length > 0) onAddMembers(subjects);
         }}
       />
 
@@ -393,7 +430,7 @@ function AddMembersModal({
   directory: DirectorySubject[];
   existingIds: string[];
   onClose: () => void;
-  onAdd: (userIds: string[]) => void;
+  onAdd: (subjects: ChatMemberSubject[]) => void;
 }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -401,11 +438,16 @@ function AddMembersModal({
   const candidates = useMemo(() => {
     const existing = new Set(existingIds);
     const q = search.trim().toLowerCase();
-    return directory
+    const matching = directory
       .filter((s) => !existing.has(s.id))
       .filter(
         (s) => !q || s.name.toLowerCase().includes(q) || (s.email ?? "").toLowerCase().includes(q),
       );
+    // People first, then agents, so the sections read in a stable order.
+    return [
+      ...matching.filter((s) => s.kind !== "AGENT"),
+      ...matching.filter((s) => s.kind === "AGENT"),
+    ];
   }, [directory, existingIds, search]);
 
   const toggle = (id: string) =>
@@ -440,6 +482,7 @@ function AddMembersModal({
         <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
           {candidates.map((s) => {
             const active = selected.has(s.id);
+            const isAgent = s.kind === "AGENT";
             return (
               <TouchableOpacity
                 key={s.id}
@@ -447,10 +490,21 @@ function AddMembersModal({
                 onPress={() => toggle(s.id)}
                 activeOpacity={0.7}
               >
-                <Avatar name={s.name} avatarUrl={s.avatarUrl} size={30} />
+                {isAgent ? (
+                  <View style={[styles.agentPickerIcon, { backgroundColor: T.domains.agentsSoft }]}>
+                    <Robot size={16} color={T.domains.agents} weight="fill" />
+                  </View>
+                ) : (
+                  <Avatar name={s.name} avatarUrl={s.avatarUrl} size={30} />
+                )}
                 <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
                   {s.name}
                 </Text>
+                {isAgent ? (
+                  <View style={[styles.roleTag, { backgroundColor: T.domains.agentsSoft }]}>
+                    <Text style={[styles.roleTagText, { color: T.domains.agents }]}>AGENT</Text>
+                  </View>
+                ) : null}
                 <View
                   style={[
                     styles.checkbox,
@@ -475,7 +529,13 @@ function AddMembersModal({
           ]}
           disabled={selected.size === 0}
           onPress={() => {
-            onAdd([...selected]);
+            const byId = new Map(directory.map((s) => [s.id, s]));
+            onAdd(
+              [...selected].map((id) => ({
+                kind: byId.get(id)?.kind === "AGENT" ? "AGENT" : "USER",
+                id,
+              })),
+            );
             setSelected(new Set());
             setSearch("");
           }}
@@ -647,6 +707,13 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  agentPickerIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
