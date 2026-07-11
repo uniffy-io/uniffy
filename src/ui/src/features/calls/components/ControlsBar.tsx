@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
 import { useCall } from '@/features/calls/components/callContext';
 import { DevicePickerMenu } from '@/features/calls/components/DevicePickerMenu';
+import { ScreenShareQualityMenu } from '@/features/calls/components/ScreenShareQualityMenu';
 import { useDevices } from '@/features/calls/hooks/useDevices';
 import {
   selectCallSession,
@@ -20,14 +21,20 @@ import {
 } from '@/features/calls/store/callsSlice';
 import {
   audioInputSelected,
+  screenShareQualitySelected,
   selectCallPreferences,
   videoInputSelected,
 } from '@/features/calls/store/callPreferencesSlice';
 
-const controlClass = cn(
-  'flex h-9 items-center justify-center rounded-lg border border-border/60 bg-muted/40 px-2.5',
+const controlBase = cn(
+  'flex items-center justify-center rounded-lg border border-border/60 bg-muted/40',
   'text-foreground transition-colors hover:bg-muted',
 );
+
+const controlClass = cn(controlBase, 'h-9 px-2.5');
+
+// Header pill: icon-only squares sized to match the nav icon buttons (w-7 h-7).
+const compactControlClass = cn(controlBase, 'h-7 w-7 rounded-md');
 
 const offClass = 'bg-red-500/15 border-red-500/40 text-red-500 hover:bg-red-500/25';
 
@@ -48,10 +55,57 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
 
   const micMenuRef = useRef<HTMLButtonElement>(null);
   const camMenuRef = useRef<HTMLButtonElement>(null);
-  const [openMenu, setOpenMenu] = useState<'mic' | 'cam' | null>(null);
+  const qualityMenuRef = useRef<HTMLButtonElement>(null);
+  const [openMenu, setOpenMenu] = useState<'mic' | 'cam' | 'quality' | null>(null);
 
   const isHost = sessionCall?.hostUserId === currentUserId;
   const participantCount = sessionCall?.participants.length ?? 0;
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1" data-testid="call-controls-bar">
+        <button
+          type="button"
+          onClick={() => void toggleMic()}
+          className={cn(compactControlClass, !session.micEnabled && offClass)}
+          aria-label={session.micEnabled ? 'Mute microphone' : 'Unmute microphone'}
+          data-testid="call-mic-toggle"
+        >
+          {session.micEnabled ? <Microphone size={15} /> : <MicrophoneSlash size={15} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => void toggleCamera()}
+          className={cn(compactControlClass, !session.cameraEnabled && offClass)}
+          aria-label={session.cameraEnabled ? 'Turn camera off' : 'Turn camera on'}
+          data-testid="call-camera-toggle"
+        >
+          {session.cameraEnabled ? <VideoCamera size={15} /> : <VideoCameraSlash size={15} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => void toggleScreenShare()}
+          className={cn(
+            compactControlClass,
+            session.screenSharing && 'border-primary/50 bg-primary/10 text-primary',
+          )}
+          aria-label={session.screenSharing ? 'Stop sharing screen' : 'Share screen'}
+          data-testid="call-screenshare-toggle"
+        >
+          <Monitor size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={() => void leaveCurrentCall()}
+          className={cn(compactControlClass, 'border-red-500 bg-red-500 text-white hover:bg-red-600')}
+          aria-label="Leave call"
+          data-testid="call-leave-button"
+        >
+          <PhoneDisconnect size={15} weight="fill" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1.5" data-testid="call-controls-bar">
@@ -121,15 +175,38 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
         }}
       />
 
-      <button
-        type="button"
-        onClick={() => void toggleScreenShare()}
-        className={cn(controlClass, session.screenSharing && 'border-primary/50 bg-primary/10 text-primary')}
-        aria-label={session.screenSharing ? 'Stop sharing screen' : 'Share screen'}
-        data-testid="call-screenshare-toggle"
-      >
-        <Monitor size={16} />
-      </button>
+      <div className="flex items-stretch">
+        <button
+          type="button"
+          onClick={() => void toggleScreenShare()}
+          className={cn(
+            controlClass,
+            'rounded-r-none',
+            session.screenSharing && 'border-primary/50 bg-primary/10 text-primary',
+          )}
+          aria-label={session.screenSharing ? 'Stop sharing screen' : 'Share screen'}
+          data-testid="call-screenshare-toggle"
+        >
+          <Monitor size={16} />
+        </button>
+        <button
+          ref={qualityMenuRef}
+          type="button"
+          onClick={() => setOpenMenu(openMenu === 'quality' ? null : 'quality')}
+          className={cn(controlClass, 'rounded-l-none border-l-0 px-1')}
+          aria-label="Screen share quality"
+        >
+          <CaretDown size={10} />
+        </button>
+      </div>
+      <ScreenShareQualityMenu
+        open={openMenu === 'quality'}
+        onClose={() => setOpenMenu(null)}
+        triggerRef={qualityMenuRef}
+        cap={session.screenShareQualityCap}
+        selected={preferences.screenShareQuality}
+        onSelect={(quality) => dispatch(screenShareQualitySelected(quality))}
+      />
 
       {!compact && onToggleParticipants && (
         <button

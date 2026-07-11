@@ -3,9 +3,24 @@
 import os
 from dataclasses import dataclass
 
+from uniffy.core.models.calls import ScreenShareQuality
+
 
 class LiveKitConfigError(RuntimeError):
     pass
+
+
+def default_screen_share_quality() -> ScreenShareQuality:
+    """Deploy-time screen-share ceiling for many-viewer calls (self-host safe).
+
+    A 1:1 DIRECT call overrides this to MAX at resolve time; this only governs
+    channel / group calls where egress scales with the viewer count.
+    """
+    raw = os.getenv("CALLS_DEFAULT_SCREEN_SHARE_QUALITY", "BALANCED").strip().upper()
+    try:
+        return ScreenShareQuality[raw]
+    except KeyError:
+        return ScreenShareQuality.BALANCED
 
 
 @dataclass(frozen=True)

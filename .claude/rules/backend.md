@@ -210,6 +210,33 @@ Logging is [loguru](https://loguru.readthedocs.io) (`from loguru import logger`)
 - Users are global, memberships are org-scoped
 - Verify the user has access to the organization before accessing resources - this is part of every domain operation's contract
 
+## Settings and Configuration
+
+There are exactly **two generic settings stores**, and new settings go into one of them. Do NOT add a per-domain settings/policy/config table (`{domain}_settings`, `{domain}_policies`, `{domain}_config`). Those tables fragment encryption, DEK rotation, audit, and the admin surface; we consolidated them away.
+
+| Store | Table | Ops class | Scope | Cipher |
+|---|---|---|---|---|
+| Deployment | `deployment_settings` | `DeploymentSettingsOperations` | whole deployment (one per install) | `DeploymentCipher` |
+| Per-org | `org_settings` | `OrgSettingsOperations` | one tenant | `OrgCipher` |
+
+Both are the same shape: a `(namespace, key) -> value` KV row where `value` is plaintext JSONB, or `value_encrypted` is ciphertext when `is_secret=true` (a CHECK constraint enforces exclusivity). `org_settings` adds `organization_id` to the key.
+
+**Pick the store by scope.** Deployment-wide operator config (registration policy, VAPID push keys, system mail relay) -> `deployment_settings`. Tenant config (per-org mail, security, MFA policy, call policy, agent runtime knobs) -> `org_settings`. Per-**user** preferences are a different axis and stay in `settings_profiles` (named JSONB profiles), NOT the KV stores.
+
+**One namespace per domain, keys within it.** e.g. `namespace='calls'` `key='policy'`, `namespace='agents'` `key='runtime'`, `namespace='mail'`, `namespace='security'`, `namespace='mfa'`, `namespace='push'`. A domain typically stores one JSON blob under a single key, or a key per setting - both are fine.
+
+**Wrap the blob in a typed dataclass with code-level defaults.** The DB row is schemaless, so validation and defaults live in a frozen dataclass the loader hydrates. Reference examples: `domains/calls/policy.py::ResolvedCallPolicy` (+ `load_call_policy`/`save_call_policy`) and `domains/agents/runtime/settings.py::ResolvedRuntimeSettings`. A missing row resolves to defaults; the loader never returns a raw dict to callers.
+
+**Secrets:** set `is_secret=True` and pass a `str`; the ops layer encrypts through the tenant/deployment cipher. Reads are opt-in via `get_secret(...)` - `get_namespace(...)` returns rows with ciphertext intact. Every `is_secret` row is rotated automatically by the `ReEncryptingConsumer` already registered for each table (`WHERE is_secret = true`), so a new secret namespace needs no rotation wiring. Never store a secret as plaintext `value`; never hand-roll a shared-key Fernet path.
+
+**Resolution chain** (from the layered config tiers in the main CLAUDE.md): per-org row -> env default -> coded default -> typed error. Canonical implementations: `core/mail/resolver.py` (org -> deployment -> env) and `domains/system_config/operations.py` (`SystemFlagState` with a `source` tag). Follow that shape rather than reading a single tier.
+
+**Audit operator-facing writes.** Changing a setting through an admin RPC writes an audit event in the same transaction (`write_audit_event`), same as `system_config` and `set_display_currency`.
+
+**When a real table is still right:** high-cardinality, relational, or hot-path-indexed config is NOT settings - keep it a table. `permissions_org_defaults` (keyed by `(org, content_type)`, on the cached permission path) is the reference counter-example: it is materialized policy, not operator config, so it stays its own table.
+
+**Folding an old per-domain table into KV** (see migration `056`): copy each row into a namespaced blob (`INSERT ... ON CONFLICT DO NOTHING`), then `op.drop_table(...)`. Copy before drop so an existing staging DB keeps its data; let each store's `server_default now()` (timestamptz = UTC) fill timestamps. Re-encrypt secrets into the target cipher's framing (`v{version}:...`) during the copy.
+
 ## Performance-Critical Domains
 
 `domains/chat/` and `domains/agents/` carry the bulk of user traffic. Every change in these two domains is held to a higher bar than the rest of the codebase. The patterns below apply when working anywhere under those trees, and transitively to anything they call into (`core/auth/`, `core/content/`, `core/valkey/`, `core/users/`).

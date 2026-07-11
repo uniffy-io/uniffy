@@ -15,8 +15,17 @@ from uniffy_proto.calls.v1.calls_pb2 import (
 from uniffy_proto.calls.v1.calls_pb2 import (
     CallType as ProtoCallType,
 )
+from uniffy_proto.calls.v1.calls_pb2 import (
+    OrgCallPolicy as ProtoOrgCallPolicy,
+)
 
-from uniffy.core.models.calls import Call, CallEndReason, CallParticipant, CallType
+from uniffy.core.models.calls import (
+    Call,
+    CallEndReason,
+    CallParticipant,
+    CallType,
+)
+from uniffy.domains.calls.policy import ResolvedCallPolicy
 
 CALL_TYPE_TO_PROTO = {
     CallType.DIRECT: ProtoCallType.CALL_TYPE_DIRECT,
@@ -90,6 +99,19 @@ def call_to_proto(
             call.end_reason, ProtoCallEndReason.CALL_END_REASON_UNSPECIFIED
         )
     return proto
+
+
+def org_policy_to_proto(policy: ResolvedCallPolicy) -> ProtoOrgCallPolicy:
+    return ProtoOrgCallPolicy(
+        organization_id=str(policy.organization_id),
+        calls_enabled=policy.calls_enabled,
+        max_participants=policy.max_participants,
+        max_duration_minutes=policy.max_duration_minutes,
+        # ScreenShareQuality ints match the proto enum values by construction.
+        max_screen_share_quality_direct=int(policy.max_screen_share_quality_direct),
+        max_screen_share_quality_group=int(policy.max_screen_share_quality_group),
+        max_screen_share_quality_channel=int(policy.max_screen_share_quality_channel),
+    )
 
 
 def participant_to_event_dict(

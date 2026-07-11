@@ -72,8 +72,7 @@ type BudgetsServiceClient interface {
 	UpsertCurrencyRate(ctx context.Context, in *UpsertCurrencyRateRequest, opts ...grpc.CallOption) (*UpsertCurrencyRateResponse, error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(ctx context.Context, in *DeleteCurrencyRateRequest, opts ...grpc.CallOption) (*DeleteCurrencyRateResponse, error)
-	// Set the org's display currency (writes to AgentRuntimeSettings).
-	// Org admin only.
+	// Set the org's display currency. Org admin only.
 	SetDisplayCurrency(ctx context.Context, in *SetDisplayCurrencyRequest, opts ...grpc.CallOption) (*SetDisplayCurrencyResponse, error)
 	// Get the org's display currency. Falls back to the module default
 	// ("EUR") when no row exists. Any org member can call.
@@ -256,8 +255,7 @@ type BudgetsServiceServer interface {
 	UpsertCurrencyRate(context.Context, *UpsertCurrencyRateRequest) (*UpsertCurrencyRateResponse, error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(context.Context, *DeleteCurrencyRateRequest) (*DeleteCurrencyRateResponse, error)
-	// Set the org's display currency (writes to AgentRuntimeSettings).
-	// Org admin only.
+	// Set the org's display currency. Org admin only.
 	SetDisplayCurrency(context.Context, *SetDisplayCurrencyRequest) (*SetDisplayCurrencyResponse, error)
 	// Get the org's display currency. Falls back to the module default
 	// ("EUR") when no row exists. Any org member can call.

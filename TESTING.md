@@ -199,6 +199,28 @@ Secure cookie, so several of these cannot be exercised there.
 - [ ] A user who had the OLD `media-stream-worker` installed loads the app once: it is unregistered on boot
       (Application > Service Workers shows it removed) and assets still load via the cookie.
 
+## Calls: screen-share quality
+
+The screen-share ceiling is layered: env default (`CALLS_DEFAULT_SCREEN_SHARE_QUALITY`) ->
+org policy cap (admin) -> per-user pick, clamped to the cap. Simulcast stays on, so viewers
+downshift per network; the ceiling only sets the top rung. A 1:1 direct call defaults to MAX.
+Needs two browsers on two machines/networks to exercise the adaptive downshift.
+
+- [ ] Share a screen in a 1:1 DM on a Retina/high-DPI display. The other side, viewing the
+      focused tile large, sees the full native layer (crisp text) - not the ~720p downscale.
+- [ ] Throttle the DM viewer's network (DevTools > Network > slow profile). Its share tile
+      steps down to a lower rung and stays smooth rather than freezing.
+- [ ] Start a channel call (3+ people). Its default ceiling is BALANCED (not MAX) - the sharer's
+      quality menu shows Balanced selected under Auto.
+- [ ] In the in-call controls, open the screen-share quality menu (caret next to the screen
+      button). Pick a tier; start a share; confirm it applies. Pick Auto; it follows the cap.
+- [ ] As an org admin, open `/admin/calls`, set the max screen-share quality to Balanced, save.
+      Back in a call the user's quality menu no longer offers High/Max, and a DM share is clamped
+      to Balanced (the org cap wins over the DM MAX default).
+- [ ] Change the quality pick, reload the page, rejoin a call - the pick persisted (redux-persist).
+- [ ] Self-host sanity: with `CALLS_DEFAULT_SCREEN_SHARE_QUALITY` unset, a channel call defaults
+      to BALANCED and a DM defaults to MAX with no admin action.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./run.sh lint`.

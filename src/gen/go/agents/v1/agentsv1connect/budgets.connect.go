@@ -101,8 +101,7 @@ type BudgetsServiceClient interface {
 	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.UpsertCurrencyRateResponse], error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(context.Context, *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error)
-	// Set the org's display currency (writes to AgentRuntimeSettings).
-	// Org admin only.
+	// Set the org's display currency. Org admin only.
 	SetDisplayCurrency(context.Context, *connect.Request[v1.SetDisplayCurrencyRequest]) (*connect.Response[v1.SetDisplayCurrencyResponse], error)
 	// Get the org's display currency. Falls back to the module default
 	// ("EUR") when no row exists. Any org member can call.
@@ -310,8 +309,7 @@ type BudgetsServiceHandler interface {
 	UpsertCurrencyRate(context.Context, *connect.Request[v1.UpsertCurrencyRateRequest]) (*connect.Response[v1.UpsertCurrencyRateResponse], error)
 	// Delete a single (from -> to) rate. Org admin only.
 	DeleteCurrencyRate(context.Context, *connect.Request[v1.DeleteCurrencyRateRequest]) (*connect.Response[v1.DeleteCurrencyRateResponse], error)
-	// Set the org's display currency (writes to AgentRuntimeSettings).
-	// Org admin only.
+	// Set the org's display currency. Org admin only.
 	SetDisplayCurrency(context.Context, *connect.Request[v1.SetDisplayCurrencyRequest]) (*connect.Response[v1.SetDisplayCurrencyResponse], error)
 	// Get the org's display currency. Falls back to the module default
 	// ("EUR") when no row exists. Any org member can call.

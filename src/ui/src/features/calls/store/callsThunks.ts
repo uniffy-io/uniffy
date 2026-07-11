@@ -9,6 +9,7 @@ import {
   ringDismissed,
 } from '@/features/calls/store/callsSlice';
 import { getDeviceId, getDeviceLabel } from '@/shared/utils/deviceId';
+import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
 import type { CallData } from '@/features/calls/types';
 import type { RootState } from '@/app/store';
 
@@ -23,6 +24,8 @@ export interface CallJoinResult {
   wsUrl: string;
   livekitToken: string;
   joinedExisting: boolean;
+  /** Org-resolved screen-share ceiling for this session. */
+  screenShareQualityCap: ScreenShareQuality;
 }
 
 export const fetchActiveCall = createAsyncThunk(
@@ -80,6 +83,7 @@ export const initiateCall = createAsyncThunk(
       wsUrl: res.wsUrl,
       livekitToken: res.livekitToken,
       joinedExisting: res.joinedExisting,
+      screenShareQualityCap: res.screenShareQualityCap,
     };
   },
 );
@@ -97,7 +101,13 @@ export const joinCall = createAsyncThunk(
     if (!res.call) throw new Error('Call missing from response');
     const call = callToPlain(res.call);
     dispatch(callUpserted(call));
-    return { call, wsUrl: res.wsUrl, livekitToken: res.livekitToken, joinedExisting: true };
+    return {
+      call,
+      wsUrl: res.wsUrl,
+      livekitToken: res.livekitToken,
+      joinedExisting: true,
+      screenShareQualityCap: res.screenShareQualityCap,
+    };
   },
 );
 
@@ -123,6 +133,7 @@ export async function joinCallRequest(
     wsUrl: res.wsUrl,
     livekitToken: res.livekitToken,
     joinedExisting: true,
+    screenShareQualityCap: res.screenShareQualityCap,
   };
 }
 

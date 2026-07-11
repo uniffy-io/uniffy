@@ -10,7 +10,6 @@ from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
-from uniffy.core.models.app_settings.application_setting import ApplicationSetting
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -24,8 +23,6 @@ from uniffy.core.models.calls import (
     CallEndReason,
     CallParticipant,
     CallType,
-    ChannelCallSettings,
-    OrgCallPolicy,
 )
 from uniffy.core.models.chat import (
     ChannelRole,
@@ -106,8 +103,6 @@ from uniffy.core.models.shared import (
 from uniffy.core.models.tags import Tag, TagAssignment
 
 __all__ = [
-    # Application settings
-    "ApplicationSetting",
     # Attachments
     "Attachment",
     # Audit
@@ -220,8 +215,6 @@ __all__ = [
     "CallEndReason",
     "CallParticipant",
     "CallType",
-    "ChannelCallSettings",
-    "OrgCallPolicy",
     # Tags
     "Tag",
     "TagAssignment",

@@ -4,7 +4,6 @@ import {
   DisconnectReason,
   Room,
   RoomEvent,
-  ScreenSharePresets,
   Track,
   createLocalAudioTrack,
 } from 'livekit-client';
@@ -46,6 +45,8 @@ import { getDeviceId } from '@/shared/utils/deviceId';
 import { env } from '@/config/env';
 import { getAccessToken } from '@/config/api';
 import { CallContext } from '@/features/calls/components/callContext';
+import { clampQuality, screenShareConfig } from '@/features/calls/utils/screenShareQuality';
+import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
 import type { CallJoinResult } from '@/features/calls/store/callsThunks';
 import type {
   CallContextValue,
@@ -175,6 +176,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   sessionRef.current = session;
   const preferencesRef = useRef(preferences);
   preferencesRef.current = preferences;
+  const screenShareCapRef = useRef<ScreenShareQuality>(ScreenShareQuality.BALANCED);
   const orgIdRef = useRef(currentOrgId);
   orgIdRef.current = currentOrgId;
   const rejoiningRef = useRef(false);
@@ -403,14 +405,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       await teardown();
 
       const prefs = preferencesRef.current;
+      screenShareCapRef.current = result.screenShareQualityCap;
       const r = new Room({
-        adaptiveStream: true,
+        // pixelDensity 'screen' factors in the device pixel ratio so a high-DPI
+        // viewer requests the full layer instead of a downscaled one - otherwise
+        // a Retina screen-share tile reads as ~720p even at native capture.
+        adaptiveStream: { pixelDensity: 'screen' },
         dynacast: true,
         audioCaptureDefaults: { deviceId: prefs.audioInputId ?? undefined },
         videoCaptureDefaults: { deviceId: prefs.videoInputId ?? undefined },
-        // Text on a shared screen needs the full source resolution; the
-        // default encoding caps shares at 2.5 Mbps which turns it to mush.
-        publishDefaults: { screenShareEncoding: ScreenSharePresets.original.encoding },
       });
 
       r.on(RoomEvent.Disconnected, (reason) => {
@@ -504,7 +507,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     async (channelId: string, opts: JoinMediaOptions) => {
       if (!(await guardOtherTab())) return;
       const result = await dispatch(initiateCall(channelId)).unwrap();
-      dispatch(sessionConnecting({ callId: result.call.id, channelId }));
+      dispatch(
+        sessionConnecting({
+          callId: result.call.id,
+          channelId,
+          screenShareQualityCap: result.screenShareQualityCap,
+        }),
+      );
       try {
         await connectRoom(result, opts);
       } catch (error) {
@@ -522,7 +531,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     async (callId: string, channelId: string, opts: JoinMediaOptions) => {
       if (!(await guardOtherTab())) return;
       const result = await dispatch(joinCall(callId)).unwrap();
-      dispatch(sessionConnecting({ callId, channelId }));
+      dispatch(
+        sessionConnecting({
+          callId,
+          channelId,
+          screenShareQualityCap: result.screenShareQualityCap,
+        }),
+      );
       try {
         await connectRoom(result, opts);
       } catch (error) {
@@ -588,13 +603,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const r = roomRef.current;
     if (!r) return;
     const enabled = r.localParticipant.isScreenShareEnabled;
+    const tier = clampQuality(
+      preferencesRef.current.screenShareQuality,
+      screenShareCapRef.current,
+    );
+    const cfg = screenShareConfig(tier);
     try {
-      await r.localParticipant.setScreenShareEnabled(!enabled, {
-        audio: true,
-        // 0x0 = capture at the source's native resolution (default caps at 1080p).
-        resolution: ScreenSharePresets.original.resolution,
-        contentHint: 'detail',
-      });
+      await r.localParticipant.setScreenShareEnabled(
+        !enabled,
+        { audio: true, resolution: cfg.captureResolution, contentHint: 'detail' },
+        { screenShareEncoding: cfg.encoding, screenShareSimulcastLayers: cfg.simulcastLayers },
+      );
       dispatch(localMediaChanged({ screenSharing: !enabled }));
       reportMediaState();
     } catch {
