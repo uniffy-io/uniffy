@@ -1,8 +1,7 @@
-"""Envelope encryption for per-org secrets.
+"""Envelope encryption for secrets at rest.
 
-``app_encrypt`` / ``app_decrypt`` (Fernet on ``APP_MASTER_KEY``) is reserved
-for genuinely app-wide secrets like VAPID; everything else is per-org through
-``OrgCipher``.
+Per-org secrets go through ``OrgCipher``; deployment-wide secrets (e.g. VAPID)
+through ``DeploymentCipher``. Both wrap their DEKs with the master KEK.
 """
 
 from uniffy.core.crypto.cache import (
@@ -32,8 +31,6 @@ from uniffy.core.crypto.errors import (
     OrgDekVersionMismatchError,
 )
 from uniffy.core.crypto.master import (
-    app_decrypt,
-    app_encrypt,
     get_master_cipher,
     reset_master_cipher_cache,
 )
@@ -63,8 +60,6 @@ __all__ = [
     "OrgDekNotFoundError",
     "OrgDekVersionMismatchError",
     "ReEncryptingConsumer",
-    "app_decrypt",
-    "app_encrypt",
     "close_dek_invalidation_subscriber",
     "close_deployment_dek_invalidation_subscriber",
     "generate_dek",

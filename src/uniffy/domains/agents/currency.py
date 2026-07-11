@@ -18,11 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
-from uniffy.core.models.agents.runtime_settings import AgentRuntimeSettings
+from uniffy.domains.agents.runtime.settings import (
+    DEFAULT_DISPLAY_CURRENCY,
+    get_runtime_settings,
+)
 
-# Matches pricing.PRICING_CURRENCY so a fresh org needs no exchange-rate row:
-# convert() short-circuits when display == pricing currency.
-DEFAULT_DISPLAY_CURRENCY = "USD"
+__all__ = ["DEFAULT_DISPLAY_CURRENCY", "convert", "get_display_currency"]
 
 
 async def get_display_currency(
@@ -30,14 +31,8 @@ async def get_display_currency(
     organization_id: UUID,
 ) -> str:
     """Return the org's display currency, or the module default."""
-    row = (
-        await session.execute(
-            select(AgentRuntimeSettings.display_currency).where(
-                AgentRuntimeSettings.organization_id == organization_id,
-            )
-        )
-    ).scalar_one_or_none()
-    return row or DEFAULT_DISPLAY_CURRENCY
+    settings = await get_runtime_settings(session, organization_id)
+    return settings.display_currency
 
 
 async def convert(

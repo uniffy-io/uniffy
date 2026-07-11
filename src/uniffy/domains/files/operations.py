@@ -579,7 +579,7 @@ class FileOperations(BaseContentOperations[File]):
         filename_changed = filename is not None and filename != file.filename
         if filename is not None:
             if len(filename) > 255:
-                raise ValidationError("Filename must be 255 characters or fewer")
+                raise ValidationError("filename", "Filename must be 255 characters or fewer")
             file.filename = filename
         if description is not None:
             file.description = description
@@ -1128,7 +1128,7 @@ class FolderOperations:
         name_changed = name is not None and name != folder.name
         if name is not None:
             if len(name) > 255:
-                raise ValidationError("Folder name must be 255 characters or fewer")
+                raise ValidationError("name", "Folder name must be 255 characters or fewer")
             folder.name = name
         if parent_id == "":
             folder.parent_id = None

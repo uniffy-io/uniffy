@@ -1,11 +1,10 @@
 from uniffy.core.models.calls.call import Call, CallEndReason, CallParticipant, CallType
-from uniffy.core.models.calls.settings import ChannelCallSettings, OrgCallPolicy
+from uniffy.core.models.calls.settings import ScreenShareQuality
 
 __all__ = [
     "Call",
     "CallEndReason",
     "CallParticipant",
     "CallType",
-    "ChannelCallSettings",
-    "OrgCallPolicy",
+    "ScreenShareQuality",
 ]

@@ -35,6 +35,12 @@ from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.user_quota import AgentUserQuota
 from uniffy.domains.agents.budgets.period import day_window, month_window
 from uniffy.domains.agents.currency import get_display_currency
+from uniffy.domains.agents.runtime.settings import (
+    AGENTS_NAMESPACE,
+    RUNTIME_KEY,
+    invalidate_runtime_settings_cache,
+)
+from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="agents.budgets.operations")
@@ -764,32 +770,31 @@ class BudgetsOperations:
         organization_id: UUID,
         currency: str,
     ) -> str:
-        """Set the org's display currency on the runtime settings row."""
+        """Set the org's display currency in the agents runtime settings blob."""
         if not await self._is_org_admin(user_id, organization_id):
             raise PermissionDeniedError("write_display_currency", "requires org admin")
         cur = currency.upper().strip()
         if not cur or len(cur) != 3:
             raise ValidationError("display_currency", "expected ISO 4217 3-letter code")
 
-        from uniffy.core.models.agents.runtime_settings import AgentRuntimeSettings
-
-        existing = (
-            await self._session.execute(
-                select(AgentRuntimeSettings).where(
-                    AgentRuntimeSettings.organization_id == organization_id,
-                )
-            )
-        ).scalar_one_or_none()
-        if existing is None:
-            row = AgentRuntimeSettings(
-                organization_id=organization_id,
-                display_currency=cur,
-            )
-            self._session.add(row)
-        else:
-            existing.display_currency = cur
-            existing.updated_at = datetime.now(UTC)
+        settings = OrgSettingsOperations(self._session)
+        rows = await settings.get_namespace(organization_id, AGENTS_NAMESPACE)
+        existing = rows.get(RUNTIME_KEY)
+        blob = (
+            dict(existing.value)
+            if existing is not None and isinstance(existing.value, dict)
+            else {}
+        )
+        blob["display_currency"] = cur
+        await settings.set(
+            organization_id=organization_id,
+            namespace=AGENTS_NAMESPACE,
+            key=RUNTIME_KEY,
+            value=blob,
+            updated_by_user_id=user_id,
+        )
         await self._session.commit()
+        invalidate_runtime_settings_cache(organization_id)
 
         await write_audit_event(
             self._session,

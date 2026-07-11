@@ -963,14 +963,21 @@ def _build_welcome_canvas(
 
 
 async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
-    """Generate a VAPID keypair and store it in application_settings."""
+    """Generate a VAPID keypair and store it in deployment_settings, once."""
     import base64
 
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
-    from uniffy.core.crypto import app_encrypt
-    from uniffy.core.models.app_settings.application_setting import ApplicationSetting
+    from uniffy.domains.deployment_settings.operations import DeploymentSettingsOperations
+
+    settings = DeploymentSettingsOperations(session)
+
+    # Regenerating the keypair would silently invalidate every existing push
+    # subscription, so a present key means we leave it untouched.
+    existing = await settings.get_namespace("push")
+    if "vapid_public_key" in existing:
+        return
 
     private_key = ec.generate_private_key(ec.SECP256R1())
 
@@ -982,31 +989,10 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
     pub_bytes = private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
     pub_b64 = base64.urlsafe_b64encode(pub_bytes).rstrip(b"=").decode("ascii")
 
-    contact = f"mailto:{admin_email}"
-
-    session.add(
-        ApplicationSetting(
-            key="vapid_private_key",
-            value=app_encrypt(priv_b64),
-            is_encrypted=True,
-            description="VAPID private key (ECDSA P-256, base64url, encrypted).",
-        )
-    )
-    session.add(
-        ApplicationSetting(
-            key="vapid_public_key",
-            value=pub_b64,
-            is_encrypted=False,
-            description="VAPID public key (ECDSA P-256, base64url, uncompressed point).",
-        )
-    )
-    session.add(
-        ApplicationSetting(
-            key="vapid_contact_email",
-            value=contact,
-            is_encrypted=False,
-            description="VAPID contact email (mailto: URI for push service).",
-        )
+    await settings.set(namespace="push", key="vapid_private_key", value=priv_b64, is_secret=True)
+    await settings.set(namespace="push", key="vapid_public_key", value=pub_b64)
+    await settings.set(
+        namespace="push", key="vapid_contact_email", value=f"mailto:{admin_email}"
     )
     await session.flush()
-    logger.info("Generated and stored VAPID keypair in application_settings")
+    logger.info("Generated and stored VAPID keypair in deployment_settings")

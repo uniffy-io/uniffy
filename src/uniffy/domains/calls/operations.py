@@ -16,21 +16,32 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import (
     Call,
     CallEndReason,
     CallParticipant,
     CallType,
-    OrgCallPolicy,
+    ScreenShareQuality,
 )
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import SenderType
 from uniffy.core.types import SubjectType
-from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config
+from uniffy.domains.calls.config import (
+    LiveKitConfigError,
+    default_screen_share_quality,
+    get_livekit_config,
+)
 from uniffy.domains.calls.converters import call_to_event_dict, participant_to_event_dict
 from uniffy.domains.calls.livekit_client import LiveKitApiError, get_livekit_admin_client
+from uniffy.domains.calls.policy import (
+    DEFAULT_MAX_PARTICIPANTS,
+    ResolvedCallPolicy,
+    load_call_policy,
+    save_call_policy,
+)
 from uniffy.domains.calls.tokens import (
     LiveKitTokenMinter,
     MintedToken,
@@ -48,7 +59,6 @@ logger = logger.bind(component="calls.operations")
 RING_TIMEOUT_SECONDS = 30
 SILENT_JOIN_MEMBER_THRESHOLD = 10
 MAX_DEVICES_PER_USER = 2
-DEFAULT_MAX_PARTICIPANTS = 50
 
 _CHANNEL_TYPE_TO_CALL_TYPE = {
     ChannelType.DIRECT: CallType.DIRECT,
@@ -56,6 +66,15 @@ _CHANNEL_TYPE_TO_CALL_TYPE = {
     ChannelType.PUBLIC: CallType.CHANNEL,
     ChannelType.PRIVATE: CallType.CHANNEL,
 }
+
+
+def _policy_cap_for_type(policy: ResolvedCallPolicy, call_type: CallType) -> int:
+    """The raw per-type ceiling stored on the policy for this call type."""
+    if call_type == CallType.DIRECT:
+        return policy.max_screen_share_quality_direct
+    if call_type == CallType.GROUP_DM:
+        return policy.max_screen_share_quality_group
+    return policy.max_screen_share_quality_channel
 
 
 class CallOperations:
@@ -818,11 +837,76 @@ class CallOperations:
             return DEFAULT_MAX_PARTICIPANTS
         return policy.max_participants
 
-    async def get_org_policy(self, organization_id: UUID) -> OrgCallPolicy | None:
-        result = await self.session.execute(
-            select(OrgCallPolicy).where(OrgCallPolicy.organization_id == organization_id)
+    async def get_org_policy(self, organization_id: UUID) -> ResolvedCallPolicy | None:
+        return await load_call_policy(self.session, organization_id)
+
+    async def resolve_screen_share_ceiling(
+        self, organization_id: UUID, call_type: CallType
+    ) -> ScreenShareQuality:
+        """Effective screen-share ceiling: the org's per-type cap, else the built-in default.
+
+        A 1:1 DIRECT call has a single viewer, so its egress is trivial and it
+        defaults to MAX. Channel / group calls fall back to the env default,
+        which protects the single SFU node from viewer-count egress.
+        """
+        policy = await self.get_org_policy(organization_id)
+        if policy is not None:
+            cap = ScreenShareQuality(_policy_cap_for_type(policy, call_type))
+            if cap != ScreenShareQuality.UNSPECIFIED:
+                return cap
+        if call_type == CallType.DIRECT:
+            return ScreenShareQuality.MAX
+        return default_screen_share_quality()
+
+    async def _require_org_admin(self, user_id: UUID, organization_id: UUID) -> None:
+        if not await PermissionChecker(self.session).is_org_admin(user_id, organization_id):
+            raise PermissionDeniedError(
+                "call_policy", "Only organization admins can manage call policy"
+            )
+
+    async def get_org_policy_view(
+        self, user_id: UUID, organization_id: UUID
+    ) -> ResolvedCallPolicy:
+        """Org call policy for the admin surface, materialized to defaults when unset."""
+        await self._require_org_admin(user_id, organization_id)
+        policy = await self.get_org_policy(organization_id)
+        return policy if policy is not None else ResolvedCallPolicy(
+            organization_id=organization_id
         )
-        return result.scalar_one_or_none()
+
+    async def update_org_policy(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        *,
+        calls_enabled: bool,
+        max_participants: int,
+        max_duration_minutes: int,
+        max_screen_share_quality_direct: ScreenShareQuality,
+        max_screen_share_quality_group: ScreenShareQuality,
+        max_screen_share_quality_channel: ScreenShareQuality,
+    ) -> ResolvedCallPolicy:
+        await self._require_org_admin(user_id, organization_id)
+        if not 1 <= max_participants <= 1000:
+            raise ValidationError("max_participants", "Must be between 1 and 1000")
+        if not 1 <= max_duration_minutes <= 1440:
+            raise ValidationError("max_duration_minutes", "Must be between 1 and 1440")
+        policy = ResolvedCallPolicy(
+            organization_id=organization_id,
+            calls_enabled=calls_enabled,
+            max_participants=max_participants,
+            max_duration_minutes=max_duration_minutes,
+            max_screen_share_quality_direct=int(max_screen_share_quality_direct),
+            max_screen_share_quality_group=int(max_screen_share_quality_group),
+            max_screen_share_quality_channel=int(max_screen_share_quality_channel),
+        )
+        await save_call_policy(
+            self.session,
+            policy=policy,
+            updated_by_user_id=user_id,
+        )
+        await self.session.commit()
+        return policy
 
     async def member_user_ids(self, channel_id: UUID) -> list[UUID]:
         members = await fetch_channel_members(self.session, channel_id)
