@@ -159,32 +159,28 @@ export function ActionSheet({
             );
           })}
 
-          {dangerActions.length > 0 && (
-            <View style={[styles.dangerDivider, { borderTopColor: T.border }]}>
-              {dangerActions.map((action, i) => {
-                const ActionIcon = getPhosphorIcon(action.icon);
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.actionRow, { borderBottomColor: T.border }]}
-                    onPress={() => {
-                      action.onPress();
-                      onClose();
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIcon, { backgroundColor: "#FA525218" }]}>
-                      <ActionIcon size={16} color="#FA5252" weight="duotone" />
-                    </View>
-                    <Text style={[styles.actionLabel, { color: "#FA5252", flex: 1 }]}>
-                      {action.label}
-                    </Text>
-                    <CaretRight size={14} color="#FA525270" weight="bold" />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
+          {dangerActions.map((action, i) => {
+            const ActionIcon = getPhosphorIcon(action.icon);
+            return (
+              <TouchableOpacity
+                key={`danger-${i}`}
+                style={[styles.actionRow, { borderBottomColor: T.border }]}
+                onPress={() => {
+                  action.onPress();
+                  onClose();
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: "#FA525218" }]}>
+                  <ActionIcon size={16} color="#FA5252" weight="duotone" />
+                </View>
+                <Text style={[styles.actionLabel, { color: "#FA5252", flex: 1 }]}>
+                  {action.label}
+                </Text>
+                <CaretRight size={14} color="#FA525270" weight="bold" />
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
     </Modal>
@@ -256,9 +252,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: FONT.regular,
     marginTop: 1,
-  },
-  dangerDivider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 8,
   },
 });
