@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Platform, useWindowDimensions } from "react-native";
-import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -229,10 +228,12 @@ export function BottomNav() {
     transform: [{ rotate: `${-(offset.value - spinOrigin.value) * 8}deg` }],
   }));
 
-  // The bar rides on top of the keyboard so its buttons are never covered.
-  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
-  const barLiftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: keyboardHeight.value }],
+  // The keyboard replaces the bar: as it rises the bar slides out below the
+  // screen edge and returns only once the keyboard is dismissed.
+  const { progress: keyboardProgress } = useReanimatedKeyboardAnimation();
+  const barHideStyle = useAnimatedStyle(() => ({
+    opacity: 1 - keyboardProgress.value,
+    transform: [{ translateY: keyboardProgress.value * (BOTTOM_BAR_CONTENT_HEIGHT + bottomPad) }],
   }));
 
   const isHome = pathname === "/";
@@ -249,16 +250,14 @@ export function BottomNav() {
         onItemPress={selectIndex}
       />
 
-      <Animated.View style={barLiftStyle}>
-        <BlurView
-          intensity={80}
-          tint={T.isDark ? "dark" : "light"}
+      <Animated.View style={barHideStyle}>
+        <View
           style={[
             styles.bar,
             {
               borderTopColor: T.border,
               paddingBottom: bottomPad,
-              backgroundColor: T.isDark ? "#0d111eaa" : "#ffffffaa",
+              backgroundColor: T.bg,
             },
           ]}
         >
@@ -294,7 +293,11 @@ export function BottomNav() {
             accessibilityLabel="Home"
           >
             <View style={styles.homeWrap}>
+              {/* key remounts the icon on weight flips: react-native-svg fails
+                  to re-resolve currentColor when the path swaps in-place and
+                  paints it black. */}
               <House
+                key={isHome ? "fill" : "duotone"}
                 size={27}
                 color={isHome ? T.accent : T.textDim}
                 weight={isHome ? "fill" : "duotone"}
@@ -306,7 +309,7 @@ export function BottomNav() {
               )}
             </View>
           </Pressable>
-        </BlurView>
+        </View>
       </Animated.View>
     </View>
   );
