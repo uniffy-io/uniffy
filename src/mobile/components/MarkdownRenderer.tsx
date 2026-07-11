@@ -151,10 +151,21 @@ function renderMixedParts(
   return parts.map((part, i) => {
     if (part.type === "mention") {
       const urnMatch = part.urn.match(/urn:uniffy:content:([^:]+):(.+)/);
-      const domain = urnMatch ? CONTENT_TYPE_TO_DOMAIN[urnMatch[1]] : null;
+      const urnType = urnMatch ? urnMatch[1] : null;
+      const domain = urnType ? CONTENT_TYPE_TO_DOMAIN[urnType] : null;
       const refId = urnMatch ? urnMatch[2] : null;
       if (!domain) {
-        // No mobile surface for this type (e.g. USER) - style it, don't chip it.
+        if (urnType === "USER" || urnType === "GROUP") {
+          return (
+            <ReferenceChip
+              key={`${kp}-m${i}`}
+              domain={urnType === "USER" ? "user" : "group"}
+              label={part.label}
+              onPress={onMentionPress ? () => onMentionPress(part.urn, part.label) : undefined}
+            />
+          );
+        }
+        // No mobile surface for this type - style it, don't chip it.
         return (
           <Text
             key={`${kp}-m${i}`}
@@ -474,6 +485,32 @@ function renderMarkdownLine(
     return <View key={index} style={styles.mdEmptyLine} />;
   }
   return render(line, [styles.bodyText, { color: T.text }]);
+}
+
+type MentionLineProps = {
+  content: string;
+  textStyle?: any;
+  wrapperStyle?: any;
+  onMentionPress?: (urn: string, label: string) => void;
+};
+
+/** Single line of mention-aware text (system messages, previews) - no block markdown. */
+export function MentionLine({
+  content,
+  textStyle,
+  wrapperStyle,
+  onMentionPress,
+}: MentionLineProps) {
+  const T = useTheme();
+  const parts = parseInlineWithMentions(content);
+  if (!hasMentions(parts)) {
+    return <Text style={textStyle}>{renderTextParts(parts, T)}</Text>;
+  }
+  return (
+    <View style={[styles.inlineRow, wrapperStyle]}>
+      {renderMixedParts(parts, T, textStyle, onMentionPress)}
+    </View>
+  );
 }
 
 type MarkdownRendererProps = {

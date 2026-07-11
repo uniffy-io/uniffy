@@ -14,7 +14,9 @@ import {
 import { X, MagnifyingGlass, ArrowRight } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import { useUniffy } from "@/context/uniffy-context";
+import { useStartAgentChat } from "@/hooks/useAgents";
 import { useSearch } from "@/hooks/useSearch";
 import { useTheme } from "@/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
@@ -28,8 +30,9 @@ const FILTERS: { key: "all" | Domain; label: string }[] = [
   { key: "notes", label: "Notes" },
   { key: "files", label: "Files" },
   { key: "chat", label: "Chat" },
-  { key: "calendar", label: "Cal" },
+  { key: "calendar", label: "Calendar" },
   { key: "projects", label: "Projects" },
+  { key: "agents", label: "Agents" },
 ];
 
 export function AtOverlay() {
@@ -47,6 +50,7 @@ export function AtOverlay() {
   } = useUniffy();
   const { query, setQuery, results, isLoading, activeFilter, setActiveFilter, clearResults } =
     useSearch();
+  const startAgentChat = useStartAgentChat();
 
   const [isMounted, setIsMounted] = React.useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -99,6 +103,16 @@ export function AtOverlay() {
     saveAtState({ query, filter: activeFilter });
     setReturnToAt(true);
     closeAt();
+    // Agent hits have no standalone screen; opening one resumes (or starts)
+    // the DM with that agent.
+    if (item.type === SearchResultType.AGENT) {
+      startAgentChat.mutate(item.id, {
+        onSuccess: (channelId) => {
+          if (channelId) router.push(`/chat/${channelId}` as any);
+        },
+      });
+      return;
+    }
     if (item.route) {
       router.push(item.route as any);
     }
@@ -273,6 +287,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontFamily: FONT.regular,
+    // Poppins' tall metrics + Android's default input padding push the text
+    // off-center inside the fixed-height row.
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
   resultsHeader: {
     paddingHorizontal: 16,
