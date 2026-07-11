@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Star, DotsThree, PencilSimple, ShareNetwork, CaretRight } from "phosphor-react-native";
+import { Star, DotsThree, CaretRight } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { CommentButton } from "@/components/CommentsSheet";
@@ -69,16 +69,6 @@ export default function NoteDetailScreen() {
   const editedAt = note.updatedAt ? formatRelativeTime(note.updatedAt.seconds) : "just now";
   const backlinks = backlinksQuery.data ?? [];
 
-  const actionBar = [
-    {
-      IconComponent: PencilSimple,
-      label: "Edit",
-      onPress: () => router.push(`/notes/edit?noteId=${note.id}` as any),
-    },
-    { IconComponent: ShareNetwork, label: "Share", onPress: () => setShareOpen(true) },
-    { IconComponent: DotsThree, label: "More", onPress: () => setSheetOpen(true) },
-  ];
-
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
@@ -97,6 +87,7 @@ export default function NoteDetailScreen() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Star
+                key={isBookmarked ? "fill" : "duotone"}
                 size={19}
                 color={isBookmarked ? T.domains.notes : T.textDim}
                 weight={isBookmarked ? "fill" : "duotone"}
@@ -166,20 +157,6 @@ export default function NoteDetailScreen() {
           </View>
         )}
       </ScrollView>
-
-      <View style={[styles.actionBar, { backgroundColor: T.surface, borderTopColor: T.border }]}>
-        {actionBar.map((action) => (
-          <TouchableOpacity
-            key={action.label}
-            style={styles.actionBtn}
-            onPress={action.onPress}
-            activeOpacity={0.7}
-          >
-            <action.IconComponent size={18} color={T.text} weight="duotone" />
-            <Text style={[styles.actionLabel, { color: T.textDim }]}>{action.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       <ActionSheet
         visible={sheetOpen}
@@ -271,12 +248,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   refTitle: { fontSize: 13, fontFamily: FONT.semibold },
-  actionBar: {
-    flexDirection: "row",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  actionBtn: { flex: 1, alignItems: "center", gap: 4 },
-  actionLabel: { fontSize: 11, fontFamily: FONT.medium },
 });

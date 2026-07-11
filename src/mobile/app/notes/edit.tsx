@@ -351,6 +351,7 @@ export default function NoteEditorScreen() {
                 activeOpacity={0.7}
               >
                 <Icon
+                  key={active ? "bold" : "duotone"}
                   size={16}
                   color={active ? T.accent : T.text}
                   weight={active ? "bold" : "duotone"}

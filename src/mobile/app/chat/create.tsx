@@ -106,6 +106,7 @@ export default function CreateChannelScreen() {
                 activeOpacity={0.7}
               >
                 <t.Icon
+                  key={active ? "fill" : "bold"}
                   size={20}
                   color={active ? T.domains.chat : T.textDim}
                   weight={active ? "fill" : "bold"}

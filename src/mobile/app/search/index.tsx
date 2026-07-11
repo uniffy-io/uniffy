@@ -301,6 +301,7 @@ function ResultRow({
         style={styles.bookmarkBtn}
       >
         <BookmarkSimple
+          key={bookmarked ? "fill" : "regular"}
           size={18}
           color={bookmarked ? T.accent : T.textDim}
           weight={bookmarked ? "fill" : "regular"}
@@ -326,7 +327,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  input: { flex: 1, fontSize: 15, fontFamily: FONT.regular },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: FONT.regular,
+    paddingVertical: 0,
+    includeFontPadding: false,
+  },
   filterBar: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
   filterBarContent: { paddingHorizontal: 16, gap: 8, paddingVertical: 10, flexDirection: "row" },
   filterPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },

@@ -31,6 +31,8 @@ type MfaChallengeState = { challengeToken: string; methods: string[] };
 // Midnight, below the 4.5:1 text threshold.
 const LINK_VIOLET = "#9b85ff";
 
+const PILL_GUTTER = 3;
+
 function parseAuthError(err: any): string {
   const msg = err?.message || "Something went wrong";
   const match = msg.includes("[") ? msg.match(/\] (.+)/) : null;
@@ -54,15 +56,17 @@ export default function AuthScreen() {
   const [mfaMethod, setMfaMethod] = useState<"totp" | "recovery_code">("totp");
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  // Animated pill indicator
+  // Animated pill indicator slides by measured pixels so it fills its half of
+  // the track exactly, gutter included on both sides.
   const pillAnim = useRef(new Animated.Value(0)).current;
+  const [pillTrackWidth, setPillTrackWidth] = useState(0);
 
   const switchMode = (newMode: Mode) => {
     setMode(newMode);
     setError(null);
     Animated.spring(pillAnim, {
       toValue: newMode === "login" ? 0 : 1,
-      useNativeDriver: false,
+      useNativeDriver: true,
       tension: 80,
       friction: 12,
     }).start();
@@ -156,9 +160,10 @@ export default function AuthScreen() {
       ? email.length > 0 && password.length > 0
       : email.length > 0 && username.length > 0 && password.length > 0;
 
-  const pillLeft = pillAnim.interpolate({
+  const pillSegmentWidth = pillTrackWidth > 0 ? (pillTrackWidth - PILL_GUTTER * 2) / 2 : 0;
+  const pillTranslate = pillAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["1%", "50%"],
+    outputRange: [0, pillSegmentWidth],
   });
 
   return (
@@ -209,7 +214,7 @@ export default function AuthScreen() {
         >
           {/* Fixed-height header anchors the card top so it only grows downward */}
           <View
-            style={[styles.header, { height: Math.max(screenHeight * 0.32, insets.top + 210) }]}
+            style={[styles.header, { height: Math.max(screenHeight * 0.26, insets.top + 190) }]}
           >
             <Image
               source={require("../assets/images/uniffy-logo.png")}
@@ -323,8 +328,18 @@ export default function AuthScreen() {
             ) : (
               <>
                 {/* Mode toggle pills */}
-                <View style={styles.pillContainer}>
-                  <Animated.View style={[styles.pillIndicator, { left: pillLeft }]} />
+                <View
+                  style={styles.pillContainer}
+                  onLayout={(e) => setPillTrackWidth(e.nativeEvent.layout.width)}
+                >
+                  {pillSegmentWidth > 0 && (
+                    <Animated.View
+                      style={[
+                        styles.pillIndicator,
+                        { width: pillSegmentWidth, transform: [{ translateX: pillTranslate }] },
+                      ]}
+                    />
+                  )}
                   <TouchableOpacity
                     style={styles.pillButton}
                     onPress={() => switchMode("login")}
@@ -488,12 +503,12 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     justifyContent: "flex-end",
-    paddingBottom: 28,
+    paddingBottom: 20,
   },
   logo: {
     width: 76,
     height: 76,
-    marginBottom: 10,
+    marginBottom: 4,
   },
   wordmark: {
     fontSize: 34,
@@ -519,22 +534,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "rgba(238,238,238,0.07)",
     borderRadius: 12,
-    padding: 3,
     position: "relative",
     marginBottom: 4,
   },
   pillIndicator: {
     position: "absolute",
-    top: 3,
-    bottom: 3,
-    width: "49%",
+    top: PILL_GUTTER,
+    bottom: PILL_GUTTER,
+    left: PILL_GUTTER,
     backgroundColor: BRAND.violet,
     borderRadius: 9,
   },
   pillButton: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 13,
   },
   pillText: {
     fontSize: 14,
