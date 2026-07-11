@@ -13,6 +13,8 @@ import {
   KickParticipantRequestSchema,
   MuteParticipantRequestSchema,
   ReportMediaStateRequestSchema,
+  GetOrgCallPolicyRequestSchema,
+  UpdateOrgCallPolicyRequestSchema,
 } from '@uniffy/proto/calls/v1/calls_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -41,4 +43,8 @@ export const callsApi = {
     callsClient.muteParticipant(req),
   reportMediaState: (req: MessageInitShape<typeof ReportMediaStateRequestSchema>) =>
     callsClient.reportMediaState(req),
+  getOrgCallPolicy: (req: MessageInitShape<typeof GetOrgCallPolicyRequestSchema>) =>
+    callsClient.getOrgCallPolicy(req),
+  updateOrgCallPolicy: (req: MessageInitShape<typeof UpdateOrgCallPolicyRequestSchema>) =>
+    callsClient.updateOrgCallPolicy(req),
 };

@@ -19,17 +19,19 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CallService_InitiateCall_FullMethodName     = "/calls.v1.CallService/InitiateCall"
-	CallService_JoinCall_FullMethodName         = "/calls.v1.CallService/JoinCall"
-	CallService_LeaveCall_FullMethodName        = "/calls.v1.CallService/LeaveCall"
-	CallService_EndCall_FullMethodName          = "/calls.v1.CallService/EndCall"
-	CallService_RefreshCallToken_FullMethodName = "/calls.v1.CallService/RefreshCallToken"
-	CallService_GetActiveCall_FullMethodName    = "/calls.v1.CallService/GetActiveCall"
-	CallService_ListActiveCalls_FullMethodName  = "/calls.v1.CallService/ListActiveCalls"
-	CallService_DeclineCall_FullMethodName      = "/calls.v1.CallService/DeclineCall"
-	CallService_KickParticipant_FullMethodName  = "/calls.v1.CallService/KickParticipant"
-	CallService_MuteParticipant_FullMethodName  = "/calls.v1.CallService/MuteParticipant"
-	CallService_ReportMediaState_FullMethodName = "/calls.v1.CallService/ReportMediaState"
+	CallService_InitiateCall_FullMethodName        = "/calls.v1.CallService/InitiateCall"
+	CallService_JoinCall_FullMethodName            = "/calls.v1.CallService/JoinCall"
+	CallService_LeaveCall_FullMethodName           = "/calls.v1.CallService/LeaveCall"
+	CallService_EndCall_FullMethodName             = "/calls.v1.CallService/EndCall"
+	CallService_RefreshCallToken_FullMethodName    = "/calls.v1.CallService/RefreshCallToken"
+	CallService_GetActiveCall_FullMethodName       = "/calls.v1.CallService/GetActiveCall"
+	CallService_ListActiveCalls_FullMethodName     = "/calls.v1.CallService/ListActiveCalls"
+	CallService_DeclineCall_FullMethodName         = "/calls.v1.CallService/DeclineCall"
+	CallService_KickParticipant_FullMethodName     = "/calls.v1.CallService/KickParticipant"
+	CallService_MuteParticipant_FullMethodName     = "/calls.v1.CallService/MuteParticipant"
+	CallService_GetOrgCallPolicy_FullMethodName    = "/calls.v1.CallService/GetOrgCallPolicy"
+	CallService_UpdateOrgCallPolicy_FullMethodName = "/calls.v1.CallService/UpdateOrgCallPolicy"
+	CallService_ReportMediaState_FullMethodName    = "/calls.v1.CallService/ReportMediaState"
 )
 
 // CallServiceClient is the client API for CallService service.
@@ -60,6 +62,10 @@ type CallServiceClient interface {
 	DeclineCall(ctx context.Context, in *DeclineCallRequest, opts ...grpc.CallOption) (*DeclineCallResponse, error)
 	KickParticipant(ctx context.Context, in *KickParticipantRequest, opts ...grpc.CallOption) (*KickParticipantResponse, error)
 	MuteParticipant(ctx context.Context, in *MuteParticipantRequest, opts ...grpc.CallOption) (*MuteParticipantResponse, error)
+	// Org call policy management. Org admin / owner only; gated on membership
+	// role, not the content permission system (this is an org-level power).
+	GetOrgCallPolicy(ctx context.Context, in *GetOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error)
+	UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -175,6 +181,26 @@ func (c *callServiceClient) MuteParticipant(ctx context.Context, in *MutePartici
 	return out, nil
 }
 
+func (c *callServiceClient) GetOrgCallPolicy(ctx context.Context, in *GetOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OrgCallPolicyResponse)
+	err := c.cc.Invoke(ctx, CallService_GetOrgCallPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *callServiceClient) UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*OrgCallPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OrgCallPolicyResponse)
+	err := c.cc.Invoke(ctx, CallService_UpdateOrgCallPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *callServiceClient) ReportMediaState(ctx context.Context, in *ReportMediaStateRequest, opts ...grpc.CallOption) (*ReportMediaStateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ReportMediaStateResponse)
@@ -213,6 +239,10 @@ type CallServiceServer interface {
 	DeclineCall(context.Context, *DeclineCallRequest) (*DeclineCallResponse, error)
 	KickParticipant(context.Context, *KickParticipantRequest) (*KickParticipantResponse, error)
 	MuteParticipant(context.Context, *MuteParticipantRequest) (*MuteParticipantResponse, error)
+	// Org call policy management. Org admin / owner only; gated on membership
+	// role, not the content permission system (this is an org-level power).
+	GetOrgCallPolicy(context.Context, *GetOrgCallPolicyRequest) (*OrgCallPolicyResponse, error)
+	UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*OrgCallPolicyResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -257,6 +287,12 @@ func (UnimplementedCallServiceServer) KickParticipant(context.Context, *KickPart
 }
 func (UnimplementedCallServiceServer) MuteParticipant(context.Context, *MuteParticipantRequest) (*MuteParticipantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MuteParticipant not implemented")
+}
+func (UnimplementedCallServiceServer) GetOrgCallPolicy(context.Context, *GetOrgCallPolicyRequest) (*OrgCallPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrgCallPolicy not implemented")
+}
+func (UnimplementedCallServiceServer) UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*OrgCallPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateOrgCallPolicy not implemented")
 }
 func (UnimplementedCallServiceServer) ReportMediaState(context.Context, *ReportMediaStateRequest) (*ReportMediaStateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportMediaState not implemented")
@@ -462,6 +498,42 @@ func _CallService_MuteParticipant_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CallService_GetOrgCallPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrgCallPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).GetOrgCallPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_GetOrgCallPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).GetOrgCallPolicy(ctx, req.(*GetOrgCallPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CallService_UpdateOrgCallPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOrgCallPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).UpdateOrgCallPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_UpdateOrgCallPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).UpdateOrgCallPolicy(ctx, req.(*UpdateOrgCallPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CallService_ReportMediaState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReportMediaStateRequest)
 	if err := dec(in); err != nil {
@@ -526,6 +598,14 @@ var CallService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MuteParticipant",
 			Handler:    _CallService_MuteParticipant_Handler,
+		},
+		{
+			MethodName: "GetOrgCallPolicy",
+			Handler:    _CallService_GetOrgCallPolicy_Handler,
+		},
+		{
+			MethodName: "UpdateOrgCallPolicy",
+			Handler:    _CallService_UpdateOrgCallPolicy_Handler,
 		},
 		{
 			MethodName: "ReportMediaState",

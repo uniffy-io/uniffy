@@ -22,6 +22,18 @@ enum CallEndReason {
   CALL_END_REASON_CHANNEL_ARCHIVED = 5;
 }
 
+// Ceiling for the publisher's top screen-share layer. Simulcast still adds lower
+// rungs under every tier, so viewers on weak networks downshift regardless.
+// UNSPECIFIED on a policy field means "no explicit cap for that call type"; the
+// server then falls back to a built-in default (DIRECT to MAX, others to the env
+// default) and returns the resolved ceiling on join.
+enum ScreenShareQuality {
+  SCREEN_SHARE_QUALITY_UNSPECIFIED = 0;
+  SCREEN_SHARE_QUALITY_BALANCED = 1;
+  SCREEN_SHARE_QUALITY_HIGH = 2;
+  SCREEN_SHARE_QUALITY_MAX = 3;
+}
+
 // CallService manages call lifecycle. Join-shaped RPCs return `ws_url` +
 // `livekit_token`; media and TURN negotiation happen over LiveKit signaling,
 // so there is no ice_servers field anywhere. `ws_url` is either a path the
@@ -46,6 +58,10 @@ service CallService {
   rpc DeclineCall(DeclineCallRequest) returns (DeclineCallResponse);
   rpc KickParticipant(KickParticipantRequest) returns (KickParticipantResponse);
   rpc MuteParticipant(MuteParticipantRequest) returns (MuteParticipantResponse);
+  // Org call policy management. Org admin / owner only; gated on membership
+  // role, not the content permission system (this is an org-level power).
+  rpc GetOrgCallPolicy(GetOrgCallPolicyRequest) returns (OrgCallPolicyResponse);
+  rpc UpdateOrgCallPolicy(UpdateOrgCallPolicyRequest) returns (OrgCallPolicyResponse);
   // The client reports its own mic/camera/screen state; this is the roster's
   // source of truth because LiveKit emits no mute webhook (a muted mic track
   // stays published, so mute state cannot be inferred server-side). Fans out
@@ -95,6 +111,8 @@ message InitiateCallResponse {
   string livekit_token = 3;
   // True when an active call already existed and the caller joined it.
   bool joined_existing = 4;
+  // Resolved screen-share ceiling for this session (org cap, else per-type default).
+  ScreenShareQuality screen_share_quality_cap = 5;
 }
 
 message JoinCallRequest {
@@ -108,6 +126,8 @@ message JoinCallResponse {
   Call call = 1;
   string ws_url = 2;
   string livekit_token = 3;
+  // Resolved screen-share ceiling for this session (org cap, else per-type default).
+  ScreenShareQuality screen_share_quality_cap = 4;
 }
 
 message LeaveCallRequest {
@@ -196,4 +216,34 @@ message ReportMediaStateRequest {
 
 message ReportMediaStateResponse {
   bool success = 1;
+}
+
+message OrgCallPolicy {
+  string organization_id = 1;
+  bool calls_enabled = 2;
+  int32 max_participants = 3;
+  int32 max_duration_minutes = 4;
+  // Per-call-type screen-share ceilings. UNSPECIFIED = no explicit cap for that
+  // type, so the server falls back to the built-in default.
+  ScreenShareQuality max_screen_share_quality_direct = 5;
+  ScreenShareQuality max_screen_share_quality_group = 6;
+  ScreenShareQuality max_screen_share_quality_channel = 7;
+}
+
+message GetOrgCallPolicyRequest {
+  string organization_id = 1;
+}
+
+message OrgCallPolicyResponse {
+  OrgCallPolicy policy = 1;
+}
+
+message UpdateOrgCallPolicyRequest {
+  string organization_id = 1;
+  bool calls_enabled = 2;
+  int32 max_participants = 3;
+  int32 max_duration_minutes = 4;
+  ScreenShareQuality max_screen_share_quality_direct = 5;
+  ScreenShareQuality max_screen_share_quality_group = 6;
+  ScreenShareQuality max_screen_share_quality_channel = 7;
 }

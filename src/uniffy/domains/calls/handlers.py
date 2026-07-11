@@ -13,6 +13,7 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     EndCallResponse,
     GetActiveCallRequest,
     GetActiveCallResponse,
+    GetOrgCallPolicyRequest,
     InitiateCallRequest,
     InitiateCallResponse,
     JoinCallRequest,
@@ -25,17 +26,20 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     ListActiveCallsResponse,
     MuteParticipantRequest,
     MuteParticipantResponse,
+    OrgCallPolicyResponse,
     RefreshCallTokenRequest,
     RefreshCallTokenResponse,
     ReportMediaStateRequest,
     ReportMediaStateResponse,
+    UpdateOrgCallPolicyRequest,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.calls import ScreenShareQuality
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config
-from uniffy.domains.calls.converters import call_to_proto
+from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto
 from uniffy.domains.calls.livekit_client import LiveKitUnavailableError
 from uniffy.domains.calls.operations import CallOperations
 
@@ -95,6 +99,7 @@ class CallHandlers:
                     user_id, organization_id, channel_id, device_id, device_label
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
+                cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
             except Exception as exc:
                 raise _map_domain_error("initiate_call", exc) from exc
 
@@ -103,6 +108,7 @@ class CallHandlers:
             ws_url=get_livekit_config().ws_url,
             livekit_token=token.token,
             joined_existing=joined_existing,
+            screen_share_quality_cap=int(cap),
         )
 
     async def join_call(self, request: JoinCallRequest, ctx: RequestContext) -> JoinCallResponse:
@@ -119,6 +125,7 @@ class CallHandlers:
                     user_id, organization_id, call_id, device_id, device_label
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
+                cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
             except Exception as exc:
                 raise _map_domain_error("join_call", exc) from exc
 
@@ -126,6 +133,7 @@ class CallHandlers:
             call=call_to_proto(call, participants, profiles),
             ws_url=get_livekit_config().ws_url,
             livekit_token=token.token,
+            screen_share_quality_cap=int(cap),
         )
 
     async def leave_call(
@@ -254,6 +262,49 @@ class CallHandlers:
             except Exception as exc:
                 raise _map_domain_error("mute_participant", exc) from exc
         return MuteParticipantResponse(success=True)
+
+    async def get_org_call_policy(
+        self, request: GetOrgCallPolicyRequest, ctx: RequestContext
+    ) -> OrgCallPolicyResponse:
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        async with open_session() as session:
+            try:
+                policy = await CallOperations(session).get_org_policy_view(
+                    user_id, organization_id
+                )
+            except Exception as exc:
+                raise _map_domain_error("get_org_call_policy", exc) from exc
+        return OrgCallPolicyResponse(policy=org_policy_to_proto(policy))
+
+    async def update_org_call_policy(
+        self, request: UpdateOrgCallPolicyRequest, ctx: RequestContext
+    ) -> OrgCallPolicyResponse:
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        async with open_session() as session:
+            try:
+                policy = await CallOperations(session).update_org_policy(
+                    user_id,
+                    organization_id,
+                    calls_enabled=request.calls_enabled,
+                    max_participants=request.max_participants,
+                    max_duration_minutes=request.max_duration_minutes,
+                    max_screen_share_quality_direct=ScreenShareQuality(
+                        request.max_screen_share_quality_direct
+                    ),
+                    max_screen_share_quality_group=ScreenShareQuality(
+                        request.max_screen_share_quality_group
+                    ),
+                    max_screen_share_quality_channel=ScreenShareQuality(
+                        request.max_screen_share_quality_channel
+                    ),
+                )
+            except Exception as exc:
+                raise _map_domain_error("update_org_call_policy", exc) from exc
+        return OrgCallPolicyResponse(policy=org_policy_to_proto(policy))
 
     async def report_media_state(
         self, request: ReportMediaStateRequest, ctx: RequestContext

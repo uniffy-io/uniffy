@@ -3,6 +3,7 @@ import {
     type ReactNode,
     type RefObject,
     useEffect,
+    useLayoutEffect,
     useRef,
     useState,
 } from 'react';
@@ -13,6 +14,8 @@ interface MenuPosition {
     top: number;
     left: number;
     minWidth: number;
+    /** False until the menu has been measured and flipped/clamped to fit the viewport. */
+    ready: boolean;
 }
 
 interface PortalMenuProps {
@@ -26,6 +29,9 @@ interface PortalMenuProps {
     className?: string;
 }
 
+const MENU_WIDTH = 208;
+const VIEWPORT_MARGIN = 8;
+
 export function PortalMenu({
     open,
     onClose,
@@ -37,26 +43,51 @@ export function PortalMenu({
     const menuRef = useRef<HTMLDivElement | null>(null);
     const [position, setPosition] = useState<MenuPosition | null>(null);
 
-    useEffect(() => {
-        if (!open) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing position on close prevents stale anchor on next open
-            setPosition(null);
-            return;
-        }
+    useLayoutEffect(() => {
+        // A closed menu renders null (see the guard below), so no reset is needed here;
+        // reopening recomputes a fresh position with ready=false before the next paint.
+        if (!open) return;
         const trigger = triggerRef.current;
         if (!trigger) return;
         const rect = trigger.getBoundingClientRect();
-        const menuWidth = 208;
         const left =
             align === 'right'
-                ? Math.max(8, rect.right - menuWidth)
-                : Math.max(8, rect.left);
-        setPosition({
-            top: rect.bottom + 4,
-            left,
-            minWidth: menuWidth,
-        });
+                ? Math.max(VIEWPORT_MARGIN, rect.right - MENU_WIDTH)
+                : Math.max(VIEWPORT_MARGIN, rect.left);
+        setPosition({ top: rect.bottom + 4, left, minWidth: MENU_WIDTH, ready: false });
     }, [open, triggerRef, align]);
+
+    // Once the menu is in the DOM, measure it and flip above the trigger (or clamp)
+    // when it would overflow the viewport bottom - otherwise a trigger low on the
+    // screen opens its menu off-screen where it reads as "nothing happened".
+    useLayoutEffect(() => {
+        if (!open || !position || position.ready) return;
+        const trigger = triggerRef.current;
+        const menu = menuRef.current;
+        if (!trigger || !menu) return;
+        const rect = trigger.getBoundingClientRect();
+        const menuHeight = menu.offsetHeight;
+        const menuWidth = menu.offsetWidth;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        let top: number;
+        if (spaceBelow < menuHeight + VIEWPORT_MARGIN && spaceAbove > spaceBelow) {
+            top = Math.max(VIEWPORT_MARGIN, rect.top - menuHeight - 4);
+        } else {
+            top = Math.max(
+                VIEWPORT_MARGIN,
+                Math.min(rect.bottom + 4, window.innerHeight - menuHeight - VIEWPORT_MARGIN),
+            );
+        }
+        // Re-anchor horizontally against the measured width (className may widen the
+        // menu past MENU_WIDTH) and clamp so it never spills off the right edge.
+        const rawLeft = align === 'right' ? rect.right - menuWidth : rect.left;
+        const left = Math.max(
+            VIEWPORT_MARGIN,
+            Math.min(rawLeft, window.innerWidth - menuWidth - VIEWPORT_MARGIN),
+        );
+        setPosition((p) => (p ? { ...p, top, left, ready: true } : p));
+    }, [open, position, triggerRef, align]);
 
     useEffect(() => {
         if (!open) return;
@@ -87,6 +118,7 @@ export function PortalMenu({
                 top: position.top,
                 left: position.left,
                 minWidth: position.minWidth,
+                visibility: position.ready ? 'visible' : 'hidden',
             }}
             className={cn(
                 'z-[200] rounded-lg border border-border bg-card shadow-lg py-1 text-sm',

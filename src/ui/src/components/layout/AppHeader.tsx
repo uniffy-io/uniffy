@@ -7,6 +7,7 @@ import { GlobalSearch } from '@/features/search';
 import { NotificationBell } from '@/features/notifications';
 import { CalendarQuickView } from '@/features/calendar';
 import { RecordingNavTrigger } from '@/features/recording';
+import { CallHeaderPill } from '@/features/calls/components/CallHeaderPill';
 import { cn } from '@/shared/utils/cn';
 import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
@@ -218,6 +219,7 @@ export function AppHeader() {
             {isMobile && (
               <MobileSearchButton />
             )}
+            <CallHeaderPill />
             <RecordingNavTrigger />
             <CalendarQuickView />
             <NotificationBell />

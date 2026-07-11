@@ -17,6 +17,7 @@ import {
     CaretRight,
     Key,
     Envelope,
+    Phone,
     LockKey,
     Lifebuoy,
 } from '@phosphor-icons/react';
@@ -62,6 +63,7 @@ const orgGroups: NavGroup[] = [
             { name: 'Rooms', path: '/admin/rooms', icon: Door },
             { name: 'Storage', path: '/admin/storage', icon: Database },
             { name: 'Email', path: '/admin/email', icon: Envelope },
+            { name: 'Calls', path: '/admin/calls', icon: Phone },
         ],
     },
 ];
