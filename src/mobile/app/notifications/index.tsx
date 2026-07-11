@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  ScrollView,
   ActivityIndicator,
   RefreshControl,
   Alert,
@@ -118,12 +117,7 @@ export default function NotificationsScreen() {
         }
       />
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={[styles.filterBar, { borderBottomColor: T.border }]}
-        contentContainerStyle={styles.filterBarContent}
-      >
+      <View style={[styles.filterBar, { borderBottomColor: T.border }]}>
         {(["all", "unread"] as Tab[]).map((key) => {
           const active = tab === key;
           return (
@@ -148,7 +142,7 @@ export default function NotificationsScreen() {
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
 
       {feed.isLoading ? (
         <View style={styles.loadingWrap}>
@@ -263,10 +257,27 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   markAllBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   markAllText: { fontSize: 13, fontFamily: FONT.semibold },
-  filterBar: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
-  filterBarContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: "row" },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  filterPillText: { fontSize: 13, fontFamily: FONT.medium },
+  filterBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterPillText: {
+    fontSize: 13,
+    fontFamily: FONT.medium,
+    lineHeight: 18,
+    includeFontPadding: false,
+  },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   listContent: { paddingBottom: 24 },
   emptyContent: { flexGrow: 1 },
