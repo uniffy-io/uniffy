@@ -17,6 +17,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/auth-context";
 import { useSessions } from "@/hooks/useSessions";
 import { Avatar } from "@/components/Avatar";
+import { DomainHeader } from "@/components/DomainHeader";
 import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
 import { FONT } from "@/constants/typography";
 
@@ -33,161 +34,164 @@ export function YouScreen() {
   const sessionCount = sessions.length;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: T.pageBg }]}
-      contentContainerStyle={{ paddingBottom: bottomPad }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Profile Header */}
-      <View style={[styles.profileHeader, { paddingTop: 24 }]}>
-        <Avatar name={userName} avatarUrl={user?.avatarUrl} size={72} accentColor={T.accent} />
-        <View style={{ alignItems: "center", gap: 4 }}>
-          <Text style={[styles.profileName, { color: T.textBright }]}>{userName}</Text>
-          <Text style={[styles.profileEmail, { color: T.textDim }]}>{userEmail}</Text>
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+      <DomainHeader title="You" color={T.accent} icon="user" />
 
-      {/* Account */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACCOUNT</Text>
-        <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <TouchableOpacity
-            style={[
-              styles.settingRow,
-              { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
-            ]}
-            onPress={() => router.push("/you/sessions" as any)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <Devices size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>Sessions</Text>
-              <Text style={[styles.settingSub, { color: T.textDim }]}>
-                {sessionCount > 0 ? `${sessionCount} active` : "Manage devices"}
-              </Text>
-            </View>
-            <CaretRight size={15} color={T.textDim} weight="regular" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.settingRow,
-              { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
-            ]}
-            onPress={() => router.push("/you/security" as any)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <ShieldCheck size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>Security</Text>
-              <Text style={[styles.settingSub, { color: T.textDim }]}>
-                Two-factor authentication
-              </Text>
-            </View>
-            <CaretRight size={15} color={T.textDim} weight="regular" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingRow}
-            activeOpacity={0.7}
-            onPress={() => router.push("/you/notifications" as any)}
-          >
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <Bell size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>Notifications</Text>
-              <Text style={[styles.settingSub, { color: T.textDim }]}>Manage alerts</Text>
-            </View>
-            <CaretRight size={15} color={T.textDim} weight="regular" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* App */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: T.textDim }]}>APP</Text>
-        <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => router.push("/you/appearance" as any)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <Moon size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>Appearance</Text>
-              <Text style={[styles.settingSub, { color: T.textDim }]}>Theme & colors</Text>
-            </View>
-            <CaretRight size={15} color={T.textDim} weight="regular" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* About */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: T.textDim }]}>ABOUT</Text>
-        <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <TouchableOpacity
-            style={[
-              styles.settingRow,
-              { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
-            ]}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <Question size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>Help & Docs</Text>
-            </View>
-            <CaretRight size={15} color={T.textDim} weight="regular" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.settingRow,
-              { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
-            ]}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <ChatText size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>Send Feedback</Text>
-            </View>
-            <CaretRight size={15} color={T.textDim} weight="regular" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
-            <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-              <Info size={15} color={T.text} weight="regular" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: T.textBright }]}>About Uniffy</Text>
-              <Text style={[styles.settingSub, { color: T.textDim }]}>v1.0.0</Text>
-            </View>
-            <CaretRight size={15} color={T.textDim} weight="regular" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Sign Out */}
-      <TouchableOpacity
-        style={[styles.signOutBtn, { borderColor: "#FA525240" }]}
-        onPress={logout}
-        activeOpacity={0.7}
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: bottomPad }}
+        showsVerticalScrollIndicator={false}
       >
-        <SignOut size={15} color="#FA5252" weight="regular" />
-        <Text style={styles.signOutText}>Sign out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Profile Header */}
+        <View style={[styles.profileHeader, { paddingTop: 24 }]}>
+          <Avatar name={userName} avatarUrl={user?.avatarUrl} size={72} accentColor={T.accent} />
+          <View style={{ alignItems: "center", gap: 4 }}>
+            <Text style={[styles.profileName, { color: T.textBright }]}>{userName}</Text>
+            <Text style={[styles.profileEmail, { color: T.textDim }]}>{userEmail}</Text>
+          </View>
+        </View>
+
+        {/* Account */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACCOUNT</Text>
+          <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              ]}
+              onPress={() => router.push("/you/sessions" as any)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Devices size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Sessions</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>
+                  {sessionCount > 0 ? `${sessionCount} active` : "Manage devices"}
+                </Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              ]}
+              onPress={() => router.push("/you/security" as any)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <ShieldCheck size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Security</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>
+                  Two-factor authentication
+                </Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              activeOpacity={0.7}
+              onPress={() => router.push("/you/notifications" as any)}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Bell size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Notifications</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>Manage alerts</Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* App */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>APP</Text>
+          <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => router.push("/you/appearance" as any)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Moon size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Appearance</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>Theme & colors</Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* About */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>ABOUT</Text>
+          <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              ]}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Question size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Help & Docs</Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              ]}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <ChatText size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Send Feedback</Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Info size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>About Uniffy</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>v1.0.0</Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Sign Out */}
+        <TouchableOpacity
+          style={[styles.signOutBtn, { borderColor: "#FA525240" }]}
+          onPress={logout}
+          activeOpacity={0.7}
+        >
+          <SignOut size={15} color="#FA5252" weight="regular" />
+          <Text style={styles.signOutText}>Sign out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 

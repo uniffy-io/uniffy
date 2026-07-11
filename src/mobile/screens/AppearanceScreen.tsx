@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from "react-native";
-import { Sun, Moon, DeviceMobile, Check, CaretLeft } from "phosphor-react-native";
+import { Sun, Moon, DeviceMobile, Check } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import { useThemeContext } from "@/context/theme-context";
 import type { ThemeMode } from "@/context/theme-context";
@@ -27,16 +27,7 @@ export function AppearanceScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <View style={[styles.header, { backgroundColor: T.bg, borderBottomColor: T.border }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <CaretLeft size={22} color={T.textBright} weight="regular" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: T.textBright }]}>Appearance</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <DomainHeader title="Appearance" color={T.accent} icon="palette" />
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: bottomPad }}
@@ -63,6 +54,7 @@ export function AppearanceScreen() {
                   activeOpacity={0.7}
                 >
                   <Icon
+                    key={active ? "fill" : "regular"}
                     size={22}
                     color={active ? T.accent : T.textDim}
                     weight={active ? "fill" : "regular"}
@@ -138,18 +130,6 @@ export function AppearanceScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: FONT.semibold,
-  },
   section: {
     paddingHorizontal: 16,
     paddingTop: 24,
