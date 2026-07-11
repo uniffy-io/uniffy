@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
@@ -39,6 +39,7 @@ from uniffy.domains.calls.tokens import (
 )
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.cache import fetch_channel_members
+from uniffy.domains.chat.messages.operations import ChatMessageOperations
 from uniffy.domains.chat.sender_resolver import SenderInfo, SenderResolver
 from uniffy.domains.chat.streaming import events as evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
@@ -49,6 +50,20 @@ RING_TIMEOUT_SECONDS = 30
 SILENT_JOIN_MEMBER_THRESHOLD = 10
 MAX_DEVICES_PER_USER = 2
 DEFAULT_MAX_PARTICIPANTS = 50
+CALL_SUMMARY_MAX_MENTIONS = 6
+
+
+def _format_call_duration(seconds: int) -> str:
+    if seconds >= 3600:
+        return f"{seconds // 3600}h {(seconds % 3600) // 60:02d}m"
+    if seconds >= 60:
+        return f"{seconds // 60}m {seconds % 60:02d}s"
+    return f"{seconds}s"
+
+
+def _user_mention(user_id: UUID, display_name: str) -> str:
+    return f"[[[{display_name or 'Someone'}|urn:uniffy:content:USER:{user_id}]]]"
+
 
 _CHANNEL_TYPE_TO_CALL_TYPE = {
     ChannelType.DIRECT: CallType.DIRECT,
@@ -131,6 +146,12 @@ class CallOperations:
             call, channel, user_id, device_id, device_label, is_start=True
         )
         await self._ring_callees(call, channel, user_id)
+        info = (await self.resolve_profiles([user_id])).get(user_id)
+        await self._post_call_system_message(
+            call,
+            f"{_user_mention(user_id, getattr(info, 'display_name', ''))} started a call",
+            user_id,
+        )
         return call, participants, token, False
 
     async def join_call(
@@ -548,6 +569,8 @@ class CallOperations:
             channel_id=call.channel_id,
         )
 
+        await self._post_call_ended_summary(call, reason, actor_user_id, now)
+
         client = get_livekit_admin_client()
         try:
             await client.delete_room(call.livekit_room_name)
@@ -555,6 +578,60 @@ class CallOperations:
             if exc.status_code != 404:
                 logger.warning(f"LiveKit room delete failed for call={call.id}: {exc}")
         return True
+
+    async def _post_call_ended_summary(
+        self, call: Call, reason: CallEndReason, actor_user_id: UUID | None, ended_at: datetime
+    ) -> None:
+        try:
+            # Everyone who ever joined, in first-join order - not just those
+            # active at the end, so early leavers still appear in the summary.
+            rows = await self.session.execute(
+                select(CallParticipant.user_id)
+                .where(CallParticipant.call_id == call.id)
+                .group_by(CallParticipant.user_id)
+                .order_by(func.min(CallParticipant.joined_at))
+            )
+            participant_ids = [row[0] for row in rows.all()]
+            lookup_ids = participant_ids + ([actor_user_id] if actor_user_id else [])
+            profiles = await self.resolve_profiles(lookup_ids)
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Failed to compose call summary for call={call.id}"
+            )
+            return
+
+        def mention(uid: UUID) -> str:
+            return _user_mention(uid, getattr(profiles.get(uid), "display_name", ""))
+
+        shown = [mention(uid) for uid in participant_ids[:CALL_SUMMARY_MAX_MENTIONS]]
+        overflow = len(participant_ids) - len(shown)
+        roster = ", ".join(shown) + (f" and {overflow} more" if overflow > 0 else "")
+
+        if reason == CallEndReason.HOST_ENDED and actor_user_id is not None:
+            summary = f"{mention(actor_user_id)} ended the call for everyone"
+        else:
+            summary = "Call ended"
+        duration = _format_call_duration(int((ended_at - call.started_at).total_seconds()))
+        content = f"{summary} - {duration}" + (f" - with {roster}" if roster else "")
+        await self._post_call_system_message(call, content, actor_user_id or call.host_user_id)
+
+    async def _post_call_system_message(
+        self, call: Call, content: str, sender_user_id: UUID
+    ) -> None:
+        """Lifecycle breadcrumbs ride the normal message pipeline as SYSTEM posts;
+        a failure here must never break the call lifecycle."""
+        try:
+            await ChatMessageOperations(self.session).send_message(
+                user_id=sender_user_id,
+                organization_id=call.organization_id,
+                channel_id=call.channel_id,
+                content=content,
+                sender_type=SenderType.SYSTEM,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"Failed to post call lifecycle message for call={call.id}"
+            )
 
     async def reassign_host_if_absent(self, call: Call) -> None:
         """Hand host to the earliest-joined active participant when the host has no active row."""

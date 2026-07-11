@@ -1,13 +1,29 @@
 import { useEffect } from "react";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   ChatEventType,
   type ChatEvent,
   type StreamUserChatEventsResponse,
 } from "@uniffy/proto/chat/v1/chat_stream_pb";
 import { chatStreamApi } from "@/api/chatStreamApi";
+import { callsApi } from "@/api/callsApi";
 import { messagesKey } from "@/hooks/useChatMutations";
 import { messageToPlain, type SerializedMessage } from "@/lib/chatSerializer";
+import {
+  callToPlain,
+  participantToPlain,
+  ringToInvite,
+  endReasonToPlain,
+} from "@/lib/callsSerializer";
+import {
+  upsertActiveCall,
+  removeActiveCall,
+  applyParticipantEvent,
+  setCallHost,
+  pushRingInvite,
+  recordEndedCall,
+  syncActiveCalls,
+} from "@/hooks/useCallsState";
 import { useAuth } from "@/context/auth-context";
 
 export type TypingEntry = { id: string; name: string; isAgent: boolean; at: number };
@@ -16,9 +32,25 @@ export function typingKey(orgId: string, channelId: string) {
   return ["chat", "typing", orgId, channelId];
 }
 
-/** True while the agent runtime reports an active run in the channel. */
+/** Ids of agents with an active run in the channel (stream-patched). */
 export function agentRunKey(orgId: string, channelId: string) {
   return ["chat", "agentRun", orgId, channelId];
+}
+
+/**
+ * Subscribe to the channel's running-agent ids without ever fetching.
+ * Undefined until the stream delivers the first agent-typing event, so
+ * callers can fall back to a heuristic while the stream is down.
+ */
+export function useRunningAgents(channelId: string | undefined): string[] | undefined {
+  const { organizationId } = useAuth();
+  const query = useQuery<string[]>({
+    queryKey: agentRunKey(organizationId ?? "", channelId ?? ""),
+    queryFn: () => [],
+    enabled: false,
+    staleTime: Infinity,
+  });
+  return query.data;
 }
 
 export function approvalsKey(orgId: string, channelId: string) {
@@ -93,6 +125,11 @@ async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortContro
         { organizationId: orgId },
         { signal: ctl.signal },
       );
+      // Stream events are a latency optimization for calls, not the source of
+      // truth: resync the active-call snapshot on every (re)connect attempt.
+      // While the stream is down this doubles as the polling fallback, riding
+      // the same backoff cadence.
+      void resyncActiveCalls(orgId, queryClient, ctl.signal);
       for await (const event of stream) {
         if (ctl.signal.aborted) break;
         queryClient.setQueryData(STREAM_HEALTH_KEY, true);
@@ -107,6 +144,16 @@ async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortContro
     if (ctl.signal.aborted) break;
     await sleep(backoffMs, ctl.signal);
     backoffMs = Math.min(backoffMs * 2, RECONNECT_MAX_MS);
+  }
+}
+
+async function resyncActiveCalls(orgId: string, queryClient: QueryClient, signal: AbortSignal) {
+  try {
+    const response = await callsApi.listActiveCalls({ organizationId: orgId });
+    if (signal.aborted) return;
+    syncActiveCalls(queryClient, orgId, response.calls.map(callToPlain));
+  } catch {
+    // Best-effort: stale indicators until the next reconnect cycle.
   }
 }
 
@@ -198,7 +245,10 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
         name: p.displayName,
         isAgent: true,
       });
-      queryClient.setQueryData(agentRunKey(orgId, channelId), p.started);
+      queryClient.setQueryData<string[]>(agentRunKey(orgId, channelId), (old) => {
+        const rest = (old ?? []).filter((id) => id !== p.agentId);
+        return p.started ? [...rest, p.agentId] : rest;
+      });
       break;
     }
     case "agentTokenDelta": {
@@ -239,6 +289,44 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       void queryClient.invalidateQueries({ queryKey: ["chat", "threads", orgId] });
       void queryClient.invalidateQueries({ queryKey: msgKey });
       break;
+    case "callLifecycle": {
+      const call = ce.payload.value.call;
+      if (!call) break;
+      if (ce.eventType === ChatEventType.CALL_ENDED) {
+        removeActiveCall(queryClient, orgId, call.channelId, call.id);
+        recordEndedCall(queryClient, orgId, {
+          callId: call.id,
+          channelId: call.channelId,
+          reason: endReasonToPlain(call.endReason),
+          atMs: Date.now(),
+        });
+      } else {
+        upsertActiveCall(queryClient, orgId, callToPlain(call));
+      }
+      break;
+    }
+    case "callParticipant": {
+      const p = ce.payload.value;
+      if (!p.participant) break;
+      const kind = ce.eventType === ChatEventType.CALL_PARTICIPANT_LEFT ? "left" : "joined";
+      applyParticipantEvent(
+        queryClient,
+        orgId,
+        channelId,
+        p.callId,
+        participantToPlain(p.participant),
+        ce.eventType === ChatEventType.CALL_PARTICIPANT_STATE ? "state" : kind,
+      );
+      break;
+    }
+    case "callRing":
+      pushRingInvite(queryClient, orgId, ringToInvite(ce.payload.value, channelId));
+      break;
+    case "callHostChanged": {
+      const p = ce.payload.value;
+      setCallHost(queryClient, orgId, p.callId, p.newHostUserId);
+      break;
+    }
     default:
       break;
   }

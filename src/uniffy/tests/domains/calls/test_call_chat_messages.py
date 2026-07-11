@@ -1,0 +1,161 @@
+"""Call lifecycle system messages posted into the channel's chat."""
+
+import asyncio
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+from uniffy.core.models.calls import Call, CallEndReason, CallType
+from uniffy.core.models.chat.message import SenderType
+from uniffy.domains.calls.operations import _format_call_duration
+
+
+def _build_session(participant_rows: list | None = None) -> MagicMock:
+    session = MagicMock()
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none = MagicMock(return_value=object())
+    result.all = MagicMock(return_value=participant_rows or [])
+    session.execute = AsyncMock(return_value=result)
+    return session
+
+
+def _build_ops(session: MagicMock):
+    from uniffy.domains.calls.config import LiveKitConfig
+    from uniffy.domains.calls.operations import CallOperations
+
+    with patch(
+        "uniffy.domains.calls.operations.get_livekit_config",
+        return_value=LiveKitConfig(
+            host="http://livekit:7880", api_key="k", api_secret="s" * 32, ws_url="/livekit"
+        ),
+    ):
+        return CallOperations(session)
+
+
+def _call(host_id, started_minutes_ago: int = 10) -> Call:
+    org_id = uuid4()
+    return Call(
+        id=uuid4(),
+        organization_id=org_id,
+        channel_id=uuid4(),
+        call_type=CallType.CHANNEL,
+        initiator_user_id=host_id,
+        host_user_id=host_id,
+        livekit_room_name=f"org_{org_id}:call_{uuid4()}",
+        started_at=datetime.now(UTC) - timedelta(minutes=started_minutes_ago),
+    )
+
+
+def _run_summary(ops, call, reason, actor_user_id, profiles):
+    with patch.object(
+        type(ops), "resolve_profiles", AsyncMock(return_value=profiles)
+    ), patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
+        msg_ops_cls.return_value.send_message = AsyncMock()
+        asyncio.run(
+            ops._post_call_ended_summary(call, reason, actor_user_id, datetime.now(UTC))
+        )
+        send = msg_ops_cls.return_value.send_message
+    return send
+
+
+def test_format_call_duration() -> None:
+    assert _format_call_duration(42) == "42s"
+    assert _format_call_duration(754) == "12m 34s"
+    assert _format_call_duration(3900) == "1h 05m"
+
+
+def test_all_left_summary_lists_participants() -> None:
+    host_id, other_id = uuid4(), uuid4()
+    call = _call(host_id)
+    session = _build_session(participant_rows=[(host_id,), (other_id,)])
+    ops = _build_ops(session)
+
+    send = _run_summary(
+        ops,
+        call,
+        CallEndReason.ALL_LEFT,
+        None,
+        {
+            host_id: MagicMock(display_name="Alice"),
+            other_id: MagicMock(display_name="Bob"),
+        },
+    )
+
+    kwargs = send.call_args.kwargs
+    assert kwargs["sender_type"] == SenderType.SYSTEM
+    assert kwargs["channel_id"] == call.channel_id
+    assert kwargs["user_id"] == host_id
+    content = kwargs["content"]
+    assert content.startswith("Call ended - ")
+    assert "10m 00s" in content
+    assert f"[[[Alice|urn:uniffy:content:USER:{host_id}]]]" in content
+    assert f"[[[Bob|urn:uniffy:content:USER:{other_id}]]]" in content
+
+
+def test_host_ended_summary_names_the_actor() -> None:
+    host_id = uuid4()
+    call = _call(host_id)
+    session = _build_session(participant_rows=[(host_id,)])
+    ops = _build_ops(session)
+
+    send = _run_summary(
+        ops,
+        call,
+        CallEndReason.HOST_ENDED,
+        host_id,
+        {host_id: MagicMock(display_name="Alice")},
+    )
+
+    content = send.call_args.kwargs["content"]
+    assert content.startswith(
+        f"[[[Alice|urn:uniffy:content:USER:{host_id}]]] ended the call for everyone"
+    )
+
+
+def test_summary_caps_mentions_with_overflow() -> None:
+    host_id = uuid4()
+    call = _call(host_id)
+    user_ids = [host_id] + [uuid4() for _ in range(7)]
+    session = _build_session(participant_rows=[(uid,) for uid in user_ids])
+    ops = _build_ops(session)
+
+    send = _run_summary(
+        ops,
+        call,
+        CallEndReason.ALL_LEFT,
+        None,
+        {uid: MagicMock(display_name=f"U{i}") for i, uid in enumerate(user_ids)},
+    )
+
+    content = send.call_args.kwargs["content"]
+    assert content.count("urn:uniffy:content:USER:") == 6
+    assert "and 2 more" in content
+
+
+def test_summary_failure_never_raises() -> None:
+    call = _call(uuid4())
+    session = _build_session()
+    ops = _build_ops(session)
+
+    with patch.object(
+        type(ops), "resolve_profiles", AsyncMock(side_effect=RuntimeError("resolver down"))
+    ), patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
+        msg_ops_cls.return_value.send_message = AsyncMock()
+        asyncio.run(
+            ops._post_call_ended_summary(
+                call, CallEndReason.ALL_LEFT, None, datetime.now(UTC)
+            )
+        )
+        msg_ops_cls.return_value.send_message.assert_not_called()
+
+
+def test_system_message_failure_is_swallowed() -> None:
+    call = _call(uuid4())
+    session = _build_session()
+    ops = _build_ops(session)
+
+    with patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
+        msg_ops_cls.return_value.send_message = AsyncMock(side_effect=RuntimeError("chat down"))
+        asyncio.run(ops._post_call_system_message(call, "Call ended", call.host_user_id))
