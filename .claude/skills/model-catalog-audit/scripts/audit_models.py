@@ -13,7 +13,8 @@ Providers DO NOT return pricing, so this script can't detect price changes; new
 models you adopt need their pricing researched by hand (see SKILL.md). Read-only:
 it never edits the catalog.
 
-Run from the repo root:  uv run python .claude/skills/model-catalog-audit/audit_models.py
+Run from the repo root via the stack-aware passthrough (add --stack local for a
+host venv):  ./manage.py deps run -s backend run python .claude/skills/model-catalog-audit/scripts/audit_models.py
 """
 
 from __future__ import annotations

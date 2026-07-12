@@ -1,6 +1,5 @@
 {
     "env": {
-        "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
         "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
         "DISABLE_ERROR_REPORTING": "1",
         "DISABLE_TELEMETRY": "1"
@@ -14,14 +13,10 @@
             "Bash(find:*)",
             "Bash(wc:*)",
             "Bash(tree:*)",
-            "Bash(./run.sh:*)",
+            "Bash(./manage.py:*)",
+            "Bash(uv run manage.py:*)",
             "Bash(uv run ruff:*)",
             "Bash(pnpm run lint)",
-            "WebFetch(domain:milkdown.dev)",
-            "WebFetch(domain:docs.anthropic.com)",
-            "WebFetch(domain:connectrpc.com)",
-            "WebFetch(domain:reactflow.dev)",
-            "Bash(gh pr create:*)",
             "Bash(pnpm lint:*)",
             "Bash(pnpm eslint:*)",
             "Bash(pnpm build:*)",
@@ -29,14 +24,23 @@
             "Bash(git stash:*)",
             "Bash(git mv:*)",
             "Bash(gh pr:*)",
-            "Read(.claude/plans/**)",
+            "WebFetch(domain:milkdown.dev)",
+            "WebFetch(domain:docs.anthropic.com)",
+            "WebFetch(domain:connectrpc.com)",
+            "WebFetch(domain:reactflow.dev)",
             "Edit(.claude/plans/**)",
             "Write(.claude/plans/**)",
+            "Edit(.claude/reviews/**)",
+            "Write(.claude/reviews/**)",
             "mcp__playwright__*"
+        ],
+        "deny": [
+            "Read(.env)",
+            "Read(.env.local)"
         ]
     },
-  "enabledMcpjsonServers": [
-    "playwright",
-    "playwright-b"
-  ]
+    "enabledMcpjsonServers": [
+        "playwright",
+        "playwright-b"
+    ]
 }

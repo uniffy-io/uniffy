@@ -31,7 +31,7 @@ Both run the same baked image `uniffy-mcp-playwright` (`.docker/dev/mcp-playwrig
 } }
 ```
 
-Both start under the `dev` profile (`docker compose --profile dev up` / `./run.sh dev-up`). Compose config: `.docker/compose/dev-tools.yaml`. The image bakes `@playwright/mcp` + `chrome-for-testing` + `chromium-headless-shell` so the first request after a cold start does not stall on a 100MB+ download. Each container launches with `--isolated`, so a fresh profile per session.
+Both start under the `dev` profile (`docker compose --profile dev up` / `./manage.py stack up`). Compose config: `.docker/compose/dev-tools.yaml`. The image bakes `@playwright/mcp` + `chrome-for-testing` + `chromium-headless-shell` so the first request after a cold start does not stall on a 100MB+ download. Each container launches with `--isolated`, so a fresh profile per session.
 
 **After adding/starting a server, Claude Code must reconnect MCP for its tools to appear** (`/mcp` reconnect or restart the session); `mcp__playwright-b__*` is invisible until then.
 
@@ -151,7 +151,7 @@ Both services live in `.docker/compose/dev-tools.yaml`; add `mcp-playwright-b` t
 | Action | Command |
 |---|---|
 | Build / rebuild image | `docker compose build mcp-playwright` (one image, shared by both) |
-| Start both | `docker compose --profile dev up -d mcp-playwright mcp-playwright-b` (or `./run.sh dev-up`) |
+| Start both | `docker compose --profile dev up -d mcp-playwright mcp-playwright-b` (or `./manage.py stack up -d`) |
 | Start only the 2nd | `docker compose --profile dev up -d mcp-playwright-b` |
 | Logs | `docker logs uniffy-mcp-playwright-b --tail 100 -f` |
 | Restart (after image rebuild) | `docker compose restart mcp-playwright mcp-playwright-b` |
