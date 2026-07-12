@@ -1,0 +1,23 @@
+{
+    "name": "Uniffy",
+    "dockerComposeFile": ["../docker-compose.yml", "compose.yaml"],
+    "service": "devcontainer",
+    "runServices": ["devcontainer"],
+    "workspaceFolder": "/app",
+    "shutdownAction": "none",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "charliermarsh.ruff",
+                "dbaeumer.vscode-eslint",
+                "bradlc.vscode-tailwindcss",
+                "bufbuild.vscode-buf"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/app/.venv/bin/python",
+                "eslint.workingDirectories": ["src/ui", "src/mobile", "src/landing"]
+            }
+        }
+    }
+}

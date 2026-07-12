@@ -1,13 +1,15 @@
 # Containerized dev stack - edge (Caddy), backend, worker-core,
-# worker-egress, ui, landing.
+# worker-egress, ui, landing, plus the mobile metro server under its
+# own `mobile` profile.
 # All services bind-mount the repo, watch for changes, and reload.
 # Dependency installs (uv sync, pnpm install) are skipped on subsequent
 # starts when the lockfile hash is unchanged.
 #
-# Behavior:
-#   docker compose up                       brings up infra only
-#   docker compose --profile dev up         brings up infra + dev services
-#   ./run.sh dev                            equivalent shortcut
+# Behavior (profiles are independent - stack core with dev for a working stack):
+#   docker compose --profile core --profile dev up   infra + dev services
+#   ./manage.py stack up                              equivalent shortcut
+# Infra depends_on is intentionally omitted: dev services carry no health-gate
+# on postgres/valkey/meilisearch, so they retry on their own until infra is up.
 #
 # Entry point is the edge at http://localhost - one origin for UI, API,
 # and LiveKit signaling, mirroring the self-host customer topology.
@@ -35,18 +37,19 @@ x-backend-base: &backend-base
     env_file:
         - ../../.env
         - ../dev/backend.env
+    environment:
+        UV_CACHE_DIR: /uv-cache
     volumes:
         - ../../:/app
+        # Shared download/wheel cache; uv syncs in any backend container
+        # link from here instead of re-downloading.
+        - uv-cache:/uv-cache
         - /app/.venv # anonymous volume hides host venv
         - /app/.ruff_cache
         - /app/.pytest_cache
     depends_on:
-        postgres:
-            condition: service_healthy
-        valkey:
-            condition: service_healthy
-        meilisearch:
-            condition: service_healthy
+        deps-manager:
+            condition: service_completed_successfully
     profiles: [dev, all]
     logging:
         driver: json-file
@@ -105,13 +108,13 @@ services:
         container_name: uniffy-dev-ui
         pull_policy: never
         restart: unless-stopped
-        # verify-deps-before-run does a workspace-wide deps check that runs
-        # src/mobile's patch-package postinstall and crash-loops the container.
-        # The UI never needs the mobile workspace; skip the check (matches landing).
+        # verify-deps-before-run does a slow workspace-wide deps check on every
+        # pnpm invocation; the entrypoint already handles installs, so skip it.
         command: pnpm --config.verify-deps-before-run=false --filter uniffy-ui dev
         environment:
             PNPM_FILTER: "uniffy-ui..."
             CI: "true"
+            npm_config_store_dir: /pnpm-store
             npm_config_confirm_modules_purge: "false"
             npm_config_strict_dep_builds: "false"
             npm_config_verify_deps_before_run: "false"
@@ -119,15 +122,22 @@ services:
             - ../dev/ui.env
         volumes: &node-volumes
             - ../../:/app
+            # Shared content-addressable download cache; installs in any node
+            # container hardlink from here instead of re-downloading.
+            - pnpm-store:/pnpm-store
             - /app/node_modules
             - /app/src/ui/node_modules
             - /app/src/mobile/node_modules
             - /app/src/landing/node_modules
             - /app/src/gen/typescript/node_modules
+            - /app/src/e2e/node_modules
         ports:
             - "5173:5173"
         depends_on:
-            - backend
+            backend:
+                condition: service_started
+            deps-manager:
+                condition: service_completed_successfully
         networks: [uniffy-network]
         profiles: [dev, all]
         logging: &node-logging
@@ -146,16 +156,95 @@ services:
         environment:
             PNPM_FILTER: "uniffy-landing..."
             CI: "true"
+            npm_config_store_dir: /pnpm-store
             npm_config_confirm_modules_purge: "false"
             npm_config_strict_dep_builds: "false"
             npm_config_verify_deps_before_run: "false"
         volumes: *node-volumes
         ports:
             - "4321:4321"
+        depends_on:
+            deps-manager:
+                condition: service_completed_successfully
         networks: [uniffy-network]
         profiles: [dev, all]
+        logging: *node-logging
+
+    mobile:
+        build: *node-build
+        image: uniffy-dev-node
+        container_name: uniffy-dev-mobile
+        pull_policy: never
+        restart: unless-stopped
+        command: pnpm --config.verify-deps-before-run=false --filter uniffy-mobile exec expo start
+        environment:
+            PNPM_FILTER: "uniffy-mobile..."
+            CI: "true"
+            # Skips the React Native DevTools chromium install, which cannot
+            # run inside the container (no SUID/userns sandbox available)
+            EXPO_UNSTABLE_HEADLESS: "1"
+            npm_config_store_dir: /pnpm-store
+            npm_config_confirm_modules_purge: "false"
+            npm_config_strict_dep_builds: "false"
+            npm_config_verify_deps_before_run: "false"
+        volumes: *node-volumes
+        ports:
+            - "8081:8081"
+        depends_on:
+            deps-manager:
+                condition: service_completed_successfully
+        networks: [uniffy-network]
+        profiles: [mobile, all]
+        logging: *node-logging
+
+    # Dependency/codegen toolbox (pnpm, uv, buf) doubling as the stack's init
+    # step: on `up` its entrypoint syncs both toolchains (pre-warming the
+    # shared pnpm-store/uv-cache) and exits; every app service waits for it
+    # via service_completed_successfully. Also invoked one-off through
+    # `./manage.py toolbox|proto|licenses`. Named volumes (not anonymous)
+    # keep its node_modules/.venv across runs.
+    deps-manager:
+        build:
+            context: ../..
+            dockerfile: .docker/dev/deps-manager.Dockerfile
+        image: uniffy-dev-deps-manager
+        pull_policy: never
+        command: ["true"]
+        environment:
+            CI: "true"
+            UV_CACHE_DIR: /uv-cache
+            npm_config_store_dir: /pnpm-store
+            npm_config_confirm_modules_purge: "false"
+            npm_config_strict_dep_builds: "false"
+            npm_config_verify_deps_before_run: "false"
+        volumes:
+            - ../../:/app
+            - pnpm-store:/pnpm-store
+            - uv-cache:/uv-cache
+            - deps-venv:/app/.venv
+            - deps-node-modules:/app/node_modules
+            - deps-ui-node-modules:/app/src/ui/node_modules
+            - deps-mobile-node-modules:/app/src/mobile/node_modules
+            - deps-landing-node-modules:/app/src/landing/node_modules
+            - deps-gen-ts-node-modules:/app/src/gen/typescript/node_modules
+            - deps-e2e-node-modules:/app/src/e2e/node_modules
+            - deps-go-cache:/go-cache
+        networks: [uniffy-network]
+        profiles: [dev, mobile, all]
         logging: *node-logging
 
 networks:
     uniffy-network:
         driver: bridge
+
+volumes:
+    pnpm-store:
+    uv-cache:
+    deps-venv:
+    deps-node-modules:
+    deps-ui-node-modules:
+    deps-mobile-node-modules:
+    deps-landing-node-modules:
+    deps-gen-ts-node-modules:
+    deps-e2e-node-modules:
+    deps-go-cache:

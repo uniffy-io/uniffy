@@ -7,7 +7,7 @@
 # (~30s worst case).
 #
 # Prerequisites:
-#   - Backend running (./run.sh backend)
+#   - Backend running (./manage.py serve backend)
 #   - Docker compose stack running (valkey)
 #   - A valid JWT token and organization ID
 #

@@ -10,3 +10,5 @@ allowBuilds:
   sharp: true
   unrs-resolver: false
   workerd: false
+# 5 days in minutes; newly published versions younger than this are not installed
+minimumReleaseAge: 7200
