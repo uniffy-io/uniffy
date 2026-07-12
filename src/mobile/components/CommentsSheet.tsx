@@ -22,11 +22,13 @@ import {
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/Avatar";
+import { MentionLine } from "@/components/MarkdownRenderer";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeColors } from "@/constants/theme";
 import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { useComments, useCommentCount, useCommentMutations } from "@/hooks/useComments";
+import { parseMentions } from "@/hooks/useMentionInput";
 import type { SerializedComment } from "@/lib/commentSerializer";
 import type { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
@@ -116,7 +118,8 @@ function CommentsSheet({
   const startEdit = useCallback((c: SerializedComment) => {
     setEditing(c);
     setReplyTo(null);
-    setDraft(c.body);
+    // The stored body is canonical; edit against the readable @label form.
+    setDraft(parseMentions(c.body).display);
   }, []);
 
   const confirmDelete = useCallback(
@@ -310,7 +313,11 @@ function CommentNode({
               </View>
             ) : null}
           </View>
-          <Text style={[styles.body, { color: T.text }]}>{comment.body}</Text>
+          <MentionLine
+            content={comment.body}
+            textStyle={[styles.body, { color: T.text }]}
+            wrapperStyle={styles.bodyMentionRow}
+          />
 
           {comment.reactions.length > 0 ? (
             <View style={styles.reactionsRow}>
@@ -468,6 +475,7 @@ const styles = StyleSheet.create({
   },
   resolvedText: { fontSize: 10, fontFamily: FONT.semibold, color: "#10b981" },
   body: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 20, marginTop: 3 },
+  bodyMentionRow: { marginTop: 3 },
   reactionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 },
   reactionChip: {
     flexDirection: "row",

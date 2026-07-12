@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { CommentButton } from "@/components/CommentsSheet";
 import { ShareButton } from "@/components/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
@@ -219,7 +220,7 @@ export default function TaskDetailScreen() {
         {task.description ? (
           <View style={{ gap: 8 }}>
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>DESCRIPTION</Text>
-            <Text style={[styles.description, { color: T.text }]}>{task.description}</Text>
+            <MarkdownRenderer content={task.description} />
           </View>
         ) : null}
 
@@ -398,7 +399,6 @@ const styles = StyleSheet.create({
   metaLabel: { fontSize: 13, fontFamily: FONT.regular },
   metaText: { fontSize: 13, fontFamily: FONT.semibold },
   sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8 },
-  description: { fontSize: 14, fontFamily: FONT.regular, lineHeight: 22 },
   datesRow: { flexDirection: "row", gap: 12 },
   dateLabel: { fontSize: 12, fontFamily: FONT.medium },
   blockerRow: {

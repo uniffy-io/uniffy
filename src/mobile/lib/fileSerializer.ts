@@ -1,7 +1,27 @@
 import type { File, TreeNode } from "@uniffy/proto/files/v1/files_pb";
 
+export interface SerializedFileTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface SerializedFileMetadata {
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+  pageCount?: number;
+  format?: string;
+  colorMode?: string;
+  bitrate?: number;
+  sampleRate?: number;
+  channels?: number;
+  exif: Record<string, string>;
+}
+
 export interface SerializedFile {
   id: string;
+  urn: string;
   filename: string;
   ext: string;
   mimeType: string;
@@ -9,8 +29,12 @@ export interface SerializedFile {
   version: number;
   description?: string;
   editedAt: string;
+  createdAt: string;
+  folderId?: string;
   ownerInfo?: { id: string; name: string; email: string };
   tags: string[];
+  tagObjects: SerializedFileTag[];
+  metadata?: SerializedFileMetadata;
 }
 
 export interface PlainTreeNode {
@@ -20,6 +44,8 @@ export interface PlainTreeNode {
   children: PlainTreeNode[];
   childCount: number;
   size?: string;
+  sizeBytes: number;
+  mimeType?: string;
   ext: string;
 }
 
@@ -50,8 +76,10 @@ function tsToIso(ts?: { seconds: bigint; nanos: number }): string {
 }
 
 export function fileToPlain(file: File): SerializedFile {
+  const m = file.metadata;
   return {
     id: file.id,
+    urn: file.urn,
     filename: file.filename,
     ext: extFromFilename(file.filename),
     mimeType: file.mimeType,
@@ -59,24 +87,41 @@ export function fileToPlain(file: File): SerializedFile {
     version: file.version,
     description: file.description,
     editedAt: tsToIso(file.updatedAt),
+    createdAt: tsToIso(file.createdAt),
+    folderId: file.folderId,
     ownerInfo: file.ownerInfo
       ? { id: file.ownerInfo.id, name: file.ownerInfo.name, email: file.ownerInfo.email }
       : undefined,
     tags: file.tags.map((t) => t.name),
+    tagObjects: file.tags.map((t) => ({ id: t.id, name: t.name, color: t.color || "#7C5CFC" })),
+    metadata: m
+      ? {
+          width: m.width,
+          height: m.height,
+          durationSeconds: m.durationSeconds,
+          pageCount: m.pageCount,
+          format: m.format,
+          colorMode: m.colorMode,
+          bitrate: m.bitrate,
+          sampleRate: m.sampleRate,
+          channels: m.channels,
+          exif: m.exif ?? {},
+        }
+      : undefined,
   };
 }
 
 export function treeNodeToPlain(node: TreeNode): PlainTreeNode {
+  const sizeBytes = !node.isFolder && node.sizeBytes !== undefined ? Number(node.sizeBytes) : 0;
   return {
     id: node.id,
     name: node.name,
     isFolder: node.isFolder,
     children: node.children.map(treeNodeToPlain),
     childCount: node.childCount,
-    size:
-      !node.isFolder && node.sizeBytes !== undefined
-        ? formatSize(Number(node.sizeBytes))
-        : undefined,
+    size: !node.isFolder && node.sizeBytes !== undefined ? formatSize(sizeBytes) : undefined,
+    sizeBytes,
+    mimeType: node.mimeType,
     ext: node.isFolder ? "" : extFromFilename(node.name) || extFromMime(node.mimeType) || "",
   };
 }

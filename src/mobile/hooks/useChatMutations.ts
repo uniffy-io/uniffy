@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AgentConfirmationDecision } from "@uniffy/proto/chat/v1/chat_pb";
+import { SubjectType } from "@uniffy/proto/common/v1/common_pb";
 import { useAuth } from "@/context/auth-context";
 import { chatApi } from "@/api/chatApi";
 import {
@@ -364,6 +365,26 @@ export function useUpdateChannel(channelId: string) {
   });
 }
 
+/** Agent DMs are renamed via custom_name, not the channel's own name field. */
+export function useRenameAgentChat(channelId: string) {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (customName: string) =>
+      chatApi.renameAgentChat({
+        organizationId: organizationId!,
+        channelId,
+        customName,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "channel", organizationId, channelId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["chat", "agentChats", organizationId] });
+    },
+  });
+}
+
 export function useArchiveChannel() {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
@@ -390,13 +411,26 @@ export function useDeleteChannel() {
   });
 }
 
+export type ChatMemberSubject = { kind: "USER" | "AGENT"; id: string };
+
+function toProtoSubjects(subjects: ChatMemberSubject[]) {
+  return subjects.map((s) => ({
+    type: s.kind === "AGENT" ? SubjectType.AGENT : SubjectType.USER,
+    id: s.id,
+  }));
+}
+
 export function useAddMembers(channelId: string) {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userIds: string[]) =>
-      chatApi.addMembers({ organizationId: organizationId!, channelId, userIds }),
+    mutationFn: (subjects: ChatMemberSubject[]) =>
+      chatApi.addMembers({
+        organizationId: organizationId!,
+        channelId,
+        subjects: toProtoSubjects(subjects),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "members", organizationId, channelId] });
       queryClient.invalidateQueries({ queryKey: ["chat", "channel", organizationId, channelId] });
@@ -409,8 +443,12 @@ export function useRemoveMembers(channelId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userIds: string[]) =>
-      chatApi.removeMembers({ organizationId: organizationId!, channelId, userIds }),
+    mutationFn: (subjects: ChatMemberSubject[]) =>
+      chatApi.removeMembers({
+        organizationId: organizationId!,
+        channelId,
+        subjects: toProtoSubjects(subjects),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "members", organizationId, channelId] });
       queryClient.invalidateQueries({ queryKey: ["chat", "channel", organizationId, channelId] });

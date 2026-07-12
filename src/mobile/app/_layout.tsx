@@ -20,11 +20,17 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { UniffyProvider, useUniffy } from "@/context/uniffy-context";
 import { AuthProvider, useAuth } from "@/context/auth-context";
+import { usePresenceHeartbeat } from "@/hooks/usePresence";
+import { CallProvider } from "@/context/call-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { useTheme } from "@/hooks/useTheme";
 import { BottomNav, BOTTOM_BAR_CONTENT_HEIGHT, bottomBarPadding } from "@/components/BottomNav";
 import { KeyboardSpacer } from "@/components/KeyboardSpacer";
 import { AtOverlay } from "@/components/AtOverlay";
+import { CallDock } from "@/components/calls/CallDock";
+import { CallScreen } from "@/components/calls/CallScreen";
+import { IncomingCallBanner } from "@/components/calls/IncomingCallBanner";
+import { CallEndedNotice } from "@/components/calls/CallEndedNotice";
 import { LoginSplash } from "@/components/LoginSplash";
 import { BRAND } from "@/constants/theme";
 
@@ -82,6 +88,8 @@ function RootLayoutNav() {
   const pathname = usePathname();
   const prevPathnameRef = useRef(pathname);
 
+  usePresenceHeartbeat();
+
   const showAppChrome = isAuthenticated && !!organizationId;
   const barSpace = BOTTOM_BAR_CONTENT_HEIGHT + bottomBarPadding(insets.bottom);
 
@@ -133,6 +141,7 @@ function RootLayoutNav() {
         <Stack.Screen name="notes/edit" />
         <Stack.Screen name="files/index" />
         <Stack.Screen name="files/[id]" />
+        <Stack.Screen name="files/trash" />
         <Stack.Screen name="chat/index" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="chat/create" />
@@ -153,10 +162,13 @@ function RootLayoutNav() {
         <Stack.Screen name="you/notifications" />
         <Stack.Screen name="you/security" />
       </Stack>
-      {showAppChrome && <View style={{ height: barSpace }} />}
-      {showAppChrome && <KeyboardSpacer />}
+      {showAppChrome && <KeyboardSpacer minHeight={barSpace} />}
       {showAppChrome && <AtOverlay />}
+      {showAppChrome && <CallDock />}
       {showAppChrome && <BottomNav />}
+      {showAppChrome && <CallScreen />}
+      {showAppChrome && <IncomingCallBanner />}
+      {showAppChrome && <CallEndedNotice />}
       {loginSplashVisible && (
         <LoginSplash
           onReveal={() => setHoldNavigation(false)}
@@ -191,13 +203,15 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
-                <ThemeProvider>
-                  <UniffyProvider>
-                    <AuthGate>
-                      <RootLayoutNav />
-                    </AuthGate>
-                  </UniffyProvider>
-                </ThemeProvider>
+                <CallProvider>
+                  <ThemeProvider>
+                    <UniffyProvider>
+                      <AuthGate>
+                        <RootLayoutNav />
+                      </AuthGate>
+                    </UniffyProvider>
+                  </ThemeProvider>
+                </CallProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

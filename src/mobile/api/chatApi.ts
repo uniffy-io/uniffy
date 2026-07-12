@@ -31,10 +31,14 @@ import {
   MarkChannelReadRequestSchema,
   GetUnreadCountsRequestSchema,
   CreateAgentChatRequestSchema,
+  RenameAgentChatRequestSchema,
   ListAgentChatsRequestSchema,
   StopAgentRunRequestSchema,
   RespondToAgentConfirmationRequestSchema,
   GetChannelPendingApprovalsRequestSchema,
+  GetChannelAgentContextStatsRequestSchema,
+  CompactChannelAgentContextRequestSchema,
+  ResetChannelAgentContextRequestSchema,
   ListCategoriesRequestSchema,
   CreateCategoryRequestSchema,
   UpdateCategoryRequestSchema,
@@ -99,6 +103,8 @@ export const chatApi = {
 
   createAgentChat: (req: MessageInitShape<typeof CreateAgentChatRequestSchema>) =>
     client.createAgentChat(req),
+  renameAgentChat: (req: MessageInitShape<typeof RenameAgentChatRequestSchema>) =>
+    client.renameAgentChat(req),
   listAgentChats: (req: MessageInitShape<typeof ListAgentChatsRequestSchema>) =>
     client.listAgentChats(req),
   stopAgentRun: (req: MessageInitShape<typeof StopAgentRunRequestSchema>) =>
@@ -109,6 +115,14 @@ export const chatApi = {
   getChannelPendingApprovals: (
     req: MessageInitShape<typeof GetChannelPendingApprovalsRequestSchema>,
   ) => client.getChannelPendingApprovals(req),
+  getChannelAgentContextStats: (
+    req: MessageInitShape<typeof GetChannelAgentContextStatsRequestSchema>,
+  ) => client.getChannelAgentContextStats(req),
+  compactChannelAgentContext: (
+    req: MessageInitShape<typeof CompactChannelAgentContextRequestSchema>,
+  ) => client.compactChannelAgentContext(req),
+  resetChannelAgentContext: (req: MessageInitShape<typeof ResetChannelAgentContextRequestSchema>) =>
+    client.resetChannelAgentContext(req),
 
   listCategories: (req: MessageInitShape<typeof ListCategoriesRequestSchema>) =>
     client.listCategories(req),

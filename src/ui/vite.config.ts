@@ -82,6 +82,15 @@ export default defineConfig(({ command, mode }) => {
         changeOrigin: true,
         ws: true,
       },
+      // Same-origin LiveKit signaling (default LIVEKIT_WS_URL=/livekit),
+      // mirroring the Caddy edge's handle_path: strip the prefix so the
+      // SFU sees /rtc at its root. Keeps CSP connect-src 'self' intact.
+      '/livekit': {
+        target: process.env.LIVEKIT_PROXY_TARGET || 'http://localhost:7880',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/livekit/, ''),
+      },
       '/api': {
         target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,

@@ -178,6 +178,7 @@ export function ShareSheet({
                       activeOpacity={0.7}
                     >
                       <Icon
+                        key={active ? "fill" : "regular"}
                         size={20}
                         color={active ? color : T.textDim}
                         weight={active ? "fill" : "regular"}

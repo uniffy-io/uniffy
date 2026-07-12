@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Platform, Linking } from "react-native";
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { FONT } from "@/constants/typography";
@@ -30,10 +30,17 @@ const NAVIGABLE_DOMAINS: ReadonlySet<Domain> = new Set([
 
 type InlinePart =
   | { type: "text"; text: string; bold: boolean; italic: boolean }
+  | { type: "strike"; text: string }
+  | { type: "highlight"; text: string }
+  | { type: "link"; text: string; url: string }
   | { type: "code"; text: string }
   | { type: "mention"; label: string; urn: string };
 
 type ThemeColors = ReturnType<typeof useTheme>;
+
+function openLink(url: string) {
+  Linking.openURL(url).catch(() => {});
+}
 
 function parseInlineWithMentions(text: string): InlinePart[] {
   const parts: InlinePart[] = [];
@@ -63,7 +70,7 @@ function parseInlineFormatting(text: string): InlinePart[] {
     if (i % 2 === 1) {
       parts.push({ type: "code", text: segment.slice(1, -1) });
     } else {
-      for (const part of parseEmphasis(segment)) {
+      for (const part of parseInlineSpans(segment)) {
         parts.push(part);
       }
     }
@@ -71,9 +78,12 @@ function parseInlineFormatting(text: string): InlinePart[] {
   return parts.length > 0 ? parts : [{ type: "text", text, bold: false, italic: false }];
 }
 
-function parseEmphasis(text: string): InlinePart[] {
+function parseInlineSpans(text: string): InlinePart[] {
   const parts: InlinePart[] = [];
-  const re = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*))/g;
+  // Order matters: links before emphasis so [a](b) is not eaten by other rules;
+  // bold/italic keep the lookarounds that separate ** from a lone *.
+  const re =
+    /\[([^\]]+)\]\(([^)]+)\)|~~(.+?)~~|==(.+?)==|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
@@ -85,9 +95,15 @@ function parseEmphasis(text: string): InlinePart[] {
         italic: false,
       });
     }
-    if (match[2]) parts.push({ type: "text", text: match[2], bold: true, italic: true });
-    else if (match[3]) parts.push({ type: "text", text: match[3], bold: true, italic: false });
-    else if (match[4]) parts.push({ type: "text", text: match[4], bold: false, italic: true });
+    if (match[1] !== undefined) parts.push({ type: "link", text: match[1], url: match[2] });
+    else if (match[3] !== undefined) parts.push({ type: "strike", text: match[3] });
+    else if (match[4] !== undefined) parts.push({ type: "highlight", text: match[4] });
+    else if (match[5] !== undefined)
+      parts.push({ type: "text", text: match[5], bold: true, italic: true });
+    else if (match[6] !== undefined)
+      parts.push({ type: "text", text: match[6], bold: true, italic: false });
+    else if (match[7] !== undefined)
+      parts.push({ type: "text", text: match[7], bold: false, italic: true });
     lastIndex = match.index + match[0].length;
   }
   if (lastIndex < text.length) {
@@ -107,6 +123,31 @@ function renderTextParts(parts: InlinePart[], T: ThemeColors, kp: number | strin
         <Text
           key={`${kp}-${i}`}
           style={[styles.inlineCode, { backgroundColor: T.surfaceHover, color: T.textBright }]}
+        >
+          {part.text}
+        </Text>
+      );
+    }
+    if (part.type === "strike") {
+      return (
+        <Text key={`${kp}-${i}`} style={{ textDecorationLine: "line-through", color: T.textDim }}>
+          {part.text}
+        </Text>
+      );
+    }
+    if (part.type === "highlight") {
+      return (
+        <Text key={`${kp}-${i}`} style={{ backgroundColor: T.yellow + "33", color: T.textBright }}>
+          {part.text}
+        </Text>
+      );
+    }
+    if (part.type === "link") {
+      return (
+        <Text
+          key={`${kp}-${i}`}
+          style={{ color: T.accent, textDecorationLine: "underline" }}
+          onPress={() => openLink(part.url)}
         >
           {part.text}
         </Text>
@@ -151,10 +192,21 @@ function renderMixedParts(
   return parts.map((part, i) => {
     if (part.type === "mention") {
       const urnMatch = part.urn.match(/urn:uniffy:content:([^:]+):(.+)/);
-      const domain = urnMatch ? CONTENT_TYPE_TO_DOMAIN[urnMatch[1]] : null;
+      const urnType = urnMatch ? urnMatch[1] : null;
+      const domain = urnType ? CONTENT_TYPE_TO_DOMAIN[urnType] : null;
       const refId = urnMatch ? urnMatch[2] : null;
       if (!domain) {
-        // No mobile surface for this type (e.g. USER) - style it, don't chip it.
+        if (urnType === "USER" || urnType === "GROUP") {
+          return (
+            <ReferenceChip
+              key={`${kp}-m${i}`}
+              domain={urnType === "USER" ? "user" : "group"}
+              label={part.label}
+              onPress={onMentionPress ? () => onMentionPress(part.urn, part.label) : undefined}
+            />
+          );
+        }
+        // No mobile surface for this type - style it, don't chip it.
         return (
           <Text
             key={`${kp}-m${i}`}
@@ -187,6 +239,37 @@ function renderMixedParts(
             styles.inlineCode,
             { backgroundColor: T.surfaceHover, color: T.textBright },
           ]}
+        >
+          {part.text}
+        </Text>
+      );
+    }
+    if (part.type === "strike") {
+      return (
+        <Text
+          key={`${kp}-${i}`}
+          style={[textStyle, { textDecorationLine: "line-through", color: T.textDim }]}
+        >
+          {part.text}
+        </Text>
+      );
+    }
+    if (part.type === "highlight") {
+      return (
+        <Text
+          key={`${kp}-${i}`}
+          style={[textStyle, { backgroundColor: T.yellow + "33", color: T.textBright }]}
+        >
+          {part.text}
+        </Text>
+      );
+    }
+    if (part.type === "link") {
+      return (
+        <Text
+          key={`${kp}-${i}`}
+          style={[textStyle, { color: T.accent, textDecorationLine: "underline" }]}
+          onPress={() => openLink(part.url)}
         >
           {part.text}
         </Text>
@@ -474,6 +557,32 @@ function renderMarkdownLine(
     return <View key={index} style={styles.mdEmptyLine} />;
   }
   return render(line, [styles.bodyText, { color: T.text }]);
+}
+
+type MentionLineProps = {
+  content: string;
+  textStyle?: any;
+  wrapperStyle?: any;
+  onMentionPress?: (urn: string, label: string) => void;
+};
+
+/** Single line of mention-aware text (system messages, previews) - no block markdown. */
+export function MentionLine({
+  content,
+  textStyle,
+  wrapperStyle,
+  onMentionPress,
+}: MentionLineProps) {
+  const T = useTheme();
+  const parts = parseInlineWithMentions(content);
+  if (!hasMentions(parts)) {
+    return <Text style={textStyle}>{renderTextParts(parts, T)}</Text>;
+  }
+  return (
+    <View style={[styles.inlineRow, wrapperStyle]}>
+      {renderMixedParts(parts, T, textStyle, onMentionPress)}
+    </View>
+  );
 }
 
 type MarkdownRendererProps = {

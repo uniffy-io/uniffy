@@ -229,11 +229,12 @@ function reactionToPlain(rg: ProtoReactionGroup): SerializedReaction {
 
 export function messageToPlain(proto: ProtoChatMessage): SerializedMessage {
   const createdAtSeconds = tsToSeconds(proto.createdAt);
+  const senderType = SENDER_TYPE_MAP[proto.senderType] ?? "USER";
   return {
     id: proto.id,
     channelId: proto.channelId,
     senderId: proto.senderId,
-    senderType: SENDER_TYPE_MAP[proto.senderType] ?? "USER",
+    senderType,
     content: proto.content,
     rootId: proto.rootId || null,
     replyToId: proto.replyToId || null,
@@ -253,7 +254,9 @@ export function messageToPlain(proto: ProtoChatMessage): SerializedMessage {
     timeLabel: formatMessageTime(createdAtSeconds),
     replyCount: proto.thread?.replyCount ?? 0,
     reactions: proto.reactions.map(reactionToPlain),
-    senderName: proto.senderName || "Unknown",
+    // Agent messages carry no senderName; screens resolve the live agent
+    // name by senderId and this fallback only covers the pre-load gap.
+    senderName: proto.senderName || (senderType === "AGENT" ? "Agent" : "Unknown"),
     senderAvatarUrl: proto.senderAvatarUrl || null,
     attachments: [],
   };
@@ -310,6 +313,7 @@ export interface SerializedPendingApproval {
   argsPreview: string;
   actorUserId: string;
   requestedAtSeconds: number;
+  expiresAtSeconds: number | null;
 }
 
 export function approvalToPlain(proto: ProtoPendingAgentApproval): SerializedPendingApproval {
@@ -321,6 +325,7 @@ export function approvalToPlain(proto: ProtoPendingAgentApproval): SerializedPen
     argsPreview: proto.argsPreview,
     actorUserId: proto.actorUserId,
     requestedAtSeconds: tsToSeconds(proto.requestedAt),
+    expiresAtSeconds: proto.expiresAt ? tsToSeconds(proto.expiresAt) : null,
   };
 }
 

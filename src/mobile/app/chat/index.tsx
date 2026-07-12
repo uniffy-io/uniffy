@@ -27,6 +27,7 @@ import {
   X,
   Check,
   MagnifyingGlass,
+  Phone,
 } from "phosphor-react-native";
 import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
@@ -49,7 +50,11 @@ import {
   useDeleteCategory,
 } from "@/hooks/useChatMutations";
 import { useChatStream } from "@/hooks/useChatStream";
+import { useActiveCall } from "@/hooks/useCallsState";
 import { useDirectory } from "@/hooks/usePermissions";
+import { usePresences } from "@/hooks/usePresence";
+import { useAuth } from "@/context/auth-context";
+import { PresenceDot } from "@/components/PresenceDot";
 import {
   formatChannelActivity,
   type SerializedChannel,
@@ -140,6 +145,25 @@ export default function ChatListScreen() {
     }
     return { uncategorized: reg, dms: dm };
   }, [channels]);
+
+  const { user } = useAuth();
+  const dmPeerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const c of channels) {
+      if (c.channelType !== "DIRECT") continue;
+      for (const memberId of c.dmMemberIds) if (memberId !== user?.id) ids.add(memberId);
+    }
+    return [...ids];
+  }, [channels, user?.id]);
+  const presenceByUser = usePresences(dmPeerIds);
+  const dmPresence = useCallback(
+    (channel: SerializedChannel) => {
+      if (channel.channelType !== "DIRECT") return null;
+      const peerId = channel.dmMemberIds.find((memberId) => memberId !== user?.id);
+      return peerId ? (presenceByUser[peerId] ?? "offline") : null;
+    },
+    [presenceByUser, user?.id],
+  );
 
   const categorized = useMemo(() => {
     const cats = categories.data ?? [];
@@ -295,7 +319,12 @@ export default function ChatListScreen() {
           data={unreadList}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <ChannelRow channel={item} T={T} onPress={() => openChannel(item.id)} />
+            <ChannelRow
+              channel={item}
+              T={T}
+              onPress={() => openChannel(item.id)}
+              presence={dmPresence(item)}
+            />
           )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={unreadList.length === 0 ? styles.emptyContent : styles.listContent}
@@ -378,7 +407,13 @@ export default function ChatListScreen() {
             onAdd={() => setNewDmOpen(true)}
           >
             {dms.map((c) => (
-              <ChannelRow key={c.id} channel={c} T={T} onPress={() => openChannel(c.id)} />
+              <ChannelRow
+                key={c.id}
+                channel={c}
+                T={T}
+                onPress={() => openChannel(c.id)}
+                presence={dmPresence(c)}
+              />
             ))}
           </CategorySection>
         </ScrollView>
@@ -741,12 +776,15 @@ function ChannelRow({
   channel,
   T,
   onPress,
+  presence,
 }: {
   channel: SerializedChannel;
   T: ThemeColors;
   onPress: () => void;
+  presence?: string | null;
 }) {
   const hasUnread = channel.unreadCount > 0;
+  const liveCall = useActiveCall(channel.id);
   return (
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: T.border }]}
@@ -755,6 +793,7 @@ function ChannelRow({
     >
       <View style={[styles.rowIcon, { backgroundColor: T.domains.chatSoft }]}>
         <ChannelIcon channel={channel} color={T.domains.chat} />
+        {presence ? <PresenceDot status={presence} size={12} ringColor={T.pageBg} /> : null}
       </View>
       <View style={styles.rowBody}>
         <Text
@@ -773,6 +812,12 @@ function ChannelRow({
         </Text>
       </View>
       <View style={styles.rowRight}>
+        {liveCall ? (
+          <View style={[styles.liveCallPill, { backgroundColor: T.green }]}>
+            <Phone size={10} color="#ffffff" weight="fill" />
+            <Text style={styles.liveCallPillText}>{liveCall.participants.length}</Text>
+          </View>
+        ) : null}
         {channel.lastMessageAtSeconds ? (
           <Text style={[styles.rowTime, { color: hasUnread ? T.domains.chat : T.textDim }]}>
             {formatChannelActivity(channel.lastMessageAtSeconds)}
@@ -941,6 +986,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeText: { color: "#fff", fontSize: 11, fontFamily: FONT.bold },
+  liveCallPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: 9,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  liveCallPillText: { color: "#fff", fontSize: 10, fontFamily: FONT.bold },
   joinBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8 },
   joinBtnText: { color: "#fff", fontSize: 13, fontFamily: FONT.semibold },
   sectionEmpty: { paddingTop: 40, alignItems: "center", gap: 10 },

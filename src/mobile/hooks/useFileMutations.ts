@@ -78,11 +78,20 @@ export function useUpdateFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { fileId: string; filename: string }) =>
+    mutationFn: (args: {
+      fileId: string;
+      filename?: string;
+      description?: string;
+      // Replacement tag id set. Empty array clears all manual tags; undefined
+      // leaves them untouched (mirrors the proto FileTagIds wrapper contract).
+      tagIds?: string[];
+    }) =>
       filesApi.updateFile({
         fileId: args.fileId,
         organizationId: organizationId!,
         filename: args.filename,
+        description: args.description,
+        tagIds: args.tagIds !== undefined ? { ids: args.tagIds } : undefined,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["files"] });
@@ -199,6 +208,92 @@ export function useMoveItems() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files"] });
       queryClient.invalidateQueries({ queryKey: ["files-tree"] });
+    },
+  });
+}
+
+function useTrashInvalidation() {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ["files"] });
+    queryClient.invalidateQueries({ queryKey: ["files-tree"] });
+    queryClient.invalidateQueries({ queryKey: ["files-trash"] });
+  };
+}
+
+export function useRestoreFolder() {
+  const { organizationId } = useAuth();
+  const invalidate = useTrashInvalidation();
+
+  return useMutation({
+    mutationFn: (folderId: string) =>
+      filesApi.restoreFolder({ folderId, organizationId: organizationId! }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useBulkDelete() {
+  const { organizationId } = useAuth();
+  const invalidate = useTrashInvalidation();
+
+  return useMutation({
+    mutationFn: (args: { fileIds?: string[]; folderIds?: string[]; permanent?: boolean }) =>
+      filesApi.bulkDelete({
+        organizationId: organizationId!,
+        fileIds: args.fileIds ?? [],
+        folderIds: args.folderIds ?? [],
+        permanent: args.permanent ?? false,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useEmptyTrash() {
+  const { organizationId } = useAuth();
+  const invalidate = useTrashInvalidation();
+
+  return useMutation({
+    mutationFn: () => filesApi.emptyTrash({ organizationId: organizationId! }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCopyItems() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { fileIds: string[]; targetFolderId?: string }) =>
+      filesApi.copyItems({
+        organizationId: organizationId!,
+        fileIds: args.fileIds,
+        targetFolderId: args.targetFolderId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      queryClient.invalidateQueries({ queryKey: ["files-tree"] });
+    },
+  });
+}
+
+export function useRestoreFileVersion() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { fileId: string; versionId: string }) =>
+      filesApi.restoreFileVersion({
+        fileId: args.fileId,
+        organizationId: organizationId!,
+        versionId: args.versionId,
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      queryClient.invalidateQueries({ queryKey: ["files-tree"] });
+      queryClient.invalidateQueries({ queryKey: ["file", organizationId, variables.fileId] });
+      queryClient.invalidateQueries({
+        queryKey: ["file-versions", organizationId, variables.fileId],
+      });
     },
   });
 }

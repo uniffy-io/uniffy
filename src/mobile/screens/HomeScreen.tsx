@@ -189,17 +189,13 @@ export function HomeScreen() {
             return (
               <TouchableOpacity
                 key={event.id}
-                style={[
-                  styles.eventCard,
-                  {
-                    backgroundColor: T.surface,
-                    borderColor: T.border,
-                    borderLeftColor: T.domains.calendar,
-                  },
-                ]}
+                style={[styles.eventCard, { backgroundColor: T.surface, borderColor: T.border }]}
                 onPress={() => router.push(`/calendar/${event.id}` as any)}
                 activeOpacity={0.8}
               >
+                <View style={[styles.domainIcon, { backgroundColor: T.domains.calendarSoft }]}>
+                  <CalendarBlank size={18} color={T.domains.calendar} weight="duotone" />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.eventTitle, { color: T.textBright }]}>{event.title}</Text>
                   {metaParts.length > 0 && (
@@ -300,10 +296,16 @@ export function HomeScreen() {
             >
               <View
                 style={[
-                  styles.projectDot,
-                  { backgroundColor: project.color || T.domains.projects },
+                  styles.domainIcon,
+                  { backgroundColor: project.color ? project.color + "22" : T.domains.projectsSoft },
                 ]}
-              />
+              >
+                <Kanban
+                  size={18}
+                  color={project.color || T.domains.projects}
+                  weight="duotone"
+                />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.projectName, { color: T.textBright }]}>{project.name}</Text>
                 <Text style={[styles.projectMeta, { color: T.textDim }]}>
@@ -451,8 +453,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: StyleSheet.hairlineWidth,
-    borderLeftWidth: 3,
     gap: 12,
+  },
+  domainIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   eventTitle: {
     fontSize: 14,
@@ -504,11 +512,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  projectDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
   },
   projectName: {
     fontSize: 14,

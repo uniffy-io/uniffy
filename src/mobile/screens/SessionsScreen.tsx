@@ -9,9 +9,9 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { DeviceMobile, Desktop, Globe, SignOut, CaretLeft } from "phosphor-react-native";
+import { DeviceMobile, Desktop, Globe, SignOut } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
 import { useSessions } from "@/hooks/useSessions";
 import { BOTTOM_NAV_HEIGHT } from "@/constants/theme";
@@ -72,16 +72,7 @@ export function SessionsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <View style={[styles.header, { backgroundColor: T.bg, borderBottomColor: T.border }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <CaretLeft size={22} color={T.textBright} weight="regular" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: T.textBright }]}>Sessions</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <DomainHeader title="Sessions" color={T.accent} icon="devices" />
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -163,18 +154,6 @@ export function SessionsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: FONT.semibold,
-  },
   loadingContainer: {
     flex: 1,
     alignItems: "center",

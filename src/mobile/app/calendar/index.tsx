@@ -7,8 +7,13 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
-import { Plus, CaretLeft, CaretRight } from "phosphor-react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import { Plus, CaretLeft, CaretRight, Warning } from "phosphor-react-native";
 import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
@@ -77,9 +82,71 @@ function formatHourLabel(hour: number): string {
   return `${hour - 12} PM`;
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function minutesToHHMM(min: number): string {
+  return `${pad2(Math.floor(min / 60))}:${pad2(min % 60)}`;
+}
+
+// Drag-to-create: long-press the day grid to drop a one-hour draft slot that
+// snaps in 15-minute steps while dragging (MS Teams-style).
+const SNAP_MINUTES = 15;
+const DRAFT_DURATION_MIN = 60;
+const MAX_DRAFT_START_MIN = 24 * 60 - DRAFT_DURATION_MIN;
+
 function getMinutesSinceMidnight(iso: string): number {
   const d = new Date(iso);
   return d.getHours() * 60 + d.getMinutes();
+}
+
+type EventSpan = { id: string; startMin: number; endMin: number };
+type EventPlacement = { colIndex: number; colCount: number; conflict: boolean };
+
+// Pack overlapping events into side-by-side columns. Events are grouped into
+// clusters of mutual overlap; within a cluster each event takes the first
+// column whose previous event has already ended. colCount is the cluster's
+// peak concurrency, so every event in a cluster shares the same width.
+function packEventColumns(spans: EventSpan[]): Map<string, EventPlacement> {
+  const sorted = [...spans].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+  const placement = new Map<string, EventPlacement>();
+  let cluster: EventSpan[] = [];
+  let clusterEnd = -1;
+
+  const flush = () => {
+    const colEnds: number[] = [];
+    const colOf = new Map<string, number>();
+    for (const ev of cluster) {
+      let col = colEnds.findIndex((end) => ev.startMin >= end);
+      if (col === -1) {
+        col = colEnds.length;
+        colEnds.push(0);
+      }
+      colEnds[col] = ev.endMin;
+      colOf.set(ev.id, col);
+    }
+    const colCount = colEnds.length;
+    for (const ev of cluster) {
+      placement.set(ev.id, {
+        colIndex: colOf.get(ev.id) ?? 0,
+        colCount,
+        conflict: colCount > 1,
+      });
+    }
+  };
+
+  for (const ev of sorted) {
+    if (cluster.length && ev.startMin >= clusterEnd) {
+      flush();
+      cluster = [];
+      clusterEnd = -1;
+    }
+    cluster.push(ev);
+    clusterEnd = Math.max(clusterEnd, ev.endMin);
+  }
+  if (cluster.length) flush();
+  return placement;
 }
 
 function getEventColor(
@@ -330,6 +397,48 @@ export default function CalendarScreen() {
       });
   }, [eventsQuery.data, selectedDate, matchesFilter]);
 
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Box + side-by-side column placement for each event, so overlaps sit next
+  // to each other instead of stacking. All-day events span the full grid
+  // height (00:00-24:00) and pack as their own full-height column.
+  const positionedEvents = useMemo(() => {
+    const spans = dayEvents.map((event) => {
+      if (event.isAllDay) {
+        return { event, startMin: HOUR_START * 60, endMin: HOUR_END * 60 };
+      }
+      const startMin = event.startTime ? getMinutesSinceMidnight(event.startTime) : 0;
+      let endMin = event.endTime ? getMinutesSinceMidnight(event.endTime) : startMin + 30;
+      // Ends at or past midnight (00:00 reads as minute 0) - fill to day bottom.
+      if (endMin <= startMin) endMin = HOUR_END * 60;
+      return { event, startMin, endMin };
+    });
+    // Geometry uses every event so all-day cards sit beside the timed ones.
+    const placement = packEventColumns(
+      spans.map(({ event, startMin, endMin }) => ({ id: event.id, startMin, endMin })),
+    );
+    // Conflict is a timed-vs-timed signal; an all-day card overlapping the
+    // day's schedule is expected, not a clash.
+    const timedConflict = packEventColumns(
+      spans
+        .filter(({ event }) => !event.isAllDay)
+        .map(({ event, startMin, endMin }) => ({ id: event.id, startMin, endMin })),
+    );
+    const areaWidth = windowWidth - (TIME_COL_WIDTH + 4) - 12;
+    return spans.map(({ event, startMin, endMin }) => {
+      const place = placement.get(event.id) ?? { colIndex: 0, colCount: 1, conflict: false };
+      const colWidth = areaWidth / place.colCount;
+      return {
+        event,
+        top: (startMin / 60) * HOUR_HEIGHT,
+        height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28),
+        left: TIME_COL_WIDTH + 4 + place.colIndex * colWidth,
+        width: colWidth - (place.colCount > 1 ? 3 : 0),
+        conflict: event.isAllDay ? false : (timedConflict.get(event.id)?.conflict ?? false),
+      };
+    });
+  }, [dayEvents, windowWidth]);
+
   const rangeEvents = useMemo(() => {
     if (!eventsQuery.data) return [];
     return eventsQuery.data.filter(matchesFilter);
@@ -361,6 +470,76 @@ export default function CalendarScreen() {
     setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
   }, []);
 
+  const [draftStartMin, setDraftStartMin] = useState<number | null>(null);
+  const draftAnchorRef = useRef(0);
+  const draftStartRef = useRef<number | null>(null);
+
+  const beginDraft = useCallback((y: number) => {
+    const touchedMin = (y / HOUR_HEIGHT) * 60;
+    const start = Math.min(
+      MAX_DRAFT_START_MIN,
+      Math.max(0, Math.floor(touchedMin / SNAP_MINUTES) * SNAP_MINUTES),
+    );
+    draftAnchorRef.current = start;
+    draftStartRef.current = start;
+    setDraftStartMin(start);
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+  }, []);
+
+  const moveDraft = useCallback((translationY: number) => {
+    const deltaMin = Math.round(((translationY / HOUR_HEIGHT) * 60) / SNAP_MINUTES) * SNAP_MINUTES;
+    const next = Math.min(MAX_DRAFT_START_MIN, Math.max(0, draftAnchorRef.current + deltaMin));
+    if (next !== draftStartRef.current) {
+      draftStartRef.current = next;
+      setDraftStartMin(next);
+      if (Platform.OS !== "web") {
+        Haptics.selectionAsync().catch(() => {});
+      }
+    }
+  }, []);
+
+  const finishDraft = useCallback(
+    (commit: boolean) => {
+      const start = draftStartRef.current;
+      draftStartRef.current = null;
+      setDraftStartMin(null);
+      if (!commit || start === null) return;
+      const d = selectedDate;
+      router.push({
+        pathname: "/calendar/create",
+        params: {
+          date: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`,
+          start: minutesToHHMM(start),
+          end: minutesToHHMM(start + DRAFT_DURATION_MIN),
+        },
+      } as any);
+    },
+    [selectedDate],
+  );
+
+  const dragCreateGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activateAfterLongPress(300)
+        .onStart((e) => {
+          runOnJS(beginDraft)(e.y);
+        })
+        .onUpdate((e) => {
+          runOnJS(moveDraft)(e.translationY);
+        })
+        .onEnd(() => {
+          runOnJS(finishDraft)(true);
+        })
+        .onFinalize(() => {
+          // No-op after a committed end (the ref is already cleared); clears
+          // the draft when the gesture is cancelled instead of released.
+          runOnJS(finishDraft)(false);
+        }),
+    [beginDraft, moveDraft, finishDraft],
+  );
+
   const selectedDayIndex = weekDates.findIndex((d) => isSameDay(d, selectedDate));
 
   // Current time position for the indicator line
@@ -379,7 +558,7 @@ export default function CalendarScreen() {
             onPress={() => router.push("/calendar/create" as any)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Plus size={21} color={T.accent} weight="bold" />
+            <Plus size={21} color={T.domains.calendar} weight="bold" />
           </TouchableOpacity>
         }
       />
@@ -392,7 +571,7 @@ export default function CalendarScreen() {
           onPress={goToToday}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={[styles.todayLink, { color: T.accent }]}>Today</Text>
+          <Text style={[styles.todayLink, { color: T.domains.calendar }]}>Today</Text>
         </TouchableOpacity>
         <View style={[styles.viewToggle, { backgroundColor: T.pageBg, borderColor: T.border }]}>
           {(["day", "month"] as ViewMode[]).map((mode) => (
@@ -527,6 +706,7 @@ export default function CalendarScreen() {
               ref={dayScrollRef}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ height: GRID_HEIGHT + 20 }}
+              scrollEnabled={draftStartMin === null}
               refreshControl={
                 <RefreshControl
                   refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
@@ -536,78 +716,140 @@ export default function CalendarScreen() {
                 />
               }
             >
-              <View style={styles.timeGrid}>
-                {/* Hour lines + labels */}
-                {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => {
-                  const hour = HOUR_START + i;
-                  if (hour > HOUR_END) return null;
-                  const top = i * HOUR_HEIGHT;
-                  return (
-                    <React.Fragment key={hour}>
-                      <Text style={[styles.hourLabel, { top: top - 7, color: T.textDim }]}>
-                        {formatHourLabel(hour)}
-                      </Text>
-                      <View style={[styles.hourLine, { top, backgroundColor: T.border }]} />
-                    </React.Fragment>
-                  );
-                })}
+              <GestureDetector gesture={dragCreateGesture}>
+                <View style={styles.timeGrid}>
+                  {/* Hour lines + labels */}
+                  {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => {
+                    const hour = HOUR_START + i;
+                    if (hour > HOUR_END) return null;
+                    const top = i * HOUR_HEIGHT;
+                    return (
+                      <React.Fragment key={hour}>
+                        <Text style={[styles.hourLabel, { top: top - 7, color: T.textDim }]}>
+                          {formatHourLabel(hour)}
+                        </Text>
+                        <View style={[styles.hourLine, { top, backgroundColor: T.border }]} />
+                      </React.Fragment>
+                    );
+                  })}
 
-                {/* Current time indicator */}
-                {isSelectedToday && (
-                  <View style={[styles.currentTimeRow, { top: currentTimeTop }]}>
+                  {/* Current time indicator */}
+                  {isSelectedToday && (
+                    <View style={[styles.currentTimeRow, { top: currentTimeTop - 5 }]}>
+                      <View
+                        style={[styles.currentTimeDot, { backgroundColor: T.domains.calendar }]}
+                      />
+                      <View
+                        style={[styles.currentTimeLine, { backgroundColor: T.domains.calendar }]}
+                      />
+                    </View>
+                  )}
+
+                  {/* Events positioned on the grid */}
+                  {positionedEvents.map(({ event, top, height, left, width, conflict }) => {
+                    const color = getEventColor(event, categoriesMap, T.domains.calendar);
+                    const attendeeLabel = event.attendees.map((a) => a.name).join(", ");
+                    const isAllDay = event.isAllDay;
+                    const showSecondRow = !isAllDay && height >= 44;
+
+                    return (
+                      <TouchableOpacity
+                        key={event.id}
+                        style={[
+                          styles.gridEvent,
+                          // All-day cards fill the whole column; keep their text
+                          // near the top instead of pushed to the far bottom.
+                          isAllDay && styles.gridEventAllDay,
+                          {
+                            top,
+                            height,
+                            left,
+                            width,
+                            backgroundColor: color + "33",
+                            borderColor: conflict ? T.red : color,
+                          },
+                        ]}
+                        onPress={() => router.push(`/calendar/${event.id}` as any)}
+                        activeOpacity={0.85}
+                      >
+                        <View style={styles.gridEventRow}>
+                          <View style={styles.gridEventTitleWrap}>
+                            {conflict ? <Warning size={12} color={T.red} weight="fill" /> : null}
+                            <Text
+                              style={[styles.gridEventTitle, { color: T.textBright }]}
+                              numberOfLines={1}
+                            >
+                              {event.title}
+                            </Text>
+                          </View>
+                          <Text style={[styles.gridEventTime, { color: T.textBright }]}>
+                            {isAllDay ? "All day" : event.startTimeFormatted}
+                          </Text>
+                        </View>
+                        {isAllDay && attendeeLabel ? (
+                          <Text
+                            style={[styles.gridEventDetail, { color: T.textDim }]}
+                            numberOfLines={1}
+                          >
+                            {attendeeLabel}
+                          </Text>
+                        ) : null}
+                        {showSecondRow ? (
+                          <View style={styles.gridEventRow}>
+                            <Text
+                              style={[styles.gridEventDetail, { color: T.textDim }]}
+                              numberOfLines={1}
+                            >
+                              {attendeeLabel}
+                            </Text>
+                            <Text style={[styles.gridEventEndTime, { color: T.textDim }]}>
+                              {event.endTimeFormatted}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  {/* Drag-to-create draft slot: same card as an event, times
+                      updating live in the top/bottom-right corners as it moves. */}
+                  {draftStartMin !== null && (
                     <View
-                      style={[styles.currentTimeDot, { backgroundColor: T.domains.calendar }]}
-                    />
-                    <View
-                      style={[styles.currentTimeLine, { backgroundColor: T.domains.calendar }]}
-                    />
-                  </View>
-                )}
-
-                {/* Events positioned on the grid */}
-                {dayEvents.map((event) => {
-                  const color = getEventColor(event, categoriesMap, T.domains.calendar);
-                  const startMin = event.startTime ? getMinutesSinceMidnight(event.startTime) : 0;
-                  const endMin = event.endTime
-                    ? getMinutesSinceMidnight(event.endTime)
-                    : startMin + 30;
-                  const top = (startMin / 60) * HOUR_HEIGHT;
-                  const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28);
-
-                  return (
-                    <TouchableOpacity
-                      key={event.id}
+                      pointerEvents="none"
                       style={[
                         styles.gridEvent,
+                        styles.draftSlot,
                         {
-                          top,
-                          height,
-                          backgroundColor: color + "18",
-                          borderLeftColor: color,
+                          top: (draftStartMin / 60) * HOUR_HEIGHT,
+                          left: TIME_COL_WIDTH + 4,
+                          right: 12,
+                          height: (DRAFT_DURATION_MIN / 60) * HOUR_HEIGHT,
+                          borderColor: T.domains.calendar,
+                          backgroundColor: T.domains.calendar + "33",
                         },
                       ]}
-                      onPress={() => router.push(`/calendar/${event.id}` as any)}
-                      activeOpacity={0.8}
                     >
-                      <Text
-                        style={[styles.gridEventTitle, { color: T.textBright }]}
-                        numberOfLines={1}
-                      >
-                        {event.title}
-                      </Text>
-                      {height >= 40 && (
+                      <View style={styles.gridEventRow}>
                         <Text
-                          style={[styles.gridEventMeta, { color: T.textDim }]}
+                          style={[styles.gridEventTitle, { color: T.textBright }]}
                           numberOfLines={1}
                         >
-                          {event.startTimeFormatted} – {event.endTimeFormatted}
-                          {event.location ? ` · ${event.location}` : ""}
+                          New event
                         </Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                        <Text style={[styles.gridEventTime, { color: T.textBright }]}>
+                          {minutesToHHMM(draftStartMin)}
+                        </Text>
+                      </View>
+                      <View style={styles.gridEventRow}>
+                        <View style={styles.gridEventSpacer} />
+                        <Text style={[styles.gridEventEndTime, { color: T.textDim }]}>
+                          {minutesToHHMM(draftStartMin + DRAFT_DURATION_MIN)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </GestureDetector>
             </ScrollView>
           )}
         </>
@@ -706,10 +948,12 @@ const styles = StyleSheet.create({
   },
   dayNum: { fontSize: 14, fontFamily: FONT.semibold },
   todayDot: { width: 4, height: 4, borderRadius: 2 },
-  // ---- Time grid (day view) ----
+  // Explicit height so the drag-to-create gesture (and touches near the
+  // bottom of the day) land inside the grid's hit area.
   timeGrid: {
     position: "relative",
     marginTop: 10,
+    height: GRID_HEIGHT,
   },
   hourLabel: {
     position: "absolute",
@@ -727,6 +971,8 @@ const styles = StyleSheet.create({
     right: 0,
     height: StyleSheet.hairlineWidth,
   },
+  // The row is 10px tall and shifted up by half so dot and line share the
+  // same vertical center on the exact current-time y.
   currentTimeRow: {
     position: "absolute",
     left: TIME_COL_WIDTH - 5,
@@ -734,38 +980,67 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     zIndex: 20,
-    height: 0,
+    height: 10,
   },
   currentTimeDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginTop: -5,
   },
   currentTimeLine: {
     flex: 1,
     height: 2,
-    marginTop: -1,
   },
   gridEvent: {
     position: "absolute",
-    left: TIME_COL_WIDTH + 4,
-    right: 12,
-    borderLeftWidth: 3,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     overflow: "hidden",
     zIndex: 10,
+    // Title/start ride the top edge, participants/end the bottom edge.
+    justifyContent: "space-between",
+  },
+  gridEventAllDay: {
+    justifyContent: "flex-start",
+    gap: 3,
+  },
+  gridEventRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  gridEventTitleWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  gridEventSpacer: {
+    flex: 1,
   },
   gridEventTitle: {
     fontSize: 13,
     fontFamily: FONT.semibold,
+    flexShrink: 1,
   },
-  gridEventMeta: {
-    fontSize: 11,
+  gridEventTime: {
+    fontSize: 12,
+    fontFamily: FONT.semibold,
+  },
+  gridEventEndTime: {
+    fontSize: 12,
+    fontFamily: FONT.medium,
+  },
+  gridEventDetail: {
+    fontSize: 12,
     fontFamily: FONT.regular,
-    marginTop: 2,
+    flex: 1,
+  },
+  draftSlot: {
+    zIndex: 30,
   },
   // ---- Month view ----
   monthGrid: {},

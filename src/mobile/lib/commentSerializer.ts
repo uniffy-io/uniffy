@@ -41,12 +41,6 @@ export function formatCommentTime(seconds: number): string {
   return new Date(seconds * 1000).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-const MENTION_RE = /\[\[\[([^|]+)\|[^\]]+\]\]\]/g;
-
-function stripMentions(text: string): string {
-  return text.replace(MENTION_RE, (_, label) => `@${label}`);
-}
-
 export function commentToPlain(proto: ProtoComment): SerializedComment {
   const createdAtSeconds = tsToSeconds(proto.createdAt);
   return {
@@ -54,7 +48,9 @@ export function commentToPlain(proto: ProtoComment): SerializedComment {
     authorId: proto.authorId,
     authorName: proto.authorName || "Unknown",
     authorAvatarUrl: proto.authorAvatarUrl || null,
-    body: stripMentions(proto.body),
+    // Canonical body with [[[label|urn]]] mentions preserved so the sheet can
+    // render them as navigable chips.
+    body: proto.body,
     isResolved: proto.isResolved,
     resolvedByName: proto.resolvedByName || null,
     createdAtSeconds,

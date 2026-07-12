@@ -7,6 +7,8 @@ import {
   CalendarBlank,
   Kanban,
   Robot,
+  User,
+  UsersThree,
 } from "phosphor-react-native";
 import type { Domain } from "@/lib/types";
 import { FONT } from "@/constants/typography";
@@ -23,21 +25,25 @@ const DOMAIN_ICONS: Record<Domain, React.ComponentType<any>> = {
 
 export const DOMAIN_ICON: Record<Domain, React.ComponentType<any>> = DOMAIN_ICONS;
 
+export type ReferenceChipKind = Domain | "user" | "group";
+
 type ReferenceChipProps = {
-  domain: Domain;
+  domain: ReferenceChipKind;
   label: string;
   onPress?: () => void;
 };
 
 export function ReferenceChip({ domain, label, onPress }: ReferenceChipProps) {
   const T = useTheme();
-  const color = T.domains[domain];
-  const softColor = T.domains[`${domain}Soft`];
-  const IconComponent = DOMAIN_ICONS[domain];
+  const isSubject = domain === "user" || domain === "group";
+  const color = isSubject ? (domain === "user" ? T.green : T.accent) : T.domains[domain];
+  const softColor = isSubject ? color + "22" : T.domains[`${domain}Soft`];
+  const IconComponent = isSubject ? (domain === "user" ? User : UsersThree) : DOMAIN_ICONS[domain];
 
   return (
     <TouchableOpacity
       onPress={onPress}
+      disabled={!onPress}
       activeOpacity={0.7}
       style={[styles.chip, { backgroundColor: softColor, borderColor: color + "40" }]}
     >

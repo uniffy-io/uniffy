@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { CalendarBlank, Clock, MapPin, Tag, Palette } from "phosphor-react-native";
-import { MentionTextInput } from "@/components/MentionTextInput";
+import { RichDescriptionInput } from "@/components/RichDescriptionInput";
 import { CalendarPicker } from "@/components/CalendarPicker";
 import { TimePicker } from "@/components/TimePicker";
 import { router, useLocalSearchParams } from "expo-router";
@@ -45,7 +45,13 @@ function parseDateTime(dateStr: string, timeStr: string): Date {
 
 export default function CreateEventScreen() {
   const T = useTheme();
-  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  // date/start/end arrive from the day-view drag-to-create gesture.
+  const { eventId, date, start, end } = useLocalSearchParams<{
+    eventId?: string;
+    date?: string;
+    start?: string;
+    end?: string;
+  }>();
   const isEditing = !!eventId;
 
   const categoriesQuery = useCategories();
@@ -59,9 +65,9 @@ export default function CreateEventScreen() {
   const [title, setTitle] = useState("");
   const descriptionRef = useRef("");
   const [initialDescription, setInitialDescription] = useState<string | undefined>(undefined);
-  const [dateStr, setDateStr] = useState(formatDateForInput(defaultStart));
-  const [startTime, setStartTime] = useState(formatTimeForInput(defaultStart));
-  const [endTime, setEndTime] = useState(formatTimeForInput(defaultEnd));
+  const [dateStr, setDateStr] = useState(date || formatDateForInput(defaultStart));
+  const [startTime, setStartTime] = useState(start || formatTimeForInput(defaultStart));
+  const [endTime, setEndTime] = useState(end || formatTimeForInput(defaultEnd));
   const [location, setLocation] = useState("");
   const [meetingUrl, setMeetingUrl] = useState("");
   const [isAllDay, setIsAllDay] = useState(false);
@@ -95,8 +101,16 @@ export default function CreateEventScreen() {
   const handleSave = async () => {
     if (!canSave) return;
 
-    const start = parseDateTime(dateStr, startTime);
-    const end = parseDateTime(dateStr, endTime);
+    let start = parseDateTime(dateStr, startTime);
+    let end = parseDateTime(dateStr, endTime);
+    if (isAllDay) {
+      // All-day spans the whole day (12:00 AM through 11:59 PM).
+      start = parseDateTime(dateStr, "00:00");
+      end = parseDateTime(dateStr, "23:59");
+    } else if (end.getTime() <= start.getTime()) {
+      // An end at or before the start runs into the next day (e.g. 8 PM - 12 AM).
+      end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+    }
 
     try {
       if (isEditing && eventId) {
@@ -153,7 +167,11 @@ export default function CreateEventScreen() {
         }
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Title */}
         <TextInput
           style={[styles.titleInput, { color: T.textBright, borderBottomColor: T.border }]}
@@ -310,14 +328,14 @@ export default function CreateEventScreen() {
 
         {/* Description */}
         <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <MentionTextInput
-            style={[styles.descInput, { color: T.textBright }]}
+          <RichDescriptionInput
+            T={T}
             initialContent={initialDescription}
             onCanonicalChange={(c) => {
               descriptionRef.current = c;
             }}
             placeholder="Add description..."
-            placeholderTextColor={T.textDim}
+            accentColor={T.domains.calendar}
           />
         </View>
       </ScrollView>
@@ -401,13 +419,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   durationText: { fontSize: 12, fontFamily: FONT.medium },
-  descInput: {
-    fontSize: 14,
-    fontFamily: FONT.regular,
-    padding: 14,
-    minHeight: 80,
-    lineHeight: 20,
-  },
   categoryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

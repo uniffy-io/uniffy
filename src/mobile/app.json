@@ -9,14 +9,21 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.uniffy.app"
+      "bundleIdentifier": "com.uniffy.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "package": "com.uniffy.app",
       "adaptiveIcon": {
         "backgroundColor": "#0d111e",
         "foregroundImage": "./assets/images/adaptive-icon.png"
-      }
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/images/uniffy-logo.png"
@@ -26,6 +33,15 @@
       "expo-font",
       "expo-web-browser",
       "expo-secure-store",
+      "expo-audio",
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Uniffy uses your camera for video calls.",
+          "microphonePermission": "Uniffy uses your microphone for calls."
+        }
+      ],
       [
         "expo-splash-screen",
         {

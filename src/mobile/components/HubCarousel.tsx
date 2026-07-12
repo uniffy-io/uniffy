@@ -39,7 +39,7 @@ export const HUB_ITEMS: HubItem[] = [
 ];
 
 // Degrees between adjacent items on the wheel; 90 deg is the apex.
-export const HUB_STEP_DEG = 24;
+export const HUB_STEP_DEG = 19;
 export const HUB_RADIUS = 220;
 const ITEM_SIZE = 54;
 

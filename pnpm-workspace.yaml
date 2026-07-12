@@ -12,3 +12,8 @@ allowBuilds:
   workerd: false
 # 5 days in minutes; newly published versions younger than this are not installed
 minimumReleaseAge: 7200
+# prettier 3.9.5 is younger than minimumReleaseAge and a transitive range
+# (@astrojs/check) floors at it; hold the v3 line on the last mature release.
+# Delete this override once 3.9.5 clears the 5-day window.
+overrides:
+  "prettier@3": "3.9.4"

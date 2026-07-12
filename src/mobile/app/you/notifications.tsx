@@ -15,6 +15,7 @@ import type { ThemeColors } from "@/constants/theme";
 import { FONT } from "@/constants/typography";
 import { useAuth } from "@/context/auth-context";
 import { settingsApi } from "@/api/settingsApi";
+import { useRingtoneEnabled } from "@/lib/callPrefs";
 
 interface Prefs {
   toastEnabled: boolean;
@@ -34,6 +35,7 @@ export default function NotificationPreferencesScreen() {
   const { isAuthenticated } = useAuth();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [ringtoneEnabled, setRingtoneEnabled] = useRingtoneEnabled();
 
   const settingsQuery = useQuery({
     queryKey: ["settings", "effective"],
@@ -110,6 +112,14 @@ export default function NotificationPreferencesScreen() {
               sub="Play a sound for new notifications"
               value={prefs.soundEnabled}
               onValueChange={(v) => update({ soundEnabled: v })}
+              border
+            />
+            <ToggleRow
+              T={T}
+              label="Call ringtone"
+              sub="Ring for incoming calls while the app is open"
+              value={ringtoneEnabled}
+              onValueChange={setRingtoneEnabled}
             />
           </View>
 

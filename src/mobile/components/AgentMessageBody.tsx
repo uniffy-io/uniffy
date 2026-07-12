@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -31,9 +31,12 @@ function meta(message: SerializedMessage, key: string): string | undefined {
   return value && value.length > 0 ? value : undefined;
 }
 
+// Tool names are "{domain}-{action}" (e.g. notes-read_note); drop the domain
+// prefix so titles read as the action alone.
 function humanizeToolName(toolName: string): string {
-  const [, action] = toolName.split(".", 2);
-  const verb = (action ?? toolName).replace(/_/g, " ");
+  const separator = toolName.search(/[.-]/);
+  const action = separator >= 0 ? toolName.slice(separator + 1) : toolName;
+  const verb = action.replace(/_/g, " ");
   return verb.charAt(0).toUpperCase() + verb.slice(1);
 }
 
@@ -48,11 +51,13 @@ export function AgentMessageBody({
   T,
   agentActive,
   toolResultFor,
+  onDetailsToggled,
 }: {
   message: SerializedMessage;
   T: ThemeColors;
   agentActive: boolean;
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
+  onDetailsToggled?: (heightDelta: number) => void;
 }) {
   const kind = message.metadata?.kind ?? "final";
   switch (kind) {
@@ -63,16 +68,17 @@ export function AgentMessageBody({
           T={T}
           agentActive={agentActive}
           toolResultFor={toolResultFor}
+          onDetailsToggled={onDetailsToggled}
         />
       );
     case "tool_result":
-      return <ToolResultRow message={message} T={T} />;
+      return <ToolResultRow message={message} T={T} onDetailsToggled={onDetailsToggled} />;
     case "summary":
       return <SummaryRow message={message} T={T} />;
     case "context_reset":
       return <ContextResetRow message={message} T={T} />;
     case "agent_error":
-      return <AgentErrorRow message={message} T={T} />;
+      return <AgentErrorRow message={message} T={T} onDetailsToggled={onDetailsToggled} />;
     case "confirmation_resolved":
       return <ConfirmationResolvedRow message={message} T={T} />;
     case "confirmation_request":
@@ -86,37 +92,37 @@ export function AgentMessageBody({
   }
 }
 
-function DetailsToggle({
-  T,
-  open,
-  onPress,
-}: {
-  T: ThemeColors;
-  open: boolean;
-  onPress: () => void;
-}) {
+function DetailsCaret({ T, open }: { T: ThemeColors; open: boolean }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={styles.detailsToggle}
-      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-    >
-      <Text style={[styles.detailsToggleText, { color: T.textDim }]}>
-        {open ? "Hide details" : "Show details"}
-      </Text>
+    <View style={styles.caret}>
       {open ? (
-        <CaretUp size={10} color={T.textDim} weight="bold" />
+        <CaretUp size={12} color={T.textDim} weight="bold" />
       ) : (
-        <CaretDown size={10} color={T.textDim} weight="bold" />
+        <CaretDown size={12} color={T.textDim} weight="bold" />
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
 
+// Expanded payloads render fully inline and scroll with the conversation: a
+// nested ScrollView never receives scroll gestures inside the inverted chat
+// list on Android. The cap keeps a giant payload from bloating the list.
+const MONO_CHAR_LIMIT = 20000;
+
+// Matches styles.card gap: the details stack adds this much on top of its own
+// measured height when it mounts.
+const CARD_GAP = 6;
+
 function MonoBlock({ T, text }: { T: ThemeColors; text: string }) {
+  const truncated = text.length > MONO_CHAR_LIMIT;
   return (
     <View style={[styles.monoBlock, { backgroundColor: T.bg, borderColor: T.border }]}>
-      <Text style={[styles.monoText, { color: T.text }]}>{text}</Text>
+      <Text style={[styles.monoText, { color: T.text }]}>
+        {truncated ? text.slice(0, MONO_CHAR_LIMIT) : text}
+      </Text>
+      {truncated ? (
+        <Text style={[styles.monoTruncatedNote, { color: T.textDim }]}>Output truncated</Text>
+      ) : null}
     </View>
   );
 }
@@ -126,13 +132,16 @@ function ToolCallRow({
   T,
   agentActive,
   toolResultFor,
+  onDetailsToggled,
 }: {
   message: SerializedMessage;
   T: ThemeColors;
   agentActive: boolean;
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
+  onDetailsToggled?: (heightDelta: number) => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
+  const detailsHeightRef = useRef(0);
   const toolName = meta(message, "tool_name") ?? "tool";
   const toolArgs = meta(message, "tool_args");
   const toolCallId = meta(message, "tool_call_id");
@@ -145,6 +154,8 @@ function ToolCallRow({
 
   const hasArgs = !!toolArgs && toolArgs !== "{}" && toolArgs !== "None";
   const hasResult = result.trim().length > 0;
+
+  const hasDetails = hasArgs || hasResult;
 
   const label = running
     ? `Running ${humanizeToolName(toolName).toLowerCase()}...`
@@ -159,7 +170,19 @@ function ToolCallRow({
         { backgroundColor: failed ? T.red + "14" : T.surface, borderColor: T.border },
       ]}
     >
-      <View style={styles.cardHeader}>
+      <TouchableOpacity
+        style={styles.cardHeader}
+        onPress={() => {
+          if (showDetails) {
+            const height = detailsHeightRef.current;
+            detailsHeightRef.current = 0;
+            if (height > 0) onDetailsToggled?.(-(height + CARD_GAP));
+          }
+          setShowDetails(!showDetails);
+        }}
+        disabled={!hasDetails}
+        activeOpacity={0.6}
+      >
         {running ? (
           <ActivityIndicator size={14} color={T.domains.chat} />
         ) : failed ? (
@@ -169,27 +192,49 @@ function ToolCallRow({
         ) : (
           <Wrench size={16} color={T.textDim} weight="duotone" />
         )}
-        <View style={{ flex: 1 }}>
+        <View style={styles.cardHeaderText}>
           <Text style={[styles.cardTitle, { color: T.text }]}>{label}</Text>
           <Text style={[styles.cardMono, { color: T.textDim }]} numberOfLines={1}>
             {toolName}
           </Text>
         </View>
-      </View>
-      {hasArgs || hasResult ? (
-        <DetailsToggle T={T} open={showDetails} onPress={() => setShowDetails((v) => !v)} />
+        {hasDetails ? <DetailsCaret T={T} open={showDetails} /> : null}
+      </TouchableOpacity>
+      {showDetails ? (
+        <View
+          style={styles.detailsStack}
+          onLayout={(e) => {
+            const height = e.nativeEvent.layout.height;
+            if (detailsHeightRef.current === 0 && height > 0) {
+              onDetailsToggled?.(height + CARD_GAP);
+            }
+            detailsHeightRef.current = height;
+          }}
+        >
+          {hasArgs ? <MonoBlock T={T} text={toolArgs!} /> : null}
+          {hasResult ? <MonoBlock T={T} text={result} /> : null}
+        </View>
       ) : null}
-      {showDetails && hasArgs ? <MonoBlock T={T} text={toolArgs!} /> : null}
-      {showDetails && hasResult ? <MonoBlock T={T} text={result} /> : null}
     </View>
   );
 }
 
-function ToolResultRow({ message, T }: { message: SerializedMessage; T: ThemeColors }) {
+function ToolResultRow({
+  message,
+  T,
+  onDetailsToggled,
+}: {
+  message: SerializedMessage;
+  T: ThemeColors;
+  onDetailsToggled?: (heightDelta: number) => void;
+}) {
   const [showDetails, setShowDetails] = useState(false);
+  const detailsHeightRef = useRef(0);
   const toolName = meta(message, "tool_name") ?? "tool";
   const result = message.content || meta(message, "tool_result") || "";
   const failed = ERROR_RESULT_RE.test(result);
+
+  const hasResult = result.trim().length > 0;
 
   return (
     <View
@@ -198,7 +243,19 @@ function ToolResultRow({ message, T }: { message: SerializedMessage; T: ThemeCol
         { backgroundColor: failed ? T.red + "14" : T.surface, borderColor: T.border },
       ]}
     >
-      <View style={styles.cardHeader}>
+      <TouchableOpacity
+        style={styles.cardHeader}
+        onPress={() => {
+          if (showDetails) {
+            const height = detailsHeightRef.current;
+            detailsHeightRef.current = 0;
+            if (height > 0) onDetailsToggled?.(-(height + CARD_GAP));
+          }
+          setShowDetails(!showDetails);
+        }}
+        disabled={!hasResult}
+        activeOpacity={0.6}
+      >
         {failed ? (
           <XCircle size={16} color={T.red} weight="fill" />
         ) : (
@@ -207,11 +264,21 @@ function ToolResultRow({ message, T }: { message: SerializedMessage; T: ThemeCol
         <Text style={[styles.cardMono, { color: T.textDim, flex: 1 }]} numberOfLines={1}>
           {toolName} {failed ? "failed" : "completed"}
         </Text>
-      </View>
-      {result.trim().length > 0 ? (
-        <DetailsToggle T={T} open={showDetails} onPress={() => setShowDetails((v) => !v)} />
+        {hasResult ? <DetailsCaret T={T} open={showDetails} /> : null}
+      </TouchableOpacity>
+      {showDetails ? (
+        <View
+          onLayout={(e) => {
+            const height = e.nativeEvent.layout.height;
+            if (detailsHeightRef.current === 0 && height > 0) {
+              onDetailsToggled?.(height + CARD_GAP);
+            }
+            detailsHeightRef.current = height;
+          }}
+        >
+          <MonoBlock T={T} text={result} />
+        </View>
       ) : null}
-      {showDetails ? <MonoBlock T={T} text={result} /> : null}
     </View>
   );
 }
@@ -256,25 +323,56 @@ function ContextResetRow({ message, T }: { message: SerializedMessage; T: ThemeC
   );
 }
 
-function AgentErrorRow({ message, T }: { message: SerializedMessage; T: ThemeColors }) {
+function AgentErrorRow({
+  message,
+  T,
+  onDetailsToggled,
+}: {
+  message: SerializedMessage;
+  T: ThemeColors;
+  onDetailsToggled?: (heightDelta: number) => void;
+}) {
   const [showRaw, setShowRaw] = useState(false);
+  const detailsHeightRef = useRef(0);
   const display = message.content || "Unknown error";
   const raw = meta(message, "raw_error");
   const hasMore = !!raw && raw !== display;
 
   return (
     <View style={[styles.card, { backgroundColor: T.red + "14", borderColor: T.red + "50" }]}>
-      <View style={styles.cardHeader}>
+      <TouchableOpacity
+        style={styles.cardHeader}
+        onPress={() => {
+          if (showRaw) {
+            const height = detailsHeightRef.current;
+            detailsHeightRef.current = 0;
+            if (height > 0) onDetailsToggled?.(-(height + CARD_GAP));
+          }
+          setShowRaw(!showRaw);
+        }}
+        disabled={!hasMore}
+        activeOpacity={0.6}
+      >
         <Warning size={16} color={T.red} weight="fill" />
-        <View style={{ flex: 1 }}>
+        <View style={styles.cardHeaderText}>
           <Text style={[styles.errorLabel, { color: T.red }]}>AGENT ERROR</Text>
           <Text style={[styles.cardTitle, { color: T.text }]}>{display}</Text>
         </View>
-      </View>
-      {hasMore ? (
-        <DetailsToggle T={T} open={showRaw} onPress={() => setShowRaw((v) => !v)} />
+        {hasMore ? <DetailsCaret T={T} open={showRaw} /> : null}
+      </TouchableOpacity>
+      {showRaw && raw ? (
+        <View
+          onLayout={(e) => {
+            const height = e.nativeEvent.layout.height;
+            if (detailsHeightRef.current === 0 && height > 0) {
+              onDetailsToggled?.(height + CARD_GAP);
+            }
+            detailsHeightRef.current = height;
+          }}
+        >
+          <MonoBlock T={T} text={raw} />
+        </View>
       ) : null}
-      {showRaw && raw ? <MonoBlock T={T} text={raw} /> : null}
     </View>
   );
 }
@@ -305,7 +403,7 @@ function SkillDraftRow({ message, T }: { message: SerializedMessage; T: ThemeCol
     <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.accent + "50" }]}>
       <View style={styles.cardHeader}>
         <Lightning size={16} color={T.accent} weight="fill" />
-        <View style={{ flex: 1 }}>
+        <View style={styles.cardHeaderText}>
           <Text style={[styles.cardTitle, { color: T.text }]}>Proposed skill: {title}</Text>
           <Text style={[styles.cardMono, { color: T.textDim }]}>
             {status === "pending"
@@ -327,21 +425,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 6,
-    alignSelf: "flex-start",
-    maxWidth: "100%",
+    alignSelf: "stretch",
   },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  cardHeaderText: { flex: 1 },
+  detailsStack: { gap: 6 },
   cardTitle: { fontSize: 13, fontFamily: FONT.medium, lineHeight: 18 },
   cardMono: { fontSize: 11, fontFamily: MONO_FONT, marginTop: 1 },
-  detailsToggle: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start" },
-  detailsToggleText: { fontSize: 11, fontFamily: FONT.medium },
+  caret: { paddingTop: 2 },
   monoBlock: {
     borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     padding: 8,
-    maxHeight: 200,
-    overflow: "hidden",
   },
+  monoTruncatedNote: { fontSize: 10, fontFamily: FONT.medium, marginTop: 6 },
   monoText: { fontSize: 11, fontFamily: MONO_FONT, lineHeight: 16 },
   errorLabel: { fontSize: 10, fontFamily: FONT.bold, letterSpacing: 0.6, marginBottom: 1 },
   summaryHeader: { flexDirection: "row", alignItems: "center", gap: 6 },

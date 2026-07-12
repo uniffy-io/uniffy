@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Image } from "expo-image";
-import { Robot, Sparkle } from "phosphor-react-native";
+import { Plus, Robot, Sparkle } from "phosphor-react-native";
 import { router } from "expo-router";
 import { DomainHeader } from "@/components/DomainHeader";
 import { useTheme } from "@/hooks/useTheme";
@@ -17,7 +17,7 @@ import type { ThemeColors } from "@/constants/theme";
 import { FONT } from "@/constants/typography";
 import { getAccessToken } from "@/lib/auth";
 import { useAuth } from "@/context/auth-context";
-import { useAgents, useStartAgentChat } from "@/hooks/useAgents";
+import { useAgents, useStartAgentChat, useCreateAgentChat } from "@/hooks/useAgents";
 import { agentAvatarUrl, type SerializedAgent } from "@/lib/agentSerializer";
 
 export default function AgentsListScreen() {
@@ -25,6 +25,7 @@ export default function AgentsListScreen() {
   const { organizationId } = useAuth();
   const agents = useAgents();
   const startChat = useStartAgentChat();
+  const createChat = useCreateAgentChat();
 
   const open = useCallback(
     (agentId: string) => {
@@ -37,17 +38,31 @@ export default function AgentsListScreen() {
     [startChat],
   );
 
+  const openNew = useCallback(
+    (agentId: string) => {
+      createChat.mutate(agentId, {
+        onSuccess: (channelId) => {
+          if (channelId) router.push(`/chat/${channelId}` as any);
+        },
+      });
+    },
+    [createChat],
+  );
+
+  const pending = startChat.isPending || createChat.isPending;
+
   const renderItem = useCallback(
     ({ item }: { item: SerializedAgent }) => (
       <AgentRow
         agent={item}
         T={T}
         organizationId={organizationId ?? ""}
-        starting={startChat.isPending}
+        starting={pending}
         onPress={() => open(item.id)}
+        onNewChat={() => openNew(item.id)}
       />
     ),
-    [T, organizationId, startChat.isPending, open],
+    [T, organizationId, pending, open, openNew],
   );
 
   const data = agents.data ?? [];
@@ -88,12 +103,14 @@ function AgentRow({
   organizationId,
   starting,
   onPress,
+  onNewChat,
 }: {
   agent: SerializedAgent;
   T: ThemeColors;
   organizationId: string;
   starting: boolean;
   onPress: () => void;
+  onNewChat: () => void;
 }) {
   const imageUri = agentAvatarUrl(organizationId, agent.id, agent.avatarKey);
   return (
@@ -136,6 +153,16 @@ function AgentRow({
           </Text>
         ) : null}
       </View>
+      <TouchableOpacity
+        style={[styles.newChatBtn, { backgroundColor: T.domains.agentsSoft }]}
+        onPress={onNewChat}
+        disabled={starting}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel={`New chat with ${agent.name}`}
+      >
+        <Plus size={16} color={T.domains.agents} weight="bold" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -183,6 +210,14 @@ const styles = StyleSheet.create({
   defaultTag: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
   defaultTagText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
   desc: { fontSize: 12, fontFamily: FONT.regular, lineHeight: 17 },
+  newChatBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   emptyState: {
     flex: 1,
     alignItems: "center",
