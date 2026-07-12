@@ -5,16 +5,23 @@ import {
   BatchListAttachmentsRequestSchema,
   BulkDeleteRequestSchema,
   CompleteUploadRequestSchema,
+  CopyItemsRequestSchema,
   CreateFolderRequestSchema,
   DeleteFileRequestSchema,
   DeleteFolderRequestSchema,
+  EmptyTrashRequestSchema,
   GetAttachmentsFolderRequestSchema,
   GetFileRequestSchema,
   GetFilesTreeRequestSchema,
+  GetStorageUsageRequestSchema,
   InitiateUploadRequestSchema,
+  ListFileVersionsRequestSchema,
   ListFilesRequestSchema,
+  ListTrashRequestSchema,
   MoveItemsRequestSchema,
   RestoreFileRequestSchema,
+  RestoreFileVersionRequestSchema,
+  RestoreFolderRequestSchema,
   UpdateFileRequestSchema,
   UpdateFolderRequestSchema,
   UploadChunkRequestSchema,
@@ -55,6 +62,27 @@ export const filesApi = {
 
   bulkDelete: (request: MessageInitShape<typeof BulkDeleteRequestSchema>) =>
     client.bulkDelete(request),
+
+  copyItems: (request: MessageInitShape<typeof CopyItemsRequestSchema>) =>
+    client.copyItems(request),
+
+  listTrash: (request: MessageInitShape<typeof ListTrashRequestSchema>) =>
+    client.listTrash(request),
+
+  restoreFolder: (request: MessageInitShape<typeof RestoreFolderRequestSchema>) =>
+    client.restoreFolder(request),
+
+  emptyTrash: (request: MessageInitShape<typeof EmptyTrashRequestSchema>) =>
+    client.emptyTrash(request),
+
+  listFileVersions: (request: MessageInitShape<typeof ListFileVersionsRequestSchema>) =>
+    client.listFileVersions(request),
+
+  restoreFileVersion: (request: MessageInitShape<typeof RestoreFileVersionRequestSchema>) =>
+    client.restoreFileVersion(request),
+
+  getStorageUsage: (request: MessageInitShape<typeof GetStorageUsageRequestSchema>) =>
+    client.getStorageUsage(request),
 
   initiateUpload: (request: MessageInitShape<typeof InitiateUploadRequestSchema>) =>
     client.initiateUpload(request),
