@@ -11,6 +11,15 @@ const config = getDefaultConfig(projectRoot);
 // through the symlinked node_modules. (Covers the shared proto package too.)
 config.watchFolders = [monorepoRoot];
 
+// Keep Metro's crawler and file watcher out of heavy non-JS trees at the workspace root
+const escapedRoot = monorepoRoot.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const nonJsDirs = [".git", ".venv", ".pnpm-store", ".pytest_cache", ".ruff_cache", ".benchmarks", ".external", ".docker"];
+const priorBlockList = config.resolver.blockList;
+config.resolver.blockList = [
+  ...(Array.isArray(priorBlockList) ? priorBlockList : priorBlockList ? [priorBlockList] : []),
+  ...nonJsDirs.map((dir) => new RegExp(`^${escapedRoot}/${dir.replace(/\./g, "\\.")}/.*$`)),
+];
+
 // Resolve packages from both project and monorepo root
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),

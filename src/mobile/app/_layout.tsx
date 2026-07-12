@@ -94,6 +94,7 @@ function RootLayoutNav() {
 
   // Hardware back button: close the @ overlay if open, otherwise navigate back normally
   useEffect(() => {
+    if (Platform.OS === "web") return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (atOpen) {
         closeAt();

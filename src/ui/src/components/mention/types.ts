@@ -42,6 +42,7 @@ export interface MentionLiveState {
   eventIsAllDay?: boolean;
   eventLocation?: string;
   eventMeetingUrl?: string;
+  eventChannelId?: string;
 
   // FILE
   fileProcessingStatus?: FileProcessingStatus;

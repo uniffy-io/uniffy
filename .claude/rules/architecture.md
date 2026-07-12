@@ -81,7 +81,7 @@ Uniffy uses URNs to uniquely identify all content. This enables universal `@` me
 
 **Format:** `urn:uniffy:content:{TYPE}:{uuid}`
 
-**Supported Types:** `NOTE`, `FILE`, `CHAT`, `USER`, `CALENDAR_EVENT`, `PROJECT`, `TASK`, `USER`, `GROUP`
+**Supported types:** the `ContentType` enum in `src/uniffy/core/types.py` (backend) and `UrnType` in `src/ui/src/shared/utils/urnTypes.ts` (frontend) are the source of truth. Do not copy the list into docs; it grows with every content type.
 
 **Requirements:**
 - All content models carry a `urn` property
@@ -104,7 +104,7 @@ Contact [[[John Doe|urn:uniffy:content:USER:uuid]]] for questions.
 
 When adding a new content type (e.g., `TASK`), update these files:
 
-**Proto** (run `./run.sh proto` after):
+**Proto** (run `./manage.py proto` after):
 | File | Update |
 |------|--------|
 | `src/proto/search/v1/search.proto` | Add `SEARCH_RESULT_TYPE_{TYPE}` |
@@ -113,7 +113,7 @@ When adding a new content type (e.g., `TASK`), update these files:
 **Backend:**
 | File | Update |
 |------|--------|
-| `src/uniffy/core/models/shared.py` | Add to `ContentType` enum |
+| `src/uniffy/core/types.py` | Add to `ContentType` enum |
 | `src/uniffy/core/converters/common_proto.py` | Add to `CONTENT_TYPE_TO_PROTO` and `CONTENT_TYPE_FROM_PROTO` |
 | `src/uniffy/domains/search/converters.py` | Add to `ENTITY_TYPE_TO_PROTO` |
 | `src/uniffy/domains/permissions/converters.py` | Add to `DOMAIN_CONTENT_TYPE_TO_PROTO` |
@@ -136,10 +136,10 @@ When adding a new content type (e.g., `TASK`), update these files:
 | `src/uniffy/factory.py` | App factory - mounts all ConnectRPC services and HTTP routes |
 | `src/uniffy/main.py` | Application entrypoint |
 | `src/ui/src/app/store.ts` | Redux store - registers all feature reducers |
-| `src/ui/src/app/router.tsx` | Frontend routes |
+| `src/ui/src/App.tsx` | Frontend routes (lazy-loaded pages via `<LazyRoute>`) |
 | `src/ui/src/config/api.ts` | ConnectRPC transport, token storage, auth interceptor |
-| `src/uniffy/core/models/shared.py` | ContentType enum, base models |
+| `src/uniffy/core/types.py` | ContentType and other shared enums |
 | `src/uniffy/domains/settings/defaults.py` | Keyboard shortcuts source of truth |
 | `src/ui/src/config/theme/` | Theme engine (dark/light + user accent colors) |
 | `src/ui/src/config/errorMessages.ts` | Centralized error message mappings |
-| `run.sh` | All project commands |
+| `manage.py` | All project commands (uv-run click CLI; `./manage.py --help`) |

@@ -7,8 +7,8 @@ The same suite runs in three modes:
 
 | Mode | Driver | Stack | Use when |
 |---|---|---|---|
-| Local with Claude Code | Playwright **MCP** server | `./run.sh dev` (live) | Reproducing or verifying a bug from a Claude session |
-| Local headless | `playwright test` | `./run.sh dev` (live) | Pre-commit smoke check, full suite locally |
+| Local with Claude Code | Playwright **MCP** server | `./manage.py stack up` (live) | Reproducing or verifying a bug from a Claude session |
+| Local headless | `playwright test` | `./manage.py stack up` (live) | Pre-commit smoke check, full suite locally |
 | CI | `playwright test` inside Docker | `docker-compose.e2e.yml` (ephemeral) | PRs labelled `[e2e]`, nightly runs |
 
 The full plan lives at `.claude/plans/e2e-browser-tests.md`. Open issues
@@ -53,7 +53,7 @@ cp src/e2e/.env.example src/e2e/.env      # tweak only if your stack runs on non
 Make sure the local stack is up:
 
 ```bash
-./run.sh dev
+./manage.py stack up
 ```
 
 That starts Postgres, Valkey, Meilisearch, RustFS, the backend (port 8000),
@@ -105,11 +105,11 @@ The Playwright MCP server runs **inside Docker**, not on your host. Zero
 ### Each session
 
 ```bash
-./run.sh dev       # postgres + valkey + meilisearch + rustfs + backend + worker + UI
-./run.sh mcp-up    # docker compose --profile mcp up -d mcp-playwright
+./manage.py stack up                                 # postgres + valkey + meilisearch + rustfs + backend + worker + UI
+docker compose --profile dev up -d mcp-playwright    # MCP server only
 ```
 
-`mcp-up` boots a long-lived `mcr.microsoft.com/playwright` container that
+That boots a long-lived `mcr.microsoft.com/playwright` container that
 exposes the MCP SSE endpoint on port 8931 and runs a headless chromium
 inside the container. After the container is healthy:
 
@@ -132,8 +132,8 @@ inside the container. After the container is healthy:
 ### Stopping
 
 ```bash
-./run.sh mcp-down  # docker compose --profile mcp down
-./run.sh mcp-logs  # tail the MCP server logs
+docker compose stop mcp-playwright        # stop the MCP server
+./manage.py logs -s mcp-playwright        # tail the MCP server logs
 ```
 
 > **Tip**: Tell Claude to anchor on testids from `helpers/selectors.ts`

@@ -274,7 +274,7 @@ const file_superadmin_v1_system_encryption_proto_rawDesc = "" +
 	"\x12new_active_version\x18\x01 \x01(\x05R\x10newActiveVersion2\x98\x02\n" +
 	"\x17SystemEncryptionService\x12\x8c\x01\n" +
 	"\x1dGetDeploymentEncryptionStatus\x123.superadmin.v1.GetDeploymentEncryptionStatusRequest\x1a4.superadmin.v1.GetDeploymentEncryptionStatusResponse\"\x00\x12n\n" +
-	"\x13RotateDeploymentDek\x12).superadmin.v1.RotateDeploymentDekRequest\x1a*.superadmin.v1.RotateDeploymentDekResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\x13RotateDeploymentDek\x12).superadmin.v1.RotateDeploymentDekRequest\x1a*.superadmin.v1.RotateDeploymentDekResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_system_encryption_proto_rawDescOnce sync.Once

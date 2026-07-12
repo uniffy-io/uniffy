@@ -245,6 +245,10 @@ class CalendarHandlers:
         if request.HasField("room_id") and request.room_id:
             room_id = _parse_uuid(request.room_id, "room_id")
 
+        channel_id = None
+        if request.HasField("channel_id") and request.channel_id:
+            channel_id = _parse_uuid(request.channel_id, "channel_id")
+
         tag_ids = _parse_tag_id_list(request.tag_ids) if request.tag_ids else None
 
         try:
@@ -285,6 +289,8 @@ class CalendarHandlers:
                     baseline_role=baseline_role,
                     reminders=list(request.reminders) if request.reminders else None,
                     room_id=room_id,
+                    channel_id=channel_id,
+                    channel_auto_created=request.channel_auto_created,
                 )
 
                 attendees = await queries.get_event_attendees(session, event.id)
@@ -420,6 +426,10 @@ class CalendarHandlers:
 
         if request.HasField("room_id"):
             kwargs["room_id"] = request.room_id
+        if request.HasField("channel_id"):
+            kwargs["channel_id"] = request.channel_id
+        if request.HasField("channel_auto_created"):
+            kwargs["channel_auto_created"] = request.channel_auto_created
 
         try:
             async with open_session() as session:

@@ -488,9 +488,15 @@ type CalendarEvent struct {
 	// Baseline role granted by access mode (when applicable)
 	BaselineRole *v1.ContentRole `protobuf:"varint,33,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Hydrated tags applied to this event (server-side from TagOperations).
-	Tags          []*v11.Tag `protobuf:"bytes,34,rep,name=tags,proto3" json:"tags,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Tags []*v11.Tag `protobuf:"bytes,34,rep,name=tags,proto3" json:"tags,omitempty"`
+	// Bound chat channel for a Uniffy online meeting. When set, this event is a
+	// Uniffy meeting and join resolves to this channel's call. Mutually exclusive
+	// with meeting_url.
+	ChannelId *string `protobuf:"bytes,35,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	// True when channel_id points at a room auto-created for this event.
+	ChannelAutoCreated bool `protobuf:"varint,36,opt,name=channel_auto_created,json=channelAutoCreated,proto3" json:"channel_auto_created,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CalendarEvent) Reset() {
@@ -759,6 +765,20 @@ func (x *CalendarEvent) GetTags() []*v11.Tag {
 		return x.Tags
 	}
 	return nil
+}
+
+func (x *CalendarEvent) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
+func (x *CalendarEvent) GetChannelAutoCreated() bool {
+	if x != nil {
+		return x.ChannelAutoCreated
+	}
+	return false
 }
 
 // Event attendee
@@ -1076,9 +1096,14 @@ type CreateEventRequest struct {
 	// Baseline role granted by access mode (when applicable)
 	BaselineRole *v1.ContentRole `protobuf:"varint,19,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Optional unified-tag ids to assign on create
-	TagIds        []string `protobuf:"bytes,20,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TagIds []string `protobuf:"bytes,20,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	// Optional channel to bind as a Uniffy online meeting. Mutually exclusive
+	// with meeting_url.
+	ChannelId *string `protobuf:"bytes,21,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	// Set when channel_id points at a room auto-created for this event.
+	ChannelAutoCreated *bool `protobuf:"varint,22,opt,name=channel_auto_created,json=channelAutoCreated,proto3,oneof" json:"channel_auto_created,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreateEventRequest) Reset() {
@@ -1251,6 +1276,20 @@ func (x *CreateEventRequest) GetTagIds() []string {
 	return nil
 }
 
+func (x *CreateEventRequest) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
+func (x *CreateEventRequest) GetChannelAutoCreated() bool {
+	if x != nil && x.ChannelAutoCreated != nil {
+		return *x.ChannelAutoCreated
+	}
+	return false
+}
+
 // Request to get an event
 type GetEventRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1355,9 +1394,15 @@ type UpdateEventRequest struct {
 	BaselineRole *v1.ContentRole `protobuf:"varint,22,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Replacement set of unified-tag ids. Empty list clears all manual tags.
 	// Field is unset (HasField=false) to leave manual tags untouched.
-	TagIds        *EventTagIds `protobuf:"bytes,23,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TagIds *EventTagIds `protobuf:"bytes,23,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
+	// Channel binding. Empty string (HasField true) clears the binding; unset
+	// leaves it untouched. Mirrors room_id set/clear handling.
+	ChannelId *string `protobuf:"bytes,24,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	// Marks the bound channel as a room auto-created for this event. Sent
+	// alongside a new channel_id; unset leaves the flag untouched.
+	ChannelAutoCreated *bool `protobuf:"varint,25,opt,name=channel_auto_created,json=channelAutoCreated,proto3,oneof" json:"channel_auto_created,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpdateEventRequest) Reset() {
@@ -1549,6 +1594,20 @@ func (x *UpdateEventRequest) GetTagIds() *EventTagIds {
 		return x.TagIds
 	}
 	return nil
+}
+
+func (x *UpdateEventRequest) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
+func (x *UpdateEventRequest) GetChannelAutoCreated() bool {
+	if x != nil && x.ChannelAutoCreated != nil {
+		return *x.ChannelAutoCreated
+	}
+	return false
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -4713,7 +4772,7 @@ var File_cal_v1_calendar_proto protoreflect.FileDescriptor
 
 const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
-	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xc3\f\n" +
+	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xa8\r\n" +
 	"\rCalendarEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n" +
@@ -4761,7 +4820,11 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\rroom_capacity\x18\x1f \x01(\x05H\bR\froomCapacity\x88\x01\x01\x12%\n" +
 	"\x0eroom_amenities\x18  \x03(\tR\rroomAmenities\x12@\n" +
 	"\rbaseline_role\x18! \x01(\x0e2\x16.common.v1.ContentRoleH\tR\fbaselineRole\x88\x01\x01\x12 \n" +
-	"\x04tags\x18\" \x03(\v2\f.tags.v1.TagR\x04tagsB\x0e\n" +
+	"\x04tags\x18\" \x03(\v2\f.tags.v1.TagR\x04tags\x12\"\n" +
+	"\n" +
+	"channel_id\x18# \x01(\tH\n" +
+	"R\tchannelId\x88\x01\x01\x120\n" +
+	"\x14channel_auto_created\x18$ \x01(\bR\x12channelAutoCreatedB\x0e\n" +
 	"\f_meeting_urlB\r\n" +
 	"\v_recurrenceB\r\n" +
 	"\v_deleted_atB\x10\n" +
@@ -4773,7 +4836,8 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"_room_nameB\x10\n" +
 	"\x0e_room_locationB\x10\n" +
 	"\x0e_room_capacityB\x10\n" +
-	"\x0e_baseline_role\"\x9b\x02\n" +
+	"\x0e_baseline_roleB\r\n" +
+	"\v_channel_id\"\x9b\x02\n" +
 	"\bAttendee\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -4803,7 +4867,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n" +
 	"\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n" +
-	"\x04_url\"\xcc\a\n" +
+	"\x04_url\"\xcf\b\n" +
 	"\x12CreateEventRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -4833,7 +4897,11 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\treminders\x18\x11 \x03(\x05R\treminders\x12\x1c\n" +
 	"\aroom_id\x18\x12 \x01(\tH\aR\x06roomId\x88\x01\x01\x12@\n" +
 	"\rbaseline_role\x18\x13 \x01(\x0e2\x16.common.v1.ContentRoleH\bR\fbaselineRole\x88\x01\x01\x12\x17\n" +
-	"\atag_ids\x18\x14 \x03(\tR\x06tagIdsB\x0e\n" +
+	"\atag_ids\x18\x14 \x03(\tR\x06tagIds\x12\"\n" +
+	"\n" +
+	"channel_id\x18\x15 \x01(\tH\tR\tchannelId\x88\x01\x01\x125\n" +
+	"\x14channel_auto_created\x18\x16 \x01(\bH\n" +
+	"R\x12channelAutoCreated\x88\x01\x01B\x0e\n" +
 	"\f_descriptionB\v\n" +
 	"\t_timezoneB\v\n" +
 	"\t_locationB\x0e\n" +
@@ -4843,11 +4911,12 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\f_access_modeB\n" +
 	"\n" +
 	"\b_room_idB\x10\n" +
-	"\x0e_baseline_role\"U\n" +
+	"\x0e_baseline_roleB\r\n" +
+	"\v_channel_idB\x17\n" +
+	"\x15_channel_auto_created\"U\n" +
 	"\x0fGetEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb4\n" +
-	"\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb7\v\n" +
 	"\x12UpdateEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -4881,7 +4950,10 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x0foccurrence_date\x18\x14 \x01(\tH\x0eR\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n" +
 	"\aroom_id\x18\x15 \x01(\tH\x0fR\x06roomId\x88\x01\x01\x12@\n" +
 	"\rbaseline_role\x18\x16 \x01(\x0e2\x16.common.v1.ContentRoleH\x10R\fbaselineRole\x88\x01\x01\x121\n" +
-	"\atag_ids\x18\x17 \x01(\v2\x13.cal.v1.EventTagIdsH\x11R\x06tagIds\x88\x01\x01B\b\n" +
+	"\atag_ids\x18\x17 \x01(\v2\x13.cal.v1.EventTagIdsH\x11R\x06tagIds\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"channel_id\x18\x18 \x01(\tH\x12R\tchannelId\x88\x01\x01\x125\n" +
+	"\x14channel_auto_created\x18\x19 \x01(\bH\x13R\x12channelAutoCreated\x88\x01\x01B\b\n" +
 	"\x06_titleB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_start_timeB\v\n" +
@@ -4901,7 +4973,9 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\b_room_idB\x10\n" +
 	"\x0e_baseline_roleB\n" +
 	"\n" +
-	"\b_tag_ids\"\x1f\n" +
+	"\b_tag_idsB\r\n" +
+	"\v_channel_idB\x17\n" +
+	"\x15_channel_auto_created\"\x1f\n" +
 	"\vEventTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\xa8\x02\n" +
 	"\x12DeleteEventRequest\x12\x19\n" +
@@ -5253,7 +5327,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x10GetEventTemplate\x12\x1f.cal.v1.GetEventTemplateRequest\x1a .cal.v1.GetEventTemplateResponse\"\x00\x12`\n" +
 	"\x13UpdateEventTemplate\x12\".cal.v1.UpdateEventTemplateRequest\x1a#.cal.v1.UpdateEventTemplateResponse\"\x00\x12`\n" +
 	"\x13DeleteEventTemplate\x12\".cal.v1.DeleteEventTemplateRequest\x1a#.cal.v1.DeleteEventTemplateResponse\"\x00\x12]\n" +
-	"\x12ListEventTemplates\x12!.cal.v1.ListEventTemplatesRequest\x1a\".cal.v1.ListEventTemplatesResponse\"\x00B5Z3github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1b\x06proto3"
+	"\x12ListEventTemplates\x12!.cal.v1.ListEventTemplatesRequest\x1a\".cal.v1.ListEventTemplatesResponse\"\x00B3Z1github.com/uniffy-io/uniffy-proto-go/cal/v1;calv1b\x06proto3"
 
 var (
 	file_cal_v1_calendar_proto_rawDescOnce sync.Once

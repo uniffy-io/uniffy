@@ -1354,7 +1354,7 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"\x0eUpdateCronTask\x12 .agents.v1.UpdateCronTaskRequest\x1a!.agents.v1.UpdateCronTaskResponse\"\x00\x12W\n" +
 	"\x0eDeleteCronTask\x12 .agents.v1.DeleteCronTaskRequest\x1a!.agents.v1.DeleteCronTaskResponse\"\x00\x12Z\n" +
 	"\x0fListCronRunLogs\x12!.agents.v1.ListCronRunLogsRequest\x1a\".agents.v1.ListCronRunLogsResponse\"\x00\x12Z\n" +
-	"\x0fTriggerCronTask\x12!.agents.v1.TriggerCronTaskRequest\x1a\".agents.v1.TriggerCronTaskResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x0fTriggerCronTask\x12!.agents.v1.TriggerCronTaskRequest\x1a\".agents.v1.TriggerCronTaskResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_cron_proto_rawDescOnce sync.Once

@@ -443,7 +443,7 @@ const file_agents_v1_rate_limits_proto_rawDesc = "" +
 	"\x11RateLimitsService\x12T\n" +
 	"\rGetRateLimits\x12\x1f.agents.v1.GetRateLimitsRequest\x1a .agents.v1.GetRateLimitsResponse\"\x00\x12Z\n" +
 	"\x0fUpsertRateLimit\x12!.agents.v1.UpsertRateLimitRequest\x1a\".agents.v1.UpsertRateLimitResponse\"\x00\x12Z\n" +
-	"\x0fDeleteRateLimit\x12!.agents.v1.DeleteRateLimitRequest\x1a\".agents.v1.DeleteRateLimitResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x0fDeleteRateLimit\x12!.agents.v1.DeleteRateLimitRequest\x1a\".agents.v1.DeleteRateLimitResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_rate_limits_proto_rawDescOnce sync.Once

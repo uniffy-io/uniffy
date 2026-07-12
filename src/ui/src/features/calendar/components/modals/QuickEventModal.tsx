@@ -9,6 +9,9 @@ import {
   TextAa,
   Users,
   Warning,
+  VideoCamera,
+  Prohibit,
+  Link as LinkIcon,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
@@ -29,8 +32,17 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
 import { TagPicker } from '@/features/tags';
 import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
+import { MeetingChannelPicker } from '@/features/calendar/components/modals/MeetingChannelPicker';
+import type { MeetingMode } from '@/features/calendar/utils/meeting';
 
 type EventVisibility = 'private' | 'organization';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Seed categories carry placeholder ids (`cat-*`); only real UUIDs go to the API. */
+function isValidUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
 
 function getDateString(date: Date): string {
   const year = date.getFullYear();
@@ -90,6 +102,10 @@ export function QuickEventModal({
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [meetingMode, setMeetingMode] = useState<MeetingMode>('none');
+  const [meetingUrl, setMeetingUrl] = useState('');
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [channelAutoCreated, setChannelAutoCreated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pendingFileIdsRef = useRef<string[]>([]);
 
@@ -147,6 +163,10 @@ export function QuickEventModal({
       setVisibility('private');
       setRecurrence(undefined);
       setTagIds([]);
+      setMeetingMode('none');
+      setMeetingUrl('');
+      setSelectedChannelId(null);
+      setChannelAutoCreated(false);
       setIsSubmitting(false);
 
       const categoryIds = Object.keys(categories || {});
@@ -184,6 +204,15 @@ export function QuickEventModal({
 
   const handleAttendeeRemove = (userId: string) => {
     setAttendees((prev) => prev.filter((a) => a.id !== userId));
+  };
+
+  const handleMeetingModeChange = (mode: MeetingMode) => {
+    setMeetingMode(mode);
+    if (mode !== 'link') setMeetingUrl('');
+    if (mode !== 'channel') {
+      setSelectedChannelId(null);
+      setChannelAutoCreated(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -227,13 +256,17 @@ export function QuickEventModal({
         isAllDay: isMultiDay,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         calendarId: '',
-        categoryId: selectedCategoryId || undefined,
+        categoryId: isValidUuid(selectedCategoryId) ? selectedCategoryId : undefined,
         isFocusTime: selectedCategoryId === 'cat-deepwork',
         attendeeIds: attendees.map((a) => a.id),
         visibility,
         recurrence,
         roomId: selectedRoomId || undefined,
         tagIds,
+        meetingUrl: meetingMode === 'link' ? meetingUrl.trim() || undefined : undefined,
+        channelId: meetingMode === 'channel' ? selectedChannelId || undefined : undefined,
+        channelAutoCreated:
+          meetingMode === 'channel' && selectedChannelId ? channelAutoCreated : undefined,
       })
     );
 
@@ -351,6 +384,61 @@ export function QuickEventModal({
                   />
                 </div>
               )}
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <VideoCamera size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Online meeting</span>
+                </div>
+                <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
+                  {([
+                    { mode: 'none' as const, icon: Prohibit, label: 'None' },
+                    { mode: 'link' as const, icon: LinkIcon, label: 'Link' },
+                    { mode: 'channel' as const, icon: VideoCamera, label: 'Uniffy meeting' },
+                  ]).map(({ mode, icon: Icon, label }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleMeetingModeChange(mode)}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
+                        meetingMode === mode
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      )}
+                    >
+                      <Icon size={16} weight={meetingMode === mode ? 'fill' : 'duotone'} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {meetingMode === 'link' && (
+                  <input
+                    type="url"
+                    value={meetingUrl}
+                    onChange={(e) => setMeetingUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                )}
+
+                {meetingMode === 'channel' && (
+                  <MeetingChannelPicker
+                    selectedChannelId={selectedChannelId}
+                    onSelect={(id) => {
+                      setSelectedChannelId(id);
+                      setChannelAutoCreated(false);
+                    }}
+                    onCreateRoom={(id) => {
+                      setSelectedChannelId(id);
+                      setChannelAutoCreated(true);
+                    }}
+                    attendeeIds={attendees.map((a) => a.id)}
+                    eventTitle={title}
+                  />
+                )}
+              </div>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

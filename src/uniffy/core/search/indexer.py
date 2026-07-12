@@ -29,6 +29,7 @@ class SearchIndexer:
         shared_group_ids: list[UUID] | None = None,
         blocked_user_ids: list[UUID] | None = None,
         blocked_group_ids: list[UUID] | None = None,
+        attendee_user_ids: list[UUID] | None = None,
         tags: list[str] | None = None,
         rank_score: float = 1.0,
         metadata: dict[str, str] | None = None,
@@ -52,6 +53,7 @@ class SearchIndexer:
             shared_group_ids=shared_group_ids,
             blocked_user_ids=blocked_user_ids,
             blocked_group_ids=blocked_group_ids,
+            attendee_user_ids=attendee_user_ids,
             tags=tags,
             rank_score=rank_score,
             metadata=metadata,
@@ -91,6 +93,7 @@ class SearchIndexer:
                 "shared_group_ids": [str(gid) for gid in (item.get("shared_group_ids") or [])],
                 "blocked_user_ids": [str(uid) for uid in (item.get("blocked_user_ids") or [])],
                 "blocked_group_ids": [str(gid) for gid in (item.get("blocked_group_ids") or [])],
+                "attendee_user_ids": [str(uid) for uid in (item.get("attendee_user_ids") or [])],
                 "tags": item.get("tags") or [],
                 "rank_score": item.get("rank_score", 1.0),
                 "metadata": item.get("metadata") or {},
@@ -120,6 +123,22 @@ class SearchIndexer:
             shared_group_ids=shared_group_ids,
             blocked_user_ids=blocked_user_ids or [],
             blocked_group_ids=blocked_group_ids or [],
+        )
+
+    async def update_attendees(
+        self,
+        urn: str,
+        organization_id: UUID,
+        attendee_user_ids: list[UUID],
+    ) -> None:
+        """Replace the ``attendee_user_ids`` list on the document; other fields untouched."""
+        from uniffy.core.search.meilisearch import get_meilisearch_client
+
+        client = get_meilisearch_client()
+        await client.update_document_attendees(
+            urn=urn,
+            organization_id=organization_id,
+            attendee_user_ids=attendee_user_ids,
         )
 
     async def update_access_policy(

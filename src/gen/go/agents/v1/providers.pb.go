@@ -1349,7 +1349,7 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x13ValidateProviderKey\x12%.agents.v1.ValidateProviderKeyRequest\x1a&.agents.v1.ValidateProviderKeyResponse\"\x00\x12f\n" +
 	"\x13ListAvailableModels\x12%.agents.v1.ListAvailableModelsRequest\x1a&.agents.v1.ListAvailableModelsResponse\"\x00\x12`\n" +
 	"\x11ToggleProviderKey\x12#.agents.v1.ToggleProviderKeyRequest\x1a$.agents.v1.ToggleProviderKeyResponse\"\x00\x12]\n" +
-	"\x10ListModelsForKey\x12\".agents.v1.ListModelsForKeyRequest\x1a#.agents.v1.ListModelsForKeyResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x10ListModelsForKey\x12\".agents.v1.ListModelsForKeyRequest\x1a#.agents.v1.ListModelsForKeyResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_providers_proto_rawDescOnce sync.Once

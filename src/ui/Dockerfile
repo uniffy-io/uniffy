@@ -7,7 +7,7 @@ FROM node:24.0-slim AS builder
 ARG VITE_API_URL=https://localhost
 ARG VITE_ENV=production
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.30.1
 
 WORKDIR /app
 

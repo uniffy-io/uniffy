@@ -1,0 +1,11 @@
+# Devcontainer overlay: a profile-less clone of deps-manager that idles so
+# VS Code can attach its language servers to the fully-installed workspace
+# (full node_modules + .venv volumes) without any host dependencies.
+services:
+    devcontainer:
+        extends:
+            file: .docker/compose/dev.yaml
+            service: deps-manager
+        container_name: uniffy-devcontainer
+        profiles: !override []
+        command: ["sleep", "infinity"]

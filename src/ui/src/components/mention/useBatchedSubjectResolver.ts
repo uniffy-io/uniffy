@@ -146,6 +146,7 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
       state.eventIsAllDay = m['is_all_day'] === 'true';
       state.eventLocation = m['location'] || undefined;
       state.eventMeetingUrl = m['meeting_url'] || undefined;
+      state.eventChannelId = m['channel_id'] || undefined;
       break;
     case UrnType.FILE:
       state.fileProcessingStatus = (m['processing_status'] || undefined) as MentionLiveState['fileProcessingStatus'];

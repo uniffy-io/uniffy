@@ -1985,7 +1985,7 @@ const file_agents_v1_budgets_proto_rawDesc = "" +
 	"\x12UpsertCurrencyRate\x12$.agents.v1.UpsertCurrencyRateRequest\x1a%.agents.v1.UpsertCurrencyRateResponse\"\x00\x12c\n" +
 	"\x12DeleteCurrencyRate\x12$.agents.v1.DeleteCurrencyRateRequest\x1a%.agents.v1.DeleteCurrencyRateResponse\"\x00\x12c\n" +
 	"\x12SetDisplayCurrency\x12$.agents.v1.SetDisplayCurrencyRequest\x1a%.agents.v1.SetDisplayCurrencyResponse\"\x00\x12c\n" +
-	"\x12GetDisplayCurrency\x12$.agents.v1.GetDisplayCurrencyRequest\x1a%.agents.v1.GetDisplayCurrencyResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x12GetDisplayCurrency\x12$.agents.v1.GetDisplayCurrencyRequest\x1a%.agents.v1.GetDisplayCurrencyResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_budgets_proto_rawDescOnce sync.Once

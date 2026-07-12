@@ -62,6 +62,7 @@ export default function EventDetailScreen() {
   const eventColor = category?.color || T.domains.calendar;
 
   const hasMeetingUrl = !!event.meetingUrl;
+  const hasChannel = !!event.channelId;
   const isRecurring = !!event.recurrence;
   const recurrenceLabel = event.recurrence ? `Recurring ${event.recurrence.pattern}` : "";
 
@@ -168,6 +169,17 @@ export default function EventDetailScreen() {
                 <TouchableOpacity>
                   <Text style={[styles.infoMain, { color: T.accent }]}>Join Meeting</Text>
                 </TouchableOpacity>
+              </View>
+            </>
+          )}
+          {hasChannel && (
+            <>
+              <View style={[styles.infoDivider, { backgroundColor: T.border }]} />
+              <View style={styles.infoRow}>
+                <View style={[styles.infoIcon, { backgroundColor: "#40C05720" }]}>
+                  <Video size={14} color="#40C057" weight="duotone" />
+                </View>
+                <Text style={[styles.infoMain, { color: T.textBright }]}>Online meeting</Text>
               </View>
             </>
           )}

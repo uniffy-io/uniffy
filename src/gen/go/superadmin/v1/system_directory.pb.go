@@ -1826,7 +1826,7 @@ const file_superadmin_v1_system_directory_proto_rawDesc = "" +
 	"\tListUsers\x12\x1f.superadmin.v1.ListUsersRequest\x1a .superadmin.v1.ListUsersResponse\"\x00\x12J\n" +
 	"\aGetUser\x12\x1d.superadmin.v1.GetUserRequest\x1a\x1e.superadmin.v1.GetUserResponse\"\x00\x12b\n" +
 	"\x0fForceLogoutUser\x12%.superadmin.v1.ForceLogoutUserRequest\x1a&.superadmin.v1.ForceLogoutUserResponse\"\x00\x12_\n" +
-	"\x0eSetSystemAdmin\x12$.superadmin.v1.SetSystemAdminRequest\x1a%.superadmin.v1.SetSystemAdminResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\x0eSetSystemAdmin\x12$.superadmin.v1.SetSystemAdminRequest\x1a%.superadmin.v1.SetSystemAdminResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_system_directory_proto_rawDescOnce sync.Once

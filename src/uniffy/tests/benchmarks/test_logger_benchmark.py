@@ -1,7 +1,7 @@
 """
 Benchmarks for logger escape functions.
 
-Run with: ./run.sh bench
+Run with: ./manage.py bench
 Or directly: uv run pytest tests/benchmarks/ --benchmark-only
 
 These benchmarks compare different approaches for escaping loguru markup characters.

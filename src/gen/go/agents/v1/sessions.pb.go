@@ -2554,7 +2554,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\vEditMessage\x12\x1d.agents.v1.EditMessageRequest\x1a\x1e.agents.v1.EditMessageResponse\"\x00\x12T\n" +
 	"\rDeleteMessage\x12\x1f.agents.v1.DeleteMessageRequest\x1a .agents.v1.DeleteMessageResponse\"\x00\x12Q\n" +
 	"\fRetryMessage\x12\x1e.agents.v1.RetryMessageRequest\x1a\x1f.agents.v1.RetryMessageResponse\"\x00\x12l\n" +
-	"\x15SubmitMessageFeedback\x12'.agents.v1.SubmitMessageFeedbackRequest\x1a(.agents.v1.SubmitMessageFeedbackResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x15SubmitMessageFeedback\x12'.agents.v1.SubmitMessageFeedbackRequest\x1a(.agents.v1.SubmitMessageFeedbackResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_sessions_proto_rawDescOnce sync.Once

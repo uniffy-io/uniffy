@@ -591,7 +591,7 @@ const file_presence_v1_presence_proto_rawDesc = "" +
 	"\vSetPresence\x12\x1f.presence.v1.SetPresenceRequest\x1a .presence.v1.SetPresenceResponse\"\x00\x12^\n" +
 	"\x0fGetBulkPresence\x12#.presence.v1.GetBulkPresenceRequest\x1a$.presence.v1.GetBulkPresenceResponse\"\x00\x12^\n" +
 	"\x0fSetCustomStatus\x12#.presence.v1.SetCustomStatusRequest\x1a$.presence.v1.SetCustomStatusResponse\"\x00\x12d\n" +
-	"\x11ClearCustomStatus\x12%.presence.v1.ClearCustomStatusRequest\x1a&.presence.v1.ClearCustomStatusResponse\"\x00B?Z=github.com/uniffy-io/uniffy-proto-go/presence/v1;presencev1b\x06proto3"
+	"\x11ClearCustomStatus\x12%.presence.v1.ClearCustomStatusRequest\x1a&.presence.v1.ClearCustomStatusResponse\"\x00B=Z;github.com/uniffy-io/uniffy-proto-go/presence/v1;presencev1b\x06proto3"
 
 var (
 	file_presence_v1_presence_proto_rawDescOnce sync.Once

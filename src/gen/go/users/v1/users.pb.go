@@ -1576,7 +1576,7 @@ const file_users_v1_users_proto_rawDesc = "" +
 	"\fDeleteAvatar\x12\x1d.users.v1.DeleteAvatarRequest\x1a\x1e.users.v1.DeleteAvatarResponse\x12h\n" +
 	"\x15ListUserOrganizations\x12&.users.v1.ListUserOrganizationsRequest\x1a'.users.v1.ListUserOrganizationsResponse\x12h\n" +
 	"\x15AddUserToOrganization\x12&.users.v1.AddUserToOrganizationRequest\x1a'.users.v1.AddUserToOrganizationResponse\x12w\n" +
-	"\x1aRemoveUserFromOrganization\x12+.users.v1.RemoveUserFromOrganizationRequest\x1a,.users.v1.RemoveUserFromOrganizationResponseB9Z7github.com/uniffy-io/uniffy-proto-go/users/v1;usersv1b\x06proto3"
+	"\x1aRemoveUserFromOrganization\x12+.users.v1.RemoveUserFromOrganizationRequest\x1a,.users.v1.RemoveUserFromOrganizationResponseB7Z5github.com/uniffy-io/uniffy-proto-go/users/v1;usersv1b\x06proto3"
 
 var (
 	file_users_v1_users_proto_rawDescOnce sync.Once

@@ -39,7 +39,6 @@ def _run_backend() -> None:
         loop=Loops.auto,
     )
 
-    print(f"Starting UNIFFY on {host}:{port} (workers={workers}, http2=true)")
     server.serve()
 
 

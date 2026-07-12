@@ -122,6 +122,8 @@ def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
         metadata["location"] = item.event_location
     if item.event_meeting_url:
         metadata["meeting_url"] = item.event_meeting_url
+    if item.event_channel_id:
+        metadata["channel_id"] = item.event_channel_id
     if item.file_mime_type:
         metadata["mime_type"] = item.file_mime_type
     if item.file_size:
@@ -163,6 +165,7 @@ def search_result_to_urn_metadata(item: SearchResult) -> UrnMetadata:
         event_is_all_day=item.event_is_all_day,
         event_location=item.event_location or "",
         event_meeting_url=item.event_meeting_url or "",
+        event_channel_id=item.event_channel_id or "",
         file_mime_type=item.file_mime_type or "",
         file_size=item.file_size,
         note_node_type=item.note_node_type or "",

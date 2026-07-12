@@ -7,12 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "uniffy",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0d111e"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.uniffy.app"
@@ -27,7 +21,20 @@
     "web": {
       "favicon": "./assets/images/uniffy-logo.png"
     },
-    "plugins": ["expo-router", "expo-font", "expo-web-browser", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0d111e"
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

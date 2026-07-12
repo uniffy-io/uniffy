@@ -1,0 +1,37 @@
+# Dependency-management toolbox: every toolchain that manipulates
+# dependencies or generates code lives here (pnpm, uv, buf), so those
+# operations never need a host install. Invoked as one-off runs via
+# `./manage.py toolbox|proto|licenses`; named volumes keep its installed
+# trees between runs.
+#
+# Debian (trixie-slim) base. ca-certificates is REQUIRED: node bundles its
+# own CA store but buf is a Go binary that reads the system pool, which is
+# empty on slim images - without the package every buf remote-plugin call
+# dies with "x509: certificate signed by unknown authority".
+FROM node:24-trixie-slim
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.12 /uv /uvx /usr/local/bin/
+COPY --from=bufbuild/buf:1.69.0 /usr/local/bin/buf /usr/local/bin/buf
+# Go toolchain for `go mod tidy` in src/gen/go after buf regenerates
+COPY --from=golang:1.26-trixie /usr/local/go /usr/local/go
+
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pnpm@10.30.1 \
+    && uv python install 3.14
+
+WORKDIR /app
+
+ENV UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    PYTHONDONTWRITEBYTECODE=1 \
+    GOMODCACHE=/go-cache/mod \
+    GOCACHE=/go-cache/build \
+    PATH=/app/.venv/bin:/usr/local/go/bin:$PATH
+
+COPY .docker/dev/deps-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]

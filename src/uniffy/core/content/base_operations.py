@@ -74,6 +74,15 @@ class BaseContentOperations[TModel](ABC):
         """Async metadata hook; override when fetching related rows (parent folder, category)."""
         return self._get_search_metadata(model)
 
+    async def _get_search_attendee_user_ids(self, model: TModel) -> list[UUID] | None:
+        """User ids granted view through domain membership rather than ContentMember rows.
+
+        Indexed as ``attendee_user_ids`` and OR-ed into the Meili permission
+        filter, kept separate from ``shared_user_ids`` so member mutations
+        (which rewrite the sharing lists from ContentMember rows) cannot wipe it.
+        """
+        return None
+
     async def get_by_id(
         self,
         user_id: UUID,
@@ -291,6 +300,7 @@ class BaseContentOperations[TModel](ABC):
             shared_group_ids=shared_group_ids if shared_group_ids else None,
             blocked_user_ids=blocked_user_ids if blocked_user_ids else None,
             blocked_group_ids=blocked_group_ids if blocked_group_ids else None,
+            attendee_user_ids=await self._get_search_attendee_user_ids(model),
             tags=await self._get_search_tags_async(model),
             metadata=await self._get_search_metadata_async(model),
         )

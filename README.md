@@ -1,10 +1,6 @@
 # Uniffy
 
-> **Work Infrastructure, finally unified.**  
-
-<p align="center">
-  <img src="docs/assets/hero.png" alt="Uniffy - Work Infrastructure, finally unified" width="100%" />
-</p>
+> **Teamwork. Simplified, amplified, unified.**  
 
 A unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. Fully private. No trackers, no advertasing, no data harvesting, no training on your data.  OPT-IN AI Agents inside your work workspace configured and controlled by you. You choose the model, skills, permissions, and behavior. 
 
@@ -37,115 +33,107 @@ A unified workspace where notes, files, chat, AI assistants, calendar, and workf
 
 ### Setup
 
-- Clone 
+- Setup
 
 ```bash
 git clone git@github.com:uniffy-io/uniffy.git
 cd uniffy
-./run.sh install
-```
-
-- Configure the environment (once)
-
-```bash
 cp .env.example .env
 # Set JWT_SECRET_KEY (generate with: openssl rand -hex 32)
 ```
 
+
 #### Start Developing
 
-- first time run
+Uniffy supports development fully in docker, and that is the recommended mode for supply-chain safety. Dependencies are resolved, installed, and executed only inside containers. A compromised npm or PyPI release never runs code on your machine, so it cannot reach your shell profile, ssh keys, browser sessions, or anything else outside a throwaway container. Two more guards apply everywhere: package install scripts are blocked by default (`allowBuilds` in `pnpm-workspace.yaml`), and new package versions are refused until they are at least 5 days old (`minimumReleaseAge`), which gives poisoned releases time to be caught and pulled before they can ever be installed.
 
-    ```bash
-    # Start the infra (postgres, valkey, meilisearch, rustfs, livekit, admin UIs)
-    docker compose up -d
-    # Start the dev stack (backend + workers + ui + landing, all in containers, all hot-reload)
-    docker compose --profile dev up -d
-    # start watching the logs of all Uniffy services
-    docker compose logs -f backend worker-core worker-egress ui landing 
-    ```
+You can also run only the infrastructure in docker and develop natively on the host with uv and pnpm. This is handy for editor integration, but understand the tradeoff: package code executes on your host. The lockfile review and the two guards above still apply, the container isolation does not.
 
-- Stop
+Editor IntelliSense does not require the native mode. The repo ships a dev container (`.devcontainer/`) that attaches your editor to a container holding the full workspace `node_modules` and `.venv`, so pyright, tsserver, ruff, and eslint all resolve from inside it:
 
-    ```bash
-    docker compose --profile dev down              # stops dev services + infra
-    docker compose --profile dev stop backend ui   # stop a subset, keep the rest
-    ```
+- **VS Code**: install the "Dev Containers" extension, open the repo, accept the "Reopen in Container" popup (or run "Dev Containers: Reopen in Container" from the command palette).
+- **Zed** (v0.218+): open the repo and accept the dev container prompt, or run "Project: Open Remote" from the command palette and choose "Connect Dev Container". Docker must be in your PATH.
 
-- Endpoints
+Both modes support hot reload in the backend and the ui. Every command below is a `./manage.py` subcommand; `--help` on any level shows the full tree.
 
-  | What              | URL                     |
-  |-------------------|-------------------------|
-  | Backend API       | http://localhost:8000   |
-  | Frontend (UI)     | http://localhost:5173   |
-  | Landing           | http://localhost:4321   |
-  | LiveKit signaling | ws://localhost:7880     |
-  | Postgres          | localhost:5432          |
-  | Valkey            | localhost:6380          |
-  | Meilisearch       | http://localhost:7700   |
-  | RustFS (S3)       | http://localhost:9000   |
-  | pgAdmin           | http://localhost:5050   |
-  | RedisInsight      | http://localhost:5540   |
-
-- Reset the data services without killing the dev stack. Wipes Postgres, Valkey, Meilisearch, and RustFS volumes; restarts backend + workers so they re-run migrations against the empty Postgres. UI / landing keep running.
-
-    ```bash
-    ./run.sh data-reset    # one-shot helper with confirmation prompt
-
-    # or step-by-step manually:
-    docker compose stop postgres valkey meilisearch rustfs
-    docker compose rm -f postgres valkey meilisearch rustfs
-    docker volume rm \
-      uniffy-local_postgres_data \
-      uniffy-local_valkey_data \
-      uniffy-local_meilisearch_data \
-      uniffy-local_rustfs_data \
-      uniffy-local_rustfs_logs
-    docker compose up -d postgres valkey meilisearch rustfs
-    docker compose restart backend worker-core worker-egress
-    ```
-
-- Rebuild dev images after a Dockerfile change
-
-    ```bash
-    docker compose --profile dev build --no-cache backend ui
-    ```
-
-#### Compose Layout
-
-Compose layout (modular, top-level `docker-compose.yml` only `include`s the rest):
-
-```
-.docker/compose/
-  core.yaml          postgres, valkey, meilisearch
-  storage.yaml       rustfs (S3-compatible)
-  admin.yaml         pgadmin, redisinsight
-  calls.yaml         livekit (always on), coturn (profile: calls-turn)
-  dev-tools.yaml     mcp-playwright (profile: dev)
-  dev.yaml           backend, worker-core, worker-egress, ui, landing (profile: dev)
-```
-
-Run any subset directly: `docker compose -f .docker/compose/calls.yaml up`.
-
-Opt-in profiles
+##### Everything in docker (nothing installed on the host)
 
 ```bash
-docker compose --profile calls-turn up -d coturn   # TURN relay for cross-NAT testing
+./manage.py start --stack docker              # build images, install deps in volumes, run the stack
+./manage.py start --stack docker -p mobile    # same, plus the expo/metro dev server on :8081
+./manage.py stack down                        # stop everything
 ```
 
-#### Other targets
+View logs:
 
 ```bash
-./run.sh proto              # regenerate protobuf after editing .proto files
-./run.sh lint               # run all linters
-./run.sh test               # backend tests
-./run.sh test-frontend      # frontend tests
-./run.sh dev-native         # legacy: run python/node on host (infra still in containers)
+./manage.py logs --stack docker               # all services combined
+./manage.py logs --stack docker -s backend    # one service: backend, ui, landing, mobile,
+./manage.py logs --stack docker -s postgres   #   worker-core, worker-egress, postgres, livekit, ...
+```
+
+Manage dependencies (resolution runs inside the containers; package.json / lockfiles change in your working tree as usual):
+
+```bash
+./manage.py deps add httpx -s backend --stack docker
+./manage.py deps add zod -s ui --stack docker
+./manage.py deps update @tanstack/react-query -s mobile --stack docker
+./manage.py deps install --stack docker       # sync every workspace from the lockfiles
+```
+
+Quality and codegen, containerized:
+
+```bash
+./manage.py lint --stack docker
+./manage.py test --stack docker
+./manage.py proto --stack docker              # runs in the toolbox container
+```
+
+##### Native on the host (infra stays in docker)
+
+```bash
+./manage.py start --stack local  # installs host deps if missing, infra up, backend + workers + vite
+./manage.py serve backend        # or run individual processes in separate terminals:
+./manage.py serve ui             #   backend, worker-core, worker-egress, ui, landing, mobile
+```
+
+View logs:
+
+```bash
+./manage.py logs --stack local              # host processes started by `start --stack local` / `serve all`
+./manage.py logs --stack local -s backend   # one process: backend, worker-core, worker-egress
+./manage.py logs --stack docker -s postgres # infra logs still come from docker
+```
+
+Manage dependencies with the host toolchains:
+
+```bash
+./manage.py deps install --stack local
+./manage.py deps add httpx -s backend --stack local
+./manage.py deps update @tanstack/react-query -s mobile --stack local
+./manage.py lint --stack local && ./manage.py test --stack local
+./manage.py proto --stack local             # needs buf, node, and the venv on the host
+```
+
+##### Data and profiles
+
+Reset the data services without killing the dev stack. Wipes Postgres, Valkey, Meilisearch, and RustFS volumes; restarts backend + workers so they re-run migrations against the empty Postgres. UI / landing keep running.
+
+```bash
+./manage.py stack reset-data    # one-shot helper with confirmation prompt
+```
+
+Profiles are independent building blocks. Stack them to compose an environment:
+
+```bash
+docker compose --profile core --profile dev up        # infra + app (== ./manage.py stack up)
+docker compose --profile core --profile adminuis up   # infra + db inspection UIs
+docker compose --profile all up                       # everything
 ```
 
 ## Repository Structure
 
-Uniffy is a monorepo managed with [uv](https://github.com/astral-sh/uv) (Python) and [pnpm workspaces](https://pnpm.io/workspaces) (TypeScript). Protocol Buffer definitions in `src/proto/` are the single source of truth for all API contracts. A single `./run.sh proto` generates code for all three languages into shared packages.
+Uniffy is a monorepo managed with [uv](https://github.com/astral-sh/uv) (Python) and [pnpm workspaces](https://pnpm.io/workspaces) (TypeScript). Protocol Buffer definitions in `src/proto/` are the single source of truth for all API contracts. A single `./manage.py proto` generates code for all three languages into shared packages.
 
 ```
 uniffy/
@@ -158,17 +146,18 @@ uniffy/
     uniffy/             Python backend  (FastAPI + ConnectRPC)
     ui/                 React web app   (Vite + Redux + Tailwind)
     mobile/             React Native    (Expo)
+    unictl/             Go CLI for Uniffy
   pyproject.toml        uv workspace root
   pnpm-workspace.yaml   pnpm workspace root
   buf.gen.yaml          Codegen config (all languages, single pass)
-  run.sh                All project commands
+  manage.py             All project commands (uv-run click CLI)
 ```
 
 | Package | Language | Consumed by | Resolution |
 |---------|----------|-------------|------------|
 | `uniffy-proto` | Python | backend | `uv sync` (workspace) |
 | `@uniffy/proto` | TypeScript | ui, mobile | `pnpm install` (workspace) |
-| `uniffy-proto-go` | Go | future CLI | `go mod` (replace directive) |
+| `uniffy-proto-go` | Go | CLI | `go mod` (replace directive) |
 
 ## System Architecture
 
@@ -176,7 +165,7 @@ uniffy/
 
 - **Note on Valkey:** While Redis should in theory work as a drop-in replacement for Valkey, this has not been tested and is not recommended by us. We only support and test against Valkey.
 
-- **Note on Calls:** LiveKit is the SFU for audio/video/screen. It reuses the existing Valkey on a separate database (DB 1; the app uses DB 0) for its room registry. All app traffic and call signaling enter through the same reverse proxy on a single TLS endpoint; the proxy routes `/livekit/*` to the LiveKit signaling port. WebRTC media (UDP 7882) cannot ride HTTP and connects directly from client to LiveKit. coturn provides TURN/STUN for NAT traversal and is opt-in.
+- **Note on Calls:** LiveKit is the SFU for audio/video/screen. It reuses the existing Valkey on a separate database (DB 1; the app uses DB 0) for its room registry. All app traffic and call signaling enter through the same reverse proxy on a single TLS endpoint; the proxy routes `/livekit/*` to the LiveKit signaling port. WebRTC media (UDP 7882) cannot ride HTTP and connects directly from client to LiveKit. LiveKit's embedded TURN (UDP 3478) provides NAT traversal, so there is no separate coturn service.
 
 ```
         +--------------+    +-----------+    +-------+
@@ -187,14 +176,14 @@ uniffy/
                +--------+---------+--------+-----+
                         |
                   HTTP/2 + WebSocket (443/tcp) | 7882/udp ( WebRTC Media ) 
-                        |                      | 3478/udp ( TURN/STUN opt-in NAT relay)
+                        |                      | 3478/udp ( LiveKit embedded TURN )
                         |                      |
                         |                      |
                         |                      |
                         v                      |
               +--------------------+           |
               | Reverse Proxy      |  :443     |
-              | (Caddy / Nginx)    |           |
+              | (Caddy / Envoy)    |           |
               +--+--------------+--+           |
                  |              |              |
                  | h2c          | /livekit/*   |
@@ -221,5 +210,3 @@ uniffy/
                               | egress    |
                               +-----------+
 ```
-
-LiveKit fires webhooks back to backend on call lifecycle events (room started, participant joined, recording finished, etc.) which the calls domain projects into Postgres.

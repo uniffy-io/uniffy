@@ -713,7 +713,7 @@ const file_mail_v1_mail_proto_rawDesc = "" +
 	"\rGetMailConfig\x12\x1d.mail.v1.GetMailConfigRequest\x1a\x1e.mail.v1.GetMailConfigResponse\"\x00\x12Y\n" +
 	"\x10UpdateMailConfig\x12 .mail.v1.UpdateMailConfigRequest\x1a!.mail.v1.UpdateMailConfigResponse\"\x00\x12V\n" +
 	"\x0fClearMailConfig\x12\x1f.mail.v1.ClearMailConfigRequest\x1a .mail.v1.ClearMailConfigResponse\"\x00\x12M\n" +
-	"\fSendTestMail\x12\x1c.mail.v1.SendTestMailRequest\x1a\x1d.mail.v1.SendTestMailResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/mail/v1;mailv1b\x06proto3"
+	"\fSendTestMail\x12\x1c.mail.v1.SendTestMailRequest\x1a\x1d.mail.v1.SendTestMailResponse\"\x00B5Z3github.com/uniffy-io/uniffy-proto-go/mail/v1;mailv1b\x06proto3"
 
 var (
 	file_mail_v1_mail_proto_rawDescOnce sync.Once

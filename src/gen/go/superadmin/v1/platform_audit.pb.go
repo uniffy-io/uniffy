@@ -500,7 +500,7 @@ const file_superadmin_v1_platform_audit_proto_rawDesc = "" +
 	"\aactions\x18\x01 \x03(\v2\".superadmin.v1.PlatformActionEntryR\aactions2\xf0\x01\n" +
 	"\x14PlatformAuditService\x12h\n" +
 	"\x11ListPlatformAudit\x12'.superadmin.v1.ListPlatformAuditRequest\x1a(.superadmin.v1.ListPlatformAuditResponse\"\x00\x12n\n" +
-	"\x13ListPlatformActions\x12).superadmin.v1.ListPlatformActionsRequest\x1a*.superadmin.v1.ListPlatformActionsResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\x13ListPlatformActions\x12).superadmin.v1.ListPlatformActionsRequest\x1a*.superadmin.v1.ListPlatformActionsResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_platform_audit_proto_rawDescOnce sync.Once

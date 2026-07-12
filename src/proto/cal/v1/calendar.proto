@@ -230,6 +230,12 @@ message CalendarEvent {
   optional common.v1.ContentRole baseline_role = 33;
   // Hydrated tags applied to this event (server-side from TagOperations).
   repeated tags.v1.Tag tags = 34;
+  // Bound chat channel for a Uniffy online meeting. When set, this event is a
+  // Uniffy meeting and join resolves to this channel's call. Mutually exclusive
+  // with meeting_url.
+  optional string channel_id = 35;
+  // True when channel_id points at a room auto-created for this event.
+  bool channel_auto_created = 36;
 }
 
 // Event attendee
@@ -322,6 +328,11 @@ message CreateEventRequest {
   optional common.v1.ContentRole baseline_role = 19;
   // Optional unified-tag ids to assign on create
   repeated string tag_ids = 20;
+  // Optional channel to bind as a Uniffy online meeting. Mutually exclusive
+  // with meeting_url.
+  optional string channel_id = 21;
+  // Set when channel_id points at a room auto-created for this event.
+  optional bool channel_auto_created = 22;
 }
 
 // Request to get an event
@@ -381,6 +392,12 @@ message UpdateEventRequest {
   // Replacement set of unified-tag ids. Empty list clears all manual tags.
   // Field is unset (HasField=false) to leave manual tags untouched.
   optional EventTagIds tag_ids = 23;
+  // Channel binding. Empty string (HasField true) clears the binding; unset
+  // leaves it untouched. Mirrors room_id set/clear handling.
+  optional string channel_id = 24;
+  // Marks the bound channel as a room auto-created for this event. Sent
+  // alongside a new channel_id; unset leaves the flag untouched.
+  optional bool channel_auto_created = 25;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from

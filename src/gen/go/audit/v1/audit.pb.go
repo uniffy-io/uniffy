@@ -602,7 +602,7 @@ const file_audit_v1_audit_proto_rawDesc = "" +
 	"\fAuditService\x12G\n" +
 	"\n" +
 	"ListEvents\x12\x1b.audit.v1.ListEventsRequest\x1a\x1c.audit.v1.ListEventsResponse\x12O\n" +
-	"\fExportEvents\x12\x1d.audit.v1.ExportEventsRequest\x1a\x1e.audit.v1.ExportEventsResponse0\x01B9Z7github.com/uniffy-io/uniffy-proto-go/audit/v1;auditv1b\x06proto3"
+	"\fExportEvents\x12\x1d.audit.v1.ExportEventsRequest\x1a\x1e.audit.v1.ExportEventsResponse0\x01B7Z5github.com/uniffy-io/uniffy-proto-go/audit/v1;auditv1b\x06proto3"
 
 var (
 	file_audit_v1_audit_proto_rawDescOnce sync.Once

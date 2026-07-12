@@ -1590,7 +1590,7 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\vDeleteAgent\x12\x1d.agents.v1.DeleteAgentRequest\x1a\x1e.agents.v1.DeleteAgentResponse\"\x00\x12`\n" +
 	"\x11UploadAgentAvatar\x12#.agents.v1.UploadAgentAvatarRequest\x1a$.agents.v1.UploadAgentAvatarResponse\"\x00\x12`\n" +
 	"\x11DeleteAgentAvatar\x12#.agents.v1.DeleteAgentAvatarRequest\x1a$.agents.v1.DeleteAgentAvatarResponse\"\x00\x12f\n" +
-	"\x13PreviewSystemPrompt\x12%.agents.v1.PreviewSystemPromptRequest\x1a&.agents.v1.PreviewSystemPromptResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x13PreviewSystemPrompt\x12%.agents.v1.PreviewSystemPromptRequest\x1a&.agents.v1.PreviewSystemPromptResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_agents_proto_rawDescOnce sync.Once

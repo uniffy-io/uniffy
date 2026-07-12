@@ -2381,7 +2381,7 @@ const file_rooms_v1_rooms_proto_rawDesc = "" +
 	"\rCancelBooking\x12\x1e.rooms.v1.CancelBookingRequest\x1a\x1f.rooms.v1.CancelBookingResponse\x12M\n" +
 	"\fListBookings\x12\x1d.rooms.v1.ListBookingsRequest\x1a\x1e.rooms.v1.ListBookingsResponse\x12\\\n" +
 	"\x11CheckAvailability\x12\".rooms.v1.CheckAvailabilityRequest\x1a#.rooms.v1.CheckAvailabilityResponse\x12_\n" +
-	"\x12FindAvailableRooms\x12#.rooms.v1.FindAvailableRoomsRequest\x1a$.rooms.v1.FindAvailableRoomsResponseB9Z7github.com/uniffy-io/uniffy-proto-go/rooms/v1;roomsv1b\x06proto3"
+	"\x12FindAvailableRooms\x12#.rooms.v1.FindAvailableRoomsRequest\x1a$.rooms.v1.FindAvailableRoomsResponseB7Z5github.com/uniffy-io/uniffy-proto-go/rooms/v1;roomsv1b\x06proto3"
 
 var (
 	file_rooms_v1_rooms_proto_rawDescOnce sync.Once

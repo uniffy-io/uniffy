@@ -126,6 +126,84 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         """Events use `organizer_id` instead of `owner_id`."""
         return CalendarEvent.organizer_id
 
+    async def _resolve_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: CalendarEvent,
+    ) -> ContentRole | None:
+        """Content permissions first, then the attendee floor.
+
+        An invitation is an explicit grant by the organizer, so an attendee can
+        VIEW an event regardless of its access mode - mirroring the attendee
+        bypass in the list queries. An explicit BLOCKED grant still wins.
+        """
+        role = await super()._resolve_role(user_id, organization_id, content)
+        if role is not None:
+            return role
+
+        master_id = _master_event_id(content)
+        if not await self._is_attendee(user_id, master_id):
+            return None
+
+        if await self.permission_checker.is_blocked(
+            user_id, organization_id, self.content_type, master_id
+        ):
+            return None
+
+        return ContentRole.VIEWER
+
+    async def _is_attendee(self, user_id: UUID, event_id: UUID) -> bool:
+        result = await self.session.execute(
+            select(EventAttendee.id)
+            .where(
+                EventAttendee.event_id == event_id,
+                EventAttendee.user_id == user_id,
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
+
+    def _attendee_access_filter(self, user_id: UUID, organization_id: UUID):
+        """WHERE branch granting invitees visibility, minus explicit BLOCKED grants."""
+        attendee_subquery = select(EventAttendee.event_id).where(
+            EventAttendee.user_id == user_id,
+        )
+        return and_(
+            CalendarEvent.id.in_(attendee_subquery),
+            self.access_query.build_not_blocked_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=self.content_type,
+                content_id_column=CalendarEvent.id,
+            ),
+        )
+
+    async def _get_search_attendee_user_ids(self, model: CalendarEvent) -> list[UUID] | None:
+        # Recurring instances resolve to the master, same as tags; override rows
+        # carry their own copied attendee set.
+        result = await self.session.execute(
+            select(EventAttendee.user_id).where(
+                EventAttendee.event_id == _master_event_id(model)
+            )
+        )
+        ids = [row[0] for row in result.all()]
+        return ids or None
+
+    async def _refresh_search_attendees(self, event: CalendarEvent) -> None:
+        """Push the current attendee set into the search document; best-effort."""
+        try:
+            attendee_ids = await self._get_search_attendee_user_ids(event)
+            await self.search_indexer.update_attendees(
+                urn=build_content_urn(self.content_type, event.id),
+                organization_id=event.organization_id,
+                attendee_user_ids=attendee_ids or [],
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Failed to refresh attendee search sharing"
+            )
+
     async def create(
         self,
         user_id: UUID,
@@ -151,6 +229,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         group_ids: list[UUID] | None = None,
         reminders: list[int] | None = None,
         room_id: UUID | None = None,
+        channel_id: UUID | None = None,
+        channel_auto_created: bool = False,
     ) -> CalendarEvent:
         """Create a new calendar event.
 
@@ -184,6 +264,14 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     "room", "Room is already booked for this time slot."
                 )
 
+        if channel_id is not None:
+            if meeting_url:
+                raise ValidationError(
+                    "channel_id",
+                    "An event cannot have both a meeting URL and a channel binding.",
+                )
+            await self._validate_channel_binding(user_id, organization_id, channel_id)
+
         if attendee_ids:
             attendee_ids = await self._expand_group_attendees(attendee_ids)
 
@@ -208,6 +296,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             timezone=timezone,
             location=location,
             meeting_url=meeting_url,
+            channel_id=channel_id,
+            channel_auto_created=bool(channel_id) and channel_auto_created,
             category_id=category_id,
             access_mode=access_mode,
             baseline_role=baseline_role,
@@ -353,6 +443,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         recurrence_edit_scope: str | None = None,
         occurrence_date: date | None = None,
         room_id: str | None = None,
+        channel_id: str | None = None,
+        channel_auto_created: bool | None = None,
     ) -> CalendarEvent:
         """Update an existing event.
 
@@ -437,6 +529,14 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             event.location = location
         if meeting_url is not None:
             event.meeting_url = meeting_url
+        await self._apply_channel_binding_update(
+            user_id,
+            organization_id,
+            event,
+            channel_id,
+            meeting_url is not None,
+            channel_auto_created=bool(channel_auto_created),
+        )
         previous_calendar_id = event.calendar_id
         calendar_moved = (
             calendar_id is not None and calendar_id != event.calendar_id
@@ -480,6 +580,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     )
 
         newly_invited_ids: list[UUID] = []
+        removed_attendee_ids: list[UUID] = []
         if attendee_ids is not None:
             attendee_ids = await self._expand_group_attendees(attendee_ids)
             stmt = select(EventAttendee).where(EventAttendee.event_id == event.id)
@@ -494,6 +595,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 attendee = existing_map[uid]
                 if attendee.user_id != event.organizer_id:
                     await self.session.delete(attendee)
+                    removed_attendee_ids.append(uid)
 
             for uid in new_ids - current_ids:
                 if uid != event.organizer_id:
@@ -631,6 +733,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
             await self.session.commit()
 
+        await self._sync_auto_created_room_members(
+            event, added=newly_invited_ids, removed=removed_attendee_ids
+        )
+
         return event
 
     async def delete(
@@ -740,11 +846,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             access_mode_column=CalendarEvent.access_mode,
             baseline_role_column=CalendarEvent.baseline_role,
         )
-        attendee_subquery = select(EventAttendee.event_id).where(
-            EventAttendee.user_id == user_id,
+        permission_filter = or_(
+            access_filter,
+            self._attendee_access_filter(user_id, organization_id),
         )
-        attendee_filter = CalendarEvent.id.in_(attendee_subquery)
-        permission_filter = or_(access_filter, attendee_filter)
 
         base_filters = [
             CalendarEvent.organization_id == organization_id,
@@ -945,6 +1050,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             timezone=master.timezone,
             location=master.location,
             meeting_url=master.meeting_url,
+            channel_id=master.channel_id,
+            channel_auto_created=master.channel_auto_created,
             access_mode=master.access_mode,
             baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
@@ -1055,6 +1162,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             timezone=master.timezone,
             location=master.location,
             meeting_url=master.meeting_url,
+            channel_id=master.channel_id,
+            channel_auto_created=master.channel_auto_created,
             access_mode=master.access_mode,
             baseline_role=master.baseline_role,
             is_focus_time=master.is_focus_time,
@@ -1124,10 +1233,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             baseline_role_column=CalendarEvent.baseline_role,
         )
 
-        attendee_subquery = select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
-        attendee_filter = CalendarEvent.id.in_(attendee_subquery)
-
-        query = query.where(or_(access_filter, attendee_filter))
+        query = query.where(
+            or_(
+                access_filter,
+                self._attendee_access_filter(user_id, organization_id),
+            )
+        )
 
         if calendar_id:
             query = query.where(CalendarEvent.calendar_id == calendar_id)
@@ -1216,6 +1327,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self.session.refresh(event)
 
         if added_ids:
+            await self._refresh_search_attendees(event)
             await emit_notification(
                 NotificationEvent(
                     notification_type=NotificationType.CALENDAR_INVITE,
@@ -1226,6 +1338,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     target_user_ids=added_ids,
                 )
             )
+
+        await self._sync_auto_created_room_members(event, added=added_ids, removed=[])
 
         return event
 
@@ -1254,7 +1368,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
             )
         )
+        removed_ids: list[UUID] = []
         for attendee in result.scalars().all():
+            removed_ids.append(attendee.user_id)
             await self.session.delete(attendee)
 
         await self._delete_reminder_rows(event_id, user_ids=attendee_ids)
@@ -1262,6 +1378,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         event.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(event)
+
+        if removed_ids:
+            await self._refresh_search_attendees(event)
+
+        await self._sync_auto_created_room_members(event, added=[], removed=removed_ids)
 
         return event
 
@@ -1439,6 +1560,106 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 resolved.append(uid)
 
         return resolved
+
+    async def _validate_channel_binding(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+    ) -> None:
+        """Verify the organizer may bind an event to ``channel_id``.
+
+        ``get_channel`` already scopes to the org and rejects deleted channels;
+        this additionally rejects archived channels and requires the caller to
+        pass the chat access check. Join stays gated per user at call time, so
+        no attendee membership is inspected here.
+        """
+        from uniffy.domains.chat.access import ChatAccessChecker
+
+        checker = ChatAccessChecker(self.session)
+        channel = await checker.get_channel(channel_id, organization_id)
+        if channel.is_archived:
+            raise ValidationError("channel_id", "Channel is archived.")
+        await checker.check_access(user_id, organization_id, channel)
+
+    async def _apply_channel_binding_update(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        event: CalendarEvent,
+        channel_id: str | None,
+        meeting_url_provided: bool,
+        channel_auto_created: bool = False,
+    ) -> None:
+        """Apply a channel binding change on update and enforce mutual exclusion.
+
+        ``channel_id`` unset leaves the binding untouched, empty string clears
+        it, and a uuid string binds after validation. An event is either a link
+        meeting or a channel meeting, never both.
+        """
+        if channel_id is not None:
+            if channel_id == "":
+                event.channel_id = None
+                event.channel_auto_created = False
+            else:
+                new_channel_id = UUID(channel_id)
+                await self._validate_channel_binding(
+                    user_id, organization_id, new_channel_id
+                )
+                if event.channel_id != new_channel_id:
+                    # A new binding takes the caller's flag: True for a room the
+                    # editor auto-created, False for a picked channel.
+                    event.channel_auto_created = channel_auto_created
+                event.channel_id = new_channel_id
+        if (meeting_url_provided or channel_id is not None) and (
+            event.channel_id is not None and event.meeting_url
+        ):
+            raise ValidationError(
+                "channel_id",
+                "An event cannot have both a meeting URL and a channel binding.",
+            )
+
+    async def _sync_auto_created_room_members(
+        self,
+        event: CalendarEvent,
+        *,
+        added: list[UUID],
+        removed: list[UUID],
+    ) -> None:
+        """Mirror attendee changes into a room the editor auto-created.
+
+        Only auto-created rooms are synced; a channel the organizer merely
+        picked is never mutated by the calendar. The organizer owns the room,
+        so the chat member ops run as the organizer. Best-effort: a chat-side
+        failure leaves the event saved and logs, since join is gated per user
+        at call time. Auto-created rooms are always PRIVATE channels (GROUP_DM
+        membership is immutable), so add/remove always apply.
+        """
+        if not (event.channel_auto_created and event.channel_id):
+            return
+        add = [uid for uid in added if uid != event.organizer_id]
+        remove = [uid for uid in removed if uid != event.organizer_id]
+        if not add and not remove:
+            return
+
+        from uniffy.domains.chat.channels.operations import ChatChannelOperations
+
+        chat_ops = ChatChannelOperations(self.session)
+        try:
+            if add:
+                await chat_ops.add_members(
+                    event.organizer_id, event.organization_id, event.channel_id, add
+                )
+            if remove:
+                await chat_ops.remove_members(
+                    event.organizer_id, event.organization_id, event.channel_id, remove
+                )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "auto-created meeting room member sync failed",
+                event_id=str(event.id),
+                channel_id=str(event.channel_id),
+            )
 
 
 class CategoryOperations:

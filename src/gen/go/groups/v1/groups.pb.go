@@ -1235,7 +1235,7 @@ const file_groups_v1_groups_proto_rawDesc = "" +
 	"\x0eAddGroupMember\x12 .groups.v1.AddGroupMemberRequest\x1a!.groups.v1.AddGroupMemberResponse\x12^\n" +
 	"\x11UpdateGroupMember\x12#.groups.v1.UpdateGroupMemberRequest\x1a$.groups.v1.UpdateGroupMemberResponse\x12^\n" +
 	"\x11RemoveGroupMember\x12#.groups.v1.RemoveGroupMemberRequest\x1a$.groups.v1.RemoveGroupMemberResponse\x12R\n" +
-	"\rGetUserGroups\x12\x1f.groups.v1.GetUserGroupsRequest\x1a .groups.v1.GetUserGroupsResponseB;Z9github.com/uniffy-io/uniffy-proto-go/groups/v1;groupsv1b\x06proto3"
+	"\rGetUserGroups\x12\x1f.groups.v1.GetUserGroupsRequest\x1a .groups.v1.GetUserGroupsResponseB9Z7github.com/uniffy-io/uniffy-proto-go/groups/v1;groupsv1b\x06proto3"
 
 var (
 	file_groups_v1_groups_proto_rawDescOnce sync.Once

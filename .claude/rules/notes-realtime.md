@@ -14,7 +14,7 @@ paths:
 
 # Notes Domain + Realtime Collaboration (Yjs / pycrdt)
 
-Notes is the only live consumer of the generic realtime stack. Plan + backlog:
+Notes is the only live consumer of the generic realtime stack.
 
 ## 1. Big picture
 

@@ -67,6 +67,7 @@ class SearchResult:
     event_is_all_day: bool = False
     event_location: str | None = None
     event_meeting_url: str | None = None
+    event_channel_id: str | None = None
 
     # File fields
     file_mime_type: str | None = None

@@ -564,6 +564,7 @@ class SearchOperations:
                 CalendarEvent.is_all_day,
                 CalendarEvent.location,
                 CalendarEvent.meeting_url,
+                CalendarEvent.channel_id,
             ).where(
                 and_(
                     CalendarEvent.id.in_(event_ids),
@@ -582,6 +583,7 @@ class SearchOperations:
                 sr.event_is_all_day = row.is_all_day or False
                 sr.event_location = row.location
                 sr.event_meeting_url = row.meeting_url
+                sr.event_channel_id = str(row.channel_id) if row.channel_id else None
         except Exception:
             logger.opt(exception=True).warning("Failed to enrich calendar event live state")
 
