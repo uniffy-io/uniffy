@@ -140,6 +140,7 @@ function RootLayoutNav() {
         <Stack.Screen name="notes/edit" />
         <Stack.Screen name="files/index" />
         <Stack.Screen name="files/[id]" />
+        <Stack.Screen name="files/trash" />
         <Stack.Screen name="chat/index" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="chat/create" />

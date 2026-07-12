@@ -58,6 +58,11 @@ function getPhosphorIcon(name: string): React.ComponentType<any> {
     check: Ph.Check,
     "check-circle": Ph.CheckCircle,
     "arrow-up": Ph.ArrowUp,
+    "sort-asc": Ph.SortAscending,
+    "sort-desc": Ph.SortDescending,
+    "clock-history": Ph.ClockCounterClockwise,
+    tag: Ph.Tag,
+    "file-text": Ph.FileText,
   };
   return map[name] ?? Ph.DotsThree;
 }
