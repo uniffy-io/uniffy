@@ -3401,7 +3401,7 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\x14UnshareNoteFromGroup\x12%.notes.v1.UnshareNoteFromGroupRequest\x1a&.notes.v1.UnshareNoteFromGroupResponse\"\x00\x12U\n" +
 	"\x0eGetNoteSharing\x12\x1f.notes.v1.GetNoteSharingRequest\x1a .notes.v1.GetNoteSharingResponse\"\x00\x12X\n" +
 	"\x0fGrantPermission\x12 .notes.v1.GrantPermissionRequest\x1a!.notes.v1.GrantPermissionResponse\"\x00\x12[\n" +
-	"\x10RevokePermission\x12!.notes.v1.RevokePermissionRequest\x1a\".notes.v1.RevokePermissionResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/notes/v1;notesv1b\x06proto3"
+	"\x10RevokePermission\x12!.notes.v1.RevokePermissionRequest\x1a\".notes.v1.RevokePermissionResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/notes/v1;notesv1b\x06proto3"
 
 var (
 	file_notes_v1_notes_proto_rawDescOnce sync.Once

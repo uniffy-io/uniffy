@@ -1589,7 +1589,7 @@ const file_superadmin_v1_support_session_proto_rawDesc = "" +
 	"\x0fListOrgSessions\x12%.superadmin.v1.ListOrgSessionsRequest\x1a&.superadmin.v1.ListOrgSessionsResponse\"\x00\x12b\n" +
 	"\x0fListAllSessions\x12%.superadmin.v1.ListAllSessionsRequest\x1a&.superadmin.v1.ListAllSessionsResponse\"\x00\x12h\n" +
 	"\x11GetOrgConsentMode\x12'.superadmin.v1.GetOrgConsentModeRequest\x1a(.superadmin.v1.GetOrgConsentModeResponse\"\x00\x12h\n" +
-	"\x11SetOrgConsentMode\x12'.superadmin.v1.SetOrgConsentModeRequest\x1a(.superadmin.v1.SetOrgConsentModeResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\x11SetOrgConsentMode\x12'.superadmin.v1.SetOrgConsentModeRequest\x1a(.superadmin.v1.SetOrgConsentModeResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_support_session_proto_rawDescOnce sync.Once

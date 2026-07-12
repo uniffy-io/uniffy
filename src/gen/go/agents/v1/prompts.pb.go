@@ -897,7 +897,7 @@ const file_agents_v1_prompts_proto_rawDesc = "" +
 	"\tGetPrompt\x12\x1b.agents.v1.GetPromptRequest\x1a\x1c.agents.v1.GetPromptResponse\"\x00\x12N\n" +
 	"\vListPrompts\x12\x1d.agents.v1.ListPromptsRequest\x1a\x1e.agents.v1.ListPromptsResponse\"\x00\x12Q\n" +
 	"\fUpdatePrompt\x12\x1e.agents.v1.UpdatePromptRequest\x1a\x1f.agents.v1.UpdatePromptResponse\"\x00\x12Q\n" +
-	"\fDeletePrompt\x12\x1e.agents.v1.DeletePromptRequest\x1a\x1f.agents.v1.DeletePromptResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\fDeletePrompt\x12\x1e.agents.v1.DeletePromptRequest\x1a\x1f.agents.v1.DeletePromptResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_prompts_proto_rawDescOnce sync.Once

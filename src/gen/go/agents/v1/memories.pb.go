@@ -737,7 +737,7 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\fListMemories\x12\x1e.agents.v1.ListMemoriesRequest\x1a\x1f.agents.v1.ListMemoriesResponse\"\x00\x12Q\n" +
 	"\fCreateMemory\x12\x1e.agents.v1.CreateMemoryRequest\x1a\x1f.agents.v1.CreateMemoryResponse\"\x00\x12Q\n" +
 	"\fUpdateMemory\x12\x1e.agents.v1.UpdateMemoryRequest\x1a\x1f.agents.v1.UpdateMemoryResponse\"\x00\x12Q\n" +
-	"\fDeleteMemory\x12\x1e.agents.v1.DeleteMemoryRequest\x1a\x1f.agents.v1.DeleteMemoryResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\fDeleteMemory\x12\x1e.agents.v1.DeleteMemoryRequest\x1a\x1f.agents.v1.DeleteMemoryResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_memories_proto_rawDescOnce sync.Once

@@ -2270,7 +2270,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x1eUSER_CHAT_EVENT_TYPE_HEARTBEAT\x10\x04\x12&\n" +
 	"\"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT\x10\x052|\n" +
 	"\x11ChatStreamService\x12g\n" +
-	"\x14StreamUserChatEvents\x12$.chat.v1.StreamUserChatEventsRequest\x1a%.chat.v1.StreamUserChatEventsResponse\"\x000\x01B7Z5github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
+	"\x14StreamUserChatEvents\x12$.chat.v1.StreamUserChatEventsRequest\x1a%.chat.v1.StreamUserChatEventsResponse\"\x000\x01B5Z3github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
 
 var (
 	file_chat_v1_chat_stream_proto_rawDescOnce sync.Once

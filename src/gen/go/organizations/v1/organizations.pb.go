@@ -3591,7 +3591,7 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x11RevokeDomainAdmin\x12*.organizations.v1.RevokeDomainAdminRequest\x1a+.organizations.v1.RevokeDomainAdminResponse\x12i\n" +
 	"\x10ListDomainAdmins\x12).organizations.v1.ListDomainAdminsRequest\x1a*.organizations.v1.ListDomainAdminsResponse\x12r\n" +
 	"\x13GetUserDomainAdmins\x12,.organizations.v1.GetUserDomainAdminsRequest\x1a-.organizations.v1.GetUserDomainAdminsResponse\x12r\n" +
-	"\x13RotateEncryptionKey\x12,.organizations.v1.RotateEncryptionKeyRequest\x1a-.organizations.v1.RotateEncryptionKeyResponseBIZGgithub.com/uniffy-io/uniffy-proto-go/organizations/v1;organizationsv1b\x06proto3"
+	"\x13RotateEncryptionKey\x12,.organizations.v1.RotateEncryptionKeyRequest\x1a-.organizations.v1.RotateEncryptionKeyResponseBGZEgithub.com/uniffy-io/uniffy-proto-go/organizations/v1;organizationsv1b\x06proto3"
 
 var (
 	file_organizations_v1_organizations_proto_rawDescOnce sync.Once

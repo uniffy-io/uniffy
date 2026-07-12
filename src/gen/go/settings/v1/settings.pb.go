@@ -1544,7 +1544,7 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\fListProfiles\x12 .settings.v1.ListProfilesRequest\x1a!.settings.v1.ListProfilesResponse\"\x00\x12m\n" +
 	"\x14GetEffectiveSettings\x12(.settings.v1.GetEffectiveSettingsRequest\x1a).settings.v1.GetEffectiveSettingsResponse\"\x00\x12d\n" +
 	"\x11GetSettingsSchema\x12%.settings.v1.GetSettingsSchemaRequest\x1a&.settings.v1.GetSettingsSchemaResponse\"\x00\x12d\n" +
-	"\x11SetDefaultProfile\x12%.settings.v1.SetDefaultProfileRequest\x1a&.settings.v1.SetDefaultProfileResponse\"\x00B?Z=github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1b\x06proto3"
+	"\x11SetDefaultProfile\x12%.settings.v1.SetDefaultProfileRequest\x1a&.settings.v1.SetDefaultProfileResponse\"\x00B=Z;github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1b\x06proto3"
 
 var (
 	file_settings_v1_settings_proto_rawDescOnce sync.Once

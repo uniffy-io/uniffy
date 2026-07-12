@@ -2763,7 +2763,7 @@ const file_tags_v1_tags_proto_rawDesc = "" +
 	"\x11CreateSavedFilter\x12!.tags.v1.CreateSavedFilterRequest\x1a\".tags.v1.CreateSavedFilterResponse\"\x00\x12\\\n" +
 	"\x11UpdateSavedFilter\x12!.tags.v1.UpdateSavedFilterRequest\x1a\".tags.v1.UpdateSavedFilterResponse\"\x00\x12\\\n" +
 	"\x11DeleteSavedFilter\x12!.tags.v1.DeleteSavedFilterRequest\x1a\".tags.v1.DeleteSavedFilterResponse\"\x00\x12Y\n" +
-	"\x10ListSavedFilters\x12 .tags.v1.ListSavedFiltersRequest\x1a!.tags.v1.ListSavedFiltersResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/tags/v1;tagsv1b\x06proto3"
+	"\x10ListSavedFilters\x12 .tags.v1.ListSavedFiltersRequest\x1a!.tags.v1.ListSavedFiltersResponse\"\x00B5Z3github.com/uniffy-io/uniffy-proto-go/tags/v1;tagsv1b\x06proto3"
 
 var (
 	file_tags_v1_tags_proto_rawDescOnce sync.Once

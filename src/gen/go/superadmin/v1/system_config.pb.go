@@ -534,7 +534,7 @@ const file_superadmin_v1_system_config_proto_rawDesc = "" +
 	"\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse\"\x00\x12t\n" +
 	"\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00\x12Y\n" +
 	"\fGetMfaPolicy\x12\".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse\"\x00\x12Y\n" +
-	"\fSetMfaPolicy\x12\".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\fSetMfaPolicy\x12\".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_system_config_proto_rawDescOnce sync.Once
