@@ -196,6 +196,8 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     timezone: proto.timezone,
     location: proto.location,
     meetingUrl: proto.meetingUrl || undefined,
+    channelId: proto.channelId || undefined,
+    channelAutoCreated: proto.channelAutoCreated || undefined,
     calendarId: proto.calendarId,
     categoryId: proto.categoryId || '',
     organizerId: proto.organizerId,
@@ -310,6 +312,8 @@ export const createEvent = createAsyncThunk<
         timezone?: string;
         location?: string;
         meetingUrl?: string;
+        channelId?: string;
+        channelAutoCreated?: boolean;
         calendarId: string;
         categoryId?: string;
         attendeeIds?: string[];
@@ -358,6 +362,8 @@ export const createEvent = createAsyncThunk<
             ...frontendVisibilityToAccessMode((params.visibility as 'private' | 'organization') || 'private'),
             reminders: params.reminders || [],
             roomId: params.roomId || undefined,
+            channelId: params.channelId,
+            channelAutoCreated: params.channelAutoCreated,
         });
 
         if (!response.event) {
@@ -396,6 +402,8 @@ export const updateEvent = createAsyncThunk<
         timezone?: string;
         location?: string;
         meetingUrl?: string;
+        channelId?: string;
+        channelAutoCreated?: boolean;
         calendarId?: string;
         categoryId?: string;
         attendeeIds?: string[];
@@ -449,6 +457,8 @@ export const updateEvent = createAsyncThunk<
                 : undefined,
             occurrenceDate: params.occurrenceDate,
             roomId: params.roomId,
+            channelId: params.channelId,
+            channelAutoCreated: params.channelAutoCreated,
         });
 
         if (!response.event) {

@@ -2480,7 +2480,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x10AcceptInvitation\x12 .auth.v1.AcceptInvitationRequest\x1a!.auth.v1.AcceptInvitationResponse\x12Z\n" +
 	"\x11SendPasswordReset\x12!.auth.v1.SendPasswordResetRequest\x1a\".auth.v1.SendPasswordResetResponse\x12o\n" +
 	"\x18VerifyPasswordResetToken\x12(.auth.v1.VerifyPasswordResetTokenRequest\x1a).auth.v1.VerifyPasswordResetTokenResponse\x12N\n" +
-	"\rResetPassword\x12\x1d.auth.v1.ResetPasswordRequest\x1a\x1e.auth.v1.ResetPasswordResponseB7Z5github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3"
+	"\rResetPassword\x12\x1d.auth.v1.ResetPasswordRequest\x1a\x1e.auth.v1.ResetPasswordResponseB5Z3github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3"
 
 var (
 	file_auth_v1_auth_proto_rawDescOnce sync.Once

@@ -1467,7 +1467,7 @@ const file_permissions_v1_permissions_proto_rawDesc = "" +
 	"\fRemoveMember\x12#.permissions.v1.RemoveMemberRequest\x1a$.permissions.v1.RemoveMemberResponse\x12\\\n" +
 	"\rSetAccessMode\x12$.permissions.v1.SetAccessModeRequest\x1a%.permissions.v1.SetAccessModeResponse\x12h\n" +
 	"\x11TransferOwnership\x12(.permissions.v1.TransferOwnershipRequest\x1a).permissions.v1.TransferOwnershipResponse\x12e\n" +
-	"\x10ListMemberEvents\x12'.permissions.v1.ListMemberEventsRequest\x1a(.permissions.v1.ListMemberEventsResponseBEZCgithub.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1b\x06proto3"
+	"\x10ListMemberEvents\x12'.permissions.v1.ListMemberEventsRequest\x1a(.permissions.v1.ListMemberEventsResponseBCZAgithub.com/uniffy-io/uniffy-proto-go/permissions/v1;permissionsv1b\x06proto3"
 
 var (
 	file_permissions_v1_permissions_proto_rawDescOnce sync.Once

@@ -7939,7 +7939,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	" GetChannelAgentContextStatsBatch\x120.chat.v1.GetChannelAgentContextStatsBatchRequest\x1a1.chat.v1.GetChannelAgentContextStatsBatchResponse\"\x00\x12w\n" +
 	"\x1aCompactChannelAgentContext\x12*.chat.v1.CompactChannelAgentContextRequest\x1a+.chat.v1.CompactChannelAgentContextResponse\"\x00\x12q\n" +
 	"\x18ResetChannelAgentContext\x12(.chat.v1.ResetChannelAgentContextRequest\x1a).chat.v1.ResetChannelAgentContextResponse\"\x00\x12M\n" +
-	"\fStopAgentRun\x12\x1c.chat.v1.StopAgentRunRequest\x1a\x1d.chat.v1.StopAgentRunResponse\"\x00B7Z5github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
+	"\fStopAgentRun\x12\x1c.chat.v1.StopAgentRunRequest\x1a\x1d.chat.v1.StopAgentRunResponse\"\x00B5Z3github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
 
 var (
 	file_chat_v1_chat_proto_rawDescOnce sync.Once

@@ -151,7 +151,7 @@ LiveKit is the SFU for audio and video calls. Container config is inlined in `.d
 
 ## TURN relay (coturn)
 
-Optional. Off by default in compose (profile `calls-turn`); most local dev does not need TURN. Bring up with `./run.sh calls-turn-up`.
+Optional. Off by default in compose (profile `calls-turn`); most local dev does not need TURN. Bring up with `docker compose --profile calls-turn up -d`.
 
 | Variable | Default | Purpose |
 |---|---|---|

@@ -5,34 +5,11 @@ paths:
   - "src/gen/python/**/*.py"
 ---
 
-## Directory Structure
+# Backend Patterns
 
-`src/uniffy/` is the root backend dir:
+Rules and load-bearing conventions for the Python backend. Domain-specific invariants live in their own rule files (`permissions.md`, `files-domain.md`, `chat-domain.md`, `calls-domain.md`, `notes-realtime.md`, `agents.md`) - this file does not duplicate them.
 
-```
-|-- __init__.py
-|-- alembic.ini
-|-- core            # Core models and utilities
-|   |- models/      # Application Database Models (User, Organization, BaseContent, etc.)
-|   |- content/     # Content module for base content operations.
-|   |- auth/        # Authentication and Permission base models.
-|   |- search/      # SearchIndexer class for indexing content to Meilisearch.
-|   |- types.py     # Shared enums and types
-|   |- errors.py    # Shared error classes
-|-- db              # Database session and migrations
-|   |-- migrations/ # Alembic migration scripts
-|   |-- seed_data/  # Initial seed data files
-|   |-- session.py  # AsyncSession factory
-|   |-- seed.py     # Seed data runner
-|   |-- __init__.py # DB package init
-|-- domains         # Domain modules, see below
-|-- factory.py      # App factory mounting services
-|-- (generated code lives in src/gen/python/ as the uniffy-proto package)
-|-- main.py         # App entrypoint
-|-- observability   # Logging, tracing, metrics
-```
-
-## Domain-Driven Vertical Slices
+## Vertical slices
 
 Each feature is self-contained in `src/uniffy/domains/{feature}/`:
 
@@ -46,497 +23,152 @@ domains/{feature}/
 └── __init__.py
 ```
 
-## Adding a New Domain
+Adding a new domain:
 
-1. Define proto in `src/proto/{service}/v1/{service}.proto`
-2. Run `./run.sh proto`
-3. Create model in `core/models/{feature}/` if needed
-4. Create domain module in `domains/{feature}/`
-5. Mount in `factory.py`:
-   ```python
-   from uniffy.domains.feature.service import FeatureServiceImpl
-   from uniffy_proto.feature.v1.feature_connect import FeatureServiceASGIApplication
+1. Define proto in `src/proto/{service}/v1/{service}.proto`, run `./manage.py proto`
+2. Model in `core/models/{feature}/` if needed, plus Alembic migration
+3. Domain module in `domains/{feature}/`
+4. Mount in `factory.py`: `app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))`
+5. New searchable content type: complete the Search Integration Checklist in `architecture.md`
 
-   service = FeatureServiceImpl()
-   app.mount("/feature.v1.FeatureService", FeatureServiceASGIApplication(service))
-   ```
-6. Create Alembic migration if model added
-7. **If adding searchable content type**: Complete the Search Integration Checklist in the main CLAUDE.md
+## Core patterns
 
-## Migration Conventions
+- **Async everywhere.** Database I/O goes through `AsyncSession`; the rest of the stack composes around it.
+- **`BaseContentOperations`** (`core/content/base_operations.py`): extending it for content gets permission checking and search indexing for free.
+- **Permission checks live inside domain operations.** The full model is in `.claude/rules/permissions.md` - the single source of truth; do not re-explain it.
+- **Multi-tenancy:** all content scoped to `organization_id`; users are global, memberships org-scoped. Verifying org access is part of every domain operation's contract.
+- **Imports at the top.** The one exception is the circular-import case in agent tool executors.
+- **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
+- **Type hints** on all functions; docstring discipline per `comment-discipline.md`.
 
-**Prefer module-level enum variables in migrations over inline definitions inside `sa.Column()`.** Inline forms tend to drift between migrations.
+## Migrations
 
-Define each enum as a module-level variable with `create_type=False`, then reference it in column definitions:
+Prefer module-level enum variables over inline definitions inside `sa.Column()` - inline forms drift between migrations:
 
 ```python
 from sqlalchemy.dialects import postgresql
 
-_visibility_enum = postgresql.ENUM(
-    "PRIVATE",
-    "GROUP",
-    "ORGANIZATION",
-    "PUBLIC",
-    name="visibilityscope",
+_access_mode_enum = postgresql.ENUM(
+    "OWNER_ONLY",
+    "EXPLICIT_MEMBERS",
+    "OPEN_TO_ORG",
+    name="accessmode",
     create_type=False,
 )
 
 def upgrade() -> None:
     op.create_table(
         "my_table",
-        # CORRECT - reference module-level variable
-        sa.Column("visibility", _visibility_enum, nullable=False),
+        sa.Column("access_mode", _access_mode_enum, nullable=True),
     )
 ```
 
-**Less ideal - inline enum in column definition:**
-```python
-def upgrade() -> None:
-    op.create_table(
-        "my_table",
-        sa.Column(
-            "visibility",
-            postgresql.ENUM(
-                "PRIVATE", "GROUP", "ORGANIZATION", "PUBLIC",
-                name="visibilityscope", create_type=False,
-            ),
-            nullable=False,
-        ),
-    )
-```
+When a migration introduces a brand new enum type, create it explicitly inside `upgrade()` first (`postgresql.ENUM(..., name="mystatus").create(op.get_bind(), checkfirst=True)`), then reference the module-level `create_type=False` variable in columns.
 
-**Creating new enums:** When a migration introduces a brand new enum type, create it explicitly inside `upgrade()` and define a separate module-level variable (with `create_type=False`) for column references:
+## Logging (loguru)
 
-```python
-_my_status_enum = postgresql.ENUM(
-    "PENDING", "ACTIVE", "DONE",
-    name="mystatus",
-    create_type=False,
-)
+Configured in `observability/`; console by default, structured JSON when `LOG_FORMAT=json`.
 
-def upgrade() -> None:
-    # Create the enum type in the database
-    postgresql.ENUM(
-        "PENDING", "ACTIVE", "DONE",
-        name="mystatus",
-    ).create(op.get_bind(), checkfirst=True)
-
-    op.create_table(
-        "my_table",
-        sa.Column("status", _my_status_enum, nullable=False),
-    )
-```
-
-## API Services Architecture
-
-The backend is organized into domain-specific ConnectRPC services. Each service has its own proto definition and handles a specific domain.
-
-**Core Services:**
-
-| Service | Proto | Purpose |
-|---------|-------|---------|
-| `auth.v1.AuthService` | `src/proto/auth/v1/auth.proto` | Authentication only (5 methods: Register, Login, RefreshToken, GetCurrentUser, Logout) |
-| `users.v1.UsersService` | `src/proto/users/v1/users.proto` | User profile CRUD, user org memberships |
-| `organizations.v1.OrganizationsService` | `src/proto/organizations/v1/organizations.proto` | Organization CRUD, member management, permission defaults |
-| `groups.v1.GroupsService` | `src/proto/groups/v1/groups.proto` | Group CRUD, group membership |
-| `permissions.v1.MembersService` | `src/proto/permissions/v1/permissions.proto` | Content member management (ListMembers, AddMember, UpdateMemberRole, RemoveMember, SetAccessMode, TransferOwnership, ListMemberEvents) |
-
-**Content Services:**
-
-| Service | Proto | Purpose |
-|---------|-------|---------|
-| `notes.v1.NotesService` | `src/proto/notes/v1/notes.proto` | Notes/documents |
-| `files.v1.FilesService` | `src/proto/files/v1/files.proto` | File storage, chunked uploads, streaming, and attachments (link files to content) |
-| `bookmarks.v1.BookmarksService` | `src/proto/bookmarks/v1/bookmarks.proto` | User bookmarks |
-| `search.v1.SearchService` | `src/proto/search/v1/search.proto` | Full-text search |
-| `settings.v1.SettingsService` | `src/proto/settings/v1/settings.proto` | User settings |
-
-**Common Types** (`src/proto/common/v1/common.proto`):
-
-Shared enums and messages used across services:
-
-```protobuf
-// Enums
-enum OrganizationRole { MEMBER, ADMIN, OWNER }
-enum GroupRole { MEMBER, ADMIN }
-enum ContentType { NOTE, FILE, CALENDAR_EVENT, PROJECT, TASK, AGENT, ... }
-enum AccessMode { OWNER_ONLY, EXPLICIT_MEMBERS, OPEN_TO_ORG }
-enum ContentRole { VIEWER, COMMENTER, EDITOR, ADMIN, OWNER, BLOCKED }
-enum SubjectType { USER, GROUP, ORGANIZATION }
-enum ContentMemberAction { MEMBER_ADDED, MEMBER_ROLE_CHANGED, MEMBER_REMOVED, ACCESS_MODE_CHANGED, BASELINE_ROLE_CHANGED, OWNERSHIP_TRANSFERRED }
-
-// Messages
-message UserInfo { id, email, full_name, username, avatar_url, created_at }
-message OrganizationInfo { id, name, slug, logo_url, created_at, updated_at }
-message GroupInfo { id, organization_id, name, slug, description, ... }
-message MemberInfo { user_id, display_name, email, role, joined_at, is_active }
-message GroupMemberInfo { user_id, display_name, email, role, joined_at }
-
-// Pagination
-message PaginationRequest { page, page_size }
-message PaginationResponse { page, page_size, total_count, total_pages }
-```
-
-## Key Backend Patterns
-
-- **Async everywhere**: Database I/O goes through `AsyncSession` - the rest of the stack composes around it
-- **BaseContentOperations**: Extending this for content gets you automatic permission checking and search indexing for free
-- **Type annotations**: Python functions read better with type hints + docstrings (PEP 257)
-- **File size**: Target 300-400 lines, soft cap 500. Splitting into sub-modules keeps things navigable
-- **Imports at the top**: Inline imports tend to obscure module dependencies
-
-## Logging
-
-Logging is [loguru](https://loguru.readthedocs.io) (`from loguru import logger`), configured in `observability/`. Output is human-readable console by default, or structured JSON when `LOG_FORMAT=json` (self-hosters and log aggregators); in JSON mode structured fields flatten to top-level keys.
-
-- **Every module tags its logs with a `component`.** Rebind the module logger once, right after the import:
+- **Every module binds a `component` once, right after the import:**
   ```python
   from loguru import logger
 
   logger = logger.bind(component="agents.runtime.operations")
   ```
-  Every call in the file then inherits `component` - do NOT repeat `component=` on each call. The name is the dotted module path minus the top-level package (`domains/agents/runtime/operations.py` -> `agents.runtime.operations`). An explicit `component=` on a single call still overrides the bound value when one line needs a different label.
-
-- **Log exceptions the native loguru way - never stdlib `exc_info=True`.** loguru is not stdlib `logging`: it does not recognize `exc_info`, so `logger.error("...", exc_info=True)` silently drops the kwarg into `extra` and captures NO traceback. Inside an `except` block use:
+  The name is the dotted module path minus the top-level package. Do not repeat `component=` on each call; an explicit `component=` on one call overrides the bound value.
+- **Never stdlib `exc_info=True`** - loguru silently drops it into `extra` and captures NO traceback. Inside `except` blocks:
   ```python
-  logger.exception("upload failed")                  # ERROR level + full traceback
-  logger.opt(exception=True).warning("degraded")     # keep WARNING level + traceback
+  logger.exception("upload failed")                  # ERROR + traceback
+  logger.opt(exception=True).warning("degraded")     # other level + traceback
   ```
-  `logger.exception` reads the active exception from `sys.exc_info()`, so it needs no exception argument. A patcher in `configure_loguru` rescues any stray `exc_info=True` at runtime, but it is a safety net - write the correct idiom.
+  A runtime patcher rescues stray `exc_info=True`, but it is a safety net - write the correct idiom.
 
-## Multi-Tenancy
+## Settings and configuration
 
-- All content scoped to `organization_id`
-- Users are global, memberships are org-scoped
-- Verify the user has access to the organization before accessing resources - this is part of every domain operation's contract
-
-## Settings and Configuration
-
-There are exactly **two generic settings stores**, and new settings go into one of them. Do NOT add a per-domain settings/policy/config table (`{domain}_settings`, `{domain}_policies`, `{domain}_config`). Those tables fragment encryption, DEK rotation, audit, and the admin surface; we consolidated them away.
+Exactly **two generic settings stores**. Do NOT add per-domain settings/policy/config tables (`{domain}_settings` etc.) - they fragment encryption, DEK rotation, audit, and the admin surface; we consolidated them away.
 
 | Store | Table | Ops class | Scope | Cipher |
 |---|---|---|---|---|
-| Deployment | `deployment_settings` | `DeploymentSettingsOperations` | whole deployment (one per install) | `DeploymentCipher` |
+| Deployment | `deployment_settings` | `DeploymentSettingsOperations` | whole install | `DeploymentCipher` |
 | Per-org | `org_settings` | `OrgSettingsOperations` | one tenant | `OrgCipher` |
 
-Both are the same shape: a `(namespace, key) -> value` KV row where `value` is plaintext JSONB, or `value_encrypted` is ciphertext when `is_secret=true` (a CHECK constraint enforces exclusivity). `org_settings` adds `organization_id` to the key.
+Both are `(namespace, key) -> value` KV rows: plaintext JSONB `value`, or `value_encrypted` when `is_secret=true` (CHECK constraint enforces exclusivity).
 
-**Pick the store by scope.** Deployment-wide operator config (registration policy, VAPID push keys, system mail relay) -> `deployment_settings`. Tenant config (per-org mail, security, MFA policy, call policy, agent runtime knobs) -> `org_settings`. Per-**user** preferences are a different axis and stay in `settings_profiles` (named JSONB profiles), NOT the KV stores.
+- **Pick by scope.** Operator config (registration policy, VAPID keys, system mail relay) -> `deployment_settings`. Tenant config (per-org mail, security, MFA, call policy, agent runtime knobs) -> `org_settings`. Per-**user** preferences stay in `settings_profiles`, not the KV stores.
+- **One namespace per domain** (`namespace='calls'`, `namespace='mail'`, ...), one JSON blob or key-per-setting within it.
+- **Wrap the blob in a frozen dataclass with code-level defaults.** Reference: `domains/calls/policy.py::ResolvedCallPolicy`, `domains/agents/runtime/settings.py::ResolvedRuntimeSettings`. The loader never returns a raw dict; a missing row resolves to defaults.
+- **Secrets:** `is_secret=True` encrypts through the tenant/deployment cipher; reads are opt-in via `get_secret(...)`. The `ReEncryptingConsumer` registered per table rotates every `is_secret` row automatically. Never plaintext, never a hand-rolled shared-key Fernet path.
+- **Resolution chain:** per-org row -> env default -> coded default -> typed error. Canonical: `core/mail/resolver.py`, `domains/system_config/operations.py`.
+- **Audit operator-facing writes** in the same transaction (`write_audit_event`).
+- **A real table is still right** for high-cardinality, relational, or hot-path-indexed config (`permissions_org_defaults` is the reference counter-example: materialized policy, not operator config).
 
-**One namespace per domain, keys within it.** e.g. `namespace='calls'` `key='policy'`, `namespace='agents'` `key='runtime'`, `namespace='mail'`, `namespace='security'`, `namespace='mfa'`, `namespace='push'`. A domain typically stores one JSON blob under a single key, or a key per setting - both are fine.
+## Performance-critical domains
 
-**Wrap the blob in a typed dataclass with code-level defaults.** The DB row is schemaless, so validation and defaults live in a frozen dataclass the loader hydrates. Reference examples: `domains/calls/policy.py::ResolvedCallPolicy` (+ `load_call_policy`/`save_call_policy`) and `domains/agents/runtime/settings.py::ResolvedRuntimeSettings`. A missing row resolves to defaults; the loader never returns a raw dict to callers.
-
-**Secrets:** set `is_secret=True` and pass a `str`; the ops layer encrypts through the tenant/deployment cipher. Reads are opt-in via `get_secret(...)` - `get_namespace(...)` returns rows with ciphertext intact. Every `is_secret` row is rotated automatically by the `ReEncryptingConsumer` already registered for each table (`WHERE is_secret = true`), so a new secret namespace needs no rotation wiring. Never store a secret as plaintext `value`; never hand-roll a shared-key Fernet path.
-
-**Resolution chain** (from the layered config tiers in the main CLAUDE.md): per-org row -> env default -> coded default -> typed error. Canonical implementations: `core/mail/resolver.py` (org -> deployment -> env) and `domains/system_config/operations.py` (`SystemFlagState` with a `source` tag). Follow that shape rather than reading a single tier.
-
-**Audit operator-facing writes.** Changing a setting through an admin RPC writes an audit event in the same transaction (`write_audit_event`), same as `system_config` and `set_display_currency`.
-
-**When a real table is still right:** high-cardinality, relational, or hot-path-indexed config is NOT settings - keep it a table. `permissions_org_defaults` (keyed by `(org, content_type)`, on the cached permission path) is the reference counter-example: it is materialized policy, not operator config, so it stays its own table.
-
-**Folding an old per-domain table into KV** (see migration `056`): copy each row into a namespaced blob (`INSERT ... ON CONFLICT DO NOTHING`), then `op.drop_table(...)`. Copy before drop so an existing staging DB keeps its data; let each store's `server_default now()` (timestamptz = UTC) fill timestamps. Re-encrypt secrets into the target cipher's framing (`v{version}:...`) during the copy.
-
-## Performance-Critical Domains
-
-`domains/chat/` and `domains/agents/` carry the bulk of user traffic. Every change in these two domains is held to a higher bar than the rest of the codebase. The patterns below apply when working anywhere under those trees, and transitively to anything they call into (`core/auth/`, `core/content/`, `core/valkey/`, `core/users/`).
-
-Patterns that work well in chat or agents code:
+`domains/chat/` and `domains/agents/` carry the bulk of user traffic; changes there (and in what they call: `core/auth/`, `core/content/`, `core/valkey/`, `core/users/`) are held to a higher bar:
 
 | Rule | Why |
 |---|---|
-| Hot reads go through Valkey before PG. | Channel rows, channel members, effective role, user/agent profiles, agent config, agent skills, agent prompt, provider-key metadata, pinned-message ids, DM peer lists, channel-resources head all have cache helpers in `domains/{x}/cache.py` or `core/{x}/cache.py`. Reach for the helper rather than raw PG. |
-| Mutations invalidate caches in the same commit. | Every write that changes something a cache mirrors drops the matching key (or tag) before the request returns. Stale cache beats no cache. |
-| Fan-out callers fetch dependencies once and thread them through. | The send pipeline fetches member ids once and passes the list into publisher / indexer / notifier. Same shape for reactions, member events. A downstream helper that re-fetches doubles the load. |
-| Skip `LIKE` on text columns for indexed lookups. | Mention counting goes through `mentioned_urns @> ARRAY[...]` against the partial GIN index. New search-by-content patterns benefit from an index design discussion before merging. |
-| Pagination caps on every list endpoint that can grow unbounded. | Default page size 200, max 500. Opaque base64-url cursor tuples for keyset pagination. Internal callers that legitimately need every row get a separate lean ID-only method (e.g. `list_user_channel_ids`). Avoid `limit=None` back-doors. |
-| Keep LLM / external HTTP / unbounded loops off the request thread. | Compaction, summarisation, and slow tool work go to ARQ. The user request returns within milliseconds; background work catches up via the worker fleet. Idempotency on every job (Valkey `SET NX` lock keyed by the natural identifier). |
-| Single-query aggregates beat UNION-per-N. | Multi-channel unread counts, sender resolution, profile lookups all use one query with `unnest(...)` joins or batch IN clauses. Per-channel UNION patterns tend to scale poorly. |
-| Batch INSERTs / UPSERTs / DELETEs. | Loop-based DB writes scale poorly. Use `pg_insert.values([...]).on_conflict_do_nothing().returning(...)` and tuple-IN DELETEs. |
-| Optimistic counters on hot rows. | Counter UPDATEs gate with `WHERE current < new_value` (or equivalent) so concurrent writers race deterministically. Lost updates show up as observable bugs. |
-| Per-call deadline on every Valkey call. | The 150ms `ops_call` guard is part of the contract. A slow Valkey returns `CACHE_MISS` / no-op; the caller falls through to PG. Wrapping a cache call in a retry loop tends to backfire. |
-| Fix root causes, not symptoms. | If a query is slow, caching alone is rarely the right answer. Add the missing index, reshape the query, or both. Caching covers spikes; structurally O(N) queries on hot paths read as bugs. |
+| Hot reads go through Valkey before PG. | Cache helpers live in `domains/{x}/cache.py` / `core/{x}/cache.py`; reach for the helper, not raw PG. |
+| Mutations invalidate caches in the same commit. | Stale cache beats no cache. |
+| Fan-out callers fetch dependencies once and thread them through. | A downstream helper that re-fetches doubles the load. |
+| No `LIKE` on text columns for indexed lookups. | e.g. mention counting uses `mentioned_urns @> ARRAY[...]` against a partial GIN index. |
+| Pagination caps on every growable list endpoint. | Default page 200, max 500; opaque keyset cursors; no `limit=None` back-doors. Internal full-set callers get a lean ID-only method. |
+| LLM / external HTTP / unbounded loops stay off the request thread. | ARQ + Valkey `SET NX` idempotency lock keyed by the natural identifier. |
+| Single-query aggregates beat UNION-per-N. | `unnest(...)` joins or batch IN clauses. |
+| Batch INSERTs / UPSERTs / DELETEs. | `pg_insert.values([...]).on_conflict_do_nothing().returning(...)`, tuple-IN DELETEs. |
+| Optimistic counters on hot rows. | Gate with `WHERE current < new_value` so concurrent writers race deterministically. |
+| Per-call deadline on every Valkey call. | The 150ms `ops_call` guard is the contract; on miss, fall through to PG. No retry loops around cache calls. |
+| Fix root causes, not symptoms. | Slow query -> missing index or query reshape first; caching covers spikes, not O(N) hot paths. |
 
-If a change in chat or agents adds a new hot read path, a new write path, or a new fan-out, the cache adoption + invalidation hooks are part of the change rather than follow-up work. Backlog promises tend to rot.
+Cache adoption + invalidation hooks are part of any change that adds a hot read/write/fan-out path - not follow-up work.
 
-## Valkey Cache Layer
+## Valkey cache layer
 
-Three physical clients per process, each tuned for its access pattern. Importing the right one matters - mismatched tiers tend to cause subtle hangs.
+Three physical clients per process; importing the right tier matters (mismatches cause subtle hangs):
 
 | Tier | Module | Purpose | Resilience |
 |---|---|---|---|
-| Pubsub | `core/valkey/pubsub.py` | Long-lived publisher + per-call subscribers. PUBLISH / SUBSCRIBE / PSUBSCRIBE only - pub/sub connections enter a special mode and cannot run regular commands. | 5s socket timeout, retry on transient errors, 30s health check. Connections are long-lived; reconnect is normal. |
-| Ops | `core/valkey/ops.py` | Cache, presence, rate-limit, mention-state. Regular commands. | 200ms connect, 100ms read, **zero retries**, no health-check sweeps. A 150ms `ops_call` deadline guard wraps every public entry. |
-| Queue | `core/valkey/queue.py` | ARQ pool for background jobs. | 10s timeout, 5 retries, 1s delay. Job dequeue tolerates retries. |
+| Pubsub | `core/valkey/pubsub.py` | PUBLISH / SUBSCRIBE / PSUBSCRIBE only | 5s socket timeout, retries, long-lived connections |
+| Ops | `core/valkey/ops.py` | Cache, presence, rate-limit, mention-state | 200ms connect, 100ms read, zero retries, 150ms `ops_call` deadline |
+| Queue | `core/valkey/queue.py` | ARQ pool | 10s timeout, 5 retries |
 
-`ValkeyConfig.from_env()` reads only host / port / password / database. Per-tier timeouts are constants in code, surfaced via `to_pubsub_kwargs()` / `to_ops_kwargs()` / `to_arq_redis_settings()`. Per-tier env vars tend to multiply quickly; one dial per tier in code keeps the surface manageable.
+Conventions:
 
-**Cache helper conventions:**
+- Key naming `{namespace}:{scope}:{id}[:subkind]`; first segment is the metrics namespace.
+- Tag-based bulk invalidation via `tag:{name}` sets (`cache_invalidate_by_tag`) when the blast radius isn't cheaply enumerable.
+- Stampede control via `cache_get_or_set_locked` on the hottest helpers.
+- Per-namespace kill-switch: `CACHE_DISABLED_NAMESPACES` env var (misses still counted).
+- Soft-deleted rows are NOT seeded into caches whose read path filters `is_deleted=false`.
+- **The fail-fast contract is load-bearing:** a cache call returns within ~150ms or returns `CACHE_MISS`. Holding a request thread on Valkey beyond that budget is a bug.
 
-- Domain-shaped helpers live in `domains/{domain}/cache.py` (chat, agents). Cross-cutting helpers live in `core/{x}/cache.py` (auth, users).
-- Key naming: `{namespace}:{scope}:{id}[:subkind]`. The first segment is the metrics namespace (used by `uniffy_cache_hit_total{namespace}` etc).
-- Tag-based bulk invalidation via Valkey sets keyed `tag:{name}` - callers add tags on `cache_set` and call `cache_invalidate_by_tag` on writes whose blast radius isn't enumerable cheaply (BLOCKED grants, group-targeted permissions, skill row mutations).
-- Stampede control via `cache_get_or_set_locked` on the hottest helpers (perm, channel metadata, agent config). Lock losers poll the cache key for the lock TTL and fall through to running their own loader if the owner crashed - a Valkey hiccup should not propagate.
-- Per-namespace kill-switch via `CACHE_DISABLED_NAMESPACES` env var. Disabled namespaces still bump miss counters so dashboards stay populated.
-- Soft-deleted rows are NOT seeded into caches that the read path filters on `is_deleted=false`. Otherwise a brief delete window leaves the cache serving phantom rows.
+## Authentication
 
-**The fail-fast contract is load-bearing**, not aspirational. A cache call returns within ~150ms or returns `CACHE_MISS`. Any code path that holds a request thread waiting on Valkey beyond that budget reads as a bug.
+JWT access/refresh pattern; users authenticate globally, then select an org context.
 
-## Authentication System
+- `auth.v1.AuthService` is **authentication only** (Register, Login, RefreshToken, GetCurrentUser, Logout). User / org / group management live on their own services.
+- Access token carries `user_id`, `org_id`, `token_version`; refresh token has no org context.
+- `User.token_version` revokes: incrementing it invalidates all existing tokens; validated on every refresh.
+- Key files: `domains/auth/operations.py`, `domains/auth/tokens.py`, `core/models/login/user.py`.
+- The asset-read cookie (GET asset reads for `<img>`/`<video>`/`<audio>`) is owned by `.claude/rules/files-domain.md` - do not add cookie handling elsewhere.
 
-JWT-based authentication with access/refresh token pattern. Users authenticate globally, then select an organization context.
+## HTTP routes vs ConnectRPC
 
-**Important:** `AuthService` handles **authentication only** (5 methods). For user/org/group management, use the dedicated services:
-- User management → `users.v1.UsersService`
-- Organization management → `organizations.v1.OrganizationsService`
-- Group management → `groups.v1.GroupsService`
+Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/http_routes.py`, mounted in `factory.py` under `/api`) exist for GET asset reads that need browser caching or Range requests: files, thumbnails, media, avatars. Identity comes from `get_current_user_id` (`domains/auth/http_deps.py`), which accepts Bearer OR the asset cookie; permission gating stays in the route handler via the domain operations. Media seeking is a native HTTP Range route - do NOT reintroduce a ConnectRPC media stream. Full contract: `.claude/rules/files-domain.md`.
 
-**Key Backend Files:**
+## Attachments (sub-feature of files)
 
-| File | Purpose |
-|------|---------|
-| `src/proto/auth/v1/auth.proto` | Auth API (Register, Login, RefreshToken, GetCurrentUser, Logout) |
-| `src/uniffy/domains/auth/operations.py` | Auth business logic (login, refresh, token validation) |
-| `src/uniffy/domains/auth/tokens.py` | JWT creation/validation (access + refresh tokens) |
-| `src/uniffy/core/models/login/user.py` | User model with `token_version` for revocation |
+Attachments link a file to content via a generic `(content_type, content_id)` row; RPCs live on `files.v1.FilesService`. `AttachFile` copies the source file into an Attachments folder and writes one `Attachment` row (`file_id` unique - each attachment owns its copy). Folder + file policy follow the PARENT's effective access mode (`OPEN_TO_ORG` parent -> shared org attachments folder; otherwise the attacher's personal `OWNER_ONLY` folder). `DetachFile` deletes the row AND the file copy. Permissions: attach = VIEW on source + edit-equivalent on target (chat delegates to `ChatAccessChecker`); view/list = VIEW on parent; detach = attacher or EDIT on parent. Key files: `core/models/files/attachment.py`, `domains/files/attachments/`.
 
-**Token Flow:**
+## Background tasks (ARQ + Valkey)
 
-1. **Login**: User authenticates → receives `access_token` (short-lived) + `refresh_token` (long-lived)
-2. **Access token**: Contains `user_id`, `org_id`, `token_version`
-3. **Refresh token**: Contains `user_id`, `token_version` (no org context)
+- Enqueue from domain operations via `get_queue()`; a queue-unavailable `RuntimeError` is non-fatal (item stays PENDING).
+- Use `get_jobs_for_mime_type()` (`workers/utils/mime.py`) to pick jobs - hardcoded job names drift from the registry.
+- New task: function in `workers/tasks/{feature}.py` (retry with `raise Retry(defer=ctx["job_try"] * 10)`), register in `workers/settings.py::WorkerSettings.functions`, add MIME mapping if applicable.
+- Every job is idempotent (Valkey `SET NX` lock keyed by the natural identifier).
+- `ExtractionStatus` flow: `PENDING -> PROCESSING -> COMPLETED | FAILED (after 3 retries) | SKIPPED`.
 
-**Token Revocation:**
+## Shared systems (pointers)
 
-- `User.token_version` field enables immediate token revocation
-- Incrementing `token_version` invalidates all existing tokens for that user
-- Backend validates `token_version` on every refresh
-
-## Permission System
-
-Content access control - the full model, `effective_role` resolution, capability gates, enforcement points, `ContentMembersOperations` / `MembersService`, org defaults, caching, search/tag filtering, domain admin, and chat's separate model - lives in **`.claude/rules/permissions.md`**. That file is the single source of truth; do not duplicate or paraphrase the permission model here.
-
-## Bookmarks System (Backend)
-
-**Key Files:**
-
-| File | Purpose |
-|------|---------|
-| `src/proto/bookmarks/v1/bookmarks.proto` | API contract (Toggle, List, BulkCheck) |
-| `src/uniffy/core/models/bookmarks/bookmark.py` | Bookmark model |
-| `src/uniffy/domains/bookmarks/operations.py` | Business logic |
-| `src/uniffy/domains/bookmarks/handlers.py` | RPC handlers |
-
-**Important Rules:**
-- Skip `is_pinned`, `is_starred`, or `is_favorite` fields on content models - the shared bookmarks system covers this UX
-- All bookmarks stored in `bookmarks` table with unique constraint on `(user_id, urn)`
-
-## Keyboard Shortcuts (Backend)
-
-Shortcuts are defined in backend as the source of truth:
-
-`src/uniffy/domains/settings/defaults.py`:
-```python
-DEFAULT_KEYBOARD_SHORTCUTS = {
-    # ... existing shortcuts
-    "calendar.newEvent": "Ctrl+E",
-    "calendar.today": "T",
-    "calendar.weekView": "W",
-}
-```
-
-## Attachments (part of the Files domain)
-
-Attachments link a file to a piece of content (note, chat message, calendar event, task) via a
-generic `(content_type, content_id)` row, without the content model duplicating file metadata. The
-attachment RPCs (`AttachFile`, `DetachFile`, `ListAttachments`, `BatchListAttachments`,
-`GetAttachmentsFolder`) live on `files.v1.FilesService` - attachments is a sub-feature of files,
-not a standalone domain.
-
-**Key Files:**
-
-| File | Purpose |
-|------|---------|
-| `src/proto/files/v1/files.proto` | API contract (attachment RPCs on `FilesService`) |
-| `src/uniffy/core/models/files/attachment.py` | `Attachment` model (table `attachments_attachments`, `file_id` unique) |
-| `src/uniffy/domains/files/attachments/operations.py` | `AttachmentOperations` - business logic + permission checks |
-| `src/uniffy/domains/files/attachments/handlers.py` | `AttachmentsHandlersMixin`, mixed into `FilesServiceImpl` |
-
-**Design Pattern:**
-- `AttachFile` copies the source file into an Attachments folder, then writes one `Attachment` row.
-  `file_id` is unique, so each attachment owns its own file copy (detaching one never affects another).
-- Folder + file policy follow the PARENT's effective access mode: an `OPEN_TO_ORG` parent routes to
-  the shared per-org "Organization Attachments" folder (`is_org_attachments`, `OPEN_TO_ORG/EDITOR`);
-  any other parent routes to the attacher's personal "Attachments" folder (`OWNER_ONLY`). Both are
-  system `Folder` rows - there is no separate `AttachmentsFolder` model.
-- `DetachFile` deletes the `Attachment` row AND the underlying file copy (plus its versions/objects).
-  `detach_all_for_content` runs this for every attachment on content delete.
-
-**Permission Model:**
-- Attaching requires VIEW on the source file and access to the target content (EDIT-equivalent via
-  the parent's policy; chat messages delegate to `ChatAccessChecker`).
-- Viewing/listing requires VIEW on the parent content; `batch_list_attachments` shares one channel
-  check across a page of chat messages.
-- Detaching requires being the attacher, or EDIT on the parent (sender-or-elevated for chat).
-
-
-**Key Pattern:** Reach for `get_jobs_for_mime_type()` from `uniffy.workers.utils.mime` to determine which jobs to enqueue; hardcoded job names tend to drift from the registry.
-
-## HTTP Routes for File Serving
-
-For resources that benefit from HTTP caching (images, thumbnails, PDFs), use standard FastAPI HTTP endpoints instead of ConnectRPC streaming.
-
-**When to use HTTP routes vs ConnectRPC:**
-
-| Use Case | Approach |
-|----------|----------|
-| Images in `<img>` tags | HTTP route (browser caching, service worker auth) |
-| Thumbnails | HTTP route (CDN caching, lazy loading) |
-| Video/audio seeking | ConnectRPC streaming (Range header support) |
-| File downloads with progress | ConnectRPC streaming (chunk callbacks) |
-
-**HTTP Route Pattern** (`domains/{feature}/http_routes.py`):
-
-```python
-from fastapi import APIRouter, Depends, Header, HTTPException, status
-from fastapi.responses import StreamingResponse
-
-router = APIRouter(prefix="/files", tags=["files"])
-
-async def get_current_user_id(
-    authorization: Annotated[str | None, Header()] = None,
-) -> UUID:
-    """Extract user ID from Bearer token."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing authorization")
-    token = authorization[7:]
-    payload = decode_access_token(token)
-    return UUID(payload["sub"])
-
-@router.get("/{organization_id}/{file_id}")
-async def stream_file(
-    organization_id: UUID,
-    file_id: UUID,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
-) -> StreamingResponse:
-    async for session in get_async_session():
-        ops = FileOperations(session)
-        file = await ops.get_by_id(user_id, organization_id, file_id)
-
-        s3 = get_s3_client()
-
-        async def stream_content():
-            async for chunk, _, _ in s3.download_stream(key=file.storage_key):
-                yield chunk
-
-        return StreamingResponse(
-            stream_content(),
-            media_type=file.mime_type,
-            headers={
-                "Cache-Control": "public, max-age=86400, immutable",
-                "Content-Disposition": f'inline; filename="{file.filename}"',
-            },
-        )
-```
-
-**Mounting HTTP routes in factory.py:**
-
-```python
-from uniffy.domains.files.http_routes import files_router, thumbnails_router
-
-# Mount under /api prefix for service worker interception
-http_app.include_router(thumbnails_router)  # /api/thumbnails/{org}/{file}
-http_app.include_router(files_router)       # /api/files/{org}/{file}
-```
-
-## Background Task Worker (ARQ + Valkey)
-
-The system uses ARQ (Async Redis Queue) with Valkey for background job processing.
-
-**Key Files:**
-
-| File | Purpose |
-|------|---------|
-| `src/uniffy/core/queue/valkey.py` | Queue pool management |
-| `src/uniffy/workers/settings.py` | ARQ worker configuration |
-| `src/uniffy/workers/tasks/` | Task implementations |
-| `src/uniffy/workers/utils/mime.py` | MIME type to job mapping |
-
-**Enqueuing Jobs from Domain Operations:**
-
-```python
-from uniffy.core.queue import get_queue
-from uniffy.workers.utils.mime import get_jobs_for_mime_type
-
-async def _enqueue_processing_jobs(self, file: File) -> None:
-    """Enqueue background processing jobs for a file."""
-    jobs = get_jobs_for_mime_type(file.mime_type or "")
-    if not jobs:
-        return
-
-    try:
-        queue = get_queue()
-        for job_name in jobs:
-            await queue.enqueue_job(
-                job_name,
-                str(file.id),
-                str(file.organization_id),
-            )
-    except RuntimeError:
-        # Queue not available - non-fatal, file stays PENDING
-        pass
-```
-
-**Adding a New Task:**
-
-1. Create task function in `src/uniffy/workers/tasks/{feature}.py`:
-   ```python
-   from typing import Any
-   from arq import Retry
-   from loguru import logger
-
-   async def my_task(ctx: dict[str, Any], item_id: str, org_id: str) -> dict[str, Any]:
-       """Process an item in the background."""
-       # ctx contains shared resources from worker startup
-       try:
-           # Do work...
-           return {"status": "success", "item_id": item_id}
-       except Exception as e:
-           logger.error(f"Task failed: {e}")
-           # Retry with backoff (10s, 20s, 30s)
-           raise Retry(defer=ctx["job_try"] * 10)
-   ```
-
-2. Register in `src/uniffy/workers/settings.py`:
-   ```python
-   from uniffy.workers.tasks.feature import my_task
-
-   class WorkerSettings:
-       functions = [
-           # ...existing tasks
-           my_task,
-       ]
-   ```
-
-3. Add MIME mapping if applicable (`src/uniffy/workers/utils/mime.py`):
-   ```python
-   FEATURE_MIME_TYPES: dict[str, str] = {
-       "application/x-custom": "my_task",
-   }
-   ```
-
-**ExtractionStatus Flow:**
-
-```
-PENDING     # Queued, waiting for worker
-    |
-    v (worker picks up)
-PROCESSING  # Currently running
-    |
-    v
-COMPLETED   # Success
-    or
-FAILED      # After max retries (3)
-    or
-SKIPPED     # MIME type not supported
-```
+- **Bookmarks** (`domains/bookmarks/`, `bookmarks` table, unique `(user_id, urn)`): no `is_pinned` / `is_starred` / `is_favorite` fields on content models.
+- **Keyboard shortcuts**: backend is the source of truth - `domains/settings/defaults.py::DEFAULT_KEYBOARD_SHORTCUTS`.
+- **Search indexing**: through `BaseContentOperations._index_for_search`; mention live-state contract in `.claude/rules/mentions.md`.

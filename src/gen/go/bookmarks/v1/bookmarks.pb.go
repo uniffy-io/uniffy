@@ -471,7 +471,7 @@ const file_bookmarks_v1_bookmarks_proto_rawDesc = "" +
 	"\x10BookmarksService\x12]\n" +
 	"\x0eToggleBookmark\x12#.bookmarks.v1.ToggleBookmarkRequest\x1a$.bookmarks.v1.ToggleBookmarkResponse\"\x00\x12Z\n" +
 	"\rListBookmarks\x12\".bookmarks.v1.ListBookmarksRequest\x1a#.bookmarks.v1.ListBookmarksResponse\"\x00\x12i\n" +
-	"\x12BulkCheckBookmarks\x12'.bookmarks.v1.BulkCheckBookmarksRequest\x1a(.bookmarks.v1.BulkCheckBookmarksResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/bookmarks/v1;bookmarksv1b\x06proto3"
+	"\x12BulkCheckBookmarks\x12'.bookmarks.v1.BulkCheckBookmarksRequest\x1a(.bookmarks.v1.BulkCheckBookmarksResponse\"\x00B?Z=github.com/uniffy-io/uniffy-proto-go/bookmarks/v1;bookmarksv1b\x06proto3"
 
 var (
 	file_bookmarks_v1_bookmarks_proto_rawDescOnce sync.Once

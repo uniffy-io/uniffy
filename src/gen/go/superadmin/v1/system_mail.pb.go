@@ -1533,7 +1533,7 @@ const file_superadmin_v1_system_mail_proto_rawDesc = "" +
 	"\x13ForceClearOrgConfig\x12).superadmin.v1.ForceClearOrgConfigRequest\x1a*.superadmin.v1.ForceClearOrgConfigResponse\"\x00\x12w\n" +
 	"\x16ListGlobalSuppressions\x12,.superadmin.v1.ListGlobalSuppressionsRequest\x1a-.superadmin.v1.ListGlobalSuppressionsResponse\"\x00\x12z\n" +
 	"\x17RemoveGlobalSuppression\x12-.superadmin.v1.RemoveGlobalSuppressionRequest\x1a..superadmin.v1.RemoveGlobalSuppressionResponse\"\x00\x12q\n" +
-	"\x14ListGlobalDeliveries\x12*.superadmin.v1.ListGlobalDeliveriesRequest\x1a+.superadmin.v1.ListGlobalDeliveriesResponse\"\x00BCZAgithub.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\x14ListGlobalDeliveries\x12*.superadmin.v1.ListGlobalDeliveriesRequest\x1a+.superadmin.v1.ListGlobalDeliveriesResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_system_mail_proto_rawDescOnce sync.Once

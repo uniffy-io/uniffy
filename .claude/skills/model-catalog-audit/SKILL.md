@@ -1,7 +1,6 @@
 ---
 name: model-catalog-audit
-description: Audit the in-tree model catalog against each provider's live API (Anthropic, OpenAI, Google) using the keys in .env. Surfaces new models the catalog is missing and catalog models a provider no longer returns, so the catalog stays current. Run periodically or when a provider ships new models / changes pricing.
-user_invocable: true
+description: Audit the in-tree model catalog against each provider's live API (Anthropic, OpenAI, Google) using the keys in .env. Surfaces new models the catalog is missing and catalog models a provider no longer returns, so the catalog stays current. Works on both stacks (docker containers or host venv). Run periodically or when a provider ships new models / changes pricing.
 ---
 
 Keep `src/uniffy/domains/agents/providers/catalog/catalog.json` current by diffing
@@ -18,10 +17,31 @@ for the model list, pricing, capabilities, and image-gen support (see
 
 ## Steps
 
-1. **Run the audit** from the repo root:
+1. **Detect the stack** (same protocol as `.claude/rules/manage-cli.md`) - never
+   assume:
 
    ```bash
-   uv run python .claude/skills/model-catalog-audit/scripts/audit_models.py
+   docker compose ps -q --status running backend
+   ```
+
+   - Output non-empty -> **docker stack**: the backend container has the venv,
+     the repo bind-mounted at `/app`, and `.env` injected via `env_file`.
+   - Empty -> local ONLY if `.venv/bin/python` exists on the host. A bare
+     `.venv` directory does NOT count (empty or root-owned leftovers happen and
+     `uv` will fail trying to populate them).
+   - Neither -> **docker**: the command below falls back to a one-off
+     `run --rm` backend container (compose builds the dev image on first use).
+     Never fix a broken host `.venv` by letting `uv` sync onto the host.
+
+2. **Run the audit** from the repo root. `deps run -s backend` is a raw `uv`
+   passthrough that targets whichever stack you detected:
+
+   ```bash
+   # docker stack (default)
+   ./manage.py deps run -s backend run python .claude/skills/model-catalog-audit/scripts/audit_models.py
+
+   # local stack
+   ./manage.py deps run -s backend --stack local run python .claude/skills/model-catalog-audit/scripts/audit_models.py
    ```
 
    It loads provider keys from `.env` (`CLAUDE_API_KEY`, `OPENAI_API_KEY`,
@@ -29,7 +49,7 @@ for the model list, pricing, capabilities, and image-gen support (see
    the catalog. A provider with no key in `.env` is skipped. It is read-only -
    it never edits the catalog.
 
-2. **Read the report.** Per provider:
+3. **Read the report.** Per provider:
    - **NEW** - a live model the catalog does not resolve. These are candidates
      to add. Expect noise from OpenAI/Google: embeddings, `tts-*`, `whisper-*`,
      `gpt-realtime-*`, `*-moderation`, `aqa`, `deep-research-*`, `computer-use-*`,
@@ -38,9 +58,9 @@ for the model list, pricing, capabilities, and image-gen support (see
    - **UNSEEN** - a catalog model this key did not return. Often just means the
      account lacks access or it is a dated snapshot; do not delete blindly.
 
-2.5 **Ask and review with the user** 
+4. **Review the findings with the user** before adopting anything.
 
-3. **Decide what to adopt.** For each NEW model worth adding (a real chat or
+5. **Decide what to adopt.** For each NEW model worth adding (a real chat or
    image-gen model), and for any model whose pricing may have changed:
    - **Research capabilities + pricing on the web** - the APIs do not return
      pricing. Use the provider's official pricing/docs page (this is the same
@@ -48,7 +68,7 @@ for the model list, pricing, capabilities, and image-gen support (see
    - Confirm context window, max output tokens, vision/tools/reasoning support,
      and reasoning effort levels.
 
-4. **Edit `catalog.json`** (catwalk-shaped - match existing entries):
+6. **Edit `catalog.json`** (catwalk-shaped - match existing entries):
    - Chat model: `id`, `name`, `cost_per_1m_in/out`, `cost_per_1m_in_cached`
      (cache write) + `cost_per_1m_out_cached` (cache read), `context_window`,
      `default_max_tokens`, `can_reason` (+ `reasoning_levels` /
@@ -62,11 +82,12 @@ for the model list, pricing, capabilities, and image-gen support (see
    - For confirmed retirements, set `deprecated: true` and `sunset_date` rather
      than deleting, so existing references still resolve.
 
-5. **Verify.** The loader re-reads on file change, so:
+7. **Verify** on the same stack you detected in step 1 (add `--stack local` for
+   the host venv). The loader re-reads on file change:
 
    ```bash
-   uv run python -c "from uniffy.domains.agents.providers.catalog import loader; loader.load_catalog(); print('catalog valid')"
-   uv run pytest src/uniffy/tests/test_pricing.py -q
+   ./manage.py deps run -s backend run python -c "from uniffy.domains.agents.providers.catalog import loader; loader.load_catalog(); print('catalog valid')"
+   ./manage.py deps run -s backend run pytest src/uniffy/tests/test_pricing.py -q
    ```
 
    A malformed catalog raises on load (hard fail), so a clean load means the

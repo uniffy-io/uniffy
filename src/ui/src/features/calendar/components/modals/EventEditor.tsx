@@ -13,6 +13,8 @@ import {
   Timer,
   Bell,
   Warning,
+  VideoCamera,
+  Prohibit,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { updateEvent } from '@/features/calendar/store/calendarThunks';
@@ -26,6 +28,8 @@ import { Select } from '@/components/ui/select';
 import { getInitials } from '@/components/subject/utils';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
 import { RoomPicker } from '@/features/rooms/components/shared/RoomPicker';
+import { MeetingChannelPicker } from '@/features/calendar/components/modals/MeetingChannelPicker';
+import { resolveMeetingSubmit, type MeetingMode } from '@/features/calendar/utils/meeting';
 import { RecurrenceEditScopeDialog } from '@/features/calendar/components/modals/RecurrenceEditScopeDialog';
 import { RecurrenceSelector } from '@/features/calendar/components/modals/RecurrenceSelector';
 import { ReminderSelector } from '@/features/calendar/components/modals/ReminderSelector';
@@ -90,6 +94,11 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(event.recurrence);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(event.roomId || null);
+  const [meetingMode, setMeetingMode] = useState<MeetingMode>(
+    event.channelId ? 'channel' : event.meetingUrl ? 'link' : 'none'
+  );
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(event.channelId || null);
+  const [channelAutoCreated, setChannelAutoCreated] = useState<boolean>(event.channelAutoCreated ?? false);
   const [showScopeDialog, setShowScopeDialog] = useState(false);
 
   const conflicts = useConflictDetection(formData.startTime, formData.endTime, event.id);
@@ -154,6 +163,9 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       setFormData(event);
       setVisibility((event.visibility as EventVisibility) || 'private');
       setRecurrence(event.recurrence);
+      setMeetingMode(event.channelId ? 'channel' : event.meetingUrl ? 'link' : 'none');
+      setSelectedChannelId(event.channelId || null);
+      setChannelAutoCreated(event.channelAutoCreated ?? false);
       setIsSubmitting(false);
       setShowScopeDialog(false);
 
@@ -172,6 +184,15 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleMeetingModeChange = (mode: MeetingMode) => {
+    setMeetingMode(mode);
+    if (mode !== 'link') handleChange('meetingUrl', '');
+    if (mode !== 'channel') {
+      setSelectedChannelId(null);
+      setChannelAutoCreated(false);
+    }
   };
 
   const handleAttendeeAdd = (member: { userId: string; displayName: string; email: string }) => {
@@ -210,6 +231,13 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
     const isAllEventsScope = scope === 'all_events';
     const isOccurrence = !!event.occurrenceDate;
 
+    const { meetingUrl: meetingUrlParam, channelId: channelIdParam } = resolveMeetingSubmit(
+      meetingMode,
+      selectedChannelId,
+      formData.meetingUrl,
+      event.channelId,
+    );
+
     await dispatch(
       updateEvent({
         eventId: formData.id,
@@ -220,7 +248,7 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         isAllDay: formData.isAllDay,
         timezone: formData.timezone,
         location: formData.location,
-        meetingUrl: formData.meetingUrl,
+        meetingUrl: meetingUrlParam,
         calendarId: formData.calendarId,
         categoryId: formData.categoryId,
         isFocusTime: formData.isFocusTime,
@@ -232,6 +260,8 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         recurrenceEditScope: scope,
         occurrenceDate: isAllEventsScope ? undefined : event.occurrenceDate,
         roomId: selectedRoomId !== event.roomId ? (selectedRoomId || '') : undefined,
+        channelId: channelIdParam,
+        channelAutoCreated: channelIdParam ? channelAutoCreated : undefined,
       })
     );
     onClose();
@@ -457,25 +487,49 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <MapPin size={16} weight="duotone" className="text-muted-foreground" />
-                    <span>Location</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => handleChange('location', e.target.value)}
-                    placeholder="Add location..."
-                    className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <MapPin size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Location</span>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <LinkIcon size={16} weight="duotone" className="text-muted-foreground" />
-                    <span>Meeting URL</span>
-                  </div>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => handleChange('location', e.target.value)}
+                  placeholder="Add location..."
+                  className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <VideoCamera size={16} weight="duotone" className="text-muted-foreground" />
+                  <span>Online meeting</span>
+                </div>
+                <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
+                  {([
+                    { mode: 'none' as const, icon: Prohibit, label: 'None' },
+                    { mode: 'link' as const, icon: LinkIcon, label: 'Link' },
+                    { mode: 'channel' as const, icon: VideoCamera, label: 'Uniffy meeting' },
+                  ]).map(({ mode, icon: Icon, label }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleMeetingModeChange(mode)}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
+                        meetingMode === mode
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      )}
+                    >
+                      <Icon size={16} weight={meetingMode === mode ? 'fill' : 'duotone'} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {meetingMode === 'link' && (
                   <input
                     type="url"
                     value={formData.meetingUrl || ''}
@@ -483,7 +537,23 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
                     placeholder="https://..."
                     className="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                   />
-                </div>
+                )}
+
+                {meetingMode === 'channel' && (
+                  <MeetingChannelPicker
+                    selectedChannelId={selectedChannelId}
+                    onSelect={(id) => {
+                      setSelectedChannelId(id);
+                      setChannelAutoCreated(false);
+                    }}
+                    onCreateRoom={(id) => {
+                      setSelectedChannelId(id);
+                      setChannelAutoCreated(true);
+                    }}
+                    attendeeIds={formData.attendees.map((a) => a.id)}
+                    eventTitle={formData.title}
+                  />
+                )}
               </div>
 
               <button

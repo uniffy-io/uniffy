@@ -67,6 +67,7 @@ INDEX_SETTINGS = MeilisearchSettings(
         "shared_group_ids",
         "blocked_user_ids",
         "blocked_group_ids",
+        "attendee_user_ids",
         "tags",
         "updated_at",
         "metadata.channel_id",
@@ -194,6 +195,7 @@ class MeilisearchClient:
         shared_group_ids: list[UUID] | None = None,
         blocked_user_ids: list[UUID] | None = None,
         blocked_group_ids: list[UUID] | None = None,
+        attendee_user_ids: list[UUID] | None = None,
         tags: list[str] | None = None,
         rank_score: float = 1.0,
         metadata: dict[str, str] | None = None,
@@ -217,6 +219,7 @@ class MeilisearchClient:
             "shared_group_ids": [str(gid) for gid in (shared_group_ids or [])],
             "blocked_user_ids": [str(uid) for uid in (blocked_user_ids or [])],
             "blocked_group_ids": [str(gid) for gid in (blocked_group_ids or [])],
+            "attendee_user_ids": [str(uid) for uid in (attendee_user_ids or [])],
             "tags": tags or [],
             "rank_score": rank_score,
             "metadata": metadata or {},
@@ -411,6 +414,7 @@ class MeilisearchClient:
         permission_conditions = [
             f'owner_id = "{user_id}"',
             f'shared_user_ids = "{user_id}"',
+            f'attendee_user_ids = "{user_id}"',
             '(access_mode = "OPEN_TO_ORG" AND baseline_role EXISTS)',
         ]
         if user_group_ids:
@@ -455,6 +459,31 @@ class MeilisearchClient:
             f"users={len(shared_user_ids)} groups={len(shared_group_ids)} "
             f"blocked_users={len(blocked_user_ids or [])} "
             f"blocked_groups={len(blocked_group_ids or [])}",
+            ms=f"{elapsed_ms:.1f}",
+            urn=urn,
+        )
+
+    async def update_document_attendees(
+        self,
+        urn: str,
+        organization_id: UUID,
+        attendee_user_ids: list[UUID],
+    ) -> None:
+        """Merge a new ``attendee_user_ids`` list into the document."""
+        doc_id = build_document_id(urn, organization_id)
+        partial = {
+            "id": doc_id,
+            "attendee_user_ids": [str(uid) for uid in attendee_user_ids],
+        }
+
+        start = time.perf_counter()
+        index = self.client.index(self.config.index_name)
+        await index.update_documents([partial])
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        SEARCH_OPERATIONS_TOTAL.labels(operation="update_attendees").inc()
+        SEARCH_OPERATION_DURATION.labels(operation="update_attendees").observe(elapsed_ms / 1000)
+        logger.info(
+            f"Meilisearch: update_attendees users={len(attendee_user_ids)}",
             ms=f"{elapsed_ms:.1f}",
             urn=urn,
         )

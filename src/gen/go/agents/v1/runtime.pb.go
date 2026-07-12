@@ -2546,7 +2546,7 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x0eSubscribeToRun\x12 .agents.v1.SubscribeToRunRequest\x1a!.agents.v1.SubscribeToRunResponse\"\x000\x01\x12Q\n" +
 	"\fCancelStream\x12\x1e.agents.v1.CancelStreamRequest\x1a\x1f.agents.v1.CancelStreamResponse\"\x00\x12l\n" +
 	"\x15RespondToConfirmation\x12'.agents.v1.RespondToConfirmationRequest\x1a(.agents.v1.RespondToConfirmationResponse\"\x00\x12T\n" +
-	"\rGetUsageStats\x12\x1f.agents.v1.GetUsageStatsRequest\x1a .agents.v1.GetUsageStatsResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\rGetUsageStats\x12\x1f.agents.v1.GetUsageStatsRequest\x1a .agents.v1.GetUsageStatsResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_runtime_proto_rawDescOnce sync.Once

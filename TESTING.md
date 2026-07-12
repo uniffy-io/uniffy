@@ -221,10 +221,48 @@ Needs two browsers on two machines/networks to exercise the adaptive downshift.
 - [ ] Self-host sanity: with `CALLS_DEFAULT_SCREEN_SHARE_QUALITY` unset, a channel call defaults
       to BALANCED and a DM defaults to MAX with no admin action.
 
+## Calendar meetings (channel-bound)
+
+An event can bind to a chat channel as a Uniffy online meeting. Join rides the existing calls
+stack through the global pre-join modal; the calendar copies nothing into channel membership.
+Needs user A (organizer + channel member), user B (attendee to add), and user C (non-member).
+
+- [ ] As user A, open the event editor, switch the meeting section to "Uniffy meeting", pick a
+      private channel A belongs to, save. The detail panel shows a "Join meeting" button.
+- [ ] Flip the section to "Link": the channel binding clears and the URL input returns. Flip to
+      "None": both the URL and the binding clear on save.
+- [ ] Add an attendee (B) who is NOT in the picked channel. The editor shows "N attendees cannot
+      access <channel>". Add B to the channel; the warning drops.
+- [ ] As attendee B (a channel member), open the event and click "Join meeting". The global
+      pre-join modal opens and join lands in the channel's call.
+- [ ] As non-member C (event shared, no channel access), open the event. Join is disabled with a
+      "You do not have access to this channel" note (`GetChannel` is denied for C).
+- [ ] While A is in the call, B's detail panel and today list show a "Live" badge with the
+      participant count. It clears when the call ends.
+- [ ] Bind a recurring event's master to a channel. Every expanded occurrence, and any edited
+      single occurrence, inherits the binding.
+- [ ] Delete the bound channel. The event silently becomes a non-meeting event (FK SET NULL) with
+      no error on the detail panel.
+- [ ] Send both a meeting URL and a channel_id on one event via the API: the backend rejects with
+      a validation error (the editor already enforces one mode).
+- [ ] Mobile: open a channel-bound event. It shows a read-only "Online meeting" row with no join
+      affordance (native calls are not shipped).
+- [ ] In the editor's Uniffy-meeting mode, click "Create a meeting room from attendees". A PRIVATE
+      channel named after the event is created with the attendees as members and auto-selected.
+- [ ] Add an attendee to that auto-created-room event and save: the attendee appears in the channel
+      (realtime member-added). Remove one: they leave the channel and are kicked from any live call.
+- [ ] Confirm a PICKED channel (not auto-created) is never mutated when attendees change - only
+      auto-created rooms sync.
+- [ ] Delete a channel-bound event: the channel and its history remain (FK SET NULL only fires when
+      the channel itself is deleted).
+- [ ] `@`-mention a channel-bound event in a note or chat message. The expanded card shows a "Join
+      meeting" button. Start a call in that channel: it turns rose with a live dot and "Join live
+      meeting (N)"; clicking it opens the pre-join modal.
+
 ## Pre-release sweep
 
-- [ ] All linters green: `./run.sh lint`.
-- [ ] Full backend test suite green: `./run.sh test`.
+- [ ] All linters green: `./manage.py lint`.
+- [ ] Full backend test suite green: `./manage.py test`.
 - [ ] No new env vars without a matching line in `.env.example` and an
       admin UI surface (cloud operators do not edit env).
 - [ ] No new feature works on self-hosted but breaks on multi-tenant

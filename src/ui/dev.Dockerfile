@@ -1,5 +1,5 @@
 # Generic Node dev image - used by every pnpm workspace dev container
-# (currently ui and landing). Same Node version + pnpm install method as
+# (ui, landing, mobile). Same Node version + pnpm install method as
 # the prod Dockerfile.
 # Source code is bind-mounted at runtime; pnpm install runs in entrypoint and
 # node_modules trees are kept in anonymous volumes (per-container, isolated
@@ -7,7 +7,7 @@
 # Each service sets PNPM_FILTER in compose to limit install to its workspace.
 FROM node:24.0-slim
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.30.1
 
 WORKDIR /app
 

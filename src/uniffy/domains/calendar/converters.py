@@ -179,20 +179,13 @@ def event_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> ProtoCalendarEvent:
-    """Convert a :class:`CalendarEvent` row to its proto representation.
+    """Convert a ``CalendarEvent`` row to its proto representation.
 
-    Parameters
-    ----------
-    event : CalendarEvent
-        Event row.
-    attendees : list[tuple[EventAttendee, dict]] | None
-        List of (EventAttendee, user_info) tuples for attendee details.
-    tags : list[Tag] | None
-        Hydrated unified tags assigned to this event. Recurring instances
-        share their parent's tag set; the handler resolves the master URN
-        before calling.
-    room_id, room_name, room_location, room_capacity, room_amenities
-        Optional room booking info for the event.
+    Recurring instances share their master's tag set, so the handler resolves
+    the master URN before calling. No channel-name hydration: only
+    ``channel_id`` and ``channel_auto_created`` ride along and the frontend
+    resolves the channel name, which keeps private channel names from leaking
+    on list paths.
     """
     proto_recurrence = RECURRENCE_TO_PROTO.get(
         event.recurrence_pattern,
@@ -222,6 +215,7 @@ def event_to_proto(
         is_focus_time=event.is_focus_time,
         access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         is_deleted=event.is_deleted,
+        channel_auto_created=event.channel_auto_created,
         tags=[tag_to_proto(t) for t in tags] if tags else [],
         outgoing_references=event.outgoing_references or [],
         created_at=datetime_to_timestamp(event.created_at),
@@ -245,6 +239,9 @@ def event_to_proto(
 
     if event.meeting_url:
         proto_event.meeting_url = event.meeting_url
+
+    if event.channel_id:
+        proto_event.channel_id = str(event.channel_id)
 
     if event.deleted_at:
         proto_event.deleted_at.CopyFrom(datetime_to_timestamp(event.deleted_at))

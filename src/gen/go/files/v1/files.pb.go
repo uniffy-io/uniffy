@@ -8044,7 +8044,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"DetachFile\x12\x1b.files.v1.DetachFileRequest\x1a\x1c.files.v1.DetachFileResponse\x12V\n" +
 	"\x0fListAttachments\x12 .files.v1.ListAttachmentsRequest\x1a!.files.v1.ListAttachmentsResponse\x12e\n" +
 	"\x14BatchListAttachments\x12%.files.v1.BatchListAttachmentsRequest\x1a&.files.v1.BatchListAttachmentsResponse\x12e\n" +
-	"\x14GetAttachmentsFolder\x12%.files.v1.GetAttachmentsFolderRequest\x1a&.files.v1.GetAttachmentsFolderResponseB9Z7github.com/uniffy-io/uniffy-proto-go/files/v1;filesv1b\x06proto3"
+	"\x14GetAttachmentsFolder\x12%.files.v1.GetAttachmentsFolderRequest\x1a&.files.v1.GetAttachmentsFolderResponseB7Z5github.com/uniffy-io/uniffy-proto-go/files/v1;filesv1b\x06proto3"
 
 var (
 	file_files_v1_files_proto_rawDescOnce sync.Once

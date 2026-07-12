@@ -1,3 +1,9 @@
+# Local operator tooling (staging registry + kubectl access), not shipped
+/staging.sh
+
+# Host-process logs written by ./manage.py serve all
+/.logs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

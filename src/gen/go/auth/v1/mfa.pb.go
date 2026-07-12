@@ -1432,7 +1432,7 @@ const file_auth_v1_mfa_proto_rawDesc = "" +
 	"\x18RequestPlatformPeerReset\x12(.auth.v1.RequestPlatformPeerResetRequest\x1a).auth.v1.RequestPlatformPeerResetResponse\x12o\n" +
 	"\x18ApprovePlatformPeerReset\x12(.auth.v1.ApprovePlatformPeerResetRequest\x1a).auth.v1.ApprovePlatformPeerResetResponse\x12i\n" +
 	"\x16ListPlatformPeerResets\x12&.auth.v1.ListPlatformPeerResetsRequest\x1a'.auth.v1.ListPlatformPeerResetsResponse\x12K\n" +
-	"\fGetMfaStatus\x12\x1c.auth.v1.GetMfaStatusRequest\x1a\x1d.auth.v1.GetMfaStatusResponseB7Z5github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3"
+	"\fGetMfaStatus\x12\x1c.auth.v1.GetMfaStatusRequest\x1a\x1d.auth.v1.GetMfaStatusResponseB5Z3github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3"
 
 var (
 	file_auth_v1_mfa_proto_rawDescOnce sync.Once

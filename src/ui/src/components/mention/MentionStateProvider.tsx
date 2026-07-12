@@ -84,6 +84,7 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
       state.eventIsAllDay = meta.eventIsAllDay || m.is_all_day === 'true';
       state.eventLocation = meta.eventLocation || undefined;
       state.eventMeetingUrl = meta.eventMeetingUrl || undefined;
+      state.eventChannelId = meta.eventChannelId || undefined;
       break;
 
     case UrnType.FILE:

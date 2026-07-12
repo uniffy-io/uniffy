@@ -2115,7 +2115,7 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\x0fMuteParticipant\x12 .calls.v1.MuteParticipantRequest\x1a!.calls.v1.MuteParticipantResponse\x12Y\n" +
 	"\x10GetOrgCallPolicy\x12!.calls.v1.GetOrgCallPolicyRequest\x1a\".calls.v1.GetOrgCallPolicyResponse\x12b\n" +
 	"\x13UpdateOrgCallPolicy\x12$.calls.v1.UpdateOrgCallPolicyRequest\x1a%.calls.v1.UpdateOrgCallPolicyResponse\x12Y\n" +
-	"\x10ReportMediaState\x12!.calls.v1.ReportMediaStateRequest\x1a\".calls.v1.ReportMediaStateResponseB9Z7github.com/uniffy-io/uniffy-proto-go/calls/v1;callsv1b\x06proto3"
+	"\x10ReportMediaState\x12!.calls.v1.ReportMediaStateRequest\x1a\".calls.v1.ReportMediaStateResponseB7Z5github.com/uniffy-io/uniffy-proto-go/calls/v1;callsv1b\x06proto3"
 
 var (
 	file_calls_v1_calls_proto_rawDescOnce sync.Once

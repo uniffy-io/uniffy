@@ -1644,7 +1644,7 @@ const file_comments_v1_comments_proto_rawDesc = "" +
 	"\rReopenComment\x12!.comments.v1.ReopenCommentRequest\x1a\".comments.v1.ReopenCommentResponse\x12P\n" +
 	"\vAddReaction\x12\x1f.comments.v1.AddReactionRequest\x1a .comments.v1.AddReactionResponse\x12Y\n" +
 	"\x0eRemoveReaction\x12\".comments.v1.RemoveReactionRequest\x1a#.comments.v1.RemoveReactionResponse\x12_\n" +
-	"\x10GetCommentCounts\x12$.comments.v1.GetCommentCountsRequest\x1a%.comments.v1.GetCommentCountsResponseB?Z=github.com/uniffy-io/uniffy-proto-go/comments/v1;commentsv1b\x06proto3"
+	"\x10GetCommentCounts\x12$.comments.v1.GetCommentCountsRequest\x1a%.comments.v1.GetCommentCountsResponseB=Z;github.com/uniffy-io/uniffy-proto-go/comments/v1;commentsv1b\x06proto3"
 
 var (
 	file_comments_v1_comments_proto_rawDescOnce sync.Once

@@ -3011,7 +3011,7 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\x0fGetSkillVersion\x12!.agents.v1.GetSkillVersionRequest\x1a\".agents.v1.GetSkillVersionResponse\"\x00\x12f\n" +
 	"\x13SetMainSkillVersion\x12%.agents.v1.SetMainSkillVersionRequest\x1a&.agents.v1.SetMainSkillVersionResponse\"\x00\x12N\n" +
 	"\vRevertSkill\x12\x1d.agents.v1.RevertSkillRequest\x1a\x1e.agents.v1.RevertSkillResponse\"\x00\x12Z\n" +
-	"\x0fGetSkillMetrics\x12!.agents.v1.GetSkillMetricsRequest\x1a\".agents.v1.GetSkillMetricsResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x0fGetSkillMetrics\x12!.agents.v1.GetSkillMetricsRequest\x1a\".agents.v1.GetSkillMetricsResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_skills_proto_rawDescOnce sync.Once

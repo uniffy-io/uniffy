@@ -26,6 +26,7 @@ import type { RecurrenceEditScope } from '@/features/calendar/types';
 import { cn } from '@/shared/utils/cn';
 import { Button } from '@/components/ui/button';
 import { useCalendarEvents } from '@/features/calendar/hooks';
+import { EventMeetingJoin } from '@/features/calendar/components/layout/EventMeetingJoin';
 import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
@@ -323,6 +324,10 @@ export function DetailPanel() {
                   </span>
                 )}
               </div>
+            )}
+
+            {selectedEvent.channelId && (
+              <EventMeetingJoin channelId={selectedEvent.channelId} />
             )}
 
             {selectedEvent.roomName && (

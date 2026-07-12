@@ -4,16 +4,26 @@ name: uniffy-local
 # Run any subset directly:  docker compose -f .docker/compose/<name>.yaml up
 # Or all at once:           docker compose up
 #
-# Profiles:
-#   (none)          infra only: postgres, valkey, meilisearch, livekit, rustfs, admin UIs
-#   --profile dev   infra + dev stack: edge, backend, workers, ui, landing, mcp-playwright
-#   --profile all   everything
+# Profiles (independent building blocks - stack them as needed):
+#   --profile core       infra: postgres, valkey, meilisearch, livekit, rustfs
+#   --profile dev        app stack: edge (caddy), backend, workers, ui, landing, mcp-playwright
+#   --profile mobile     expo/metro dev server for the mobile app (port 8081)
+# The deps-manager toolbox (pnpm, uv, buf) rides the dev and mobile profiles
+# as an init step: it syncs all dependency trees, exits, and app services
+# wait on its completion. One-off use: ./manage.py toolbox|proto|licenses
+#   --profile adminuis   db inspection UIs: pgadmin, redisinsight
+#   --profile all        everything
 #
-# Helpers in run.sh: dev, dev-down, dev-logs, livekit-logs
+# Every service carries a profile, so a bare `docker compose up` starts nothing.
+# Combine profiles to compose an environment:
+#   docker compose --profile core --profile dev up        infra + app (== ./manage.py stack up)
+#   docker compose --profile core --profile adminuis up   infra + db UIs
+#   docker compose --profile all up                       everything
+#
+# Helpers in manage.py: stack up|down|logs|rebuild|reset-data
 
 include:
-  - .docker/compose/core.yaml          # postgres, valkey, meilisearch, livekit
-  - .docker/compose/storage.yaml       # rustfs (S3-compatible)
-  - .docker/compose/admin.yaml         # pgadmin, redisinsight (db inspection UIs)
-  - .docker/compose/dev-tools.yaml     # mcp-playwright (profile: mcp)
-  - .docker/compose/dev.yaml           # edge, backend, workers, ui (profile: dev)
+  - .docker/compose/core.yaml          # profile core:     postgres, valkey, meilisearch, livekit, rustfs
+  - .docker/compose/admin.yaml         # profile adminuis: pgadmin, redisinsight
+  - .docker/compose/dev-tools.yaml     # profile dev:      mcp-playwright
+  - .docker/compose/dev.yaml           # profile dev:      edge, backend, workers, ui, landing; profile mobile: expo/metro

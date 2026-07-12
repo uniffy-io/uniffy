@@ -57,28 +57,6 @@ class ContentAccessQuery:
             GroupMember.is_active == True,  # noqa: E712
         )
 
-        # Content IDs the user is BLOCKED on (direct or via group). Must be
-        # excluded regardless of any other grant.
-        blocked_subq = select(ContentMember.content_id).where(
-            ContentMember.organization_id == organization_id,
-            ContentMember.content_type == content_type,
-            ContentMember.role == ContentRole.BLOCKED,
-            or_(
-                ContentMember.expires_at.is_(None),
-                ContentMember.expires_at > now,
-            ),
-            or_(
-                and_(
-                    ContentMember.subject_type == SubjectType.USER,
-                    ContentMember.subject_id == user_id,
-                ),
-                and_(
-                    ContentMember.subject_type == SubjectType.GROUP,
-                    ContentMember.subject_id.in_(user_groups_subq),
-                ),
-            ),
-        )
-
         explicit_member_subq = select(ContentMember.content_id).where(
             ContentMember.organization_id == organization_id,
             ContentMember.content_type == content_type,
@@ -154,9 +132,59 @@ class ContentAccessQuery:
         )
 
         return and_(
-            content_id_column.notin_(blocked_subq),
+            self.build_not_blocked_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=content_type,
+                content_id_column=content_id_column,
+            ),
             has_any_access,
         )
+
+    def build_not_blocked_filter(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id_column: InstrumentedAttribute,
+    ) -> Any:
+        """WHERE clause excluding content the user is BLOCKED on (direct or via group).
+
+        BLOCKED beats every grant, so any caller that ORs an extra allow branch
+        onto ``build_accessible_filter`` (e.g. domain-membership bypasses) must
+        AND this onto that branch.
+        """
+        from uniffy.core.models.login.group_member import GroupMember
+        from uniffy.core.models.permissions.content_member import ContentMember
+
+        now = datetime.now(UTC)
+
+        user_groups_subq = select(GroupMember.group_id).where(
+            GroupMember.user_id == user_id,
+            GroupMember.is_active == True,  # noqa: E712
+        )
+
+        blocked_subq = select(ContentMember.content_id).where(
+            ContentMember.organization_id == organization_id,
+            ContentMember.content_type == content_type,
+            ContentMember.role == ContentRole.BLOCKED,
+            or_(
+                ContentMember.expires_at.is_(None),
+                ContentMember.expires_at > now,
+            ),
+            or_(
+                and_(
+                    ContentMember.subject_type == SubjectType.USER,
+                    ContentMember.subject_id == user_id,
+                ),
+                and_(
+                    ContentMember.subject_type == SubjectType.GROUP,
+                    ContentMember.subject_id.in_(user_groups_subq),
+                ),
+            ),
+        )
+
+        return content_id_column.notin_(blocked_subq)
 
     def build_shared_with_me_filter(
         self,

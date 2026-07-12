@@ -7,12 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "uniffy",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0d111e"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.uniffy.app",
@@ -46,6 +40,14 @@
         {
           "cameraPermission": "Uniffy uses your camera for video calls.",
           "microphonePermission": "Uniffy uses your microphone for calls."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0d111e"
         }
       ]
     ],

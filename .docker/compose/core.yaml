@@ -1,10 +1,12 @@
 # Core services - postgres, valkey (cache + LiveKit registry), meilisearch,
-# livekit (SFU with embedded TURN; room registry on valkey DB 1, app uses DB 0).
-# Always-on. Run standalone: docker compose -f .docker/compose/core.yaml up
+# livekit (SFU with embedded TURN; room registry on valkey DB 1, app uses DB 0),
+# rustfs (S3-compatible object storage for the Files domain).
+# Profile: core. Run standalone: docker compose -f .docker/compose/core.yaml --profile core up
 
 x-defaults: &defaults
   restart: unless-stopped
   networks: [uniffy-network]
+  profiles: [core, all]
   logging:
     driver: json-file
     options:
@@ -17,6 +19,26 @@ x-healthcheck-defaults: &hc-defaults
   retries: 5
 
 services:
+
+  rustfs:
+    <<: *defaults
+    image: rustfs/rustfs:latest
+    container_name: uniffy-rustfs
+    environment:
+      RUSTFS_ROOT_USER: rustfsadmin
+      RUSTFS_ROOT_PASSWORD: rustfsadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs_data:/data
+      - rustfs_logs:/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   postgres:
     <<: *defaults
     image: postgres:18-alpine
@@ -158,6 +180,8 @@ volumes:
   postgres_data:
   valkey_data:
   meilisearch_data:
+  rustfs_data:
+  rustfs_logs:
 
 networks:
   uniffy-network:

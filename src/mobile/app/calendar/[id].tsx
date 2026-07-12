@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import {
   PencilSimple,
@@ -27,6 +28,8 @@ import { FONT } from "@/constants/typography";
 import { useEvent, useCategories } from "@/hooks/useCalendar";
 import { useDeleteEvent } from "@/hooks/useCalendarMutations";
 import { useAuth } from "@/context/auth-context";
+import { PreJoinSheet } from "@/components/calls/PreJoinSheet";
+import { useActiveCall } from "@/hooks/useCallsState";
 
 const RSVP_COLORS: Record<string, string> = {
   accepted: "#40C057",
@@ -40,9 +43,11 @@ export default function EventDetailScreen() {
   const T = useTheme();
   const auth = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [prejoinOpen, setPrejoinOpen] = useState(false);
   const eventQuery = useEvent(id);
   const categoriesQuery = useCategories();
   const deleteEvent = useDeleteEvent();
+  const activeMeetingCall = useActiveCall(eventQuery.data?.channelId ?? undefined);
 
   if (eventQuery.isLoading) {
     return (
@@ -63,6 +68,7 @@ export default function EventDetailScreen() {
   const eventColor = category?.color || T.domains.calendar;
 
   const hasMeetingUrl = !!event.meetingUrl;
+  const hasChannel = !!event.channelId;
   const isRecurring = !!event.recurrence;
   const recurrenceLabel = event.recurrence ? `Recurring ${event.recurrence.pattern}` : "";
 
@@ -166,8 +172,25 @@ export default function EventDetailScreen() {
                 <View style={[styles.infoIcon, { backgroundColor: "#40C05720" }]}>
                   <Video size={14} color="#40C057" weight="duotone" />
                 </View>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => Linking.openURL(event.meetingUrl!)}>
                   <Text style={[styles.infoMain, { color: T.accent }]}>Join Meeting</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+          {hasChannel && (
+            <>
+              <View style={[styles.infoDivider, { backgroundColor: T.border }]} />
+              <View style={styles.infoRow}>
+                <View style={[styles.infoIcon, { backgroundColor: "#40C05720" }]}>
+                  <Video size={14} color="#40C057" weight="duotone" />
+                </View>
+                <TouchableOpacity onPress={() => setPrejoinOpen(true)}>
+                  <Text
+                    style={[styles.infoMain, { color: activeMeetingCall ? "#F43F5E" : T.accent }]}
+                  >
+                    {activeMeetingCall ? "Join live meeting" : "Join meeting"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -259,7 +282,20 @@ export default function EventDetailScreen() {
                   icon: "video" as const,
                   label: "Join video call",
                   color: "#40C057",
-                  onPress: () => {},
+                  onPress: () => Linking.openURL(event.meetingUrl!),
+                },
+              ]
+            : []),
+          ...(hasChannel
+            ? [
+                {
+                  icon: "video" as const,
+                  label: activeMeetingCall ? "Join live meeting" : "Join meeting",
+                  color: "#40C057",
+                  onPress: () => {
+                    setSheetOpen(false);
+                    setPrejoinOpen(true);
+                  },
                 },
               ]
             : []),
@@ -282,6 +318,17 @@ export default function EventDetailScreen() {
           },
         ]}
       />
+
+      {event.channelId ? (
+        <PreJoinSheet
+          visible={prejoinOpen}
+          T={T}
+          channelId={event.channelId}
+          channelName={event.title}
+          callId={activeMeetingCall?.id}
+          onClose={() => setPrejoinOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }

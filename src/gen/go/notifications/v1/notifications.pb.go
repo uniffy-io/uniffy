@@ -2397,7 +2397,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x13SearchNotifications\x12,.notifications.v1.SearchNotificationsRequest\x1a-.notifications.v1.SearchNotificationsResponse\"\x00\x12w\n" +
 	"\x14GetNotificationStats\x12-.notifications.v1.GetNotificationStatsRequest\x1a..notifications.v1.GetNotificationStatsResponse\"\x00\x12e\n" +
 	"\x0eBulkMarkAsRead\x12'.notifications.v1.BulkMarkAsReadRequest\x1a(.notifications.v1.BulkMarkAsReadResponse\"\x00\x12\x80\x01\n" +
-	"\x17BulkDeleteNotifications\x120.notifications.v1.BulkDeleteNotificationsRequest\x1a1.notifications.v1.BulkDeleteNotificationsResponse\"\x00BIZGgithub.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1b\x06proto3"
+	"\x17BulkDeleteNotifications\x120.notifications.v1.BulkDeleteNotificationsRequest\x1a1.notifications.v1.BulkDeleteNotificationsResponse\"\x00BGZEgithub.com/uniffy-io/uniffy-proto-go/notifications/v1;notificationsv1b\x06proto3"
 
 var (
 	file_notifications_v1_notifications_proto_rawDescOnce sync.Once

@@ -1447,7 +1447,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x1dRATE_LIMIT_KIND_AGENT_MSG_ORG\x10\x02\x12#\n" +
 	"\x1fRATE_LIMIT_KIND_AGENT_MSG_AGENT\x10\x03\x12\"\n" +
 	"\x1eRATE_LIMIT_KIND_IMAGE_GEN_USER\x10\x04\x12!\n" +
-	"\x1dRATE_LIMIT_KIND_IMAGE_GEN_ORG\x10\x05B;Z9github.com/uniffy-io/uniffy-proto-go/common/v1;commonv1b\x06proto3"
+	"\x1dRATE_LIMIT_KIND_IMAGE_GEN_ORG\x10\x05B9Z7github.com/uniffy-io/uniffy-proto-go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_common_proto_rawDescOnce sync.Once

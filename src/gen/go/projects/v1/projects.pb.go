@@ -5935,7 +5935,7 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\vListSprints\x12\x1f.projects.v1.ListSprintsRequest\x1a .projects.v1.ListSprintsResponse\x12b\n" +
 	"\x11ToggleTaskWatcher\x12%.projects.v1.ToggleTaskWatcherRequest\x1a&.projects.v1.ToggleTaskWatcherResponse\x12_\n" +
 	"\x10ListTaskWatchers\x12$.projects.v1.ListTaskWatchersRequest\x1a%.projects.v1.ListTaskWatchersResponse\x12n\n" +
-	"\x15BulkCheckTaskWatchers\x12).projects.v1.BulkCheckTaskWatchersRequest\x1a*.projects.v1.BulkCheckTaskWatchersResponseB?Z=github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3"
+	"\x15BulkCheckTaskWatchers\x12).projects.v1.BulkCheckTaskWatchersRequest\x1a*.projects.v1.BulkCheckTaskWatchersResponseB=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3"
 
 var (
 	file_projects_v1_projects_proto_rawDescOnce sync.Once

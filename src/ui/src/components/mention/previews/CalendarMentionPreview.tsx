@@ -12,6 +12,10 @@ import {
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { CalendarTemporalIndicator } from '@/components/mention/LiveIndicators';
 import type { MentionLiveState } from '@/components/mention/types';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { prejoinOpened, selectActiveCallForChannel } from '@/features/calls/store/callsSlice';
+import { cn } from '@/shared/utils/cn';
+import type { RootState } from '@/app/store';
 
 interface CalendarMentionPreviewProps {
   urn: string;
@@ -56,6 +60,11 @@ export function CalendarMentionPreview({
   onCopyLink,
 }: CalendarMentionPreviewProps) {
   const [copied, setCopied] = useState(false);
+  const dispatch = useAppDispatch();
+  const channelId = liveState.eventChannelId;
+  const activeCall = useAppSelector((s: RootState) =>
+    channelId ? selectActiveCallForChannel(s, channelId) : null,
+  );
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(urn);
@@ -122,6 +131,37 @@ export function CalendarMentionPreview({
             <VideoCamera size={13} weight="duotone" />
             <span>Join meeting</span>
           </a>
+        </span>
+      )}
+
+      {channelId && (
+        <span className="block px-4 pb-2 pl-5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch(prejoinOpened(channelId));
+            }}
+            className={cn(
+              'inline-flex items-center gap-1.5 text-xs font-medium transition-colors',
+              activeCall
+                ? 'text-rose-600 dark:text-rose-400 hover:text-rose-500'
+                : 'text-primary hover:text-primary/80',
+            )}
+          >
+            {activeCall && (
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+              </span>
+            )}
+            <VideoCamera size={13} weight="duotone" />
+            <span>
+              {activeCall
+                ? `Join live meeting${activeCall.participants.length > 0 ? ` (${activeCall.participants.length})` : ''}`
+                : 'Join meeting'}
+            </span>
+          </button>
         </span>
       )}
 
