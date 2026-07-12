@@ -171,6 +171,24 @@ class PermissionChecker:
             raw_access_mode, raw_baseline_role, default_mode, default_baseline,
         )
 
+    async def is_blocked(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+    ) -> bool:
+        """Whether an explicit BLOCKED grant (direct or via group) denies this user.
+
+        For domains that layer their own membership on top of ``effective_role``
+        (e.g. calendar attendees): a ``None`` role is ambiguous between "no
+        access" and "explicitly blocked", and BLOCKED must beat the domain grant.
+        """
+        member_role = await self._get_member_role(
+            organization_id, content_type, content_id, user_id
+        )
+        return member_role == ContentRole.BLOCKED
+
     async def is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
         return await self._is_org_admin(user_id, organization_id)
 

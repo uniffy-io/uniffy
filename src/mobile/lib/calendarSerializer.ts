@@ -28,6 +28,8 @@ export interface SerializedEvent {
   duration: string;
   location: string;
   meetingUrl?: string;
+  /** Bound chat channel for a Uniffy online meeting. Read-only on mobile. */
+  channelId?: string;
   calendarId: string;
   categoryId: string;
   attendees: SerializedAttendee[];
@@ -107,6 +109,7 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
     duration: formatDuration(start, end),
     location: event.location,
     meetingUrl: event.meetingUrl,
+    channelId: event.channelId,
     calendarId: event.calendarId,
     categoryId: event.categoryId,
     attendees: event.attendees.map((a) => ({

@@ -51,6 +51,10 @@ export interface CalendarEvent {
   timezone: string;
   location: string;
   meetingUrl?: string;
+  /** Bound chat channel for a Uniffy online meeting (mutually exclusive with meetingUrl). */
+  channelId?: string;
+  /** True when the bound channel was auto-created as a meeting room for this event. */
+  channelAutoCreated?: boolean;
   calendarId: string;
   categoryId: string;
   attendees: Attendee[];
@@ -91,6 +95,8 @@ export interface CreateEventRequest {
   timezone?: string;
   location?: string;
   meetingUrl?: string;
+  channelId?: string;
+  channelAutoCreated?: boolean;
   calendarId: string;
   categoryId?: string;
   attendeeIds?: string[];
@@ -111,6 +117,8 @@ export interface UpdateEventRequest {
   timezone?: string;
   location?: string;
   meetingUrl?: string;
+  /** Empty string clears the binding; undefined leaves it untouched. */
+  channelId?: string;
   calendarId?: string;
   categoryId?: string;
   attendeeIds?: string[];

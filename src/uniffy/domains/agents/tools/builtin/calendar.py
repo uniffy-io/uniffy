@@ -102,6 +102,8 @@ async def _format_event_result(
         fields.append(f"Location: {event.location}")
     if event.meeting_url:
         fields.append(f"Meeting URL: {event.meeting_url}")
+    if event.channel_id:
+        fields.append(f"Meeting channel: {event.channel_id}")
     if event.access_mode:
         fields.append(f"Access mode: {event.access_mode.value}")
     if event.is_focus_time:

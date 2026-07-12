@@ -862,6 +862,7 @@ type UrnMetadata struct {
 	EventIsAllDay   bool   `protobuf:"varint,35,opt,name=event_is_all_day,json=eventIsAllDay,proto3" json:"event_is_all_day,omitempty"`    // all-day flag
 	EventLocation   string `protobuf:"bytes,36,opt,name=event_location,json=eventLocation,proto3" json:"event_location,omitempty"`         // location text
 	EventMeetingUrl string `protobuf:"bytes,37,opt,name=event_meeting_url,json=eventMeetingUrl,proto3" json:"event_meeting_url,omitempty"` // video call URL
+	EventChannelId  string `protobuf:"bytes,49,opt,name=event_channel_id,json=eventChannelId,proto3" json:"event_channel_id,omitempty"`    // bound chat channel for a Uniffy online meeting
 	// File enrichment
 	FileMimeType string `protobuf:"bytes,38,opt,name=file_mime_type,json=fileMimeType,proto3" json:"file_mime_type,omitempty"` // MIME type
 	FileSize     int64  `protobuf:"varint,39,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`              // size in bytes
@@ -1135,6 +1136,13 @@ func (x *UrnMetadata) GetEventMeetingUrl() string {
 	return ""
 }
 
+func (x *UrnMetadata) GetEventChannelId() string {
+	if x != nil {
+		return x.EventChannelId
+	}
+	return ""
+}
+
 func (x *UrnMetadata) GetFileMimeType() string {
 	if x != nil {
 		return x.FileMimeType
@@ -1282,7 +1290,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\bresolved\x18\x01 \x03(\v2,.search.v1.ResolveUrnsResponse.ResolvedEntryR\bresolved\x1aS\n" +
 	"\rResolvedEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xc7\f\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.search.v1.UrnMetadataR\x05value:\x028\x01\"\xf1\f\n" +
 	"\vUrnMetadata\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12/\n" +
@@ -1317,7 +1325,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x0eevent_end_time\x18\" \x01(\tR\feventEndTime\x12'\n" +
 	"\x10event_is_all_day\x18# \x01(\bR\reventIsAllDay\x12%\n" +
 	"\x0eevent_location\x18$ \x01(\tR\reventLocation\x12*\n" +
-	"\x11event_meeting_url\x18% \x01(\tR\x0feventMeetingUrl\x12$\n" +
+	"\x11event_meeting_url\x18% \x01(\tR\x0feventMeetingUrl\x12(\n" +
+	"\x10event_channel_id\x181 \x01(\tR\x0eeventChannelId\x12$\n" +
 	"\x0efile_mime_type\x18& \x01(\tR\ffileMimeType\x12\x1b\n" +
 	"\tfile_size\x18' \x01(\x03R\bfileSize\x12$\n" +
 	"\x0enote_node_type\x18( \x01(\tR\fnoteNodeType\x12!\n" +
@@ -1357,7 +1366,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
 	"DeleteItem\x12\x1c.search.v1.DeleteItemRequest\x1a\x1d.search.v1.DeleteItemResponse\"\x00\x12T\n" +
 	"\rGetReferences\x12\x1f.search.v1.GetReferencesRequest\x1a .search.v1.GetReferencesResponse\"\x00\x12N\n" +
-	"\vResolveUrns\x12\x1d.search.v1.ResolveUrnsRequest\x1a\x1e.search.v1.ResolveUrnsResponse\"\x00B;Z9github.com/uniffy-io/uniffy-proto-go/search/v1;searchv1b\x06proto3"
+	"\vResolveUrns\x12\x1d.search.v1.ResolveUrnsRequest\x1a\x1e.search.v1.ResolveUrnsResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/search/v1;searchv1b\x06proto3"
 
 var (
 	file_search_v1_search_proto_rawDescOnce sync.Once

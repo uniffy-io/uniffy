@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum
+from sqlalchemy import Column, DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -31,6 +31,15 @@ class CalendarEvent(SQLModel, table=True):
     timezone: str = Field(max_length=100, default="UTC", nullable=False)
     location: str = Field(default="", max_length=500, nullable=False)
     meeting_url: str | None = Field(default=None, max_length=2000)
+    channel_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            ForeignKey("chat_channels.id", ondelete="SET NULL"),
+            nullable=True,
+            index=True,
+        ),
+    )
+    channel_auto_created: bool = Field(default=False, nullable=False)
     access_mode: AccessMode | None = Field(
         default=None,
         sa_column=Column(

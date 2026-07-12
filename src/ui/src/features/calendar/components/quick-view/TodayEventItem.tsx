@@ -1,5 +1,8 @@
 import { MapPin, VideoCamera, Users } from '@phosphor-icons/react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { prejoinOpened, selectActiveCallForChannel } from '@/features/calls/store/callsSlice';
 import { cn } from '@/shared/utils/cn';
+import type { RootState } from '@/app/store';
 import { formatTime } from '@/features/calendar/utils';
 import { getCategoryColor } from '@/features/calendar/constants';
 import type { CalendarEvent } from '@/features/calendar/types';
@@ -68,6 +71,11 @@ function ContextLine({ event }: { event: CalendarEvent }) {
 }
 
 export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventItemProps) {
+  const dispatch = useAppDispatch();
+  const activeCall = useAppSelector((s: RootState) =>
+    event.channelId ? selectActiveCallForChannel(s, event.channelId) : null,
+  );
+  const isChannelLive = !!activeCall;
   const categoryColor = getCategoryColor(event.categoryId);
   const nowMs = now.getTime();
   const startMs = new Date(event.startTime).getTime();
@@ -125,6 +133,18 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
               </span>
             </>
           )}
+          {isChannelLive && (
+            <>
+              <span className="text-[11px] text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-500 dark:text-rose-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+                </span>
+                Live{activeCall && activeCall.participants.length > 0 ? ` · ${activeCall.participants.length}` : ''}
+              </span>
+            </>
+          )}
         </div>
 
         <p className="text-sm font-medium text-foreground truncate leading-snug">
@@ -136,7 +156,27 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
         </div>
       </div>
 
-      {event.meetingUrl && (
+      {event.channelId ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            dispatch(prejoinOpened(event.channelId!));
+          }}
+          className={cn(
+            'shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium mt-0.5',
+            'transition-colors',
+            isChannelLive
+              ? 'bg-rose-500 text-white hover:bg-rose-500/90'
+              : isCurrent
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+          )}
+        >
+          <VideoCamera size={12} weight="fill" />
+          Join
+        </button>
+      ) : event.meetingUrl ? (
         <a
           href={event.meetingUrl}
           target="_blank"
@@ -153,7 +193,7 @@ export function TodayEventItem({ event, isCurrent, now, onClick }: TodayEventIte
           <VideoCamera size={12} weight="fill" />
           Join
         </a>
-      )}
+      ) : null}
     </button>
   );
 }
