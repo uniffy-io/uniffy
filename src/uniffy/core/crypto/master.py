@@ -1,7 +1,7 @@
 """Master Key Encryption Key (KEK) for the deployment.
 
-A single Fernet on ``APP_MASTER_KEY`` wraps every per-org DEK and encrypts
-app-wide secrets (e.g. VAPID). The cipher is cached for the process lifetime.
+A single Fernet on ``APP_MASTER_KEY`` wraps every per-org and deployment DEK.
+The cipher is cached for the process lifetime.
 """
 
 from __future__ import annotations
@@ -9,9 +9,9 @@ from __future__ import annotations
 import functools
 import os
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 
-from uniffy.core.crypto.errors import CryptoError, MasterKeyMissingError
+from uniffy.core.crypto.errors import MasterKeyMissingError
 
 
 @functools.lru_cache(maxsize=1)
@@ -33,22 +33,3 @@ def get_master_cipher() -> Fernet:
 def reset_master_cipher_cache() -> None:
     """Test-only: drop the cached master cipher between cases."""
     get_master_cipher.cache_clear()
-
-
-def app_encrypt(plaintext: str) -> str:
-    """Encrypt an app-wide (non-org-scoped) secret; use ``OrgCipher`` for org-scoped values."""
-    return get_master_cipher().encrypt(plaintext.encode("utf-8")).decode("ascii")
-
-
-def app_decrypt(ciphertext: str) -> str:
-    """Reverse of ``app_encrypt``; raises ``CryptoError`` on tamper / wrong key."""
-    try:
-        return (
-            get_master_cipher()
-            .decrypt(ciphertext.encode("ascii"))
-            .decode("utf-8")
-        )
-    except InvalidToken as exc:
-        raise CryptoError(
-            "Failed to decrypt app-wide secret; master key mismatch or ciphertext corrupted"
-        ) from exc

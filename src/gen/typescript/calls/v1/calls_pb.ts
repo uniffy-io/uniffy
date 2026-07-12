@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file calls/v1/calls.proto.
  */
 export const file_calls_v1_calls: GenFile = /*@__PURE__*/
-  fileDesc("ChRjYWxscy92MS9jYWxscy5wcm90bxIIY2FsbHMudjEi+QIKBENhbGwSCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhIKCmNoYW5uZWxfaWQYAyABKAkSJQoJY2FsbF90eXBlGAQgASgOMhIuY2FsbHMudjEuQ2FsbFR5cGUSGQoRaW5pdGlhdG9yX3VzZXJfaWQYBSABKAkSFAoMaG9zdF91c2VyX2lkGAYgASgJEi4KCnN0YXJ0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjEKCGVuZGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjAKCmVuZF9yZWFzb24YCSABKA4yFy5jYWxscy52MS5DYWxsRW5kUmVhc29uSAGIAQESLwoMcGFydGljaXBhbnRzGAogAygLMhkuY2FsbHMudjEuQ2FsbFBhcnRpY2lwYW50QgsKCV9lbmRlZF9hdEINCgtfZW5kX3JlYXNvbiKlAgoPQ2FsbFBhcnRpY2lwYW50Eg8KB3VzZXJfaWQYASABKAkSEQoJZGV2aWNlX2lkGAIgASgJEhAKCGlkZW50aXR5GAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRIXCgphdmF0YXJfdXJsGAUgASgJSACIAQESGQoMZGV2aWNlX2xhYmVsGAYgASgJSAGIAQESLQoJam9pbmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgttaWNfZW5hYmxlZBgIIAEoCBIWCg5jYW1lcmFfZW5hYmxlZBgJIAEoCBIWCg5zY3JlZW5fc2hhcmluZxgKIAEoCEINCgtfYXZhdGFyX3VybEIPCg1fZGV2aWNlX2xhYmVsIoEBChNJbml0aWF0ZUNhbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpjaGFubmVsX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIZCgxkZXZpY2VfbGFiZWwYBCABKAlIAIgBAUIPCg1fZGV2aWNlX2xhYmVsInQKFEluaXRpYXRlQ2FsbFJlc3BvbnNlEhwKBGNhbGwYASABKAsyDi5jYWxscy52MS5DYWxsEg4KBndzX3VybBgCIAEoCRIVCg1saXZla2l0X3Rva2VuGAMgASgJEhcKD2pvaW5lZF9leGlzdGluZxgEIAEoCCJ6Cg9Kb2luQ2FsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJEhkKDGRldmljZV9sYWJlbBgEIAEoCUgAiAEBQg8KDV9kZXZpY2VfbGFiZWwiVwoQSm9pbkNhbGxSZXNwb25zZRIcCgRjYWxsGAEgASgLMg4uY2FsbHMudjEuQ2FsbBIOCgZ3c191cmwYAiABKAkSFQoNbGl2ZWtpdF90b2tlbhgDIAEoCSJPChBMZWF2ZUNhbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYWxsX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCSIkChFMZWF2ZUNhbGxSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIjoKDkVuZENhbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYWxsX2lkGAIgASgJIiIKD0VuZENhbGxSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIlYKF1JlZnJlc2hDYWxsVG9rZW5SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYWxsX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCSIxChhSZWZyZXNoQ2FsbFRva2VuUmVzcG9uc2USFQoNbGl2ZWtpdF90b2tlbhgBIAEoCSJDChRHZXRBY3RpdmVDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKY2hhbm5lbF9pZBgCIAEoCSJDChVHZXRBY3RpdmVDYWxsUmVzcG9uc2USIQoEY2FsbBgBIAEoCzIOLmNhbGxzLnYxLkNhbGxIAIgBAUIHCgVfY2FsbCIxChZMaXN0QWN0aXZlQ2FsbHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSI4ChdMaXN0QWN0aXZlQ2FsbHNSZXNwb25zZRIdCgVjYWxscxgBIAMoCzIOLmNhbGxzLnYxLkNhbGwiPgoSRGVjbGluZUNhbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYWxsX2lkGAIgASgJIiYKE0RlY2xpbmVDYWxsUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJUChZLaWNrUGFydGljaXBhbnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYWxsX2lkGAIgASgJEhAKCGlkZW50aXR5GAMgASgJIioKF0tpY2tQYXJ0aWNpcGFudFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiVAoWTXV0ZVBhcnRpY2lwYW50UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIQCghpZGVudGl0eRgDIAEoCSIqChdNdXRlUGFydGljaXBhbnRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIpsBChdSZXBvcnRNZWRpYVN0YXRlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSEwoLbWljX2VuYWJsZWQYBCABKAgSFgoOY2FtZXJhX2VuYWJsZWQYBSABKAgSFgoOc2NyZWVuX3NoYXJpbmcYBiABKAgiKwoYUmVwb3J0TWVkaWFTdGF0ZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgqagoIQ2FsbFR5cGUSGQoVQ0FMTF9UWVBFX1VOU1BFQ0lGSUVEEAASFAoQQ0FMTF9UWVBFX0RJUkVDVBABEhYKEkNBTExfVFlQRV9HUk9VUF9ETRACEhUKEUNBTExfVFlQRV9DSEFOTkVMEAMq2AEKDUNhbGxFbmRSZWFzb24SHwobQ0FMTF9FTkRfUkVBU09OX1VOU1BFQ0lGSUVEEAASHgoaQ0FMTF9FTkRfUkVBU09OX0hPU1RfRU5ERUQQARIcChhDQUxMX0VORF9SRUFTT05fQUxMX0xFRlQQAhIgChxDQUxMX0VORF9SRUFTT05fTUFYX0RVUkFUSU9OEAMSIAocQ0FMTF9FTkRfUkVBU09OX1NPTE9fVElNRU9VVBAEEiQKIENBTExfRU5EX1JFQVNPTl9DSEFOTkVMX0FSQ0hJVkVEEAUygQcKC0NhbGxTZXJ2aWNlEk0KDEluaXRpYXRlQ2FsbBIdLmNhbGxzLnYxLkluaXRpYXRlQ2FsbFJlcXVlc3QaHi5jYWxscy52MS5Jbml0aWF0ZUNhbGxSZXNwb25zZRJBCghKb2luQ2FsbBIZLmNhbGxzLnYxLkpvaW5DYWxsUmVxdWVzdBoaLmNhbGxzLnYxLkpvaW5DYWxsUmVzcG9uc2USRAoJTGVhdmVDYWxsEhouY2FsbHMudjEuTGVhdmVDYWxsUmVxdWVzdBobLmNhbGxzLnYxLkxlYXZlQ2FsbFJlc3BvbnNlEj4KB0VuZENhbGwSGC5jYWxscy52MS5FbmRDYWxsUmVxdWVzdBoZLmNhbGxzLnYxLkVuZENhbGxSZXNwb25zZRJZChBSZWZyZXNoQ2FsbFRva2VuEiEuY2FsbHMudjEuUmVmcmVzaENhbGxUb2tlblJlcXVlc3QaIi5jYWxscy52MS5SZWZyZXNoQ2FsbFRva2VuUmVzcG9uc2USUAoNR2V0QWN0aXZlQ2FsbBIeLmNhbGxzLnYxLkdldEFjdGl2ZUNhbGxSZXF1ZXN0Gh8uY2FsbHMudjEuR2V0QWN0aXZlQ2FsbFJlc3BvbnNlElYKD0xpc3RBY3RpdmVDYWxscxIgLmNhbGxzLnYxLkxpc3RBY3RpdmVDYWxsc1JlcXVlc3QaIS5jYWxscy52MS5MaXN0QWN0aXZlQ2FsbHNSZXNwb25zZRJKCgtEZWNsaW5lQ2FsbBIcLmNhbGxzLnYxLkRlY2xpbmVDYWxsUmVxdWVzdBodLmNhbGxzLnYxLkRlY2xpbmVDYWxsUmVzcG9uc2USVgoPS2lja1BhcnRpY2lwYW50EiAuY2FsbHMudjEuS2lja1BhcnRpY2lwYW50UmVxdWVzdBohLmNhbGxzLnYxLktpY2tQYXJ0aWNpcGFudFJlc3BvbnNlElYKD011dGVQYXJ0aWNpcGFudBIgLmNhbGxzLnYxLk11dGVQYXJ0aWNpcGFudFJlcXVlc3QaIS5jYWxscy52MS5NdXRlUGFydGljaXBhbnRSZXNwb25zZRJZChBSZXBvcnRNZWRpYVN0YXRlEiEuY2FsbHMudjEuUmVwb3J0TWVkaWFTdGF0ZVJlcXVlc3QaIi5jYWxscy52MS5SZXBvcnRNZWRpYVN0YXRlUmVzcG9uc2VCOVo3Z2l0aHViLmNvbS9BdGhlbm5hTWluZC91bmlmZnktcHJvdG8tZ28vY2FsbHMvdjE7Y2FsbHN2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("ChRjYWxscy92MS9jYWxscy5wcm90bxIIY2FsbHMudjEi+QIKBENhbGwSCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhIKCmNoYW5uZWxfaWQYAyABKAkSJQoJY2FsbF90eXBlGAQgASgOMhIuY2FsbHMudjEuQ2FsbFR5cGUSGQoRaW5pdGlhdG9yX3VzZXJfaWQYBSABKAkSFAoMaG9zdF91c2VyX2lkGAYgASgJEi4KCnN0YXJ0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjEKCGVuZGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjAKCmVuZF9yZWFzb24YCSABKA4yFy5jYWxscy52MS5DYWxsRW5kUmVhc29uSAGIAQESLwoMcGFydGljaXBhbnRzGAogAygLMhkuY2FsbHMudjEuQ2FsbFBhcnRpY2lwYW50QgsKCV9lbmRlZF9hdEINCgtfZW5kX3JlYXNvbiKlAgoPQ2FsbFBhcnRpY2lwYW50Eg8KB3VzZXJfaWQYASABKAkSEQoJZGV2aWNlX2lkGAIgASgJEhAKCGlkZW50aXR5GAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRIXCgphdmF0YXJfdXJsGAUgASgJSACIAQESGQoMZGV2aWNlX2xhYmVsGAYgASgJSAGIAQESLQoJam9pbmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgttaWNfZW5hYmxlZBgIIAEoCBIWCg5jYW1lcmFfZW5hYmxlZBgJIAEoCBIWCg5zY3JlZW5fc2hhcmluZxgKIAEoCEINCgtfYXZhdGFyX3VybEIPCg1fZGV2aWNlX2xhYmVsIoEBChNJbml0aWF0ZUNhbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpjaGFubmVsX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIZCgxkZXZpY2VfbGFiZWwYBCABKAlIAIgBAUIPCg1fZGV2aWNlX2xhYmVsIrQBChRJbml0aWF0ZUNhbGxSZXNwb25zZRIcCgRjYWxsGAEgASgLMg4uY2FsbHMudjEuQ2FsbBIOCgZ3c191cmwYAiABKAkSFQoNbGl2ZWtpdF90b2tlbhgDIAEoCRIXCg9qb2luZWRfZXhpc3RpbmcYBCABKAgSPgoYc2NyZWVuX3NoYXJlX3F1YWxpdHlfY2FwGAUgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5InoKD0pvaW5DYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSGQoMZGV2aWNlX2xhYmVsGAQgASgJSACIAQFCDwoNX2RldmljZV9sYWJlbCKXAQoQSm9pbkNhbGxSZXNwb25zZRIcCgRjYWxsGAEgASgLMg4uY2FsbHMudjEuQ2FsbBIOCgZ3c191cmwYAiABKAkSFQoNbGl2ZWtpdF90b2tlbhgDIAEoCRI+ChhzY3JlZW5fc2hhcmVfcXVhbGl0eV9jYXAYBCABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkiTwoQTGVhdmVDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkiJAoRTGVhdmVDYWxsUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCI6Cg5FbmRDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCSIiCg9FbmRDYWxsUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJWChdSZWZyZXNoQ2FsbFRva2VuUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkiMQoYUmVmcmVzaENhbGxUb2tlblJlc3BvbnNlEhUKDWxpdmVraXRfdG9rZW4YASABKAkiQwoUR2V0QWN0aXZlQ2FsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCmNoYW5uZWxfaWQYAiABKAkiQwoVR2V0QWN0aXZlQ2FsbFJlc3BvbnNlEiEKBGNhbGwYASABKAsyDi5jYWxscy52MS5DYWxsSACIAQFCBwoFX2NhbGwiMQoWTGlzdEFjdGl2ZUNhbGxzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkiOAoXTGlzdEFjdGl2ZUNhbGxzUmVzcG9uc2USHQoFY2FsbHMYASADKAsyDi5jYWxscy52MS5DYWxsIj4KEkRlY2xpbmVDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCSImChNEZWNsaW5lQ2FsbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiVAoWS2lja1BhcnRpY2lwYW50UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIQCghpZGVudGl0eRgDIAEoCSIqChdLaWNrUGFydGljaXBhbnRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIlQKFk11dGVQYXJ0aWNpcGFudFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEAoIaWRlbnRpdHkYAyABKAkiKgoXTXV0ZVBhcnRpY2lwYW50UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKbAQoXUmVwb3J0TWVkaWFTdGF0ZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJEhMKC21pY19lbmFibGVkGAQgASgIEhYKDmNhbWVyYV9lbmFibGVkGAUgASgIEhYKDnNjcmVlbl9zaGFyaW5nGAYgASgIIisKGFJlcG9ydE1lZGlhU3RhdGVSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIswCCg1PcmdDYWxsUG9saWN5EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIVCg1jYWxsc19lbmFibGVkGAIgASgIEhgKEG1heF9wYXJ0aWNpcGFudHMYAyABKAUSHAoUbWF4X2R1cmF0aW9uX21pbnV0ZXMYBCABKAUSRQofbWF4X3NjcmVlbl9zaGFyZV9xdWFsaXR5X2RpcmVjdBgFIAEoDjIcLmNhbGxzLnYxLlNjcmVlblNoYXJlUXVhbGl0eRJECh5tYXhfc2NyZWVuX3NoYXJlX3F1YWxpdHlfZ3JvdXAYBiABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkSRgogbWF4X3NjcmVlbl9zaGFyZV9xdWFsaXR5X2NoYW5uZWwYByABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkiMgoXR2V0T3JnQ2FsbFBvbGljeVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIkMKGEdldE9yZ0NhbGxQb2xpY3lSZXNwb25zZRInCgZwb2xpY3kYASABKAsyFy5jYWxscy52MS5PcmdDYWxsUG9saWN5ItkCChpVcGRhdGVPcmdDYWxsUG9saWN5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFQoNY2FsbHNfZW5hYmxlZBgCIAEoCBIYChBtYXhfcGFydGljaXBhbnRzGAMgASgFEhwKFG1heF9kdXJhdGlvbl9taW51dGVzGAQgASgFEkUKH21heF9zY3JlZW5fc2hhcmVfcXVhbGl0eV9kaXJlY3QYBSABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkSRAoebWF4X3NjcmVlbl9zaGFyZV9xdWFsaXR5X2dyb3VwGAYgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5EkYKIG1heF9zY3JlZW5fc2hhcmVfcXVhbGl0eV9jaGFubmVsGAcgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5IkYKG1VwZGF0ZU9yZ0NhbGxQb2xpY3lSZXNwb25zZRInCgZwb2xpY3kYASABKAsyFy5jYWxscy52MS5PcmdDYWxsUG9saWN5KmoKCENhbGxUeXBlEhkKFUNBTExfVFlQRV9VTlNQRUNJRklFRBAAEhQKEENBTExfVFlQRV9ESVJFQ1QQARIWChJDQUxMX1RZUEVfR1JPVVBfRE0QAhIVChFDQUxMX1RZUEVfQ0hBTk5FTBADKtgBCg1DYWxsRW5kUmVhc29uEh8KG0NBTExfRU5EX1JFQVNPTl9VTlNQRUNJRklFRBAAEh4KGkNBTExfRU5EX1JFQVNPTl9IT1NUX0VOREVEEAESHAoYQ0FMTF9FTkRfUkVBU09OX0FMTF9MRUZUEAISIAocQ0FMTF9FTkRfUkVBU09OX01BWF9EVVJBVElPThADEiAKHENBTExfRU5EX1JFQVNPTl9TT0xPX1RJTUVPVVQQBBIkCiBDQUxMX0VORF9SRUFTT05fQ0hBTk5FTF9BUkNISVZFRBAFKpoBChJTY3JlZW5TaGFyZVF1YWxpdHkSJAogU0NSRUVOX1NIQVJFX1FVQUxJVFlfVU5TUEVDSUZJRUQQABIhCh1TQ1JFRU5fU0hBUkVfUVVBTElUWV9CQUxBTkNFRBABEh0KGVNDUkVFTl9TSEFSRV9RVUFMSVRZX0hJR0gQAhIcChhTQ1JFRU5fU0hBUkVfUVVBTElUWV9NQVgQAzLACAoLQ2FsbFNlcnZpY2USTQoMSW5pdGlhdGVDYWxsEh0uY2FsbHMudjEuSW5pdGlhdGVDYWxsUmVxdWVzdBoeLmNhbGxzLnYxLkluaXRpYXRlQ2FsbFJlc3BvbnNlEkEKCEpvaW5DYWxsEhkuY2FsbHMudjEuSm9pbkNhbGxSZXF1ZXN0GhouY2FsbHMudjEuSm9pbkNhbGxSZXNwb25zZRJECglMZWF2ZUNhbGwSGi5jYWxscy52MS5MZWF2ZUNhbGxSZXF1ZXN0GhsuY2FsbHMudjEuTGVhdmVDYWxsUmVzcG9uc2USPgoHRW5kQ2FsbBIYLmNhbGxzLnYxLkVuZENhbGxSZXF1ZXN0GhkuY2FsbHMudjEuRW5kQ2FsbFJlc3BvbnNlElkKEFJlZnJlc2hDYWxsVG9rZW4SIS5jYWxscy52MS5SZWZyZXNoQ2FsbFRva2VuUmVxdWVzdBoiLmNhbGxzLnYxLlJlZnJlc2hDYWxsVG9rZW5SZXNwb25zZRJQCg1HZXRBY3RpdmVDYWxsEh4uY2FsbHMudjEuR2V0QWN0aXZlQ2FsbFJlcXVlc3QaHy5jYWxscy52MS5HZXRBY3RpdmVDYWxsUmVzcG9uc2USVgoPTGlzdEFjdGl2ZUNhbGxzEiAuY2FsbHMudjEuTGlzdEFjdGl2ZUNhbGxzUmVxdWVzdBohLmNhbGxzLnYxLkxpc3RBY3RpdmVDYWxsc1Jlc3BvbnNlEkoKC0RlY2xpbmVDYWxsEhwuY2FsbHMudjEuRGVjbGluZUNhbGxSZXF1ZXN0Gh0uY2FsbHMudjEuRGVjbGluZUNhbGxSZXNwb25zZRJWCg9LaWNrUGFydGljaXBhbnQSIC5jYWxscy52MS5LaWNrUGFydGljaXBhbnRSZXF1ZXN0GiEuY2FsbHMudjEuS2lja1BhcnRpY2lwYW50UmVzcG9uc2USVgoPTXV0ZVBhcnRpY2lwYW50EiAuY2FsbHMudjEuTXV0ZVBhcnRpY2lwYW50UmVxdWVzdBohLmNhbGxzLnYxLk11dGVQYXJ0aWNpcGFudFJlc3BvbnNlElkKEEdldE9yZ0NhbGxQb2xpY3kSIS5jYWxscy52MS5HZXRPcmdDYWxsUG9saWN5UmVxdWVzdBoiLmNhbGxzLnYxLkdldE9yZ0NhbGxQb2xpY3lSZXNwb25zZRJiChNVcGRhdGVPcmdDYWxsUG9saWN5EiQuY2FsbHMudjEuVXBkYXRlT3JnQ2FsbFBvbGljeVJlcXVlc3QaJS5jYWxscy52MS5VcGRhdGVPcmdDYWxsUG9saWN5UmVzcG9uc2USWQoQUmVwb3J0TWVkaWFTdGF0ZRIhLmNhbGxzLnYxLlJlcG9ydE1lZGlhU3RhdGVSZXF1ZXN0GiIuY2FsbHMudjEuUmVwb3J0TWVkaWFTdGF0ZVJlc3BvbnNlQjlaN2dpdGh1Yi5jb20vQXRoZW5uYU1pbmQvdW5pZmZ5LXByb3RvLWdvL2NhbGxzL3YxO2NhbGxzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message calls.v1.Call
@@ -201,6 +201,13 @@ export type InitiateCallResponse = Message<"calls.v1.InitiateCallResponse"> & {
    * @generated from field: bool joined_existing = 4;
    */
   joinedExisting: boolean;
+
+  /**
+   * Resolved screen-share ceiling for this session (org cap, else per-type default).
+   *
+   * @generated from field: calls.v1.ScreenShareQuality screen_share_quality_cap = 5;
+   */
+  screenShareQualityCap: ScreenShareQuality;
 };
 
 /**
@@ -260,6 +267,13 @@ export type JoinCallResponse = Message<"calls.v1.JoinCallResponse"> & {
    * @generated from field: string livekit_token = 3;
    */
   livekitToken: string;
+
+  /**
+   * Resolved screen-share ceiling for this session (org cap, else per-type default).
+   *
+   * @generated from field: calls.v1.ScreenShareQuality screen_share_quality_cap = 4;
+   */
+  screenShareQualityCap: ScreenShareQuality;
 };
 
 /**
@@ -656,6 +670,154 @@ export const ReportMediaStateResponseSchema: GenMessage<ReportMediaStateResponse
   messageDesc(file_calls_v1_calls, 23);
 
 /**
+ * @generated from message calls.v1.OrgCallPolicy
+ */
+export type OrgCallPolicy = Message<"calls.v1.OrgCallPolicy"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: bool calls_enabled = 2;
+   */
+  callsEnabled: boolean;
+
+  /**
+   * @generated from field: int32 max_participants = 3;
+   */
+  maxParticipants: number;
+
+  /**
+   * @generated from field: int32 max_duration_minutes = 4;
+   */
+  maxDurationMinutes: number;
+
+  /**
+   * Per-call-type screen-share ceilings. UNSPECIFIED = no explicit cap for that
+   * type, so the server falls back to the built-in default.
+   *
+   * @generated from field: calls.v1.ScreenShareQuality max_screen_share_quality_direct = 5;
+   */
+  maxScreenShareQualityDirect: ScreenShareQuality;
+
+  /**
+   * @generated from field: calls.v1.ScreenShareQuality max_screen_share_quality_group = 6;
+   */
+  maxScreenShareQualityGroup: ScreenShareQuality;
+
+  /**
+   * @generated from field: calls.v1.ScreenShareQuality max_screen_share_quality_channel = 7;
+   */
+  maxScreenShareQualityChannel: ScreenShareQuality;
+};
+
+/**
+ * Describes the message calls.v1.OrgCallPolicy.
+ * Use `create(OrgCallPolicySchema)` to create a new message.
+ */
+export const OrgCallPolicySchema: GenMessage<OrgCallPolicy> = /*@__PURE__*/
+  messageDesc(file_calls_v1_calls, 24);
+
+/**
+ * @generated from message calls.v1.GetOrgCallPolicyRequest
+ */
+export type GetOrgCallPolicyRequest = Message<"calls.v1.GetOrgCallPolicyRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * Describes the message calls.v1.GetOrgCallPolicyRequest.
+ * Use `create(GetOrgCallPolicyRequestSchema)` to create a new message.
+ */
+export const GetOrgCallPolicyRequestSchema: GenMessage<GetOrgCallPolicyRequest> = /*@__PURE__*/
+  messageDesc(file_calls_v1_calls, 25);
+
+/**
+ * @generated from message calls.v1.GetOrgCallPolicyResponse
+ */
+export type GetOrgCallPolicyResponse = Message<"calls.v1.GetOrgCallPolicyResponse"> & {
+  /**
+   * @generated from field: calls.v1.OrgCallPolicy policy = 1;
+   */
+  policy?: OrgCallPolicy | undefined;
+};
+
+/**
+ * Describes the message calls.v1.GetOrgCallPolicyResponse.
+ * Use `create(GetOrgCallPolicyResponseSchema)` to create a new message.
+ */
+export const GetOrgCallPolicyResponseSchema: GenMessage<GetOrgCallPolicyResponse> = /*@__PURE__*/
+  messageDesc(file_calls_v1_calls, 26);
+
+/**
+ * @generated from message calls.v1.UpdateOrgCallPolicyRequest
+ */
+export type UpdateOrgCallPolicyRequest = Message<"calls.v1.UpdateOrgCallPolicyRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: bool calls_enabled = 2;
+   */
+  callsEnabled: boolean;
+
+  /**
+   * @generated from field: int32 max_participants = 3;
+   */
+  maxParticipants: number;
+
+  /**
+   * @generated from field: int32 max_duration_minutes = 4;
+   */
+  maxDurationMinutes: number;
+
+  /**
+   * @generated from field: calls.v1.ScreenShareQuality max_screen_share_quality_direct = 5;
+   */
+  maxScreenShareQualityDirect: ScreenShareQuality;
+
+  /**
+   * @generated from field: calls.v1.ScreenShareQuality max_screen_share_quality_group = 6;
+   */
+  maxScreenShareQualityGroup: ScreenShareQuality;
+
+  /**
+   * @generated from field: calls.v1.ScreenShareQuality max_screen_share_quality_channel = 7;
+   */
+  maxScreenShareQualityChannel: ScreenShareQuality;
+};
+
+/**
+ * Describes the message calls.v1.UpdateOrgCallPolicyRequest.
+ * Use `create(UpdateOrgCallPolicyRequestSchema)` to create a new message.
+ */
+export const UpdateOrgCallPolicyRequestSchema: GenMessage<UpdateOrgCallPolicyRequest> = /*@__PURE__*/
+  messageDesc(file_calls_v1_calls, 27);
+
+/**
+ * @generated from message calls.v1.UpdateOrgCallPolicyResponse
+ */
+export type UpdateOrgCallPolicyResponse = Message<"calls.v1.UpdateOrgCallPolicyResponse"> & {
+  /**
+   * @generated from field: calls.v1.OrgCallPolicy policy = 1;
+   */
+  policy?: OrgCallPolicy | undefined;
+};
+
+/**
+ * Describes the message calls.v1.UpdateOrgCallPolicyResponse.
+ * Use `create(UpdateOrgCallPolicyResponseSchema)` to create a new message.
+ */
+export const UpdateOrgCallPolicyResponseSchema: GenMessage<UpdateOrgCallPolicyResponse> = /*@__PURE__*/
+  messageDesc(file_calls_v1_calls, 28);
+
+/**
  * @generated from enum calls.v1.CallType
  */
 export enum CallType {
@@ -726,6 +888,43 @@ export enum CallEndReason {
  */
 export const CallEndReasonSchema: GenEnum<CallEndReason> = /*@__PURE__*/
   enumDesc(file_calls_v1_calls, 1);
+
+/**
+ * Ceiling for the publisher's top screen-share layer. Simulcast still adds lower
+ * rungs under every tier, so viewers on weak networks downshift regardless.
+ * UNSPECIFIED on a policy field means "no explicit cap for that call type"; the
+ * server then falls back to a built-in default (DIRECT to MAX, others to the env
+ * default) and returns the resolved ceiling on join.
+ *
+ * @generated from enum calls.v1.ScreenShareQuality
+ */
+export enum ScreenShareQuality {
+  /**
+   * @generated from enum value: SCREEN_SHARE_QUALITY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SCREEN_SHARE_QUALITY_BALANCED = 1;
+   */
+  BALANCED = 1,
+
+  /**
+   * @generated from enum value: SCREEN_SHARE_QUALITY_HIGH = 2;
+   */
+  HIGH = 2,
+
+  /**
+   * @generated from enum value: SCREEN_SHARE_QUALITY_MAX = 3;
+   */
+  MAX = 3,
+}
+
+/**
+ * Describes the enum calls.v1.ScreenShareQuality.
+ */
+export const ScreenShareQualitySchema: GenEnum<ScreenShareQuality> = /*@__PURE__*/
+  enumDesc(file_calls_v1_calls, 2);
 
 /**
  * CallService manages call lifecycle. Join-shaped RPCs return `ws_url` +
@@ -829,6 +1028,25 @@ export const CallService: GenService<{
     methodKind: "unary";
     input: typeof MuteParticipantRequestSchema;
     output: typeof MuteParticipantResponseSchema;
+  },
+  /**
+   * Org call policy management. Org admin / owner only; gated on membership
+   * role, not the content permission system (this is an org-level power).
+   *
+   * @generated from rpc calls.v1.CallService.GetOrgCallPolicy
+   */
+  getOrgCallPolicy: {
+    methodKind: "unary";
+    input: typeof GetOrgCallPolicyRequestSchema;
+    output: typeof GetOrgCallPolicyResponseSchema;
+  },
+  /**
+   * @generated from rpc calls.v1.CallService.UpdateOrgCallPolicy
+   */
+  updateOrgCallPolicy: {
+    methodKind: "unary";
+    input: typeof UpdateOrgCallPolicyRequestSchema;
+    output: typeof UpdateOrgCallPolicyResponseSchema;
   },
   /**
    * The client reports its own mic/camera/screen state; this is the roster's

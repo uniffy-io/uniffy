@@ -56,6 +56,7 @@ const SecurityPage = lazyImport(() => import('@/features/admin/pages/SecurityPag
 const AuditLogsPage = lazyImport(() => import('@/features/admin/pages/AuditLogsPage'), 'AuditLogsPage');
 const AdminAgentsPage = lazyImport(() => import('@/features/admin/pages/AgentsPage'), 'AgentsPage');
 const StoragePage = lazyImport(() => import('@/features/admin/pages/StoragePage'), 'StoragePage');
+const CallsAdminPage = lazyImport(() => import('@/features/admin/pages/CallsPage'), 'CallsPage');
 
 // Platform (cross-tenant operator surface)
 const PlatformLayout = lazyImport(() => import('@/features/platform/layouts/PlatformLayout'), 'PlatformLayout');
@@ -303,6 +304,7 @@ export function App() {
                             <Route path="security" element={<LazyRoute><SecurityPage /></LazyRoute>} />
                             <Route path="encryption" element={<LazyRoute><EncryptionPage /></LazyRoute>} />
                             <Route path="email" element={<LazyRoute><EmailPage /></LazyRoute>} />
+                            <Route path="calls" element={<LazyRoute><CallsAdminPage /></LazyRoute>} />
                             <Route path="audit-logs" element={<LazyRoute><AuditLogsPage /></LazyRoute>} />
                             <Route path="agents" element={<LazyRoute><AdminAgentsPage /></LazyRoute>} />
                             <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />

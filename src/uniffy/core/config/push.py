@@ -1,7 +1,8 @@
 """VAPID key configuration for Web Push.
 
-Keys are auto-generated on initial DB seed and stored encrypted in
-``application_settings``. Manual generation: ``uv run -m uniffy.scripts.generate_vapid``.
+Keys are auto-generated on initial DB seed and stored in ``deployment_settings``
+under ``namespace='push'`` (the private key encrypted via ``DeploymentCipher``).
+Manual generation: ``uv run -m uniffy.scripts.generate_vapid``.
 """
 
 from dataclasses import dataclass
@@ -29,54 +30,39 @@ def get_vapid_config() -> VapidConfig | None:
 
 
 async def load_vapid_config() -> None:
-    """Load and cache VAPID settings from ``application_settings``; idempotent."""
+    """Load and cache VAPID settings from ``deployment_settings``; idempotent."""
     global _vapid_config
 
     if _vapid_config is not None:
         return
 
     try:
-        from sqlalchemy import select
-
-        from uniffy.core.crypto import app_decrypt
-        from uniffy.core.models.app_settings.application_setting import (
-            ApplicationSetting,
-        )
         from uniffy.db.session import open_session
+        from uniffy.domains.deployment_settings.operations import (
+            DeploymentSettingsOperations,
+        )
 
         async with open_session() as session:
-            result = await session.execute(
-                select(ApplicationSetting).where(
-                    ApplicationSetting.key.in_([
-                        "vapid_private_key",
-                        "vapid_public_key",
-                        "vapid_contact_email",
-                    ])
-                )
-            )
-            rows = {row.key: row for row in result.scalars().all()}
+            ops = DeploymentSettingsOperations(session)
+            rows = await ops.get_namespace("push")
+            public_row = rows.get("vapid_public_key")
+            contact_row = rows.get("vapid_contact_email")
+            private_key = await ops.get_secret("push", "vapid_private_key")
 
-            if len(rows) < 3:
+            if public_row is None or contact_row is None or not private_key:
                 logger.warning(
-                    "VAPID settings not found in database -- "
+                    "VAPID settings not found in deployment_settings -- "
                     "push notifications disabled. "
                     "Run initial seed to generate VAPID keys."
                 )
                 return
 
-            private_key_row = rows["vapid_private_key"]
-            private_key = (
-                app_decrypt(private_key_row.value)
-                if private_key_row.is_encrypted
-                else private_key_row.value
-            )
-
             _vapid_config = VapidConfig(
                 private_key=private_key,
-                public_key=rows["vapid_public_key"].value,
-                contact_email=rows["vapid_contact_email"].value,
+                public_key=str(public_row.value),
+                contact_email=str(contact_row.value),
             )
-            logger.info("VAPID config loaded from application_settings table")
+            logger.info("VAPID config loaded from deployment_settings")
     except Exception:
         logger.opt(exception=True).warning(
             "Failed to load VAPID config from database | push notifications disabled"

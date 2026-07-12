@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
 import type {
   CallData,
   CallParticipantData,
@@ -17,6 +18,8 @@ export interface CallSessionState {
   micEnabled: boolean;
   cameraEnabled: boolean;
   screenSharing: boolean;
+  /** Org-resolved screen-share ceiling for the active session. */
+  screenShareQualityCap: ScreenShareQuality;
 }
 
 interface CallsState {
@@ -34,6 +37,7 @@ const idleSession: CallSessionState = {
   micEnabled: false,
   cameraEnabled: false,
   screenSharing: false,
+  screenShareQualityCap: ScreenShareQuality.BALANCED,
 };
 
 const initialState: CallsState = {
@@ -139,13 +143,18 @@ const callsSlice = createSlice({
     },
     sessionConnecting(
       state,
-      action: PayloadAction<{ callId: string; channelId: string }>,
+      action: PayloadAction<{
+        callId: string;
+        channelId: string;
+        screenShareQualityCap: ScreenShareQuality;
+      }>,
     ) {
       state.session = {
         ...idleSession,
         status: 'connecting',
         callId: action.payload.callId,
         channelId: action.payload.channelId,
+        screenShareQualityCap: action.payload.screenShareQualityCap,
       };
       state.endedInfo = null;
       state.ringInvites = state.ringInvites.filter(

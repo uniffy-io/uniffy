@@ -332,40 +332,29 @@ Use `@phosphor-icons/react` for all icons.
 
 | File | Purpose |
 |------|---------|
-| `/favicon.svg` | Main logo (white, for dark backgrounds) |
+| `/uniffy-symbol.png` | Brand mark (colored cube, transparent) - the in-app logo |
+| `/favicon.svg` | Colored-mark favicon (base64 PNG wrapped in SVG) |
 | `/favicon.ico` | Browser favicon |
 | `/favicon-96x96.png` | PNG favicon |
-| `/apple-touch-icon.png` | iOS home screen icon |
-| `/web-app-manifest-192x192.png` | PWA icon (small) |
-| `/web-app-manifest-512x512.png` | PWA icon (large) |
+| `/apple-touch-icon.png` | iOS home screen icon (mark on Midnight tile) |
+| `/web-app-manifest-192x192.png` | PWA icon, maskable (mark on Midnight tile) |
+| `/web-app-manifest-512x512.png` | PWA icon, maskable (mark on Midnight tile) |
 
-**Theme-aware logo usage:**
+**Logo usage:**
 
-The main logo (`/favicon.svg`) is white/light colored, designed for dark backgrounds. To display it on light backgrounds, use CSS `filter: invert(1)` to make it black.
+The brand mark is a multi-color cube that reads on any background, so it renders the same in dark and light themes. Use the `UniffyLogo` component (`@/components/ui/uniffy-logo`) or reference `/uniffy-symbol.png` directly.
 
 ```typescript
-import { useTheme } from '@/config/theme/ThemeProvider';
+import { UniffyLogo } from '@/components/ui/uniffy-logo';
 
-function MyComponent() {
-  const { resolvedTheme } = useTheme();
-  const isLightTheme = resolvedTheme !== 'dark';
-
-  return (
-    <img
-      src="/favicon.svg"
-      alt="Uniffy"
-      className="w-12 h-12"
-      style={isLightTheme ? { filter: 'invert(1)' } : undefined}
-    />
-  );
-}
+<UniffyLogo className="w-12 h-12" />
 ```
 
 **Rules:**
-- `/favicon.svg` is the canonical source (rather than separate dark/light files)
-- Apply `filter: invert(1)` on light theme to render the logo black
-- On dark theme, display the logo as-is (white)
-- Hardcoding a specific logo color variant tends to drift from the theme
+- `/uniffy-symbol.png` is the canonical in-app mark - transparent, full color, theme-agnostic
+- Do NOT recolor or `invert()` the mark - it is designed to stay colored on both themes
+- Favicons and browser-tab icons use the transparent mark; app/PWA icons sit on a Midnight (`#0d111e`) tile so maskable clipping keeps a solid backdrop
+- Regenerate all icon sizes from `docs/brand/uniffy-symbol.png` rather than editing them by hand
 
 ## Document Titles
 

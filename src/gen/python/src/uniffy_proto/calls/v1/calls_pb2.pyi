@@ -25,6 +25,13 @@ class CallEndReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CALL_END_REASON_MAX_DURATION: _ClassVar[CallEndReason]
     CALL_END_REASON_SOLO_TIMEOUT: _ClassVar[CallEndReason]
     CALL_END_REASON_CHANNEL_ARCHIVED: _ClassVar[CallEndReason]
+
+class ScreenShareQuality(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    SCREEN_SHARE_QUALITY_UNSPECIFIED: _ClassVar[ScreenShareQuality]
+    SCREEN_SHARE_QUALITY_BALANCED: _ClassVar[ScreenShareQuality]
+    SCREEN_SHARE_QUALITY_HIGH: _ClassVar[ScreenShareQuality]
+    SCREEN_SHARE_QUALITY_MAX: _ClassVar[ScreenShareQuality]
 CALL_TYPE_UNSPECIFIED: CallType
 CALL_TYPE_DIRECT: CallType
 CALL_TYPE_GROUP_DM: CallType
@@ -35,6 +42,10 @@ CALL_END_REASON_ALL_LEFT: CallEndReason
 CALL_END_REASON_MAX_DURATION: CallEndReason
 CALL_END_REASON_SOLO_TIMEOUT: CallEndReason
 CALL_END_REASON_CHANNEL_ARCHIVED: CallEndReason
+SCREEN_SHARE_QUALITY_UNSPECIFIED: ScreenShareQuality
+SCREEN_SHARE_QUALITY_BALANCED: ScreenShareQuality
+SCREEN_SHARE_QUALITY_HIGH: ScreenShareQuality
+SCREEN_SHARE_QUALITY_MAX: ScreenShareQuality
 
 class Call(_message.Message):
     __slots__ = ("id", "organization_id", "channel_id", "call_type", "initiator_user_id", "host_user_id", "started_at", "ended_at", "end_reason", "participants")
@@ -97,16 +108,18 @@ class InitiateCallRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., device_id: _Optional[str] = ..., device_label: _Optional[str] = ...) -> None: ...
 
 class InitiateCallResponse(_message.Message):
-    __slots__ = ("call", "ws_url", "livekit_token", "joined_existing")
+    __slots__ = ("call", "ws_url", "livekit_token", "joined_existing", "screen_share_quality_cap")
     CALL_FIELD_NUMBER: _ClassVar[int]
     WS_URL_FIELD_NUMBER: _ClassVar[int]
     LIVEKIT_TOKEN_FIELD_NUMBER: _ClassVar[int]
     JOINED_EXISTING_FIELD_NUMBER: _ClassVar[int]
+    SCREEN_SHARE_QUALITY_CAP_FIELD_NUMBER: _ClassVar[int]
     call: Call
     ws_url: str
     livekit_token: str
     joined_existing: bool
-    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ..., joined_existing: _Optional[bool] = ...) -> None: ...
+    screen_share_quality_cap: ScreenShareQuality
+    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ..., joined_existing: _Optional[bool] = ..., screen_share_quality_cap: _Optional[_Union[ScreenShareQuality, str]] = ...) -> None: ...
 
 class JoinCallRequest(_message.Message):
     __slots__ = ("organization_id", "call_id", "device_id", "device_label")
@@ -121,14 +134,16 @@ class JoinCallRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., call_id: _Optional[str] = ..., device_id: _Optional[str] = ..., device_label: _Optional[str] = ...) -> None: ...
 
 class JoinCallResponse(_message.Message):
-    __slots__ = ("call", "ws_url", "livekit_token")
+    __slots__ = ("call", "ws_url", "livekit_token", "screen_share_quality_cap")
     CALL_FIELD_NUMBER: _ClassVar[int]
     WS_URL_FIELD_NUMBER: _ClassVar[int]
     LIVEKIT_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    SCREEN_SHARE_QUALITY_CAP_FIELD_NUMBER: _ClassVar[int]
     call: Call
     ws_url: str
     livekit_token: str
-    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ...) -> None: ...
+    screen_share_quality_cap: ScreenShareQuality
+    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ..., screen_share_quality_cap: _Optional[_Union[ScreenShareQuality, str]] = ...) -> None: ...
 
 class LeaveCallRequest(_message.Message):
     __slots__ = ("organization_id", "call_id", "device_id")
@@ -269,3 +284,57 @@ class ReportMediaStateResponse(_message.Message):
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     success: bool
     def __init__(self, success: _Optional[bool] = ...) -> None: ...
+
+class OrgCallPolicy(_message.Message):
+    __slots__ = ("organization_id", "calls_enabled", "max_participants", "max_duration_minutes", "max_screen_share_quality_direct", "max_screen_share_quality_group", "max_screen_share_quality_channel")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALLS_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    MAX_PARTICIPANTS_FIELD_NUMBER: _ClassVar[int]
+    MAX_DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    MAX_SCREEN_SHARE_QUALITY_DIRECT_FIELD_NUMBER: _ClassVar[int]
+    MAX_SCREEN_SHARE_QUALITY_GROUP_FIELD_NUMBER: _ClassVar[int]
+    MAX_SCREEN_SHARE_QUALITY_CHANNEL_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calls_enabled: bool
+    max_participants: int
+    max_duration_minutes: int
+    max_screen_share_quality_direct: ScreenShareQuality
+    max_screen_share_quality_group: ScreenShareQuality
+    max_screen_share_quality_channel: ScreenShareQuality
+    def __init__(self, organization_id: _Optional[str] = ..., calls_enabled: _Optional[bool] = ..., max_participants: _Optional[int] = ..., max_duration_minutes: _Optional[int] = ..., max_screen_share_quality_direct: _Optional[_Union[ScreenShareQuality, str]] = ..., max_screen_share_quality_group: _Optional[_Union[ScreenShareQuality, str]] = ..., max_screen_share_quality_channel: _Optional[_Union[ScreenShareQuality, str]] = ...) -> None: ...
+
+class GetOrgCallPolicyRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class GetOrgCallPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: OrgCallPolicy
+    def __init__(self, policy: _Optional[_Union[OrgCallPolicy, _Mapping]] = ...) -> None: ...
+
+class UpdateOrgCallPolicyRequest(_message.Message):
+    __slots__ = ("organization_id", "calls_enabled", "max_participants", "max_duration_minutes", "max_screen_share_quality_direct", "max_screen_share_quality_group", "max_screen_share_quality_channel")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CALLS_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    MAX_PARTICIPANTS_FIELD_NUMBER: _ClassVar[int]
+    MAX_DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    MAX_SCREEN_SHARE_QUALITY_DIRECT_FIELD_NUMBER: _ClassVar[int]
+    MAX_SCREEN_SHARE_QUALITY_GROUP_FIELD_NUMBER: _ClassVar[int]
+    MAX_SCREEN_SHARE_QUALITY_CHANNEL_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    calls_enabled: bool
+    max_participants: int
+    max_duration_minutes: int
+    max_screen_share_quality_direct: ScreenShareQuality
+    max_screen_share_quality_group: ScreenShareQuality
+    max_screen_share_quality_channel: ScreenShareQuality
+    def __init__(self, organization_id: _Optional[str] = ..., calls_enabled: _Optional[bool] = ..., max_participants: _Optional[int] = ..., max_duration_minutes: _Optional[int] = ..., max_screen_share_quality_direct: _Optional[_Union[ScreenShareQuality, str]] = ..., max_screen_share_quality_group: _Optional[_Union[ScreenShareQuality, str]] = ..., max_screen_share_quality_channel: _Optional[_Union[ScreenShareQuality, str]] = ...) -> None: ...
+
+class UpdateOrgCallPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: OrgCallPolicy
+    def __init__(self, policy: _Optional[_Union[OrgCallPolicy, _Mapping]] = ...) -> None: ...

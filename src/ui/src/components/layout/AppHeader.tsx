@@ -7,6 +7,7 @@ import { GlobalSearch } from '@/features/search';
 import { NotificationBell } from '@/features/notifications';
 import { CalendarQuickView } from '@/features/calendar';
 import { RecordingNavTrigger } from '@/features/recording';
+import { CallHeaderPill } from '@/features/calls/components/CallHeaderPill';
 import { cn } from '@/shared/utils/cn';
 import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
@@ -55,10 +56,7 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
           ? "border-2 border-primary/30"
           : "border border-border text-muted-foreground group-hover:border-transparent group-hover:text-primary"
       )}>
-        <UniffyLogo
-          className="w-5 h-5 transition-all duration-500"
-          variant={isActive ? 'dark' : undefined}
-        />
+        <UniffyLogo className="w-5 h-5 transition-all duration-500" />
       </span>
 
       <span className={cn(
@@ -218,6 +216,7 @@ export function AppHeader() {
             {isMobile && (
               <MobileSearchButton />
             )}
+            <CallHeaderPill />
             <RecordingNavTrigger />
             <CalendarQuickView />
             <NotificationBell />

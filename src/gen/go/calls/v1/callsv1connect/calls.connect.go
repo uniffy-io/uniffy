@@ -59,6 +59,12 @@ const (
 	// CallServiceMuteParticipantProcedure is the fully-qualified name of the CallService's
 	// MuteParticipant RPC.
 	CallServiceMuteParticipantProcedure = "/calls.v1.CallService/MuteParticipant"
+	// CallServiceGetOrgCallPolicyProcedure is the fully-qualified name of the CallService's
+	// GetOrgCallPolicy RPC.
+	CallServiceGetOrgCallPolicyProcedure = "/calls.v1.CallService/GetOrgCallPolicy"
+	// CallServiceUpdateOrgCallPolicyProcedure is the fully-qualified name of the CallService's
+	// UpdateOrgCallPolicy RPC.
+	CallServiceUpdateOrgCallPolicyProcedure = "/calls.v1.CallService/UpdateOrgCallPolicy"
 	// CallServiceReportMediaStateProcedure is the fully-qualified name of the CallService's
 	// ReportMediaState RPC.
 	CallServiceReportMediaStateProcedure = "/calls.v1.CallService/ReportMediaState"
@@ -84,6 +90,10 @@ type CallServiceClient interface {
 	DeclineCall(context.Context, *connect.Request[v1.DeclineCallRequest]) (*connect.Response[v1.DeclineCallResponse], error)
 	KickParticipant(context.Context, *connect.Request[v1.KickParticipantRequest]) (*connect.Response[v1.KickParticipantResponse], error)
 	MuteParticipant(context.Context, *connect.Request[v1.MuteParticipantRequest]) (*connect.Response[v1.MuteParticipantResponse], error)
+	// Org call policy management. Org admin / owner only; gated on membership
+	// role, not the content permission system (this is an org-level power).
+	GetOrgCallPolicy(context.Context, *connect.Request[v1.GetOrgCallPolicyRequest]) (*connect.Response[v1.GetOrgCallPolicyResponse], error)
+	UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -162,6 +172,18 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(callServiceMethods.ByName("MuteParticipant")),
 			connect.WithClientOptions(opts...),
 		),
+		getOrgCallPolicy: connect.NewClient[v1.GetOrgCallPolicyRequest, v1.GetOrgCallPolicyResponse](
+			httpClient,
+			baseURL+CallServiceGetOrgCallPolicyProcedure,
+			connect.WithSchema(callServiceMethods.ByName("GetOrgCallPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrgCallPolicy: connect.NewClient[v1.UpdateOrgCallPolicyRequest, v1.UpdateOrgCallPolicyResponse](
+			httpClient,
+			baseURL+CallServiceUpdateOrgCallPolicyProcedure,
+			connect.WithSchema(callServiceMethods.ByName("UpdateOrgCallPolicy")),
+			connect.WithClientOptions(opts...),
+		),
 		reportMediaState: connect.NewClient[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse](
 			httpClient,
 			baseURL+CallServiceReportMediaStateProcedure,
@@ -173,17 +195,19 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // callServiceClient implements CallServiceClient.
 type callServiceClient struct {
-	initiateCall     *connect.Client[v1.InitiateCallRequest, v1.InitiateCallResponse]
-	joinCall         *connect.Client[v1.JoinCallRequest, v1.JoinCallResponse]
-	leaveCall        *connect.Client[v1.LeaveCallRequest, v1.LeaveCallResponse]
-	endCall          *connect.Client[v1.EndCallRequest, v1.EndCallResponse]
-	refreshCallToken *connect.Client[v1.RefreshCallTokenRequest, v1.RefreshCallTokenResponse]
-	getActiveCall    *connect.Client[v1.GetActiveCallRequest, v1.GetActiveCallResponse]
-	listActiveCalls  *connect.Client[v1.ListActiveCallsRequest, v1.ListActiveCallsResponse]
-	declineCall      *connect.Client[v1.DeclineCallRequest, v1.DeclineCallResponse]
-	kickParticipant  *connect.Client[v1.KickParticipantRequest, v1.KickParticipantResponse]
-	muteParticipant  *connect.Client[v1.MuteParticipantRequest, v1.MuteParticipantResponse]
-	reportMediaState *connect.Client[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse]
+	initiateCall        *connect.Client[v1.InitiateCallRequest, v1.InitiateCallResponse]
+	joinCall            *connect.Client[v1.JoinCallRequest, v1.JoinCallResponse]
+	leaveCall           *connect.Client[v1.LeaveCallRequest, v1.LeaveCallResponse]
+	endCall             *connect.Client[v1.EndCallRequest, v1.EndCallResponse]
+	refreshCallToken    *connect.Client[v1.RefreshCallTokenRequest, v1.RefreshCallTokenResponse]
+	getActiveCall       *connect.Client[v1.GetActiveCallRequest, v1.GetActiveCallResponse]
+	listActiveCalls     *connect.Client[v1.ListActiveCallsRequest, v1.ListActiveCallsResponse]
+	declineCall         *connect.Client[v1.DeclineCallRequest, v1.DeclineCallResponse]
+	kickParticipant     *connect.Client[v1.KickParticipantRequest, v1.KickParticipantResponse]
+	muteParticipant     *connect.Client[v1.MuteParticipantRequest, v1.MuteParticipantResponse]
+	getOrgCallPolicy    *connect.Client[v1.GetOrgCallPolicyRequest, v1.GetOrgCallPolicyResponse]
+	updateOrgCallPolicy *connect.Client[v1.UpdateOrgCallPolicyRequest, v1.UpdateOrgCallPolicyResponse]
+	reportMediaState    *connect.Client[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse]
 }
 
 // InitiateCall calls calls.v1.CallService.InitiateCall.
@@ -236,6 +260,16 @@ func (c *callServiceClient) MuteParticipant(ctx context.Context, req *connect.Re
 	return c.muteParticipant.CallUnary(ctx, req)
 }
 
+// GetOrgCallPolicy calls calls.v1.CallService.GetOrgCallPolicy.
+func (c *callServiceClient) GetOrgCallPolicy(ctx context.Context, req *connect.Request[v1.GetOrgCallPolicyRequest]) (*connect.Response[v1.GetOrgCallPolicyResponse], error) {
+	return c.getOrgCallPolicy.CallUnary(ctx, req)
+}
+
+// UpdateOrgCallPolicy calls calls.v1.CallService.UpdateOrgCallPolicy.
+func (c *callServiceClient) UpdateOrgCallPolicy(ctx context.Context, req *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error) {
+	return c.updateOrgCallPolicy.CallUnary(ctx, req)
+}
+
 // ReportMediaState calls calls.v1.CallService.ReportMediaState.
 func (c *callServiceClient) ReportMediaState(ctx context.Context, req *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {
 	return c.reportMediaState.CallUnary(ctx, req)
@@ -261,6 +295,10 @@ type CallServiceHandler interface {
 	DeclineCall(context.Context, *connect.Request[v1.DeclineCallRequest]) (*connect.Response[v1.DeclineCallResponse], error)
 	KickParticipant(context.Context, *connect.Request[v1.KickParticipantRequest]) (*connect.Response[v1.KickParticipantResponse], error)
 	MuteParticipant(context.Context, *connect.Request[v1.MuteParticipantRequest]) (*connect.Response[v1.MuteParticipantResponse], error)
+	// Org call policy management. Org admin / owner only; gated on membership
+	// role, not the content permission system (this is an org-level power).
+	GetOrgCallPolicy(context.Context, *connect.Request[v1.GetOrgCallPolicyRequest]) (*connect.Response[v1.GetOrgCallPolicyResponse], error)
+	UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -335,6 +373,18 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(callServiceMethods.ByName("MuteParticipant")),
 		connect.WithHandlerOptions(opts...),
 	)
+	callServiceGetOrgCallPolicyHandler := connect.NewUnaryHandler(
+		CallServiceGetOrgCallPolicyProcedure,
+		svc.GetOrgCallPolicy,
+		connect.WithSchema(callServiceMethods.ByName("GetOrgCallPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	callServiceUpdateOrgCallPolicyHandler := connect.NewUnaryHandler(
+		CallServiceUpdateOrgCallPolicyProcedure,
+		svc.UpdateOrgCallPolicy,
+		connect.WithSchema(callServiceMethods.ByName("UpdateOrgCallPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
 	callServiceReportMediaStateHandler := connect.NewUnaryHandler(
 		CallServiceReportMediaStateProcedure,
 		svc.ReportMediaState,
@@ -363,6 +413,10 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 			callServiceKickParticipantHandler.ServeHTTP(w, r)
 		case CallServiceMuteParticipantProcedure:
 			callServiceMuteParticipantHandler.ServeHTTP(w, r)
+		case CallServiceGetOrgCallPolicyProcedure:
+			callServiceGetOrgCallPolicyHandler.ServeHTTP(w, r)
+		case CallServiceUpdateOrgCallPolicyProcedure:
+			callServiceUpdateOrgCallPolicyHandler.ServeHTTP(w, r)
 		case CallServiceReportMediaStateProcedure:
 			callServiceReportMediaStateHandler.ServeHTTP(w, r)
 		default:
@@ -412,6 +466,14 @@ func (UnimplementedCallServiceHandler) KickParticipant(context.Context, *connect
 
 func (UnimplementedCallServiceHandler) MuteParticipant(context.Context, *connect.Request[v1.MuteParticipantRequest]) (*connect.Response[v1.MuteParticipantResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.MuteParticipant is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) GetOrgCallPolicy(context.Context, *connect.Request[v1.GetOrgCallPolicyRequest]) (*connect.Response[v1.GetOrgCallPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.GetOrgCallPolicy is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.UpdateOrgCallPolicy is not implemented"))
 }
 
 func (UnimplementedCallServiceHandler) ReportMediaState(context.Context, *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {

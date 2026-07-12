@@ -1,9 +1,8 @@
-"""Runtime settings loader with a small in-process cache.
+"""Per-org agent runtime settings, backed by the generic ``org_settings`` store.
 
-Reads ``agents_runtime_settings`` rows by ``organization_id``. Missing
-rows fall through to module-level defaults from
-``core.models.agents.runtime_settings``. Failures are swallowed so a
-broken DB or missing column never blocks a send.
+Stored as one JSON blob under ``namespace='agents'``, ``key='runtime'``. A missing
+row (or a broken read) falls through to module defaults so a config hiccup never
+blocks a send. A small in-process cache keeps the hot pre-flight read cheap.
 """
 
 from __future__ import annotations
@@ -13,17 +12,19 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.agents.runtime_settings import (
-    DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-    DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS,
-    DEFAULT_SEND_DEADLINE_SECONDS,
-    AgentRuntimeSettings,
-)
+from uniffy.domains.org_settings.operations import OrgSettingsOperations
 
 logger = logger.bind(component="agents.runtime.settings")
+
+AGENTS_NAMESPACE = "agents"
+RUNTIME_KEY = "runtime"
+
+DEFAULT_SEND_DEADLINE_SECONDS = 300
+DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5
+DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS = 60
+DEFAULT_DISPLAY_CURRENCY = "USD"
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,7 @@ class ResolvedRuntimeSettings:
     resume_enabled: bool
     circuit_breaker_failure_threshold: int
     circuit_breaker_recovery_seconds: int
+    display_currency: str
 
 
 _CACHE_TTL_SECONDS = 30.0
@@ -48,6 +50,23 @@ def _defaults() -> ResolvedRuntimeSettings:
         resume_enabled=True,
         circuit_breaker_failure_threshold=DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
         circuit_breaker_recovery_seconds=DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS,
+        display_currency=DEFAULT_DISPLAY_CURRENCY,
+    )
+
+
+def _from_blob(blob: dict) -> ResolvedRuntimeSettings:
+    deadline = blob.get("send_deadline_seconds")
+    return ResolvedRuntimeSettings(
+        send_deadline_seconds=int(deadline) if deadline else DEFAULT_SEND_DEADLINE_SECONDS,
+        failover_enabled=bool(blob.get("failover_enabled", True)),
+        resume_enabled=bool(blob.get("resume_enabled", True)),
+        circuit_breaker_failure_threshold=int(
+            blob.get("circuit_breaker_failure_threshold", DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD)
+        ),
+        circuit_breaker_recovery_seconds=int(
+            blob.get("circuit_breaker_recovery_seconds", DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS)
+        ),
+        display_currency=str(blob.get("display_currency") or DEFAULT_DISPLAY_CURRENCY),
     )
 
 
@@ -63,26 +82,18 @@ async def get_runtime_settings(
             return value
 
     try:
-        result = await session.execute(
-            select(AgentRuntimeSettings).where(
-                AgentRuntimeSettings.organization_id == organization_id
-            )
+        rows = await OrgSettingsOperations(session).get_namespace(
+            organization_id, AGENTS_NAMESPACE
         )
-        row = result.scalar_one_or_none()
+        row = rows.get(RUNTIME_KEY)
     except Exception:
         logger.opt(exception=True).warning("Failed to load runtime settings; using defaults")
         return _defaults()
 
-    if row is None:
+    if row is None or not isinstance(row.value, dict):
         resolved = _defaults()
     else:
-        resolved = ResolvedRuntimeSettings(
-            send_deadline_seconds=row.send_deadline_seconds or DEFAULT_SEND_DEADLINE_SECONDS,
-            failover_enabled=row.failover_enabled,
-            resume_enabled=row.resume_enabled,
-            circuit_breaker_failure_threshold=row.circuit_breaker_failure_threshold,
-            circuit_breaker_recovery_seconds=row.circuit_breaker_recovery_seconds,
-        )
+        resolved = _from_blob(row.value)
 
     _cache[organization_id] = (time.monotonic(), resolved)
     return resolved

@@ -52,8 +52,7 @@ service BudgetsService {
   // Delete a single (from -> to) rate. Org admin only.
   rpc DeleteCurrencyRate(DeleteCurrencyRateRequest) returns (DeleteCurrencyRateResponse) {}
 
-  // Set the org's display currency (writes to AgentRuntimeSettings).
-  // Org admin only.
+  // Set the org's display currency. Org admin only.
   rpc SetDisplayCurrency(SetDisplayCurrencyRequest) returns (SetDisplayCurrencyResponse) {}
 
   // Get the org's display currency. Falls back to the module default

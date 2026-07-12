@@ -37,7 +37,7 @@ class SettingsOperations:
     ) -> SettingsProfile:
         existing = await self._get_profile_by_name(user_id, name)
         if existing:
-            raise ValidationError(f"Profile with name '{name}' already exists")
+            raise ValidationError("name", f"Profile with name '{name}' already exists")
 
         if is_default:
             await self._unset_default_profiles(user_id)
@@ -114,7 +114,7 @@ class SettingsOperations:
         if name is not None and name != profile.name:
             existing = await self._get_profile_by_name(user_id, name)
             if existing:
-                raise ValidationError(f"Profile with name '{name}' already exists")
+                raise ValidationError("name", f"Profile with name '{name}' already exists")
             profile.name = name
 
         if appearance is not None:
@@ -155,7 +155,9 @@ class SettingsOperations:
 
         count = await self._count_user_profiles(user_id)
         if count <= 1:
-            raise ValidationError("Cannot delete the only profile. Create another profile first.")
+            raise ValidationError(
+                "profile_id", "Cannot delete the only profile. Create another profile first."
+            )
 
         await self.session.delete(profile)
         await self.session.commit()

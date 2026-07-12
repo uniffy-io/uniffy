@@ -975,8 +975,7 @@ export const BudgetsService: GenService<{
     output: typeof DeleteCurrencyRateResponseSchema;
   },
   /**
-   * Set the org's display currency (writes to AgentRuntimeSettings).
-   * Org admin only.
+   * Set the org's display currency. Org admin only.
    *
    * @generated from rpc agents.v1.BudgetsService.SetDisplayCurrency
    */
