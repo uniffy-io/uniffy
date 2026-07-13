@@ -28,9 +28,24 @@ NODE_SERVICES = {
 PASSTHROUGH = {"ignore_unknown_options": True}
 
 
+# Injected into every command so container entrypoints can drop to the host
+# user - bind-mounted writes then stay host-owned instead of root-owned.
+HOST_IDS = (
+    {"HOST_UID": str(os.getuid()), "HOST_GID": str(os.getgid())} if hasattr(os, "getuid") else {}
+)
+
+# `compose exec` bypasses the entrypoint privilege drop, so exec'd commands
+# pass the user explicitly. HOME points at the dir the entrypoint created.
+EXEC_AS_HOST = (
+    ["--user", f"{os.getuid()}:{os.getgid()}", "--env", "HOME=/tmp/home"]
+    if hasattr(os, "getuid")
+    else []
+)
+
+
 def sh(cmd: list[str], cwd: Path | None = None, check: bool = True, env: dict | None = None) -> int:
     click.secho(f"$ {shlex.join(cmd)}", fg="cyan", err=True)
-    full_env = {**os.environ, **env} if env else None
+    full_env = {**os.environ, **HOST_IDS, **(env or {})}
     return subprocess.run(cmd, cwd=cwd or ROOT, check=check, env=full_env).returncode
 
 
@@ -53,14 +68,14 @@ def container_running(service: str) -> bool:
 def docker_pnpm(service: str, args: list[str]) -> None:
     svc, filter_, profile = NODE_SERVICES[service]
     if container_running(svc):
-        sh(compose("exec", svc, "pnpm", "--filter", filter_, *args))
+        sh(compose("exec", *EXEC_AS_HOST, svc, "pnpm", "--filter", filter_, *args))
     else:
         sh(compose("run", "--rm", "--no-deps", svc, "pnpm", "--filter", filter_, *args, profiles=[profile]))
 
 
 def docker_uv(args: list[str]) -> None:
     if container_running("backend"):
-        sh(compose("exec", "backend", "uv", *args))
+        sh(compose("exec", *EXEC_AS_HOST, "backend", "uv", *args))
     else:
         sh(compose("run", "--rm", "--no-deps", "backend", "uv", *args, profiles=["dev"]))
 
@@ -191,10 +206,22 @@ profiles_option = click.option(
 
 @stack.command("up")
 @profiles_option
-@click.option("--detach", "-d", is_flag=True)
-def stack_up(profiles, detach):
-    """Start the containerized stack (edge on :80, direct ports for tooling)."""
-    sh(compose("up", *(["-d"] if detach else []), profiles=list(profiles)))
+@click.option("--detach", "-d", is_flag=True, help="Start and return without tailing logs.")
+@click.option("--no-build", is_flag=True, help="Start without rebuilding changed images.")
+def stack_up(profiles, detach, no_build):
+    """Start the containerized stack (edge on :80, direct ports for tooling).
+
+    Starts detached, rebuilding images whose Dockerfile/context changed
+    (cached, so a no-op when nothing changed), then tails logs. Ctrl+C stops
+    the tail only - the stack keeps running.
+    """
+    sh(compose("up", "-d", *([] if no_build else ["--build"]), profiles=list(profiles)))
+    if detach:
+        return
+    try:
+        sh(compose("logs", "-f", "--tail", "50", profiles=list(profiles)), check=False)
+    except KeyboardInterrupt:
+        pass
 
 
 @stack.command("down")
@@ -208,6 +235,28 @@ def stack_down(profiles):
 def stack_rebuild(services):
     """Rebuild dev images without cache (after a Dockerfile change)."""
     sh(compose("build", "--no-cache", *(services or ("backend", "ui", "deps-manager")), profiles=["dev"]))
+
+
+@stack.command("recreate")
+@profiles_option
+@click.option("--detach", "-d", is_flag=True, help="Start and return without tailing logs.")
+@click.option("--no-build", is_flag=True, help="Start without rebuilding changed images.")
+@click.option("--yes", "-y", is_flag=True, help="Skip the confirmation prompt.")
+@click.pass_context
+def stack_recreate(ctx, profiles, detach, no_build, yes):
+    """Tear down EVERYTHING and start fresh - containers, all volumes, orphans.
+
+    Wipes all data (postgres, valkey, meilisearch, rustfs) plus every tooling
+    cache volume (venvs, node_modules, pnpm store, uv cache), then runs the
+    same flow as `stack up`.
+    """
+    if not yes:
+        click.confirm(
+            "This deletes ALL containers and volumes for every profile (data is gone). Continue?",
+            abort=True,
+        )
+    sh(compose("down", "--volumes", "--remove-orphans", profiles=["all"]))
+    ctx.invoke(stack_up, profiles=profiles, detach=detach, no_build=no_build)
 
 
 @stack.command("reset-data")

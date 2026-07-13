@@ -12,7 +12,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). `./m
 | Purpose | Command |
 |---|---|
 | First start, everything | `./manage.py start` (docker) / `start --stack local` (host app, infra in docker) |
-| Compose lifecycle | `./manage.py stack up\|down\|rebuild\|reset-data` (`-p mobile` etc., default profiles core+dev) |
+| Compose lifecycle | `./manage.py stack up\|down\|rebuild\|recreate\|reset-data` (`-p mobile` etc., default profiles core+dev; `up` starts detached with cached `--build` then tails logs - Ctrl+C detaches, `-d` skips the tail, `--no-build` skips building; `rebuild` is the `--no-cache` path; `recreate` = confirm, down --volumes across ALL profiles, then `up`; `reset-data` wipes only the data volumes) |
 | Logs | `./manage.py logs [-s <service>] [--stack local\|docker]` - docker tails compose services; local tails `.logs/*.log` written by `serve all` |
 | Host dev processes | `./manage.py serve backend\|worker-core\|worker-egress\|ui\|landing\|mobile\|all` |
 | Dependencies | `./manage.py deps install\|add\|remove\|update\|run -s backend\|ui\|mobile\|landing [--stack local\|docker]` |
@@ -34,6 +34,14 @@ When installing, adding, removing, or updating dependencies, detect which mode i
 3. Neither -> use `--stack docker`; never implicitly install toolchains onto the host.
 
 Lockfile and package.json changes land on the bind mount in docker mode, so git sees them either way.
+
+## File ownership in containers
+
+Dev containers start as root, fix ownership of their named/anonymous volumes, then drop to the host user via `setpriv` before running anything - so writes to the bind-mounted checkout (proto regen, `ruff --fix`, `prettier --write`, lockfiles) stay host-owned. The mechanism: `manage.py` exports `HOST_UID`/`HOST_GID` on every invocation, compose passes them into the containers, and each entrypoint (`.docker/dev/*-entrypoint.sh`) re-execs itself as that uid. `compose exec` paths bypass entrypoints, so `manage.py` adds `--user` there explicitly. Never chown the `/app` bind mount from inside a container. If root-owned files predate this setup, fix them once on the host: `sudo chown -R "$USER":"$USER" <repo>`.
+
+## Container containment
+
+Every dev service that executes third-party packages (backend x3, node x3, deps-manager - via the `x-contained` anchor in `dev.yaml` - plus the two Playwright browsers in `dev-tools.yaml`) runs with `cap_drop: ALL` (the entrypoint prelude gets back only CHOWN/DAC_OVERRIDE/FOWNER/SETGID/SETUID for the chown + setpriv drop), `no-new-privileges`, a read-only rootfs with tmpfs `/tmp`, and a `pids_limit`. After the privilege drop the package-running process has zero capabilities. Nothing mounts the docker socket and nothing runs `privileged` - keep it that way; a new service that runs fetched code gets `<<: *contained`. If a tool fails with `EROFS`, give it a named volume or a tmpfs entry rather than removing `read_only`.
 
 ## Supply-chain policy
 

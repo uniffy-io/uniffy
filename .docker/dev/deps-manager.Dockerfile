@@ -15,11 +15,16 @@ COPY --from=bufbuild/buf:1.69.0 /usr/local/bin/buf /usr/local/bin/buf
 # Go toolchain for `go mod tidy` in src/gen/go after buf regenerates
 COPY --from=golang:1.26-trixie /usr/local/go /usr/local/go
 
+# Managed pythons live outside /root so the entrypoint's privilege drop
+# (running as the host uid) can still read the interpreter.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g pnpm@10.30.1 \
-    && uv python install 3.14
+    && uv python install 3.14 \
+    && chmod -R a+rX /opt/uv-python
 
 WORKDIR /app
 
