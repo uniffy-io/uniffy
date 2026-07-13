@@ -21,6 +21,12 @@ services:
     container_name: uniffy-mcp-playwright
     profiles: ["dev", "all"]
     restart: unless-stopped
+    # Renders arbitrary web content; headless chromium runs sandboxless in
+    # the container, so containment comes from the container boundary.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    pids_limit: 4096
     command: ["--port", "8931", "--host", "0.0.0.0", "--browser", "chromium", "--headless", "--user-data-dir", "/profile"]
     ports:
       - "8931:8931"
@@ -47,6 +53,10 @@ services:
     container_name: uniffy-mcp-playwright-b
     profiles: ["dev", "all"]
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    pids_limit: 4096
     command: ["--port", "8932", "--host", "0.0.0.0", "--browser", "chromium", "--headless", "--user-data-dir", "/profile"]
     ports:
       - "8932:8932"

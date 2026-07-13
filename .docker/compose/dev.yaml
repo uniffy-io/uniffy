@@ -26,7 +26,25 @@
 #   fails UDP fast and falls back to ICE/TCP on the tunneled 7881 - calls
 #   work, just with TCP latency. Use a VPN for real media behavior.
 
+# Containment for every container that executes third-party packages (npm,
+# PyPI, buf remote plugins). Root exists only for the entrypoint prelude
+# (volume chown + setpriv drop to the host uid), so it gets exactly the caps
+# that prelude needs and nothing else; the dropped process runs with zero
+# capabilities. no-new-privileges blocks re-escalation through setuid
+# binaries, the read-only rootfs keeps a payload from persisting anything
+# outside the bind mount and its declared volumes, /tmp is a private tmpfs,
+# and pids_limit stops fork bombs.
+x-contained: &contained
+    security_opt:
+        - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    read_only: true
+    tmpfs: [/tmp]
+    pids_limit: 4096
+
 x-backend-base: &backend-base
+    <<: *contained
     build:
         context: ../..
         dockerfile: src/uniffy/dev.Dockerfile
@@ -39,6 +57,8 @@ x-backend-base: &backend-base
         - ../dev/backend.env
     environment:
         UV_CACHE_DIR: /uv-cache
+        HOST_UID: "${HOST_UID:-1000}"
+        HOST_GID: "${HOST_GID:-1000}"
     volumes:
         - ../../:/app
         # Shared download/wheel cache; uv syncs in any backend container
@@ -101,6 +121,7 @@ services:
     # Shared base for every Node workspace dev container (ui, landing, ...).
     # Each service overrides command, ports, and PNPM_FILTER.
     ui:
+        <<: *contained
         build: &node-build
             context: ../..
             dockerfile: src/ui/dev.Dockerfile
@@ -108,12 +129,25 @@ services:
         container_name: uniffy-dev-ui
         pull_policy: never
         restart: unless-stopped
-        # verify-deps-before-run does a slow workspace-wide deps check on every
-        # pnpm invocation; the entrypoint already handles installs, so skip it.
+        # verify-deps-before-run is off in every container (flag on service
+        # commands, npm_config env on deps-manager). It is a freshness check,
+        # not a security rail, and in-container it is wrong on all counts:
+        # the entrypoint's frozen install is the single authority and the
+        # node_modules volumes are container-private, so state cannot drift;
+        # the check is workspace-wide while each container installs only its
+        # PNPM_FILTER slice, so it would flag the other workspaces as missing
+        # forever (or trigger its own unfrozen install racing the entrypoint);
+        # and it stats every dep tree on each invocation, which costs seconds
+        # on the bind mount. minimumReleaseAge, --frozen-lockfile, and
+        # allowBuilds stay enforced; host behavior is untouched.
         command: pnpm --config.verify-deps-before-run=false --filter uniffy-ui dev
+        # No CI=true here: Metro/Expo (and other dev servers) disable watch
+        # mode under CI, killing hot reload. The entrypoint sets CI only for
+        # its pnpm install step.
         environment:
             PNPM_FILTER: "uniffy-ui..."
-            CI: "true"
+            HOST_UID: "${HOST_UID:-1000}"
+            HOST_GID: "${HOST_GID:-1000}"
             npm_config_store_dir: /pnpm-store
             npm_config_confirm_modules_purge: "false"
             npm_config_strict_dep_builds: "false"
@@ -147,15 +181,18 @@ services:
                 max-file: "3"
 
     landing:
+        <<: *contained
         build: *node-build
         image: uniffy-dev-node
         container_name: uniffy-dev-landing
         pull_policy: never
         restart: unless-stopped
+        # verify-deps off: see the ui service note.
         command: pnpm --config.verify-deps-before-run=false --filter uniffy-landing exec astro dev --host 0.0.0.0
         environment:
             PNPM_FILTER: "uniffy-landing..."
-            CI: "true"
+            HOST_UID: "${HOST_UID:-1000}"
+            HOST_GID: "${HOST_GID:-1000}"
             npm_config_store_dir: /pnpm-store
             npm_config_confirm_modules_purge: "false"
             npm_config_strict_dep_builds: "false"
@@ -171,15 +208,18 @@ services:
         logging: *node-logging
 
     mobile:
+        <<: *contained
         build: *node-build
         image: uniffy-dev-node
         container_name: uniffy-dev-mobile
         pull_policy: never
         restart: unless-stopped
+        # verify-deps off: see the ui service note.
         command: pnpm --config.verify-deps-before-run=false --filter uniffy-mobile exec expo start
         environment:
             PNPM_FILTER: "uniffy-mobile..."
-            CI: "true"
+            HOST_UID: "${HOST_UID:-1000}"
+            HOST_GID: "${HOST_GID:-1000}"
             # Skips the React Native DevTools chromium install, which cannot
             # run inside the container (no SUID/userns sandbox available)
             EXPO_UNSTABLE_HEADLESS: "1"
@@ -204,6 +244,7 @@ services:
     # `./manage.py toolbox|proto|licenses`. Named volumes (not anonymous)
     # keep its node_modules/.venv across runs.
     deps-manager:
+        <<: *contained
         build:
             context: ../..
             dockerfile: .docker/dev/deps-manager.Dockerfile
@@ -213,9 +254,17 @@ services:
         environment:
             CI: "true"
             UV_CACHE_DIR: /uv-cache
+            HOST_UID: "${HOST_UID:-1000}"
+            HOST_GID: "${HOST_GID:-1000}"
             npm_config_store_dir: /pnpm-store
+            # dlx unpacks executables into the pnpm cache; /tmp (the HOME
+            # fallback) is a noexec tmpfs, so the cache lives on the store
+            # volume where execution is allowed.
+            npm_config_cache_dir: /pnpm-store/cache
             npm_config_confirm_modules_purge: "false"
             npm_config_strict_dep_builds: "false"
+            # env form because the toolbox runs arbitrary pnpm commands;
+            # rationale in the ui service note.
             npm_config_verify_deps_before_run: "false"
         volumes:
             - ../../:/app

@@ -3,6 +3,28 @@ set -euo pipefail
 
 cd /app
 
+# When started as root with HOST_UID set (manage.py exports it on every
+# invocation), fix volume ownership and re-exec as the host user so writes
+# to the bind mount stay host-owned. /app itself is never chowned - it is
+# the host checkout.
+if [[ "$(id -u)" == "0" && -n "${HOST_UID:-}" ]]; then
+    HOST_GID="${HOST_GID:-$HOST_UID}"
+    for d in /pnpm-store /uv-cache /go-cache /app/.venv /app/node_modules \
+        /app/src/ui/node_modules /app/src/mobile/node_modules \
+        /app/src/landing/node_modules /app/src/gen/typescript/node_modules \
+        /app/src/e2e/node_modules; do
+        if [[ -e "$d" && "$(stat -c %u "$d")" != "$HOST_UID" ]]; then
+            chown -R "$HOST_UID:$HOST_GID" "$d"
+        fi
+    done
+    export HOME=/tmp/home
+    mkdir -p "$HOME" && chown "$HOST_UID:$HOST_GID" "$HOME"
+    if command -v setpriv >/dev/null 2>&1; then
+        exec setpriv --reuid="$HOST_UID" --regid="$HOST_GID" --clear-groups "$0" "$@"
+    fi
+    echo "[deps-manager] setpriv missing - running as root; mounted writes will be root-owned" >&2
+fi
+
 # Both toolchains sync from their lockfiles before the command runs, each
 # guarded by a hash marker inside its named volume so unchanged lockfiles
 # skip the install.
