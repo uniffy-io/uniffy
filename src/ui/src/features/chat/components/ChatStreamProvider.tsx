@@ -17,14 +17,15 @@ import {
   removeReactionFromMessage,
   appendDelta,
 } from '@/features/chat/store/chatMessagesSlice';
-import { fetchMembers, fetchThreadsInbox } from '@/features/chat/store/chatThunks';
+import { fetchMembers, fetchThreadsInbox, markChannelRead } from '@/features/chat/store/chatThunks';
 import {
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
   appendThreadMessage,
   appendDeltaToThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
-import { updateChannel, incrementUnreadCount, addChannel, removeChannel } from '@/features/chat/store/chatChannelsSlice';
+import { updateChannel, incrementUnreadCount, updateUnreadCounts, addChannel, removeChannel } from '@/features/chat/store/chatChannelsSlice';
+import { isDocumentVisible } from '@/shared/utils/documentVisibility';
 import { chatApi } from '@/features/chat/api/chatApi';
 import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
 import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
@@ -142,6 +143,14 @@ function handleChannelEvent(
           dispatch(appendThreadMessage({ rootMessageId: msg.rootId, message: msg }));
         } else {
           dispatch(appendMessage({ channelId: activeChannelId, message: msg }));
+          // Viewing this channel live: mark the new message read so it never
+          // surfaces as unread. Unread is time-based (last_read_at = now), so
+          // the real id clears the just-arrived message too. Skip own sends;
+          // thread replies do not count toward the channel badge.
+          if (msg.senderId !== currentUserId && isDocumentVisible()) {
+            dispatch(updateUnreadCounts([{ channelId: activeChannelId, unreadCount: 0, mentionCount: 0 }]));
+            dispatch(markChannelRead({ channelId: activeChannelId, lastReadMessageId: msg.id }));
+          }
         }
       }
       break;
@@ -399,6 +408,17 @@ function usePersistentChatStream() {
                 if (event.payload.case === 'unreadCount' && event.payload.value) {
                   const p = event.payload.value;
 
+                  // Channel open and window focused: the user is reading it now.
+                  // Keep the badge clear and advance the read cursor instead of
+                  // surfacing a phantom unread (which also cascades the chat
+                  // notification read, so the bell does not accumulate).
+                  if (p.channelId === channelIdRef.current && isDocumentVisible()) {
+                    // Reading it live: keep the badge clear. The MESSAGE_CREATED
+                    // handler advances the server read cursor with the real id.
+                    dispatch(updateUnreadCounts([{ channelId: p.channelId, unreadCount: 0, mentionCount: 0 }]));
+                    break;
+                  }
+
                   // Unknown channel (e.g. new DM): fetch and add it.
                   if (
                     !channelIdsRef.current.has(p.channelId) &&
@@ -442,6 +462,10 @@ function usePersistentChatStream() {
               case UserChatEventType.MENTION_RECEIVED: {
                 if (event.payload.case === 'mentionReceived' && event.payload.value) {
                   const p = event.payload.value;
+                  if (p.channelId === channelIdRef.current && isDocumentVisible()) {
+                    dispatch(updateUnreadCounts([{ channelId: p.channelId, unreadCount: 0, mentionCount: 0 }]));
+                    break;
+                  }
                   dispatch(incrementUnreadCount({
                     channelId: p.channelId,
                     mentionCount: 1,

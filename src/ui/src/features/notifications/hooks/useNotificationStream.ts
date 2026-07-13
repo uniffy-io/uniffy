@@ -9,7 +9,8 @@ import { fetchFile } from '@/features/files/store/filesSlice';
 import { initializeNotesData } from '@/features/notes/store/notesThunks';
 import { emitContentAccessChanged, type ContentAccessAction } from '@/features/notifications/contentAccessEmitter';
 import { notificationsApi } from '@/features/notifications/api/notificationsApi';
-import { addRealtimeNotification, markNotificationAsRead } from '@/features/notifications/store/notificationsSlice';
+import { addRealtimeNotification, markNotificationAsRead, markNotificationsReadBySource } from '@/features/notifications/store/notificationsSlice';
+import { isDocumentVisible } from '@/shared/utils/documentVisibility';
 import type { SerializedNotification } from '@/features/notifications/store/notificationsSlice';
 import { updatePresenceWithCustomStatus } from '@/features/presence/store/presenceSlice';
 import { setDomainAdminDomains } from '@/features/auth/store/authSlice';
@@ -80,7 +81,25 @@ export function useNotificationStream() {
                             dispatch(addRealtimeNotification(serialized));
 
                             const currentState = getState();
-                            if (currentState) {
+
+                            // A chat notification for the channel the user is
+                            // actively viewing (open + window focused) is already
+                            // being read: keep it out of the bell and suppress the
+                            // toast. ChatStreamProvider advances the server cursor.
+                            const CHAT_URN_PREFIX = 'urn:uniffy:content:CHAT:';
+                            const chatChannelId = serialized.sourceUrn.startsWith(CHAT_URN_PREFIX)
+                                ? serialized.sourceUrn.slice(CHAT_URN_PREFIX.length)
+                                : null;
+                            const activelyViewingChat =
+                                chatChannelId !== null &&
+                                chatChannelId === currentState?.chatChannels.activeChannelId &&
+                                isDocumentVisible();
+
+                            if (activelyViewingChat) {
+                                dispatch(markNotificationsReadBySource(serialized.sourceUrn));
+                            }
+
+                            if (currentState && !activelyViewingChat) {
                                 const toastEnabled = currentState.settings.effectiveSettings?.notifications.toastEnabled ?? false;
                                 const isZenMode = currentState.zenMode.isActive;
                                 const isPanelOpen = currentState.notifications.panelOpen;
