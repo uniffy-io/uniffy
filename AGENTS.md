@@ -43,7 +43,7 @@ Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint
 Path-scoped rules in `.claude/rules/` auto-load when you touch matching files and are the source of truth for their area - do not duplicate their content elsewhere:
 
 - `architecture.md`, `permissions.md`, `comment-discipline.md` - always on (stack, permission model, comment/naming discipline)
-- `backend.md`, `frontend.md` - conventions per side
+- `backend.md`, `frontend.md`, `mobile.md` - conventions per side (backend, web app, Expo mobile app)
 - `files-domain.md`, `chat-domain.md`, `calls-domain.md`, `agents.md`, `notes-realtime.md`, `mentions.md`, `landing-voice.md` - domain invariants
 
 Repo-wide basics not covered by a scoped rule:

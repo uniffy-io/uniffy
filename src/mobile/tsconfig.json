@@ -4,8 +4,12 @@
     "baseUrl": ".",
     "strict": true,
     "paths": {
-      "@/*": ["./*"],
-      "@shared/*": ["./shared/*"],
+      "@/*": ["./src/*"],
+      "@app/*": ["./src/app/*"],
+      "@features/*": ["./src/features/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@core/*": ["./src/core/*"],
+      "@theme/*": ["./src/theme/*"],
       "@uniffy/proto/*": ["../gen/typescript/*"]
     }
   },
