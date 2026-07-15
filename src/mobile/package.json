@@ -29,6 +29,7 @@
     "@ungap/structured-clone": "^1.3.3",
     "@uniffy/proto": "workspace:*",
     "expo": "^57.0.4",
+    "expo-asset": "~57.0.3",
     "expo-audio": "~57.0.0",
     "expo-blur": "~57.0.0",
     "expo-clipboard": "~57.0.0",
