@@ -193,7 +193,20 @@ Secure cookie, so several of these cannot be exercised there.
       image load. It recovers (the `onError` handler refreshes the cookie and retries) rather than staying broken.
 - [ ] Self-hosted over plain http on a LAN: set `ASSET_COOKIE_SECURE=false`, confirm images still load
       (with it left `true`, the browser drops the cookie over http and assets `401`).
-- [ ] Mobile / native client: assets still load via the Bearer path (no cookie) - the routes accept both.
+- [ ] Mobile / native client: assets (thumbnails, chat images, avatars, PDF/audio previews) load via the
+      asset cookie sent as an explicit `Cookie` header (delivered in auth response bodies). Verify a chat
+      image request carries `Cookie: ...uniffy_asset=...` and no `Authorization` header.
+- [ ] Mobile: leave the app backgrounded past the access-token TTL (default 15 min), reopen it. Queries and
+      images recover without a logout (foreground refresh + 401 retry).
+- [ ] Mobile: revoke the device's session from the web app (Settings > Sessions). The next interaction in
+      the mobile app lands on the login screen instead of browsing empty screens.
+- [ ] Mobile: log in on an MFA-enabled account (TOTP) and on a forced-enrollment org. After both flows,
+      images/avatars render immediately (VerifyMfa / ConfirmEnrollment deliver the asset cookie too).
+- [ ] Mobile: log out. Cached content is gone - reopening the app shows the login screen and no stale
+      images flash from the expo-image disk cache after logging in as a different user.
+- [ ] Mobile, user in two orgs: pick org A, browse, then switch to org B (select-org). No org-A content
+      (lists, images) surfaces in B, and the app keeps working after the switch (the switch mints a new
+      session; the old one shows as revoked under web Settings > Sessions).
 - [ ] Enable push notifications (Settings), confirm the dedicated `/notification-worker.js` registers and a
       test notification displays + click-through focuses the app. (The media worker is gone; push is its own worker.)
 - [ ] A user who had the OLD `media-stream-worker` installed loads the app once: it is unregistered on boot
