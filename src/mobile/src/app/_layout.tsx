@@ -99,11 +99,18 @@ function RootLayoutNav() {
 
   const showAppChrome = isAuthenticated && !!organizationId;
 
-  // Set Android system navigation bar to match theme
+  // Android runs edge-to-edge, so the system nav bar is transparent with
+  // content drawn behind it and its color/style setters are unsupported and
+  // may be absent on the installed build. Guard so a missing setter cannot
+  // crash startup; only button contrast is adjustable when present.
   useEffect(() => {
     if (Platform.OS !== "android") return;
-    NavigationBar.setButtonStyleAsync(T.isDark ? "light" : "dark").catch(() => {});
-    NavigationBar.setBackgroundColorAsync(T.isDark ? BRAND.midnight : BRAND.white).catch(() => {});
+    try {
+      NavigationBar.setButtonStyleAsync?.(T.isDark ? "light" : "dark")?.catch(() => {});
+      NavigationBar.setBackgroundColorAsync?.(T.isDark ? BRAND.midnight : BRAND.white)?.catch(() => {});
+    } catch {
+      // setter removed under edge-to-edge; leave the system default
+    }
   }, [T.isDark]);
 
   // Hardware back button: minimize the call overlay or close the @ overlay
