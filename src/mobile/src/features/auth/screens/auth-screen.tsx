@@ -17,11 +17,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Envelope, Lock, User, IdentificationCard, ShieldCheck } from "phosphor-react-native";
+import { Envelope, Lock, User, IdentificationCard, ShieldCheck, Globe } from "phosphor-react-native";
 import { BRAND } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/auth-context";
 import { authApi } from "@core/auth/authApi";
+import { getServerUrl, setServerUrl } from "@core/config/serverUrl";
 
 type Mode = "login" | "register";
 
@@ -45,6 +46,7 @@ export default function AuthScreen() {
   const { login, verifyMfa, register, setHoldNavigation, setLoginSplashVisible } = useAuth();
 
   const [mode, setMode] = useState<Mode>("login");
+  const [server, setServer] = useState(getServerUrl());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -81,6 +83,8 @@ export default function AuthScreen() {
     setHoldNavigation(true);
 
     try {
+      // Point every transport at the chosen server before the auth request.
+      await setServerUrl(server);
       if (mode === "login") {
         const result = await login(email.trim(), password);
         if (result.status === "mfa") {
@@ -142,6 +146,7 @@ export default function AuthScreen() {
     Keyboard.dismiss();
     // The RPC never reveals whether the email exists; always show success.
     try {
+      await setServerUrl(server);
       await authApi.sendPasswordReset(email.trim());
     } catch {
       // ignore - intentionally non-revealing
@@ -302,6 +307,15 @@ export default function AuthScreen() {
                 {!resetSent && (
                   <>
                     <AuthInput
+                      icon={<Globe size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
+                      placeholder="Server"
+                      value={server}
+                      onChangeText={setServer}
+                      keyboardType="url"
+                      autoCapitalize="none"
+                      autoComplete="off"
+                    />
+                    <AuthInput
                       icon={<Envelope size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
                       placeholder="Email"
                       value={email}
@@ -369,6 +383,16 @@ export default function AuthScreen() {
 
                 {/* Fields */}
                 <AuthInput
+                  icon={<Globe size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
+                  placeholder="Server"
+                  value={server}
+                  onChangeText={setServer}
+                  keyboardType="url"
+                  autoCapitalize="none"
+                  autoComplete="off"
+                />
+
+                <AuthInput
                   icon={<Envelope size={18} color="rgba(238,238,238,0.4)" weight="duotone" />}
                   placeholder="Email"
                   value={email}
@@ -430,7 +454,11 @@ export default function AuthScreen() {
                 )}
 
                 <TouchableOpacity
-                  onPress={() => router.push("/accept-invite" as any)}
+                  onPress={() => {
+                    // Carry the chosen server into the invite flow.
+                    void setServerUrl(server);
+                    router.push("/accept-invite" as any);
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.linkText}>Have an invitation? Accept it</Text>

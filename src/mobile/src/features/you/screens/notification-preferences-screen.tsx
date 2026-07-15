@@ -6,11 +6,14 @@ import {
   ScrollView,
   Switch,
   TouchableOpacity,
+  Platform,
   ActivityIndicator,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/auth-context";
@@ -32,6 +35,9 @@ const FREQUENCIES: { key: string; label: string }[] = [
 
 export default function NotificationPreferencesScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { isAuthenticated } = useAuth();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<Prefs | null>(null);
@@ -95,7 +101,7 @@ export default function NotificationPreferencesScreen() {
           <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>IN-APP</Text>
           <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
             <ToggleRow

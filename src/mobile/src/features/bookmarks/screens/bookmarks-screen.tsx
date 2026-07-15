@@ -5,14 +5,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { BookmarkSimple } from "phosphor-react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/auth-context";
@@ -61,6 +64,9 @@ function useBookmarkItems() {
 
 export default function BookmarksScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const bookmarks = useBookmarkItems();
   const toggleBookmark = useToggleBookmark();
 
@@ -95,7 +101,10 @@ export default function BookmarksScreen() {
           data={items}
           renderItem={renderItem}
           keyExtractor={(item) => item.urn}
-          contentContainerStyle={items.length === 0 ? styles.emptyContent : styles.listContent}
+          contentContainerStyle={[
+            items.length === 0 ? styles.emptyContent : styles.listContent,
+            { paddingBottom: bottomPad },
+          ]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={<EmptyBookmarks T={T} />}
           refreshControl={
@@ -125,24 +134,22 @@ function BookmarkRow({
 }) {
   const domain = (item.domain ?? "notes") as Domain;
   const Icon = DOMAIN_ICON[domain];
-  const domainColor = T.domains[domain];
-  const softColor = T.domains[`${domain}Soft`];
   return (
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: T.border }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.icon, { backgroundColor: softColor }]}>
-        <Icon size={16} color={domainColor} weight="bold" />
+      <View style={[styles.icon, { backgroundColor: T.accentSoft }]}>
+        <Icon size={16} color={T.accent} weight="bold" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
           {item.title}
         </Text>
         <View style={styles.meta}>
-          <View style={[styles.badge, { backgroundColor: softColor }]}>
-            <Text style={[styles.badgeText, { color: domainColor }]}>{domain.toUpperCase()}</Text>
+          <View style={[styles.badge, { backgroundColor: T.accentSoft }]}>
+            <Text style={[styles.badgeText, { color: T.accent }]}>{domain.toUpperCase()}</Text>
           </View>
           {item.description ? (
             <Text style={[styles.sub, { color: T.textDim }]} numberOfLines={1}>

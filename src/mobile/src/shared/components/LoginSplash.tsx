@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Text, Image, Animated, Platform, StyleSheet } from "react-native";
+import { Text, Image, Animated, Modal, Platform, StyleSheet } from "react-native";
 import { BRAND } from "@theme/theme";
 import { FONT } from "@theme/typography";
 
@@ -54,23 +54,35 @@ export function LoginSplash({ onReveal, onFinished }: Props) {
   }, [coverOpacity, logoOpacity]);
 
   return (
-    <Animated.View style={[styles.container, { opacity: coverOpacity }]}>
-      <Animated.View style={[styles.logoWrapper, { opacity: logoOpacity }]}>
-        <Image
-          source={require("../../../assets/images/uniffy-logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.wordmark}>uniffy</Text>
+    // A Modal, not an absolute-fill sibling: on iOS 26 Fabric an inset
+    // overlay at the shell level collapses into flow layout and covers only
+    // part of the screen. The Modal hosts its own full-screen root, the same
+    // escape AtOverlay uses.
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={() => {}}
+    >
+      <Animated.View style={[styles.container, { opacity: coverOpacity }]}>
+        <Animated.View style={[styles.logoWrapper, { opacity: logoOpacity }]}>
+          <Image
+            source={require("../../../assets/images/uniffy-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.wordmark}>uniffy</Text>
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 300,
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: BRAND.midnight,

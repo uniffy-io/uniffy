@@ -6,13 +6,16 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  Platform,
   ActivityIndicator,
 } from "react-native";
 import { MentionTextInput } from "@shared/mentions/MentionTextInput";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useProject, useTask } from "@features/projects/useProjects";
 import { useCreateTask, useUpdateTask } from "@features/projects/useProjectMutations";
@@ -26,6 +29,9 @@ export default function CreateTaskScreen() {
   } = useLocalSearchParams<{ projectId?: string; taskId?: string; status?: string }>();
   const isEditing = !!taskId;
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
   const taskQuery = useTask(taskId);
   const task = taskQuery.data;
@@ -38,7 +44,7 @@ export default function CreateTaskScreen() {
 
   const statusOptions = project ? getStatusOptions(project) : [];
   const priorityOptions = project ? getPriorityOptions(project) : [];
-  const projectColor = project?.color || T.domains.projects;
+  const projectColor = project?.color || T.accent;
 
   const [title, setTitle] = useState("");
   const descriptionRef = useRef("");
@@ -108,7 +114,7 @@ export default function CreateTaskScreen() {
   if (projectQuery.isLoading || (isEditing && taskQuery.isLoading)) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={T.domains.projects} />
+        <ActivityIndicator size="large" color={T.accent} />
       </View>
     );
   }
@@ -137,7 +143,10 @@ export default function CreateTaskScreen() {
         }
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={{ gap: 6 }}>
           <Text style={[styles.label, { color: T.textDim }]}>Title</Text>
           <TextInput

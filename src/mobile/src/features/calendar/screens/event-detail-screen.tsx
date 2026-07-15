@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Platform,
   ActivityIndicator,
   Linking,
 } from "react-native";
@@ -17,6 +18,7 @@ import {
   ArrowsClockwise,
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { CommentButton } from "@shared/comments/CommentsSheet";
@@ -24,6 +26,7 @@ import { ShareButton } from "@shared/permissions/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useEvent, useCategories } from "@features/calendar/useCalendar";
 import { useDeleteEvent } from "@features/calendar/useCalendarMutations";
@@ -41,6 +44,9 @@ const RSVP_COLORS: Record<string, string> = {
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const auth = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [prejoinOpen, setPrejoinOpen] = useState(false);
@@ -52,9 +58,9 @@ export default function EventDetailScreen() {
   if (eventQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Calendar" color={T.domains.calendar} icon="calendar" />
+        <DomainHeader title="Calendar" color={T.accent} icon="calendar" />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.calendar} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       </View>
     );
@@ -65,7 +71,7 @@ export default function EventDetailScreen() {
 
   // Get event color from category
   const category = categoriesQuery.data?.find((c) => c.id === event.categoryId);
-  const eventColor = category?.color || T.domains.calendar;
+  const eventColor = category?.color || T.accent;
 
   const hasMeetingUrl = !!event.meetingUrl;
   const hasChannel = !!event.channelId;
@@ -76,19 +82,19 @@ export default function EventDetailScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Calendar"
-        color={T.domains.calendar}
+        color={T.accent}
         icon="calendar"
         rightActions={
           <>
             <CommentButton
               contentType={ContentType.CALENDAR_EVENT}
               contentId={event.id}
-              color={T.domains.calendar}
+              color={T.accent}
             />
             <ShareButton
               contentType={ContentType.CALENDAR_EVENT}
               contentId={event.id}
-              color={T.domains.calendar}
+              color={T.accent}
             />
             <TouchableOpacity
               onPress={() =>
@@ -108,7 +114,10 @@ export default function EventDetailScreen() {
         }
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.titleSection}>
           <View style={[styles.colorBar, { backgroundColor: eventColor }]} />
           <View style={{ flex: 1 }}>
@@ -158,8 +167,8 @@ export default function EventDetailScreen() {
             <>
               <View style={[styles.infoDivider, { backgroundColor: T.border }]} />
               <View style={styles.infoRow}>
-                <View style={[styles.infoIcon, { backgroundColor: T.domains.calendar + "20" }]}>
-                  <MapPin size={14} color={T.domains.calendar} weight="duotone" />
+                <View style={[styles.infoIcon, { backgroundColor: T.accent + "20" }]}>
+                  <MapPin size={14} color={T.accent} weight="duotone" />
                 </View>
                 <Text style={[styles.infoMain, { color: T.textBright }]}>{event.location}</Text>
               </View>
@@ -302,7 +311,7 @@ export default function EventDetailScreen() {
           {
             icon: "edit-3",
             label: "Create meeting notes",
-            color: T.domains.notes,
+            color: T.accent,
             onPress: () => router.push("/notes/edit" as any),
           },
           { icon: "star", label: "Add to favorites", onPress: () => {} },

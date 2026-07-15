@@ -46,6 +46,7 @@ from uniffy.domains.auth.context import (
     get_user_id_from_context,
     get_user_id_from_enrollment_context,
 )
+from uniffy.domains.auth.cookies import attach_asset_cookie
 from uniffy.domains.auth.errors import (
     AuthenticationError,
     MfaRateLimitedError,
@@ -121,12 +122,20 @@ class MfaHandlers:
                     user_agent=user_agent,
                     pending_organization_id=pending_org_id,
                 )
+                asset_cookie = attach_asset_cookie(
+                    ctx,
+                    access_token=result.access_token,
+                    user_id=user_id,
+                    organization_id=result.organization_id,
+                    session_id=result.session_id,
+                )
                 response = ConfirmEnrollmentResponse(
                     recovery_codes=result.recovery_codes,
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
                     session_id=str(result.session_id),
                     domain_admin_domains=_mfa_domain_admins(result.domain_admin_domains),
+                    asset_cookie=asset_cookie,
                 )
                 if result.organization_id is not None:
                     response.organization_id = str(result.organization_id)
@@ -158,6 +167,13 @@ class MfaHandlers:
                     method=request.method,
                     user_agent=user_agent,
                 )
+                asset_cookie = attach_asset_cookie(
+                    ctx,
+                    access_token=result.access_token,
+                    user_id=result.user_id,
+                    organization_id=result.organization_id,
+                    session_id=result.session_id,
+                )
                 response = VerifyMfaResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
@@ -166,6 +182,7 @@ class MfaHandlers:
                     used_recovery_code=result.used_recovery_code,
                     remaining_recovery_codes=result.remaining_recovery_codes,
                     domain_admin_domains=_mfa_domain_admins(result.domain_admin_domains),
+                    asset_cookie=asset_cookie,
                 )
                 if result.organization_id is not None:
                     response.organization_id = str(result.organization_id)

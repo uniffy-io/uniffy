@@ -1,5 +1,5 @@
 import type { AgentInfo } from "@uniffy/proto/agents/v1/agents_pb";
-import { ENV } from "@core/config/env";
+import { getApiBaseUrl } from "@core/config/serverUrl";
 
 export interface SerializedAgent {
   id: string;
@@ -38,5 +38,5 @@ export function agentAvatarUrl(
   avatarKey: string,
 ): string | null {
   if (!avatarKey) return null;
-  return `${ENV.apiUrl}/agents/avatars/${organizationId}/${agentId}`;
+  return `${getApiBaseUrl()}/agents/avatars/${organizationId}/${agentId}`;
 }

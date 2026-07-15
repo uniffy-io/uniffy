@@ -98,7 +98,7 @@ export default function RoadmapScreen() {
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
   const statusOptions = useMemo(() => (project ? getStatusOptions(project) : []), [project]);
-  const projectColor = project?.color || T.domains.projects;
+  const projectColor = project?.color || T.accent;
 
   const dayWidth = zoom === "week" ? DAY_WIDTH_WEEK : DAY_WIDTH_MONTH;
   const { start: timelineStart, totalDays } = useMemo(
@@ -110,7 +110,7 @@ export default function RoadmapScreen() {
   if (projectQuery.isLoading || tasksQuery.isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={T.domains.projects} />
+        <ActivityIndicator size="large" color={T.accent} />
       </View>
     );
   }

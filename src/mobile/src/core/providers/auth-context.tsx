@@ -6,10 +6,15 @@ import React, {
   useReducer,
   useState,
 } from "react";
+import { AppState } from "react-native";
+import { Image } from "expo-image";
 import type { GetCurrentUserResponse } from "@uniffy/proto/auth/v1/auth_pb";
 import type { CurrentUser } from "@core/types";
+import { queryClient } from "@core/api/query-client";
 import {
+  getAccessToken,
   setAccessToken,
+  setAssetCookie,
   setRefreshToken,
   getRefreshToken,
   setStoredOrgId,
@@ -17,12 +22,17 @@ import {
   clearAuthStorage,
 } from "@core/auth/auth";
 import { authApi } from "@core/auth/authApi";
+import { isTokenExpiring } from "@core/auth/jwt";
+import { refreshSession } from "@core/auth/refresh";
+import { onSessionExpired } from "@core/auth/sessionEvents";
+import { hydrateServerUrl } from "@core/config/serverUrl";
 
 type AuthTokens = {
   accessToken: string;
   refreshToken: string;
   organizationId?: string;
   organizationRole?: string;
+  assetCookie?: string;
 };
 
 interface AuthState {
@@ -118,11 +128,20 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Wiping caches on every auth boundary keeps one user's content (query data,
+// decoded images on disk) from surviving into another session on the device.
+function clearSessionCaches(): void {
+  queryClient.clear();
+  void Image.clearMemoryCache();
+  void Image.clearDiskCache();
+}
+
 async function handleAuthResponse(
   response: AuthTokens,
   dispatch: React.Dispatch<AuthAction>,
 ): Promise<void> {
   setAccessToken(response.accessToken);
+  setAssetCookie(response.assetCookie ?? null);
   await setRefreshToken(response.refreshToken);
 
   if (response.organizationId) {
@@ -156,6 +175,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function rehydrate() {
       try {
+        // Load the persisted server before any request so refreshSession and
+        // the first queries hit the deployment the user last signed in to.
+        await hydrateServerUrl();
+
         const refreshToken = await getRefreshToken();
         if (!refreshToken) {
           dispatch({ type: "SET_REHYDRATING", value: false });
@@ -163,12 +186,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const storedOrgId = await getStoredOrgId();
-        const response = await authApi.refreshToken(refreshToken);
+        const response = await refreshSession();
 
         if (cancelled) return;
 
-        setAccessToken(response.accessToken);
-        await setRefreshToken(response.refreshToken);
+        if (!response) {
+          dispatch({ type: "LOGOUT" });
+          return;
+        }
 
         const orgId = response.organizationId ?? storedOrgId ?? null;
         if (orgId) {
@@ -186,7 +211,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           organizationRole: response.organizationRole ?? null,
         });
       } catch {
-        await clearAuthStorage();
+        // Transient failure (offline cold start): refreshSession only clears
+        // storage on a definitive rejection, so the next launch retries.
         if (!cancelled) {
           dispatch({ type: "LOGOUT" });
         }
@@ -197,6 +223,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // A rejected refresh anywhere (interceptor, image retry) ends the session:
+  // wipe caches and let AuthGate route back to the login screen.
+  useEffect(() => {
+    return onSessionExpired(() => {
+      clearSessionCaches();
+      dispatch({ type: "LOGOUT" });
+    });
+  }, []);
+
+  // Returning to the foreground after a long background stay: refresh before
+  // the first queries and images fire so they do not race an expired token.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (status) => {
+      if (status !== "active") return;
+      const token = getAccessToken();
+      if (token && isTokenExpiring(token)) {
+        void refreshSession().catch(() => {});
+      }
+    });
+    return () => subscription.remove();
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
@@ -270,17 +318,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refreshToken = await getRefreshToken();
     if (!refreshToken) throw new Error("No refresh token");
 
-    const response = await authApi.refreshToken(refreshToken, slug);
-    setAccessToken(response.accessToken);
-    await setRefreshToken(response.refreshToken);
+    const response = await authApi.switchOrganization(refreshToken, slug);
+    const result = response.authResult;
+    if (!result) throw new Error("Unexpected switch organization response");
 
-    const orgId = response.organizationId ?? "";
+    setAccessToken(result.accessToken);
+    setAssetCookie(result.assetCookie);
+    await setRefreshToken(result.refreshToken);
+
+    const orgId = result.organizationId ?? "";
     await setStoredOrgId(orgId);
+
+    // Different tenant: cached queries and decoded images from the previous
+    // org must not carry into the new context.
+    clearSessionCaches();
 
     dispatch({
       type: "SET_ORGANIZATION",
       organizationId: orgId,
-      organizationRole: response.organizationRole ?? null,
+      organizationRole: result.organizationRole ?? null,
     });
   }, []);
 
@@ -294,6 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     await clearAuthStorage();
+    clearSessionCaches();
     dispatch({ type: "LOGOUT" });
   }, []);
 

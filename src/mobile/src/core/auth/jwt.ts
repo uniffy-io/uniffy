@@ -33,3 +33,12 @@ export function getTokenExpiryMs(token: string): number | null {
     return null;
   }
 }
+
+const EXPIRY_BUFFER_MS = 60_000;
+
+// A buffer so a request never leaves with a token that dies in flight.
+export function isTokenExpiring(token: string): boolean {
+  const expiry = getTokenExpiryMs(token);
+  if (expiry === null) return false;
+  return expiry - EXPIRY_BUFFER_MS <= Date.now();
+}

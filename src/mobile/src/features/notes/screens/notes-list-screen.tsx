@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
@@ -20,11 +21,13 @@ import {
 } from "phosphor-react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { ShareSheet } from "@shared/permissions/ShareSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useDeleteNote } from "@features/notes/useNoteMutations";
@@ -66,6 +69,9 @@ function getRootFolders(nodes: TreeNode[]): TreeNode[] {
 
 export default function NotesListScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const notesTree = useNotesTree();
   const deleteNote = useDeleteNote();
   const [sheetNote, setSheetNote] = useState<{ id: string; title: string } | null>(null);
@@ -114,7 +120,7 @@ export default function NotesListScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Notes"
-        color={T.domains.notes}
+        color={T.accent}
         icon="notes"
         rightActions={
           <>
@@ -154,7 +160,7 @@ export default function NotesListScreen() {
               style={[
                 styles.filterPill,
                 active
-                  ? { backgroundColor: T.domains.notes }
+                  ? { backgroundColor: T.accent }
                   : {
                       backgroundColor: T.surface,
                       borderColor: T.border,
@@ -174,7 +180,7 @@ export default function NotesListScreen() {
 
       {notesTree.isLoading && !notesTree.data ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.notes} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : (
         <FlatList
@@ -184,13 +190,16 @@ export default function NotesListScreen() {
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={notes.length === 0 ? styles.emptyContent : styles.listContent}
+          contentContainerStyle={[
+            notes.length === 0 ? styles.emptyContent : styles.listContent,
+            { paddingBottom: bottomPad },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={notesTree.isFetching && !notesTree.isLoading}
               onRefresh={() => notesTree.refetch()}
-              tintColor={T.domains.notes}
-              colors={[T.domains.notes]}
+              tintColor={T.accent}
+              colors={[T.accent]}
             />
           }
         />
@@ -201,7 +210,7 @@ export default function NotesListScreen() {
         onClose={() => setSheetNote(null)}
         title={sheetNote?.title ?? ""}
         icon="notes"
-        iconColor={T.domains.notes}
+        iconColor={T.accent}
         actions={[
           {
             icon: "edit-2",
@@ -248,7 +257,7 @@ export default function NotesListScreen() {
         onClose={() => setShareNoteId(null)}
         contentType={ContentType.NOTE}
         contentId={shareNoteId ?? ""}
-        color={T.domains.notes}
+        color={T.accent}
       />
     </View>
   );
@@ -274,8 +283,8 @@ function NoteRow({
       onLongPress={onLongPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.noteRowIcon, { backgroundColor: T.domains.notesSoft }]}>
-        <NotePencil size={16} color={T.domains.notes} weight="fill" />
+      <View style={[styles.noteRowIcon, { backgroundColor: T.accentSoft }]}>
+        <NotePencil size={16} color={T.accent} weight="fill" />
       </View>
       <View style={styles.noteRowBody}>
         <Text style={[styles.noteRowTitle, { color: T.textBright }]} numberOfLines={1}>
@@ -314,7 +323,7 @@ function FolderChips({ folders, T }: { folders: TreeNode[]; T: ThemeColors }) {
           onPress={() => router.push(`/notes/folder/${folder.id}` as any)}
           activeOpacity={0.7}
         >
-          <FolderSimple size={14} color={T.domains.notes} weight="fill" />
+          <FolderSimple size={14} color={T.accent} weight="fill" />
           <Text style={[styles.chipLabel, { color: T.textBright }]} numberOfLines={1}>
             {folder.title || "Untitled"}
           </Text>
@@ -337,15 +346,15 @@ function EmptyNotes({ filter }: { filter: FilterKey }) {
   }
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.notesSoft }]}>
-        <NotePencil size={36} color={T.domains.notes} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+        <NotePencil size={36} color={T.accent} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No notes yet</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
         Create your first note to get started
       </Text>
       <TouchableOpacity
-        style={[styles.emptyCta, { backgroundColor: T.domains.notes }]}
+        style={[styles.emptyCta, { backgroundColor: T.accent }]}
         onPress={() => router.push("/notes/edit" as any)}
         activeOpacity={0.8}
       >

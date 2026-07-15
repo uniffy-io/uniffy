@@ -76,6 +76,7 @@ export function MfaEnrollFlow({ color, onDone }: { color: string; onDone: () => 
         refreshToken: res.refreshToken,
         organizationId: res.organizationId,
         organizationRole: res.organizationRole,
+        assetCookie: res.assetCookie,
       });
       setRecoveryCodes(res.recoveryCodes);
       setPhase("codes");

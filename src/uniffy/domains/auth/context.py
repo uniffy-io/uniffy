@@ -157,11 +157,24 @@ _OS_PATTERNS = [
     (re.compile(r"Linux"), "Linux"),
 ]
 
+# Native app clients (the Uniffy mobile app) present no browser token, so the
+# generic browser/OS pass below cannot label them. They send an explicit
+# "Uniffy/<ver> (<platform> <ver>)" agent; match the platform inside the parens.
+_APP_CLIENT_PATTERNS = [
+    (re.compile(r"Uniffy/[\d.]+\s*\(\s*(?:iOS|iPadOS|iPhone|iPad|iPod)", re.I), "Uniffy for iOS"),
+    (re.compile(r"Uniffy/[\d.]+\s*\(\s*Android", re.I), "Uniffy for Android"),
+    (re.compile(r"Uniffy/[\d.]+", re.I), "Uniffy app"),
+]
+
 
 def parse_device_label(user_agent: str) -> str:
     """Parse a User-Agent into a label like "Chrome on macOS"."""
     if not user_agent:
         return "Unknown device"
+
+    for pattern, label in _APP_CLIENT_PATTERNS:
+        if pattern.search(user_agent):
+            return label
 
     browser = "Unknown browser"
     for pattern, name in _BROWSER_PATTERNS:

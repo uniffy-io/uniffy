@@ -1,10 +1,10 @@
 import React from "react";
-import { StyleSheet, Text, Platform, Pressable, useWindowDimensions } from "react-native";
+import { Modal, StyleSheet, Text, View, Platform, Pressable, useWindowDimensions } from "react-native";
 import { BlurView } from "expo-blur";
-import { GestureDetector } from "react-native-gesture-handler";
+import { GlassSurface } from "@shared/components/GlassSurface";
+import { GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import type { ComposedGesture, GestureType } from "react-native-gesture-handler";
 import Animated, {
-  FadeIn,
   interpolate,
   useAnimatedStyle,
   Extrapolation,
@@ -16,7 +16,6 @@ import {
   ChatCircle,
   CalendarBlank,
   Kanban,
-  Robot,
 } from "phosphor-react-native";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
@@ -29,29 +28,22 @@ export type HubItem = {
   Icon: React.ComponentType<{ size: number; color: string; weight: "duotone" }>;
 };
 
+// Chat holds the middle slot: the wheel opens centered on it, and only the
+// center position keeps every item's arc spot on screen at once.
 export const HUB_ITEMS: HubItem[] = [
-  { key: "chat", label: "Chat", path: "/chat", Icon: ChatCircle },
   { key: "calendar", label: "Calendar", path: "/calendar", Icon: CalendarBlank },
   { key: "notes", label: "Notes", path: "/notes", Icon: NotePencil },
+  { key: "chat", label: "Chat", path: "/chat", Icon: ChatCircle },
   { key: "files", label: "Files", path: "/files", Icon: FolderSimple },
   { key: "projects", label: "Projects", path: "/projects", Icon: Kanban },
-  { key: "agents", label: "Agents", path: "/agents", Icon: Robot },
 ];
+
+export const HUB_CENTER_INDEX = Math.floor(HUB_ITEMS.length / 2);
 
 // Degrees between adjacent items on the wheel; 90 deg is the apex.
 export const HUB_STEP_DEG = 19;
 export const HUB_RADIUS = 220;
 const ITEM_SIZE = 54;
-
-// The ring is endless: an item's distance from the apex is its index minus
-// the offset, wrapped to the nearest representative so rotation never hits
-// an end. Items fade out before the wrap point, hiding the position jump.
-function wrapDelta(delta: number): number {
-  "worklet";
-  const n = HUB_ITEMS.length;
-  const d = ((delta % n) + n) % n;
-  return d >= n / 2 ? d - n : d;
-}
 
 type HubItemViewProps = {
   item: HubItem;
@@ -73,38 +65,50 @@ function HubItemView({
   onPress,
 }: HubItemViewProps) {
   const T = useTheme();
-  const color = T.domains[item.key];
-  const soft = T.domains[`${item.key}Soft`];
 
   const animatedStyle = useAnimatedStyle(() => {
-    const delta = wrapDelta(index - offset.value);
+    const delta = index - offset.value;
     const angle = ((90 + delta * HUB_STEP_DEG) * Math.PI) / 180;
     const dist = Math.abs(delta);
-    const scale = interpolate(dist, [0, 1], [1.28, 1], Extrapolation.CLAMP);
-    const opacity = interpolate(dist, [0, 2.2, 2.8], [1, 0.85, 0], Extrapolation.CLAMP);
+    // Emphasis is real width/height layout, never transform or opacity: a
+    // GlassView under an ancestor with an animated opacity or transform
+    // silently renders as a plain view (expo/expo#41024).
+    const size =
+      ITEM_SIZE * interpolate(dist, [0, 1, 2.5, 4], [1.28, 1, 0.85, 0.45], Extrapolation.CLAMP);
     return {
-      left: centerX + HUB_RADIUS * Math.cos(angle) - ITEM_SIZE / 2,
-      bottom: centerBottom + HUB_RADIUS * Math.sin(angle) - ITEM_SIZE / 2,
-      transform: [{ scale }],
-      opacity,
+      width: size,
+      height: size,
+      left: centerX + HUB_RADIUS * Math.cos(angle) - size / 2,
+      bottom: centerBottom + HUB_RADIUS * Math.sin(angle) - size / 2,
     };
   });
 
   return (
-    <Animated.View style={[styles.item, animatedStyle]}>
+    <Animated.View
+      style={[
+        styles.item,
+        animatedStyle,
+        focused && { shadowColor: T.textBright },
+        focused && styles.itemShadowFocused,
+      ]}
+    >
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={item.label}
-        style={[
-          styles.itemInner,
-          {
-            backgroundColor: focused ? soft : T.surface,
-            borderColor: focused ? color : T.border,
-          },
-        ]}
+        style={[styles.itemInner, { borderColor: focused ? T.textBright : T.border }]}
       >
-        <item.Icon size={24} color={focused ? color : T.textDim} weight="duotone" />
+        {/* Selection stays neutral: the focused bubble reads from a brighter
+            border, icon, and glow over the theme glass, so it holds in dark and
+            light without any color tint. */}
+        <GlassSurface
+          style={StyleSheet.absoluteFill}
+          interactive
+          isDark={T.isDark}
+          blurIntensity={focused ? 70 : 36}
+          solidColor={T.surface}
+        />
+        <item.Icon size={24} color={focused ? T.textBright : T.textDim} weight="duotone" />
       </Pressable>
     </Animated.View>
   );
@@ -118,6 +122,7 @@ type HubCarouselProps = {
   gesture: ComposedGesture | GestureType;
   showHint: boolean;
   onItemPress: (index: number) => void;
+  onRequestClose: () => void;
 };
 
 export function HubCarousel({
@@ -128,6 +133,7 @@ export function HubCarousel({
   gesture,
   showHint,
   onItemPress,
+  onRequestClose,
 }: HubCarouselProps) {
   const T = useTheme();
   const { width } = useWindowDimensions();
@@ -138,21 +144,41 @@ export function HubCarousel({
   const labelBottom = centerBottom + HUB_RADIUS + ITEM_SIZE / 2 + 22;
 
   return (
-    <Animated.View entering={FadeIn.duration(140)} style={StyleSheet.absoluteFill}>
+    // A Modal, not an absolute-fill sibling: a shell-level inset overlay can
+    // collapse into flow layout on iOS 26 Fabric (LoginSplash and AtOverlay
+    // hit the same bug). The Modal hosts its own full-screen root, and it
+    // needs its own GestureHandlerRootView for the detectors to work on
+    // Android. The in-progress pan that opened the wheel stays with the
+    // logo's detector in the main window; only new touches land here.
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onRequestClose}
+    >
+      <GestureHandlerRootView style={styles.fill}>
       <GestureDetector gesture={gesture}>
-        <Animated.View style={StyleSheet.absoluteFill}>
+        {/* The backdrop mounts with no animation: a Reanimated entering fade
+            on an absolute-fill view collapses it on iOS 26 Fabric so it
+            never draws, and animated opacity above glass would break the
+            bubbles anyway (expo/expo#41024). Strong enough that text or file
+            pages behind cannot compete with the wheel's icons, while the page
+            stays faintly recognizable. */}
+        <View style={StyleSheet.absoluteFill} collapsable={false}>
           <BlurView
-            intensity={30}
+            intensity={55}
             tint={T.isDark ? "dark" : "light"}
-            style={[styles.backdrop, { backgroundColor: T.isDark ? "#0d111ecc" : "#eeeeeecc" }]}
+            style={[styles.backdrop, { backgroundColor: T.isDark ? "#0d111ee6" : "#eeeeeee6" }]}
           />
-        </Animated.View>
+        </View>
       </GestureDetector>
 
       <Text
         style={[
           styles.label,
-          { color: T.domains[focusedItem.key], bottom: labelBottom, pointerEvents: "none" },
+          { color: T.textBright, bottom: labelBottom, pointerEvents: "none" },
         ]}
       >
         {focusedItem.label}
@@ -180,25 +206,36 @@ export function HubCarousel({
           onPress={() => onItemPress(i)}
         />
       ))}
-    </Animated.View>
+      </GestureHandlerRootView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   item: {
     position: "absolute",
-    width: ITEM_SIZE,
-    height: ITEM_SIZE,
+  },
+  itemShadowFocused: {
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
   itemInner: {
     flex: 1,
-    borderRadius: ITEM_SIZE / 2,
+    // Bubbles resize with wheel distance; an oversized radius keeps them
+    // circular at every animated size.
+    borderRadius: 999,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
     ...(Platform.OS === "web" ? { cursor: "pointer" as any } : null),
   },
   label: {

@@ -1,7 +1,6 @@
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import type { Notification as ProtoNotification } from "@uniffy/proto/notifications/v1/notifications_pb";
 import { NotificationType } from "@uniffy/proto/notifications/v1/notifications_pb";
-import type { DomainKey } from "@theme/theme";
 
 export type NotificationIconKind =
   | "share"
@@ -25,7 +24,6 @@ export interface SerializedNotification {
   sourceUrn: string;
   route: string | null;
   iconKind: NotificationIconKind;
-  domain: DomainKey;
   tone: "danger" | "warning" | null;
 }
 
@@ -53,26 +51,26 @@ function stripMentions(text: string): string {
   return text.replace(MENTION_RE, (_, label) => `@${label}`);
 }
 
-type TypeMeta = { kind: NotificationIconKind; domain: DomainKey; tone?: "danger" | "warning" };
+type TypeMeta = { kind: NotificationIconKind; tone?: "danger" | "warning" };
 
 const TYPE_META: Record<number, TypeMeta> = {
-  [NotificationType.CONTENT_SHARED]: { kind: "share", domain: "files" },
-  [NotificationType.CONTENT_MENTIONED]: { kind: "mention", domain: "notes" },
-  [NotificationType.CONTENT_EDITED]: { kind: "edit", domain: "notes" },
-  [NotificationType.CALENDAR_REMINDER]: { kind: "calendar", domain: "calendar" },
-  [NotificationType.CALENDAR_INVITE]: { kind: "calendar", domain: "calendar" },
-  [NotificationType.CALENDAR_RESPONSE]: { kind: "calendar", domain: "calendar" },
-  [NotificationType.PERMISSION_GRANTED]: { kind: "permission", domain: "projects" },
-  [NotificationType.PERMISSION_REVOKED]: { kind: "permission", domain: "projects", tone: "danger" },
-  [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", domain: "calendar", tone: "warning" },
-  [NotificationType.TASK_ASSIGNED]: { kind: "task", domain: "projects" },
-  [NotificationType.TASK_DUE_SOON]: { kind: "task", domain: "projects", tone: "warning" },
-  [NotificationType.TASK_OVERDUE]: { kind: "task", domain: "projects", tone: "danger" },
-  [NotificationType.CHAT_MENTION]: { kind: "chat", domain: "chat" },
-  [NotificationType.CHAT_DM]: { kind: "chat", domain: "chat" },
-  [NotificationType.CHAT_CHANNEL_INVITE]: { kind: "chat", domain: "chat" },
-  [NotificationType.CHAT_CHANNEL_REMOVED]: { kind: "chat", domain: "chat", tone: "danger" },
-  [NotificationType.CHAT_THREAD_REPLY]: { kind: "chat", domain: "chat" },
+  [NotificationType.CONTENT_SHARED]: { kind: "share" },
+  [NotificationType.CONTENT_MENTIONED]: { kind: "mention" },
+  [NotificationType.CONTENT_EDITED]: { kind: "edit" },
+  [NotificationType.CALENDAR_REMINDER]: { kind: "calendar" },
+  [NotificationType.CALENDAR_INVITE]: { kind: "calendar" },
+  [NotificationType.CALENDAR_RESPONSE]: { kind: "calendar" },
+  [NotificationType.PERMISSION_GRANTED]: { kind: "permission" },
+  [NotificationType.PERMISSION_REVOKED]: { kind: "permission", tone: "danger" },
+  [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", tone: "warning" },
+  [NotificationType.TASK_ASSIGNED]: { kind: "task" },
+  [NotificationType.TASK_DUE_SOON]: { kind: "task", tone: "warning" },
+  [NotificationType.TASK_OVERDUE]: { kind: "task", tone: "danger" },
+  [NotificationType.CHAT_MENTION]: { kind: "chat" },
+  [NotificationType.CHAT_DM]: { kind: "chat" },
+  [NotificationType.CHAT_CHANNEL_INVITE]: { kind: "chat" },
+  [NotificationType.CHAT_CHANNEL_REMOVED]: { kind: "chat", tone: "danger" },
+  [NotificationType.CHAT_THREAD_REPLY]: { kind: "chat" },
 };
 
 const CONTENT_TYPE_ROUTE: Record<string, (id: string) => string> = {
@@ -97,7 +95,6 @@ export function routeFromUrn(urn: string): string | null {
 export function notificationToPlain(proto: ProtoNotification): SerializedNotification {
   const meta = TYPE_META[proto.notificationType] ?? {
     kind: "system" as const,
-    domain: "chat" as const,
   };
   const createdAtSeconds = tsToSeconds(proto.createdAt);
   return {
@@ -112,7 +109,6 @@ export function notificationToPlain(proto: ProtoNotification): SerializedNotific
     sourceUrn: proto.sourceUrn,
     route: routeFromUrn(proto.sourceUrn),
     iconKind: meta.kind,
-    domain: meta.domain,
     tone: meta.tone ?? null,
   };
 }

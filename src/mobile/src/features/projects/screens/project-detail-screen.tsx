@@ -156,14 +156,14 @@ export default function ProjectBoardScreen() {
   if (projectQuery.isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={T.domains.projects} />
+        <ActivityIndicator size="large" color={T.accent} />
       </View>
     );
   }
 
   if (!project) return null;
 
-  const projectColor = project.color || T.domains.projects;
+  const projectColor = project.color || T.accent;
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>

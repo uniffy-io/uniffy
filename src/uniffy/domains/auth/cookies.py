@@ -1,4 +1,4 @@
-"""The read-only asset cookie: config resolved from env, built here, set by the auth handlers.
+"""The read-only asset cookie: config resolved from env, minted and attached here.
 
 Env tier only - cookie transport is a deployment property, not a per-tenant one. Knobs:
 ``ASSET_COOKIE_SECURE`` (default on outside development; off for plain-http LAN self-host),
@@ -8,8 +8,15 @@ Env tier only - cookie transport is a deployment property, not a per-tenant one.
 
 import os
 from dataclasses import dataclass
+from uuid import UUID
 
-from uniffy.domains.auth.tokens import get_asset_token_expire_minutes
+from connectrpc.request import RequestContext
+
+from uniffy.domains.auth.tokens import (
+    create_asset_read_token,
+    decode_token_unsafe,
+    get_asset_token_expire_minutes,
+)
 
 
 @dataclass(frozen=True)
@@ -54,6 +61,32 @@ def build_set_cookie(config: AssetCookieConfig, token: str) -> str:
     if config.secure:
         parts.append("Secure")
     return "; ".join(parts)
+
+
+def attach_asset_cookie(
+    ctx: RequestContext,
+    *,
+    access_token: str,
+    user_id: UUID,
+    organization_id: UUID | None,
+    session_id: UUID | None,
+) -> str:
+    """Mint the asset-read token and attach it as a Set-Cookie header.
+
+    ``tkv`` is lifted from the freshly-minted access token so the cookie rides the same revocation
+    watermark as Bearer. Returns the ``name=value`` pair so auth responses can also carry it in the
+    body for native clients that send it as an explicit Cookie header instead of using a cookie jar.
+    """
+    tkv = decode_token_unsafe(access_token).get("tkv")
+    token = create_asset_read_token(
+        user_id=user_id,
+        organization_id=organization_id,
+        token_version=tkv,
+        session_id=session_id,
+    )
+    config = resolve_asset_cookie_config()
+    ctx.response_headers().add("set-cookie", build_set_cookie(config, token))
+    return f"{config.name}={token}"
 
 
 def build_clear_cookie(config: AssetCookieConfig) -> str:

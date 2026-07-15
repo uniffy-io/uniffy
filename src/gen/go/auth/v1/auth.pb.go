@@ -526,8 +526,12 @@ type RegisterResponse struct {
 	SessionId          *string                `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`                                                          // Server-side session identifier
 	DomainAdminDomains []v1.DomainType        `protobuf:"varint,8,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"` // Domains where user is domain admin
 	OrganizationSlug   *string                `protobuf:"bytes,9,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`                                     // Slug of the org bound to the session
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Asset-read cookie as a "name=value" pair for native clients that attach it
+	// as an explicit Cookie header on GET asset routes. Browsers ignore this and
+	// ride the HttpOnly Set-Cookie sent alongside.
+	AssetCookie   string `protobuf:"bytes,10,opt,name=asset_cookie,json=assetCookie,proto3" json:"asset_cookie,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterResponse) Reset() {
@@ -619,6 +623,13 @@ func (x *RegisterResponse) GetDomainAdminDomains() []v1.DomainType {
 func (x *RegisterResponse) GetOrganizationSlug() string {
 	if x != nil && x.OrganizationSlug != nil {
 		return *x.OrganizationSlug
+	}
+	return ""
+}
+
+func (x *RegisterResponse) GetAssetCookie() string {
+	if x != nil {
+		return x.AssetCookie
 	}
 	return ""
 }
@@ -745,8 +756,10 @@ type AuthResult struct {
 	SessionId          *string                `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
 	DomainAdminDomains []v1.DomainType        `protobuf:"varint,8,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"`
 	OrganizationSlug   *string                `protobuf:"bytes,9,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Asset-read cookie as a "name=value" pair for native clients (see RegisterResponse).
+	AssetCookie   string `protobuf:"bytes,10,opt,name=asset_cookie,json=assetCookie,proto3" json:"asset_cookie,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AuthResult) Reset() {
@@ -838,6 +851,13 @@ func (x *AuthResult) GetDomainAdminDomains() []v1.DomainType {
 func (x *AuthResult) GetOrganizationSlug() string {
 	if x != nil && x.OrganizationSlug != nil {
 		return *x.OrganizationSlug
+	}
+	return ""
+}
+
+func (x *AuthResult) GetAssetCookie() string {
+	if x != nil {
+		return x.AssetCookie
 	}
 	return ""
 }
@@ -965,8 +985,10 @@ type RefreshTokenResponse struct {
 	SessionId          *string                `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`                                                          // Server-side session identifier
 	DomainAdminDomains []v1.DomainType        `protobuf:"varint,8,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"` // Domains where user is domain admin
 	OrganizationSlug   *string                `protobuf:"bytes,9,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`                                     // Slug of the org bound to the session
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Asset-read cookie as a "name=value" pair for native clients (see RegisterResponse).
+	AssetCookie   string `protobuf:"bytes,10,opt,name=asset_cookie,json=assetCookie,proto3" json:"asset_cookie,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RefreshTokenResponse) Reset() {
@@ -1058,6 +1080,13 @@ func (x *RefreshTokenResponse) GetDomainAdminDomains() []v1.DomainType {
 func (x *RefreshTokenResponse) GetOrganizationSlug() string {
 	if x != nil && x.OrganizationSlug != nil {
 		return *x.OrganizationSlug
+	}
+	return ""
+}
+
+func (x *RefreshTokenResponse) GetAssetCookie() string {
+	if x != nil {
+		return x.AssetCookie
 	}
 	return ""
 }
@@ -2312,7 +2341,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x14RevokeSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"\x1c\n" +
-	"\x1aRevokeOtherSessionsRequest\"\xe0\x03\n" +
+	"\x1aRevokeOtherSessionsRequest\"\x83\x04\n" +
 	"\x10RegisterResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
@@ -2324,7 +2353,9 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\a \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n" +
 	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n" +
-	"\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01B\x12\n" +
+	"\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n" +
+	"\fasset_cookie\x18\n" +
+	" \x01(\tR\vassetCookieB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
 	"\v_session_idB\x14\n" +
@@ -2334,7 +2365,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"authResult\x12<\n" +
 	"\rmfa_challenge\x18\x02 \x01(\v2\x15.auth.v1.MfaChallengeH\x00R\fmfaChallenge\x12N\n" +
 	"\x13enrollment_required\x18\x03 \x01(\v2\x1b.auth.v1.EnrollmentRequiredH\x00R\x12enrollmentRequiredB\b\n" +
-	"\x06result\"\xda\x03\n" +
+	"\x06result\"\xfd\x03\n" +
 	"\n" +
 	"AuthResult\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
@@ -2347,7 +2378,9 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\a \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n" +
 	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n" +
-	"\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01B\x12\n" +
+	"\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n" +
+	"\fasset_cookie\x18\n" +
+	" \x01(\tR\vassetCookieB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
 	"\v_session_idB\x14\n" +
@@ -2358,7 +2391,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x12EnrollmentRequired\x12)\n" +
 	"\x10enrollment_token\x18\x01 \x01(\tR\x0fenrollmentToken\x12I\n" +
 	"\x10grace_expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x0egraceExpiresAt\x88\x01\x01B\x13\n" +
-	"\x11_grace_expires_at\"\xe4\x03\n" +
+	"\x11_grace_expires_at\"\x87\x04\n" +
 	"\x14RefreshTokenResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
@@ -2370,7 +2403,9 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\a \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n" +
 	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n" +
-	"\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01B\x12\n" +
+	"\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n" +
+	"\fasset_cookie\x18\n" +
+	" \x01(\tR\vassetCookieB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
 	"\v_session_idB\x14\n" +

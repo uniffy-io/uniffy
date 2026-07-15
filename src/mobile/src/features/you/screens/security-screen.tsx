@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -20,9 +21,11 @@ import {
   X,
   Check,
 } from "phosphor-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { MfaEnrollFlow } from "@features/auth/components/MfaEnrollFlow";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/auth-context";
@@ -32,6 +35,9 @@ type CodeAction = "disable" | "regenerate" | null;
 
 export default function SecurityScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { isAuthenticated } = useAuth();
   const [enrolling, setEnrolling] = useState(false);
   const [codeAction, setCodeAction] = useState<CodeAction>(null);
@@ -70,7 +76,7 @@ export default function SecurityScreen() {
           <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>TWO-FACTOR AUTHENTICATION</Text>
 
           <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>

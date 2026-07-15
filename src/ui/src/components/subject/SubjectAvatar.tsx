@@ -6,7 +6,7 @@ import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 const _failedAvatars = new Set<string>();
 import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 import { SUBJECT_TYPE, type Subject, type SubjectAvatarSize } from '@/components/subject/types';
-import { getInitials } from '@/components/subject/utils';
+import { getAvatarGradientStyle, getInitials } from '@/components/subject/utils';
 import { usePresence } from '@/features/presence/hooks/usePresence';
 
 const SIZE_CLASSES: Record<SubjectAvatarSize, string> = {
@@ -91,12 +91,12 @@ export function SubjectAvatar({
     ) : (
         <div
             className={cn(
-                'rounded-full flex items-center justify-center shrink-0 font-medium',
-                'bg-primary/15 text-primary',
+                'rounded-full flex items-center justify-center shrink-0 font-medium text-white',
                 sizeClass,
                 bordered && 'border-2 border-card',
                 !shouldShowPresence && className
             )}
+            style={getAvatarGradientStyle(subject.name || subject.id)}
             title={subject.name}
         >
             {getInitials(subject.name || subject.id.slice(-2))}
@@ -121,6 +121,9 @@ export function SubjectAvatar({
 interface SubjectAvatarByIdProps {
     userId: string;
     displayName?: string;
+    /** Server-built avatar URL (e.g. a chat message's senderAvatarUrl). When
+     *  set it wins over the id-derived lookup, which only covers users. */
+    avatarUrl?: string;
     size?: SubjectAvatarSize;
     className?: string;
     bordered?: boolean;
@@ -131,13 +134,15 @@ interface SubjectAvatarByIdProps {
 export function SubjectAvatarById({
     userId,
     displayName,
+    avatarUrl,
     size = 'sm',
     className,
     bordered = false,
     showPresence = false,
 }: SubjectAvatarByIdProps) {
     const sizeClass = SIZE_CLASSES[size];
-    const avatarSrc = useAvatarUrl(userId, size === 'lg' ? 'md' : 'sm');
+    const resolvedUrl = useAvatarUrl(userId, size === 'lg' ? 'md' : 'sm');
+    const avatarSrc = avatarUrl || resolvedUrl;
     const [imgFailed, setImgFailed] = useState(() => !!avatarSrc && _failedAvatars.has(avatarSrc));
     const handleImgError = useCallback(() => {
         if (avatarSrc) _failedAvatars.add(avatarSrc);
@@ -161,12 +166,12 @@ export function SubjectAvatarById({
     ) : (
         <div
             className={cn(
-                'rounded-full flex items-center justify-center shrink-0 font-medium',
-                'bg-primary/15 text-primary',
+                'rounded-full flex items-center justify-center shrink-0 font-medium text-white',
                 sizeClass,
                 bordered && 'border-2 border-card',
                 !showPresence && className
             )}
+            style={getAvatarGradientStyle(displayName || userId)}
             title={displayName}
         >
             {displayName ? getInitials(displayName) : userId.slice(-2).toUpperCase()}

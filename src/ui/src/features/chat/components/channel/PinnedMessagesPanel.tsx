@@ -142,7 +142,12 @@ export function PinnedMessagesPanel({ channelId, anchorRef, onClose, onJumpToMes
                       size="xs"
                     />
                   ) : (
-                    <SubjectAvatarById userId={message.senderId} displayName={senderName} size="xs" />
+                    <SubjectAvatarById
+                      userId={message.senderId}
+                      displayName={senderName}
+                      avatarUrl={message.senderAvatarUrl}
+                      size="xs"
+                    />
                   )}
                   <span className="text-sm font-semibold text-foreground">{senderName}</span>
                   <span className="text-xs text-muted-foreground">{formatRelativeTime(message.createdAt)}</span>

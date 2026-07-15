@@ -182,8 +182,11 @@ type ConfirmEnrollmentResponse struct {
 	OrganizationSlug   *string         `protobuf:"bytes,6,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`
 	OrganizationRole   *string         `protobuf:"bytes,7,opt,name=organization_role,json=organizationRole,proto3,oneof" json:"organization_role,omitempty"`
 	DomainAdminDomains []v1.DomainType `protobuf:"varint,8,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Asset-read cookie as a "name=value" pair for native clients
+	// (see auth.v1.RegisterResponse).
+	AssetCookie   string `protobuf:"bytes,9,opt,name=asset_cookie,json=assetCookie,proto3" json:"asset_cookie,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ConfirmEnrollmentResponse) Reset() {
@@ -272,6 +275,13 @@ func (x *ConfirmEnrollmentResponse) GetDomainAdminDomains() []v1.DomainType {
 	return nil
 }
 
+func (x *ConfirmEnrollmentResponse) GetAssetCookie() string {
+	if x != nil {
+		return x.AssetCookie
+	}
+	return ""
+}
+
 type VerifyMfaRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The mfa_challenge JWT returned by AuthService.Authenticate.
@@ -350,8 +360,11 @@ type VerifyMfaResponse struct {
 	RemainingRecoveryCodes int32           `protobuf:"varint,9,opt,name=remaining_recovery_codes,json=remainingRecoveryCodes,proto3" json:"remaining_recovery_codes,omitempty"`
 	OrganizationSlug       *string         `protobuf:"bytes,10,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`
 	DomainAdminDomains     []v1.DomainType `protobuf:"varint,11,rep,packed,name=domain_admin_domains,json=domainAdminDomains,proto3,enum=common.v1.DomainType" json:"domain_admin_domains,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Asset-read cookie as a "name=value" pair for native clients
+	// (see auth.v1.RegisterResponse).
+	AssetCookie   string `protobuf:"bytes,12,opt,name=asset_cookie,json=assetCookie,proto3" json:"asset_cookie,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *VerifyMfaResponse) Reset() {
@@ -459,6 +472,13 @@ func (x *VerifyMfaResponse) GetDomainAdminDomains() []v1.DomainType {
 		return x.DomainAdminDomains
 	}
 	return nil
+}
+
+func (x *VerifyMfaResponse) GetAssetCookie() string {
+	if x != nil {
+		return x.AssetCookie
+	}
+	return ""
 }
 
 type DisableMfaRequest struct {
@@ -1325,7 +1345,7 @@ const file_auth_v1_mfa_proto_rawDesc = "" +
 	"\x10provisioning_uri\x18\x02 \x01(\tR\x0fprovisioningUri\x12\"\n" +
 	"\rqr_svg_base64\x18\x03 \x01(\tR\vqrSvgBase64\".\n" +
 	"\x18ConfirmEnrollmentRequest\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\"\xc4\x03\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\"\xe7\x03\n" +
 	"\x19ConfirmEnrollmentResponse\x12%\n" +
 	"\x0erecovery_codes\x18\x01 \x03(\tR\rrecoveryCodes\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
@@ -1335,14 +1355,15 @@ const file_auth_v1_mfa_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n" +
 	"\x11organization_slug\x18\x06 \x01(\tH\x01R\x10organizationSlug\x88\x01\x01\x120\n" +
 	"\x11organization_role\x18\a \x01(\tH\x02R\x10organizationRole\x88\x01\x01\x12G\n" +
-	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomainsB\x12\n" +
+	"\x14domain_admin_domains\x18\b \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x12!\n" +
+	"\fasset_cookie\x18\t \x01(\tR\vassetCookieB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_slugB\x14\n" +
 	"\x12_organization_role\"g\n" +
 	"\x10VerifyMfaRequest\x12'\n" +
 	"\x0fchallenge_token\x18\x01 \x01(\tR\x0echallengeToken\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x16\n" +
-	"\x06method\x18\x03 \x01(\tR\x06method\"\xc9\x04\n" +
+	"\x06method\x18\x03 \x01(\tR\x06method\"\xec\x04\n" +
 	"\x11VerifyMfaResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
@@ -1357,7 +1378,8 @@ const file_auth_v1_mfa_proto_rawDesc = "" +
 	"\x18remaining_recovery_codes\x18\t \x01(\x05R\x16remainingRecoveryCodes\x120\n" +
 	"\x11organization_slug\x18\n" +
 	" \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12G\n" +
-	"\x14domain_admin_domains\x18\v \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomainsB\x12\n" +
+	"\x14domain_admin_domains\x18\v \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x12!\n" +
+	"\fasset_cookie\x18\f \x01(\tR\vassetCookieB\x12\n" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
 	"\v_session_idB\x14\n" +

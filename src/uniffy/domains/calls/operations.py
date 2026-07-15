@@ -455,7 +455,7 @@ class CallOperations:
                 participant_to_event_dict(
                     participant,
                     display_name=getattr(info, "display_name", ""),
-                    avatar_url=getattr(info, "avatar_key", None),
+                    avatar_url=getattr(info, "avatar_url", None) or None,
                 ),
                 len(active),
             ),
@@ -521,7 +521,7 @@ class CallOperations:
                 participant_to_event_dict(
                     participant,
                     display_name=getattr(info, "display_name", ""),
-                    avatar_url=getattr(info, "avatar_key", None),
+                    avatar_url=getattr(info, "avatar_url", None) or None,
                 ),
                 len(remaining),
             ),
@@ -843,7 +843,7 @@ class CallOperations:
             call_type=call.call_type.value,
             caller_user_id=caller_id,
             caller_name=info.display_name,
-            caller_avatar_url=info.avatar_key,
+            caller_avatar_url=info.avatar_url or None,
             expires_at=datetime.now(UTC) + timedelta(seconds=RING_TIMEOUT_SECONDS),
         )
         await publish_channel_event_to_members(

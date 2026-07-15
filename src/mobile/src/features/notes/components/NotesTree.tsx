@@ -74,7 +74,7 @@ function TreeNodeRow({
         {isFolder ? (
           <FolderSimple size={16} color={T.textDim} weight="duotone" />
         ) : (
-          <FileText size={16} color={T.domains.notes} weight="duotone" />
+          <FileText size={16} color={T.accent} weight="duotone" />
         )}
 
         <Text

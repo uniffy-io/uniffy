@@ -5,15 +5,17 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Platform,
   RefreshControl,
   ActivityIndicator,
   Alert,
 } from "react-native";
 import { DotsThree, FolderSimple, Trash } from "phosphor-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { useTheme } from "@shared/hooks/useTheme";
-import { FILE_COLORS } from "@theme/theme";
+import { BOTTOM_NAV_HEIGHT, FILE_COLORS } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useFilesTrash } from "@features/files/useFiles";
 import {
@@ -31,6 +33,9 @@ type TrashSheetItem = { id: string; name: string; isFolder: boolean } | null;
 
 export default function FilesTrashScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const trash = useFilesTrash();
   const restoreFile = useRestoreFile();
   const restoreFolder = useRestoreFolder();
@@ -82,7 +87,7 @@ export default function FilesTrashScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Trash"
-        color={T.domains.files}
+        color={T.accent}
         icon="files"
         rightActions={
           <TouchableOpacity
@@ -98,19 +103,19 @@ export default function FilesTrashScreen() {
 
       {trash.isLoading && !trash.data && (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.files} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
         refreshControl={
           <RefreshControl
             refreshing={trash.isFetching && !trash.isLoading}
             onRefresh={() => trash.refetch()}
-            tintColor={T.domains.files}
-            colors={[T.domains.files]}
+            tintColor={T.accent}
+            colors={[T.accent]}
           />
         }
       >
@@ -118,8 +123,8 @@ export default function FilesTrashScreen() {
           <View style={styles.listContent}>
             {folders.map((folder) => (
               <View key={folder.id} style={[styles.row, { borderBottomColor: T.border }]}>
-                <View style={[styles.folderIcon, { backgroundColor: T.domains.filesSoft }]}>
-                  <FolderSimple size={22} color={T.domains.files} weight="fill" />
+                <View style={[styles.folderIcon, { backgroundColor: T.accentSoft }]}>
+                  <FolderSimple size={22} color={T.accent} weight="fill" />
                 </View>
                 <Text style={[styles.itemName, { color: T.textBright }]} numberOfLines={1}>
                   {folder.name}
@@ -162,8 +167,8 @@ export default function FilesTrashScreen() {
         ) : (
           !trash.isLoading && (
             <View style={styles.emptyState}>
-              <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.filesSoft }]}>
-                <Trash size={32} color={T.domains.files} weight="duotone" />
+              <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+                <Trash size={32} color={T.accent} weight="duotone" />
               </View>
               <Text style={[styles.emptyTitle, { color: T.textBright }]}>Trash is empty</Text>
               <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
@@ -179,7 +184,7 @@ export default function FilesTrashScreen() {
         onClose={() => setSheetItem(null)}
         title={sheetItem?.name ?? ""}
         icon="files"
-        iconColor={T.domains.files}
+        iconColor={T.accent}
         actions={[
           {
             icon: "repeat",

@@ -1,5 +1,8 @@
 import type { CalendarEvent, Category } from "@uniffy/proto/cal/v1/calendar_pb";
 import { AttendeeStatus, RecurrencePattern, ResourceType } from "@uniffy/proto/cal/v1/calendar_pb";
+import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
+
+export type EventAccessMode = "OWNER_ONLY" | "EXPLICIT_MEMBERS" | "OPEN_TO_ORG";
 
 export interface SerializedAttendee {
   id: string;
@@ -32,6 +35,10 @@ export interface SerializedEvent {
   channelId?: string;
   calendarId: string;
   categoryId: string;
+  /** Event creator; the "Mine" scope matches this or an attendee. */
+  organizerId: string;
+  /** Drives the "Organization" scope: OPEN_TO_ORG is org-wide. */
+  accessMode: EventAccessMode;
   attendees: SerializedAttendee[];
   recurrence?: { pattern: string };
   linkedResources: SerializedLinkedResource[];
@@ -64,6 +71,12 @@ const RESOURCE_TYPE: Record<number, string> = {
   [ResourceType.NOTE]: "note",
   [ResourceType.FILE]: "file",
   [ResourceType.CHAT]: "chat",
+};
+
+const ACCESS_MODE: Record<number, EventAccessMode> = {
+  [AccessMode.OWNER_ONLY]: "OWNER_ONLY",
+  [AccessMode.EXPLICIT_MEMBERS]: "EXPLICIT_MEMBERS",
+  [AccessMode.OPEN_TO_ORG]: "OPEN_TO_ORG",
 };
 
 function tsToDate(ts?: { seconds: bigint; nanos: number }): Date {
@@ -112,6 +125,8 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
     channelId: event.channelId,
     calendarId: event.calendarId,
     categoryId: event.categoryId,
+    organizerId: event.organizerId,
+    accessMode: ACCESS_MODE[event.accessMode] ?? "OWNER_ONLY",
     attendees: event.attendees.map((a) => ({
       id: a.id,
       name: a.name,

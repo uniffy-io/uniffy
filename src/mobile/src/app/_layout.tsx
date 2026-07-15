@@ -21,14 +21,14 @@ import { queryClient } from "@core/api/query-client";
 import { UniffyProvider, useUniffy } from "@core/providers/uniffy-context";
 import { AuthProvider, useAuth } from "@core/providers/auth-context";
 import { usePresenceHeartbeat } from "@shared/presence/usePresence";
-import { CallProvider } from "@features/calls/call-context";
+import { CallProvider, useCall } from "@features/calls/call-context";
 import { ThemeProvider } from "@core/providers/theme-context";
 import { useTheme } from "@shared/hooks/useTheme";
-import { BottomNav, BOTTOM_BAR_CONTENT_HEIGHT, bottomBarPadding } from "@shared/components/BottomNav";
+import { BottomNav, bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { useUnreadNotificationCount } from "@features/notifications/useNotifications";
 import { KeyboardSpacer } from "@shared/components/KeyboardSpacer";
 import { AtOverlay } from "@features/mentions/AtOverlay";
-import { CallDock } from "@features/calls/components/CallDock";
+import { CallIndicator } from "@features/calls/components/CallIndicator";
 import { CallScreen } from "@features/calls/components/CallScreen";
 import { IncomingCallBanner } from "@features/calls/components/IncomingCallBanner";
 import { CallEndedNotice } from "@features/calls/components/CallEndedNotice";
@@ -93,11 +93,11 @@ function RootLayoutNav() {
   } = useAuth();
   const pathname = usePathname();
   const prevPathnameRef = useRef(pathname);
+  const { session: callSession, minimized: callMinimized, setMinimized } = useCall();
 
   usePresenceHeartbeat();
 
   const showAppChrome = isAuthenticated && !!organizationId;
-  const barSpace = BOTTOM_BAR_CONTENT_HEIGHT + bottomBarPadding(insets.bottom);
 
   // Set Android system navigation bar to match theme
   useEffect(() => {
@@ -106,10 +106,20 @@ function RootLayoutNav() {
     NavigationBar.setBackgroundColorAsync(T.isDark ? BRAND.midnight : BRAND.white).catch(() => {});
   }, [T.isDark]);
 
-  // Hardware back button: close the @ overlay if open, otherwise navigate back normally
+  // Hardware back button: minimize the call overlay or close the @ overlay
+  // before letting navigation handle it.
+  const callExpanded =
+    !callMinimized &&
+    (callSession.status === "connecting" ||
+      callSession.status === "connected" ||
+      callSession.status === "reconnecting");
   useEffect(() => {
     if (Platform.OS === "web") return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (callExpanded) {
+        setMinimized(true);
+        return true;
+      }
       if (atOpen) {
         closeAt();
         return true;
@@ -117,7 +127,7 @@ function RootLayoutNav() {
       return false;
     });
     return () => subscription.remove();
-  }, [atOpen, closeAt]);
+  }, [atOpen, closeAt, callExpanded, setMinimized]);
 
   useEffect(() => {
     const prevDepth = prevPathnameRef.current.split("/").filter(Boolean).length;
@@ -131,6 +141,20 @@ function RootLayoutNav() {
   return (
     <View style={[styles.root, { backgroundColor: T.pageBg }]}>
       <StatusBar style={T.isDark ? "light" : "dark"} />
+      {/* The negative margin slides the router content under the flow-laid
+          bar so its glass has real content to refract; screens inset their
+          scrollables (BOTTOM_NAV_HEIGHT + insets.bottom, or
+          bottomBarBlockHeight for exact flushness) to clear the bar. While a
+          call is expanded the CallScreen flow child replaces this wrapper
+          (display none keeps navigation state mounted); RTCView cannot render
+          in a modal and absolute overlays flow-collapse on iOS 26 Fabric. */}
+      <View
+        style={[
+          styles.content,
+          showAppChrome && { marginBottom: -bottomBarBlockHeight(insets.bottom) },
+          callExpanded && styles.contentHidden,
+        ]}
+      >
       <Stack
         screenOptions={{
           headerShown: false,
@@ -151,7 +175,6 @@ function RootLayoutNav() {
         <Stack.Screen name="chat/index" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="chat/create" />
-        <Stack.Screen name="agents/index" />
         <Stack.Screen name="calendar/index" />
         <Stack.Screen name="calendar/[id]" />
         <Stack.Screen name="projects/index" />
@@ -168,11 +191,18 @@ function RootLayoutNav() {
         <Stack.Screen name="you/notifications" />
         <Stack.Screen name="you/security" />
       </Stack>
-      {showAppChrome && <KeyboardSpacer minHeight={barSpace} />}
+      </View>
+      {/* The bar is a flow child on purpose: iOS 26 Fabric keeps absolutely
+          positioned shell overlays in flow layout (they steal Stack height),
+          so the bar IS the reserved space. The spacer after it lifts the bar
+          above the keyboard. Overlay stacking comes from sibling order, not
+          zIndex - zIndex on a fully inset-positioned sibling triggers the
+          same flow-layout bug. */}
+      {showAppChrome && callExpanded && <CallScreen />}
+      {showAppChrome && !callExpanded && <CallIndicator />}
+      {showAppChrome && !callExpanded && <AppBottomNav />}
+      {showAppChrome && !callExpanded && <KeyboardSpacer />}
       {showAppChrome && <AtOverlay />}
-      {showAppChrome && <CallDock />}
-      {showAppChrome && <AppBottomNav />}
-      {showAppChrome && <CallScreen />}
       {showAppChrome && <IncomingCallBanner />}
       {showAppChrome && <CallEndedNotice />}
       {loginSplashVisible && (
@@ -229,6 +259,8 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  content: { flex: 1 },
+  contentHidden: { display: "none" },
   loadingScreen: {
     flex: 1,
     backgroundColor: BRAND.midnight,

@@ -184,7 +184,7 @@ function ToolCallRow({
         activeOpacity={0.6}
       >
         {running ? (
-          <ActivityIndicator size={14} color={T.domains.chat} />
+          <ActivityIndicator size={14} color={T.accent} />
         ) : failed ? (
           <XCircle size={16} color={T.red} weight="fill" />
         ) : resultMsg ? (

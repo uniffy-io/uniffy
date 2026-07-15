@@ -6,15 +6,18 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  Platform,
   ActivityIndicator,
 } from "react-native";
 import { CalendarBlank, Clock, MapPin, Tag, Palette } from "phosphor-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RichDescriptionInput } from "@shared/components/RichDescriptionInput";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
 import { TimePicker } from "@features/calendar/components/TimePicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useCategories, useEvent } from "@features/calendar/useCalendar";
 import { useCreateEvent, useUpdateEvent } from "@features/calendar/useCalendarMutations";
@@ -45,6 +48,9 @@ function parseDateTime(dateStr: string, timeStr: string): Date {
 
 export default function CreateEventScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   // date/start/end arrive from the day-view drag-to-create gesture.
   const { eventId, date, start, end } = useLocalSearchParams<{
     eventId?: string;
@@ -150,7 +156,7 @@ export default function CreateEventScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={isEditing ? "Edit Event" : "New Event"}
-        color={T.domains.calendar}
+        color={T.accent}
         icon="calendar"
         rightActions={
           <TouchableOpacity
@@ -168,7 +174,7 @@ export default function CreateEventScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -192,7 +198,7 @@ export default function CreateEventScreen() {
           >
             <CalendarBlank size={18} color={T.textDim} weight="duotone" />
             <Text style={[styles.fieldLabel, { color: T.textBright }]}>All day</Text>
-            <View style={[styles.toggleTrack, isAllDay && { backgroundColor: T.domains.calendar }]}>
+            <View style={[styles.toggleTrack, isAllDay && { backgroundColor: T.accent }]}>
               <View style={[styles.toggleThumb, isAllDay && styles.toggleThumbOn]} />
             </View>
           </TouchableOpacity>
@@ -205,7 +211,7 @@ export default function CreateEventScreen() {
               <CalendarPicker
                 value={dateStr}
                 onChange={(d) => d && setDateStr(d)}
-                accentColor={T.domains.calendar}
+                accentColor={T.accent}
               />
             </View>
           </View>
@@ -227,13 +233,13 @@ export default function CreateEventScreen() {
                       const newEnd = new Date(parseDateTime(dateStr, t).getTime() + durationMs);
                       setEndTime(formatTimeForInput(newEnd));
                     }}
-                    accentColor={T.domains.calendar}
+                    accentColor={T.accent}
                   />
                   <Text style={[styles.timeDash, { color: T.textDim }]}>-</Text>
                   <TimePicker
                     value={endTime}
                     onChange={setEndTime}
-                    accentColor={T.domains.calendar}
+                    accentColor={T.accent}
                   />
                 </View>
               </View>
@@ -335,7 +341,7 @@ export default function CreateEventScreen() {
               descriptionRef.current = c;
             }}
             placeholder="Add description..."
-            accentColor={T.domains.calendar}
+            accentColor={T.accent}
           />
         </View>
       </ScrollView>

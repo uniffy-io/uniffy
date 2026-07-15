@@ -79,7 +79,7 @@ class ThreadHandlers:
                     root_message=message_to_proto(
                         root_msg,
                         sender_name=info.display_name,
-                        sender_avatar_url=info.avatar_key,
+                        sender_avatar_url=info.avatar_url or None,
                     ),
                     reply_count=stats.reply_count if stats else 0,
                     participant_ids=[str(p) for p in participants],
@@ -137,7 +137,7 @@ class ThreadHandlers:
                                 else "Unknown"
                             ),
                             sender_avatar_url=(
-                                sender_map[m.sender_id].avatar_key
+                                sender_map[m.sender_id].avatar_url or None
                                 if m.sender_id in sender_map
                                 else None
                             ),
@@ -191,7 +191,7 @@ class ThreadHandlers:
         """Build a ThreadInboxItem from preview-only columns to avoid full chat_messages fetch."""
         info = sender_map.get(row.sender_id)
         sender_name = info.display_name if info else "Unknown"
-        sender_avatar = info.avatar_key if info else None
+        sender_avatar = info.avatar_url if info else None
 
         root_proto = ProtoChatMessage(
             id=str(row.root_message_id),

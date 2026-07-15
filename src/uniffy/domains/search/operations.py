@@ -11,6 +11,7 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
 )
+from uniffy.core.avatars import get_avatar_url
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
@@ -682,7 +683,7 @@ class SearchOperations:
                 sr = results[urn]
                 sr.user_email = row.email
                 if row.avatar_key:
-                    sr.user_avatar_url = f"/api/avatars/{row.avatar_key}"
+                    sr.user_avatar_url = get_avatar_url(row.id, row.avatar_key)
         except Exception:
             logger.opt(exception=True).warning("Failed to enrich user live state")
 

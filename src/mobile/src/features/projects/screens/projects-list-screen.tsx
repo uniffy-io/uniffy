@@ -91,7 +91,7 @@ function ProjectCard({
   const tasksQuery = useProjectTasks(project.id);
   const tasks = tasksQuery.data ?? [];
   const stats = computeProjectStats(tasks);
-  const projectColor = project.color || T.domains.projects;
+  const projectColor = project.color || T.accent;
 
   return (
     <TouchableOpacity
@@ -184,7 +184,7 @@ export default function ProjectsListScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Projects"
-        color={T.domains.projects}
+        color={T.accent}
         icon="projects"
         rightActions={
           <>
@@ -203,7 +203,7 @@ export default function ProjectsListScreen() {
 
       {projectsQuery.isLoading && !projectsQuery.data ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={T.domains.projects} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : (
         <FlatList
@@ -215,21 +215,21 @@ export default function ProjectsListScreen() {
             <RefreshControl
               refreshing={projectsQuery.isFetching && !projectsQuery.isLoading}
               onRefresh={onRefresh}
-              tintColor={T.domains.projects}
-              colors={[T.domains.projects]}
+              tintColor={T.accent}
+              colors={[T.accent]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.projectsSoft }]}>
-                <Kanban size={36} color={T.domains.projects} weight="duotone" />
+              <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+                <Kanban size={36} color={T.accent} weight="duotone" />
               </View>
               <Text style={[styles.emptyTitle, { color: T.textBright }]}>No projects yet</Text>
               <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
                 Create your first project to track work
               </Text>
               <TouchableOpacity
-                style={[styles.emptyCta, { backgroundColor: T.domains.projects }]}
+                style={[styles.emptyCta, { backgroundColor: T.accent }]}
                 activeOpacity={0.8}
                 onPress={() => router.push("/projects/create" as any)}
               >
@@ -253,7 +253,7 @@ export default function ProjectsListScreen() {
         title={sheetProject?.name ?? ""}
         subtitle={sheetProject ? `${sheetProject.memberIds.length} members` : ""}
         icon="projects"
-        iconColor={sheetProject?.color || T.domains.projects}
+        iconColor={sheetProject?.color || T.accent}
         actions={[
           {
             icon: "plus-circle",
@@ -278,7 +278,7 @@ export default function ProjectsListScreen() {
           {
             icon: "edit-3",
             label: "Create project notes",
-            color: T.domains.notes,
+            color: T.accent,
             onPress: () => {
               setSheetProject(null);
               router.push("/notes/edit" as any);

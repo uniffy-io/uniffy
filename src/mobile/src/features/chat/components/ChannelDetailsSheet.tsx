@@ -145,8 +145,8 @@ export function ChannelDetailsSheet({
         <View style={[styles.handle, { backgroundColor: T.border }]} />
         <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <View style={[styles.typeIcon, { backgroundColor: T.domains.chatSoft }]}>
-              <TypeIcon size={20} color={T.domains.chat} weight="duotone" />
+            <View style={[styles.typeIcon, { backgroundColor: T.accentSoft }]}>
+              <TypeIcon size={20} color={T.accent} weight="duotone" />
             </View>
             <View style={{ flex: 1 }}>
               {renaming ? (
@@ -217,7 +217,7 @@ export function ChannelDetailsSheet({
                   style={[
                     styles.levelPill,
                     active
-                      ? { backgroundColor: T.domains.chat }
+                      ? { backgroundColor: T.accent }
                       : {
                           backgroundColor: T.bg,
                           borderColor: T.border,
@@ -261,8 +261,8 @@ export function ChannelDetailsSheet({
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={styles.addMembersBtn}
               >
-                <UserPlus size={14} color={T.domains.chat} weight="bold" />
-                <Text style={[styles.addMembersText, { color: T.domains.chat }]}>Add</Text>
+                <UserPlus size={14} color={T.accent} weight="bold" />
+                <Text style={[styles.addMembersText, { color: T.accent }]}>Add</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -282,13 +282,13 @@ export function ChannelDetailsSheet({
                 {m.subjectId === currentUserId ? " (you)" : ""}
               </Text>
               {m.subjectType === "AGENT" ? (
-                <View style={[styles.roleTag, { backgroundColor: T.domains.agentsSoft }]}>
-                  <Text style={[styles.roleTagText, { color: T.domains.agents }]}>AGENT</Text>
+                <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
+                  <Text style={[styles.roleTagText, { color: T.accent }]}>AGENT</Text>
                 </View>
               ) : null}
               {m.role !== "MEMBER" ? (
-                <View style={[styles.roleTag, { backgroundColor: T.domains.chatSoft }]}>
-                  <Text style={[styles.roleTagText, { color: T.domains.chat }]}>{m.role}</Text>
+                <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
+                  <Text style={[styles.roleTagText, { color: T.accent }]}>{m.role}</Text>
                 </View>
               ) : null}
               {m.subjectType === "AGENT" && onShowAgentContext ? (
@@ -491,8 +491,8 @@ function AddMembersModal({
                 activeOpacity={0.7}
               >
                 {isAgent ? (
-                  <View style={[styles.agentPickerIcon, { backgroundColor: T.domains.agentsSoft }]}>
-                    <Robot size={16} color={T.domains.agents} weight="fill" />
+                  <View style={[styles.agentPickerIcon, { backgroundColor: T.accentSoft }]}>
+                    <Robot size={16} color={T.accent} weight="fill" />
                   </View>
                 ) : (
                   <Avatar name={s.name} avatarUrl={s.avatarUrl} size={30} />
@@ -501,15 +501,15 @@ function AddMembersModal({
                   {s.name}
                 </Text>
                 {isAgent ? (
-                  <View style={[styles.roleTag, { backgroundColor: T.domains.agentsSoft }]}>
-                    <Text style={[styles.roleTagText, { color: T.domains.agents }]}>AGENT</Text>
+                  <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
+                    <Text style={[styles.roleTagText, { color: T.accent }]}>AGENT</Text>
                   </View>
                 ) : null}
                 <View
                   style={[
                     styles.checkbox,
                     active
-                      ? { backgroundColor: T.domains.chat, borderColor: T.domains.chat }
+                      ? { backgroundColor: T.accent, borderColor: T.accent }
                       : { borderColor: T.border },
                   ]}
                 >
@@ -525,7 +525,7 @@ function AddMembersModal({
         <TouchableOpacity
           style={[
             styles.cta,
-            { backgroundColor: selected.size > 0 ? T.domains.chat : T.surfaceHover },
+            { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover },
           ]}
           disabled={selected.size === 0}
           onPress={() => {
@@ -583,7 +583,7 @@ function CategoryPickerModal({
           activeOpacity={0.7}
         >
           <Text style={[styles.actionLabel, { color: T.textBright }]}>No category</Text>
-          {!currentCategoryId ? <Check size={15} color={T.domains.chat} weight="bold" /> : null}
+          {!currentCategoryId ? <Check size={15} color={T.accent} weight="bold" /> : null}
         </TouchableOpacity>
         {categories.map((cat) => (
           <TouchableOpacity
@@ -594,7 +594,7 @@ function CategoryPickerModal({
           >
             <Text style={[styles.actionLabel, { color: T.textBright }]}>{cat.name}</Text>
             {currentCategoryId === cat.id ? (
-              <Check size={15} color={T.domains.chat} weight="bold" />
+              <Check size={15} color={T.accent} weight="bold" />
             ) : null}
           </TouchableOpacity>
         ))}

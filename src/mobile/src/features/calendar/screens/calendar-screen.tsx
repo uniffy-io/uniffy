@@ -13,17 +13,36 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Plus, CaretLeft, CaretRight, Warning } from "phosphor-react-native";
+import { Plus, CaretLeft, CaretRight, CaretDown, Funnel, Target, Warning } from "phosphor-react-native";
 import { router } from "expo-router";
-import { DomainHeader } from "@shared/components/DomainHeader";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
+import { useAuth } from "@core/providers/auth-context";
+import { ActionSheet } from "@shared/components/ActionSheet";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useEventsInRange, useCategories } from "@features/calendar/useCalendar";
+import { CalendarFilterSheet } from "@features/calendar/components/CalendarFilterSheet";
 import type { SerializedEvent, SerializedCategory } from "@features/calendar/calendarSerializer";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-type ViewMode = "day" | "month";
+type ViewMode = "day" | "week" | "month";
+type CalendarScope = "mine" | "org" | "all";
+
+const HITSLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
+const SCOPE_LABEL: Record<CalendarScope, string> = {
+  mine: "Mine",
+  org: "Organization",
+  all: "All events",
+};
+
+const SCOPES: { key: CalendarScope; icon: string; sublabel: string }[] = [
+  { key: "mine", icon: "user", sublabel: "Events you organize or attend" },
+  { key: "org", icon: "buildings", sublabel: "Shared with the whole organization" },
+  { key: "all", icon: "stack", sublabel: "Everything you can access" },
+];
 
 // Hour grid config
 const HOUR_START = 0; // midnight
@@ -242,7 +261,7 @@ function MonthGrid({
         {DAY_LABELS.map((d, i) => (
           <Text
             key={d}
-            style={[styles.monthDayHeader, { color: i === 4 ? T.domains.calendar : T.textDim }]}
+            style={[styles.monthDayHeader, { color: i === 4 ? T.accent : T.textDim }]}
           >
             {d.charAt(0)}
           </Text>
@@ -271,7 +290,7 @@ function MonthGrid({
                   <View
                     style={[
                       styles.monthCellCircle,
-                      isToday && { backgroundColor: T.domains.calendar },
+                      isToday && { backgroundColor: T.accent },
                     ]}
                   >
                     <Text
@@ -292,7 +311,7 @@ function MonthGrid({
                 </View>
                 <View style={styles.monthCellEvents}>
                   {visibleEvents.map((evt) => {
-                    const color = getEventColor(evt, categoriesMap, T.domains.calendar);
+                    const color = getEventColor(evt, categoriesMap, T.accent);
                     return (
                       <View
                         key={evt.id}
@@ -320,15 +339,239 @@ function MonthGrid({
   );
 }
 
+function WeekGrid({
+  T,
+  weekDates,
+  selectedDate,
+  today,
+  events,
+  categoriesMap,
+  bottomPad,
+  onSelectDay,
+  onEventPress,
+  refreshing,
+  onRefresh,
+}: {
+  T: ReturnType<typeof useTheme>;
+  weekDates: Date[];
+  selectedDate: Date;
+  today: Date;
+  events: SerializedEvent[];
+  categoriesMap: Map<string, SerializedCategory>;
+  bottomPad: number;
+  onSelectDay: (d: Date) => void;
+  onEventPress: (id: string) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const { width } = useWindowDimensions();
+  const dayWidth = (width - TIME_COL_WIDTH) / 7;
+  const scrollRef = useRef<ScrollView>(null);
+  const todayIdx = weekDates.findIndex((d) => isSameDay(d, today));
+
+  useEffect(() => {
+    const now = new Date();
+    const y = Math.max(0, (now.getHours() - 1) * HOUR_HEIGHT);
+    const t = setTimeout(() => scrollRef.current?.scrollTo({ y, animated: false }), 100);
+    return () => clearTimeout(t);
+  }, []);
+
+  // One absolute block per event, bucketed by day column. Timed events pack
+  // overlaps into side-by-side sub-columns; all-day events stack as short
+  // banners at the top of their column.
+  const blocks = useMemo(() => {
+    const out: {
+      key: string;
+      event: SerializedEvent;
+      allDay: boolean;
+      left: number;
+      top: number;
+      height: number;
+      width: number;
+    }[] = [];
+    weekDates.forEach((wd, dayIdx) => {
+      const dayEvents = events.filter((e) => e.startTime && isSameDay(new Date(e.startTime), wd));
+      const timed = dayEvents.filter((e) => !e.isAllDay);
+      const allDay = dayEvents.filter((e) => e.isAllDay);
+      const spans = timed.map((e) => {
+        const startMin = getMinutesSinceMidnight(e.startTime);
+        let endMin = e.endTime ? getMinutesSinceMidnight(e.endTime) : startMin + 30;
+        if (endMin <= startMin) endMin = HOUR_END * 60;
+        return { event: e, startMin, endMin };
+      });
+      const place = packEventColumns(
+        spans.map((s) => ({ id: s.event.id, startMin: s.startMin, endMin: s.endMin })),
+      );
+      const dayLeft = TIME_COL_WIDTH + dayIdx * dayWidth;
+      spans.forEach(({ event, startMin, endMin }) => {
+        const p = place.get(event.id) ?? { colIndex: 0, colCount: 1, conflict: false };
+        const w = dayWidth / p.colCount;
+        out.push({
+          key: event.id,
+          event,
+          allDay: false,
+          left: dayLeft + p.colIndex * w,
+          top: (startMin / 60) * HOUR_HEIGHT,
+          height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 22),
+          width: w - 1,
+        });
+      });
+      allDay.forEach((event, i) => {
+        out.push({
+          key: `${event.id}-ad`,
+          event,
+          allDay: true,
+          left: dayLeft,
+          top: i * 17,
+          height: 16,
+          width: dayWidth - 1,
+        });
+      });
+    });
+    return out;
+  }, [events, weekDates, dayWidth]);
+
+  const now = new Date();
+  const currentTimeTop = ((now.getHours() * 60 + now.getMinutes()) / 60) * HOUR_HEIGHT;
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={[styles.weekHeaderRow, { backgroundColor: T.bg, borderBottomColor: T.border }]}>
+        <View style={{ width: TIME_COL_WIDTH }} />
+        {weekDates.map((d, i) => {
+          const isToday = isSameDay(d, today);
+          const isSel = isSameDay(d, selectedDate);
+          return (
+            <TouchableOpacity
+              key={i}
+              style={styles.weekHeaderCell}
+              onPress={() => onSelectDay(d)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[styles.weekHeaderLabel, { color: isSel ? T.accent : T.textDim }]}
+              >
+                {DAY_LABELS[i]}
+              </Text>
+              <View
+                style={[styles.weekHeaderCircle, isToday && { backgroundColor: T.accent }]}
+              >
+                <Text
+                  style={[
+                    styles.weekHeaderNum,
+                    { color: isToday ? "#fff" : isSel ? T.accent : T.textBright },
+                  ]}
+                >
+                  {d.getDate()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ height: GRID_HEIGHT + 20 + bottomPad }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={T.accent}
+            colors={[T.accent]}
+          />
+        }
+      >
+        <View style={[styles.weekGridBody, { height: GRID_HEIGHT }]}>
+          {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => {
+            const hour = HOUR_START + i;
+            const top = i * HOUR_HEIGHT;
+            return (
+              <React.Fragment key={hour}>
+                <Text style={[styles.hourLabel, { top: top - 7, color: T.textDim }]}>
+                  {formatHourLabel(hour)}
+                </Text>
+                <View style={[styles.hourLine, { top, backgroundColor: T.border }]} />
+              </React.Fragment>
+            );
+          })}
+
+          {weekDates.map((_, i) => (
+            <View
+              key={`sep-${i}`}
+              style={[
+                styles.weekDaySep,
+                { left: TIME_COL_WIDTH + i * dayWidth, backgroundColor: T.border },
+              ]}
+            />
+          ))}
+
+          {todayIdx >= 0 && (
+            <View
+              style={[
+                styles.weekNowLine,
+                {
+                  top: currentTimeTop,
+                  left: TIME_COL_WIDTH + todayIdx * dayWidth,
+                  width: dayWidth,
+                  backgroundColor: T.accent,
+                },
+              ]}
+            />
+          )}
+
+          {blocks.map((b) => {
+            const color = getEventColor(b.event, categoriesMap, T.accent);
+            return (
+              <TouchableOpacity
+                key={b.key}
+                style={[
+                  styles.weekEvent,
+                  {
+                    top: b.top,
+                    left: b.left,
+                    width: b.width,
+                    height: b.height,
+                    backgroundColor: color + "33",
+                    borderColor: color,
+                  },
+                ]}
+                onPress={() => onEventPress(b.event.id)}
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={[styles.weekEventText, { color: T.textBright }]}
+                  numberOfLines={b.allDay ? 1 : 2}
+                >
+                  {b.event.title}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function CalendarScreen() {
   const T = useTheme();
+  const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const topPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const today = useMemo(() => new Date(), []);
   const [currentMonth, setCurrentMonth] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [selectedDate, setSelectedDate] = useState(today);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
+  const [scope, setScope] = useState<CalendarScope>("mine");
   const [activeCategoryIds, setActiveCategoryIds] = useState<Set<string>>(new Set());
+  const [scopeSheetOpen, setScopeSheetOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const dayScrollRef = useRef<ScrollView>(null);
 
   const weekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
@@ -375,13 +618,23 @@ export default function CalendarScreen() {
     });
   }, []);
 
-  // Filter function: if no categories selected, show all; otherwise filter by selected
+  // Scope narrows within events already returned (all accessible): "mine" is
+  // organizer-or-attendee, "org" is OPEN_TO_ORG. Category chips narrow further.
+  const myId = user?.id;
   const matchesFilter = useCallback(
     (event: SerializedEvent) => {
-      if (activeCategoryIds.size === 0) return true;
-      return activeCategoryIds.has(event.categoryId);
+      if (scope === "org" && event.accessMode !== "OPEN_TO_ORG") return false;
+      if (
+        scope === "mine" &&
+        event.organizerId !== myId &&
+        !event.attendees.some((a) => a.id === myId)
+      ) {
+        return false;
+      }
+      if (activeCategoryIds.size > 0 && !activeCategoryIds.has(event.categoryId)) return false;
+      return true;
     },
-    [activeCategoryIds],
+    [scope, myId, activeCategoryIds],
   );
 
   const dayEvents = useMemo(() => {
@@ -456,19 +709,57 @@ export default function CalendarScreen() {
     }
   }, [viewMode, selectedDate, hasData]);
 
-  const goToPrevMonth = useCallback(() => {
-    setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  // Prev/next moves the period the active view actually renders: a week in day
+  // mode (day view is driven by selectedDate's week), a month in month mode.
+  const shiftWeek = useCallback((delta: number) => {
+    setSelectedDate((d) => {
+      const next = new Date(d);
+      next.setDate(next.getDate() + delta * 7);
+      return next;
+    });
   }, []);
 
-  const goToNextMonth = useCallback(() => {
-    setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
-  }, []);
+  const goPrev = useCallback(() => {
+    if (viewMode === "month") {
+      setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+    } else {
+      shiftWeek(-1);
+    }
+  }, [viewMode, shiftWeek]);
+
+  const goNext = useCallback(() => {
+    if (viewMode === "month") {
+      setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+    } else {
+      shiftWeek(1);
+    }
+  }, [viewMode, shiftWeek]);
+
+  const setView = useCallback(
+    (mode: ViewMode) => {
+      if (mode === "month") {
+        setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+      }
+      setViewMode(mode);
+    },
+    [selectedDate],
+  );
 
   const goToToday = useCallback(() => {
     const now = new Date();
     setSelectedDate(now);
     setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
   }, []);
+
+  const periodLabel =
+    viewMode === "month" ? getMonthLabel(currentMonth) : getMonthLabel(selectedDate);
+  const isOnToday =
+    viewMode === "month"
+      ? currentMonth.getFullYear() === today.getFullYear() &&
+        currentMonth.getMonth() === today.getMonth()
+      : viewMode === "week"
+        ? weekDates.some((d) => isSameDay(d, today))
+        : isSameDay(selectedDate, today);
 
   const [draftStartMin, setDraftStartMin] = useState<number | null>(null);
   const draftAnchorRef = useRef(0);
@@ -549,38 +840,79 @@ export default function CalendarScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-      <DomainHeader
-        title="Calendar"
-        color={T.domains.calendar}
-        icon="calendar"
-        rightActions={
-          <TouchableOpacity
-            onPress={() => router.push("/calendar/create" as any)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Plus size={21} color={T.domains.calendar} weight="bold" />
-          </TouchableOpacity>
-        }
-      />
-
       <View
-        style={[styles.controlsBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}
+        style={[
+          styles.header,
+          { backgroundColor: T.bg, borderBottomColor: T.border, paddingTop: topPad },
+        ]}
       >
         <TouchableOpacity
-          style={[styles.todayBtn, { borderColor: T.border }]}
-          onPress={goToToday}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={[styles.scopePill, { backgroundColor: T.surface, borderColor: T.border }]}
+          onPress={() => setScopeSheetOpen(true)}
+          activeOpacity={0.7}
+          accessibilityLabel="Choose which events to show"
         >
-          <Text style={[styles.todayLink, { color: T.domains.calendar }]}>Today</Text>
+          <Text style={[styles.scopePillText, { color: T.textBright }]}>{SCOPE_LABEL[scope]}</Text>
+          <CaretDown size={13} color={T.textDim} weight="bold" />
         </TouchableOpacity>
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={goToToday}
+            hitSlop={HITSLOP}
+            accessibilityLabel="Go to today"
+          >
+            <Target size={21} color={isOnToday ? T.textDim : T.accent} weight="bold" />
+          </TouchableOpacity>
+          {categories.length > 0 && (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setFilterSheetOpen(true)}
+              hitSlop={HITSLOP}
+              accessibilityLabel="Filter by category"
+            >
+              <Funnel
+                size={20}
+                color={activeCategoryIds.size > 0 ? T.accent : T.textDim}
+                weight={activeCategoryIds.size > 0 ? "fill" : "regular"}
+              />
+              {activeCategoryIds.size > 0 && (
+                <View
+                  style={[styles.filterDot, { backgroundColor: T.accent, borderColor: T.bg }]}
+                />
+              )}
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push("/calendar/create" as any)}
+            hitSlop={HITSLOP}
+            accessibilityLabel="New event"
+          >
+            <Plus size={22} color={T.accent} weight="bold" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={[styles.periodBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
+        <View style={styles.periodNav}>
+          <TouchableOpacity onPress={goPrev} hitSlop={HITSLOP} accessibilityLabel="Previous">
+            <CaretLeft size={18} color={T.text} weight="bold" />
+          </TouchableOpacity>
+          <Text style={[styles.monthText, { color: T.textBright }]}>{periodLabel}</Text>
+          <TouchableOpacity onPress={goNext} hitSlop={HITSLOP} accessibilityLabel="Next">
+            <CaretRight size={18} color={T.text} weight="bold" />
+          </TouchableOpacity>
+        </View>
         <View style={[styles.viewToggle, { backgroundColor: T.pageBg, borderColor: T.border }]}>
-          {(["day", "month"] as ViewMode[]).map((mode) => (
+          {(["day", "week", "month"] as ViewMode[]).map((mode) => (
             <TouchableOpacity
               key={mode}
-              onPress={() => setViewMode(mode)}
+              onPress={() => setView(mode)}
               style={[
                 styles.viewToggleBtn,
-                viewMode === mode && { backgroundColor: T.domains.calendar },
+                viewMode === mode && { backgroundColor: T.accent },
               ]}
             >
               <Text
@@ -595,52 +927,6 @@ export default function CalendarScreen() {
           ))}
         </View>
       </View>
-
-      <View style={[styles.monthNav, { backgroundColor: T.bg, borderBottomColor: T.border }]}>
-        <TouchableOpacity onPress={goToPrevMonth}>
-          <CaretLeft size={18} color={T.text} weight="bold" />
-        </TouchableOpacity>
-        <Text style={[styles.monthText, { color: T.textBright }]}>
-          {getMonthLabel(currentMonth)}
-        </Text>
-        <TouchableOpacity onPress={goToNextMonth}>
-          <CaretRight size={18} color={T.text} weight="bold" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Category filter chips */}
-      {categories.length > 0 && (
-        <View style={[styles.categoryBar, { borderBottomColor: T.border }]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryBarContent}
-          >
-            {categories.map((cat) => {
-              const isActive = activeCategoryIds.has(cat.id);
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[
-                    styles.categoryChip,
-                    { borderColor: isActive ? cat.color : T.border },
-                    isActive && { backgroundColor: cat.color + "18" },
-                  ]}
-                  onPress={() => toggleCategory(cat.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
-                  <Text
-                    style={[styles.categoryText, { color: isActive ? T.textBright : T.textDim }]}
-                  >
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
 
       {viewMode === "day" ? (
         <>
@@ -658,7 +944,7 @@ export default function CalendarScreen() {
                   <Text
                     style={[
                       styles.dayLabel,
-                      { color: isSelected ? T.domains.calendar : T.textDim },
+                      { color: isSelected ? T.accent : T.textDim },
                     ]}
                   >
                     {DAY_LABELS[i]}
@@ -666,7 +952,7 @@ export default function CalendarScreen() {
                   <View
                     style={[
                       styles.dayCircle,
-                      isSelected && { backgroundColor: T.domains.calendar },
+                      isSelected && { backgroundColor: T.accent },
                     ]}
                   >
                     <Text
@@ -676,7 +962,7 @@ export default function CalendarScreen() {
                           color: isSelected
                             ? "#fff"
                             : isDayToday
-                              ? T.domains.calendar
+                              ? T.accent
                               : T.textBright,
                         },
                       ]}
@@ -688,7 +974,7 @@ export default function CalendarScreen() {
                     <View
                       style={[
                         styles.todayDot,
-                        { backgroundColor: isSelected ? "#fff" : T.domains.calendar },
+                        { backgroundColor: isSelected ? "#fff" : T.accent },
                       ]}
                     />
                   )}
@@ -699,20 +985,20 @@ export default function CalendarScreen() {
 
           {eventsQuery.isLoading && !eventsQuery.data ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={T.domains.calendar} />
+              <ActivityIndicator size="large" color={T.accent} />
             </View>
           ) : (
             <ScrollView
               ref={dayScrollRef}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ height: GRID_HEIGHT + 20 }}
+              contentContainerStyle={{ height: GRID_HEIGHT + 20 + bottomPad }}
               scrollEnabled={draftStartMin === null}
               refreshControl={
                 <RefreshControl
                   refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
                   onRefresh={() => eventsQuery.refetch()}
-                  tintColor={T.domains.calendar}
-                  colors={[T.domains.calendar]}
+                  tintColor={T.accent}
+                  colors={[T.accent]}
                 />
               }
             >
@@ -737,17 +1023,17 @@ export default function CalendarScreen() {
                   {isSelectedToday && (
                     <View style={[styles.currentTimeRow, { top: currentTimeTop - 5 }]}>
                       <View
-                        style={[styles.currentTimeDot, { backgroundColor: T.domains.calendar }]}
+                        style={[styles.currentTimeDot, { backgroundColor: T.accent }]}
                       />
                       <View
-                        style={[styles.currentTimeLine, { backgroundColor: T.domains.calendar }]}
+                        style={[styles.currentTimeLine, { backgroundColor: T.accent }]}
                       />
                     </View>
                   )}
 
                   {/* Events positioned on the grid */}
                   {positionedEvents.map(({ event, top, height, left, width, conflict }) => {
-                    const color = getEventColor(event, categoriesMap, T.domains.calendar);
+                    const color = getEventColor(event, categoriesMap, T.accent);
                     const attendeeLabel = event.attendees.map((a) => a.name).join(", ");
                     const isAllDay = event.isAllDay;
                     const showSecondRow = !isAllDay && height >= 44;
@@ -824,8 +1110,8 @@ export default function CalendarScreen() {
                           left: TIME_COL_WIDTH + 4,
                           right: 12,
                           height: (DRAFT_DURATION_MIN / 60) * HOUR_HEIGHT,
-                          borderColor: T.domains.calendar,
-                          backgroundColor: T.domains.calendar + "33",
+                          borderColor: T.accent,
+                          backgroundColor: T.accent + "33",
                         },
                       ]}
                     >
@@ -853,21 +1139,45 @@ export default function CalendarScreen() {
             </ScrollView>
           )}
         </>
+      ) : viewMode === "week" ? (
+        eventsQuery.isLoading && !eventsQuery.data ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={T.accent} />
+          </View>
+        ) : (
+          <WeekGrid
+            T={T}
+            weekDates={weekDates}
+            selectedDate={selectedDate}
+            today={today}
+            events={rangeEvents}
+            categoriesMap={categoriesMap}
+            bottomPad={bottomPad}
+            onSelectDay={(d) => {
+              setSelectedDate(new Date(d));
+              setViewMode("day");
+            }}
+            onEventPress={(id) => router.push(`/calendar/${id}` as any)}
+            refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
+            onRefresh={() => eventsQuery.refetch()}
+          />
+        )
       ) : (
         <>
           {eventsQuery.isLoading && !eventsQuery.data ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={T.domains.calendar} />
+              <ActivityIndicator size="large" color={T.accent} />
             </View>
           ) : (
             <ScrollView
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: bottomPad }}
               refreshControl={
                 <RefreshControl
                   refreshing={eventsQuery.isFetching && !eventsQuery.isLoading}
                   onRefresh={() => eventsQuery.refetch()}
-                  tintColor={T.domains.calendar}
-                  colors={[T.domains.calendar]}
+                  tintColor={T.accent}
+                  colors={[T.accent]}
                 />
               }
             >
@@ -887,13 +1197,76 @@ export default function CalendarScreen() {
           )}
         </>
       )}
+
+      <ActionSheet
+        visible={scopeSheetOpen}
+        onClose={() => setScopeSheetOpen(false)}
+        title="Show events"
+        icon="calendar"
+        iconColor={T.accent}
+        actions={SCOPES.map((s) => ({
+          icon: scope === s.key ? "check" : s.icon,
+          label: SCOPE_LABEL[s.key],
+          sublabel: s.sublabel,
+          color: scope === s.key ? T.accent : undefined,
+          onPress: () => setScope(s.key),
+        }))}
+      />
+
+      <CalendarFilterSheet
+        visible={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        categories={categories}
+        activeCategoryIds={activeCategoryIds}
+        onToggle={toggleCategory}
+        onClear={() => setActiveCategoryIds(new Set())}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  controlsBar: {
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  scopePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingLeft: 14,
+    paddingRight: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  scopePillText: { fontSize: 14, fontFamily: FONT.semibold },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterDot: {
+    position: "absolute",
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+  },
+  periodBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -901,13 +1274,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  todayBtn: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  periodNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  todayLink: { fontSize: 13, fontFamily: FONT.semibold },
   viewToggle: {
     flexDirection: "row",
     borderRadius: 8,
@@ -915,20 +1286,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   viewToggleBtn: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 6,
   },
   viewToggleBtnText: {
     fontSize: 13,
     fontFamily: FONT.medium,
-  },
-  monthNav: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   monthText: { fontSize: 16, fontFamily: FONT.semibold },
   weekStrip: {
@@ -948,6 +1311,47 @@ const styles = StyleSheet.create({
   },
   dayNum: { fontSize: 14, fontFamily: FONT.semibold },
   todayDot: { width: 4, height: 4, borderRadius: 2 },
+  weekHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  weekHeaderCell: { flex: 1, alignItems: "center", gap: 3, paddingVertical: 2 },
+  weekHeaderLabel: { fontSize: 10, fontFamily: FONT.medium },
+  weekHeaderCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weekHeaderNum: { fontSize: 13, fontFamily: FONT.semibold },
+  weekGridBody: {
+    position: "relative",
+    marginTop: 10,
+  },
+  weekDaySep: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: StyleSheet.hairlineWidth,
+  },
+  weekNowLine: {
+    position: "absolute",
+    height: 2,
+    zIndex: 20,
+  },
+  weekEvent: {
+    position: "absolute",
+    borderRadius: 5,
+    borderWidth: 1,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    overflow: "hidden",
+    zIndex: 10,
+  },
+  weekEventText: { fontSize: 9, fontFamily: FONT.medium },
   // Explicit height so the drag-to-create gesture (and touches near the
   // bottom of the day) land inside the grid's hit area.
   timeGrid: {
@@ -1102,25 +1506,4 @@ const styles = StyleSheet.create({
     paddingTop: 1,
   },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
-  // ---- Category filter bar ----
-  categoryBar: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  categoryBarContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-    flexDirection: "row",
-  },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  categoryDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryText: { fontSize: 12, fontFamily: FONT.medium },
 });

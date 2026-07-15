@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Animated,
   Keyboard,
+  Modal,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -125,6 +126,9 @@ export function AtOverlay() {
   };
 
   return (
+    // Hosted in a Modal window: an inset-positioned overlay in the shell gets
+    // flow-laid on iOS 26 Fabric and ends up as a squeezed popup under the bar.
+    <Modal visible transparent animationType="none" onRequestClose={closeAt} statusBarTranslucent>
     <Animated.View
       style={[styles.overlay, { backgroundColor: T.pageBg, opacity, transform: [{ translateY }] }]}
     >
@@ -147,6 +151,14 @@ export function AtOverlay() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          onPress={closeAt}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Close references"
+        >
+          <X size={20} color={T.textDim} weight="bold" />
+        </TouchableOpacity>
       </View>
 
       {query.length > 0 && (
@@ -166,7 +178,7 @@ export function AtOverlay() {
           contentContainerStyle={styles.filterContent}
           renderItem={({ item: f }) => {
             const active = f.key === activeFilter;
-            const color = f.key === "all" ? T.accent : T.domains[f.key];
+            const color = T.accent;
             return (
               <TouchableOpacity
                 onPress={() => setActiveFilter(f.key)}
@@ -195,12 +207,10 @@ export function AtOverlay() {
         renderItem={({ item }) => {
           const domain = item.domain as Domain;
           const IconComponent = DOMAIN_ICON[domain];
-          const domainColor = T.domains[domain];
-          const softColor = T.domains[`${domain}Soft`];
           return (
             <View style={[styles.resultRow, { borderBottomColor: T.border }]}>
-              <View style={[styles.domainIcon, { backgroundColor: softColor }]}>
-                <IconComponent size={16} color={domainColor} weight="bold" />
+              <View style={[styles.domainIcon, { backgroundColor: T.accentSoft }]}>
+                <IconComponent size={16} color={T.accent} weight="bold" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.resultTitle, { color: T.textBright }]}>{item.title}</Text>
@@ -256,13 +266,13 @@ export function AtOverlay() {
         }
       />
     </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 150,
+    flex: 1,
   },
   topBar: {
     flexDirection: "row",

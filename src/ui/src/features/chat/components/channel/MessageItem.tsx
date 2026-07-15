@@ -274,7 +274,13 @@ function MessageItemInner({
                 size="md"
               />
             ) : (
-              <SubjectAvatarById userId={message.senderId} displayName={senderName} size="md" showPresence />
+              <SubjectAvatarById
+                userId={message.senderId}
+                displayName={senderName}
+                avatarUrl={message.senderAvatarUrl}
+                size="md"
+                showPresence
+              />
             )}
           </div>
         ) : (

@@ -23,6 +23,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import SubjectType as ProtoSubjectType
 
+from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_category import ChatChannelCategory
@@ -179,12 +180,15 @@ def member_to_proto(
         proto.display_name = user.full_name or ""
         proto.email = user.email
         if user.avatar_key:
-            proto.avatar_url = user.avatar_key
+            proto.avatar_url = get_avatar_url(user.id, user.avatar_key)
     else:
         if display_name:
             proto.display_name = display_name
+        # The keyless branch carries agent rows (GetMembers joins agents).
         if avatar_key:
-            proto.avatar_url = avatar_key
+            proto.avatar_url = get_avatar_url(
+                member.subject_id, avatar_key, url_prefix="/api/agents/avatars"
+            )
 
     return proto
 

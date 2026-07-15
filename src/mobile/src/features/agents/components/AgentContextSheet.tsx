@@ -67,7 +67,7 @@ export function AgentContextSheet({
       <View style={[styles.sheet, { backgroundColor: T.surface }]}>
         <View style={[styles.handle, { backgroundColor: T.border }]} />
         <View style={styles.header}>
-          <Gauge size={18} color={T.domains.agents} weight="duotone" />
+          <Gauge size={18} color={T.accent} weight="duotone" />
           <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
             {agentName ? `${agentName} context` : "Agent context"}
           </Text>
@@ -75,7 +75,7 @@ export function AgentContextSheet({
 
         {statsQuery.isLoading || !stats ? (
           <View style={styles.loading}>
-            <ActivityIndicator size="small" color={T.domains.agents} />
+            <ActivityIndicator size="small" color={T.accent} />
           </View>
         ) : (
           <>
@@ -128,7 +128,7 @@ export function AgentContextSheet({
               disabled={compact.isPending || stats.activeMessages === 0}
               activeOpacity={0.7}
             >
-              <ArrowsInLineVertical size={17} color={T.domains.agents} weight="duotone" />
+              <ArrowsInLineVertical size={17} color={T.accent} weight="duotone" />
               <Text style={[styles.actionLabel, { color: T.textBright }]}>
                 {compact.isPending ? "Compacting..." : "Compact conversation"}
               </Text>

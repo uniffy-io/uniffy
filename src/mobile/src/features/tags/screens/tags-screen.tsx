@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ActivityIndicator,
   RefreshControl,
   Modal,
@@ -20,8 +21,10 @@ import {
   Trash,
 } from "phosphor-react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useTags, useTagMutations } from "@features/tags/useTags";
@@ -29,6 +32,9 @@ import { TAG_COLORS, type SerializedTag } from "@features/tags/tagSerializer";
 
 export default function TagsScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [query, setQuery] = useState("");
   const tags = useTags(query);
   const { remove } = useTagMutations();
@@ -114,7 +120,10 @@ export default function TagsScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={data.length === 0 ? styles.emptyContent : styles.listContent}
+          contentContainerStyle={[
+            data.length === 0 ? styles.emptyContent : styles.listContent,
+            { paddingBottom: bottomPad },
+          ]}
           ListEmptyComponent={<EmptyTags T={T} query={query} />}
           refreshControl={
             <RefreshControl

@@ -56,11 +56,13 @@ Secure/HttpOnly/SameSite=Strict cookie named `uniffy_asset` (`__Secure-uniffy_as
 read-only JWT whose type claim is `asset_read`, a distinct type, NOT the access token (least privilege). There is
 NO service-worker auth proxy.
 
-- Cookie: minted by `create_asset_read_token` (`domains/auth/tokens.py`); built + configured by
-  `domains/auth/cookies.py` (env `ASSET_COOKIE_SECURE` / `SAMESITE` / `TTL_MINUTES`; `__Secure-` name prefix
-  when secure; self-host http LAN sets Secure off). Set on Login/Register/Refresh/SwitchOrg, cleared on Logout,
-  via `ctx.response_headers().add("set-cookie", ...)` in the auth handlers (ConnectRPC CAN set response
-  headers). TTL ~1h, refreshed every RefreshToken; carries `tkv`/`sid` so it rides the same revocation watermark.
+- Cookie: minted by `create_asset_read_token` (`domains/auth/tokens.py`); built + configured + attached by
+  `domains/auth/cookies.py::attach_asset_cookie` (env `ASSET_COOKIE_SECURE` / `SAMESITE` / `TTL_MINUTES`;
+  `__Secure-` name prefix when secure; self-host http LAN sets Secure off). Set on every session-issuing RPC -
+  Login/Register/RefreshToken/SwitchOrg/AcceptInvitation/VerifyMfa/ConfirmEnrollment - cleared on Logout
+  (ConnectRPC CAN set response headers). TTL ~1h, refreshed every RefreshToken; carries `tkv`/`sid` so it
+  rides the same revocation watermark. The same `name=value` pair rides in the auth response body
+  (`asset_cookie` field) for native clients; browsers ignore it and use the HttpOnly Set-Cookie.
 - Routes: `get_current_user_id` (`domains/auth/http_deps.py`) accepts Bearer access OR the `uniffy_asset` cookie,
   both through the same revocation checks. One shared dep covers `/api/files`, `/api/thumbnails`, `/api/media`,
   `/api/avatars`, `/api/agents/avatars`. The type-claim decoders keep the paths separate (access-in-cookie and
@@ -72,6 +74,10 @@ NO service-worker auth proxy.
   `buildAvatarUrl` (`shared/utils/fileUrls.ts`); same-origin requests carry the cookie automatically. A single
   global capture-phase `error` listener (`shared/utils/assetAuthRetry.ts`, installed in `main.tsx`) refreshes
   the cookie and retries an asset once when it 401s (idle past the cookie TTL).
+- Mobile: no cookie jar - the app keeps the body pair in memory (`src/mobile/src/core/auth/auth.ts`) and
+  attaches it as an explicit `Cookie` header via `assetAuthHeaders()` (`core/auth/assetAuth.ts`) on every
+  asset request (expo-image, WebView PDFs, downloads, audio). Image error handlers use `assetAuthStale()` +
+  `refreshSession()` to recover from an expired pair. Same rule as web: the pair is GET-read-only.
 
 ## Hard rules
 

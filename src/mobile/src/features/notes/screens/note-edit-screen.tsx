@@ -37,6 +37,7 @@ import type { TextStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useNote } from "@features/notes/useNotes";
 import { useCreateNote, useAutosave } from "@features/notes/useNoteMutations";
@@ -233,6 +234,8 @@ export default function NoteEditorScreen() {
   }, [isEditMode, noteQuery.data, initialized, initFromCanonical]);
 
   const headerTopPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
 
   // Autosave on any content change. Typing, formatting, and @-reference
   // insertion all funnel through body/title, so watching them here keeps the
@@ -548,7 +551,7 @@ export default function NoteEditorScreen() {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+    <View style={[styles.container, { backgroundColor: T.pageBg, paddingBottom: bottomPad }]}>
       {/* Header */}
       <View
         style={[

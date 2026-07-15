@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.avatars import get_avatar_url
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.chat.message import SenderType
 from uniffy.core.models.login.user import User
@@ -26,6 +27,12 @@ class SenderInfo:
     display_name: str
     avatar_key: str | None = None
     avatar_emoji: str | None = None
+
+    @property
+    def avatar_url(self) -> str:
+        """HTTP avatar URL for protos; avatar_key is the raw S3 key, never wire-safe."""
+        prefix = "/api/agents/avatars" if self.sender_type == SenderType.AGENT else "/api/avatars"
+        return get_avatar_url(self.id, self.avatar_key, url_prefix=prefix)
 
 
 _FALLBACK_NAME = "Unknown"

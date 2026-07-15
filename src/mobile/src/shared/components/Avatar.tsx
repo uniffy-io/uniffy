@@ -1,6 +1,9 @@
-import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import React, { useCallback, useRef, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { assetAuthHeaders, assetAuthStale, resolveAssetUrl } from "@core/auth/assetAuth";
+import { refreshSession } from "@core/auth/refresh";
 import { FONT } from "@theme/typography";
 import { PresenceDot } from "@shared/presence/PresenceDot";
 
@@ -56,6 +59,9 @@ export function Avatar({
   presence,
   presenceRingColor,
 }: AvatarProps) {
+  // A dead avatar URL (deleted image, unrecoverable 401) falls through to
+  // the emoji/gradient branches instead of leaving a blank square.
+  const [imgFailed, setImgFailed] = useState(false);
   const fontSize = size * 0.35;
   const borderRadius = size * 0.25;
 
@@ -78,9 +84,14 @@ export function Avatar({
     );
   }
 
-  if (avatarUrl) {
+  if (avatarUrl && !imgFailed) {
     return (
-      <Image source={{ uri: avatarUrl }} style={{ width: size, height: size, borderRadius }} />
+      <AvatarImage
+        uri={resolveAssetUrl(avatarUrl)}
+        size={size}
+        borderRadius={borderRadius}
+        onFail={() => setImgFailed(true)}
+      />
     );
   }
 
@@ -128,6 +139,50 @@ export function Avatar({
     >
       <Text style={[styles.initials, { fontSize, lineHeight: size }]}>{initials}</Text>
     </LinearGradient>
+  );
+}
+
+function AvatarImage({
+  uri,
+  size,
+  borderRadius,
+  onFail,
+}: {
+  uri: string;
+  size: number;
+  borderRadius: number;
+  onFail: () => void;
+}) {
+  const [bust, setBust] = useState(0);
+  const retried = useRef(false);
+
+  // One stale-auth retry per mount: refresh the tokens, then cache-bust so
+  // expo-image re-fetches with the fresh Cookie header instead of the cached
+  // 401. Anything else is a dead image; hand rendering back to the fallback.
+  const handleError = useCallback(() => {
+    if (!retried.current && assetAuthStale()) {
+      retried.current = true;
+      void refreshSession()
+        .then((response) => {
+          if (response) setBust((b) => b + 1);
+          else onFail();
+        })
+        .catch(onFail);
+      return;
+    }
+    onFail();
+  }, [onFail]);
+
+  const src = bust > 0 ? `${uri}${uri.includes("?") ? "&" : "?"}r=${bust}` : uri;
+
+  return (
+    <Image
+      source={{ uri: src, headers: assetAuthHeaders() }}
+      style={{ width: size, height: size, borderRadius }}
+      cachePolicy="memory-disk"
+      transition={100}
+      onError={handleError}
+    />
   );
 }
 

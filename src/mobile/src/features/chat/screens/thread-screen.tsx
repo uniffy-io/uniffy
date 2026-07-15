@@ -12,7 +12,9 @@ import {
 import * as Clipboard from "expo-clipboard";
 import { ChatText } from "phosphor-react-native";
 import { useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
+import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { Avatar } from "@shared/components/Avatar";
 import { ChatComposer } from "@features/chat/components/ChatComposer";
 import { EmojiPickerSheet } from "@features/chat/components/EmojiPickerSheet";
@@ -47,6 +49,8 @@ export default function ChatThreadScreen() {
   const rootMessageId = id ?? "";
   const channelId = channelIdParam ?? "";
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const barSpace = bottomBarBlockHeight(insets.bottom);
   const { user, organizationId } = useAuth();
   const { openAt, pendingReference, clearPendingReference } = useUniffy();
 
@@ -181,17 +185,17 @@ export default function ChatThreadScreen() {
   const canSend = !attachments.uploading && (!!draft.trim() || attachments.readyFileIds.length > 0);
 
   return (
-    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+    <View style={[styles.container, { backgroundColor: T.pageBg, paddingBottom: barSpace }]}>
       <DomainHeader
         title="Thread"
         subtitle={`${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
-        color={T.domains.chat}
+        color={T.accent}
         icon="chat"
       />
 
       {threadQuery.isLoading || repliesQuery.isLoading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.chat} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : (
         <FlatList
@@ -295,7 +299,7 @@ function ThreadMessageRow({
             name={senderName}
             avatarUrl={message.senderAvatarUrl ?? undefined}
             size={32}
-            accentColor={isAgent ? T.domains.agents : undefined}
+            accentColor={isAgent ? T.accent : undefined}
             emoji={isAgent ? (agentEmoji ?? undefined) : undefined}
           />
         ) : null}

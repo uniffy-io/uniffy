@@ -153,7 +153,7 @@ export function ChatComposer({
           style={[
             styles.roundBtn,
             styles.sendBtn,
-            { backgroundColor: canSend ? T.domains.chat : T.surfaceHover },
+            { backgroundColor: canSend ? T.accent : T.surfaceHover },
           ]}
           onPress={onSend}
           disabled={!canSend}

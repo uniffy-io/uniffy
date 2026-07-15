@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
@@ -30,9 +31,11 @@ import {
   Phone,
 } from "phosphor-react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { Avatar } from "@shared/components/Avatar";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import {
@@ -81,6 +84,9 @@ function ChannelIcon({ channel, color }: { channel: SerializedChannel; color: st
 
 export default function ChatListScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [tab, setTab] = useState<Tab>("all");
   const [browsing, setBrowsing] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -209,7 +215,7 @@ export default function ChatListScreen() {
   const header = (
     <DomainHeader
       title="Chat"
-      color={T.domains.chat}
+      color={T.accent}
       icon="chat"
       rightActions={
         <>
@@ -217,13 +223,13 @@ export default function ChatListScreen() {
             onPress={() => setBrowsing((v) => !v)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Compass size={21} color={browsing ? T.domains.chat : T.text} weight="duotone" />
+            <Compass size={21} color={browsing ? T.accent : T.text} weight="duotone" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setNewCategoryOpen(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Plus size={21} color={T.domains.chat} weight="bold" />
+            <Plus size={21} color={T.accent} weight="bold" />
           </TouchableOpacity>
         </>
       }
@@ -237,21 +243,22 @@ export default function ChatListScreen() {
         <View style={[styles.browseBar, { borderBottomColor: T.border }]}>
           <Text style={[styles.browseTitle, { color: T.textBright }]}>Browse channels</Text>
           <TouchableOpacity onPress={() => setBrowsing(false)}>
-            <Text style={[styles.browseClose, { color: T.domains.chat }]}>Done</Text>
+            <Text style={[styles.browseClose, { color: T.accent }]}>Done</Text>
           </TouchableOpacity>
         </View>
         {browse.isLoading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color={T.domains.chat} />
+            <ActivityIndicator size="large" color={T.accent} />
           </View>
         ) : (
           <FlatList
             data={browseList}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={
-              browseList.length === 0 ? styles.emptyContent : styles.listContent
-            }
+            contentContainerStyle={[
+              browseList.length === 0 ? styles.emptyContent : styles.listContent,
+              { paddingBottom: bottomPad },
+            ]}
             renderItem={({ item }) => (
               <BrowseRow
                 channel={item}
@@ -287,7 +294,7 @@ export default function ChatListScreen() {
               style={[
                 styles.filterPill,
                 active
-                  ? { backgroundColor: T.domains.chat }
+                  ? { backgroundColor: T.accent }
                   : {
                       backgroundColor: T.surface,
                       borderColor: T.border,
@@ -310,6 +317,7 @@ export default function ChatListScreen() {
           threads={threads.data ?? []}
           loading={threads.isLoading}
           T={T}
+          bottomPad={bottomPad}
           onOpen={(item) =>
             router.push(`/chat/thread/${item.rootMessageId}?channelId=${item.channelId}` as never)
           }
@@ -327,7 +335,10 @@ export default function ChatListScreen() {
             />
           )}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={unreadList.length === 0 ? styles.emptyContent : styles.listContent}
+          contentContainerStyle={[
+            unreadList.length === 0 ? styles.emptyContent : styles.listContent,
+            { paddingBottom: bottomPad },
+          ]}
           ListEmptyComponent={
             <View style={styles.sectionEmpty}>
               <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>
@@ -338,20 +349,20 @@ export default function ChatListScreen() {
         />
       ) : isLoading && channels.length === 0 ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.chat} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : channels.length === 0 && agentChats.length === 0 ? (
         <EmptyChannels T={T} />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad }]}
           refreshControl={
             <RefreshControl
               refreshing={isFetching && !isLoading}
               onRefresh={() => refetch()}
-              tintColor={T.domains.chat}
-              colors={[T.domains.chat]}
+              tintColor={T.accent}
+              colors={[T.accent]}
             />
           }
         >
@@ -391,7 +402,6 @@ export default function ChatListScreen() {
             collapsed={!!collapsed.agents}
             onToggle={() => toggle("agents")}
             T={T}
-            onAdd={() => router.push("/agents" as any)}
           >
             {agentChats.map((c) => (
               <ChannelRow key={c.id} channel={c} T={T} onPress={() => openChannel(c.id)} />
@@ -494,7 +504,7 @@ function CategoryNameModal({
       <View style={[styles.sheet, { backgroundColor: T.surface }]}>
         <View style={[styles.handle, { backgroundColor: T.border }]} />
         <View style={styles.sheetHeader}>
-          <FolderPlus size={20} color={T.domains.chat} weight="duotone" />
+          <FolderPlus size={20} color={T.accent} weight="duotone" />
           <Text style={[styles.sheetTitle, { color: T.textBright }]}>{title}</Text>
         </View>
         <TextInput
@@ -509,7 +519,7 @@ function CategoryNameModal({
           ]}
         />
         <TouchableOpacity
-          style={[styles.modalCta, { backgroundColor: trimmed ? T.domains.chat : T.surfaceHover }]}
+          style={[styles.modalCta, { backgroundColor: trimmed ? T.accent : T.surfaceHover }]}
           disabled={!trimmed || pending}
           onPress={() => {
             onSubmit(trimmed);
@@ -608,7 +618,7 @@ function NewDmModal({
                   style={[
                     styles.dmCheckbox,
                     active
-                      ? { backgroundColor: T.domains.chat, borderColor: T.domains.chat }
+                      ? { backgroundColor: T.accent, borderColor: T.accent }
                       : { borderColor: T.border },
                   ]}
                 >
@@ -628,7 +638,7 @@ function NewDmModal({
         <TouchableOpacity
           style={[
             styles.modalCta,
-            { backgroundColor: selected.size > 0 ? T.domains.chat : T.surfaceHover },
+            { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover },
           ]}
           disabled={selected.size === 0 || pending}
           onPress={() => {
@@ -709,17 +719,19 @@ function ThreadsList({
   threads,
   loading,
   T,
+  bottomPad,
   onOpen,
 }: {
   threads: SerializedThreadInboxItem[];
   loading: boolean;
   T: ThemeColors;
+  bottomPad: number;
   onOpen: (item: SerializedThreadInboxItem) => void;
 }) {
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={T.domains.chat} />
+        <ActivityIndicator size="large" color={T.accent} />
       </View>
     );
   }
@@ -728,15 +740,18 @@ function ThreadsList({
       data={threads}
       keyExtractor={(item) => item.rootMessageId}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={threads.length === 0 ? styles.emptyContent : styles.listContent}
+      contentContainerStyle={[
+        threads.length === 0 ? styles.emptyContent : styles.listContent,
+        { paddingBottom: bottomPad },
+      ]}
       renderItem={({ item }) => (
         <TouchableOpacity
           style={[styles.row, { borderBottomColor: T.border }]}
           onPress={() => onOpen(item)}
           activeOpacity={0.7}
         >
-          <View style={[styles.rowIcon, { backgroundColor: T.domains.chatSoft }]}>
-            <ChatText size={16} color={T.domains.chat} weight="fill" />
+          <View style={[styles.rowIcon, { backgroundColor: T.accentSoft }]}>
+            <ChatText size={16} color={T.accent} weight="fill" />
           </View>
           <View style={styles.rowBody}>
             <Text
@@ -753,7 +768,7 @@ function ThreadsList({
             </Text>
           </View>
           <View style={styles.rowRight}>
-            <Text style={[styles.rowTime, { color: item.hasUnread ? T.domains.chat : T.textDim }]}>
+            <Text style={[styles.rowTime, { color: item.hasUnread ? T.accent : T.textDim }]}>
               {item.activityLabel}
             </Text>
             <Text style={[styles.rowReplies, { color: T.textDim }]}>
@@ -764,7 +779,7 @@ function ThreadsList({
       )}
       ListEmptyComponent={
         <View style={styles.sectionEmpty}>
-          <ChatText size={32} color={T.domains.chat} weight="duotone" />
+          <ChatText size={32} color={T.accent} weight="duotone" />
           <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>No threads yet</Text>
         </View>
       }
@@ -791,8 +806,8 @@ function ChannelRow({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: T.domains.chatSoft }]}>
-        <ChannelIcon channel={channel} color={T.domains.chat} />
+      <View style={[styles.rowIcon, { backgroundColor: T.accentSoft }]}>
+        <ChannelIcon channel={channel} color={T.accent} />
         {presence ? <PresenceDot status={presence} size={12} ringColor={T.pageBg} /> : null}
       </View>
       <View style={styles.rowBody}>
@@ -819,7 +834,7 @@ function ChannelRow({
           </View>
         ) : null}
         {channel.lastMessageAtSeconds ? (
-          <Text style={[styles.rowTime, { color: hasUnread ? T.domains.chat : T.textDim }]}>
+          <Text style={[styles.rowTime, { color: hasUnread ? T.accent : T.textDim }]}>
             {formatChannelActivity(channel.lastMessageAtSeconds)}
           </Text>
         ) : null}
@@ -827,7 +842,7 @@ function ChannelRow({
           <View
             style={[
               styles.badge,
-              { backgroundColor: channel.mentionCount > 0 ? T.red : T.domains.chat },
+              { backgroundColor: channel.mentionCount > 0 ? T.red : T.accent },
             ]}
           >
             <Text style={styles.badgeText}>
@@ -859,8 +874,8 @@ function BrowseRow({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: T.domains.chatSoft }]}>
-        <ChannelIcon channel={channel} color={T.domains.chat} />
+      <View style={[styles.rowIcon, { backgroundColor: T.accentSoft }]}>
+        <ChannelIcon channel={channel} color={T.accent} />
       </View>
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, { color: T.textBright }]} numberOfLines={1}>
@@ -871,7 +886,7 @@ function BrowseRow({
         </Text>
       </View>
       <TouchableOpacity
-        style={[styles.joinBtn, { backgroundColor: T.domains.chat }]}
+        style={[styles.joinBtn, { backgroundColor: T.accent }]}
         onPress={onJoin}
         disabled={joining}
         activeOpacity={0.8}
@@ -885,15 +900,15 @@ function BrowseRow({
 function EmptyChannels({ T }: { T: ThemeColors }) {
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.chatSoft }]}>
-        <ChatTeardropText size={36} color={T.domains.chat} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+        <ChatTeardropText size={36} color={T.accent} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No channels yet</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
         Create a channel or browse public ones to start chatting
       </Text>
       <TouchableOpacity
-        style={[styles.emptyCta, { backgroundColor: T.domains.chat }]}
+        style={[styles.emptyCta, { backgroundColor: T.accent }]}
         onPress={() => router.push("/chat/create" as any)}
         activeOpacity={0.8}
       >

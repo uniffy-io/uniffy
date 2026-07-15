@@ -5,12 +5,14 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Platform,
   ActivityIndicator,
   Alert,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Star, DotsThree, CaretRight } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { CommentButton } from "@shared/comments/CommentsSheet";
 import { ShareSheet } from "@shared/permissions/ShareSheet";
@@ -20,6 +22,7 @@ import { DOMAIN_ICON } from "@shared/mentions/ReferenceChip";
 import { Avatar } from "@shared/components/Avatar";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useNote, useNoteBacklinks } from "@features/notes/useNotes";
 import { useDeleteNote } from "@features/notes/useNoteMutations";
@@ -30,6 +33,9 @@ import { formatRelativeTime } from "@features/notes/noteSerializer";
 export default function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const auth = useAuth();
@@ -44,9 +50,9 @@ export default function NoteDetailScreen() {
   if (noteQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Notes" color={T.domains.notes} icon="notes" />
+        <DomainHeader title="Notes" color={T.accent} icon="notes" />
         <View style={styles.notFound}>
-          <ActivityIndicator size="large" color={T.domains.notes} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       </View>
     );
@@ -57,7 +63,7 @@ export default function NoteDetailScreen() {
   if (!note) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Notes" color={T.domains.notes} icon="notes" />
+        <DomainHeader title="Notes" color={T.accent} icon="notes" />
         <View style={styles.notFound}>
           <Text style={{ color: T.textDim }}>Note not found</Text>
         </View>
@@ -73,14 +79,14 @@ export default function NoteDetailScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Notes"
-        color={T.domains.notes}
+        color={T.accent}
         icon="notes"
         rightActions={
           <>
             <CommentButton
               contentType={ContentType.NOTE}
               contentId={note.id}
-              color={T.domains.notes}
+              color={T.accent}
             />
             <TouchableOpacity
               onPress={() => toggleBookmark.mutate(noteUrn)}
@@ -89,7 +95,7 @@ export default function NoteDetailScreen() {
               <Star
                 key={isBookmarked ? "fill" : "duotone"}
                 size={19}
-                color={isBookmarked ? T.domains.notes : T.textDim}
+                color={isBookmarked ? T.accent : T.textDim}
                 weight={isBookmarked ? "fill" : "duotone"}
               />
             </TouchableOpacity>
@@ -105,7 +111,7 @@ export default function NoteDetailScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 60, gap: 16 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 16 }}
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.title, { color: T.textBright }]}>{note.title}</Text>
@@ -134,8 +140,6 @@ export default function NoteDetailScreen() {
               REFERENCED BY {backlinks.length} ITEMS
             </Text>
             {backlinks.map((ref, i) => {
-              const color = T.domains.notes;
-              const softColor = T.domains.notesSoft;
               const RefIcon = DOMAIN_ICON["notes"];
               return (
                 <TouchableOpacity
@@ -144,8 +148,8 @@ export default function NoteDetailScreen() {
                   onPress={() => router.push(`/notes/${ref.id}` as any)}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.refIcon, { backgroundColor: softColor }]}>
-                    <RefIcon size={14} color={color} weight="bold" />
+                  <View style={[styles.refIcon, { backgroundColor: T.accentSoft }]}>
+                    <RefIcon size={14} color={T.accent} weight="bold" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.refTitle, { color: T.textBright }]}>{ref.title}</Text>
@@ -164,7 +168,7 @@ export default function NoteDetailScreen() {
         title={note.title}
         subtitle={`${note.outgoingReferences.length} references · ${editedAt}`}
         icon="notes"
-        iconColor={T.domains.notes}
+        iconColor={T.accent}
         actions={[
           {
             icon: "edit-2",
@@ -213,7 +217,7 @@ export default function NoteDetailScreen() {
         onClose={() => setShareOpen(false)}
         contentType={ContentType.NOTE}
         contentId={note.id}
-        color={T.domains.notes}
+        color={T.accent}
       />
     </View>
   );

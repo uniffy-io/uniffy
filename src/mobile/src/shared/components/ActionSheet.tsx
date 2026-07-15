@@ -63,6 +63,9 @@ function getPhosphorIcon(name: string): React.ComponentType<any> {
     "clock-history": Ph.ClockCounterClockwise,
     tag: Ph.Tag,
     "file-text": Ph.FileText,
+    user: Ph.User,
+    buildings: Ph.Buildings,
+    stack: Ph.Stack,
   };
   return map[name] ?? Ph.DotsThree;
 }

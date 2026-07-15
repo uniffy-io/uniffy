@@ -32,7 +32,7 @@ import { FilePreview } from "@features/files/components/FilePreview";
 import { TagPickerSheet } from "@features/tags/components/TagPickerSheet";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useTheme } from "@shared/hooks/useTheme";
-import { FILE_COLORS } from "@theme/theme";
+import { BOTTOM_NAV_HEIGHT, FILE_COLORS } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useFile, useFileVersions } from "@features/files/useFiles";
 import { useDeleteFile, useUpdateFile, useRestoreFileVersion } from "@features/files/useFileMutations";
@@ -61,6 +61,9 @@ function getFileColor(ext: string) {
 export default function FileDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const auth = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tagSheetOpen, setTagSheetOpen] = useState(false);
@@ -79,9 +82,9 @@ export default function FileDetailScreen() {
   if (fileQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Files" color={T.domains.files} icon="files" />
+        <DomainHeader title="Files" color={T.accent} icon="files" />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.files} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       </View>
     );
@@ -150,7 +153,7 @@ export default function FileDetailScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Files"
-        color={T.domains.files}
+        color={T.accent}
         icon="files"
         rightActions={
           <>
@@ -167,12 +170,12 @@ export default function FileDetailScreen() {
             <CommentButton
               contentType={ContentType.FILE}
               contentId={file.id}
-              color={T.domains.files}
+              color={T.accent}
             />
             <ShareButton
               contentType={ContentType.FILE}
               contentId={file.id}
-              color={T.domains.files}
+              color={T.accent}
             />
             <TouchableOpacity
               onPress={() => setSheetOpen(true)}
@@ -184,7 +187,10 @@ export default function FileDetailScreen() {
         }
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[styles.previewCard, { backgroundColor: T.surface, borderColor: T.border }]}>
           <FilePreview
             fileId={file.id}
@@ -195,7 +201,7 @@ export default function FileDetailScreen() {
           />
           <View style={styles.previewActions}>
             <TouchableOpacity
-              style={[styles.previewBtn, { backgroundColor: T.domains.files }]}
+              style={[styles.previewBtn, { backgroundColor: T.accent }]}
               onPress={() => download.saveToDevice(file.id, file.filename, file.mimeType)}
               disabled={download.isBusy(file.id)}
             >
@@ -439,7 +445,7 @@ function DescriptionModal({
               <Text style={[styles.modalBtnText, { color: T.text }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: T.domains.files }]}
+              style={[styles.modalBtn, { backgroundColor: T.accent }]}
               onPress={onSave}
               disabled={saving}
             >
@@ -488,7 +494,7 @@ function VersionsModal({
         <Text style={[styles.moveTitle, { color: T.textBright }]}>Version history</Text>
         {loading ? (
           <View style={{ padding: 24 }}>
-            <ActivityIndicator size="small" color={T.domains.files} />
+            <ActivityIndicator size="small" color={T.accent} />
           </View>
         ) : versions.length === 0 ? (
           <Text style={[styles.versionEmpty, { color: T.textDim }]}>No previous versions</Text>
@@ -513,8 +519,8 @@ function VersionsModal({
                       onPress={() => onRestore(v.id)}
                       disabled={restoring}
                     >
-                      <ArrowCounterClockwise size={14} color={T.domains.files} weight="bold" />
-                      <Text style={[styles.versionRestoreText, { color: T.domains.files }]}>
+                      <ArrowCounterClockwise size={14} color={T.accent} weight="bold" />
+                      <Text style={[styles.versionRestoreText, { color: T.accent }]}>
                         Restore
                       </Text>
                     </TouchableOpacity>

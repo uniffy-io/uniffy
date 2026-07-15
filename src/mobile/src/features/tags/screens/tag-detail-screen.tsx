@@ -5,13 +5,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Tag as TagIcon } from "phosphor-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useTagContent } from "@features/tags/useTags";
@@ -21,6 +24,9 @@ import { DOMAIN_ICON } from "@shared/mentions/ReferenceChip";
 
 export default function TagContentScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const content = useTagContent(id);
 
@@ -56,7 +62,10 @@ export default function TagContentScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.urn}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={data.length === 0 ? styles.emptyContent : styles.listContent}
+          contentContainerStyle={[
+            data.length === 0 ? styles.emptyContent : styles.listContent,
+            { paddingBottom: bottomPad },
+          ]}
           ListEmptyComponent={
             <View style={styles.empty}>
               <TagIcon size={34} color={T.accent} weight="duotone" />
@@ -88,8 +97,6 @@ function ContentRow({
 }) {
   const domain = (item.domain ?? "notes") as Domain;
   const Icon = DOMAIN_ICON[domain];
-  const domainColor = T.domains[domain];
-  const softColor = T.domains[`${domain}Soft`];
   return (
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: T.border }]}
@@ -97,8 +104,8 @@ function ContentRow({
       disabled={!item.route}
       activeOpacity={0.7}
     >
-      <View style={[styles.icon, { backgroundColor: softColor }]}>
-        <Icon size={16} color={domainColor} weight="bold" />
+      <View style={[styles.icon, { backgroundColor: T.accentSoft }]}>
+        <Icon size={16} color={T.accent} weight="bold" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
@@ -110,8 +117,8 @@ function ContentRow({
           </Text>
         ) : null}
       </View>
-      <View style={[styles.badge, { backgroundColor: softColor }]}>
-        <Text style={[styles.badgeText, { color: domainColor }]}>{domain.toUpperCase()}</Text>
+      <View style={[styles.badge, { backgroundColor: T.accentSoft }]}>
+        <Text style={[styles.badgeText, { color: T.accent }]}>{domain.toUpperCase()}</Text>
       </View>
     </TouchableOpacity>
   );
