@@ -62,12 +62,13 @@ export function HomeScreen() {
   const userName = user?.fullName || user?.username || "there";
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: T.pageBg }]}
-      contentContainerStyle={{ paddingBottom: bottomPad }}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={[styles.header, { backgroundColor: T.bg, paddingTop: topPad }]}>
+    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: T.bg, paddingTop: topPad, borderBottomColor: T.border },
+        ]}
+      >
         <View style={styles.headerRow}>
           <Text style={[styles.wordmark, { color: T.textBright }]}>uniffy</Text>
           <View style={styles.actionsRow}>
@@ -110,6 +111,13 @@ export function HomeScreen() {
         </View>
       </View>
 
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
+      >
       <View style={styles.greetingBlock}>
         <Text style={[styles.greeting, { color: T.textBright }]}>{greeting},</Text>
         <Text style={[styles.greetingName, { color: T.accent }]} numberOfLines={1}>
@@ -135,8 +143,8 @@ export function HomeScreen() {
               onPress={() => router.push(`/chat/${channel.id}` as any)}
               activeOpacity={0.8}
             >
-              <View style={[styles.chatIcon, { backgroundColor: T.domains.chatSoft }]}>
-                <Hash size={16} color={T.domains.chat} weight="bold" />
+              <View style={[styles.chatIcon, { backgroundColor: T.accentSoft }]}>
+                <Hash size={16} color={T.accent} weight="bold" />
               </View>
               <Text style={[styles.chatName, { color: T.textBright }]} numberOfLines={1}>
                 {channel.name}
@@ -145,7 +153,7 @@ export function HomeScreen() {
                 style={[
                   styles.chatBadge,
                   {
-                    backgroundColor: channel.mentionCount > 0 ? T.red : T.domains.chat,
+                    backgroundColor: channel.mentionCount > 0 ? T.red : T.accent,
                   },
                 ]}
               >
@@ -172,7 +180,7 @@ export function HomeScreen() {
 
         {eventsQuery.isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={T.domains.calendar} />
+            <ActivityIndicator size="small" color={T.accent} />
           </View>
         ) : events.length === 0 ? (
           <View style={styles.emptyState}>
@@ -193,8 +201,8 @@ export function HomeScreen() {
                 onPress={() => router.push(`/calendar/${event.id}` as any)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.domainIcon, { backgroundColor: T.domains.calendarSoft }]}>
-                  <CalendarBlank size={18} color={T.domains.calendar} weight="duotone" />
+                <View style={[styles.domainIcon, { backgroundColor: T.accentSoft }]}>
+                  <CalendarBlank size={18} color={T.accent} weight="duotone" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.eventTitle, { color: T.textBright }]}>{event.title}</Text>
@@ -204,7 +212,7 @@ export function HomeScreen() {
                     </Text>
                   )}
                 </View>
-                <Text style={[styles.eventTime, { color: T.domains.calendar }]}>
+                <Text style={[styles.eventTime, { color: T.accent }]}>
                   {event.dateFormatted?.split(", ")[0] ?? ""}
                 </Text>
               </TouchableOpacity>
@@ -227,7 +235,7 @@ export function HomeScreen() {
 
         {notesQuery.isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={T.domains.notes} />
+            <ActivityIndicator size="small" color={T.accent} />
           </View>
         ) : notes.length === 0 ? (
           <View style={styles.emptyState}>
@@ -242,11 +250,11 @@ export function HomeScreen() {
               onPress={() => router.push(`/notes/${note.id}` as any)}
               activeOpacity={0.8}
             >
-              <View style={[styles.noteIcon, { backgroundColor: T.domains.notesSoft }]}>
+              <View style={[styles.noteIcon, { backgroundColor: T.accentSoft }]}>
                 {note.icon?.type === "emoji" ? (
                   <Text style={styles.noteEmoji}>{note.icon.value}</Text>
                 ) : (
-                  <NotePencil size={16} color={T.domains.notes} weight="duotone" />
+                  <NotePencil size={16} color={T.accent} weight="duotone" />
                 )}
               </View>
               <View style={{ flex: 1 }}>
@@ -279,7 +287,7 @@ export function HomeScreen() {
 
         {projectsQuery.isLoading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={T.domains.projects} />
+            <ActivityIndicator size="small" color={T.accent} />
           </View>
         ) : projects.length === 0 ? (
           <View style={styles.emptyState}>
@@ -297,12 +305,12 @@ export function HomeScreen() {
               <View
                 style={[
                   styles.domainIcon,
-                  { backgroundColor: project.color ? project.color + "22" : T.domains.projectsSoft },
+                  { backgroundColor: project.color ? project.color + "22" : T.accentSoft },
                 ]}
               >
                 <Kanban
                   size={18}
-                  color={project.color || T.domains.projects}
+                  color={project.color || T.accent}
                   weight="duotone"
                 />
               </View>
@@ -317,15 +325,18 @@ export function HomeScreen() {
           ))
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scroll: { flex: 1 },
   header: {
     paddingHorizontal: 16,
     paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   greetingBlock: {
     paddingHorizontal: 16,

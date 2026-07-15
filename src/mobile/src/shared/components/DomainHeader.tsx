@@ -57,9 +57,15 @@ export function DomainHeader({
               <IconComponent size={16} color={color} weight="bold" />
             </View>
           )}
-          <View>
-            <Text style={[styles.title, { color: T.textBright }]}>{title}</Text>
-            {subtitle && <Text style={[styles.subtitle, { color: T.textDim }]}>{subtitle}</Text>}
+          <View style={styles.titleTextWrap}>
+            <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
+              {title}
+            </Text>
+            {subtitle && (
+              <Text style={[styles.subtitle, { color: T.textDim }]} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -95,6 +101,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+  },
+  titleTextWrap: {
+    flexShrink: 1,
   },
   title: {
     fontSize: 17,
