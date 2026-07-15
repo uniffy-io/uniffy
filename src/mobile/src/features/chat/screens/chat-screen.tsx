@@ -40,7 +40,8 @@ import { Avatar } from "@shared/components/Avatar";
 import { ChatComposer } from "@features/chat/components/ChatComposer";
 import { TypingIndicator } from "@features/chat/components/TypingIndicator";
 import { EmojiPickerSheet } from "@features/chat/components/EmojiPickerSheet";
-import { MarkdownRenderer, MentionLine } from "@shared/components/MarkdownRenderer";
+import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
+import { SystemMessage } from "@features/chat/components/SystemMessage";
 import { MessageAttachments } from "@features/chat/components/MessageAttachments";
 import { AgentMessageBody, isSpecialAgentKind } from "@features/agents/components/AgentMessageBody";
 import { AgentApprovalCard } from "@features/agents/components/AgentApprovalCard";
@@ -1030,15 +1031,7 @@ function MessageRow({
   const jumbo = useMemo(() => !agentSpecial && isEmojiOnly(display), [agentSpecial, display]);
 
   if (isSystem) {
-    return (
-      <View style={styles.systemRow}>
-        <MentionLine
-          content={message.content}
-          textStyle={[styles.systemText, { color: T.textDim }]}
-          wrapperStyle={styles.systemLine}
-        />
-      </View>
-    );
+    return <SystemMessage content={message.content} />;
   }
 
   return (
@@ -1341,9 +1334,6 @@ const styles = StyleSheet.create({
   },
   replyContextName: { fontSize: 12, fontFamily: FONT.semibold },
   replyContextText: { fontSize: 12, fontFamily: FONT.regular },
-  systemRow: { paddingHorizontal: 16, paddingVertical: 6, alignItems: "center" },
-  systemLine: { justifyContent: "center" },
-  systemText: { fontSize: 12, fontFamily: FONT.regular, fontStyle: "italic" },
   reactionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
   reactionChip: {
     flexDirection: "row",

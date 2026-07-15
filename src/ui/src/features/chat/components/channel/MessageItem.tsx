@@ -4,6 +4,7 @@ import { ArrowBendUpLeft, PushPin, Robot, Stop } from '@phosphor-icons/react';
 import { type ChatMessage } from '@/features/chat/types';
 import { HoverActionsToolbar } from '@/features/chat/components/channel/HoverActionsToolbar';
 import { MessageContent } from '@/features/chat/components/channel/MessageContent';
+import { SystemMessage } from '@/features/chat/components/channel/SystemMessage';
 import { MessageAttachments } from '@/features/chat/components/channel/MessageAttachments';
 import { ThreadFooter } from '@/features/chat/components/channel/ThreadFooter';
 import { AgentMessageBody } from '@/features/chat/components/channel/AgentMessageBody';
@@ -199,17 +200,7 @@ function MessageItemInner({
   }
 
   if (message.senderType === 'SYSTEM') {
-    return (
-      <div
-        className="flex justify-center py-2 px-4"
-        data-testid={`chat-message-${message.id}`}
-        data-message-kind="system"
-      >
-        <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <MessageContent content={message.content} className="!text-xs !text-muted-foreground [&_*]:!text-xs [&_.mention-chip-compact]:!text-[10px]" />
-        </div>
-      </div>
-    );
+    return <SystemMessage content={message.content} messageId={message.id} />;
   }
 
   if (message.isDeleted) {
