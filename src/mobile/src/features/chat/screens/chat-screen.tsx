@@ -21,7 +21,6 @@ import {
   Robot,
   ChatCircle,
   ChatText,
-  Stop,
   Smiley,
   PushPin,
   PushPinSlash,
@@ -34,9 +33,12 @@ import {
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
+import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { Avatar } from "@shared/components/Avatar";
 import { ChatComposer } from "@features/chat/components/ChatComposer";
+import { TypingIndicator } from "@features/chat/components/TypingIndicator";
 import { EmojiPickerSheet } from "@features/chat/components/EmojiPickerSheet";
 import { MarkdownRenderer, MentionLine } from "@shared/components/MarkdownRenderer";
 import { MessageAttachments } from "@features/chat/components/MessageAttachments";
@@ -138,6 +140,8 @@ export default function ChatConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const channelId = id ?? "";
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const barSpace = bottomBarBlockHeight(insets.bottom);
   const { user, organizationId } = useAuth();
   const { pendingReference, clearPendingReference, openAt } = useUniffy();
   const queryClient = useQueryClient();
@@ -291,8 +295,9 @@ export default function ChatConversationScreen() {
     enabled: false,
     staleTime: Infinity,
   });
-  const typingNames = useMemo(
-    () => (typingQuery.data ?? []).filter((t) => t.id !== user?.id).map((t) => t.name),
+  // Agents surface through the running-agents row, not the human typing text.
+  const typingHumans = useMemo(
+    () => (typingQuery.data ?? []).filter((t) => !t.isAgent && t.id !== user?.id),
     [typingQuery.data, user?.id],
   );
 
@@ -517,9 +522,9 @@ export default function ChatConversationScreen() {
   if (channelQuery.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: T.pageBg }]}>
-        <DomainHeader title="Chat" color={T.domains.chat} icon="chat" />
+        <DomainHeader title="Chat" color={T.accent} icon="chat" />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.chat} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       </View>
     );
@@ -529,11 +534,11 @@ export default function ChatConversationScreen() {
     !attachments.uploading && (!!draft.trim() || (!editing && attachments.readyFileIds.length > 0));
 
   return (
-    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+    <View style={[styles.container, { backgroundColor: T.pageBg, paddingBottom: barSpace }]}>
       <DomainHeader
         title={title}
         subtitle={subtitle}
-        color={T.domains.chat}
+        color={T.accent}
         icon="chat"
         rightActions={
           <>
@@ -586,12 +591,12 @@ export default function ChatConversationScreen() {
 
       {messagesQuery.isLoading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.chat} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : messages.length === 0 ? (
         channel?.isAgentDm ? (
           <View style={styles.emptyWrap}>
-            <Robot size={40} color={T.domains.agents} weight="duotone" />
+            <Robot size={40} color={T.accent} weight="duotone" />
             <Text style={[styles.emptyTitle, { color: T.textBright }]}>
               {(channel.agentId && agentById.get(channel.agentId)?.name) || title}
             </Text>
@@ -602,7 +607,7 @@ export default function ChatConversationScreen() {
           </View>
         ) : (
           <View style={styles.emptyWrap}>
-            <ChatCircle size={40} color={T.domains.chat} weight="duotone" />
+            <ChatCircle size={40} color={T.accent} weight="duotone" />
             <Text style={[styles.emptyTitle, { color: T.textBright }]}>No messages yet</Text>
             <Text style={[styles.emptySub, { color: T.textDim }]}>
               Say hello to start the conversation
@@ -612,6 +617,7 @@ export default function ChatConversationScreen() {
       ) : (
         <FlatList
           ref={listRef}
+          style={styles.list}
           data={messages}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
@@ -627,7 +633,7 @@ export default function ChatConversationScreen() {
           ListFooterComponent={
             messagesQuery.isLoadingOlder ? (
               <View style={styles.loadOlderWrap}>
-                <ActivityIndicator size="small" color={T.domains.chat} />
+                <ActivityIndicator size="small" color={T.accent} />
               </View>
             ) : null
           }
@@ -649,20 +655,6 @@ export default function ChatConversationScreen() {
             })
           }
         />
-      ))}
-
-      {runningAgentIds.map((agentId) => (
-        <TouchableOpacity
-          key={agentId}
-          style={[styles.stopPill, { backgroundColor: T.surface, borderColor: T.border }]}
-          onPress={() => stopAgent.mutate({ channelId, agentId })}
-          activeOpacity={0.7}
-        >
-          <Stop size={14} color={T.red} weight="fill" />
-          <Text style={[styles.stopText, { color: T.text }]}>
-            Stop {agentById.get(agentId)?.name ?? "agent"}
-          </Text>
-        </TouchableOpacity>
       ))}
 
       {callsAvailable && activeCall && !inCallHere ? (
@@ -690,15 +682,11 @@ export default function ChatConversationScreen() {
         />
       ) : null}
 
-      {typingNames.length > 0 ? (
-        <View style={styles.typingRow}>
-          <Text style={[styles.typingText, { color: T.textDim }]} numberOfLines={1}>
-            {typingNames.slice(0, 3).join(", ")}
-            {typingNames.length > 3 ? ` and ${typingNames.length - 3} more` : ""}{" "}
-            {typingNames.length === 1 ? "is" : "are"} typing...
-          </Text>
-        </View>
-      ) : null}
+      <TypingIndicator
+        agentIds={runningAgentIds}
+        humans={typingHumans}
+        onStopAgents={(ids) => ids.forEach((agentId) => stopAgent.mutate({ channelId, agentId }))}
+      />
 
       <ChatComposer
         T={T}
@@ -887,12 +875,12 @@ function PinnedMessagesSheet({
       <View style={[styles.sheet, { backgroundColor: T.surface }]}>
         <View style={[styles.handle, { backgroundColor: T.border }]} />
         <View style={styles.pinnedHeader}>
-          <PushPin size={16} color={T.domains.chat} weight="fill" />
+          <PushPin size={16} color={T.accent} weight="fill" />
           <Text style={[styles.pinnedTitle, { color: T.textBright }]}>Pinned messages</Text>
         </View>
         {loading ? (
           <View style={styles.pinnedLoading}>
-            <ActivityIndicator size="small" color={T.domains.chat} />
+            <ActivityIndicator size="small" color={T.accent} />
           </View>
         ) : pinned.length === 0 ? (
           <Text style={[styles.pinnedEmpty, { color: T.textDim }]}>No pinned messages</Text>
@@ -946,9 +934,9 @@ function ComposeBanner({
   const { display } = useMemo(() => parseMentions(message.content), [message.content]);
   return (
     <View style={[styles.banner, { backgroundColor: T.surface, borderTopColor: T.border }]}>
-      <View style={[styles.bannerAccent, { backgroundColor: T.domains.chat }]} />
+      <View style={[styles.bannerAccent, { backgroundColor: T.accent }]} />
       <View style={{ flex: 1 }}>
-        <Text style={[styles.bannerLabel, { color: T.domains.chat }]}>
+        <Text style={[styles.bannerLabel, { color: T.accent }]}>
           {mode === "edit" ? "Editing message" : `Replying to ${message.senderName}`}
         </Text>
         <Text style={[styles.bannerText, { color: T.textDim }]} numberOfLines={1}>
@@ -992,9 +980,9 @@ function DaySeparator({ label, T }: { label: string; T: ThemeColors }) {
 function UnreadDivider({ T }: { T: ThemeColors }) {
   return (
     <View style={styles.separatorRow}>
-      <View style={[styles.separatorLine, { backgroundColor: T.domains.chat }]} />
-      <Text style={[styles.unreadLabel, { color: T.domains.chat }]}>New messages</Text>
-      <View style={[styles.separatorLine, { backgroundColor: T.domains.chat }]} />
+      <View style={[styles.separatorLine, { backgroundColor: T.accent }]} />
+      <Text style={[styles.unreadLabel, { color: T.accent }]}>New messages</Text>
+      <View style={[styles.separatorLine, { backgroundColor: T.accent }]} />
     </View>
   );
 }
@@ -1066,7 +1054,7 @@ function MessageRow({
             name={senderName}
             avatarUrl={message.senderAvatarUrl ?? undefined}
             size={36}
-            accentColor={isAgent ? T.domains.agents : undefined}
+            accentColor={isAgent ? T.accent : undefined}
             emoji={isAgent ? (agentEmoji ?? undefined) : undefined}
             presence={senderPresence}
             presenceRingColor={T.pageBg}
@@ -1080,12 +1068,12 @@ function MessageRow({
               {senderName}
             </Text>
             {isAgent ? (
-              <View style={[styles.agentTag, { backgroundColor: T.domains.chatSoft }]}>
-                <Text style={[styles.agentTagText, { color: T.domains.chat }]}>AGENT</Text>
+              <View style={[styles.agentTag, { backgroundColor: T.accentSoft }]}>
+                <Text style={[styles.agentTagText, { color: T.accent }]}>AGENT</Text>
               </View>
             ) : null}
             <Text style={[styles.msgTime, { color: T.textDim }]}>{message.timeLabel}</Text>
-            {message.isPinned ? <PushPin size={11} color={T.domains.chat} weight="fill" /> : null}
+            {message.isPinned ? <PushPin size={11} color={T.accent} weight="fill" /> : null}
           </View>
         ) : null}
         {message.replyContext ? (
@@ -1131,12 +1119,12 @@ function MessageRow({
         ) : null}
         {message.replyCount > 0 ? (
           <TouchableOpacity
-            style={[styles.threadChip, { backgroundColor: T.domains.chatSoft }]}
+            style={[styles.threadChip, { backgroundColor: T.accentSoft }]}
             onPress={onPressThread}
             activeOpacity={0.7}
           >
-            <ChatText size={12} color={T.domains.chat} weight="duotone" />
-            <Text style={[styles.threadChipText, { color: T.domains.chat }]}>
+            <ChatText size={12} color={T.accent} weight="duotone" />
+            <Text style={[styles.threadChipText, { color: T.accent }]}>
               {message.replyCount} {message.replyCount === 1 ? "reply" : "replies"}
             </Text>
           </TouchableOpacity>
@@ -1149,8 +1137,8 @@ function MessageRow({
                 style={[
                   styles.reactionChip,
                   {
-                    backgroundColor: r.currentUserReacted ? T.domains.chatSoft : T.surface,
-                    borderColor: r.currentUserReacted ? T.domains.chat : T.border,
+                    backgroundColor: r.currentUserReacted ? T.accentSoft : T.surface,
+                    borderColor: r.currentUserReacted ? T.accent : T.border,
                   },
                 ]}
                 onPress={() => onToggleReaction(r.emoji)}
@@ -1160,7 +1148,7 @@ function MessageRow({
                 <Text
                   style={[
                     styles.reactionCount,
-                    { color: r.currentUserReacted ? T.domains.chat : T.textDim },
+                    { color: r.currentUserReacted ? T.accent : T.textDim },
                   ]}
                 >
                   {r.count}
@@ -1313,6 +1301,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 16, fontFamily: FONT.semibold, marginTop: 4 },
   emptySub: { fontSize: 13, fontFamily: FONT.regular, textAlign: "center" },
+  list: { flex: 1 },
   listContent: { paddingVertical: 12 },
   loadOlderWrap: { paddingVertical: 14, alignItems: "center" },
   msgRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingTop: 10 },
@@ -1389,8 +1378,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  typingRow: { paddingHorizontal: 16, paddingVertical: 4 },
-  typingText: { fontSize: 12, fontFamily: FONT.regular, fontStyle: "italic" },
   threadChip: {
     flexDirection: "row",
     alignItems: "center",

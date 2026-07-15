@@ -26,12 +26,14 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     UpdateMessageResponse,
 )
 
+from uniffy.core.avatars import get_avatar_url
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_sender_info_from_context, get_user_id_from_context
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.messages.converters import message_to_proto
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
+from uniffy.domains.chat.sender_resolver import SenderResolver
 
 logger = logger.bind(component="chat.messages.handlers")
 
@@ -54,7 +56,10 @@ class MessageHandlers:
         ctx: RequestContext,
     ) -> SendMessageResponse:
         user_id = get_user_id_from_context(ctx)
-        jwt_name, jwt_avatar = get_sender_info_from_context(ctx)
+        jwt_name, jwt_avatar_key = get_sender_info_from_context(ctx)
+        # The JWT carries the raw storage key; everything downstream (publish
+        # event, response proto) expects the HTTP avatar URL.
+        jwt_avatar = get_avatar_url(user_id, jwt_avatar_key or None)
         try:
             org_id = UUID(request.organization_id)
             channel_id = UUID(request.channel_id)
@@ -296,7 +301,6 @@ class MessageHandlers:
         from sqlalchemy import func, select
 
         from uniffy.core.models.chat.thread import ChatThreadParticipant, ChatThreadStats
-        from uniffy.core.models.login.user import User
         from uniffy.domains.chat.reactions.operations import ChatReactionOperations
 
         if not messages:
@@ -304,7 +308,6 @@ class MessageHandlers:
 
         root_ids = [m.id for m in messages if m.root_id is None]
         message_ids = [m.id for m in messages]
-        sender_ids = list({m.sender_id for m in messages})
 
         thread_stats_map: dict[UUID, ChatThreadStats] = {}
         thread_participants_map: dict[UUID, list[UUID]] = defaultdict(list)
@@ -344,13 +347,16 @@ class MessageHandlers:
                 for row in p_result.all():
                     thread_participants_map[row[0]].append(row[1])
 
-        sender_map: dict[UUID, tuple[str, str | None]] = {}
-        if sender_ids:
-            u_result = await session.execute(
-                select(User.id, User.full_name, User.avatar_key).where(User.id.in_(sender_ids))
-            )
-            for row in u_result.all():
-                sender_map[row[0]] = (row[1] or "Unknown", row[2])
+        # Polymorphic USER | AGENT resolution with the cached resolver; the
+        # tuple carries (display_name, avatar URL) ready for the proto.
+        resolver = SenderResolver(session)
+        sender_infos = await resolver.resolve_many(
+            [(m.sender_type, m.sender_id) for m in messages]
+        )
+        sender_map: dict[UUID, tuple[str, str | None]] = {
+            sid: (info.display_name, info.avatar_url or None)
+            for sid, info in sender_infos.items()
+        }
 
         reply_to_ids = [m.reply_to_id for m in messages if m.reply_to_id]
         reply_context_map: dict[UUID, tuple[str, str, str]] = {}
@@ -359,19 +365,18 @@ class MessageHandlers:
 
             rto_result = await session.execute(
                 select(
-                    ChatMessageModel.id, ChatMessageModel.sender_id, ChatMessageModel.content
+                    ChatMessageModel.id,
+                    ChatMessageModel.sender_id,
+                    ChatMessageModel.sender_type,
+                    ChatMessageModel.content,
                 ).where(ChatMessageModel.id.in_(reply_to_ids))
             )
-            rto_data = {row[0]: (row[1], row[2]) for row in rto_result.all()}
-            missing_sender_ids = [sid for sid, _ in rto_data.values() if sid not in sender_map]
-            if missing_sender_ids:
-                extra_result = await session.execute(
-                    select(User.id, User.full_name).where(User.id.in_(missing_sender_ids))
-                )
-                for row in extra_result.all():
-                    sender_map[row[0]] = (row[1] or "Unknown", None)
-            for rid, (sid, content) in rto_data.items():
-                s_name = sender_map.get(sid, ("Unknown", None))[0]
+            rto_data = {row[0]: (row[1], row[2], row[3]) for row in rto_result.all()}
+            rto_infos = await resolver.resolve_many(
+                [(stype, sid) for sid, stype, _ in rto_data.values()]
+            )
+            for rid, (sid, _stype, content) in rto_data.items():
+                s_name = rto_infos[sid].display_name if sid in rto_infos else "Unknown"
                 reply_context_map[rid] = (str(rid), s_name, content[:150])
 
         from uniffy_proto.chat.v1.chat_pb2 import ReactionGroup as ProtoReactionGroup

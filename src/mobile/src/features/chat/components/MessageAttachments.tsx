@@ -5,8 +5,7 @@ import { router } from "expo-router";
 import { FileText, FileAudio, FileVideo, FileZip, File as FileIcon } from "phosphor-react-native";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
-import { ENV } from "@core/config/env";
-import { getAccessToken } from "@core/auth/auth";
+import { assetAuthHeaders, buildFileUrl } from "@features/files/fileUrls";
 import { formatSize } from "@features/files/fileSerializer";
 import type { SerializedAttachment } from "@features/chat/chatSerializer";
 
@@ -37,7 +36,7 @@ export function MessageAttachments({
 }) {
   const images = attachments.filter((a) => a.mimeType.startsWith("image/"));
   const others = attachments.filter((a) => !a.mimeType.startsWith("image/"));
-  const authHeaders = { Authorization: `Bearer ${getAccessToken() ?? ""}` };
+  const authHeaders = assetAuthHeaders();
 
   const visibleImages = images.slice(0, MAX_GRID_IMAGES);
   const overflow = images.length - visibleImages.length;
@@ -48,7 +47,7 @@ export function MessageAttachments({
         <TouchableOpacity activeOpacity={0.85} onPress={() => openFile(visibleImages[0].fileId)}>
           <Image
             source={{
-              uri: `${ENV.apiUrl}/files/${organizationId}/${visibleImages[0].fileId}`,
+              uri: buildFileUrl(organizationId, visibleImages[0].fileId),
               headers: authHeaders,
             }}
             style={[styles.singleImage, { backgroundColor: T.surface }]}
@@ -67,7 +66,7 @@ export function MessageAttachments({
             >
               <Image
                 source={{
-                  uri: `${ENV.apiUrl}/files/${organizationId}/${img.fileId}`,
+                  uri: buildFileUrl(organizationId, img.fileId),
                   headers: authHeaders,
                 }}
                 style={[styles.gridImage, { backgroundColor: T.surface }]}
@@ -93,8 +92,8 @@ export function MessageAttachments({
             onPress={() => openFile(att.fileId)}
             activeOpacity={0.7}
           >
-            <View style={[styles.fileIconWrap, { backgroundColor: T.domains.filesSoft }]}>
-              <Icon size={18} color={T.domains.files} weight="duotone" />
+            <View style={[styles.fileIconWrap, { backgroundColor: T.accentSoft }]}>
+              <Icon size={18} color={T.accent} weight="duotone" />
             </View>
             <View style={styles.fileMeta}>
               <Text style={[styles.fileName, { color: T.textBright }]} numberOfLines={1}>
