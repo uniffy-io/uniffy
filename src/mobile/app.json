@@ -11,7 +11,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.uniffy.app",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -49,7 +51,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#0d111e"
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
