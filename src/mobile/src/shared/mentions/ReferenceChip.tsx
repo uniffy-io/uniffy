@@ -36,8 +36,8 @@ type ReferenceChipProps = {
 export function ReferenceChip({ domain, label, onPress }: ReferenceChipProps) {
   const T = useTheme();
   const isSubject = domain === "user" || domain === "group";
-  const color = isSubject ? (domain === "user" ? T.green : T.accent) : T.domains[domain];
-  const softColor = isSubject ? color + "22" : T.domains[`${domain}Soft`];
+  const color = domain === "user" ? T.green : T.accent;
+  const softColor = isSubject ? color + "22" : T.accentSoft;
   const IconComponent = isSubject ? (domain === "user" ? User : UsersThree) : DOMAIN_ICONS[domain];
 
   return (

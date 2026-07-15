@@ -31,12 +31,13 @@ import {
   Trash,
 } from "phosphor-react-native";
 import { router, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { FileThumb } from "@features/files/components/FileThumb";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useAuth } from "@core/providers/auth-context";
-import { FILE_COLORS } from "@theme/theme";
+import { BOTTOM_NAV_HEIGHT, FILE_COLORS } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useFilesTree, useStorageUsage } from "@features/files/useFiles";
 import { useToggleBookmark } from "@features/bookmarks/useBookmarks";
@@ -102,6 +103,9 @@ type SheetItem = {
 
 export default function FilesListScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { organizationId } = useAuth();
   const [scope, setScope] = useState<"all" | "personal">("all");
   const filesTree = useFilesTree(scope === "personal");
@@ -431,8 +435,8 @@ export default function FilesListScreen() {
         activeOpacity={0.7}
       >
         {selectMode && <SelectDot on={isSel} />}
-        <View style={[styles.folderIcon, { backgroundColor: T.domains.filesSoft }]}>
-          <FolderSimple size={24} color={T.domains.files} weight="fill" />
+        <View style={[styles.folderIcon, { backgroundColor: T.accentSoft }]}>
+          <FolderSimple size={24} color={T.accent} weight="fill" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.itemName, { color: T.textBright }]} numberOfLines={1}>
@@ -468,7 +472,7 @@ export default function FilesListScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.gridCardTop}>
-          <FolderSimple size={40} color={T.domains.files} weight="fill" />
+          <FolderSimple size={40} color={T.accent} weight="fill" />
           {selectMode ? (
             <SelectDot on={isSel} />
           ) : (
@@ -601,7 +605,7 @@ export default function FilesListScreen() {
       <DomainHeader
         title={selectMode ? `${selected.size} selected` : currentFolderName}
         subtitle={!selectMode && scope === "personal" ? "My files only" : undefined}
-        color={T.domains.files}
+        color={T.accent}
         icon="files"
         onBack={selectMode ? exitSelect : folderStack.length > 0 ? navigateBack : undefined}
         rightActions={
@@ -723,7 +727,7 @@ export default function FilesListScreen() {
         <View
           style={[styles.uploadBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}
         >
-          <ActivityIndicator size="small" color={T.domains.files} />
+          <ActivityIndicator size="small" color={T.accent} />
           <Text style={[styles.uploadText, { color: T.text }]}>
             Uploading{uploadFile.progress > 0 ? ` ${uploadFile.progress}%` : "..."}
           </Text>
@@ -732,19 +736,19 @@ export default function FilesListScreen() {
 
       {filesTree.isLoading && !filesTree.data && (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.files} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
         refreshControl={
           <RefreshControl
             refreshing={filesTree.isFetching && !filesTree.isLoading}
             onRefresh={() => filesTree.refetch()}
-            tintColor={T.domains.files}
-            colors={[T.domains.files]}
+            tintColor={T.accent}
+            colors={[T.accent]}
           />
         }
       >
@@ -840,7 +844,7 @@ export default function FilesListScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtn,
-                  { backgroundColor: T.domains.files, opacity: newFolderName.trim() ? 1 : 0.4 },
+                  { backgroundColor: T.accent, opacity: newFolderName.trim() ? 1 : 0.4 },
                 ]}
                 disabled={!newFolderName.trim() || createFolder.isPending}
                 onPress={() => {
@@ -901,7 +905,7 @@ export default function FilesListScreen() {
               <TouchableOpacity
                 style={[
                   styles.modalBtn,
-                  { backgroundColor: T.domains.files, opacity: renameValue.trim() ? 1 : 0.4 },
+                  { backgroundColor: T.accent, opacity: renameValue.trim() ? 1 : 0.4 },
                 ]}
                 disabled={!renameValue.trim() || updateFile.isPending || updateFolder.isPending}
                 onPress={submitRename}
@@ -936,7 +940,7 @@ export default function FilesListScreen() {
               onPress={() => onPickMoveTarget(undefined)}
               activeOpacity={0.7}
             >
-              <FolderSimple size={20} color={T.domains.files} weight="fill" />
+              <FolderSimple size={20} color={T.accent} weight="fill" />
               <Text style={[styles.moveRowText, { color: T.textBright }]}>Files (root)</Text>
             </TouchableOpacity>
             {flattenFolders(filesTree.data ?? [], moveExcludeIds).map((opt) => (
@@ -949,7 +953,7 @@ export default function FilesListScreen() {
                 onPress={() => onPickMoveTarget(opt.id)}
                 activeOpacity={0.7}
               >
-                <FolderSimple size={20} color={T.domains.files} weight="fill" />
+                <FolderSimple size={20} color={T.accent} weight="fill" />
                 <Text style={[styles.moveRowText, { color: T.textBright }]} numberOfLines={1}>
                   {opt.name}
                 </Text>
@@ -967,10 +971,10 @@ export default function FilesListScreen() {
         icon="files"
         iconColor={
           sheetItem?.isFolder
-            ? T.domains.files
+            ? T.accent
             : sheetItem?.ext
               ? getFileColor(sheetItem.ext)
-              : T.domains.files
+              : T.accent
         }
         actions={
           sheetItem?.isFolder
@@ -1138,7 +1142,7 @@ export default function FilesListScreen() {
             : undefined
         }
         icon="files"
-        iconColor={T.domains.files}
+        iconColor={T.accent}
         actions={[
           {
             icon: "grid",
@@ -1172,8 +1176,8 @@ function NoResults({ query }: { query: string }) {
   const T = useTheme();
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.filesSoft }]}>
-        <MagnifyingGlass size={32} color={T.domains.files} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+        <MagnifyingGlass size={32} color={T.accent} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No matches</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>
@@ -1200,7 +1204,7 @@ function StorageBar({ used, quota, percent }: { used: string; quota?: string; pe
           <View
             style={[
               styles.storageFill,
-              { backgroundColor: nearFull ? "#FA5252" : T.domains.files, width: `${pct}%` },
+              { backgroundColor: nearFull ? "#FA5252" : T.accent, width: `${pct}%` },
             ]}
           />
         </View>
@@ -1240,8 +1244,8 @@ function EmptyState({ isSubfolder }: { isSubfolder: boolean }) {
   const T = useTheme();
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { backgroundColor: T.domains.filesSoft }]}>
-        <FolderSimple size={36} color={T.domains.files} weight="duotone" />
+      <View style={[styles.emptyIconWrap, { backgroundColor: T.accentSoft }]}>
+        <FolderSimple size={36} color={T.accent} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>
         {isSubfolder ? "This folder is empty" : "No files yet"}

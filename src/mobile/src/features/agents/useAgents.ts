@@ -48,26 +48,6 @@ export function useStartAgentChat() {
   });
 }
 
-/**
- * Always create a fresh named chat with the agent (the server picks a
- * disambiguated default name), unlike useStartAgentChat's resume-or-create.
- */
-export function useCreateAgentChat() {
-  const { organizationId } = useAuth();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (agentId: string): Promise<string> => {
-      const created = await chatApi.createAgentChat({ organizationId: organizationId!, agentId });
-      return created.channel?.id ?? "";
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
-      queryClient.invalidateQueries({ queryKey: ["chat", "agentChats", organizationId] });
-    },
-  });
-}
-
 export function useStopAgentRun() {
   const { organizationId } = useAuth();
 

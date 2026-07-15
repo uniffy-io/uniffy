@@ -366,14 +366,14 @@ export default function NotesGraphScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title="Knowledge Graph"
-        color={T.domains.notes}
+        color={T.accent}
         icon="notes"
         onBack={() => router.back()}
       />
 
       {graph.isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={T.domains.notes} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : graph.data && graph.data.nodes.length === 0 ? (
         <EmptyGraph T={T} />
@@ -425,7 +425,7 @@ export default function NotesGraphScreen() {
                             y1={s.y}
                             x2={t.x}
                             y2={t.y}
-                            stroke={T.domains.notes}
+                            stroke={T.accent}
                             strokeWidth={8}
                             strokeOpacity={0.12}
                             strokeLinecap="round"
@@ -436,7 +436,7 @@ export default function NotesGraphScreen() {
                             y1={s.y}
                             x2={t.x}
                             y2={t.y}
-                            stroke={T.domains.notes}
+                            stroke={T.accent}
                             strokeWidth={2}
                             strokeOpacity={0.5}
                             strokeLinecap="round"
@@ -448,7 +448,7 @@ export default function NotesGraphScreen() {
                             ax2,
                             ay2,
                             edgePhaseSelectedRef.current,
-                            T.domains.notes,
+                            T.accent,
                           )}
                         </G>
                       );
@@ -584,7 +584,7 @@ export default function NotesGraphScreen() {
               </View>
               {selectedNode.isNote && (
                 <TouchableOpacity
-                  style={[styles.nodeCardBtn, { backgroundColor: T.domains.notes }]}
+                  style={[styles.nodeCardBtn, { backgroundColor: T.accent }]}
                   onPress={() => {
                     setSelectedNode(null);
                     router.push(`/notes/${selectedNode.id}` as any);
@@ -605,8 +605,8 @@ export default function NotesGraphScreen() {
 function EmptyGraph({ T }: { T: ThemeColors & { isDark: boolean } }) {
   return (
     <View style={styles.center}>
-      <View style={[styles.emptyIcon, { backgroundColor: T.domains.notesSoft }]}>
-        <NotePencil size={36} color={T.domains.notes} weight="duotone" />
+      <View style={[styles.emptyIcon, { backgroundColor: T.accentSoft }]}>
+        <NotePencil size={36} color={T.accent} weight="duotone" />
       </View>
       <Text style={[styles.emptyTitle, { color: T.textBright }]}>No graph yet</Text>
       <Text style={[styles.emptySubtitle, { color: T.textDim }]}>

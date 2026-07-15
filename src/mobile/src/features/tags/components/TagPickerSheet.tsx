@@ -64,7 +64,7 @@ export function TagPickerSheet({
         <View style={[styles.handle, { backgroundColor: T.border }]} />
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: T.textBright }]}>Tags</Text>
-          {busy && <ActivityIndicator size="small" color={T.domains.files} />}
+          {busy && <ActivityIndicator size="small" color={T.accent} />}
         </View>
 
         <View style={[styles.searchBar, { backgroundColor: T.pageBg, borderColor: T.border }]}>
@@ -121,7 +121,7 @@ export function TagPickerSheet({
           })}
           {tags.isLoading && (
             <View style={styles.loading}>
-              <ActivityIndicator size="small" color={T.domains.files} />
+              <ActivityIndicator size="small" color={T.accent} />
             </View>
           )}
         </ScrollView>

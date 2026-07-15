@@ -154,7 +154,7 @@ function PdfPreview({ uri, onExpand }: { uri: string; onExpand: () => void }) {
         startInLoadingState
         renderLoading={() => (
           <View style={styles.centered}>
-            <ActivityIndicator color={T.domains.files} />
+            <ActivityIndicator color={T.accent} />
           </View>
         )}
       />
@@ -195,7 +195,7 @@ function TextPreview({ uri }: { uri: string }) {
   if (text === null) {
     return (
       <View style={[styles.frame, styles.centered, { borderColor: T.border }]}>
-        <ActivityIndicator color={T.domains.files} />
+        <ActivityIndicator color={T.accent} />
       </View>
     );
   }
@@ -220,15 +220,15 @@ function AudioPreview({ uri, filename }: { uri: string; filename: string }) {
 
   return (
     <View style={styles.audioWrap}>
-      <View style={[styles.audioArt, { backgroundColor: T.domains.filesSoft }]}>
-        <FileText size={40} color={T.domains.files} weight="duotone" />
+      <View style={[styles.audioArt, { backgroundColor: T.accentSoft }]}>
+        <FileText size={40} color={T.accent} weight="duotone" />
       </View>
       <Text style={[styles.audioName, { color: T.textBright }]} numberOfLines={1}>
         {filename}
       </Text>
       <View style={styles.audioControls}>
         <TouchableOpacity
-          style={[styles.audioBtn, { backgroundColor: T.domains.files }]}
+          style={[styles.audioBtn, { backgroundColor: T.accent }]}
           onPress={() => (status.playing ? player.pause() : player.play())}
         >
           {status.playing ? (
@@ -240,7 +240,7 @@ function AudioPreview({ uri, filename }: { uri: string; filename: string }) {
         <View style={{ flex: 1 }}>
           <View style={[styles.audioTrack, { backgroundColor: T.border }]}>
             <View
-              style={[styles.audioFill, { backgroundColor: T.domains.files, width: `${pct}%` }]}
+              style={[styles.audioFill, { backgroundColor: T.accent, width: `${pct}%` }]}
             />
           </View>
           <Text style={[styles.audioTime, { color: T.textDim }]}>

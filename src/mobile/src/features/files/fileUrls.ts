@@ -1,23 +1,20 @@
-import { ENV } from "@core/config/env";
-import { getAccessToken } from "@core/auth/auth";
+import { getApiBaseUrl } from "@core/config/serverUrl";
 
-// Asset routes (files / thumbnails / media) authenticate a Bearer token on
-// mobile - there is no uniffy_asset cookie as on web - so every <Image>/<WebView>
-// request must carry the header explicitly via `source.headers`.
+// Asset routes (files / thumbnails / media) authenticate via the asset-read
+// cookie attached as an explicit header (see core/auth/assetAuth.ts), so every
+// <Image>/<WebView> request must carry `source.headers`.
+export { assetAuthHeaders } from "@core/auth/assetAuth";
+
 export function buildFileUrl(organizationId: string, fileId: string): string {
-  return `${ENV.apiUrl}/files/${organizationId}/${fileId}`;
+  return `${getApiBaseUrl()}/files/${organizationId}/${fileId}`;
 }
 
 export function buildThumbnailUrl(organizationId: string, fileId: string): string {
-  return `${ENV.apiUrl}/thumbnails/${organizationId}/${fileId}`;
+  return `${getApiBaseUrl()}/thumbnails/${organizationId}/${fileId}`;
 }
 
 export function buildMediaUrl(organizationId: string, fileId: string): string {
-  return `${ENV.apiUrl}/media/${organizationId}/${fileId}`;
-}
-
-export function assetAuthHeaders(): Record<string, string> {
-  return { Authorization: `Bearer ${getAccessToken() ?? ""}` };
+  return `${getApiBaseUrl()}/media/${organizationId}/${fileId}`;
 }
 
 // Mirrors the backend THUMBNAIL_MIME_TYPES (workers/utils/mime.py): only these

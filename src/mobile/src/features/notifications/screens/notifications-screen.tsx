@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ActivityIndicator,
   RefreshControl,
   Alert,
@@ -23,9 +24,11 @@ import {
 } from "phosphor-react-native";
 import type { IconProps } from "phosphor-react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { Avatar } from "@shared/components/Avatar";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import {
@@ -51,6 +54,9 @@ type Tab = "all" | "unread";
 
 export default function NotificationsScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const [tab, setTab] = useState<Tab>("all");
   const feed = useNotifications(tab === "unread");
   const markRead = useMarkNotificationRead();
@@ -154,7 +160,10 @@ export default function NotificationsScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={data.length === 0 ? styles.emptyContent : styles.listContent}
+          contentContainerStyle={[
+            data.length === 0 ? styles.emptyContent : styles.listContent,
+            { paddingBottom: bottomPad },
+          ]}
           ListEmptyComponent={<EmptyNotifications T={T} unreadOnly={tab === "unread"} />}
           refreshControl={
             <RefreshControl
@@ -183,7 +192,7 @@ function NotificationRow({
 }) {
   const Icon = ICON_MAP[item.iconKind] ?? Megaphone;
   const accent =
-    item.tone === "danger" ? T.red : item.tone === "warning" ? T.yellow : T.domains[item.domain];
+    item.tone === "danger" ? T.red : item.tone === "warning" ? T.yellow : T.accent;
   return (
     <TouchableOpacity
       style={[

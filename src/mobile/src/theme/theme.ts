@@ -11,8 +11,6 @@ export const BRAND = {
 
 export type DomainKey = "notes" | "files" | "chat" | "calendar" | "projects" | "agents";
 
-export type DomainColors = Record<DomainKey, string> & Record<`${DomainKey}Soft`, string>;
-
 export type ThemeColors = {
   bg: string;
   surface: string;
@@ -32,7 +30,6 @@ export type ThemeColors = {
   yellow: string;
   cyan: string;
   pageBg: string;
-  domains: DomainColors;
 };
 
 // Exact HSL of BRAND.violet #694aff.
@@ -51,38 +48,6 @@ export const ACCENT_PRESETS: { name: string; hsl: string }[] = [
   { name: "Amber", hsl: "38 92% 50%" },
   { name: "Red", hsl: "0 84.2% 60.2%" },
 ];
-
-// Dark mode uses the pure brand primaries; light mode uses contrast-adjusted
-// variants so every domain color holds >= 3:1 on white and the light page bg.
-const DOMAINS_DARK: DomainColors = {
-  notes: BRAND.pink,
-  notesSoft: "rgba(253,126,234,0.14)",
-  files: "#4a7dff",
-  filesSoft: "rgba(74,125,255,0.14)",
-  chat: BRAND.violet,
-  chatSoft: "rgba(105,74,255,0.14)",
-  calendar: BRAND.orange,
-  calendarSoft: "rgba(255,85,0,0.14)",
-  projects: BRAND.green,
-  projectsSoft: "rgba(1,183,127,0.14)",
-  agents: "#9b85ff",
-  agentsSoft: "rgba(155,133,255,0.14)",
-};
-
-const DOMAINS_LIGHT: DomainColors = {
-  notes: "#d63bbd",
-  notesSoft: "rgba(214,59,189,0.10)",
-  files: "#3568f5",
-  filesSoft: "rgba(53,104,245,0.10)",
-  chat: BRAND.violet,
-  chatSoft: "rgba(105,74,255,0.10)",
-  calendar: "#f04e00",
-  calendarSoft: "rgba(240,78,0,0.10)",
-  projects: "#019268",
-  projectsSoft: "rgba(1,146,104,0.10)",
-  agents: "#7a5af5",
-  agentsSoft: "rgba(122,90,245,0.10)",
-};
 
 export const DARK: ThemeColors = {
   bg: "#12172a",
@@ -103,7 +68,6 @@ export const DARK: ThemeColors = {
   yellow: "#FAB005",
   cyan: "#22B8CF",
   pageBg: BRAND.midnight,
-  domains: DOMAINS_DARK,
 };
 
 export const LIGHT: ThemeColors = {
@@ -125,7 +89,6 @@ export const LIGHT: ThemeColors = {
   yellow: "#F08C00",
   cyan: "#1098AD",
   pageBg: BRAND.white,
-  domains: DOMAINS_LIGHT,
 };
 
 export const FILE_COLORS: Record<string, string> = {

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  Platform,
   ActivityIndicator,
 } from "react-native";
 import { MentionTextInput } from "@shared/mentions/MentionTextInput";
@@ -30,9 +31,10 @@ import {
 } from "phosphor-react-native";
 import type { IconProps } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
-import { CATEGORY_COLORS } from "@theme/theme";
+import { BOTTOM_NAV_HEIGHT, CATEGORY_COLORS } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useProject } from "@features/projects/useProjects";
 import { useCreateProject, useUpdateProject } from "@features/projects/useProjectMutations";
@@ -57,6 +59,9 @@ const ICON_OPTIONS: { name: string; Component: React.ComponentType<IconProps> }[
 
 export default function CreateProjectScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { projectId } = useLocalSearchParams<{ projectId?: string }>();
   const isEditing = !!projectId;
   const projectQuery = useProject(projectId);
@@ -118,7 +123,7 @@ export default function CreateProjectScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={isEditing ? "Edit Project" : "New Project"}
-        color={T.domains.projects}
+        color={T.accent}
         icon="projects"
         rightActions={
           <TouchableOpacity
@@ -127,9 +132,9 @@ export default function CreateProjectScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color={T.domains.projects} />
+              <ActivityIndicator size="small" color={T.accent} />
             ) : (
-              <Text style={[styles.saveBtn, { color: canSave ? T.domains.projects : T.textDim }]}>
+              <Text style={[styles.saveBtn, { color: canSave ? T.accent : T.textDim }]}>
                 Save
               </Text>
             )}
@@ -137,7 +142,10 @@ export default function CreateProjectScreen() {
         }
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={{ gap: 6 }}>
           <Text style={[styles.label, { color: T.textDim }]}>Name</Text>
           <TextInput

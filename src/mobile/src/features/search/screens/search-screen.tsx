@@ -6,14 +6,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ScrollView,
   ActivityIndicator,
   Keyboard,
 } from "react-native";
 import { MagnifyingGlass, X, BookmarkSimple, Tag as TagIcon } from "phosphor-react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/auth-context";
@@ -44,6 +47,9 @@ const FILTERS: { key: "all" | Domain; label: string; types: SearchResultType[] }
 
 export default function SearchScreen() {
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { organizationId } = useAuth();
   const toggleBookmark = useToggleBookmark();
 
@@ -191,7 +197,7 @@ export default function SearchScreen() {
       >
         {FILTERS.map((f) => {
           const active = filter === f.key;
-          const color = f.key === "all" ? T.accent : T.domains[f.key as Domain];
+          const color = T.accent;
           return (
             <TouchableOpacity
               key={f.key}
@@ -233,7 +239,10 @@ export default function SearchScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item.urn}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={results.length === 0 ? styles.emptyContent : styles.listContent}
+        contentContainerStyle={[
+          results.length === 0 ? styles.emptyContent : styles.listContent,
+          { paddingBottom: bottomPad },
+        ]}
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.empty}>
@@ -267,24 +276,22 @@ function ResultRow({
 }) {
   const domain = (item.domain ?? "notes") as Domain;
   const Icon = DOMAIN_ICON[domain];
-  const domainColor = T.domains[domain];
-  const softColor = T.domains[`${domain}Soft`];
   return (
     <TouchableOpacity
       style={[styles.resultRow, { borderBottomColor: T.border }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.domainIcon, { backgroundColor: softColor }]}>
-        <Icon size={16} color={domainColor} weight="bold" />
+      <View style={[styles.domainIcon, { backgroundColor: T.accentSoft }]}>
+        <Icon size={16} color={T.accent} weight="bold" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.resultTitle, { color: T.textBright }]} numberOfLines={1}>
           {item.title}
         </Text>
         <View style={styles.resultMeta}>
-          <View style={[styles.domainBadge, { backgroundColor: softColor }]}>
-            <Text style={[styles.domainBadgeText, { color: domainColor }]}>
+          <View style={[styles.domainBadge, { backgroundColor: T.accentSoft }]}>
+            <Text style={[styles.domainBadgeText, { color: T.accent }]}>
               {domain.toUpperCase()}
             </Text>
           </View>

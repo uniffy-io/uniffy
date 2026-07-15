@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { Image } from "expo-image";
+import { assetAuthStale } from "@core/auth/assetAuth";
+import { refreshSession } from "@core/auth/refresh";
 import { FILE_COLORS } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { buildThumbnailUrl, assetAuthHeaders, supportsThumbnail } from "@features/files/fileUrls";
@@ -63,6 +65,11 @@ export function FileThumb({
 
   const handleError = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (assetAuthStale()) {
+      // Expired asset credentials (app idled past the cookie TTL), not a
+      // missing thumbnail: refresh so the scheduled retry carries fresh headers.
+      void refreshSession().catch(() => {});
+    }
     if (attemptsRef.current >= MAX_RETRIES) {
       setFailed(true);
       return;

@@ -73,7 +73,7 @@ export default function TaskDetailScreen() {
   if (taskQuery.isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.pageBg }]}>
-        <ActivityIndicator size="large" color={T.domains.projects} />
+        <ActivityIndicator size="large" color={T.accent} />
       </View>
     );
   }
@@ -84,7 +84,7 @@ export default function TaskDetailScreen() {
   const priorityOptions = project ? getPriorityOptions(project) : [];
   const statusOpt = getOptionById(statusOptions, task.status);
   const priorityOpt = getOptionById(priorityOptions, task.priority);
-  const projectColor = project?.color || T.domains.projects;
+  const projectColor = project?.color || T.accent;
 
   const subtasks = allTasks.filter((t) => t.parentId === task.id);
   const subtasksDone = subtasks.filter((t) => t.completedAt).length;

@@ -5,14 +5,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Platform,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { DotsThree, NotePencil, Plus, FolderSimple, CaretRight } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { useTheme } from "@shared/hooks/useTheme";
+import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useDeleteNote } from "@features/notes/useNoteMutations";
@@ -35,6 +38,9 @@ function findNode(nodes: TreeNode[], id: string): TreeNode | null {
 export default function NotesFolderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad =
+    Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const notesTree = useNotesTree();
   const deleteNote = useDeleteNote();
   const [sheetNote, setSheetNote] = useState<{ id: string; title: string } | null>(null);
@@ -89,7 +95,7 @@ export default function NotesFolderScreen() {
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={folderTitle}
-        color={T.domains.notes}
+        color={T.accent}
         icon="notes"
         onBack={() => router.back()}
         rightActions={
@@ -104,7 +110,7 @@ export default function NotesFolderScreen() {
 
       {notesTree.isLoading && !notesTree.data ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={T.domains.notes} />
+          <ActivityIndicator size="large" color={T.accent} />
         </View>
       ) : (
         <FlatList
@@ -117,13 +123,16 @@ export default function NotesFolderScreen() {
             </View>
           }
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={items.length === 0 ? styles.emptyContent : styles.listContent}
+          contentContainerStyle={[
+            items.length === 0 ? styles.emptyContent : styles.listContent,
+            { paddingBottom: bottomPad },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={notesTree.isFetching && !notesTree.isLoading}
               onRefresh={() => notesTree.refetch()}
-              tintColor={T.domains.notes}
-              colors={[T.domains.notes]}
+              tintColor={T.accent}
+              colors={[T.accent]}
             />
           }
         />
@@ -134,7 +143,7 @@ export default function NotesFolderScreen() {
         onClose={() => setSheetNote(null)}
         title={sheetNote?.title ?? ""}
         icon="notes"
-        iconColor={T.domains.notes}
+        iconColor={T.accent}
         actions={[
           {
             icon: "edit-2",
@@ -172,8 +181,8 @@ function FolderRow({ node, T, onPress }: { node: TreeNode; T: ThemeColors; onPre
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.folderIcon, { backgroundColor: T.domains.notesSoft }]}>
-        <FolderSimple size={22} color={T.domains.notes} weight="fill" />
+      <View style={[styles.folderIcon, { backgroundColor: T.accentSoft }]}>
+        <FolderSimple size={22} color={T.accent} weight="fill" />
       </View>
       <View style={styles.rowBody}>
         <Text style={[styles.folderTitle, { color: T.textBright }]} numberOfLines={1}>
@@ -210,8 +219,8 @@ function NoteRow({
       onLongPress={onLongPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.noteIcon, { backgroundColor: T.domains.notesSoft }]}>
-        <NotePencil size={16} color={T.domains.notes} weight="fill" />
+      <View style={[styles.noteIcon, { backgroundColor: T.accentSoft }]}>
+        <NotePencil size={16} color={T.accent} weight="fill" />
       </View>
       <View style={styles.rowBody}>
         <Text style={[styles.noteTitle, { color: T.textBright }]} numberOfLines={1}>
