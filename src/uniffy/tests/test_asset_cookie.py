@@ -16,6 +16,7 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from uniffy.domains.auth.cookies import (
+    attach_asset_cookie,
     build_clear_cookie,
     build_set_cookie,
     resolve_asset_cookie_config,
@@ -164,3 +165,46 @@ def test_access_token_in_cookie_is_rejected(monkeypatch: pytest.MonkeyPatch) -> 
 def test_no_credentials_is_rejected() -> None:
     resp = _asset_route_client().get("/me")
     assert resp.status_code == 401
+
+
+def test_attach_asset_cookie_returns_the_pair_it_sets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ASSET_COOKIE_SECURE", raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "development")
+
+    headers: list[tuple[str, str]] = []
+
+    class _Headers:
+        def add(self, key: str, value: str) -> None:
+            headers.append((key, value))
+
+    class _Ctx:
+        def response_headers(self) -> _Headers:
+            return _Headers()
+
+    user_id = uuid4()
+    org_id = uuid4()
+    sid = uuid4()
+    access = create_access_token(user_id, org_id, token_version=3, session_id=sid)
+
+    pair = attach_asset_cookie(
+        _Ctx(),  # type: ignore[arg-type]
+        access_token=access,
+        user_id=user_id,
+        organization_id=org_id,
+        session_id=sid,
+    )
+
+    assert len(headers) == 1
+    key, set_cookie = headers[0]
+    assert key == "set-cookie"
+    assert set_cookie.startswith(f"{pair}; ")
+
+    name, _, token = pair.partition("=")
+    assert name == resolve_asset_cookie_config().name
+    payload = decode_asset_read_token(token)
+    assert payload["sub"] == str(user_id)
+    assert payload["org_id"] == str(org_id)
+    assert payload["sid"] == str(sid)
+    assert payload["tkv"] == 3

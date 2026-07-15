@@ -69,8 +69,8 @@ from uniffy.domains.auth.context import (
 )
 from uniffy.domains.auth.converters import session_to_proto, user_to_proto
 from uniffy.domains.auth.cookies import (
+    attach_asset_cookie,
     build_clear_cookie,
-    build_set_cookie,
     resolve_asset_cookie_config,
 )
 from uniffy.domains.auth.errors import (
@@ -89,11 +89,7 @@ from uniffy.domains.auth.password_reset import (
     PasswordResetTokenNotFoundError,
     PasswordResetTokenUsedError,
 )
-from uniffy.domains.auth.tokens import (
-    create_asset_read_token,
-    decode_refresh_token,
-    decode_token_unsafe,
-)
+from uniffy.domains.auth.tokens import decode_refresh_token
 from uniffy.domains.auth.types import (
     AuthResult,
     MfaChallengeRequired,
@@ -152,21 +148,15 @@ def _auth_result_to_proto(result: AuthResult) -> AuthResultProto:
     return proto
 
 
-def _set_asset_cookie(ctx: RequestContext, result: AuthResult) -> None:
-    """Attach the read-only asset cookie to an auth response.
-
-    ``tkv`` is lifted from the freshly-minted access token so the cookie rides the same revocation
-    watermark as Bearer. The cookie is honoured only by GET asset routes, never for mutations.
-    """
-    tkv = decode_token_unsafe(result.access_token).get("tkv")
-    token = create_asset_read_token(
+def _set_asset_cookie(ctx: RequestContext, result: AuthResult) -> str:
+    """Attach the read-only asset cookie to an auth response; returns the ``name=value`` pair."""
+    return attach_asset_cookie(
+        ctx,
+        access_token=result.access_token,
         user_id=result.user_id,
         organization_id=result.organization_id,
-        token_version=tkv,
         session_id=result.session_id,
     )
-    config = resolve_asset_cookie_config()
-    ctx.response_headers().add("set-cookie", build_set_cookie(config, token))
 
 
 def _clear_asset_cookie(ctx: RequestContext) -> None:
@@ -220,7 +210,7 @@ class AuthHandlers:
                     user_agent=user_agent,
                 )
 
-                _set_asset_cookie(ctx, result)
+                asset_cookie = _set_asset_cookie(ctx, result)
                 return RegisterResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
@@ -231,6 +221,7 @@ class AuthHandlers:
                     organization_role=result.organization_role or "",
                     session_id=str(result.session_id) if result.session_id else "",
                     domain_admin_domains=_domain_admins_to_proto(result),
+                    asset_cookie=asset_cookie,
                 )
         except RegistrationError as e:
             logger.warning(f"Registration failed: {e}")
@@ -259,9 +250,10 @@ class AuthHandlers:
                     user_agent=user_agent,
                 )
 
+                response = _login_outcome_to_proto(result)
                 if isinstance(result, AuthResult):
-                    _set_asset_cookie(ctx, result)
-                return _login_outcome_to_proto(result)
+                    response.auth_result.asset_cookie = _set_asset_cookie(ctx, result)
+                return response
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except AuthenticationError as e:
@@ -287,7 +279,7 @@ class AuthHandlers:
                     ),
                 )
 
-                _set_asset_cookie(ctx, result)
+                asset_cookie = _set_asset_cookie(ctx, result)
                 return RefreshTokenResponse(
                     access_token=result.access_token,
                     refresh_token=result.refresh_token,
@@ -298,6 +290,7 @@ class AuthHandlers:
                     organization_role=result.organization_role or "",
                     session_id=str(result.session_id) if result.session_id else "",
                     domain_admin_domains=_domain_admins_to_proto(result),
+                    asset_cookie=asset_cookie,
                 )
         except TokenError as e:
             logger.warning(f"Token refresh failed: {e}")
@@ -325,10 +318,9 @@ class AuthHandlers:
                     organization_slug=request.organization_slug,
                     user_agent=user_agent,
                 )
-                _set_asset_cookie(ctx, result)
-                return SwitchOrganizationResponse(
-                    auth_result=_auth_result_to_proto(result),
-                )
+                auth_result = _auth_result_to_proto(result)
+                auth_result.asset_cookie = _set_asset_cookie(ctx, result)
+                return SwitchOrganizationResponse(auth_result=auth_result)
         except AuthenticationError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except TokenError as e:
@@ -605,10 +597,9 @@ class AuthHandlers:
                             datetime_to_timestamp(outcome.grace_expires_at)
                         )
                     return AcceptInvitationResponse(enrollment_required=enrollment)
-                _set_asset_cookie(ctx, outcome)
-                return AcceptInvitationResponse(
-                    auth_result=_auth_result_to_proto(outcome),
-                )
+                auth_result = _auth_result_to_proto(outcome)
+                auth_result.asset_cookie = _set_asset_cookie(ctx, outcome)
+                return AcceptInvitationResponse(auth_result=auth_result)
         except RateLimitExceededError as e:
             raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except InvitationNotFoundError as e:

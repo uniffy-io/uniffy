@@ -211,6 +211,27 @@ class TestParseDeviceLabelCombinations:
         assert parse_device_label(user_agent) == expected_label
 
 
+class TestParseDeviceLabelNativeApp:
+    """Tests for the Uniffy native app client, which sends no browser token."""
+
+    @pytest.mark.parametrize(
+        "user_agent,expected_label",
+        [
+            ("Uniffy/1.0.0 (iOS 18.1)", "Uniffy for iOS"),
+            ("Uniffy/2.3.1 (iPadOS 17.5)", "Uniffy for iOS"),
+            ("Uniffy/1.0.0 (Android 14)", "Uniffy for Android"),
+            ("Uniffy/0 (iOS)", "Uniffy for iOS"),
+            ("Uniffy/1.0.0 (web)", "Uniffy app"),
+        ],
+    )
+    def test_native_app_label(self, user_agent: str, expected_label: str):
+        assert parse_device_label(user_agent) == expected_label
+
+    def test_app_client_beats_generic_browser_pass(self):
+        """A native agent is labeled from its own token, never "Unknown browser on ..."."""
+        assert parse_device_label("Uniffy/1.0.0 (Android 14)") == "Uniffy for Android"
+
+
 class TestParseDeviceLabelEdgeCases:
     """Tests for edge cases and fallback behavior."""
 

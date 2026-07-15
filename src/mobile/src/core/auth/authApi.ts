@@ -1,15 +1,9 @@
 import { createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { MfaService } from "@uniffy/proto/auth/v1/mfa_pb";
 import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
-import { ENV } from "@core/config/env";
+import { publicTransport } from "@core/api/publicTransport";
 import { transport } from "@core/api/transport";
-
-// Unauthenticated transport for login/register/refresh (no Bearer token)
-const publicTransport = createConnectTransport({
-  baseUrl: ENV.apiUrl,
-});
 
 const publicAuthClient = createClient(AuthService, publicTransport);
 const publicMfaClient = createClient(MfaService, publicTransport);
@@ -22,8 +16,12 @@ export const authApi = {
   register: (email: string, username: string, password: string, fullName?: string) =>
     publicAuthClient.register({ email, username, password, fullName }),
 
-  refreshToken: (refreshToken: string, organizationSlug?: string) =>
-    publicAuthClient.refreshToken({ refreshToken, organizationSlug }),
+  refreshToken: (refreshToken: string) => publicAuthClient.refreshToken({ refreshToken }),
+
+  // Mints a fresh session bound to the target org (also the first bind after a
+  // no-org login). RefreshToken deliberately rejects a cross-org slug.
+  switchOrganization: (refreshToken: string, organizationSlug: string) =>
+    publicAuthClient.switchOrganization({ refreshToken, organizationSlug }),
 
   verifyMfa: (challengeToken: string, code: string, method: string) =>
     publicMfaClient.verifyMfa({ challengeToken, code, method }),

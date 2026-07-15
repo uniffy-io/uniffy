@@ -8,6 +8,13 @@ const ORG_ID_KEY = "uniffy_organization_id";
 // expo-secure-store has no web backend; fall back to AsyncStorage there.
 const useSecureStore = Platform.OS !== "web";
 
+// Available for background work after first unlock, but never leaves this
+// device: no iCloud keychain sync and no device-transfer restore of the
+// refresh token (iOS-only knob; Android Keystore keys are device-bound).
+const secureStoreOptions: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+};
+
 async function getItem(key: string): Promise<string | null> {
   if (useSecureStore) return SecureStore.getItemAsync(key);
   return AsyncStorage.getItem(key);
@@ -15,7 +22,7 @@ async function getItem(key: string): Promise<string | null> {
 
 async function setItem(key: string, value: string): Promise<void> {
   if (useSecureStore) {
-    await SecureStore.setItemAsync(key, value);
+    await SecureStore.setItemAsync(key, value, secureStoreOptions);
     return;
   }
   await AsyncStorage.setItem(key, value);
@@ -41,6 +48,20 @@ export function setAccessToken(token: string): void {
   accessToken = token;
 }
 
+// The asset-read cookie pair ("name=token") delivered in auth response bodies.
+// GET asset requests attach it as an explicit Cookie header (see
+// core/auth/assetAuth.ts). Memory-only like the access token: it is re-minted
+// on every refresh and never persisted.
+let assetCookie: string | null = null;
+
+export function getAssetCookie(): string | null {
+  return assetCookie;
+}
+
+export function setAssetCookie(pair: string | null): void {
+  assetCookie = pair || null;
+}
+
 export function getRefreshToken(): Promise<string | null> {
   return getItem(REFRESH_TOKEN_KEY);
 }
@@ -59,5 +80,6 @@ export function setStoredOrgId(orgId: string): Promise<void> {
 
 export async function clearAuthStorage(): Promise<void> {
   accessToken = null;
+  assetCookie = null;
   await Promise.all([deleteItem(REFRESH_TOKEN_KEY), deleteItem(ORG_ID_KEY)]);
 }

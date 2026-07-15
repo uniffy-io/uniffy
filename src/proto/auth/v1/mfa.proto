@@ -98,6 +98,9 @@ message ConfirmEnrollmentResponse {
   optional string organization_slug = 6;
   optional string organization_role = 7;
   repeated common.v1.DomainType domain_admin_domains = 8;
+  // Asset-read cookie as a "name=value" pair for native clients
+  // (see auth.v1.RegisterResponse).
+  string asset_cookie = 9;
 }
 
 // ---------------------------------------------------------------- //
@@ -127,6 +130,9 @@ message VerifyMfaResponse {
   int32 remaining_recovery_codes = 9;
   optional string organization_slug = 10;
   repeated common.v1.DomainType domain_admin_domains = 11;
+  // Asset-read cookie as a "name=value" pair for native clients
+  // (see auth.v1.RegisterResponse).
+  string asset_cookie = 12;
 }
 
 // ---------------------------------------------------------------- //

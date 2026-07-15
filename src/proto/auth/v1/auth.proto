@@ -136,6 +136,10 @@ message RegisterResponse {
   optional string session_id = 7; // Server-side session identifier
   repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
   optional string organization_slug = 9; // Slug of the org bound to the session
+  // Asset-read cookie as a "name=value" pair for native clients that attach it
+  // as an explicit Cookie header on GET asset routes. Browsers ignore this and
+  // ride the HttpOnly Set-Cookie sent alongside.
+  string asset_cookie = 10;
 }
 
 // Login outcome. One of three variants:
@@ -169,6 +173,8 @@ message AuthResult {
   optional string session_id = 7;
   repeated common.v1.DomainType domain_admin_domains = 8;
   optional string organization_slug = 9;
+  // Asset-read cookie as a "name=value" pair for native clients (see RegisterResponse).
+  string asset_cookie = 10;
 }
 
 // Mid-login state when password was correct but MFA is enabled.
@@ -199,6 +205,8 @@ message RefreshTokenResponse {
   optional string session_id = 7; // Server-side session identifier
   repeated common.v1.DomainType domain_admin_domains = 8; // Domains where user is domain admin
   optional string organization_slug = 9; // Slug of the org bound to the session
+  // Asset-read cookie as a "name=value" pair for native clients (see RegisterResponse).
+  string asset_cookie = 10;
 }
 
 // Current user info response
