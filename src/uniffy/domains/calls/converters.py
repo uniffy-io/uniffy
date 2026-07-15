@@ -87,7 +87,7 @@ def call_to_proto(
             participant_to_proto(
                 p,
                 display_name=getattr(profiles.get(p.user_id), "display_name", ""),
-                avatar_url=getattr(profiles.get(p.user_id), "avatar_key", None),
+                avatar_url=getattr(profiles.get(p.user_id), "avatar_url", None) or None,
             )
             for p in participants
         ],
@@ -151,7 +151,7 @@ def call_to_event_dict(
             participant_to_event_dict(
                 p,
                 display_name=getattr(profiles.get(p.user_id), "display_name", ""),
-                avatar_url=getattr(profiles.get(p.user_id), "avatar_key", None),
+                avatar_url=getattr(profiles.get(p.user_id), "avatar_url", None) or None,
             )
             for p in participants
         ],

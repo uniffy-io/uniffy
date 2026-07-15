@@ -1,16 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Alert,
-  useWindowDimensions,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CaretDown, MicrophoneSlash, SignOut } from "phosphor-react-native";
+import { MicrophoneSlash } from "phosphor-react-native";
 import type { Participant } from "livekit-client";
 import { loadLivekitClient } from "@features/calls/livekit";
 import { useCall } from "@features/calls/call-context";
@@ -22,14 +13,19 @@ import { callsApi } from "@features/calls/callsApi";
 import { formatCallDuration } from "@features/calls/callsSerializer";
 import { ParticipantTile, participantLabel } from "@features/calls/components/ParticipantTile";
 import { CallControls } from "@features/calls/components/CallControls";
+import { DomainHeader } from "@shared/components/DomainHeader";
+import { GlassSurface } from "@shared/components/GlassSurface";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 
-const CHROME_HIDE_DELAY_MS = 4000;
 const SOLO_HINT_AFTER_MS = 60 * 1000;
 
 const livekit = loadLivekitClient();
 
+// Rendered in the main window as a flow child that replaces the router
+// content while expanded: RTCView paints no frames in native modals or
+// FullWindowOverlay on iOS, and inset-positioned shell overlays get
+// flow-laid on iOS 26 Fabric, so neither presentation works here.
 export function CallScreen() {
   // Reads mutable livekit state (screen-share publications) during render;
   // opt out of React Compiler memoization so roster changes repaint.
@@ -38,35 +34,18 @@ export function CallScreen() {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { user, organizationId } = useAuth();
-  const { session, room, minimized, setMinimized } = useCall();
+  const { session, room, setMinimized } = useCall();
   const activeCall = useActiveCall(session.channelId ?? undefined);
   const participants = useRoomParticipants(room);
   const { channels } = useChannels();
 
-  const [chromeVisible, setChromeVisible] = useState(true);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const visible =
-    (session.status === "connecting" ||
-      session.status === "connected" ||
-      session.status === "reconnecting") &&
-    !minimized;
-
   useEffect(() => {
-    if (!visible || session.status !== "connected") return;
+    if (session.status !== "connected") return;
     const timer = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [visible, session.status]);
-
-  useEffect(() => {
-    if (!visible || !chromeVisible || session.status !== "connected") return;
-    const timer = setTimeout(() => setChromeVisible(false), CHROME_HIDE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [visible, chromeVisible, session.status]);
-
-  useEffect(() => {
-    if (visible) setChromeVisible(true);
-  }, [visible]);
+  }, [session.status]);
 
   const isHost = !!user && activeCall?.hostUserId === user.id;
 
@@ -114,9 +93,13 @@ export function CallScreen() {
     [isHost, organizationId, session.callId],
   );
 
-  if (!visible) return null;
-
   const elapsed = session.connectedAtMs ? formatCallDuration(nowMs - session.connectedAtMs) : "";
+  const status =
+    session.status === "connecting"
+      ? "Connecting..."
+      : session.status === "reconnecting"
+        ? "Reconnecting..."
+        : elapsed;
   const solo =
     participants.length === 1 &&
     session.status === "connected" &&
@@ -125,38 +108,14 @@ export function CallScreen() {
   const gridHeight = windowHeight - insets.top - insets.bottom - 220;
 
   return (
-    <View
-      style={[
-        styles.root,
-        { backgroundColor: T.pageBg, paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
-      pointerEvents="auto"
-    >
-      {chromeVisible ? (
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => setMinimized(true)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="Minimize call"
-          >
-            <CaretDown size={22} color={T.text} weight="bold" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
-              {channelTitle}
-            </Text>
-            <Text style={[styles.subtitle, { color: T.textDim }]}>
-              {session.status === "connecting"
-                ? "Connecting..."
-                : session.status === "reconnecting"
-                  ? "Reconnecting..."
-                  : elapsed}
-            </Text>
-          </View>
-          <View style={styles.headerSpacer} />
-        </View>
-      ) : null}
+    <View style={[styles.root, { backgroundColor: T.pageBg }]}>
+      <DomainHeader
+        title={channelTitle}
+        subtitle={status}
+        color={T.green}
+        icon="chat"
+        onBack={() => setMinimized(true)}
+      />
 
       {session.status === "reconnecting" ? (
         <View style={[styles.banner, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -174,7 +133,7 @@ export function CallScreen() {
         </View>
       ) : null}
 
-      <Pressable style={styles.stage} onPress={() => setChromeVisible((v) => !v)}>
+      <View style={styles.stage}>
         {screenSharer ? (
           <View style={styles.screenShareLayout}>
             <ParticipantTile
@@ -223,7 +182,7 @@ export function CallScreen() {
             ))}
           </ScrollView>
         )}
-      </Pressable>
+      </View>
 
       {solo ? (
         <View style={styles.soloWrap}>
@@ -233,39 +192,23 @@ export function CallScreen() {
         </View>
       ) : null}
 
-      {chromeVisible ? (
-        <View style={styles.controls}>
-          <CallControls T={T} isHost={isHost} />
-        </View>
-      ) : null}
-      {!chromeVisible ? (
-        <TouchableOpacity
-          style={[styles.leaveGhost, { bottom: insets.bottom + 18, backgroundColor: T.surface }]}
-          onPress={() => setChromeVisible(true)}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Show call controls"
-        >
-          <SignOut size={16} color={T.textDim} weight="bold" />
-        </TouchableOpacity>
-      ) : null}
+      <View style={[styles.controls, { borderColor: T.border, marginBottom: insets.bottom + 10 }]}>
+        <GlassSurface
+          style={StyleSheet.absoluteFill}
+          tintColor={T.isDark ? "rgba(20,22,34,0.22)" : "rgba(255,255,255,0.35)"}
+          interactive
+          isDark={T.isDark}
+          blurIntensity={48}
+          solidColor={T.surface}
+        />
+        <CallControls T={T} isHost={isHost} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { ...StyleSheet.absoluteFillObject, zIndex: 300 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 12,
-  },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerSpacer: { width: 22 },
-  title: { fontSize: 16, fontFamily: FONT.semibold },
-  subtitle: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
+  root: { flex: 1 },
   banner: {
     flexDirection: "row",
     alignItems: "center",
@@ -276,10 +219,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    marginBottom: 6,
+    marginTop: 8,
   },
   bannerText: { fontSize: 12, fontFamily: FONT.medium },
-  stage: { flex: 1, paddingHorizontal: 10 },
+  stage: { flex: 1, paddingHorizontal: 10, paddingTop: 10 },
   stackLayout: { flex: 1, gap: 10 },
   stackTile: { flex: 1 },
   fillTile: { flex: 1 },
@@ -291,15 +234,12 @@ const styles = StyleSheet.create({
   filmstripTile: { width: 96, height: 72 },
   soloWrap: { alignItems: "center", paddingVertical: 6 },
   soloText: { fontSize: 12, fontFamily: FONT.regular },
-  controls: { paddingTop: 12, paddingBottom: 12 },
-  leaveGhost: {
-    position: "absolute",
-    alignSelf: "center",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    opacity: 0.85,
+  controls: {
+    marginHorizontal: 14,
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 28,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
 });

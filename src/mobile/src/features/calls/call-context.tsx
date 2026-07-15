@@ -15,7 +15,7 @@ import type { ConnectionState, DisconnectReason, Room } from "livekit-client";
 import { callsApi } from "@features/calls/callsApi";
 import { getDeviceId, getDeviceLabel } from "@core/auth/deviceId";
 import { resolveSignalingUrl } from "@features/calls/signalingUrl";
-import { getTokenExpiryMs } from "@features/calls/livekitToken";
+import { getTokenExpiryMs } from "@core/auth/jwt";
 import {
   callsSupported,
   loadLivekitClient,
@@ -352,7 +352,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // Portrait capture: the default landscape presets get center-cropped
       // into portrait tiles, which reads as a heavy zoom on phones.
       const r = new livekit.Room({
-        adaptiveStream: true,
+        // adaptiveStream pauses remote tracks whose view size it cannot resolve.
+        // On React Native the VideoView often cannot report dimensions ("could
+        // not determine track dimensions"), so remote video - screen shares in
+        // particular - never requests frames and renders black. Off = frames
+        // always flow; fine for small calls.
+        adaptiveStream: false,
+        // livekit-client defaults to single-peer-connection mode (2.17+), which
+        // still has React Native bugs: remote tracks negotiate (ontrack fires)
+        // but frames never render on iOS. RN-specific SDP fixes were still
+        // landing at 2.20.x (livekit/client-sdk-js#1984, #1993), so pin the
+        // mature dual peer connection path.
+        singlePeerConnection: false,
         dynacast: true,
         videoCaptureDefaults: { resolution: { width: 720, height: 1280 } },
       });

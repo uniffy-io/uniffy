@@ -145,11 +145,12 @@ export function IncomingCallBanner() {
 }
 
 const styles = StyleSheet.create({
+  // No zIndex: sibling order in _layout stacks the banner, and zIndex on an
+  // inset-positioned view risks the iOS 26 Fabric flow-layout fallback.
   wrap: {
     position: "absolute",
     left: 14,
     right: 14,
-    zIndex: 400,
     gap: 8,
     alignItems: "center",
   },
