@@ -115,6 +115,12 @@ const (
 	// ChatServiceGetUnreadCountsProcedure is the fully-qualified name of the ChatService's
 	// GetUnreadCounts RPC.
 	ChatServiceGetUnreadCountsProcedure = "/chat.v1.ChatService/GetUnreadCounts"
+	// ChatServiceSaveDraftProcedure is the fully-qualified name of the ChatService's SaveDraft RPC.
+	ChatServiceSaveDraftProcedure = "/chat.v1.ChatService/SaveDraft"
+	// ChatServiceDeleteDraftProcedure is the fully-qualified name of the ChatService's DeleteDraft RPC.
+	ChatServiceDeleteDraftProcedure = "/chat.v1.ChatService/DeleteDraft"
+	// ChatServiceListDraftsProcedure is the fully-qualified name of the ChatService's ListDrafts RPC.
+	ChatServiceListDraftsProcedure = "/chat.v1.ChatService/ListDrafts"
 	// ChatServiceGetChannelResourcesProcedure is the fully-qualified name of the ChatService's
 	// GetChannelResources RPC.
 	ChatServiceGetChannelResourcesProcedure = "/chat.v1.ChatService/GetChannelResources"
@@ -207,6 +213,10 @@ type ChatServiceClient interface {
 	MarkChannelRead(context.Context, *connect.Request[v1.MarkChannelReadRequest]) (*connect.Response[v1.MarkChannelReadResponse], error)
 	MarkThreadRead(context.Context, *connect.Request[v1.MarkThreadReadRequest]) (*connect.Response[v1.MarkThreadReadResponse], error)
 	GetUnreadCounts(context.Context, *connect.Request[v1.GetUnreadCountsRequest]) (*connect.Response[v1.GetUnreadCountsResponse], error)
+	// Drafts - per-user unsent composer text, synced across devices.
+	SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error)
+	DeleteDraft(context.Context, *connect.Request[v1.DeleteDraftRequest]) (*connect.Response[v1.DeleteDraftResponse], error)
+	ListDrafts(context.Context, *connect.Request[v1.ListDraftsRequest]) (*connect.Response[v1.ListDraftsResponse], error)
 	// Channel resources
 	GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
@@ -452,6 +462,24 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("GetUnreadCounts")),
 			connect.WithClientOptions(opts...),
 		),
+		saveDraft: connect.NewClient[v1.SaveDraftRequest, v1.SaveDraftResponse](
+			httpClient,
+			baseURL+ChatServiceSaveDraftProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("SaveDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteDraft: connect.NewClient[v1.DeleteDraftRequest, v1.DeleteDraftResponse](
+			httpClient,
+			baseURL+ChatServiceDeleteDraftProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("DeleteDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		listDrafts: connect.NewClient[v1.ListDraftsRequest, v1.ListDraftsResponse](
+			httpClient,
+			baseURL+ChatServiceListDraftsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListDrafts")),
+			connect.WithClientOptions(opts...),
+		),
 		getChannelResources: connect.NewClient[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse](
 			httpClient,
 			baseURL+ChatServiceGetChannelResourcesProcedure,
@@ -590,6 +618,9 @@ type chatServiceClient struct {
 	markChannelRead                  *connect.Client[v1.MarkChannelReadRequest, v1.MarkChannelReadResponse]
 	markThreadRead                   *connect.Client[v1.MarkThreadReadRequest, v1.MarkThreadReadResponse]
 	getUnreadCounts                  *connect.Client[v1.GetUnreadCountsRequest, v1.GetUnreadCountsResponse]
+	saveDraft                        *connect.Client[v1.SaveDraftRequest, v1.SaveDraftResponse]
+	deleteDraft                      *connect.Client[v1.DeleteDraftRequest, v1.DeleteDraftResponse]
+	listDrafts                       *connect.Client[v1.ListDraftsRequest, v1.ListDraftsResponse]
 	getChannelResources              *connect.Client[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse]
 	createAgentChat                  *connect.Client[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse]
 	renameAgentChat                  *connect.Client[v1.RenameAgentChatRequest, v1.RenameAgentChatResponse]
@@ -764,6 +795,21 @@ func (c *chatServiceClient) GetUnreadCounts(ctx context.Context, req *connect.Re
 	return c.getUnreadCounts.CallUnary(ctx, req)
 }
 
+// SaveDraft calls chat.v1.ChatService.SaveDraft.
+func (c *chatServiceClient) SaveDraft(ctx context.Context, req *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error) {
+	return c.saveDraft.CallUnary(ctx, req)
+}
+
+// DeleteDraft calls chat.v1.ChatService.DeleteDraft.
+func (c *chatServiceClient) DeleteDraft(ctx context.Context, req *connect.Request[v1.DeleteDraftRequest]) (*connect.Response[v1.DeleteDraftResponse], error) {
+	return c.deleteDraft.CallUnary(ctx, req)
+}
+
+// ListDrafts calls chat.v1.ChatService.ListDrafts.
+func (c *chatServiceClient) ListDrafts(ctx context.Context, req *connect.Request[v1.ListDraftsRequest]) (*connect.Response[v1.ListDraftsResponse], error) {
+	return c.listDrafts.CallUnary(ctx, req)
+}
+
 // GetChannelResources calls chat.v1.ChatService.GetChannelResources.
 func (c *chatServiceClient) GetChannelResources(ctx context.Context, req *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error) {
 	return c.getChannelResources.CallUnary(ctx, req)
@@ -888,6 +934,10 @@ type ChatServiceHandler interface {
 	MarkChannelRead(context.Context, *connect.Request[v1.MarkChannelReadRequest]) (*connect.Response[v1.MarkChannelReadResponse], error)
 	MarkThreadRead(context.Context, *connect.Request[v1.MarkThreadReadRequest]) (*connect.Response[v1.MarkThreadReadResponse], error)
 	GetUnreadCounts(context.Context, *connect.Request[v1.GetUnreadCountsRequest]) (*connect.Response[v1.GetUnreadCountsResponse], error)
+	// Drafts - per-user unsent composer text, synced across devices.
+	SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error)
+	DeleteDraft(context.Context, *connect.Request[v1.DeleteDraftRequest]) (*connect.Response[v1.DeleteDraftResponse], error)
+	ListDrafts(context.Context, *connect.Request[v1.ListDraftsRequest]) (*connect.Response[v1.ListDraftsResponse], error)
 	// Channel resources
 	GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
@@ -1129,6 +1179,24 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("GetUnreadCounts")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceSaveDraftHandler := connect.NewUnaryHandler(
+		ChatServiceSaveDraftProcedure,
+		svc.SaveDraft,
+		connect.WithSchema(chatServiceMethods.ByName("SaveDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceDeleteDraftHandler := connect.NewUnaryHandler(
+		ChatServiceDeleteDraftProcedure,
+		svc.DeleteDraft,
+		connect.WithSchema(chatServiceMethods.ByName("DeleteDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListDraftsHandler := connect.NewUnaryHandler(
+		ChatServiceListDraftsProcedure,
+		svc.ListDrafts,
+		connect.WithSchema(chatServiceMethods.ByName("ListDrafts")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceGetChannelResourcesHandler := connect.NewUnaryHandler(
 		ChatServiceGetChannelResourcesProcedure,
 		svc.GetChannelResources,
@@ -1295,6 +1363,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceMarkThreadReadHandler.ServeHTTP(w, r)
 		case ChatServiceGetUnreadCountsProcedure:
 			chatServiceGetUnreadCountsHandler.ServeHTTP(w, r)
+		case ChatServiceSaveDraftProcedure:
+			chatServiceSaveDraftHandler.ServeHTTP(w, r)
+		case ChatServiceDeleteDraftProcedure:
+			chatServiceDeleteDraftHandler.ServeHTTP(w, r)
+		case ChatServiceListDraftsProcedure:
+			chatServiceListDraftsHandler.ServeHTTP(w, r)
 		case ChatServiceGetChannelResourcesProcedure:
 			chatServiceGetChannelResourcesHandler.ServeHTTP(w, r)
 		case ChatServiceCreateAgentChatProcedure:
@@ -1460,6 +1534,18 @@ func (UnimplementedChatServiceHandler) MarkThreadRead(context.Context, *connect.
 
 func (UnimplementedChatServiceHandler) GetUnreadCounts(context.Context, *connect.Request[v1.GetUnreadCountsRequest]) (*connect.Response[v1.GetUnreadCountsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetUnreadCounts is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.SaveDraft is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) DeleteDraft(context.Context, *connect.Request[v1.DeleteDraftRequest]) (*connect.Response[v1.DeleteDraftResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.DeleteDraft is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListDrafts(context.Context, *connect.Request[v1.ListDraftsRequest]) (*connect.Response[v1.ListDraftsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ListDrafts is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error) {

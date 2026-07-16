@@ -43,6 +43,7 @@ from uniffy_proto.chat.v1.chat_stream_pb2 import (
     CallRingPayload,
     ChatEvent,
     ChatEventType,
+    DraftChangedPayload,
     MemberPayload,
     MembersChangedPayload,
     MentionReceivedPayload,
@@ -545,6 +546,25 @@ def _payload_to_user_event(payload: dict) -> StreamUserChatEventsResponse | None
                 preview=payload.get("preview", ""),
             ),
         )
+
+    if event_type == evt.DRAFT_CHANGED:
+        event = StreamUserChatEventsResponse(
+            event_type=UserChatEventType.USER_CHAT_EVENT_TYPE_DRAFT_CHANGED,
+            timestamp=_now_ts(),
+            draft_changed=DraftChangedPayload(
+                channel_id=payload.get("channel_id", ""),
+                content=payload.get("content", ""),
+                deleted=bool(payload.get("deleted", False)),
+                client_session_id=payload.get("client_session_id", ""),
+            ),
+        )
+        if payload.get("root_message_id"):
+            event.draft_changed.root_message_id = payload["root_message_id"]
+        if payload.get("updated_at"):
+            ts = Timestamp()
+            ts.FromDatetime(datetime.fromisoformat(payload["updated_at"]))
+            event.draft_changed.updated_at.CopyFrom(ts)
+        return event
 
     return None
 

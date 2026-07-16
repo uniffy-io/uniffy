@@ -167,6 +167,8 @@ const (
 	UserChatEventType_USER_CHAT_EVENT_TYPE_HEARTBEAT            UserChatEventType = 4
 	// Wraps a channel-level ChatEvent (messages, typing, reactions, etc.)
 	UserChatEventType_USER_CHAT_EVENT_TYPE_CHANNEL_EVENT UserChatEventType = 5
+	// A draft was saved or deleted on one of the user's devices.
+	UserChatEventType_USER_CHAT_EVENT_TYPE_DRAFT_CHANGED UserChatEventType = 6
 )
 
 // Enum value maps for UserChatEventType.
@@ -178,6 +180,7 @@ var (
 		3: "USER_CHAT_EVENT_TYPE_MENTION_RECEIVED",
 		4: "USER_CHAT_EVENT_TYPE_HEARTBEAT",
 		5: "USER_CHAT_EVENT_TYPE_CHANNEL_EVENT",
+		6: "USER_CHAT_EVENT_TYPE_DRAFT_CHANGED",
 	}
 	UserChatEventType_value = map[string]int32{
 		"USER_CHAT_EVENT_TYPE_UNSPECIFIED":          0,
@@ -186,6 +189,7 @@ var (
 		"USER_CHAT_EVENT_TYPE_MENTION_RECEIVED":     3,
 		"USER_CHAT_EVENT_TYPE_HEARTBEAT":            4,
 		"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT":        5,
+		"USER_CHAT_EVENT_TYPE_DRAFT_CHANGED":        6,
 	}
 )
 
@@ -1724,6 +1728,7 @@ type StreamUserChatEventsResponse struct {
 	//	*StreamUserChatEventsResponse_ThreadActivity
 	//	*StreamUserChatEventsResponse_MentionReceived
 	//	*StreamUserChatEventsResponse_ChannelEvent
+	//	*StreamUserChatEventsResponse_DraftChanged
 	Payload       isStreamUserChatEventsResponse_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1816,6 +1821,15 @@ func (x *StreamUserChatEventsResponse) GetChannelEvent() *ChatEvent {
 	return nil
 }
 
+func (x *StreamUserChatEventsResponse) GetDraftChanged() *DraftChangedPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*StreamUserChatEventsResponse_DraftChanged); ok {
+			return x.DraftChanged
+		}
+	}
+	return nil
+}
+
 type isStreamUserChatEventsResponse_Payload interface {
 	isStreamUserChatEventsResponse_Payload()
 }
@@ -1837,6 +1851,11 @@ type StreamUserChatEventsResponse_ChannelEvent struct {
 	ChannelEvent *ChatEvent `protobuf:"bytes,13,opt,name=channel_event,json=channelEvent,proto3,oneof"`
 }
 
+type StreamUserChatEventsResponse_DraftChanged struct {
+	// DRAFT_CHANGED
+	DraftChanged *DraftChangedPayload `protobuf:"bytes,14,opt,name=draft_changed,json=draftChanged,proto3,oneof"`
+}
+
 func (*StreamUserChatEventsResponse_UnreadCount) isStreamUserChatEventsResponse_Payload() {}
 
 func (*StreamUserChatEventsResponse_ThreadActivity) isStreamUserChatEventsResponse_Payload() {}
@@ -1844,6 +1863,95 @@ func (*StreamUserChatEventsResponse_ThreadActivity) isStreamUserChatEventsRespon
 func (*StreamUserChatEventsResponse_MentionReceived) isStreamUserChatEventsResponse_Payload() {}
 
 func (*StreamUserChatEventsResponse_ChannelEvent) isStreamUserChatEventsResponse_Payload() {}
+
+func (*StreamUserChatEventsResponse_DraftChanged) isStreamUserChatEventsResponse_Payload() {}
+
+// DraftChangedPayload syncs a draft across the user's devices.
+// deleted=true (content empty) removes it. Sessions ignore events
+// carrying their own client_session_id.
+type DraftChangedPayload struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId       string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	RootMessageId   *string                `protobuf:"bytes,2,opt,name=root_message_id,json=rootMessageId,proto3,oneof" json:"root_message_id,omitempty"`
+	Content         string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Deleted         bool                   `protobuf:"varint,4,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ClientSessionId string                 `protobuf:"bytes,6,opt,name=client_session_id,json=clientSessionId,proto3" json:"client_session_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DraftChangedPayload) Reset() {
+	*x = DraftChangedPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DraftChangedPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DraftChangedPayload) ProtoMessage() {}
+
+func (x *DraftChangedPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DraftChangedPayload.ProtoReflect.Descriptor instead.
+func (*DraftChangedPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *DraftChangedPayload) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *DraftChangedPayload) GetRootMessageId() string {
+	if x != nil && x.RootMessageId != nil {
+		return *x.RootMessageId
+	}
+	return ""
+}
+
+func (x *DraftChangedPayload) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *DraftChangedPayload) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
+func (x *DraftChangedPayload) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *DraftChangedPayload) GetClientSessionId() string {
+	if x != nil {
+		return x.ClientSessionId
+	}
+	return ""
+}
 
 type UnreadCountPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1856,7 +1964,7 @@ type UnreadCountPayload struct {
 
 func (x *UnreadCountPayload) Reset() {
 	*x = UnreadCountPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1868,7 +1976,7 @@ func (x *UnreadCountPayload) String() string {
 func (*UnreadCountPayload) ProtoMessage() {}
 
 func (x *UnreadCountPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1881,7 +1989,7 @@ func (x *UnreadCountPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnreadCountPayload.ProtoReflect.Descriptor instead.
 func (*UnreadCountPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{18}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *UnreadCountPayload) GetChannelId() string {
@@ -1918,7 +2026,7 @@ type ThreadActivityPayload struct {
 
 func (x *ThreadActivityPayload) Reset() {
 	*x = ThreadActivityPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1930,7 +2038,7 @@ func (x *ThreadActivityPayload) String() string {
 func (*ThreadActivityPayload) ProtoMessage() {}
 
 func (x *ThreadActivityPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1943,7 +2051,7 @@ func (x *ThreadActivityPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadActivityPayload.ProtoReflect.Descriptor instead.
 func (*ThreadActivityPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{19}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ThreadActivityPayload) GetRootMessageId() string {
@@ -1996,7 +2104,7 @@ type MentionReceivedPayload struct {
 
 func (x *MentionReceivedPayload) Reset() {
 	*x = MentionReceivedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2008,7 +2116,7 @@ func (x *MentionReceivedPayload) String() string {
 func (*MentionReceivedPayload) ProtoMessage() {}
 
 func (x *MentionReceivedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2021,7 +2129,7 @@ func (x *MentionReceivedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MentionReceivedPayload.ProtoReflect.Descriptor instead.
 func (*MentionReceivedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{20}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *MentionReceivedPayload) GetChannelId() string {
@@ -2199,7 +2307,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12'\n" +
 	"\x10new_host_user_id\x18\x02 \x01(\tR\rnewHostUserId\"F\n" +
 	"\x1bStreamUserChatEventsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xb4\x03\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xf9\x03\n" +
 	"\x1cStreamUserChatEventsResponse\x129\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x1a.chat.v1.UserChatEventTypeR\teventType\x128\n" +
@@ -2208,8 +2316,19 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	" \x01(\v2\x1b.chat.v1.UnreadCountPayloadH\x00R\vunreadCount\x12I\n" +
 	"\x0fthread_activity\x18\v \x01(\v2\x1e.chat.v1.ThreadActivityPayloadH\x00R\x0ethreadActivity\x12L\n" +
 	"\x10mention_received\x18\f \x01(\v2\x1f.chat.v1.MentionReceivedPayloadH\x00R\x0fmentionReceived\x129\n" +
-	"\rchannel_event\x18\r \x01(\v2\x12.chat.v1.ChatEventH\x00R\fchannelEventB\t\n" +
-	"\apayload\"{\n" +
+	"\rchannel_event\x18\r \x01(\v2\x12.chat.v1.ChatEventH\x00R\fchannelEvent\x12C\n" +
+	"\rdraft_changed\x18\x0e \x01(\v2\x1c.chat.v1.DraftChangedPayloadH\x00R\fdraftChangedB\t\n" +
+	"\apayload\"\x90\x02\n" +
+	"\x13DraftChangedPayload\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\x12+\n" +
+	"\x0froot_message_id\x18\x02 \x01(\tH\x00R\rrootMessageId\x88\x01\x01\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12\x18\n" +
+	"\adeleted\x18\x04 \x01(\bR\adeleted\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12*\n" +
+	"\x11client_session_id\x18\x06 \x01(\tR\x0fclientSessionIdB\x12\n" +
+	"\x10_root_message_id\"{\n" +
 	"\x12UnreadCountPayload\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12!\n" +
@@ -2261,14 +2380,15 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"%CHAT_EVENT_TYPE_CALL_PARTICIPANT_LEFT\x10\x1b\x12*\n" +
 	"&CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE\x10\x1c\x12\x1d\n" +
 	"\x19CHAT_EVENT_TYPE_CALL_RING\x10\x1d\x12%\n" +
-	"!CHAT_EVENT_TYPE_CALL_HOST_CHANGED\x10\x1e*\x89\x02\n" +
+	"!CHAT_EVENT_TYPE_CALL_HOST_CHANGED\x10\x1e*\xb1\x02\n" +
 	"\x11UserChatEventType\x12$\n" +
 	" USER_CHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12-\n" +
 	")USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED\x10\x01\x12(\n" +
 	"$USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY\x10\x02\x12)\n" +
 	"%USER_CHAT_EVENT_TYPE_MENTION_RECEIVED\x10\x03\x12\"\n" +
 	"\x1eUSER_CHAT_EVENT_TYPE_HEARTBEAT\x10\x04\x12&\n" +
-	"\"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT\x10\x052|\n" +
+	"\"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT\x10\x05\x12&\n" +
+	"\"USER_CHAT_EVENT_TYPE_DRAFT_CHANGED\x10\x062|\n" +
 	"\x11ChatStreamService\x12g\n" +
 	"\x14StreamUserChatEvents\x12$.chat.v1.StreamUserChatEventsRequest\x1a%.chat.v1.StreamUserChatEventsResponse\"\x000\x01B5Z3github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
 
@@ -2285,7 +2405,7 @@ func file_chat_v1_chat_stream_proto_rawDescGZIP() []byte {
 }
 
 var file_chat_v1_chat_stream_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_chat_v1_chat_stream_proto_goTypes = []any{
 	(ChatEventType)(0),                        // 0: chat.v1.ChatEventType
 	(UserChatEventType)(0),                    // 1: chat.v1.UserChatEventType
@@ -2308,27 +2428,28 @@ var file_chat_v1_chat_stream_proto_goTypes = []any{
 	(*CallHostChangedPayload)(nil),            // 18: chat.v1.CallHostChangedPayload
 	(*StreamUserChatEventsRequest)(nil),       // 19: chat.v1.StreamUserChatEventsRequest
 	(*StreamUserChatEventsResponse)(nil),      // 20: chat.v1.StreamUserChatEventsResponse
-	(*UnreadCountPayload)(nil),                // 21: chat.v1.UnreadCountPayload
-	(*ThreadActivityPayload)(nil),             // 22: chat.v1.ThreadActivityPayload
-	(*MentionReceivedPayload)(nil),            // 23: chat.v1.MentionReceivedPayload
-	(*timestamppb.Timestamp)(nil),             // 24: google.protobuf.Timestamp
-	(*ChatMessage)(nil),                       // 25: chat.v1.ChatMessage
-	(*ChatChannel)(nil),                       // 26: chat.v1.ChatChannel
-	(ChannelRole)(0),                          // 27: chat.v1.ChannelRole
-	(AgentConfirmationDecision)(0),            // 28: chat.v1.AgentConfirmationDecision
-	(*v1.Call)(nil),                           // 29: calls.v1.Call
-	(*v1.CallParticipant)(nil),                // 30: calls.v1.CallParticipant
-	(v1.CallType)(0),                          // 31: calls.v1.CallType
+	(*DraftChangedPayload)(nil),               // 21: chat.v1.DraftChangedPayload
+	(*UnreadCountPayload)(nil),                // 22: chat.v1.UnreadCountPayload
+	(*ThreadActivityPayload)(nil),             // 23: chat.v1.ThreadActivityPayload
+	(*MentionReceivedPayload)(nil),            // 24: chat.v1.MentionReceivedPayload
+	(*timestamppb.Timestamp)(nil),             // 25: google.protobuf.Timestamp
+	(*ChatMessage)(nil),                       // 26: chat.v1.ChatMessage
+	(*ChatChannel)(nil),                       // 27: chat.v1.ChatChannel
+	(ChannelRole)(0),                          // 28: chat.v1.ChannelRole
+	(AgentConfirmationDecision)(0),            // 29: chat.v1.AgentConfirmationDecision
+	(*v1.Call)(nil),                           // 30: calls.v1.Call
+	(*v1.CallParticipant)(nil),                // 31: calls.v1.CallParticipant
+	(v1.CallType)(0),                          // 32: calls.v1.CallType
 }
 var file_chat_v1_chat_stream_proto_depIdxs = []int32{
 	0,  // 0: chat.v1.ChatEvent.event_type:type_name -> chat.v1.ChatEventType
-	24, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	25, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
+	25, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	26, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
 	4,  // 3: chat.v1.ChatEvent.message_deleted:type_name -> chat.v1.MessageDeletedPayload
 	5,  // 4: chat.v1.ChatEvent.reaction:type_name -> chat.v1.ReactionPayload
 	6,  // 5: chat.v1.ChatEvent.typing:type_name -> chat.v1.TypingPayload
 	7,  // 6: chat.v1.ChatEvent.member:type_name -> chat.v1.MemberPayload
-	26, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
+	27, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
 	9,  // 8: chat.v1.ChatEvent.thread_updated:type_name -> chat.v1.ThreadUpdatedPayload
 	10, // 9: chat.v1.ChatEvent.agent_typing:type_name -> chat.v1.AgentTypingPayload
 	11, // 10: chat.v1.ChatEvent.agent_token_delta:type_name -> chat.v1.AgentTokenDeltaPayload
@@ -2340,31 +2461,33 @@ var file_chat_v1_chat_stream_proto_depIdxs = []int32{
 	16, // 16: chat.v1.ChatEvent.call_participant:type_name -> chat.v1.CallParticipantEventPayload
 	17, // 17: chat.v1.ChatEvent.call_ring:type_name -> chat.v1.CallRingPayload
 	18, // 18: chat.v1.ChatEvent.call_host_changed:type_name -> chat.v1.CallHostChangedPayload
-	24, // 19: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
-	27, // 20: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
-	24, // 21: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	25, // 19: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
+	28, // 20: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
+	25, // 21: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
 	2,  // 22: chat.v1.AgentToolCallPayload.status:type_name -> chat.v1.AgentToolCallPayload.Status
-	24, // 23: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
-	28, // 24: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
-	24, // 25: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
-	29, // 26: chat.v1.CallLifecyclePayload.call:type_name -> calls.v1.Call
-	30, // 27: chat.v1.CallParticipantEventPayload.participant:type_name -> calls.v1.CallParticipant
-	31, // 28: chat.v1.CallRingPayload.call_type:type_name -> calls.v1.CallType
-	24, // 29: chat.v1.CallRingPayload.expires_at:type_name -> google.protobuf.Timestamp
+	25, // 23: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
+	29, // 24: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
+	25, // 25: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
+	30, // 26: chat.v1.CallLifecyclePayload.call:type_name -> calls.v1.Call
+	31, // 27: chat.v1.CallParticipantEventPayload.participant:type_name -> calls.v1.CallParticipant
+	32, // 28: chat.v1.CallRingPayload.call_type:type_name -> calls.v1.CallType
+	25, // 29: chat.v1.CallRingPayload.expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 30: chat.v1.StreamUserChatEventsResponse.event_type:type_name -> chat.v1.UserChatEventType
-	24, // 31: chat.v1.StreamUserChatEventsResponse.timestamp:type_name -> google.protobuf.Timestamp
-	21, // 32: chat.v1.StreamUserChatEventsResponse.unread_count:type_name -> chat.v1.UnreadCountPayload
-	22, // 33: chat.v1.StreamUserChatEventsResponse.thread_activity:type_name -> chat.v1.ThreadActivityPayload
-	23, // 34: chat.v1.StreamUserChatEventsResponse.mention_received:type_name -> chat.v1.MentionReceivedPayload
+	25, // 31: chat.v1.StreamUserChatEventsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	22, // 32: chat.v1.StreamUserChatEventsResponse.unread_count:type_name -> chat.v1.UnreadCountPayload
+	23, // 33: chat.v1.StreamUserChatEventsResponse.thread_activity:type_name -> chat.v1.ThreadActivityPayload
+	24, // 34: chat.v1.StreamUserChatEventsResponse.mention_received:type_name -> chat.v1.MentionReceivedPayload
 	3,  // 35: chat.v1.StreamUserChatEventsResponse.channel_event:type_name -> chat.v1.ChatEvent
-	24, // 36: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
-	19, // 37: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
-	20, // 38: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.StreamUserChatEventsResponse
-	38, // [38:39] is the sub-list for method output_type
-	37, // [37:38] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	21, // 36: chat.v1.StreamUserChatEventsResponse.draft_changed:type_name -> chat.v1.DraftChangedPayload
+	25, // 37: chat.v1.DraftChangedPayload.updated_at:type_name -> google.protobuf.Timestamp
+	25, // 38: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	19, // 39: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
+	20, // 40: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.StreamUserChatEventsResponse
+	40, // [40:41] is the sub-list for method output_type
+	39, // [39:40] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_chat_v1_chat_stream_proto_init() }
@@ -2401,14 +2524,16 @@ func file_chat_v1_chat_stream_proto_init() {
 		(*StreamUserChatEventsResponse_ThreadActivity)(nil),
 		(*StreamUserChatEventsResponse_MentionReceived)(nil),
 		(*StreamUserChatEventsResponse_ChannelEvent)(nil),
+		(*StreamUserChatEventsResponse_DraftChanged)(nil),
 	}
+	file_chat_v1_chat_stream_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_v1_chat_stream_proto_rawDesc), len(file_chat_v1_chat_stream_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

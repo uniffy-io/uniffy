@@ -35,6 +35,7 @@ CALL_HOST_CHANGED = "call_host_changed"
 UNREAD_COUNT_CHANGED = "unread_count_changed"
 THREAD_ACTIVITY = "thread_activity"
 MENTION_RECEIVED = "mention_received"
+DRAFT_CHANGED = "draft_changed"
 
 
 def build_message_payload(
@@ -264,6 +265,26 @@ def build_call_host_changed_payload(call_id: UUID, new_host_user_id: UUID) -> di
         "call_id": str(call_id),
         "new_host_user_id": str(new_host_user_id),
     }
+
+
+def build_draft_changed_payload(
+    channel_id: UUID,
+    root_message_id: UUID | None,
+    content: str,
+    deleted: bool,
+    updated_at: datetime,
+    client_session_id: str = "",
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "channel_id": str(channel_id),
+        "content": content,
+        "deleted": deleted,
+        "updated_at": updated_at.isoformat(),
+        "client_session_id": client_session_id,
+    }
+    if root_message_id is not None:
+        payload["root_message_id"] = str(root_message_id)
+    return payload
 
 
 def build_thread_updated_payload(

@@ -17,7 +17,9 @@ import {
   removeReactionFromMessage,
   appendDelta,
 } from '@/features/chat/store/chatMessagesSlice';
-import { fetchMembers, fetchThreadsInbox, markChannelRead } from '@/features/chat/store/chatThunks';
+import { fetchMembers, fetchThreadsInbox, fetchDrafts, markChannelRead } from '@/features/chat/store/chatThunks';
+import { draftUpserted, draftRemoved, draftKey } from '@/features/chat/store/chatDraftsSlice';
+import { draftClientSessionId } from '@/features/chat/api/draftSession';
 import {
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
@@ -385,11 +387,13 @@ function usePersistentChatStream() {
           );
 
           // The stream is a latency optimization, not the source of truth:
-          // events published while disconnected are gone. Resync call state on
-          // every (re)connect (keeps initial load and reconnect recovery prompt);
-          // the thunk swallows its own failures. The escalating backoff below
-          // bounds this to one sync per connect attempt during an outage.
+          // events published while disconnected are gone. Resync call and draft
+          // state on every (re)connect (keeps initial load and reconnect recovery
+          // prompt); both thunks swallow their own failures. The escalating
+          // backoff below bounds this to one sync per connect attempt during an
+          // outage.
           void dispatch(syncActiveCalls());
+          void dispatch(fetchDrafts());
 
           for await (const event of stream) {
             if (!mounted) break;
@@ -470,6 +474,24 @@ function usePersistentChatStream() {
                     channelId: p.channelId,
                     mentionCount: 1,
                   }));
+                }
+                break;
+              }
+              case UserChatEventType.DRAFT_CHANGED: {
+                if (event.payload.case === 'draftChanged' && event.payload.value) {
+                  const p = event.payload.value;
+                  // Skip our own echo; applying it would fight the local composer.
+                  if (p.clientSessionId === draftClientSessionId) break;
+                  if (p.deleted) {
+                    dispatch(draftRemoved(draftKey(p.channelId, p.rootMessageId)));
+                  } else {
+                    dispatch(draftUpserted({
+                      channelId: p.channelId,
+                      rootMessageId: p.rootMessageId ?? null,
+                      content: p.content,
+                      updatedAt: timestampToIso(p.updatedAt) ?? new Date().toISOString(),
+                    }));
+                  }
                 }
                 break;
               }

@@ -9,6 +9,7 @@ import { sendMessage, sendTyping, editMessage } from '@/features/chat/store/chat
 import { updateMessage } from '@/features/chat/store/chatMessagesSlice';
 import { selectReplyToMessage, clearReplyToMessage, selectEditingMessage, clearEditingMessage, setEditingMessage } from '@/features/chat/store/chatUiSlice';
 import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
+import { useDraftSync } from '@/features/chat/hooks/useDraftSync';
 import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { CallSection } from '@/features/calls/components/CallView';
@@ -39,10 +40,14 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   const channelMessages = useAppSelector((state) =>
     effectiveChannelId ? selectMessagesForChannel(state, effectiveChannelId) : null,
   );
+  const { initialDraft, remoteDraft, onDraftChange, flushOnSend } = useDraftSync(
+    effectiveChannelId ?? null,
+  );
 
   const handleSend = useCallback(
     async (content: string, fileIds: string[]) => {
       if (!activeChannel || !effectiveChannelId) return;
+      flushOnSend();
       const result = await dispatch(sendMessage({
         channelId: effectiveChannelId,
         content: content || '',
@@ -76,7 +81,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
         }
       }
     },
-    [activeChannel, effectiveChannelId, replyToMessage, dispatch, organizationId],
+    [activeChannel, effectiveChannelId, replyToMessage, dispatch, organizationId, flushOnSend],
   );
 
   const handleCancelReply = useCallback(() => {
@@ -153,6 +158,9 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
       {effectiveChannelId && <CallSection channelId={effectiveChannelId} />}
       <MessageList channelId={effectiveChannelId ?? undefined} />
       <MessageCompose
+        // Remount per channel: the contentEditable DOM would otherwise carry
+        // one channel's text into another and corrupt its draft.
+        key={effectiveChannelId ?? 'none'}
         channelName={channelDisplayName}
         organizationId={organizationId ?? undefined}
         onSend={handleSend}
@@ -163,6 +171,9 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
         onSaveEdit={handleEdit}
         onCancelEdit={handleCancelEdit}
         onEditLast={handleEditLast}
+        initialDraft={initialDraft}
+        remoteDraft={remoteDraft}
+        onDraftChange={onDraftChange}
       />
     </div>
   );

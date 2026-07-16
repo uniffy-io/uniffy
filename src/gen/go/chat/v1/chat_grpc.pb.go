@@ -50,6 +50,9 @@ const (
 	ChatService_MarkChannelRead_FullMethodName                  = "/chat.v1.ChatService/MarkChannelRead"
 	ChatService_MarkThreadRead_FullMethodName                   = "/chat.v1.ChatService/MarkThreadRead"
 	ChatService_GetUnreadCounts_FullMethodName                  = "/chat.v1.ChatService/GetUnreadCounts"
+	ChatService_SaveDraft_FullMethodName                        = "/chat.v1.ChatService/SaveDraft"
+	ChatService_DeleteDraft_FullMethodName                      = "/chat.v1.ChatService/DeleteDraft"
+	ChatService_ListDrafts_FullMethodName                       = "/chat.v1.ChatService/ListDrafts"
 	ChatService_GetChannelResources_FullMethodName              = "/chat.v1.ChatService/GetChannelResources"
 	ChatService_CreateAgentChat_FullMethodName                  = "/chat.v1.ChatService/CreateAgentChat"
 	ChatService_RenameAgentChat_FullMethodName                  = "/chat.v1.ChatService/RenameAgentChat"
@@ -112,6 +115,10 @@ type ChatServiceClient interface {
 	MarkChannelRead(ctx context.Context, in *MarkChannelReadRequest, opts ...grpc.CallOption) (*MarkChannelReadResponse, error)
 	MarkThreadRead(ctx context.Context, in *MarkThreadReadRequest, opts ...grpc.CallOption) (*MarkThreadReadResponse, error)
 	GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error)
+	// Drafts - per-user unsent composer text, synced across devices.
+	SaveDraft(ctx context.Context, in *SaveDraftRequest, opts ...grpc.CallOption) (*SaveDraftResponse, error)
+	DeleteDraft(ctx context.Context, in *DeleteDraftRequest, opts ...grpc.CallOption) (*DeleteDraftResponse, error)
+	ListDrafts(ctx context.Context, in *ListDraftsRequest, opts ...grpc.CallOption) (*ListDraftsResponse, error)
 	// Channel resources
 	GetChannelResources(ctx context.Context, in *GetChannelResourcesRequest, opts ...grpc.CallOption) (*GetChannelResourcesResponse, error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
@@ -478,6 +485,36 @@ func (c *chatServiceClient) GetUnreadCounts(ctx context.Context, in *GetUnreadCo
 	return out, nil
 }
 
+func (c *chatServiceClient) SaveDraft(ctx context.Context, in *SaveDraftRequest, opts ...grpc.CallOption) (*SaveDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveDraftResponse)
+	err := c.cc.Invoke(ctx, ChatService_SaveDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) DeleteDraft(ctx context.Context, in *DeleteDraftRequest, opts ...grpc.CallOption) (*DeleteDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteDraftResponse)
+	err := c.cc.Invoke(ctx, ChatService_DeleteDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) ListDrafts(ctx context.Context, in *ListDraftsRequest, opts ...grpc.CallOption) (*ListDraftsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDraftsResponse)
+	err := c.cc.Invoke(ctx, ChatService_ListDrafts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) GetChannelResources(ctx context.Context, in *GetChannelResourcesRequest, opts ...grpc.CallOption) (*GetChannelResourcesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetChannelResourcesResponse)
@@ -691,6 +728,10 @@ type ChatServiceServer interface {
 	MarkChannelRead(context.Context, *MarkChannelReadRequest) (*MarkChannelReadResponse, error)
 	MarkThreadRead(context.Context, *MarkThreadReadRequest) (*MarkThreadReadResponse, error)
 	GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error)
+	// Drafts - per-user unsent composer text, synced across devices.
+	SaveDraft(context.Context, *SaveDraftRequest) (*SaveDraftResponse, error)
+	DeleteDraft(context.Context, *DeleteDraftRequest) (*DeleteDraftResponse, error)
+	ListDrafts(context.Context, *ListDraftsRequest) (*ListDraftsResponse, error)
 	// Channel resources
 	GetChannelResources(context.Context, *GetChannelResourcesRequest) (*GetChannelResourcesResponse, error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
@@ -839,6 +880,15 @@ func (UnimplementedChatServiceServer) MarkThreadRead(context.Context, *MarkThrea
 }
 func (UnimplementedChatServiceServer) GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUnreadCounts not implemented")
+}
+func (UnimplementedChatServiceServer) SaveDraft(context.Context, *SaveDraftRequest) (*SaveDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveDraft not implemented")
+}
+func (UnimplementedChatServiceServer) DeleteDraft(context.Context, *DeleteDraftRequest) (*DeleteDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteDraft not implemented")
+}
+func (UnimplementedChatServiceServer) ListDrafts(context.Context, *ListDraftsRequest) (*ListDraftsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDrafts not implemented")
 }
 func (UnimplementedChatServiceServer) GetChannelResources(context.Context, *GetChannelResourcesRequest) (*GetChannelResourcesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetChannelResources not implemented")
@@ -1470,6 +1520,60 @@ func _ChatService_GetUnreadCounts_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_SaveDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).SaveDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_SaveDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).SaveDraft(ctx, req.(*SaveDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_DeleteDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).DeleteDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_DeleteDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).DeleteDraft(ctx, req.(*DeleteDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_ListDrafts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDraftsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ListDrafts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ListDrafts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ListDrafts(ctx, req.(*ListDraftsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatService_GetChannelResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetChannelResourcesRequest)
 	if err := dec(in); err != nil {
@@ -1906,6 +2010,18 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUnreadCounts",
 			Handler:    _ChatService_GetUnreadCounts_Handler,
+		},
+		{
+			MethodName: "SaveDraft",
+			Handler:    _ChatService_SaveDraft_Handler,
+		},
+		{
+			MethodName: "DeleteDraft",
+			Handler:    _ChatService_DeleteDraft_Handler,
+		},
+		{
+			MethodName: "ListDrafts",
+			Handler:    _ChatService_ListDrafts_Handler,
 		},
 		{
 			MethodName: "GetChannelResources",

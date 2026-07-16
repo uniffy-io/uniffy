@@ -25,7 +25,7 @@ import { clearPermissions } from '@/features/permissions';
 import { clearAdmin, useAdminAccess } from '@/features/admin';
 import { clearBlobCache } from '@/features/files';
 import { clearComments } from '@/features/comments';
-import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
+import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi, clearChatDrafts } from '@/features/chat/store';
 import { clearAgentMessages } from '@/features/agents/store/agentMessagesSlice';
 import { clearTags } from '@/features/tags/store/tagsSlice';
 import { clearCalls } from '@/features/calls/store/callsSlice';
@@ -120,6 +120,7 @@ export function UserMenu() {
         dispatch(clearChatMessages());
         dispatch(clearChatThreads());
         dispatch(clearChatUi());
+        dispatch(clearChatDrafts());
         dispatch(clearAgentMessages());
         dispatch(clearTags());
         dispatch(clearCalls());

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Hash, Lock, SpeakerSlash } from '@phosphor-icons/react';
+import { Hash, Lock, PencilSimple, SpeakerSlash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { type ChatChannel } from '@/features/chat/types';
 import { ChannelContextMenu } from '@/features/chat/components/sidebar/ChannelContextMenu';
@@ -11,6 +11,7 @@ interface ChannelListItemProps {
     unreadCount?: number;
     mentionCount?: number;
     isMuted?: boolean;
+    hasDraft?: boolean;
     onClick: () => void;
 }
 
@@ -21,6 +22,7 @@ export function ChannelListItem({
     unreadCount = 0,
     mentionCount = 0,
     isMuted = false,
+    hasDraft = false,
     onClick,
 }: ChannelListItemProps) {
     const isPrivate = channel.channelType === 'PRIVATE';
@@ -75,6 +77,14 @@ export function ChannelListItem({
 
                 {isMuted && (
                     <SpeakerSlash size={12} className="shrink-0 text-muted-foreground/50" />
+                )}
+
+                {hasDraft && mentionCount === 0 && (
+                    <PencilSimple
+                        size={12}
+                        className="shrink-0 text-muted-foreground"
+                        data-testid={`chat-sidebar-channel-draft-${channel.id}`}
+                    />
                 )}
 
                 {mentionCount > 0 && (

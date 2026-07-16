@@ -8,8 +8,19 @@ import {
 } from "@uniffy/proto/chat/v1/chat_stream_pb";
 import { chatStreamApi } from "@features/chat/chatStreamApi";
 import { callsApi } from "@features/calls/callsApi";
-import { messagesKey } from "@features/chat/useChatMutations";
-import { messageToPlain, type SerializedMessage } from "@features/chat/chatSerializer";
+import { draftClientSessionId } from "@features/chat/chatApi";
+import {
+  messagesKey,
+  draftsKey,
+  upsertDraftInCache,
+  removeDraftFromCache,
+} from "@features/chat/useChatMutations";
+import {
+  messageToPlain,
+  draftKey,
+  tsToIso,
+  type SerializedMessage,
+} from "@features/chat/chatSerializer";
 import {
   callToPlain,
   participantToPlain,
@@ -172,8 +183,10 @@ async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortContro
       // Stream events are a latency optimization for calls, not the source of
       // truth: resync the active-call snapshot on every (re)connect attempt.
       // While the stream is down this doubles as the polling fallback, riding
-      // the same backoff cadence.
+      // the same backoff cadence. Drafts get the same snapshot resync to pick
+      // up whatever changed while the stream was down.
       void resyncActiveCalls(orgId, queryClient, attempt.signal);
+      void queryClient.invalidateQueries({ queryKey: draftsKey(orgId) });
       for await (const event of stream) {
         if (attempt.signal.aborted) break;
         lastEventAtMs = Date.now();
@@ -248,6 +261,23 @@ function applyUserEvent(
     case "threadActivity":
       void queryClient.invalidateQueries({ queryKey: ["chat", "threads", orgId] });
       break;
+    case "draftChanged": {
+      const p = event.payload.value;
+      // Events this session caused are already reflected locally; applying
+      // them would fight the composer mid-keystroke.
+      if (p.clientSessionId === draftClientSessionId) break;
+      if (p.deleted) {
+        removeDraftFromCache(queryClient, orgId, draftKey(p.channelId, p.rootMessageId));
+      } else {
+        upsertDraftInCache(queryClient, orgId, {
+          channelId: p.channelId,
+          rootMessageId: p.rootMessageId ?? null,
+          content: p.content,
+          updatedAt: tsToIso(p.updatedAt),
+        });
+      }
+      break;
+    }
     case "channelEvent":
       applyChannelEvent(orgId, queryClient, event.payload.value);
       break;

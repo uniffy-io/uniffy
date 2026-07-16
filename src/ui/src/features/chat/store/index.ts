@@ -79,6 +79,17 @@ export {
 } from '@/features/chat/store/chatThreadsSlice';
 
 export {
+  chatDraftsReducer,
+  draftKey,
+  setDrafts,
+  draftUpserted,
+  draftRemoved,
+  clearChatDrafts,
+  selectDraft,
+  selectChannelsWithDrafts,
+} from '@/features/chat/store/chatDraftsSlice';
+
+export {
   chatUiReducer,
   toggleSidebar,
   setSidebarOpen,
@@ -163,6 +174,9 @@ export {
   markChannelRead,
   markThreadRead,
   fetchUnreadCounts,
+  fetchDrafts,
+  saveDraftToServer,
+  deleteDraftOnServer,
   sendTyping,
   fetchCategories,
   createCategoryThunk,

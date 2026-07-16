@@ -11,6 +11,7 @@ import type {
   ChatMessage as ProtoChatMessage,
   ChatChannelMember as ProtoChatChannelMember,
   ChatChannelCategory as ProtoChatChannelCategory,
+  ChatDraft as ProtoChatDraft,
   ThreadInboxItem as ProtoThreadInboxItem,
   ReactionGroup as ProtoReactionGroup,
 } from '@uniffy/proto/chat/v1/chat_pb';
@@ -157,6 +158,22 @@ export function categoryToPlain(proto: ProtoChatChannelCategory): ChatChannelCat
     position: proto.position,
     createdBy: '',
     createdAt: timestampToIso(proto.createdAt) ?? new Date().toISOString(),
+    updatedAt: timestampToIso(proto.updatedAt) ?? new Date().toISOString(),
+  };
+}
+
+export interface PlainDraft {
+  channelId: string;
+  rootMessageId: string | null;
+  content: string;
+  updatedAt: string;
+}
+
+export function draftToPlain(proto: ProtoChatDraft): PlainDraft {
+  return {
+    channelId: proto.channelId,
+    rootMessageId: proto.rootMessageId ?? null,
+    content: proto.content,
     updatedAt: timestampToIso(proto.updatedAt) ?? new Date().toISOString(),
   };
 }

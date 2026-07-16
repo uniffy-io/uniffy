@@ -272,6 +272,38 @@ Needs user A (organizer + channel member), user B (attendee to add), and user C 
       meeting" button. Start a call in that channel: it turns rose with a live dot and "Join live
       meeting (N)"; clicking it opens the pre-join modal.
 
+## Chat synced drafts
+
+Unsent composer text syncs across devices per channel and per thread. Needs one user logged in
+on two clients (web tab A, web tab B or mobile) plus a second user for the send checks.
+
+- [ ] Type in a channel composer, navigate to another channel and back: text and mention chips
+      restore exactly (canonical Markdown round-trip).
+- [ ] Type on web, wait ~2s, open the same channel on mobile: the draft appears (and the reverse
+      direction).
+- [ ] Edit the draft on device B while device A's composer is untouched since its last save:
+      A updates live without focus or caret jumps.
+- [ ] With unsaved local edits on device A, save a different draft from device B: A keeps its
+      local text (last-write-wins guard), and A's next pause overwrites the server.
+- [ ] Send the message from device A: the composer and pencil indicator clear on device B within
+      a second (server-side clear on send).
+- [ ] A thread draft and a channel draft in the same channel stay independent; each restores in
+      its own composer.
+- [ ] Open "Reply in thread" on a message with NO replies yet, type, pause ~2s: the draft syncs
+      to the other device (first-reply thread drafts precede the thread row; regression for the
+      FK bug).
+- [ ] Mobile: with a synced channel draft present, long-press a message, Edit, then cancel (and
+      again with saving the edit): the unsent draft text and mention chips come back in the
+      composer, and the other device keeps showing the draft (nothing deleted).
+- [ ] Pencil indicator shows in the web sidebar (channels + DMs) and the mobile channel list for
+      any channel holding a draft (thread drafts count); it disappears after send or clearing the
+      composer.
+- [ ] Log out and back in: drafts are still there (server persistence; the logout path clears
+      only the local slice).
+- [ ] Enter edit-message mode, change text, cancel: no draft was created or overwritten.
+- [ ] Kill the network, type, restore the network: the next debounce saves silently (no error
+      toasts at any point).
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

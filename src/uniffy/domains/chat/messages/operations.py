@@ -319,6 +319,13 @@ class ChatMessageOperations:
             mentioned_user_ids,
         )
 
+        if message.sender_type == SenderType.USER:
+            from uniffy.domains.chat.drafts.operations import ChatDraftOperations
+
+            await ChatDraftOperations(self.session).clear_for_send(
+                user_id, channel.organization_id, channel.id, root_id
+            )
+
     async def _get_channel_member_ids(self, channel_id: UUID) -> list[UUID]:
         # USER-only; AGENT rows have NULL user_id which would crash _event_to_json on deserialize.
         from uniffy.domains.chat.cache import fetch_channel_members

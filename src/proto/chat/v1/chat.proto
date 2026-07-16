@@ -53,6 +53,11 @@ service ChatService {
   rpc MarkThreadRead(MarkThreadReadRequest) returns (MarkThreadReadResponse) {}
   rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse) {}
 
+  // Drafts - per-user unsent composer text, synced across devices.
+  rpc SaveDraft(SaveDraftRequest) returns (SaveDraftResponse) {}
+  rpc DeleteDraft(DeleteDraftRequest) returns (DeleteDraftResponse) {}
+  rpc ListDrafts(ListDraftsRequest) returns (ListDraftsResponse) {}
+
   // Channel resources
   rpc GetChannelResources(GetChannelResourcesRequest) returns (GetChannelResourcesResponse) {}
 
@@ -700,6 +705,48 @@ message ChannelUnreadCount {
   bool is_muted = 5;
   ChatNotificationLevel notification_level = 6;
   optional google.protobuf.Timestamp muted_until = 7;
+}
+
+// DRAFTS
+
+// ChatDraft carries canonical Markdown content ([[[label|urn]]] mentions).
+// root_message_id set = thread draft; unset = channel draft.
+message ChatDraft {
+  string channel_id = 1;
+  optional string root_message_id = 2;
+  string content = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message SaveDraftRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  optional string root_message_id = 3;
+  string content = 4;
+  // Random per-app-session id (max 64 chars); echoed on DRAFT_CHANGED so
+  // the originating session can ignore its own events.
+  string client_session_id = 5;
+}
+
+message SaveDraftResponse {
+  ChatDraft draft = 1;
+}
+
+message DeleteDraftRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  optional string root_message_id = 3;
+  string client_session_id = 4;
+}
+
+message DeleteDraftResponse {}
+
+message ListDraftsRequest {
+  string organization_id = 1;
+}
+
+message ListDraftsResponse {
+  repeated ChatDraft drafts = 1;
 }
 
 // CHANNEL RESOURCES

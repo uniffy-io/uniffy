@@ -10,8 +10,10 @@ import {
   messageToPlain,
   memberToPlain,
   categoryToPlain,
+  draftToPlain,
   threadInboxItemToPlain,
 } from '@/features/chat/api/chatConverters';
+import { draftClientSessionId } from '@/features/chat/api/draftSession';
 import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 import {
   setChannels,
@@ -38,6 +40,12 @@ import {
   addReactionToMessage,
   removeReactionFromMessage,
 } from '@/features/chat/store/chatMessagesSlice';
+import {
+  setDrafts,
+  draftUpserted,
+  draftRemoved,
+  draftKey,
+} from '@/features/chat/store/chatDraftsSlice';
 import {
   setThreadMessages,
   setThreadsInbox,
@@ -405,6 +413,8 @@ export const sendMessage = createAsyncThunk<
       return rejectWithValue('Failed to send message');
     }
     const plain = messageToPlain(response.message);
+    // Instant local clear; the server also clears the draft and fans out to other devices.
+    dispatch(draftRemoved(draftKey(params.channelId, params.rootId)));
     // Append eagerly for immediate display; the stream will also deliver it.
     if (!params.rootId) {
       dispatch(appendMessage({ channelId: params.channelId, message: plain }));
@@ -838,6 +848,68 @@ export const fetchUnreadCounts = createAsyncThunk<
   }
 });
 
+export const fetchDrafts = createAsyncThunk<
+  void,
+  void,
+  { state: RootState }
+>('chat/fetchDrafts', async (_, { getState, dispatch }) => {
+  // Swallow failures: this runs on every stream reconnect and must not toast during outages.
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.listDrafts({ organizationId });
+    dispatch(setDrafts(response.drafts.map(draftToPlain)));
+  } catch {
+    // Drafts reload on the next reconnect or chat mount.
+  }
+});
+
+export const saveDraftToServer = createAsyncThunk<
+  void,
+  { channelId: string; rootMessageId?: string; content: string },
+  { state: RootState }
+>('chat/saveDraftToServer', async (params, { getState, dispatch }) => {
+  dispatch(draftUpserted({
+    channelId: params.channelId,
+    rootMessageId: params.rootMessageId ?? null,
+    content: params.content,
+    updatedAt: new Date().toISOString(),
+  }));
+  // Swallow failures: a rejected thunk would toast via errorToastMiddleware, and
+  // autosave must stay silent. The optimistic local copy keeps the text safe.
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.saveDraft({
+      organizationId,
+      channelId: params.channelId,
+      rootMessageId: params.rootMessageId,
+      content: params.content,
+      clientSessionId: draftClientSessionId,
+    });
+  } catch {
+    // Server catches up on the next content change.
+  }
+});
+
+export const deleteDraftOnServer = createAsyncThunk<
+  void,
+  { channelId: string; rootMessageId?: string },
+  { state: RootState }
+>('chat/deleteDraftOnServer', async (params, { getState, dispatch }) => {
+  dispatch(draftRemoved(draftKey(params.channelId, params.rootMessageId)));
+  // Same silence contract as saveDraftToServer.
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.deleteDraft({
+      organizationId,
+      channelId: params.channelId,
+      rootMessageId: params.rootMessageId,
+      clientSessionId: draftClientSessionId,
+    });
+  } catch {
+    // A stale server row resurfaces on refetch and clears on the next delete.
+  }
+});
+
 export const sendTyping = createAsyncThunk<
   void,
   string,
@@ -1145,6 +1217,7 @@ export const initializeChat = createAsyncThunk<
       dispatch(fetchCategories()).unwrap(),
       dispatch(fetchUnreadCounts()).unwrap(),
       dispatch(fetchThreadsInbox()).unwrap(),
+      dispatch(fetchDrafts()).unwrap().catch(() => {}),
       dispatch(fetchAgents()).unwrap().catch(() => {}),
     ]);
 

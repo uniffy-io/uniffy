@@ -266,6 +266,8 @@ enum UserChatEventType {
   USER_CHAT_EVENT_TYPE_HEARTBEAT = 4;
   // Wraps a channel-level ChatEvent (messages, typing, reactions, etc.)
   USER_CHAT_EVENT_TYPE_CHANNEL_EVENT = 5;
+  // A draft was saved or deleted on one of the user's devices.
+  USER_CHAT_EVENT_TYPE_DRAFT_CHANGED = 6;
 }
 
 message StreamUserChatEventsResponse {
@@ -278,7 +280,21 @@ message StreamUserChatEventsResponse {
     MentionReceivedPayload mention_received = 12;
     // Channel-level event forwarded through the unified stream
     ChatEvent channel_event = 13;
+    // DRAFT_CHANGED
+    DraftChangedPayload draft_changed = 14;
   }
+}
+
+// DraftChangedPayload syncs a draft across the user's devices.
+// deleted=true (content empty) removes it. Sessions ignore events
+// carrying their own client_session_id.
+message DraftChangedPayload {
+  string channel_id = 1;
+  optional string root_message_id = 2;
+  string content = 3;
+  bool deleted = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  string client_session_id = 6;
 }
 
 message UnreadCountPayload {

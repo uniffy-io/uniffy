@@ -34,6 +34,7 @@ import {
 } from "@features/chat/useChatMutations";
 import { useChatStream } from "@features/chat/useChatStream";
 import { useComposerAttachments } from "@features/chat/useComposerAttachments";
+import { useDraftSync } from "@features/chat/useDraftSync";
 import { useScreenFocusRef } from "@shared/hooks/useScreenFocusRef";
 import {
   parseMentions,
@@ -72,6 +73,8 @@ export function ChatThreadScreen() {
   const inputRef = useRef<TextInput>(null);
   const attachments = useComposerAttachments();
   const screenFocused = useScreenFocusRef();
+
+  const { flushOnSend } = useDraftSync({ channelId, rootMessageId, draft, setDraft, mentionsRef });
 
   useEffect(() => {
     if (rootMessageId) markThreadRead.mutate(rootMessageId);
@@ -131,11 +134,12 @@ export function ChatThreadScreen() {
     const attachmentFileIds = attachments.readyFileIds;
     if (!text && attachmentFileIds.length === 0) return;
     const content = toCanonical(draft, mentionsRef.current);
+    flushOnSend();
     setDraft("");
     mentionsRef.current = [];
     attachments.clear();
     sendReply.mutate({ content, attachmentFileIds });
-  }, [draft, attachments, sendReply]);
+  }, [draft, attachments, sendReply, flushOnSend]);
 
   const handleLongPress = useCallback(
     (message: SerializedMessage) => {

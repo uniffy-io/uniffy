@@ -111,6 +111,15 @@ class ChatService(Protocol):
     async def get_unread_counts(self, request: chat_dot_v1_dot_chat__pb2.GetUnreadCountsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetUnreadCountsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def save_draft(self, request: chat_dot_v1_dot_chat__pb2.SaveDraftRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.SaveDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def delete_draft(self, request: chat_dot_v1_dot_chat__pb2.DeleteDraftRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_drafts(self, request: chat_dot_v1_dot_chat__pb2.ListDraftsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ListDraftsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def get_channel_resources(self, request: chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelResourcesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -477,6 +486,36 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_unread_counts,
+                ),
+                "/chat.v1.ChatService/SaveDraft": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SaveDraft",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.SaveDraftRequest,
+                        output=chat_dot_v1_dot_chat__pb2.SaveDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.save_draft,
+                ),
+                "/chat.v1.ChatService/DeleteDraft": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteDraft",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.DeleteDraftRequest,
+                        output=chat_dot_v1_dot_chat__pb2.DeleteDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_draft,
+                ),
+                "/chat.v1.ChatService/ListDrafts": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListDrafts",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ListDraftsRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ListDraftsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_drafts,
                 ),
                 "/chat.v1.ChatService/GetChannelResources": Endpoint.unary(
                     method=MethodInfo(
@@ -1282,6 +1321,66 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def save_draft(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.SaveDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.SaveDraftResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SaveDraft",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.SaveDraftRequest,
+                output=chat_dot_v1_dot_chat__pb2.SaveDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_draft(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.DeleteDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.DeleteDraftResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteDraft",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.DeleteDraftRequest,
+                output=chat_dot_v1_dot_chat__pb2.DeleteDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_drafts(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ListDraftsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ListDraftsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListDrafts",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ListDraftsRequest,
+                output=chat_dot_v1_dot_chat__pb2.ListDraftsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_channel_resources(
         self,
         request: chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest,
@@ -1689,6 +1788,12 @@ class ChatServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_unread_counts(self, request: chat_dot_v1_dot_chat__pb2.GetUnreadCountsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetUnreadCountsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def save_draft(self, request: chat_dot_v1_dot_chat__pb2.SaveDraftRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.SaveDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_draft(self, request: chat_dot_v1_dot_chat__pb2.DeleteDraftRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteDraftResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_drafts(self, request: chat_dot_v1_dot_chat__pb2.ListDraftsRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ListDraftsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_channel_resources(self, request: chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelResourcesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
@@ -2038,6 +2143,36 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_unread_counts,
+                ),
+                "/chat.v1.ChatService/SaveDraft": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SaveDraft",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.SaveDraftRequest,
+                        output=chat_dot_v1_dot_chat__pb2.SaveDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.save_draft,
+                ),
+                "/chat.v1.ChatService/DeleteDraft": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteDraft",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.DeleteDraftRequest,
+                        output=chat_dot_v1_dot_chat__pb2.DeleteDraftResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_draft,
+                ),
+                "/chat.v1.ChatService/ListDrafts": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListDrafts",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ListDraftsRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ListDraftsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_drafts,
                 ),
                 "/chat.v1.ChatService/GetChannelResources": EndpointSync.unary(
                     method=MethodInfo(
@@ -2837,6 +2972,66 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.GetUnreadCountsRequest,
                 output=chat_dot_v1_dot_chat__pb2.GetUnreadCountsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def save_draft(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.SaveDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.SaveDraftResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SaveDraft",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.SaveDraftRequest,
+                output=chat_dot_v1_dot_chat__pb2.SaveDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_draft(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.DeleteDraftRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.DeleteDraftResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteDraft",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.DeleteDraftRequest,
+                output=chat_dot_v1_dot_chat__pb2.DeleteDraftResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_drafts(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ListDraftsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ListDraftsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListDrafts",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ListDraftsRequest,
+                output=chat_dot_v1_dot_chat__pb2.ListDraftsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

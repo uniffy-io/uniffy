@@ -885,6 +885,66 @@ class ChannelUnreadCount(_message.Message):
     muted_until: _timestamp_pb2.Timestamp
     def __init__(self, channel_id: _Optional[str] = ..., unread_count: _Optional[int] = ..., mention_count: _Optional[int] = ..., last_read_message_id: _Optional[str] = ..., is_muted: _Optional[bool] = ..., notification_level: _Optional[_Union[ChatNotificationLevel, str]] = ..., muted_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
+class ChatDraft(_message.Message):
+    __slots__ = ("channel_id", "root_message_id", "content", "updated_at")
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    channel_id: str
+    root_message_id: str
+    content: str
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, channel_id: _Optional[str] = ..., root_message_id: _Optional[str] = ..., content: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class SaveDraftRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "root_message_id", "content", "client_session_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    CLIENT_SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    root_message_id: str
+    content: str
+    client_session_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., root_message_id: _Optional[str] = ..., content: _Optional[str] = ..., client_session_id: _Optional[str] = ...) -> None: ...
+
+class SaveDraftResponse(_message.Message):
+    __slots__ = ("draft",)
+    DRAFT_FIELD_NUMBER: _ClassVar[int]
+    draft: ChatDraft
+    def __init__(self, draft: _Optional[_Union[ChatDraft, _Mapping]] = ...) -> None: ...
+
+class DeleteDraftRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "root_message_id", "client_session_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    CLIENT_SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    root_message_id: str
+    client_session_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., root_message_id: _Optional[str] = ..., client_session_id: _Optional[str] = ...) -> None: ...
+
+class DeleteDraftResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ListDraftsRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class ListDraftsResponse(_message.Message):
+    __slots__ = ("drafts",)
+    DRAFTS_FIELD_NUMBER: _ClassVar[int]
+    drafts: _containers.RepeatedCompositeFieldContainer[ChatDraft]
+    def __init__(self, drafts: _Optional[_Iterable[_Union[ChatDraft, _Mapping]]] = ...) -> None: ...
+
 class GetChannelResourcesRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id", "content_type_filter", "limit", "offset")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]

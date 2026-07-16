@@ -28,6 +28,7 @@ import {
   X,
   Check,
   MagnifyingGlass,
+  PencilSimple,
   Phone,
 } from "phosphor-react-native";
 import { router } from "expo-router";
@@ -838,13 +839,21 @@ function ChannelRow({
             {formatChannelActivity(channel.lastMessageAtSeconds)}
           </Text>
         ) : null}
-        {hasUnread ? (
-          <View
-            style={[styles.badge, { backgroundColor: channel.mentionCount > 0 ? T.red : T.accent }]}
-          >
-            <Text style={styles.badgeText}>
-              {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
-            </Text>
+        {channel.hasDraft || hasUnread ? (
+          <View style={styles.rowIndicators}>
+            {channel.hasDraft ? <PencilSimple size={13} color={T.textDim} weight="bold" /> : null}
+            {hasUnread ? (
+              <View
+                style={[
+                  styles.badge,
+                  { backgroundColor: channel.mentionCount > 0 ? T.red : T.accent },
+                ]}
+              >
+                <Text style={styles.badgeText}>
+                  {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
+                </Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -987,6 +996,7 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 15 },
   rowSub: { fontSize: 12, fontFamily: FONT.regular },
   rowRight: { alignItems: "flex-end", gap: 5, flexShrink: 0 },
+  rowIndicators: { flexDirection: "row", alignItems: "center", gap: 5 },
   rowTime: { fontSize: 11, fontFamily: FONT.medium },
   rowReplies: { fontSize: 11, fontFamily: FONT.regular },
   badge: {
