@@ -1,8 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { uploadAsset } from "@features/files/useFileMutations";
 import { filesApi } from "@features/files/filesApi";
 
@@ -23,12 +23,15 @@ type PickedAsset = { uri: string; name: string; mimeType: string };
 export function useComposerAttachments() {
   const { organizationId } = useAuth();
   const [pending, setPending] = useState<PendingAttachment[]>([]);
+  const controllersRef = useRef(new Map<string, AbortController>());
 
   const uploadPicked = useCallback(
     (assets: PickedAsset[]) => {
       if (!organizationId) return;
       for (const asset of assets) {
         const localId = `att-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        const controller = new AbortController();
+        controllersRef.current.set(localId, controller);
         setPending((prev) => [
           ...prev,
           {
@@ -57,6 +60,7 @@ export function useComposerAttachments() {
                 setPending((prev) =>
                   prev.map((p) => (p.localId === localId ? { ...p, progress: pct } : p)),
                 ),
+              controller.signal,
             );
             const fileId = res.file?.id ?? null;
             setPending((prev) =>
@@ -65,9 +69,12 @@ export function useComposerAttachments() {
               ),
             );
           } catch {
+            // A removed row was cancelled on purpose; the map below is a no-op.
             setPending((prev) =>
               prev.map((p) => (p.localId === localId ? { ...p, error: true } : p)),
             );
+          } finally {
+            controllersRef.current.delete(localId);
           }
         })();
       }
@@ -118,10 +125,15 @@ export function useComposerAttachments() {
   }, [pickPhotos, pickDocuments]);
 
   const remove = useCallback((localId: string) => {
+    controllersRef.current.get(localId)?.abort();
     setPending((prev) => prev.filter((p) => p.localId !== localId));
   }, []);
 
-  const clear = useCallback(() => setPending([]), []);
+  const clear = useCallback(() => {
+    for (const controller of controllersRef.current.values()) controller.abort();
+    controllersRef.current.clear();
+    setPending([]);
+  }, []);
 
   const uploading = pending.some((p) => !p.fileId && !p.error);
   const readyFileIds = pending.filter((p) => p.fileId).map((p) => p.fileId as string);

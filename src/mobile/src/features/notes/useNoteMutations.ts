@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { notesApi } from "@features/notes/notesApi";
 
 export function useCreateNote() {

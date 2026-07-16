@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { searchApi } from "@features/search/searchApi";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
 import { searchResultToPlain, domainToTypeFilters } from "@features/search/searchSerializer";

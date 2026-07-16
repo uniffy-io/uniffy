@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { filesApi } from "@features/files/filesApi";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 
@@ -127,47 +127,127 @@ export interface UploadFileArgs {
   folderId?: string;
 }
 
-/** Chunked upload of a local asset. Returns the completed File row. */
+const CHUNK_MAX_ATTEMPTS = 3;
+const CHUNK_RETRY_BASE_MS = 1000;
+
+type FileModule = {
+  File: new (uri: string) => {
+    exists: boolean;
+    size: number;
+    readableStream(): ReadableStream<Uint8Array>;
+  };
+};
+
+// expo-file-system is a native module; a dev client built before it was added
+// lacks it. The caller falls back to buffering the whole asset in memory.
+function loadFileModule(): FileModule | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require("expo-file-system") as FileModule;
+  } catch {
+    return null;
+  }
+}
+
+// A chunk is idempotent server-side (keyed by uploadId + chunkNumber), so a
+// transient LTE drop retries the chunk instead of failing the whole upload.
+async function uploadChunkWithRetry(
+  request: Parameters<typeof filesApi.uploadChunk>[0],
+  signal?: AbortSignal,
+) {
+  let retryDelayMs = CHUNK_RETRY_BASE_MS;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await filesApi.uploadChunk(request, { signal });
+    } catch (err) {
+      if (signal?.aborted || attempt >= CHUNK_MAX_ATTEMPTS) throw err;
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      retryDelayMs *= 2;
+    }
+  }
+}
+
+/**
+ * Chunked upload of a local asset. Returns the completed File row. Streams
+ * from disk when possible - buffering a phone video recording whole would
+ * OOM the app - and falls back to buffering for non-file URIs.
+ */
 export async function uploadAsset(
   organizationId: string,
   args: UploadFileArgs,
   onProgress?: (percent: number) => void,
+  signal?: AbortSignal,
 ) {
-  // Read bytes first: pickers do not always report a size, and initiate needs
-  // an accurate total.
-  const fileResponse = await fetch(args.uri);
-  const arrayBuffer = await fileResponse.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
+  const fs = args.uri.startsWith("file://") ? loadFileModule() : null;
+  const source = fs ? new fs.File(args.uri) : null;
 
-  const initResponse = await filesApi.initiateUpload({
-    organizationId,
-    filename: args.filename,
-    mimeType: args.mimeType,
-    totalSize: BigInt(bytes.length),
-    folderId: args.folderId,
-    accessMode: AccessMode.OWNER_ONLY,
-  });
-
-  const { uploadId, chunkSize, totalChunks } = initResponse;
-
-  const size = Number(chunkSize);
-  for (let i = 0; i < Number(totalChunks); i++) {
-    const start = i * size;
-    const end = Math.min(start + size, bytes.length);
-    const chunk = bytes.slice(start, end);
-    const isLast = i === Number(totalChunks) - 1;
-
-    await filesApi.uploadChunk({
-      uploadId,
-      chunkNumber: i + 1,
-      data: chunk,
-      isLast,
-    });
-
-    onProgress?.(Math.round(((i + 1) / Number(totalChunks)) * 100));
+  let totalSize: number;
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  let buffered: Uint8Array | null = null;
+  if (source && source.exists && source.size > 0) {
+    totalSize = source.size;
+    reader = source.readableStream().getReader();
+  } else {
+    const fileResponse = await fetch(args.uri);
+    buffered = new Uint8Array(await fileResponse.arrayBuffer());
+    totalSize = buffered.length;
   }
 
-  return filesApi.completeUpload({ uploadId });
+  const initResponse = await filesApi.initiateUpload(
+    {
+      organizationId,
+      filename: args.filename,
+      mimeType: args.mimeType,
+      totalSize: BigInt(totalSize),
+      folderId: args.folderId,
+      accessMode: AccessMode.OWNER_ONLY,
+    },
+    { signal },
+  );
+
+  const { uploadId, chunkSize, totalChunks } = initResponse;
+  const size = Number(chunkSize);
+
+  let bufferedOffset = 0;
+  let pending = new Uint8Array(0);
+  const readChunk = async (want: number): Promise<Uint8Array> => {
+    if (buffered) {
+      const chunk = buffered.subarray(bufferedOffset, bufferedOffset + want);
+      bufferedOffset += chunk.length;
+      return chunk;
+    }
+    while (pending.length < want) {
+      const { done, value } = await reader!.read();
+      if (done) break;
+      const merged = new Uint8Array(pending.length + value.length);
+      merged.set(pending);
+      merged.set(value, pending.length);
+      pending = merged;
+    }
+    const chunk = pending.subarray(0, Math.min(want, pending.length));
+    pending = pending.subarray(chunk.length);
+    return chunk;
+  };
+
+  try {
+    for (let i = 0; i < Number(totalChunks); i++) {
+      if (signal?.aborted) throw new Error("Upload cancelled");
+      const want = Math.min(size, totalSize - i * size);
+      const chunk = await readChunk(want);
+      if (chunk.length !== want) {
+        throw new Error("Asset changed size during upload");
+      }
+      await uploadChunkWithRetry(
+        { uploadId, chunkNumber: i + 1, data: chunk, isLast: i === Number(totalChunks) - 1 },
+        signal,
+      );
+      onProgress?.(Math.round(((i + 1) / Number(totalChunks)) * 100));
+    }
+  } finally {
+    reader?.cancel().catch(() => {});
+  }
+
+  return filesApi.completeUpload({ uploadId }, { signal });
 }
 
 export function useUploadFile() {

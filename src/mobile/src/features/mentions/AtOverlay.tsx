@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { X, MagnifyingGlass, ArrowRight } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
-import { useUniffy } from "@core/providers/uniffy-context";
+import { useUniffy } from "@core/providers/UniffyContext";
 import { useStartAgentChat } from "@features/agents/useAgents";
 import { useSearch } from "@features/search/useSearch";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -54,24 +54,25 @@ export function AtOverlay() {
   const startAgentChat = useStartAgentChat();
 
   const [isMounted, setIsMounted] = React.useState(false);
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const [slideAnim] = useState(() => new Animated.Value(0));
   const inputRef = useRef<TextInput>(null);
 
   const topPad = Platform.OS === "web" ? 8 : insets.top;
   const navBottom = BOTTOM_NAV_HEIGHT + (Platform.OS === "web" ? 34 : insets.bottom);
 
+  // Mount immediately when opening; the close animation flips isMounted false in
+  // its completion callback so the exit transition can play.
+  if (atOpen && !isMounted) setIsMounted(true);
+
   useEffect(() => {
-    if (atOpen) {
-      setIsMounted(true);
-    } else {
-      Keyboard.dismiss();
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: Platform.OS !== "web",
-      }).start(() => setIsMounted(false));
-    }
-  }, [atOpen]);
+    if (atOpen) return;
+    Keyboard.dismiss();
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 220,
+      useNativeDriver: Platform.OS !== "web",
+    }).start(() => setIsMounted(false));
+  }, [atOpen, slideAnim]);
 
   useEffect(() => {
     if (atOpen && isMounted) {
@@ -129,143 +130,151 @@ export function AtOverlay() {
     // Hosted in a Modal window: an inset-positioned overlay in the shell gets
     // flow-laid on iOS 26 Fabric and ends up as a squeezed popup under the bar.
     <Modal visible transparent animationType="none" onRequestClose={closeAt} statusBarTranslucent>
-    <Animated.View
-      style={[styles.overlay, { backgroundColor: T.pageBg, opacity, transform: [{ translateY }] }]}
-    >
-      <View style={[styles.topBar, { paddingTop: topPad + 4, borderBottomColor: T.border }]}>
-        <View style={[styles.searchRow, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
-          <TextInput
-            ref={inputRef}
-            style={[styles.input, { color: T.textBright }]}
-            placeholder="Search everything..."
-            placeholderTextColor={T.textDim}
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-            autoCapitalize="none"
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={clearResults}>
-              <X size={14} color={T.textDim} weight="duotone" />
-            </TouchableOpacity>
-          )}
-        </View>
-        <TouchableOpacity
-          onPress={closeAt}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="Close references"
-        >
-          <X size={20} color={T.textDim} weight="bold" />
-        </TouchableOpacity>
-      </View>
-
-      {query.length > 0 && (
-        <View style={[styles.resultsHeader, { borderBottomColor: T.border }]}>
-          <Text style={[styles.resultsLabel, { color: T.textDim }]}>
-            {`RESULTS FOR "${query.toUpperCase()}"`}
-          </Text>
-        </View>
-      )}
-
-      <View style={[styles.filterBar, { borderBottomColor: T.border }]}>
-        <FlatList
-          horizontal
-          data={FILTERS}
-          keyExtractor={(f) => f.key}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item: f }) => {
-            const active = f.key === activeFilter;
-            const color = T.accent;
-            return (
-              <TouchableOpacity
-                onPress={() => setActiveFilter(f.key)}
-                style={[
-                  styles.filterPill,
-                  {
-                    backgroundColor: active ? color + "22" : T.surface,
-                    borderColor: active ? color : T.border,
-                  },
-                ]}
-              >
-                <Text style={[styles.filterText, { color: active ? color : T.textDim }]}>
-                  {f.label}
-                </Text>
+      <Animated.View
+        style={[
+          styles.overlay,
+          { backgroundColor: T.pageBg, opacity, transform: [{ translateY }] },
+        ]}
+      >
+        <View style={[styles.topBar, { paddingTop: topPad + 4, borderBottomColor: T.border }]}>
+          <View style={[styles.searchRow, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
+            <TextInput
+              ref={inputRef}
+              style={[styles.input, { color: T.textBright }]}
+              placeholder="Search everything..."
+              placeholderTextColor={T.textDim}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+              autoCapitalize="none"
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={clearResults}>
+                <X size={14} color={T.textDim} weight="duotone" />
               </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={closeAt}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Close references"
+          >
+            <X size={20} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
 
-      <FlatList
-        data={results}
-        keyExtractor={(item) => item.urn}
-        contentContainerStyle={{ paddingBottom: navBottom + 16 }}
-        keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => {
-          const domain = item.domain as Domain;
-          const IconComponent = DOMAIN_ICON[domain];
-          return (
-            <View style={[styles.resultRow, { borderBottomColor: T.border }]}>
-              <View style={[styles.domainIcon, { backgroundColor: T.accentSoft }]}>
-                <IconComponent size={16} color={T.accent} weight="bold" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.resultTitle, { color: T.textBright }]}>{item.title}</Text>
-                <View style={styles.resultMeta}>
-                  <View style={[styles.domainBadge, { backgroundColor: softColor }]}>
-                    <Text style={[styles.domainBadgeText, { color: domainColor }]}>
-                      {domain.toUpperCase()}
-                    </Text>
-                  </View>
-                  {item.description ? (
-                    <Text style={[styles.resultSub, { color: T.textDim }]} numberOfLines={1}>
-                      {item.description}
-                    </Text>
-                  ) : null}
+        {query.length > 0 && (
+          <View style={[styles.resultsHeader, { borderBottomColor: T.border }]}>
+            <Text style={[styles.resultsLabel, { color: T.textDim }]}>
+              {`RESULTS FOR "${query.toUpperCase()}"`}
+            </Text>
+          </View>
+        )}
+
+        <View style={[styles.filterBar, { borderBottomColor: T.border }]}>
+          <FlatList
+            horizontal
+            data={FILTERS}
+            keyExtractor={(f) => f.key}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContent}
+            renderItem={({ item: f }) => {
+              const active = f.key === activeFilter;
+              const color = T.accent;
+              return (
+                <TouchableOpacity
+                  onPress={() => setActiveFilter(f.key)}
+                  style={[
+                    styles.filterPill,
+                    {
+                      backgroundColor: active ? color + "22" : T.surface,
+                      borderColor: active ? color : T.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.filterText, { color: active ? color : T.textDim }]}>
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+
+        <FlatList
+          data={results}
+          keyExtractor={(item) => item.urn}
+          contentContainerStyle={{ paddingBottom: navBottom + 16 }}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const domain = item.domain as Domain;
+            const IconComponent = DOMAIN_ICON[domain];
+            const domainColor = T.accent;
+            const softColor = T.accentSoft;
+            return (
+              <View style={[styles.resultRow, { borderBottomColor: T.border }]}>
+                <View style={[styles.domainIcon, { backgroundColor: T.accentSoft }]}>
+                  <IconComponent size={16} color={T.accent} weight="bold" />
                 </View>
-              </View>
-              <View style={styles.actionButtons}>
-                {atFromEditor && (
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.resultTitle, { color: T.textBright }]}>{item.title}</Text>
+                  <View style={styles.resultMeta}>
+                    <View style={[styles.domainBadge, { backgroundColor: softColor }]}>
+                      <Text style={[styles.domainBadgeText, { color: domainColor }]}>
+                        {domain.toUpperCase()}
+                      </Text>
+                    </View>
+                    {item.description ? (
+                      <Text style={[styles.resultSub, { color: T.textDim }]} numberOfLines={1}>
+                        {item.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+                <View style={styles.actionButtons}>
+                  {atFromEditor && (
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtn,
+                        { backgroundColor: T.accent + "22", borderColor: T.accent + "55" },
+                      ]}
+                      onPress={() => handleReference(item)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.actionBtnAt, { color: T.accent }]}>@</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[
                       styles.actionBtn,
-                      { backgroundColor: T.accent + "22", borderColor: T.accent + "55" },
+                      { backgroundColor: T.surface, borderColor: T.border },
                     ]}
-                    onPress={() => handleReference(item)}
+                    onPress={() => handleNavigate(item)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.actionBtnAt, { color: T.accent }]}>@</Text>
+                    <ArrowRight size={13} color={T.textDim} weight="bold" />
                   </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: T.surface, borderColor: T.border }]}
-                  onPress={() => handleNavigate(item)}
-                  activeOpacity={0.7}
-                >
-                  <ArrowRight size={13} color={T.textDim} weight="bold" />
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
-          isLoading ? (
-            <View style={styles.empty}>
-              <ActivityIndicator color={T.accent} />
-            </View>
-          ) : (
-            <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: T.textDim }]}>
-                {query.trim() ? "No results found" : "Type to search..."}
-              </Text>
-            </View>
-          )
-        }
-      />
-    </Animated.View>
+            );
+          }}
+          ListEmptyComponent={
+            isLoading ? (
+              <View style={styles.empty}>
+                <ActivityIndicator color={T.accent} />
+              </View>
+            ) : (
+              <View style={styles.empty}>
+                <Text style={[styles.emptyText, { color: T.textDim }]}>
+                  {query.trim() ? "No results found" : "Type to search..."}
+                </Text>
+              </View>
+            )
+          }
+        />
+      </Animated.View>
     </Modal>
   );
 }

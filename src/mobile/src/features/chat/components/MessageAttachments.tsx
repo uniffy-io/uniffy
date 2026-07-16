@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   gridCell: { width: 145, height: 110 },
   gridImage: { width: "100%", height: "100%", borderRadius: 10 },
   overflowScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
     borderRadius: 10,
     alignItems: "center",

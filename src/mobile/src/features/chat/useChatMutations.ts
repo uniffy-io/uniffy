@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AgentConfirmationDecision } from "@uniffy/proto/chat/v1/chat_pb";
 import { SubjectType } from "@uniffy/proto/common/v1/common_pb";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
 import {
   channelTypeToProto,

@@ -121,7 +121,7 @@ export function ActionSheet({
           <View style={[styles.header, { borderBottomColor: T.border }]}>
             {HeaderIcon && iconColor && (
               <View style={[styles.headerIcon, { backgroundColor: iconColor + "20" }]}>
-                <HeaderIcon size={18} color={iconColor} weight="bold" />
+                {React.createElement(HeaderIcon, { size: 18, color: iconColor, weight: "bold" })}
               </View>
             )}
             <View style={{ flex: 1 }}>

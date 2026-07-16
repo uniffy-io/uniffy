@@ -113,8 +113,6 @@ export function NotesTree({
   onNotePress: (id: string) => void;
   onNoteLongPress: (node: TreeNode) => void;
 }) {
-  const T = useTheme();
-
   return (
     <View style={styles.container}>
       {sections.map((section) => (

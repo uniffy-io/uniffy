@@ -114,19 +114,53 @@ service_option = click.option(
 stack_option = click.option("--stack", type=Stack, default="docker", show_default=True)
 
 
+BACKEND_COMPOSE_SERVICES = (("backend", "dev"), ("worker-core", "dev"), ("worker-egress", "dev"))
+
+
+def _docker_sync(compose_svc: str, profile: str) -> None:
+    """Bring one container's dependency volumes in line with the lockfiles.
+
+    Every app container owns separate anonymous volumes (node_modules, .venv),
+    so a lock change only reaches a RUNNING container by re-running its
+    entrypoint - restart does exactly that (chown pass + hash-guarded frozen
+    install). A throwaway `compose run` would install into fresh anonymous
+    volumes and discard them; it is only useful to pre-warm the shared store
+    when the container is not running.
+    """
+    if container_running(compose_svc):
+        sh(compose("restart", compose_svc, profiles=[profile]))
+    else:
+        sh(compose("run", "--rm", "--no-deps", compose_svc, "true", profiles=[profile]))
+
+
+def _resync_after_lock_change(service: str) -> None:
+    """After a dependency mutation, sync the sibling containers that share the
+    mutated lockfile but not the mutated container's volumes."""
+    if service == "backend":
+        siblings = [(svc, profile) for svc, profile in BACKEND_COMPOSE_SERVICES if svc != "backend"]
+    else:
+        siblings = [(svc, profile) for name, (svc, _, profile) in NODE_SERVICES.items() if name != service]
+    for svc, profile in siblings:
+        if container_running(svc):
+            sh(compose("restart", svc, profiles=[profile]))
+
+
 @deps.command("install")
 @service_option
 @stack_option
 def deps_install(service: str, stack: str):
-    """Sync dependencies from the lockfiles."""
+    """Sync dependencies from the lockfiles (restarts running containers in docker mode)."""
     if stack == "docker":
         if service == "all":
             toolbox_run(["true"])
+            for svc, profile in [*BACKEND_COMPOSE_SERVICES, *((s, p) for s, _, p in NODE_SERVICES.values())]:
+                if container_running(svc):
+                    sh(compose("restart", svc, profiles=[profile]))
         elif service == "backend":
-            sh(compose("run", "--rm", "--no-deps", "backend", "true", profiles=["dev"]))
+            _docker_sync("backend", "dev")
         else:
             svc, _, profile = NODE_SERVICES[service]
-            sh(compose("run", "--rm", "--no-deps", svc, "true", profiles=[profile]))
+            _docker_sync(svc, profile)
         return
     if service in ("backend", "all"):
         sh(["uv", "sync"])
@@ -145,6 +179,8 @@ def _mutate(service: str, stack: str, verb: str, packages: tuple[str, ...], dev:
     else:
         args = [verb, *(["--save-dev"] if dev and verb == "add" else []), *packages]
         workspace_cmd(service, stack, args)
+    if stack == "docker":
+        _resync_after_lock_change(service)
 
 
 @deps.command("add")
@@ -153,7 +189,7 @@ def _mutate(service: str, stack: str, verb: str, packages: tuple[str, ...], dev:
 @stack_option
 @click.option("--dev", is_flag=True, help="Add as a dev dependency.")
 def deps_add(packages, service, stack, dev):
-    """Add packages to a workspace."""
+    """Add packages to a workspace (pkg@version also pins upgrades/downgrades)."""
     _mutate(service, stack, "add", packages, dev)
 
 
@@ -176,6 +212,8 @@ def deps_update(packages, service, stack):
         workspace_cmd("backend", stack, ["sync", "--upgrade", *(f"--upgrade-package={p}" for p in packages)])
     else:
         workspace_cmd(service, stack, ["update", *packages])
+    if stack == "docker":
+        _resync_after_lock_change(service)
 
 
 @deps.command("run", context_settings=PASSTHROUGH)

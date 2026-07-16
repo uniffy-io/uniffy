@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
 import { eventToPlain, categoryToPlain } from "@features/calendar/calendarSerializer";
 

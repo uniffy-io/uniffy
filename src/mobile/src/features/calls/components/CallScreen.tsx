@@ -1,11 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, useWindowDimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Alert,
+  useWindowDimensions,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MicrophoneSlash } from "phosphor-react-native";
 import type { Participant } from "livekit-client";
 import { loadLivekitClient } from "@features/calls/livekit";
-import { useCall } from "@features/calls/call-context";
-import { useAuth } from "@core/providers/auth-context";
+import { useCall } from "@features/calls/CallContext";
+import { useAuth } from "@core/providers/AuthContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { useRoomParticipants } from "@features/calls/useRoomParticipants";
 import { useChannels } from "@features/chat/useChat";

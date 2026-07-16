@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { permissionsApi } from "@shared/permissions/permissionsApi";
 import { directoryApi } from "@shared/directory/directoryApi";
 import {

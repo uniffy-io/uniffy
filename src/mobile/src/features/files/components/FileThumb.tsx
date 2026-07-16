@@ -49,11 +49,18 @@ export function FileThumb({
   const color = fileColor(ext);
   const tint = color + "18";
 
-  // A recycled row (or a refresh) should re-attempt from scratch.
-  useEffect(() => {
-    attemptsRef.current = 0;
+  // A recycled row (or a refresh) should re-attempt from scratch. Reset the
+  // render state during render on the key change; the attempt counter is a
+  // render-free ref, so it resets off the render path.
+  const resetKey = `${fileId}:${refreshKey ?? 0}`;
+  const [syncedResetKey, setSyncedResetKey] = useState(resetKey);
+  if (resetKey !== syncedResetKey) {
+    setSyncedResetKey(resetKey);
     setFailed(false);
     setTick(0);
+  }
+  useEffect(() => {
+    attemptsRef.current = 0;
   }, [fileId, refreshKey]);
 
   useEffect(

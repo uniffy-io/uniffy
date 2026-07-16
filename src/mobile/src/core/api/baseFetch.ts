@@ -8,13 +8,19 @@ import { getApiBaseUrl } from "@core/config/serverUrl";
 // rewrite were ever missed.
 export const SENTINEL_BASE_URL = "http://uniffy.invalid/api";
 
-export function serverRewritingFetch(
-  baseFetch: typeof globalThis.fetch,
-): typeof globalThis.fetch {
+// React Native's Android fetch has no native timeouts (OkHttp is built with
+// them disabled), so without a deadline a black-holed request hangs forever.
+// Applies to the unary transports only; the long-lived event stream manages
+// its own liveness via the server heartbeat watchdog. Interactive reads and
+// writes should fail fast enough for the UI to react; RPCs that legitimately
+// run long (chunk pushes, server-side storage copies) override per call with
+// the slow tier.
+export const DEFAULT_RPC_TIMEOUT_MS = 10_000;
+export const SLOW_RPC_TIMEOUT_MS = 60_000;
+
+export function serverRewritingFetch(baseFetch: typeof globalThis.fetch): typeof globalThis.fetch {
   const swap = (url: string): string =>
-    url.startsWith(SENTINEL_BASE_URL)
-      ? getApiBaseUrl() + url.slice(SENTINEL_BASE_URL.length)
-      : url;
+    url.startsWith(SENTINEL_BASE_URL) ? getApiBaseUrl() + url.slice(SENTINEL_BASE_URL.length) : url;
 
   return ((input: RequestInfo | URL, init?: RequestInit) => {
     if (typeof input === "string") return baseFetch(swap(input), init);

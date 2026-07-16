@@ -1,2 +1,2 @@
-export { default } from "@features/files/screens/file-detail-screen";
-export * from "@features/files/screens/file-detail-screen";
+export { FileDetailScreen as default } from "@features/files/screens/FileDetailScreen";
+export * from "@features/files/screens/FileDetailScreen";

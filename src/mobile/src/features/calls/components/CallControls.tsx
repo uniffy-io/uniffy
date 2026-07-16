@@ -11,7 +11,7 @@ import {
   SpeakerSlash,
   PhoneDisconnect,
 } from "phosphor-react-native";
-import { useCall } from "@features/calls/call-context";
+import { useCall } from "@features/calls/CallContext";
 import type { ThemeColors } from "@theme/theme";
 
 function tick() {

@@ -4,14 +4,7 @@
 // hiding markers would desync the native caret on Android.
 
 export type InlineKind =
-  | "plain"
-  | "marker"
-  | "bold"
-  | "italic"
-  | "bolditalic"
-  | "strike"
-  | "highlight"
-  | "code";
+  "plain" | "marker" | "bold" | "italic" | "bolditalic" | "strike" | "highlight" | "code";
 
 export type InlineFormat = "bold" | "italic" | "strike" | "highlight" | "code";
 

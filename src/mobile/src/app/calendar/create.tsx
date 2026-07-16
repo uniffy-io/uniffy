@@ -1,2 +1,2 @@
-export { default } from "@features/calendar/screens/event-create-screen";
-export * from "@features/calendar/screens/event-create-screen";
+export { CreateEventScreen as default } from "@features/calendar/screens/EventCreateScreen";
+export * from "@features/calendar/screens/EventCreateScreen";

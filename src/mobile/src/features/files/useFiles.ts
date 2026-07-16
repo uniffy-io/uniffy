@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { filesApi } from "@features/files/filesApi";
 import { fileToPlain, treeNodeToPlain, formatSize } from "@features/files/fileSerializer";
 import type { SerializedFile, PlainTreeNode } from "@features/files/fileSerializer";

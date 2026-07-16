@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { PhoneDisconnect } from "phosphor-react-native";
-import { useCall, type CallEndCause } from "@features/calls/call-context";
+import { useCall, type CallEndCause } from "@features/calls/CallContext";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 

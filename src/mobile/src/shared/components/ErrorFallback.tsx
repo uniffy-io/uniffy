@@ -1,8 +1,7 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from "react-native";
 import { Warning } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useColorScheme } from "react-native";
 import { reloadAppAsync } from "expo";
 import { DARK, LIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";

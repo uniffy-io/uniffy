@@ -11,9 +11,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.uniffy.app",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "audio"
-        ]
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {

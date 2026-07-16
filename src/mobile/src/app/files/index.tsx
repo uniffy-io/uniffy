@@ -1,2 +1,2 @@
-export { default } from "@features/files/screens/files-list-screen";
-export * from "@features/files/screens/files-list-screen";
+export { FilesListScreen as default } from "@features/files/screens/FilesListScreen";
+export * from "@features/files/screens/FilesListScreen";

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { AppState } from "react-native";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   ChatEventType,
@@ -24,7 +25,8 @@ import {
   recordEndedCall,
   syncActiveCalls,
 } from "@features/calls/useCallsState";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
+import { addOnlineListener } from "@core/api/connectivity";
 
 export type TypingEntry = { id: string; name: string; isAgent: boolean; at: number };
 
@@ -62,11 +64,23 @@ export const STREAM_HEALTH_KEY = ["chat", "stream", "healthy"];
 const TYPING_TTL_MS = 8000;
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
+// The server heartbeats every 30s; 75s of silence means the socket is gone
+// even though the platform never errors it (half-open TCP on LTE, iOS
+// suspending sockets in background).
+const STREAM_IDLE_LIMIT_MS = 75000;
+const WATCHDOG_TICK_MS = 15000;
+// On a foreground/online kick, one missed heartbeat plus slack is enough
+// evidence to abandon the current socket instead of waiting out the watchdog.
+const KICK_STALE_MS = 35000;
 
 let refCount = 0;
 let controller: AbortController | null = null;
+let attemptController: AbortController | null = null;
+let lastEventAtMs = 0;
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
 let currentOrgId: string | null = null;
+let lifecycleUnsubs: (() => void)[] = [];
+let sleepWakers: (() => void)[] = [];
 
 /**
  * Subscribes the app to the unified chat event stream and mirrors events into
@@ -103,6 +117,14 @@ function start(orgId: string, queryClient: QueryClient) {
   currentOrgId = orgId;
   if (sweepTimer) clearInterval(sweepTimer);
   sweepTimer = setInterval(() => sweepTyping(queryClient), 5000);
+  for (const unsub of lifecycleUnsubs) unsub();
+  const appStateSub = AppState.addEventListener("change", (state) => {
+    if (state === "active") kick();
+  });
+  const removeOnline = addOnlineListener((online) => {
+    if (online) kick();
+  });
+  lifecycleUnsubs = [() => appStateSub.remove(), removeOnline];
   void runLoop(orgId, queryClient, ctl);
 }
 
@@ -114,37 +136,70 @@ function stop(queryClient: QueryClient) {
     clearInterval(sweepTimer);
     sweepTimer = null;
   }
+  for (const unsub of lifecycleUnsubs) unsub();
+  lifecycleUnsubs = [];
   queryClient.setQueryData(STREAM_HEALTH_KEY, false);
+}
+
+// Foreground or connectivity regained: skip any backoff sleep, and drop the
+// current socket when it has already missed a heartbeat (likely dead after
+// background suspension or a network switch).
+function kick() {
+  if (attemptController && Date.now() - lastEventAtMs > KICK_STALE_MS) {
+    attemptController.abort();
+  }
+  const wakers = sleepWakers;
+  sleepWakers = [];
+  for (const wake of wakers) wake();
 }
 
 async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortController) {
   let backoffMs = RECONNECT_BASE_MS;
   while (!ctl.signal.aborted) {
+    const attempt = new AbortController();
+    attemptController = attempt;
+    const onOuterAbort = () => attempt.abort();
+    ctl.signal.addEventListener("abort", onOuterAbort, { once: true });
+    lastEventAtMs = Date.now();
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastEventAtMs > STREAM_IDLE_LIMIT_MS) attempt.abort();
+    }, WATCHDOG_TICK_MS);
     try {
       const stream = chatStreamApi.streamUserChatEvents(
         { organizationId: orgId },
-        { signal: ctl.signal },
+        { signal: attempt.signal },
       );
       // Stream events are a latency optimization for calls, not the source of
       // truth: resync the active-call snapshot on every (re)connect attempt.
       // While the stream is down this doubles as the polling fallback, riding
       // the same backoff cadence.
-      void resyncActiveCalls(orgId, queryClient, ctl.signal);
+      void resyncActiveCalls(orgId, queryClient, attempt.signal);
       for await (const event of stream) {
-        if (ctl.signal.aborted) break;
+        if (attempt.signal.aborted) break;
+        lastEventAtMs = Date.now();
         queryClient.setQueryData(STREAM_HEALTH_KEY, true);
         backoffMs = RECONNECT_BASE_MS;
         applyUserEvent(orgId, queryClient, event);
       }
     } catch {
-      // Either a network drop or a platform fetch that cannot consume
-      // server streams; both fall back to the polling cadence below.
+      // Network drop, watchdog abort, or a platform fetch that cannot consume
+      // server streams; all fall back to the polling cadence below.
+    } finally {
+      clearInterval(watchdog);
+      ctl.signal.removeEventListener("abort", onOuterAbort);
+      if (attemptController === attempt) attemptController = null;
     }
     queryClient.setQueryData(STREAM_HEALTH_KEY, false);
     if (ctl.signal.aborted) break;
-    await sleep(backoffMs, ctl.signal);
+    await sleep(jitter(backoffMs), ctl.signal);
     backoffMs = Math.min(backoffMs * 2, RECONNECT_MAX_MS);
   }
+}
+
+// Desynchronizes reconnects across clients so a server restart does not get
+// hammered by every device on the same beat.
+function jitter(ms: number): number {
+  return Math.round(ms * (0.75 + Math.random() * 0.5));
 }
 
 async function resyncActiveCalls(orgId: string, queryClient: QueryClient, signal: AbortSignal) {
@@ -159,15 +214,17 @@ async function resyncActiveCalls(orgId: string, queryClient: QueryClient, signal
 
 function sleep(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve) => {
-    const t = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(t);
-        resolve();
-      },
-      { once: true },
-    );
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(t);
+      sleepWakers = sleepWakers.filter((w) => w !== finish);
+      resolve();
+    };
+    const t = setTimeout(finish, ms);
+    sleepWakers.push(finish);
+    signal.addEventListener("abort", finish, { once: true });
   });
 }
 

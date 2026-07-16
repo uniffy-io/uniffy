@@ -3,7 +3,7 @@ import { AppState } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { PresenceStatus } from "@uniffy/proto/presence/v1/presence_pb";
 import { presenceApi } from "@shared/presence/presenceApi";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 
 // Matches the web heartbeat cadence so the backend stale-presence GC keeps
 // both clients on the same offline threshold.

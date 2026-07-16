@@ -1,2 +1,2 @@
-export { default } from "@features/projects/screens/task-create-screen";
-export * from "@features/projects/screens/task-create-screen";
+export { CreateTaskScreen as default } from "@features/projects/screens/TaskCreateScreen";
+export * from "@features/projects/screens/TaskCreateScreen";

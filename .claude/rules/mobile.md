@@ -55,13 +55,13 @@ Every import uses an alias. Relative imports across modules are not used (only s
 
 ```tsx
 // src/app/chat/[id].tsx
-export { default } from "@features/chat/screens/chat-screen";
-export * from "@features/chat/screens/chat-screen";
+export { default } from "@features/chat/screens/ChatScreen";
+export * from "@features/chat/screens/ChatScreen";
 ```
 
 The `export *` forwards any Expo Router route config the screen declares (`unstable_settings`, `ErrorBoundary`, `generateStaticParams`). Route files keep the `default` export that Expo Router requires; this is the one place a default export is expected. Screens and every other module use named exports.
 
-Screen components live in `src/features/<domain>/screens/` and are named `*-screen.tsx` (kebab-case). Do not inline screen logic (state, RPC calls, styles) into a route file under `app/`. The route URL and its file path stay stable when the screen moves; only the delegation target changes. Layout files (`_layout.tsx`), route groups like `(tabs)`, and Expo specials (`+not-found.tsx`, `+native-intent.tsx`) stay in `app/`. Do not put non-route files inside `app/`; Expo Router treats files there as routes.
+Screen components live in `src/features/<domain>/screens/` and are named `*Screen.tsx` (PascalCase, e.g. `ChatScreen.tsx`, `NotificationPreferencesScreen.tsx`). Do not inline screen logic (state, RPC calls, styles) into a route file under `app/`. The route URL and its file path stay stable when the screen moves; only the delegation target changes. Layout files (`_layout.tsx`), route groups like `(tabs)`, and Expo specials (`+not-found.tsx`, `+native-intent.tsx`) stay in `app/`. Do not put non-route files inside `app/`; Expo Router treats files there as routes.
 
 ## Feature module anatomy
 
@@ -75,7 +75,7 @@ src/features/chat/
   useChatMutations.ts   TanStack Query mutation hooks
   chatSerializer.ts     proto -> view-model, and the view-model types
   components/           domain components (ChatComposer, MessageAttachments, ...)
-  screens/              *-screen.tsx route targets
+  screens/              *Screen.tsx route targets
 ```
 
 Not every feature needs every part; small features (bookmarks) are a hook plus an api plus a screen. Keep the query hook file and the mutation hook file split when both are non-trivial; combine them when the feature is small.
@@ -89,6 +89,16 @@ core/api/transport  ->  features/<d>/<d>Api  ->  features/<d>/use<D>  ->  featur
 
 The transport, the streaming transport, and the query client are created once in `core/api/`. Auth token storage and the auth interceptor live in `core/auth/`. Feature API modules call `createClient(Service, transport)` and expose typed pass-through methods. Hooks wrap them in `useQuery`/`useMutation`. Serializers convert proto messages to view-model types and export those types.
 
+### Timeouts and network resilience
+
+React Native's Android fetch has no native timeouts, so an RPC without a deadline can hang forever on LTE. Every new domain and every new API call follows these rules:
+
+- **Every RPC rides a shared transport from `core/api/`.** Never create a per-feature transport and never hit the API with raw `fetch`. The unary transports carry `DEFAULT_RPC_TIMEOUT_MS` (10s, `core/api/baseFetch.ts`) as `defaultTimeoutMs`, so a pass-through api method gets a bounded deadline for free. This is the interactive tier: list, get, create, send.
+- **RPCs that legitimately run long get `SLOW_RPC_TIMEOUT_MS` (60s) per call, set inside the feature's api module** - not at hook or screen call sites. `filesApi.ts` is the reference: `uploadChunk`, `completeUpload`, `copyItems`, `bulkDelete`, `emptyTrash` pass `{ timeoutMs: SLOW_RPC_TIMEOUT_MS }`. Qualifying means real server-side storage or export work; "might be a big list" does not qualify (paginate instead).
+- **Server-streaming RPCs use `streamTransport` and carry NO deadline.** A call timeout would kill the long-lived stream. The consumer owns liveness and reconnection instead: the chat stream (`features/chat/useChatStream.ts`) is the reference - heartbeat watchdog (abort after 2.5 missed 30s server heartbeats), exponential backoff with jitter, restart kick on AppState active and connectivity regained. A new stream consumer copies that shape; a stream without a watchdog silently goes half-open on LTE and never recovers.
+- **Cancellable or retried calls accept `options?: { signal?: AbortSignal }`** in the api method and thread it to the client, so hooks can abort in-flight work (see the upload pipeline).
+- **Connectivity and focus are already wired** (`core/api/connectivity.ts` feeds TanStack's `focusManager`/`onlineManager`). New query hooks get foreground refetch for free; do not add per-screen AppState refetch listeners.
+
 ## Cross-cutting placement
 
 Concerns used across many domains do not belong to any one feature:
@@ -97,15 +107,16 @@ Concerns used across many domains do not belong to any one feature:
 - `shared/mentions`: the leaf mention primitives (`MentionTextInput`, `ReferenceChip`, `useMentionInput`) that have no feature dependencies.
 - `shared/components`, `shared/hooks`, `shared/lib`: generic primitives (`Avatar`, `DomainHeader`, `MarkdownRenderer`, `BottomNav`), generic hooks (`useTheme`), and pure utils.
 - `features/mentions`: the `@` overlay (`AtOverlay`) and reference-insertion helper. These orchestrate search, agents, and files, so they are feature-level, not shared.
-- `core/providers`: the global providers (`auth-context`, `theme-context`, `uniffy-context`). They depend only on `core`. The call provider lives in `features/calls` since it is calls-domain state.
+- `core/providers`: the global providers (`AuthContext`, `ThemeContext`, `UniffyContext`). They depend only on `core`. The call provider lives in `features/calls` since it is calls-domain state.
 - `core/types.ts`: cross-cutting types (`Domain`, `CurrentUser`).
 - `theme/`: `theme.ts` tokens, `typography.ts`, `colorUtils.ts`. Read tokens through `useTheme()` (returns resolved dark/light colors plus `isDark`), not by importing raw token maps into components.
 
-Calls render as a global overlay mounted from `_layout`, not as a route, but everything calls-related still lives in `features/calls/` (api, hooks, serializer, LiveKit glue, `call-context`, components).
+Calls render as a global overlay mounted from `_layout`, not as a route, but everything calls-related still lives in `features/calls/` (api, hooks, serializer, LiveKit glue, `CallContext`, components).
 
 ## Conventions
 
 - Named exports everywhere. The sole default export is a route file's re-export of its screen.
+- Filenames are PascalCase for React component modules (`ChatScreen.tsx`, `AuthContext.tsx`, `ChatComposer.tsx`) and camelCase for everything else (`chatApi.ts`, `useChat.ts`, `queryClient.ts`). No kebab-case. `unicorn/filename-case` in `eslint.config.js` enforces this across `features/`, `shared/`, `core/`, and `theme/`; `app/` is exempt because Expo Router owns those names (URL segments plus specials like `+not-found`, `[id]`, `(tabs)`).
 - Static assets stay at the root `assets/`. Reference them with a relative `require()` from the file's location, or add an `@assets` alias if the depth becomes awkward.
 - Platform variants use the `.native.ts` / `.ios.tsx` / `.web.tsx` suffix (for example `features/calls/livekit.ts` + `livekit.native.ts`); import the base specifier and let Metro pick.
 - No barrel `index.ts` files today; imports target the concrete module. If barrels are introduced later, they do not change the layering rules.
@@ -120,6 +131,6 @@ Calls render as a global overlay mounted from `_layout`, not as a route, but eve
 
 ## Adding a screen to an existing feature
 
-1. Write `features/<domain>/screens/<name>-screen.tsx` with a default export.
+1. Write `features/<domain>/screens/<Name>Screen.tsx` with a default export.
 2. Add `app/<domain>/<route>.tsx` that re-exports it (`export { default } ...; export * ...`).
 3. Keep all logic in the screen; the route file stays two lines.

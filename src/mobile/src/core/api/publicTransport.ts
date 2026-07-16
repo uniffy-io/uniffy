@@ -1,6 +1,10 @@
 import { createConnectTransport } from "@connectrpc/connect-web";
 import type { Interceptor } from "@connectrpc/connect";
-import { SENTINEL_BASE_URL, serverRewritingFetch } from "@core/api/baseFetch";
+import {
+  DEFAULT_RPC_TIMEOUT_MS,
+  SENTINEL_BASE_URL,
+  serverRewritingFetch,
+} from "@core/api/baseFetch";
 import { clientUserAgent } from "@core/api/userAgent";
 
 const userAgent = clientUserAgent();
@@ -21,4 +25,5 @@ export const publicTransport = createConnectTransport({
   baseUrl: SENTINEL_BASE_URL,
   interceptors: [userAgentInterceptor],
   fetch: serverRewritingFetch(globalThis.fetch),
+  defaultTimeoutMs: DEFAULT_RPC_TIMEOUT_MS,
 });

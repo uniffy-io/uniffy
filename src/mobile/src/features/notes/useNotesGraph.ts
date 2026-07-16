@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { notesApi } from "@features/notes/notesApi";
 import { noteToPlain } from "@features/notes/noteSerializer";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";

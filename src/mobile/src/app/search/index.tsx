@@ -1,2 +1,2 @@
-export { default } from "@features/search/screens/search-screen";
-export * from "@features/search/screens/search-screen";
+export { SearchScreen as default } from "@features/search/screens/SearchScreen";
+export * from "@features/search/screens/SearchScreen";

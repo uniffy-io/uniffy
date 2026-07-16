@@ -1,6 +1,11 @@
 import { useQuery, type QueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
-import type { PlainCall, PlainParticipant, RingInvite, CallEndReason } from "@features/calls/callsSerializer";
+import { useAuth } from "@core/providers/AuthContext";
+import type {
+  PlainCall,
+  PlainParticipant,
+  RingInvite,
+  CallEndReason,
+} from "@features/calls/callsSerializer";
 
 export type ActiveCallsMap = Record<string, PlainCall>;
 

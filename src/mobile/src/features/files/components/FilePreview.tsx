@@ -239,9 +239,7 @@ function AudioPreview({ uri, filename }: { uri: string; filename: string }) {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <View style={[styles.audioTrack, { backgroundColor: T.border }]}>
-            <View
-              style={[styles.audioFill, { backgroundColor: T.accent, width: `${pct}%` }]}
-            />
+            <View style={[styles.audioFill, { backgroundColor: T.accent, width: `${pct}%` }]} />
           </View>
           <Text style={[styles.audioTime, { color: T.textDim }]}>
             {fmtTime(position)} / {fmtTime(duration)}

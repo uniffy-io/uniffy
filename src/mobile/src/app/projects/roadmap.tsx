@@ -1,2 +1,2 @@
-export { default } from "@features/projects/screens/roadmap-screen";
-export * from "@features/projects/screens/roadmap-screen";
+export { RoadmapScreen as default } from "@features/projects/screens/RoadmapScreen";
+export * from "@features/projects/screens/RoadmapScreen";

@@ -1,2 +1,2 @@
-export { default } from "@features/projects/screens/project-detail-screen";
-export * from "@features/projects/screens/project-detail-screen";
+export { ProjectBoardScreen as default } from "@features/projects/screens/ProjectDetailScreen";
+export * from "@features/projects/screens/ProjectDetailScreen";

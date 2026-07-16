@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
-import { useAuth } from "@core/providers/auth-context";
+import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
+import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
 
 function isoToTimestamp(iso: string) {
@@ -26,9 +27,13 @@ export function useCreateEvent() {
       timezone?: string;
       location?: string;
       meetingUrl?: string;
+      channelId?: string;
+      channelAutoCreated?: boolean;
       categoryId?: string;
       attendeeIds?: string[];
       tagIds?: string[];
+      accessMode?: AccessMode;
+      baselineRole?: ContentRole;
     }) =>
       calendarApi.createEvent({
         organizationId: organizationId!,
@@ -40,9 +45,13 @@ export function useCreateEvent() {
         timezone: args.timezone,
         location: args.location,
         meetingUrl: args.meetingUrl,
+        channelId: args.channelId,
+        channelAutoCreated: args.channelAutoCreated,
         categoryId: args.categoryId,
         attendeeIds: args.attendeeIds ?? [],
         tagIds: args.tagIds ?? [],
+        accessMode: args.accessMode,
+        baselineRole: args.baselineRole,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });
@@ -64,6 +73,8 @@ export function useUpdateEvent() {
       isAllDay?: boolean;
       location?: string;
       meetingUrl?: string;
+      channelId?: string;
+      channelAutoCreated?: boolean;
       categoryId?: string;
     }) =>
       calendarApi.updateEvent({
@@ -76,6 +87,8 @@ export function useUpdateEvent() {
         isAllDay: args.isAllDay,
         location: args.location,
         meetingUrl: args.meetingUrl,
+        channelId: args.channelId,
+        channelAutoCreated: args.channelAutoCreated,
         categoryId: args.categoryId,
       }),
     onSuccess: (_data, variables) => {

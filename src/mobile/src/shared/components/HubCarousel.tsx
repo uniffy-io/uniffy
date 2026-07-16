@@ -1,22 +1,20 @@
 import React from "react";
-import { Modal, StyleSheet, Text, View, Platform, Pressable, useWindowDimensions } from "react-native";
+import {
+  Modal,
+  StyleSheet,
+  Text,
+  View,
+  Platform,
+  Pressable,
+  useWindowDimensions,
+} from "react-native";
 import { BlurView } from "expo-blur";
 import { GlassSurface } from "@shared/components/GlassSurface";
 import { GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import type { ComposedGesture, GestureType } from "react-native-gesture-handler";
-import Animated, {
-  interpolate,
-  useAnimatedStyle,
-  Extrapolation,
-} from "react-native-reanimated";
+import Animated, { interpolate, useAnimatedStyle, Extrapolation } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
-import {
-  NotePencil,
-  FolderSimple,
-  ChatCircle,
-  CalendarBlank,
-  Kanban,
-} from "phosphor-react-native";
+import { NotePencil, FolderSimple, ChatCircle, CalendarBlank, Kanban } from "phosphor-react-native";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import type { DomainKey } from "@theme/theme";
@@ -159,53 +157,53 @@ export function HubCarousel({
       onRequestClose={onRequestClose}
     >
       <GestureHandlerRootView style={styles.fill}>
-      <GestureDetector gesture={gesture}>
-        {/* The backdrop mounts with no animation: a Reanimated entering fade
+        <GestureDetector gesture={gesture}>
+          {/* The backdrop mounts with no animation: a Reanimated entering fade
             on an absolute-fill view collapses it on iOS 26 Fabric so it
             never draws, and animated opacity above glass would break the
             bubbles anyway (expo/expo#41024). Strong enough that text or file
             pages behind cannot compete with the wheel's icons, while the page
             stays faintly recognizable. */}
-        <View style={StyleSheet.absoluteFill} collapsable={false}>
-          <BlurView
-            intensity={55}
-            tint={T.isDark ? "dark" : "light"}
-            style={[styles.backdrop, { backgroundColor: T.isDark ? "#0d111ee6" : "#eeeeeee6" }]}
-          />
-        </View>
-      </GestureDetector>
+          <View style={StyleSheet.absoluteFill} collapsable={false}>
+            <BlurView
+              intensity={55}
+              tint={T.isDark ? "dark" : "light"}
+              style={[styles.backdrop, { backgroundColor: T.isDark ? "#0d111ee6" : "#eeeeeee6" }]}
+            />
+          </View>
+        </GestureDetector>
 
-      <Text
-        style={[
-          styles.label,
-          { color: T.textBright, bottom: labelBottom, pointerEvents: "none" },
-        ]}
-      >
-        {focusedItem.label}
-      </Text>
-      {showHint && (
         <Text
           style={[
-            styles.hint,
-            { color: T.textDim, bottom: labelBottom + 30, pointerEvents: "none" },
+            styles.label,
+            { color: T.textBright, bottom: labelBottom, pointerEvents: "none" },
           ]}
         >
-          Drag to rotate, release to open
+          {focusedItem.label}
         </Text>
-      )}
+        {showHint && (
+          <Text
+            style={[
+              styles.hint,
+              { color: T.textDim, bottom: labelBottom + 30, pointerEvents: "none" },
+            ]}
+          >
+            Drag to rotate, release to open
+          </Text>
+        )}
 
-      {HUB_ITEMS.map((item, i) => (
-        <HubItemView
-          key={item.key}
-          item={item}
-          index={i}
-          offset={offset}
-          centerBottom={centerBottom}
-          centerX={width / 2}
-          focused={i === focusedIndex}
-          onPress={() => onItemPress(i)}
-        />
-      ))}
+        {HUB_ITEMS.map((item, i) => (
+          <HubItemView
+            key={item.key}
+            item={item}
+            index={i}
+            offset={offset}
+            centerBottom={centerBottom}
+            centerX={width / 2}
+            focused={i === focusedIndex}
+            onPress={() => onItemPress(i)}
+          />
+        ))}
       </GestureHandlerRootView>
     </Modal>
   );
@@ -216,7 +214,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   item: {
     position: "absolute",

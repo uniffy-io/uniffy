@@ -28,7 +28,7 @@ export function refreshSession(): Promise<RefreshTokenResponse | null> {
   return inFlight;
 }
 
-function isAuthRejection(err: unknown): boolean {
+export function isAuthRejection(err: unknown): boolean {
   return (
     err instanceof ConnectError &&
     (err.code === Code.Unauthenticated || err.code === Code.PermissionDenied)

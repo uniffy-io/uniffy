@@ -26,7 +26,7 @@ import { Avatar } from "@shared/components/Avatar";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { useMembers, useDirectory, useMemberMutations } from "@shared/permissions/usePermissions";
 import {
   ACCESS_MODE_META,
@@ -468,7 +468,7 @@ function MemberRow({
 
 const styles = StyleSheet.create({
   modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: {
     maxHeight: "88%",
     borderTopLeftRadius: 20,

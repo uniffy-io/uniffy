@@ -2,8 +2,8 @@ import { useCallback, useState } from "react";
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import { useAuth } from "@core/providers/auth-context";
-import { useUniffy } from "@core/providers/uniffy-context";
+import { useAuth } from "@core/providers/AuthContext";
+import { useUniffy } from "@core/providers/UniffyContext";
 import { uploadAsset } from "@features/files/useFileMutations";
 import { filesApi } from "@features/files/filesApi";
 

@@ -15,7 +15,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). `./m
 | Compose lifecycle | `./manage.py stack up\|down\|rebuild\|recreate\|reset-data` (`-p mobile` etc., default profiles core+dev; `up` starts detached with cached `--build` then tails logs - Ctrl+C detaches, `-d` skips the tail, `--no-build` skips building; `rebuild` is the `--no-cache` path; `recreate` = confirm, down --volumes across ALL profiles, then `up`; `reset-data` wipes only the data volumes) |
 | Logs | `./manage.py logs [-s <service>] [--stack local\|docker]` - docker tails compose services; local tails `.logs/*.log` written by `serve all` |
 | Host dev processes | `./manage.py serve backend\|worker-core\|worker-egress\|ui\|landing\|mobile\|all` |
-| Dependencies | `./manage.py deps install\|add\|remove\|update\|run -s backend\|ui\|mobile\|landing [--stack local\|docker]` |
+| Dependencies | `./manage.py deps install\|add\|remove\|update\|run -s backend\|ui\|mobile\|landing [--stack local\|docker]` - `add pkg@version` also pins upgrades/downgrades; in docker mode every mutation regenerates the lock AND restarts the sibling running containers so their separate dependency volumes resync (each app container owns anonymous node_modules/.venv volumes; only an entrypoint re-run installs a changed lock into a running container). Never hand-edit a package.json and then `deps install` - the entrypoints install with a frozen lockfile and will refuse. |
 | Codegen | `./manage.py proto` (defaults to the toolbox container), `licenses`, `clean` |
 | Quality | `./manage.py lint [-s backend\|ui\|mobile\|cli]`, `format`, `test [-s backend\|ui\|cli]`, `bench` |
 | Database | `./manage.py db shell\|migrate` |

@@ -5,8 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { Phone, PhoneSlash } from "phosphor-react-native";
-import { useCall } from "@features/calls/call-context";
-import { useAuth } from "@core/providers/auth-context";
+import { useCall } from "@features/calls/CallContext";
+import { useAuth } from "@core/providers/AuthContext";
 import { useRingInvites, dismissRingInvite } from "@features/calls/useCallsState";
 import { useRingtoneEnabled } from "@features/calls/callPrefs";
 import { callsApi } from "@features/calls/callsApi";
@@ -59,6 +59,9 @@ export function IncomingCallBanner() {
       player.pause();
       return;
     }
+    // expo-audio's AudioPlayer is a mutable native handle; `loop` has no
+    // constructor option, so assigning the property is the intended API.
+    // eslint-disable-next-line react-hooks/immutability
     player.loop = true;
     void player.seekTo(0);
     player.play();

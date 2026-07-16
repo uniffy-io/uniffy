@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Text, Image, Animated, Modal, Platform, StyleSheet } from "react-native";
 import { BRAND } from "@theme/theme";
 import { FONT } from "@theme/typography";
@@ -19,8 +19,8 @@ type Props = {
 // swap: the cover goes opaque, onReveal lets navigation happen underneath,
 // then the cover dissolves over the destination screen.
 export function LoginSplash({ onReveal, onFinished }: Props) {
-  const coverOpacity = useRef(new Animated.Value(0)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const [coverOpacity] = useState(() => new Animated.Value(0));
+  const [logoOpacity] = useState(() => new Animated.Value(0));
   // Refs keep the latest callbacks without restarting the sequence on re-render.
   const onRevealRef = useRef(onReveal);
   const onFinishedRef = useRef(onFinished);

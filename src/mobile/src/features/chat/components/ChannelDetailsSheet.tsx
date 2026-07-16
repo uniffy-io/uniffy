@@ -523,10 +523,7 @@ function AddMembersModal({
           ) : null}
         </ScrollView>
         <TouchableOpacity
-          style={[
-            styles.cta,
-            { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover },
-          ]}
+          style={[styles.cta, { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover }]}
           disabled={selected.size === 0}
           onPress={() => {
             const byId = new Map(directory.map((s) => [s.id, s]));

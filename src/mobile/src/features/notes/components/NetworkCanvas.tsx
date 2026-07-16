@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useWindowDimensions } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
@@ -83,14 +83,19 @@ function initNodes(w: number, h: number): Node[] {
 
 export function NetworkCanvas() {
   const { width, height } = useWindowDimensions();
-  const nodesRef = useRef<Node[]>(initNodes(width, height));
-  const pulsesRef = useRef<Pulse[]>([]);
+  // Physics lives in refs (mutated in place each frame, no per-frame allocation);
+  // a snapshot is pushed to state so the SVG renders from state, not from a ref.
+  const [frame, setFrame] = useState<{ nodes: Node[]; pulses: Pulse[] }>(() => ({
+    nodes: initNodes(width, height),
+    pulses: [],
+  }));
+  const nodesRef = useRef(frame.nodes);
+  const pulsesRef = useRef(frame.pulses);
   const lastTimeRef = useRef(0);
   const rafRef = useRef<number>(0);
-  const [, setTick] = useState(0);
 
-  const animate = useCallback(
-    (ts: number) => {
+  useEffect(() => {
+    const animate = (ts: number) => {
       const dt = lastTimeRef.current ? ts - lastTimeRef.current : 16;
       lastTimeRef.current = ts;
 
@@ -133,19 +138,14 @@ export function NetworkCanvas() {
         }
       }
 
-      setTick((t) => t + 1);
+      setFrame({ nodes: [...nodes], pulses: [...pulses] });
       rafRef.current = requestAnimationFrame(animate);
-    },
-    [width, height],
-  );
-
-  useEffect(() => {
+    };
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [animate]);
+  }, [width, height]);
 
-  const nodes = nodesRef.current;
-  const pulses = pulsesRef.current;
+  const { nodes, pulses } = frame;
 
   // Build connections
   const lines: React.ReactNode[] = [];

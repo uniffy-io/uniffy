@@ -1,2 +1,2 @@
-export { default } from "@features/auth/screens/select-org-screen";
-export * from "@features/auth/screens/select-org-screen";
+export { SelectOrgScreen as default } from "@features/auth/screens/SelectOrgScreen";
+export * from "@features/auth/screens/SelectOrgScreen";

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ChannelAgentContextStats } from "@uniffy/proto/chat/v1/chat_pb";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
 import { useRunningAgents } from "@features/chat/useChatStream";
 import { messagesKey } from "@features/chat/useChatMutations";

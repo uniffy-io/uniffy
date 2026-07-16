@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { projectsApi } from "@features/projects/projectsApi";
 import { visibilityStringToProto } from "@features/projects/projectsSerializer";
 

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Alert, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { buildFileUrl, assetAuthHeaders } from "@features/files/fileUrls";
 
 // Persisted Android SAF directory grant, so the second and later downloads skip

@@ -26,7 +26,7 @@ import { MentionLine } from "@shared/components/MarkdownRenderer";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { useComments, useCommentCount, useCommentMutations } from "@shared/comments/useComments";
 import { parseMentions } from "@shared/mentions/useMentionInput";
 import type { SerializedComment } from "@shared/comments/commentSerializer";
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   },
   headerBadgeText: { color: "#fff", fontSize: 9, fontFamily: FONT.bold },
   modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: { height: "86%", borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" },
   sheetHeader: { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 10 },
   handle: {

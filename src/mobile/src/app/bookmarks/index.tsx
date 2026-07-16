@@ -1,2 +1,2 @@
-export { default } from "@features/bookmarks/screens/bookmarks-screen";
-export * from "@features/bookmarks/screens/bookmarks-screen";
+export { BookmarksScreen as default } from "@features/bookmarks/screens/BookmarksScreen";
+export * from "@features/bookmarks/screens/BookmarksScreen";

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
 import { filesApi } from "@features/files/filesApi";
 import { STREAM_HEALTH_KEY } from "@features/chat/useChatStream";

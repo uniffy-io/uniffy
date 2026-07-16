@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Phone, CaretUp } from "phosphor-react-native";
 import { GlassSurface } from "@shared/components/GlassSurface";
-import { useCall } from "@features/calls/call-context";
+import { useCall } from "@features/calls/CallContext";
 import { useChannels } from "@features/chat/useChat";
 import { formatCallDuration } from "@features/calls/callsSerializer";
 import { useTheme } from "@shared/hooks/useTheme";

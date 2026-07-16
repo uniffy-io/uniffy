@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   speakingBorder: { borderWidth: 2 },
-  video: { ...StyleSheet.absoluteFillObject },
+  video: { ...StyleSheet.absoluteFill },
   avatarWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   badgeRow: {
     position: "absolute",

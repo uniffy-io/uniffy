@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TextInput } from "react-native";
-import { useUniffy } from "@core/providers/uniffy-context";
+import { useUniffy } from "@core/providers/UniffyContext";
 import { useScreenFocusRef } from "@shared/hooks/useScreenFocusRef";
 
 export const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
@@ -42,18 +42,17 @@ export function useMentionInput(initialCanonical?: string) {
   const { pendingReference, clearPendingReference } = useUniffy();
   const screenFocused = useScreenFocusRef();
 
-  const mentionsRef = useRef<MentionEntry[]>([]);
+  const [initial] = useState(() =>
+    initialCanonical
+      ? parseMentions(initialCanonical)
+      : { display: "", mentions: [] as MentionEntry[] },
+  );
+
+  const mentionsRef = useRef<MentionEntry[]>(initial.mentions);
   const cursorPosRef = useRef<number>(0);
   const inputRef = useRef<TextInput>(null);
 
-  const [displayText, setDisplayText] = useState(() => {
-    if (initialCanonical) {
-      const { display, mentions } = parseMentions(initialCanonical);
-      mentionsRef.current = mentions;
-      return display;
-    }
-    return "";
-  });
+  const [displayText, setDisplayText] = useState(initial.display);
 
   const [selection, setSelection] = useState<Selection>({ start: 0, end: 0 });
 
@@ -99,7 +98,7 @@ export function useMentionInput(initialCanonical?: string) {
         inputRef.current?.setSelection(newPos, newPos);
       }, 50);
     }
-  }, [pendingReference]);
+  }, [pendingReference, displayText, clearPendingReference, screenFocused]);
 
   return {
     displayText,

@@ -1,2 +1,2 @@
-export { default } from "@features/chat/screens/chat-create-screen";
-export * from "@features/chat/screens/chat-create-screen";
+export { CreateChannelScreen as default } from "@features/chat/screens/ChatCreateScreen";
+export * from "@features/chat/screens/ChatCreateScreen";

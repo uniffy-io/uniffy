@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { bookmarksApi } from "@features/bookmarks/bookmarksApi";
 
 export function useBookmarkedNoteUrns() {

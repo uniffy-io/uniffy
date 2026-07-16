@@ -13,7 +13,7 @@ import * as Clipboard from "expo-clipboard";
 import { ShieldCheck, Copy, Check, Key } from "phosphor-react-native";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { mfaApi } from "@features/auth/mfaApi";
 
 type Phase = "loading" | "scan" | "codes" | "error";

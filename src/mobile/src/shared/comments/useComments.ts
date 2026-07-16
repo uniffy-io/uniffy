@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { commentsApi } from "@shared/comments/commentsApi";
 import { commentToPlain, type SerializedComment } from "@shared/comments/commentSerializer";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";

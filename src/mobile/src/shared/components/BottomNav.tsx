@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, StyleSheet, Platform, Keyboard, useWindowDimensions } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Platform,
+  Keyboard,
+  useWindowDimensions,
+} from "react-native";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,7 +29,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { At, House } from "phosphor-react-native";
 import { useTheme } from "@shared/hooks/useTheme";
-import { useUniffy } from "@core/providers/uniffy-context";
+import { useUniffy } from "@core/providers/UniffyContext";
 import { FONT } from "@theme/typography";
 import {
   HubCarousel,
@@ -354,47 +362,47 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
               accessibilityLabel="References"
             >
               <At size={27} color={atOpen ? T.accent : T.textDim} weight="bold" />
-          </Pressable>
+            </Pressable>
 
-          <GestureDetector gesture={hubGesture}>
-            <Animated.View
-              style={styles.hubButton}
+            <GestureDetector gesture={hubGesture}>
+              <Animated.View
+                style={styles.hubButton}
+                accessibilityRole="button"
+                accessibilityLabel="Switch domain"
+              >
+                <Animated.Image
+                  source={require("../../../assets/images/uniffy-logo.png")}
+                  style={[styles.hubLogo, logoStyle]}
+                  resizeMode="contain"
+                />
+              </Animated.View>
+            </GestureDetector>
+
+            <Pressable
+              style={styles.sideButton}
+              onPress={() => {
+                if (!isHome) router.push("/");
+              }}
               accessibilityRole="button"
-              accessibilityLabel="Switch domain"
+              accessibilityLabel="Home"
             >
-              <Animated.Image
-                source={require("../../../assets/images/uniffy-logo.png")}
-                style={[styles.hubLogo, logoStyle]}
-                resizeMode="contain"
-              />
-            </Animated.View>
-          </GestureDetector>
-
-          <Pressable
-            style={styles.sideButton}
-            onPress={() => {
-              if (!isHome) router.push("/");
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Home"
-          >
-            <View style={styles.homeWrap}>
-              {/* key remounts the icon on weight flips: react-native-svg fails
+              <View style={styles.homeWrap}>
+                {/* key remounts the icon on weight flips: react-native-svg fails
                   to re-resolve currentColor when the path swaps in-place and
                   paints it black. */}
-              <House
-                key={isHome ? "fill" : "duotone"}
-                size={27}
-                color={isHome ? T.accent : T.textDim}
-                weight={isHome ? "fill" : "duotone"}
-              />
-              {unread > 0 && (
-                <View style={[styles.badge, { backgroundColor: T.red, borderColor: T.bg }]}>
-                  <Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
-                </View>
-              )}
-            </View>
-          </Pressable>
+                <House
+                  key={isHome ? "fill" : "duotone"}
+                  size={27}
+                  color={isHome ? T.accent : T.textDim}
+                  weight={isHome ? "fill" : "duotone"}
+                />
+                {unread > 0 && (
+                  <View style={[styles.badge, { backgroundColor: T.red, borderColor: T.bg }]}>
+                    <Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
+                  </View>
+                )}
+              </View>
+            </Pressable>
           </View>
         </View>
       </Animated.View>

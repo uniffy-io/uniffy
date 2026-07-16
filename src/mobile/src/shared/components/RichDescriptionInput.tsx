@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { At, Code, Plus, TextB, TextItalic, X } from "phosphor-react-native";
-import { useUniffy } from "@core/providers/uniffy-context";
+import { useUniffy } from "@core/providers/UniffyContext";
 import { useMentionInput, toCanonical } from "@shared/mentions/useMentionInput";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";

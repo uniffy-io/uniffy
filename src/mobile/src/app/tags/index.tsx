@@ -1,2 +1,2 @@
-export { default } from "@features/tags/screens/tags-screen";
-export * from "@features/tags/screens/tags-screen";
+export { TagsScreen as default } from "@features/tags/screens/TagsScreen";
+export * from "@features/tags/screens/TagsScreen";

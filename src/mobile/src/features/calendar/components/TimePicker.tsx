@@ -41,6 +41,50 @@ function display(value: string): string {
     : `${hour12}:${String(minute).padStart(2, "0")} ${period}`;
 }
 
+function TimeColumn({
+  items,
+  selected,
+  onSelect,
+  format,
+  accent,
+  textBright,
+}: {
+  items: number[];
+  selected: number;
+  onSelect: (v: number) => void;
+  format: (v: number) => string;
+  accent: string;
+  textBright: string;
+}) {
+  return (
+    <ScrollView style={styles.column} showsVerticalScrollIndicator={false}>
+      {items.map((item) => {
+        const isSel = item === selected;
+        return (
+          <TouchableOpacity
+            key={item}
+            style={[styles.cell, isSel && { backgroundColor: accent + "22" }]}
+            onPress={() => onSelect(item)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.cellText,
+                {
+                  color: isSel ? accent : textBright,
+                  fontFamily: isSel ? FONT.bold : FONT.medium,
+                },
+              ]}
+            >
+              {format(item)}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
   const T = useTheme();
   const accent = accentColor ?? T.accent;
@@ -92,44 +136,6 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
     setOpen(false);
   };
 
-  const Column = ({
-    items,
-    selected,
-    onSelect,
-    format,
-  }: {
-    items: number[];
-    selected: number;
-    onSelect: (v: number) => void;
-    format: (v: number) => string;
-  }) => (
-    <ScrollView style={styles.column} showsVerticalScrollIndicator={false}>
-      {items.map((item) => {
-        const isSel = item === selected;
-        return (
-          <TouchableOpacity
-            key={item}
-            style={[styles.cell, isSel && { backgroundColor: accent + "22" }]}
-            onPress={() => onSelect(item)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.cellText,
-                {
-                  color: isSel ? accent : T.textBright,
-                  fontFamily: isSel ? FONT.bold : FONT.medium,
-                },
-              ]}
-            >
-              {format(item)}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
-  );
-
   return (
     <>
       <TouchableOpacity
@@ -160,17 +166,21 @@ export function TimePicker({ value, onChange, accentColor }: TimePickerProps) {
               ]}
             />
             <View style={styles.columns}>
-              <Column
+              <TimeColumn
                 items={HOURS}
                 selected={hour12}
                 onSelect={(v) => setFromWheel(v, minute, period)}
                 format={(v) => String(v)}
+                accent={accent}
+                textBright={T.textBright}
               />
-              <Column
+              <TimeColumn
                 items={MINUTES}
                 selected={minute}
                 onSelect={(v) => setFromWheel(hour12, v, period)}
                 format={(v) => String(v).padStart(2, "0")}
+                accent={accent}
+                textBright={T.textBright}
               />
               <View style={styles.periodColumn}>
                 {PERIODS.map((p) => {

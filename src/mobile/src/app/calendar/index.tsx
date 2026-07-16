@@ -1,2 +1,2 @@
-export { default } from "@features/calendar/screens/calendar-screen";
-export * from "@features/calendar/screens/calendar-screen";
+export { CalendarScreen as default } from "@features/calendar/screens/CalendarScreen";
+export * from "@features/calendar/screens/CalendarScreen";

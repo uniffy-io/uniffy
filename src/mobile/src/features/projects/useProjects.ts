@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { projectsApi } from "@features/projects/projectsApi";
-import { projectToPlain, taskToPlain, activityToPlain } from "@features/projects/projectsSerializer";
+import {
+  projectToPlain,
+  taskToPlain,
+  activityToPlain,
+} from "@features/projects/projectsSerializer";
 
 export function useProjectsList() {
   const { organizationId } = useAuth();

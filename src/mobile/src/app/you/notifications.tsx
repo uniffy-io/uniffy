@@ -1,2 +1,2 @@
-export { default } from "@features/you/screens/notification-preferences-screen";
-export * from "@features/you/screens/notification-preferences-screen";
+export { NotificationPreferencesScreen as default } from "@features/you/screens/NotificationPreferencesScreen";
+export * from "@features/you/screens/NotificationPreferencesScreen";

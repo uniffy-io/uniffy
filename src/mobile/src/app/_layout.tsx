@@ -17,12 +17,13 @@ import { View, StyleSheet, BackHandler, ActivityIndicator, Platform } from "reac
 import { StatusBar } from "expo-status-bar";
 import * as NavigationBar from "expo-navigation-bar";
 import { ErrorBoundary } from "@shared/components/ErrorBoundary";
-import { queryClient } from "@core/api/query-client";
-import { UniffyProvider, useUniffy } from "@core/providers/uniffy-context";
-import { AuthProvider, useAuth } from "@core/providers/auth-context";
+import { queryClient } from "@core/api/queryClient";
+import { installConnectivityHooks } from "@core/api/connectivity";
+import { UniffyProvider, useUniffy } from "@core/providers/UniffyContext";
+import { AuthProvider, useAuth } from "@core/providers/AuthContext";
 import { usePresenceHeartbeat } from "@shared/presence/usePresence";
-import { CallProvider, useCall } from "@features/calls/call-context";
-import { ThemeProvider } from "@core/providers/theme-context";
+import { CallProvider, useCall } from "@features/calls/CallContext";
+import { ThemeProvider } from "@core/providers/ThemeContext";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BottomNav, bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { useUnreadNotificationCount } from "@features/notifications/useNotifications";
@@ -36,6 +37,7 @@ import { LoginSplash } from "@shared/components/LoginSplash";
 import { BRAND } from "@theme/theme";
 
 SplashScreen.preventAutoHideAsync();
+installConnectivityHooks();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isRehydrating, organizationId, holdNavigation } = useAuth();
@@ -62,7 +64,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace("/");
       }
     }
-  }, [isAuthenticated, isRehydrating, organizationId, holdNavigation, segments]);
+  }, [isAuthenticated, isRehydrating, organizationId, holdNavigation, segments, router]);
 
   if (isRehydrating) {
     return (
@@ -105,9 +107,15 @@ function RootLayoutNav() {
   // crash startup; only button contrast is adjustable when present.
   useEffect(() => {
     if (Platform.OS !== "android") return;
+    // These setters are dropped from the module types under edge-to-edge but a
+    // build may still expose them, so reach for them through an optional shape.
+    const navBar = NavigationBar as {
+      setButtonStyleAsync?: (style: "light" | "dark") => Promise<void>;
+      setBackgroundColorAsync?: (color: string) => Promise<void>;
+    };
     try {
-      NavigationBar.setButtonStyleAsync?.(T.isDark ? "light" : "dark")?.catch(() => {});
-      NavigationBar.setBackgroundColorAsync?.(T.isDark ? BRAND.midnight : BRAND.white)?.catch(() => {});
+      navBar.setButtonStyleAsync?.(T.isDark ? "light" : "dark")?.catch(() => {});
+      navBar.setBackgroundColorAsync?.(T.isDark ? BRAND.midnight : BRAND.white)?.catch(() => {});
     } catch {
       // setter removed under edge-to-edge; leave the system default
     }
@@ -162,42 +170,42 @@ function RootLayoutNav() {
           callExpanded && styles.contentHidden,
         ]}
       >
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: showAppChrome ? T.pageBg : "transparent" },
-        }}
-      >
-        <Stack.Screen name="auth" options={{ headerShown: false, animation: "fade" }} />
-        <Stack.Screen name="accept-invite" options={{ headerShown: false, animation: "fade" }} />
-        <Stack.Screen name="enroll-mfa" options={{ headerShown: false, animation: "fade" }} />
-        <Stack.Screen name="select-org" options={{ headerShown: false, animation: "fade" }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="notes/index" />
-        <Stack.Screen name="notes/[id]" />
-        <Stack.Screen name="notes/edit" />
-        <Stack.Screen name="files/index" />
-        <Stack.Screen name="files/[id]" />
-        <Stack.Screen name="files/trash" />
-        <Stack.Screen name="chat/index" />
-        <Stack.Screen name="chat/[id]" />
-        <Stack.Screen name="chat/create" />
-        <Stack.Screen name="calendar/index" />
-        <Stack.Screen name="calendar/[id]" />
-        <Stack.Screen name="projects/index" />
-        <Stack.Screen name="projects/[id]" />
-        <Stack.Screen name="projects/task/[id]" />
-        <Stack.Screen name="search/index" />
-        <Stack.Screen name="bookmarks/index" />
-        <Stack.Screen name="tags/index" />
-        <Stack.Screen name="tags/[id]" />
-        <Stack.Screen name="notifications/index" />
-        <Stack.Screen name="you/index" />
-        <Stack.Screen name="you/sessions" />
-        <Stack.Screen name="you/appearance" />
-        <Stack.Screen name="you/notifications" />
-        <Stack.Screen name="you/security" />
-      </Stack>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: showAppChrome ? T.pageBg : "transparent" },
+          }}
+        >
+          <Stack.Screen name="auth" options={{ headerShown: false, animation: "fade" }} />
+          <Stack.Screen name="accept-invite" options={{ headerShown: false, animation: "fade" }} />
+          <Stack.Screen name="enroll-mfa" options={{ headerShown: false, animation: "fade" }} />
+          <Stack.Screen name="select-org" options={{ headerShown: false, animation: "fade" }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="notes/index" />
+          <Stack.Screen name="notes/[id]" />
+          <Stack.Screen name="notes/edit" />
+          <Stack.Screen name="files/index" />
+          <Stack.Screen name="files/[id]" />
+          <Stack.Screen name="files/trash" />
+          <Stack.Screen name="chat/index" />
+          <Stack.Screen name="chat/[id]" />
+          <Stack.Screen name="chat/create" />
+          <Stack.Screen name="calendar/index" />
+          <Stack.Screen name="calendar/[id]" />
+          <Stack.Screen name="projects/index" />
+          <Stack.Screen name="projects/[id]" />
+          <Stack.Screen name="projects/task/[id]" />
+          <Stack.Screen name="search/index" />
+          <Stack.Screen name="bookmarks/index" />
+          <Stack.Screen name="tags/index" />
+          <Stack.Screen name="tags/[id]" />
+          <Stack.Screen name="notifications/index" />
+          <Stack.Screen name="you/index" />
+          <Stack.Screen name="you/sessions" />
+          <Stack.Screen name="you/appearance" />
+          <Stack.Screen name="you/notifications" />
+          <Stack.Screen name="you/security" />
+        </Stack>
       </View>
       {/* The bar is a flow child on purpose: iOS 26 Fabric keeps absolutely
           positioned shell overlays in flow layout (they steal Stack height),

@@ -27,6 +27,7 @@ import {
   UploadChunkRequestSchema,
 } from "@uniffy/proto/files/v1/files_pb";
 import { transport } from "@core/api/transport";
+import { SLOW_RPC_TIMEOUT_MS } from "@core/api/baseFetch";
 
 const client = createClient(FilesService, transport);
 
@@ -60,11 +61,13 @@ export const filesApi = {
   moveItems: (request: MessageInitShape<typeof MoveItemsRequestSchema>) =>
     client.moveItems(request),
 
+  // Permanent bulk deletes, trash purges, and copies do storage work server
+  // side, so they get the slow tier instead of the interactive default.
   bulkDelete: (request: MessageInitShape<typeof BulkDeleteRequestSchema>) =>
-    client.bulkDelete(request),
+    client.bulkDelete(request, { timeoutMs: SLOW_RPC_TIMEOUT_MS }),
 
   copyItems: (request: MessageInitShape<typeof CopyItemsRequestSchema>) =>
-    client.copyItems(request),
+    client.copyItems(request, { timeoutMs: SLOW_RPC_TIMEOUT_MS }),
 
   listTrash: (request: MessageInitShape<typeof ListTrashRequestSchema>) =>
     client.listTrash(request),
@@ -73,7 +76,7 @@ export const filesApi = {
     client.restoreFolder(request),
 
   emptyTrash: (request: MessageInitShape<typeof EmptyTrashRequestSchema>) =>
-    client.emptyTrash(request),
+    client.emptyTrash(request, { timeoutMs: SLOW_RPC_TIMEOUT_MS }),
 
   listFileVersions: (request: MessageInitShape<typeof ListFileVersionsRequestSchema>) =>
     client.listFileVersions(request),
@@ -84,14 +87,20 @@ export const filesApi = {
   getStorageUsage: (request: MessageInitShape<typeof GetStorageUsageRequestSchema>) =>
     client.getStorageUsage(request),
 
-  initiateUpload: (request: MessageInitShape<typeof InitiateUploadRequestSchema>) =>
-    client.initiateUpload(request),
+  initiateUpload: (
+    request: MessageInitShape<typeof InitiateUploadRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.initiateUpload(request, options),
 
-  uploadChunk: (request: MessageInitShape<typeof UploadChunkRequestSchema>) =>
-    client.uploadChunk(request),
+  uploadChunk: (
+    request: MessageInitShape<typeof UploadChunkRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.uploadChunk(request, { timeoutMs: SLOW_RPC_TIMEOUT_MS, ...options }),
 
-  completeUpload: (request: MessageInitShape<typeof CompleteUploadRequestSchema>) =>
-    client.completeUpload(request),
+  completeUpload: (
+    request: MessageInitShape<typeof CompleteUploadRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.completeUpload(request, { timeoutMs: SLOW_RPC_TIMEOUT_MS, ...options }),
 
   batchListAttachments: (request: MessageInitShape<typeof BatchListAttachmentsRequestSchema>) =>
     client.batchListAttachments(request),

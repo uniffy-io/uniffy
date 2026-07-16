@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator } from "react-native";
 import {
   Phone,
@@ -8,8 +8,8 @@ import {
   VideoCameraSlash,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useCall } from "@features/calls/call-context";
-import { useAuth } from "@core/providers/auth-context";
+import { useCall } from "@features/calls/CallContext";
+import { useAuth } from "@core/providers/AuthContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { ensureCallPermissions } from "@features/calls/callPermissions";
 import { callErrorMessage } from "@features/calls/callErrors";
@@ -43,14 +43,18 @@ export function PreJoinSheet({
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reset the sheet each time it opens. Adjusting state during render on the
+  // visible transition avoids an effect that would cascade a second render.
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
     if (visible) {
       setMicOn(false);
       setCameraOn(false);
       setJoining(false);
       setError(null);
     }
-  }, [visible]);
+  }
 
   const others = (activeCall?.participants ?? []).filter((p) => p.userId !== user?.id);
 

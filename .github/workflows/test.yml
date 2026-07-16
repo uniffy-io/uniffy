@@ -17,6 +17,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
       proto: ${{ steps.filter.outputs.proto }}
     steps:
       - uses: actions/checkout@v5
@@ -32,7 +33,11 @@ jobs:
             frontend:
               - 'src/ui/**'
               - 'src/gen/typescript/**'
-              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+            mobile:
+              - 'src/mobile/**'
+              - 'src/gen/typescript/**'
               - 'pnpm-workspace.yaml'
               - 'package.json'
             proto:
@@ -145,6 +150,89 @@ jobs:
 
       - name: Build (tsc + vite)
         run: pnpm --filter uniffy-ui build
+
+  lint-mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    runs-on: ubuntu-latest
+    env:
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter uniffy-mobile...
+
+      - name: Run ESLint
+        run: pnpm --filter uniffy-mobile lint
+
+  format-mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter uniffy-mobile...
+
+      - name: Check formatting
+        run: pnpm --filter uniffy-mobile format:check
+
+  typecheck-mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true' || needs.changes.outputs.proto == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter uniffy-mobile...
+
+      - name: Typecheck (tsc)
+        run: pnpm --filter uniffy-mobile exec tsc --noEmit
 
   test-python:
     needs: changes
@@ -307,6 +395,9 @@ jobs:
       - lint-python
       - lint-frontend
       - build-frontend
+      - lint-mobile
+      - format-mobile
+      - typecheck-mobile
       - test-python
       - test-frontend
     runs-on: ubuntu-latest

@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@core/providers/auth-context";
+import { useAuth } from "@core/providers/AuthContext";
 import { notificationsApi } from "@features/notifications/notificationsApi";
-import { notificationToPlain, type SerializedNotification } from "@features/notifications/notificationSerializer";
+import {
+  notificationToPlain,
+  type SerializedNotification,
+} from "@features/notifications/notificationSerializer";
 
 const UNREAD_POLL_MS = 15000;
 
