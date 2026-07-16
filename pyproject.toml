@@ -37,8 +37,9 @@ dependencies = [
   "granian>=2.7.0",
   "aioboto3>=13.0.0",
   "types-aiobotocore[s3]>=2.15.0",
-  # Background jobs
-  "arq>=0.26.0",
+  # Background jobs: arq is vendored under uniffy.vendor.arq (valkey-backed); it needs click.
+  "valkey[libvalkey]>=6.1.1",
+  "click>=8.0",
   # Image processing
   "pillow>=11.0.0",
   # PDF thumbnail generation
@@ -157,6 +158,9 @@ exclude = [
   "tests/",
   "src/gen",
 ]
+# Vendored third-party code (kept as a clean re-diff against upstream); not held to our style.
+# extend-exclude survives the CLI --exclude that manage.py passes, unlike exclude.
+extend-exclude = ["src/uniffy/vendor"]
 
 [tool.ruff.lint]
 exclude = ["*.ipynb"]

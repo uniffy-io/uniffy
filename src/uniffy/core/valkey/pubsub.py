@@ -12,7 +12,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-import redis.asyncio as aioredis
+import valkey.asyncio as aioredis
 from loguru import logger
 
 from uniffy.core.valkey.config import ValkeyConfig

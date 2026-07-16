@@ -7,11 +7,11 @@ right fleet. ``get_queue_safe`` rebuilds a dropped pool once; ``get_queue`` rais
 import asyncio
 from typing import Literal
 
-from arq import create_pool
-from arq.connections import ArqRedis
 from loguru import logger
 
 from uniffy.core.valkey.config import ValkeyConfig
+from uniffy.vendor.arq import create_pool
+from uniffy.vendor.arq.connections import ArqValkey
 
 logger = logger.bind(component="valkey.queue")
 
@@ -22,18 +22,18 @@ _QUEUE_NAMES: dict[QueueName, str] = {
     "egress": "uniffy:queue:egress",
 }
 
-_pools: dict[QueueName, ArqRedis | None] = {"core": None, "egress": None}
+_pools: dict[QueueName, ArqValkey | None] = {"core": None, "egress": None}
 _reinit_locks: dict[QueueName, asyncio.Lock] = {
     "core": asyncio.Lock(),
     "egress": asyncio.Lock(),
 }
 
 
-async def init_queue(name: QueueName) -> ArqRedis:
+async def init_queue(name: QueueName) -> ArqValkey:
     """Initialise the ``core`` or ``egress`` pool."""
     config = ValkeyConfig.from_env()
     pool = await create_pool(
-        config.to_arq_redis_settings(),
+        config.to_arq_valkey_settings(),
         default_queue_name=_QUEUE_NAMES[name],
     )
     _pools[name] = pool
@@ -54,7 +54,7 @@ async def close_queue(name: QueueName) -> None:
     logger.info(f"Queue pool closed: name={name}")
 
 
-async def _try_reinit_queue(name: QueueName) -> ArqRedis | None:
+async def _try_reinit_queue(name: QueueName) -> ArqValkey | None:
     async with _reinit_locks[name]:
         pool = _pools[name]
         if pool is not None:
@@ -73,7 +73,7 @@ async def _try_reinit_queue(name: QueueName) -> ArqRedis | None:
             return None
 
 
-def get_queue(name: QueueName) -> ArqRedis:
+def get_queue(name: QueueName) -> ArqValkey:
     """Return the named pool; raises ``RuntimeError`` if not initialised."""
     pool = _pools[name]
     if pool is None:
@@ -83,7 +83,7 @@ def get_queue(name: QueueName) -> ArqRedis:
     return pool
 
 
-async def get_queue_safe(name: QueueName) -> ArqRedis | None:
+async def get_queue_safe(name: QueueName) -> ArqValkey | None:
     """Return the named pool; attempts one reconnect on miss, returns
     ``None`` on persistent failure.
     """

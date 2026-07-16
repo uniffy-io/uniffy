@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-import redis.asyncio as aioredis
+import valkey.asyncio as aioredis
 from loguru import logger
-from redis.exceptions import ConnectionError as RedisConnectionError
-from redis.exceptions import TimeoutError as RedisTimeoutError
+from valkey.exceptions import ConnectionError as ValkeyConnectionError
+from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.observability.metrics import (
@@ -180,7 +180,7 @@ async def _run_subscriber() -> None:
                     continue
                 await _handle_invalidate_message(msg.get("data"))
 
-        except (RedisConnectionError, RedisTimeoutError, OSError) as exc:
+        except (ValkeyConnectionError, ValkeyTimeoutError, OSError) as exc:
             logger.warning(
                 f"Provider invalidation subscriber connection error: {exc}; "
                 f"reconnecting in {_RECONNECT_BACKOFF_SECONDS}s"

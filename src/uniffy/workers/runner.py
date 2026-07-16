@@ -4,12 +4,12 @@ import asyncio
 import os
 import time
 
-from arq import run_worker
 from loguru import logger
-from redis.exceptions import ConnectionError as RedisConnectionError
+from valkey.exceptions import ConnectionError as ValkeyConnectionError
 
 from uniffy.observability import ObservabilityConfig, setup_observability
 from uniffy.observability.metrics import start_worker_metrics_server
+from uniffy.vendor.arq import run_worker
 
 logger = logger.bind(component="runner")
 
@@ -43,7 +43,7 @@ def run_worker_with_restart(
         try:
             run_worker(settings_cls)
             break
-        except (RedisConnectionError, ConnectionError, OSError, RuntimeError) as exc:
+        except (ValkeyConnectionError, ConnectionError, OSError, RuntimeError) as exc:
             uptime = time.monotonic() - started_at
             logger.warning(
                 "Worker lost Valkey connection, restarting in "

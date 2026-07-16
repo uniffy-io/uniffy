@@ -69,11 +69,11 @@ def test_stream_xread_returns_empty_when_streams_client_missing(monkeypatch) -> 
 
 
 def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
-    from redis.exceptions import TimeoutError as RedisTimeoutError
+    from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
     class _BoomClient:
         async def xread(self, **_kwargs: Any) -> list[Any]:
-            raise RedisTimeoutError("simulated block deadline")
+            raise ValkeyTimeoutError("simulated block deadline")
 
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: _BoomClient())
 
@@ -83,7 +83,7 @@ def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
     assert result == []
     warnings = [r for r in caplog.records if r.levelname == "WARNING"]
     assert warnings == [], (
-        "RedisTimeoutError must NOT log at WARNING -- it's expected when a "
+        "ValkeyTimeoutError must NOT log at WARNING -- it's expected when a "
         "block elapses with no events. Was logged: "
         f"{[r.message for r in warnings]}"
     )
