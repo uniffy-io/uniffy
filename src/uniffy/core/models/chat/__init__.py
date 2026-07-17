@@ -8,6 +8,7 @@ from uniffy.core.models.chat.channel_member import (
     ChatNotificationLevel,
 )
 from uniffy.core.models.chat.channel_resource import ChatChannelResource
+from uniffy.core.models.chat.draft import ChatDraft
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.reaction import ChatReaction
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
@@ -20,6 +21,7 @@ __all__ = [
     "ChatChannelMember",
     "ChatChannelResource",
     "ChatChannelStats",
+    "ChatDraft",
     "ChatMessage",
     "ChatReaction",
     "ChatReadCursor",

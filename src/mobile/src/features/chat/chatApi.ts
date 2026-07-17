@@ -30,6 +30,9 @@ import {
   SetTypingRequestSchema,
   MarkChannelReadRequestSchema,
   GetUnreadCountsRequestSchema,
+  SaveDraftRequestSchema,
+  DeleteDraftRequestSchema,
+  ListDraftsRequestSchema,
   CreateAgentChatRequestSchema,
   RenameAgentChatRequestSchema,
   ListAgentChatsRequestSchema,
@@ -48,6 +51,13 @@ import {
 import { transport } from "@core/api/transport";
 
 const client = createClient(ChatService, transport);
+
+// crypto.randomUUID is not guaranteed on Hermes; timestamp + random suffix is
+// unique enough to tell concurrent app sessions apart.
+const clientSessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+/** Rides every draft RPC so this session can skip its own DRAFT_CHANGED echoes. */
+export const draftClientSessionId = clientSessionId;
 
 export const chatApi = {
   listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
@@ -100,6 +110,12 @@ export const chatApi = {
     client.markChannelRead(req),
   getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>
     client.getUnreadCounts(req),
+
+  saveDraft: (req: MessageInitShape<typeof SaveDraftRequestSchema>) =>
+    client.saveDraft({ ...req, clientSessionId }),
+  deleteDraft: (req: MessageInitShape<typeof DeleteDraftRequestSchema>) =>
+    client.deleteDraft({ ...req, clientSessionId }),
+  listDrafts: (req: MessageInitShape<typeof ListDraftsRequestSchema>) => client.listDrafts(req),
 
   createAgentChat: (req: MessageInitShape<typeof CreateAgentChatRequestSchema>) =>
     client.createAgentChat(req),

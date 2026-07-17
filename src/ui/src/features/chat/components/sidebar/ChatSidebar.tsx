@@ -31,6 +31,7 @@ import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Input } from '@/components/ui/input';
 import { SidebarOverlayContext } from '@/components/layout/CollapsibleSidebarRail';
 import { setSplitChannel, selectChannelPreferences } from '@/features/chat/store/chatChannelsSlice';
+import { selectChannelsWithDrafts } from '@/features/chat/store/chatDraftsSlice';
 import {
   toggleDmSection,
   toggleAgentChatsSection,
@@ -105,6 +106,7 @@ export function ChatSidebar() {
   );
   const { canManageChat } = useChatPermissions();
   const channelPreferences = useAppSelector(selectChannelPreferences);
+  const draftChannels = useAppSelector(selectChannelsWithDrafts);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
   const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
 
@@ -353,6 +355,7 @@ export function ChatSidebar() {
                     unreadCount={unreadCounts[channel.id] ?? 0}
                     mentionCount={channel.mentionCount ?? 0}
                     isMuted={isChannelMuted(channel.id)}
+                    hasDraft={draftChannels.has(channel.id)}
                     onClick={() => handleChannelSelect(channel.id)}
                   />
                 ))}
@@ -407,6 +410,7 @@ export function ChatSidebar() {
                     isActive={channel.id === activeChannelId}
                     unreadCount={unreadCounts[channel.id] ?? 0}
                     isMuted={isChannelMuted(channel.id)}
+                    hasDraft={draftChannels.has(channel.id)}
                     onClick={() => handleChannelSelect(channel.id)}
                   />
                 ))
@@ -446,6 +450,7 @@ export function ChatSidebar() {
                   isActive={channel.id === activeChannelId}
                   unreadCount={unreadCounts[channel.id] ?? 0}
                   isMuted={isChannelMuted(channel.id)}
+                  hasDraft={draftChannels.has(channel.id)}
                   onClick={() => handleChannelSelect(channel.id)}
                 />
               ))}

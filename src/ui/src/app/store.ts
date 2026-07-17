@@ -47,6 +47,7 @@ import { chatChannelsReducer } from '@/features/chat/store/chatChannelsSlice';
 import { chatMessagesReducer } from '@/features/chat/store/chatMessagesSlice';
 import { chatThreadsReducer } from '@/features/chat/store/chatThreadsSlice';
 import { chatUiReducer } from '@/features/chat/store/chatUiSlice';
+import { chatDraftsReducer } from '@/features/chat/store/chatDraftsSlice';
 import { tagsReducer } from '@/features/tags/store/tagsSlice';
 import { recordingReducer } from '@/features/recording';
 import { callsReducer } from '@/features/calls/store/callsSlice';
@@ -197,6 +198,7 @@ const rootReducer = combineReducers({
   chatMessages: chatMessagesReducer,
   chatThreads: chatThreadsReducer,
   chatUi: chatUiReducer,
+  chatDrafts: chatDraftsReducer,
   tags: tagsReducer,
   recording: recordingReducer,
   calls: callsReducer,

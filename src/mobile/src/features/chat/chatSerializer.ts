@@ -14,6 +14,7 @@ import type {
   ThreadInboxItem as ProtoThreadInboxItem,
   ChatChannelCategory as ProtoChatChannelCategory,
   PendingAgentApproval as ProtoPendingAgentApproval,
+  ChatDraft as ProtoChatDraft,
 } from "@uniffy/proto/chat/v1/chat_pb";
 
 export type ChannelType = "PUBLIC" | "PRIVATE" | "DIRECT" | "GROUP_DM";
@@ -67,6 +68,7 @@ export interface SerializedChannel {
   displayName: string;
   unreadCount: number;
   mentionCount: number;
+  hasDraft?: boolean;
 }
 
 export interface SerializedMessage {
@@ -148,6 +150,11 @@ const NOTIFICATION_LEVEL_MAP: Record<number, NotificationLevel> = {
 function tsToSeconds(ts: Timestamp | undefined): number {
   if (!ts) return 0;
   return typeof ts.seconds === "bigint" ? Number(ts.seconds) : ts.seconds;
+}
+
+export function tsToIso(ts: Timestamp | undefined): string {
+  const seconds = tsToSeconds(ts);
+  return seconds ? new Date(seconds * 1000).toISOString() : "";
 }
 
 /** Discord/Slack-style time label: time of day for today, "Yesterday", else date. */
@@ -302,6 +309,27 @@ export function threadInboxItemToPlain(proto: ProtoThreadInboxItem): SerializedT
     lastReplyAtSeconds,
     activityLabel: formatChannelActivity(lastReplyAtSeconds),
     hasUnread: proto.hasUnread,
+  };
+}
+
+export interface SerializedDraft {
+  channelId: string;
+  rootMessageId: string | null;
+  content: string;
+  updatedAt: string;
+}
+
+/** Cache key for a draft: "channelId" for the channel composer, "channelId:rootId" for a thread. */
+export function draftKey(channelId: string, rootMessageId?: string | null): string {
+  return rootMessageId ? `${channelId}:${rootMessageId}` : channelId;
+}
+
+export function draftToPlain(proto: ProtoChatDraft): SerializedDraft {
+  return {
+    channelId: proto.channelId,
+    rootMessageId: proto.rootMessageId || null,
+    content: proto.content,
+    updatedAt: tsToIso(proto.updatedAt),
   };
 }
 

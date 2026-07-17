@@ -222,10 +222,10 @@ async def transcode_video_to_mp4(
             except Exception:
                 log.warning("Search re-index failed after transcode swap")
 
-        redis = ctx.get("redis") if ctx else None
-        if redis is not None and old_storage_key:
+        valkey = ctx.get("valkey") if ctx else None
+        if valkey is not None and old_storage_key:
             try:
-                await redis.enqueue_job(
+                await valkey.enqueue_job(
                     "delete_s3_object",
                     old_storage_key,
                     _defer_by=_DELAYED_DELETE_SECONDS,

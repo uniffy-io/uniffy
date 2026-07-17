@@ -92,6 +92,7 @@ import {
   type TypingEntry,
 } from "@features/chat/useChatStream";
 import { useComposerAttachments } from "@features/chat/useComposerAttachments";
+import { useDraftSync } from "@features/chat/useDraftSync";
 import { useScreenFocusRef } from "@shared/hooks/useScreenFocusRef";
 import { chatApi } from "@features/chat/chatApi";
 import {
@@ -175,6 +176,9 @@ export function ChatConversationScreen() {
 
   const [draft, setDraft] = useState("");
   const mentionsRef = useRef<MentionEntry[]>([]);
+  // Edit mode borrows the composer; the unsent draft is stashed so exiting
+  // edit restores it instead of leaving "" for the autosaver to sync as a delete.
+  const preEditStashRef = useRef<{ draft: string; mentions: MentionEntry[] } | null>(null);
   const selectionRef = useRef<SelectionRange>({ start: 0, end: 0 });
   const inputRef = useRef<TextInput>(null);
   const [actionMessage, setActionMessage] = useState<SerializedMessage | null>(null);
@@ -311,6 +315,14 @@ export function ChatConversationScreen() {
     chatApi.setTyping({ organizationId, channelId }).catch(() => {});
   }, [draft, organizationId, channelId]);
 
+  const { flushOnSend } = useDraftSync({
+    channelId,
+    draft,
+    setDraft,
+    mentionsRef,
+    editing: !!editing,
+  });
+
   const title = useMemo(() => {
     if (!channel) return "Channel";
     return resolveChannelTitle(channel, membersQuery.data, user?.id ?? "");
@@ -365,12 +377,18 @@ export function ChatConversationScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingReference]);
 
+  const restorePreEditCompose = useCallback(() => {
+    const stash = preEditStashRef.current;
+    preEditStashRef.current = null;
+    setDraft(stash?.draft ?? "");
+    mentionsRef.current = stash?.mentions ?? [];
+  }, []);
+
   const resetCompose = useCallback(() => {
-    setDraft("");
-    mentionsRef.current = [];
+    restorePreEditCompose();
     setReplyTo(null);
     setEditing(null);
-  }, []);
+  }, [restorePreEditCompose]);
 
   const handleSend = useCallback(() => {
     const text = draft.trim();
@@ -385,10 +403,11 @@ export function ChatConversationScreen() {
     if (!text && attachmentFileIds.length === 0) return;
     const content = toCanonical(draft, mentionsRef.current);
     const replyId = replyTo?.id;
+    flushOnSend();
     resetCompose();
     attachments.clear();
     sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
-  }, [draft, editing, replyTo, attachments, sendMessage, editMessage, resetCompose]);
+  }, [draft, editing, replyTo, attachments, sendMessage, editMessage, resetCompose, flushOnSend]);
 
   const handleReact = useCallback(
     (message: SerializedMessage, emoji: string) => {
@@ -402,19 +421,28 @@ export function ChatConversationScreen() {
     [toggleReaction],
   );
 
-  const startEdit = useCallback((message: SerializedMessage) => {
-    const { display } = parseMentions(message.content);
-    setEditing(message);
-    setReplyTo(null);
-    setDraft(display);
-    setTimeout(() => inputRef.current?.focus(), 60);
-  }, []);
+  const startEdit = useCallback(
+    (message: SerializedMessage) => {
+      const { display, mentions } = parseMentions(message.content);
+      preEditStashRef.current ??= { draft, mentions: mentionsRef.current };
+      setEditing(message);
+      setReplyTo(null);
+      setDraft(display);
+      mentionsRef.current = mentions;
+      setTimeout(() => inputRef.current?.focus(), 60);
+    },
+    [draft],
+  );
 
-  const startReply = useCallback((message: SerializedMessage) => {
-    setReplyTo(message);
-    setEditing(null);
-    setTimeout(() => inputRef.current?.focus(), 60);
-  }, []);
+  const startReply = useCallback(
+    (message: SerializedMessage) => {
+      if (editing) restorePreEditCompose();
+      setReplyTo(message);
+      setEditing(null);
+      setTimeout(() => inputRef.current?.focus(), 60);
+    },
+    [editing, restorePreEditCompose],
+  );
 
   const discardFailed = useDiscardFailedMessage(channelId);
 

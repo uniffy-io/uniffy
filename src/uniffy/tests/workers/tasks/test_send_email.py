@@ -9,7 +9,6 @@ import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from arq import Retry
 
 from uniffy.core.mail import (
     MailNotConfiguredError,
@@ -18,6 +17,7 @@ from uniffy.core.mail import (
     MailSuppressedError,
 )
 from uniffy.core.mail.backends.base import MailResult
+from uniffy.vendor.arq import Retry
 from uniffy.workers.tasks.mail import send_email
 
 

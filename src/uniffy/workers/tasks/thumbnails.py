@@ -8,7 +8,6 @@ from typing import Any
 from uuid import UUID
 
 import fitz  # PyMuPDF
-from arq import Retry
 from loguru import logger
 from PIL import Image, ImageOps
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -18,6 +17,7 @@ from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage.s3_client import get_s3_client
 from uniffy.core.valkey import publish_notification
 from uniffy.db.session import open_session
+from uniffy.vendor.arq import Retry
 
 THUMB_MAX_SIZE = (400, 400)
 THUMB_QUALITY = 85

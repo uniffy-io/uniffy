@@ -50,6 +50,7 @@ class UserChatEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     USER_CHAT_EVENT_TYPE_MENTION_RECEIVED: _ClassVar[UserChatEventType]
     USER_CHAT_EVENT_TYPE_HEARTBEAT: _ClassVar[UserChatEventType]
     USER_CHAT_EVENT_TYPE_CHANNEL_EVENT: _ClassVar[UserChatEventType]
+    USER_CHAT_EVENT_TYPE_DRAFT_CHANGED: _ClassVar[UserChatEventType]
 CHAT_EVENT_TYPE_UNSPECIFIED: ChatEventType
 CHAT_EVENT_TYPE_MESSAGE_CREATED: ChatEventType
 CHAT_EVENT_TYPE_MESSAGE_UPDATED: ChatEventType
@@ -83,6 +84,7 @@ USER_CHAT_EVENT_TYPE_THREAD_ACTIVITY: UserChatEventType
 USER_CHAT_EVENT_TYPE_MENTION_RECEIVED: UserChatEventType
 USER_CHAT_EVENT_TYPE_HEARTBEAT: UserChatEventType
 USER_CHAT_EVENT_TYPE_CHANNEL_EVENT: UserChatEventType
+USER_CHAT_EVENT_TYPE_DRAFT_CHANGED: UserChatEventType
 
 class ChatEvent(_message.Message):
     __slots__ = ("event_type", "timestamp", "channel_id", "message", "message_deleted", "reaction", "typing", "member", "channel_updated", "thread_updated", "agent_typing", "agent_token_delta", "agent_tool_call", "agent_confirmation_requested", "agent_confirmation_resolved", "members_changed", "call_lifecycle", "call_participant", "call_ring", "call_host_changed")
@@ -321,20 +323,38 @@ class StreamUserChatEventsRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
 
 class StreamUserChatEventsResponse(_message.Message):
-    __slots__ = ("event_type", "timestamp", "unread_count", "thread_activity", "mention_received", "channel_event")
+    __slots__ = ("event_type", "timestamp", "unread_count", "thread_activity", "mention_received", "channel_event", "draft_changed")
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     UNREAD_COUNT_FIELD_NUMBER: _ClassVar[int]
     THREAD_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
     MENTION_RECEIVED_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_EVENT_FIELD_NUMBER: _ClassVar[int]
+    DRAFT_CHANGED_FIELD_NUMBER: _ClassVar[int]
     event_type: UserChatEventType
     timestamp: _timestamp_pb2.Timestamp
     unread_count: UnreadCountPayload
     thread_activity: ThreadActivityPayload
     mention_received: MentionReceivedPayload
     channel_event: ChatEvent
-    def __init__(self, event_type: _Optional[_Union[UserChatEventType, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., unread_count: _Optional[_Union[UnreadCountPayload, _Mapping]] = ..., thread_activity: _Optional[_Union[ThreadActivityPayload, _Mapping]] = ..., mention_received: _Optional[_Union[MentionReceivedPayload, _Mapping]] = ..., channel_event: _Optional[_Union[ChatEvent, _Mapping]] = ...) -> None: ...
+    draft_changed: DraftChangedPayload
+    def __init__(self, event_type: _Optional[_Union[UserChatEventType, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., unread_count: _Optional[_Union[UnreadCountPayload, _Mapping]] = ..., thread_activity: _Optional[_Union[ThreadActivityPayload, _Mapping]] = ..., mention_received: _Optional[_Union[MentionReceivedPayload, _Mapping]] = ..., channel_event: _Optional[_Union[ChatEvent, _Mapping]] = ..., draft_changed: _Optional[_Union[DraftChangedPayload, _Mapping]] = ...) -> None: ...
+
+class DraftChangedPayload(_message.Message):
+    __slots__ = ("channel_id", "root_message_id", "content", "deleted", "updated_at", "client_session_id")
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOT_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    DELETED_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    CLIENT_SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    channel_id: str
+    root_message_id: str
+    content: str
+    deleted: bool
+    updated_at: _timestamp_pb2.Timestamp
+    client_session_id: str
+    def __init__(self, channel_id: _Optional[str] = ..., root_message_id: _Optional[str] = ..., content: _Optional[str] = ..., deleted: _Optional[bool] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., client_session_id: _Optional[str] = ...) -> None: ...
 
 class UnreadCountPayload(_message.Message):
     __slots__ = ("channel_id", "unread_count", "mention_count")

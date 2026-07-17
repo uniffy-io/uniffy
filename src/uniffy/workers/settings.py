@@ -27,8 +27,7 @@ setup_observability(
         console_log_type=_log_format,
     )
 )
-from arq.cron import cron
-
+from uniffy.vendor.arq.cron import cron
 from uniffy.workers.tasks import (
     CORE_TASKS,
     EGRESS_TASKS,
@@ -51,7 +50,7 @@ from uniffy.workers.tasks import (
     reconcile_calls,
 )
 
-_redis_settings = ValkeyConfig.from_env().to_arq_redis_settings()
+_valkey_settings = ValkeyConfig.from_env().to_arq_valkey_settings()
 _core_job_timeout = int(os.getenv("WORKER_JOB_TIMEOUT", "300"))
 _egress_job_timeout = int(os.getenv("EGRESS_WORKER_JOB_TIMEOUT", "900"))
 _keep_result = int(os.getenv("WORKER_KEEP_RESULT", "3600"))
@@ -80,7 +79,7 @@ class CoreWorkerSettings:
     on_shutdown = core_on_shutdown
     on_job_start = on_job_start
     on_job_end = on_job_end
-    redis_settings = _redis_settings
+    valkey_settings = _valkey_settings
     max_jobs = int(os.getenv("CORE_WORKER_MAX_JOBS", "10"))
     job_timeout = _core_job_timeout
     keep_result = _keep_result
@@ -101,7 +100,7 @@ class EgressWorkerSettings:
     on_shutdown = egress_on_shutdown
     on_job_start = on_job_start
     on_job_end = on_job_end
-    redis_settings = _redis_settings
+    valkey_settings = _valkey_settings
     max_jobs = int(os.getenv("EGRESS_WORKER_MAX_JOBS", "50"))
     job_timeout = _egress_job_timeout
     keep_result = _keep_result

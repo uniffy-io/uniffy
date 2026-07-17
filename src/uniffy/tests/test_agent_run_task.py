@@ -8,7 +8,7 @@ Pins three load-bearing paths the W3 plan calls out:
   the run state hash to ``status="error"`` *before* re-raising so the
   ARQ failure record matches what the subscriber already saw.
 - The ``Done`` path schedules a deferred ``delete_run_stream`` cleanup
-  job on the egress redis pool with a 60s defer.
+  job on the egress valkey pool with a 60s defer.
 
 The collaborators (open_session, RuntimeOperations, SessionOperations,
 Valkey ops client, set_run_state) are stubbed out so the test runs
@@ -36,7 +36,7 @@ from uniffy.domains.agents.runtime.stream_events import (
 from uniffy.workers.tasks import agent_run as agent_run_mod
 
 
-class _FakeRedis:
+class _FakeValkey:
     def __init__(self) -> None:
         self.enqueued: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
 
@@ -203,11 +203,11 @@ class TestRunAgentSession:
         publisher = _install_publisher_stub(monkeypatch)
         _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
-        redis = _FakeRedis()
+        valkey = _FakeValkey()
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"redis": redis},
+                ctx={"valkey": valkey},
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -236,11 +236,11 @@ class TestRunAgentSession:
         publisher = _install_publisher_stub(monkeypatch)
         _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
-        redis = _FakeRedis()
+        valkey = _FakeValkey()
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"redis": redis},
+                ctx={"valkey": valkey},
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -251,8 +251,8 @@ class TestRunAgentSession:
         assert result["status"] == "success"
         assert publisher.closed is True, "publisher must be closed in finally"
         assert ops_client.delete_calls, "lock must be released after run"
-        assert len(redis.enqueued) == 1
-        name, args, kwargs = redis.enqueued[0]
+        assert len(valkey.enqueued) == 1
+        name, args, kwargs = valkey.enqueued[0]
         assert name == "delete_run_stream"
         assert kwargs.get("_defer_by") == agent_run_mod._DELETE_DEFER_SECONDS
         assert args == (result["run_id"],)
@@ -270,11 +270,11 @@ class TestRunAgentSession:
         _install_publisher_stub(monkeypatch)
         _install_open_session_stub(monkeypatch)
         _install_state_stub(monkeypatch)
-        redis = _FakeRedis()
+        valkey = _FakeValkey()
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"redis": redis},
+                ctx={"valkey": valkey},
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -283,7 +283,7 @@ class TestRunAgentSession:
 
         result = asyncio.run(run())
         assert result["status"] == "success"
-        assert redis.enqueued == [], "no cleanup without RuntimeDoneEvent"
+        assert valkey.enqueued == [], "no cleanup without RuntimeDoneEvent"
 
     def test_exception_emits_synthetic_error_and_reraises(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
@@ -293,11 +293,11 @@ class TestRunAgentSession:
         publisher = _install_publisher_stub(monkeypatch)
         _install_open_session_stub(monkeypatch)
         states = _install_state_stub(monkeypatch)
-        redis = _FakeRedis()
+        valkey = _FakeValkey()
 
         async def run() -> Any:
             return await agent_run_mod.run_agent_session(
-                ctx={"redis": redis},
+                ctx={"valkey": valkey},
                 content="hi",
                 files=None,
                 user_timezone=None,
@@ -316,7 +316,7 @@ class TestRunAgentSession:
         last_state = states[-1]
         assert last_state["status"] == "error"
         assert last_state["error"] == "driver blew up"
-        assert redis.enqueued == [], "no cleanup scheduled on failure"
+        assert valkey.enqueued == [], "no cleanup scheduled on failure"
 
     def test_invalid_uuid_returns_error_without_lock(self, monkeypatch) -> None:
         ops_client = _install_ops_client(monkeypatch)
@@ -324,7 +324,7 @@ class TestRunAgentSession:
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"redis": _FakeRedis()},
+                ctx={"valkey": _FakeValkey()},
                 run_id="not-a-uuid",
                 user_id=str(uuid7()),
                 organization_id=str(uuid7()),
@@ -360,7 +360,7 @@ class TestRunAgentSession:
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.run_agent_session(
-                ctx={"redis": _FakeRedis()},
+                ctx={"valkey": _FakeValkey()},
                 content="hi",
                 files=files,
                 user_timezone="UTC",

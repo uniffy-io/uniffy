@@ -26,7 +26,7 @@ _SENSITIVE_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?:/home/|/usr/|/var/|/tmp/|/etc/|/opt/)[^\s]+"),
     re.compile(r'File "[^"]+", line \d+'),
     re.compile(r"Traceback \(most recent call last\)"),
-    re.compile(r"(?:postgresql|redis|mysql|mongodb)://", re.IGNORECASE),
+    re.compile(r"(?:postgresql|valkey|mysql|mongodb)://", re.IGNORECASE),
 ]
 
 

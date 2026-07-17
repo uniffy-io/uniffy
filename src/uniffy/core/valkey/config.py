@@ -6,16 +6,17 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from arq.connections import RedisSettings
-from redis.exceptions import ConnectionError as RedisConnectionError
-from redis.exceptions import TimeoutError as RedisTimeoutError
+from valkey.exceptions import ConnectionError as ValkeyConnectionError
+from valkey.exceptions import TimeoutError as ValkeyTimeoutError
+
+from uniffy.vendor.arq.connections import ValkeySettings
 
 _PUBSUB_SOCKET_CONNECT_TIMEOUT = 5
 _PUBSUB_SOCKET_TIMEOUT = 5
 _PUBSUB_HEALTH_CHECK_INTERVAL = 30
 _PUBSUB_RETRY_ERRORS = (
-    RedisConnectionError,
-    RedisTimeoutError,
+    ValkeyConnectionError,
+    ValkeyTimeoutError,
     OSError,
     ConnectionResetError,
 )
@@ -56,11 +57,11 @@ class ValkeyConfig:
         )
 
     def to_url(self) -> str:
-        return f"redis://:{self.password}@{self.host}:{self.port}/{self.database}"
+        return f"valkey://:{self.password}@{self.host}:{self.port}/{self.database}"
 
-    def to_arq_redis_settings(self) -> RedisSettings:
-        """ARQ ``RedisSettings`` for the worker queue pool."""
-        return RedisSettings(
+    def to_arq_valkey_settings(self) -> ValkeySettings:
+        """ARQ ``ValkeySettings`` for the worker queue pool."""
+        return ValkeySettings(
             host=self.host,
             port=self.port,
             password=self.password,

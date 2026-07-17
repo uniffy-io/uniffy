@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { AgentConfirmationDecision } from "@uniffy/proto/chat/v1/chat_pb";
 import { SubjectType } from "@uniffy/proto/common/v1/common_pb";
 import { useAuth } from "@core/providers/AuthContext";
@@ -6,13 +6,39 @@ import { chatApi } from "@features/chat/chatApi";
 import {
   channelTypeToProto,
   notificationLevelToProto,
+  draftKey,
   type ChannelType,
   type NotificationLevel,
   type SerializedMessage,
+  type SerializedDraft,
 } from "@features/chat/chatSerializer";
 
 export function messagesKey(orgId: string | null, channelId: string) {
   return ["chat", "messages", orgId, channelId];
+}
+
+export function draftsKey(orgId: string | null) {
+  return ["chat", "drafts", orgId];
+}
+
+export function upsertDraftInCache(
+  queryClient: QueryClient,
+  orgId: string | null,
+  draft: SerializedDraft,
+) {
+  queryClient.setQueryData<Record<string, SerializedDraft>>(draftsKey(orgId), (old) => ({
+    ...(old ?? {}),
+    [draftKey(draft.channelId, draft.rootMessageId)]: draft,
+  }));
+}
+
+export function removeDraftFromCache(queryClient: QueryClient, orgId: string | null, key: string) {
+  queryClient.setQueryData<Record<string, SerializedDraft>>(draftsKey(orgId), (old) => {
+    if (!old || !(key in old)) return old;
+    const next = { ...old };
+    delete next[key];
+    return next;
+  });
 }
 
 export function useSendMessage(channelId: string) {
@@ -259,6 +285,55 @@ export function useMarkChannelRead(channelId: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "unread", organizationId] });
+    },
+  });
+}
+
+/**
+ * Autosave draft mutations patch the cache optimistically and stay silent on
+ * error: a failed save keeps the optimistic entry and the next debounce
+ * retries, so surfacing anything would only spam flaky-network sessions.
+ */
+export function useSaveDraft() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { channelId: string; rootMessageId?: string; content: string }) =>
+      chatApi.saveDraft({
+        organizationId: organizationId!,
+        channelId: args.channelId,
+        rootMessageId: args.rootMessageId,
+        content: args.content,
+      }),
+    onMutate: (args) => {
+      upsertDraftInCache(queryClient, organizationId, {
+        channelId: args.channelId,
+        rootMessageId: args.rootMessageId ?? null,
+        content: args.content,
+        updatedAt: new Date().toISOString(),
+      });
+    },
+  });
+}
+
+export function useDeleteDraft() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { channelId: string; rootMessageId?: string }) =>
+      chatApi.deleteDraft({
+        organizationId: organizationId!,
+        channelId: args.channelId,
+        rootMessageId: args.rootMessageId,
+      }),
+    onMutate: (args) => {
+      removeDraftFromCache(
+        queryClient,
+        organizationId,
+        draftKey(args.channelId, args.rootMessageId),
+      );
     },
   });
 }

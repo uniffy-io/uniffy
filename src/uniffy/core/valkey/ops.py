@@ -9,7 +9,7 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator
 
-import redis.asyncio as aioredis
+import valkey.asyncio as aioredis
 from loguru import logger
 
 from uniffy.core.valkey.config import ValkeyConfig

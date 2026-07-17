@@ -17,6 +17,7 @@ interface DirectMessageListItemProps {
   isActive: boolean;
   unreadCount?: number;
   isMuted?: boolean;
+  hasDraft?: boolean;
   onClick: () => void;
 }
 
@@ -25,6 +26,7 @@ export function DirectMessageListItem({
   isActive,
   unreadCount = 0,
   isMuted = false,
+  hasDraft = false,
   onClick,
 }: DirectMessageListItemProps) {
   const hasUnread = unreadCount > 0;
@@ -151,6 +153,14 @@ export function DirectMessageListItem({
 
           {isMuted && (
             <SpeakerSlash size={12} className="shrink-0 text-muted-foreground/50" />
+          )}
+
+          {hasDraft && !(hasUnread && !isMuted) && (
+            <PencilSimple
+              size={12}
+              className="shrink-0 text-muted-foreground"
+              data-testid={`chat-sidebar-dm-draft-${channel.id}`}
+            />
           )}
 
           {hasUnread && !isMuted && (

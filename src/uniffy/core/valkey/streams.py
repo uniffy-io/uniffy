@@ -17,10 +17,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-import redis.asyncio as aioredis
+import valkey.asyncio as aioredis
 from loguru import logger
-from redis.exceptions import ConnectionError as RedisConnectionError
-from redis.exceptions import TimeoutError as RedisTimeoutError
+from valkey.exceptions import ConnectionError as ValkeyConnectionError
+from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
 from uniffy.core.valkey.config import ValkeyConfig
 from uniffy.core.valkey.ops import _get_ops_client, ops_call
@@ -143,7 +143,7 @@ async def stream_xread(
             count=count,
             block=block_ms,
         )
-    except (RedisTimeoutError, RedisConnectionError) as exc:
+    except (ValkeyTimeoutError, ValkeyConnectionError) as exc:
         logger.debug(
             f"Stream XREAD transient error for {stream_key}: {exc!r}",
             component=LOGGER_COMPONENT,

@@ -141,7 +141,7 @@ async def run_agent_session(
         session_id=sid,
     )
     file_contexts = _files_from_payload(files)
-    redis = ctx.get("redis")
+    valkey = ctx.get("valkey")
     run_started = time.monotonic()
     AGENT_RUN_ACTIVE.inc()
     await session_active_run_add(sid, rid)
@@ -203,9 +203,9 @@ async def run_agent_session(
                     )
                     break
 
-        if (done_seen or cancelled) and redis is not None:
+        if (done_seen or cancelled) and valkey is not None:
             try:
-                await redis.enqueue_job(
+                await valkey.enqueue_job(
                     "delete_run_stream",
                     run_id,
                     _defer_by=_DELETE_DEFER_SECONDS,

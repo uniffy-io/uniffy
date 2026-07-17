@@ -3,7 +3,6 @@
 from typing import Any
 from uuid import UUID
 
-from arq import Retry
 from loguru import logger
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
@@ -21,6 +20,7 @@ from uniffy.core.types import ContentType
 from uniffy.core.valkey import publish_notification
 from uniffy.db.session import open_session
 from uniffy.domains.tags import TagOperations
+from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="tasks.content_extraction")
 

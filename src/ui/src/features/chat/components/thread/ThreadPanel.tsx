@@ -10,6 +10,7 @@ import {
 } from '@/features/chat/store/chatThreadsSlice';
 import { fetchThreadMessages, sendMessage } from '@/features/chat/store/chatThunks';
 import { selectTypingInThread, evictExpiredTyping } from '@/features/chat/store/chatMessagesSlice';
+import { useDraftSync } from '@/features/chat/hooks/useDraftSync';
 import { MessageItem } from '@/features/chat/components/channel/MessageItem';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
 import { TypingIndicator } from '@/features/chat/components/channel/TypingIndicator';
@@ -102,9 +103,14 @@ export function ThreadPanel() {
   }, [rootMessage]);
 
   const replyToMessage = useAppSelector(selectReplyToMessage);
+  const { initialDraft, remoteDraft, onDraftChange, flushOnSend } = useDraftSync(
+    rootMessage?.channelId ?? null,
+    activeThreadId ?? undefined,
+  );
 
   const handleSend = useCallback((content: string) => {
     if (!activeThreadId || !rootMessage) return;
+    flushOnSend();
     dispatch(sendMessage({
       channelId: rootMessage.channelId,
       content,
@@ -112,7 +118,7 @@ export function ThreadPanel() {
       replyToId: replyToMessage?.id,
     }));
     dispatch(clearReplyToMessage());
-  }, [activeThreadId, rootMessage, replyToMessage, dispatch]);
+  }, [activeThreadId, rootMessage, replyToMessage, dispatch, flushOnSend]);
 
   const handleCancelReply = useCallback(() => {
     dispatch(clearReplyToMessage());
@@ -214,11 +220,16 @@ export function ThreadPanel() {
       <TypingIndicator typingUsers={threadTyping} />
 
       <MessageCompose
+        // Remount per thread so one thread's text never leaks into another.
+        key={activeThreadId}
         channelName=""
         placeholder="Reply..."
         onSend={handleSend}
         replyTo={replyToMessage}
         onCancelReply={handleCancelReply}
+        initialDraft={initialDraft}
+        remoteDraft={remoteDraft}
+        onDraftChange={onDraftChange}
       />
     </div>
   );

@@ -35,6 +35,9 @@ import {
   MarkChannelReadRequestSchema,
   MarkThreadReadRequestSchema,
   GetUnreadCountsRequestSchema,
+  SaveDraftRequestSchema,
+  DeleteDraftRequestSchema,
+  ListDraftsRequestSchema,
   GetChannelResourcesRequestSchema,
   CreateCategoryRequestSchema,
   UpdateCategoryRequestSchema,
@@ -136,6 +139,13 @@ export const chatApi = {
     chatClient.markThreadRead(req),
   getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>
     chatClient.getUnreadCounts(req),
+
+  saveDraft: (req: MessageInitShape<typeof SaveDraftRequestSchema>) =>
+    chatClient.saveDraft(req),
+  deleteDraft: (req: MessageInitShape<typeof DeleteDraftRequestSchema>) =>
+    chatClient.deleteDraft(req),
+  listDrafts: (req: MessageInitShape<typeof ListDraftsRequestSchema>) =>
+    chatClient.listDrafts(req),
 
   getChannelResources: (req: MessageInitShape<typeof GetChannelResourcesRequestSchema>) =>
     chatClient.getChannelResources(req),

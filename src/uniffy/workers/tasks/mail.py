@@ -10,7 +10,6 @@ import json
 from typing import Any
 from uuid import UUID
 
-from arq import Retry
 from loguru import logger
 
 from uniffy.core.mail import (
@@ -20,6 +19,7 @@ from uniffy.core.mail import (
     MailSender,
     MailSuppressedError,
 )
+from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="mail")
 

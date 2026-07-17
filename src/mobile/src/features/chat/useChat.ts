@@ -5,6 +5,7 @@ import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
 import { filesApi } from "@features/files/filesApi";
 import { STREAM_HEALTH_KEY } from "@features/chat/useChatStream";
+import { draftsKey } from "@features/chat/useChatMutations";
 import {
   channelToPlain,
   messageToPlain,
@@ -12,12 +13,15 @@ import {
   threadInboxItemToPlain,
   categoryToPlain,
   approvalToPlain,
+  draftToPlain,
+  draftKey,
   type SerializedChannel,
   type SerializedMessage,
   type SerializedMember,
   type SerializedThreadInboxItem,
   type SerializedCategory,
   type SerializedPendingApproval,
+  type SerializedDraft,
 } from "@features/chat/chatSerializer";
 
 const MESSAGE_POLL_MS = 3500;
@@ -50,6 +54,7 @@ export function useChannels() {
   });
 
   const unreadQuery = useUnreadCounts();
+  const draftChannelIds = useDraftChannelIds();
 
   const channels = useMemo<SerializedChannel[]>(() => {
     const list = channelsQuery.data ?? [];
@@ -59,9 +64,10 @@ export function useChannels() {
         ...c,
         unreadCount: unread[c.id]?.unread ?? 0,
         mentionCount: unread[c.id]?.mentions ?? 0,
+        hasDraft: draftChannelIds.has(c.id),
       }))
       .sort((a, b) => b.lastMessageAtSeconds - a.lastMessageAtSeconds);
-  }, [channelsQuery.data, unreadQuery.data]);
+  }, [channelsQuery.data, unreadQuery.data, draftChannelIds]);
 
   return {
     channels,
@@ -91,10 +97,39 @@ function useUnreadCounts() {
   });
 }
 
+/** All of the user's drafts keyed by draftKey. Stream-patched between refetches. */
+export function useDrafts() {
+  const { organizationId } = useAuth();
+  return useQuery({
+    queryKey: draftsKey(organizationId),
+    enabled: !!organizationId,
+    queryFn: async () => {
+      const res = await chatApi.listDrafts({ organizationId: organizationId! });
+      const map: Record<string, SerializedDraft> = {};
+      for (const proto of res.drafts) {
+        const draft = draftToPlain(proto);
+        map[draftKey(draft.channelId, draft.rootMessageId)] = draft;
+      }
+      return map;
+    },
+  });
+}
+
+/** Channel ids carrying a draft; a thread draft marks its parent channel. */
+function useDraftChannelIds(): Set<string> {
+  const draftsQuery = useDrafts();
+  return useMemo(() => {
+    const ids = new Set<string>();
+    for (const draft of Object.values(draftsQuery.data ?? {})) ids.add(draft.channelId);
+    return ids;
+  }, [draftsQuery.data]);
+}
+
 /** The user's named agent chats, merged with live unread counts. */
 export function useAgentChats() {
   const { organizationId } = useAuth();
   const unreadQuery = useUnreadCounts();
+  const draftChannelIds = useDraftChannelIds();
 
   const agentChatsQuery = useQuery({
     queryKey: ["chat", "agentChats", organizationId],
@@ -113,9 +148,10 @@ export function useAgentChats() {
         ...c,
         unreadCount: unread[c.id]?.unread ?? 0,
         mentionCount: unread[c.id]?.mentions ?? 0,
+        hasDraft: draftChannelIds.has(c.id),
       }))
       .sort((a, b) => b.lastMessageAtSeconds - a.lastMessageAtSeconds);
-  }, [agentChatsQuery.data, unreadQuery.data]);
+  }, [agentChatsQuery.data, unreadQuery.data, draftChannelIds]);
 
   return { agentChats, isLoading: agentChatsQuery.isLoading };
 }

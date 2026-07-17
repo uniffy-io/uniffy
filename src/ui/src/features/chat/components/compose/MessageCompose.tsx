@@ -56,6 +56,11 @@ interface MessageComposeProps {
   onCancelEdit?: () => void;
   /** Fired when the bound `chat.editLast` key is pressed in an empty compose. */
   onEditLast?: () => void;
+  /** Canonical Markdown restored into an untouched empty composer. */
+  initialDraft?: string | null;
+  /** Non-null only when a remote draft change is safe to apply; replaces the editor content. */
+  remoteDraft?: string | null;
+  onDraftChange?: (markdown: string) => void;
 }
 
 const MAX_HEIGHT = 200;
@@ -168,7 +173,26 @@ function createMentionElement(label: string, urn: string): HTMLSpanElement {
   return wrapper;
 }
 
-export function MessageCompose({ channelName, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit, onEditLast }: MessageComposeProps) {
+const MENTION_MARKDOWN_PATTERN = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
+
+// Builds the DOM from text nodes + createMentionElement only; draft content is
+// synced from other sessions and must never be assigned as an HTML string.
+function hydrateFromMarkdown(container: HTMLDivElement, markdown: string): void {
+  container.innerHTML = '';
+  const parts = markdown.split(MENTION_MARKDOWN_PATTERN);
+  for (let i = 0; i < parts.length; i += 3) {
+    if (parts[i]) {
+      container.appendChild(document.createTextNode(parts[i]));
+    }
+    const label = parts[i + 1];
+    const urn = parts[i + 2];
+    if (label !== undefined && urn !== undefined) {
+      container.appendChild(createMentionElement(label, urn));
+    }
+  }
+}
+
+export function MessageCompose({ channelName, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit, onEditLast, initialDraft, remoteDraft, onDraftChange }: MessageComposeProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
@@ -299,6 +323,15 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     setCharCount(text.length);
   }, [pendingFiles.length]);
 
+  // Edit mode is not a draft: autosave stays silent while editingMessage is set.
+  const userEditedRef = useRef(false);
+  const emitDraftChange = useCallback(() => {
+    const el = editorRef.current;
+    if (!el || !onDraftChange || editingMessage) return;
+    userEditedRef.current = true;
+    onDraftChange(serializeToMarkdown(el));
+  }, [onDraftChange, editingMessage]);
+
   const prevEditIdRef = useRef<string | null>(null);
   useEffect(() => {
     const el = editorRef.current;
@@ -317,12 +350,40 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     } else if (!editingMessage && prevEditIdRef.current) {
       prevEditIdRef.current = null;
       el.innerHTML = '';
+      // Let the draft effect below restore the unsent draft the edit replaced.
+      userEditedRef.current = false;
       updateState();
     }
   }, [editingMessage, updateState]);
 
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el || editingMessage || !initialDraft || userEditedRef.current) return;
+    const hasContent =
+      (el.textContent ?? '').trim().length > 0 ||
+      el.querySelectorAll(`[${MENTION_ATTR}]`).length > 0;
+    if (hasContent) return;
+    hydrateFromMarkdown(el, initialDraft);
+    updateState();
+  }, [initialDraft, editingMessage, updateState]);
+
+  const prevRemoteDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    const el = editorRef.current;
+    const previous = prevRemoteDraftRef.current;
+    prevRemoteDraftRef.current = remoteDraft ?? null;
+    if (!el || editingMessage) return;
+    if (remoteDraft == null || remoteDraft === previous) return;
+    // The hook only surfaces remoteDraft when there are no unsaved local edits,
+    // so replacing the editor content cannot lose typing.
+    userEditedRef.current = false;
+    hydrateFromMarkdown(el, remoteDraft);
+    updateState();
+  }, [remoteDraft, editingMessage, updateState]);
+
   const handleInput = useCallback(() => {
     updateState();
+    emitDraftChange();
     onTyping?.();
 
     if (mentionActive) return;
@@ -351,7 +412,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     mentionStartOffsetRef.current = atIndex;
     setMentionQuery(query);
     setMentionActive(true);
-  }, [updateState, mentionActive, onTyping]);
+  }, [updateState, emitDraftChange, mentionActive, onTyping]);
 
   const handleMentionSelect = useCallback((result: SearchResultItem) => {
     const el = editorRef.current;
@@ -400,8 +461,9 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     setMentionQuery('');
     mentionStartNodeRef.current = null;
     updateState();
+    emitDraftChange();
     el.focus();
-  }, [updateState]);
+  }, [updateState, emitDraftChange]);
 
   const handleMentionClose = useCallback(() => {
     setMentionActive(false);
@@ -479,6 +541,7 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
           e.preventDefault();
           chip.remove();
           updateState();
+          emitDraftChange();
           return;
         }
       }
@@ -548,9 +611,10 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
         range.insertNode(document.createTextNode(wrapped));
         range.collapse(false);
         updateState();
+        emitDraftChange();
       }
     }
-  }, [mentionActive, handleSend, handleMentionClose, updateState, replyTo, onCancelReply, editingMessage, onCancelEdit, isEmpty, pendingFiles.length, onEditLast, editLastBinding]);
+  }, [mentionActive, handleSend, handleMentionClose, updateState, emitDraftChange, replyTo, onCancelReply, editingMessage, onCancelEdit, isEmpty, pendingFiles.length, onEditLast, editLastBinding]);
 
   const handleAtButtonClick = useCallback(() => {
     const el = editorRef.current;
@@ -598,8 +662,9 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     }
 
     updateState();
+    emitDraftChange();
     setShowEmojiPicker(false);
-  }, [updateState]);
+  }, [updateState, emitDraftChange]);
 
   const handleCodeBlockInsert = useCallback(() => {
     const el = editorRef.current;
@@ -619,7 +684,8 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     }
 
     updateState();
-  }, [updateState]);
+    emitDraftChange();
+  }, [updateState, emitDraftChange]);
 
   const handleBoldInsert = useCallback(() => {
     const el = editorRef.current;
@@ -651,7 +717,8 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
     }
 
     updateState();
-  }, [updateState]);
+    emitDraftChange();
+  }, [updateState, emitDraftChange]);
 
   useEffect(() => {
     const el = editorRef.current;

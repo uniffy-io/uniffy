@@ -1,0 +1,1 @@
+"""Chat drafts sub-domain."""

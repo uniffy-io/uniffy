@@ -6,7 +6,6 @@ from typing import Any
 from uuid import UUID
 
 import mutagen
-from arq import Retry
 from loguru import logger
 from PIL import Image
 from PIL.ExifTags import GPSTAGS, IFD, TAGS
@@ -17,6 +16,7 @@ from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.storage.s3_client import get_s3_client
 from uniffy.core.valkey import publish_notification
 from uniffy.db.session import open_session
+from uniffy.vendor.arq import Retry
 from uniffy.workers.tasks.thumbnails import _create_thumbnail, get_thumbnail_key
 
 logger = logger.bind(component="tasks.extraction")
