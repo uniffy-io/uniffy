@@ -42,6 +42,7 @@ import {
   writeCanvasToYDoc,
   writeNodeTextDiff,
 } from '@/features/notes/realtime/canvasBinding';
+import { HYDRATION_ORIGIN } from '@/features/realtime';
 import type { CanvasRealtimeBinding } from '@/features/notes/realtime/useCanvasRealtimeSession';
 import { CanvasAwarenessOverlay } from '@/features/notes/realtime/CanvasAwarenessOverlay';
 import {
@@ -273,12 +274,14 @@ function CanvasEditorInner({
       if (empty && canvasStateRef.current.nodes.length > 0) {
         const initial = canvasStateRef.current;
         const userEdges = initial.edges.filter((e) => e.type !== 'mindmapEdge');
+        // Hydration origin: untracked by the UndoManager (undo must not wipe the seed) and filtered from IDB persistence.
         seedCanvasYDoc(
           realtime.ydoc,
           { nodes: initial.nodes, edges: userEdges, defaults: initial.defaults },
-          realtime.sessionId,
+          HYDRATION_ORIGIN,
         );
       }
+      // The rebuild observers skip hydration-origin transactions; this direct read renders the seed on the seeding tab.
       const next = readCanvasFromYDoc(realtime.ydoc);
       setNodes(next.nodes);
       setEdges(next.edges as CanvasEdge[]);
@@ -306,7 +309,7 @@ function CanvasEditorInner({
 
     const rebuild = (transaction: Y.Transaction) => {
       if (transaction.origin === realtime.sessionId) return;
-      if (transaction.origin === 'hydration') return;
+      if (transaction.origin === HYDRATION_ORIGIN) return;
       const next = readCanvasFromYDoc(realtime.ydoc);
       // Preserve local UI flags across peer rebuilds - remote writes would tear down NodeResizer mid-drag.
       setNodes((prev) => {
@@ -334,7 +337,7 @@ function CanvasEditorInner({
     };
     const rebuildDefaults = (transaction: Y.Transaction) => {
       if (transaction.origin === realtime.sessionId) return;
-      if (transaction.origin === 'hydration') return;
+      if (transaction.origin === HYDRATION_ORIGIN) return;
       setDefaults(readCanvasDefaults(realtime.ydoc) ?? undefined);
     };
     const handleDeep = (

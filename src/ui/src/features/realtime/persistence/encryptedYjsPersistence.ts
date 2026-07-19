@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 import { openDB, type IDBPDatabase } from 'idb';
+import { randomUUID } from '@/shared/utils/uuid';
 import {
   ENCRYPTION_REKEY_EVENT,
   ENCRYPTION_TEARDOWN_EVENT,
@@ -10,16 +11,12 @@ import {
 } from '@/shared/crypto/storageEncryption';
 
 const DB_NAME = 'uniffy-realtime-yjs';
-const DB_VERSION = 1;
+// Rebuildable cache: a key-shape change bumps the version and the upgrade
+// wipes the stores instead of migrating rows.
+const DB_VERSION = 2;
 const UPDATES_STORE = 'updates';
-const META_STORE = 'meta';
 
 registerEncryptedDatabase(DB_NAME);
-
-interface PersistenceMeta {
-  lastSeq: number;
-  lastCompactAt: number;
-}
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -27,12 +24,10 @@ function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        if (!db.objectStoreNames.contains(UPDATES_STORE)) {
-          db.createObjectStore(UPDATES_STORE);
+        for (const name of Array.from(db.objectStoreNames)) {
+          db.deleteObjectStore(name);
         }
-        if (!db.objectStoreNames.contains(META_STORE)) {
-          db.createObjectStore(META_STORE);
-        }
+        db.createObjectStore(UPDATES_STORE);
       },
     });
   }
@@ -41,6 +36,47 @@ function getDB(): Promise<IDBPDatabase> {
 
 export const HYDRATION_ORIGIN = Symbol('uniffy.realtime.hydration');
 export const REMOTE_ORIGIN = Symbol('uniffy.realtime.remote');
+// The editor's Y.Text("markdown") mirror re-derives its content from the
+// persisted fragment and also fires for remote ySync transactions, so
+// persisting it would write peer edits into local IDB.
+export const MARKDOWN_MIRROR_ORIGIN = Symbol('uniffy.realtime.markdownMirror');
+
+export function isPersistedOrigin(origin: unknown): boolean {
+  return (
+    origin !== HYDRATION_ORIGIN &&
+    origin !== REMOTE_ORIGIN &&
+    origin !== MARKDOWN_MIRROR_ORIGIN
+  );
+}
+
+// A random epoch per attach keys this session's rows, so a fresh attach or a
+// concurrent tab can never overwrite another session's rows.
+export function newPersistenceEpoch(): string {
+  return randomUUID();
+}
+
+// Yjs updates are commutative, so replay order across epochs does not matter;
+// zero-padding keeps one epoch's rows in write order anyway.
+export function updateRowSeq(epoch: string, counter: number): string {
+  return `${epoch}:${String(counter).padStart(10, '0')}`;
+}
+
+// A row may be folded into a snapshot only when its content is provably in
+// this session's ydoc: rows replayed by hydrate, plus this epoch's own rows up
+// to the counter captured when the snapshot was encoded.
+export function selectCompactableSeqs(
+  seqs: readonly string[],
+  epoch: string,
+  maxOwnCounter: number,
+  hydratedSeqs: ReadonlySet<string>,
+): string[] {
+  const ownPrefix = `${epoch}:`;
+  return seqs.filter((seq) => {
+    if (hydratedSeqs.has(seq)) return true;
+    if (!seq.startsWith(ownPrefix)) return false;
+    return Number(seq.slice(ownPrefix.length)) <= maxOwnCounter;
+  });
+}
 
 export interface EncryptedPersistenceOptions {
   contentType: string;
@@ -56,9 +92,11 @@ export interface EncryptedPersistence {
 }
 
 function rangeFor(contentType: string, contentId: string): IDBKeyRange {
+  // The third key component is always a string; an empty array sorts after
+  // every string in IndexedDB key order.
   return IDBKeyRange.bound(
     [contentType, contentId],
-    [contentType, contentId, Number.MAX_SAFE_INTEGER],
+    [contentType, contentId, []],
   );
 }
 
@@ -68,24 +106,32 @@ export function attachEncryptedPersistence(
   const { contentType, contentId, ydoc } = opts;
   const compactEvery = opts.compactEvery ?? 100;
 
-  let seq = 0;
+  const epoch = newPersistenceEpoch();
+  let counter = 0;
+  const hydratedSeqs = new Set<string>();
   let pendingCompact = false;
   let destroyed = false;
 
   const onUpdate = (update: Uint8Array, origin: unknown) => {
     if (destroyed) return;
-    if (origin === REMOTE_ORIGIN || origin === HYDRATION_ORIGIN) return;
+    if (!isPersistedOrigin(origin)) return;
     if (!isStorageEncryptionReady()) return;
     void writeUpdate(update);
   };
 
   async function writeUpdate(update: Uint8Array): Promise<void> {
+    // Counter allocation stays synchronous with the doc update, so any own
+    // row at or below the counter compact() captures is inside its snapshot.
+    const allocated = ++counter;
     try {
       const blob = await encryptForStorage(bytesToBase64(update));
       const db = await getDB();
-      const next = ++seq;
-      await db.put(UPDATES_STORE, blob, [contentType, contentId, next]);
-      if (next % compactEvery === 0 && !pendingCompact) {
+      await db.put(UPDATES_STORE, blob, [
+        contentType,
+        contentId,
+        updateRowSeq(epoch, allocated),
+      ]);
+      if (allocated % compactEvery === 0 && !pendingCompact) {
         pendingCompact = true;
         queueMicrotask(() => {
           pendingCompact = false;
@@ -97,42 +143,29 @@ export function attachEncryptedPersistence(
     }
   }
 
-  async function readMeta(): Promise<PersistenceMeta | null> {
-    try {
-      const db = await getDB();
-      const blob = await db.get(META_STORE, [contentType, contentId]);
-      if (!blob) return null;
-      return await decryptFromStorage<PersistenceMeta>(blob);
-    } catch {
-      return null;
-    }
-  }
-
-  async function writeMeta(meta: PersistenceMeta): Promise<void> {
-    try {
-      const blob = await encryptForStorage(meta);
-      const db = await getDB();
-      await db.put(META_STORE, blob, [contentType, contentId]);
-    } catch {
-      // ignore
-    }
-  }
-
   async function hydrate(): Promise<void> {
     if (!isStorageEncryptionReady()) return;
     try {
-      const meta = await readMeta();
-      if (meta) seq = meta.lastSeq;
-
       const db = await getDB();
-      const blobs = await db.getAll(UPDATES_STORE, rangeFor(contentType, contentId));
-      for (const blob of blobs) {
+      const tx = db.transaction(UPDATES_STORE, 'readonly');
+      const store = tx.objectStore(UPDATES_STORE);
+      const range = rangeFor(contentType, contentId);
+      const [keys, blobs] = await Promise.all([
+        store.getAllKeys(range),
+        store.getAll(range),
+        tx.done,
+      ]);
+      for (let i = 0; i < blobs.length; i++) {
         try {
-          const encoded = await decryptFromStorage<string>(blob);
+          const encoded = await decryptFromStorage<string>(blobs[i]);
           const bytes = base64ToBytes(encoded);
           if (bytes.length > 0) Y.applyUpdate(ydoc, bytes, HYDRATION_ORIGIN);
+          const key = keys[i] as [string, string, string];
+          hydratedSeqs.add(key[2]);
         } catch {
-          // skip rows that fail to decrypt (rotated DEK, corruption)
+          // Skip rows that fail to decrypt (rotated DEK, corruption). They
+          // also stay out of hydratedSeqs, so compact never deletes content
+          // this session has not applied.
         }
       }
     } catch (err) {
@@ -143,20 +176,32 @@ export function attachEncryptedPersistence(
   async function compact(): Promise<void> {
     if (!isStorageEncryptionReady()) return;
     try {
+      // Captured before the encode: any own row at or below this counter was
+      // applied to the ydoc first, so the snapshot subsumes it. Rows outside
+      // the selection (another tab's live writes, an own write landing after
+      // this transaction) are left in place and re-applied by a later
+      // hydrate, which is safe because Yjs updates are idempotent.
+      const snapshotCounter = counter;
       const snapshot = Y.encodeStateAsUpdate(ydoc);
       const blob = await encryptForStorage(bytesToBase64(snapshot));
       const db = await getDB();
       const tx = db.transaction(UPDATES_STORE, 'readwrite');
       const store = tx.objectStore(UPDATES_STORE);
-      let cursor = await store.openCursor(rangeFor(contentType, contentId));
-      while (cursor) {
-        await cursor.delete();
-        cursor = await cursor.continue();
-      }
-      seq = 1;
-      await store.put(blob, [contentType, contentId, seq]);
-      await tx.done;
-      await writeMeta({ lastSeq: seq, lastCompactAt: Date.now() });
+      const keys = (await store.getAllKeys(
+        rangeFor(contentType, contentId),
+      )) as [string, string, string][];
+      const removable = selectCompactableSeqs(
+        keys.map((key) => key[2]),
+        epoch,
+        snapshotCounter,
+        hydratedSeqs,
+      );
+      await Promise.all([
+        ...removable.map((seq) => store.delete([contentType, contentId, seq])),
+        store.put(blob, [contentType, contentId, updateRowSeq(epoch, ++counter)]),
+        tx.done,
+      ]);
+      for (const seq of removable) hydratedSeqs.delete(seq);
     } catch (err) {
       console.warn('[realtime] encrypted persistence compact failed', err);
     }
@@ -172,7 +217,9 @@ export function attachEncryptedPersistence(
   }
 
   const handleRekey = () => {
-    seq = 0;
+    // The rekey path wipes the whole DB, so seqs recorded by hydrate no
+    // longer exist; a fresh snapshot re-seeds the store under the new DEK.
+    hydratedSeqs.clear();
     void compact();
   };
   const handleTeardown = () => {

@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
 import { useAppSelector } from '@/app/hooks';
-import { useDocSession, type RealtimeStatus } from '@/features/realtime';
+import { realtimeMultiplexer, useDocSession, type RealtimeStatus } from '@/features/realtime';
 import { PROSEMIRROR_FRAGMENT_FIELD } from '@/features/notes/realtime/markdown';
+import { registerLiveNoteDoc } from '@/features/notes/realtime/liveNoteDocs';
 import { resolveAwarenessColor } from '@/features/notes/realtime/awarenessColor';
 import type { CrepeRealtimeBinding } from '@/components/editor/CrepeEditor';
 
 export function useNoteRealtimeSession(
   noteId: string | null,
   enabled: boolean,
+  canEdit: boolean = true,
 ): {
   binding: CrepeRealtimeBinding | null;
   status: RealtimeStatus;
@@ -22,8 +24,26 @@ export function useNoteRealtimeSession(
   const user = useAppSelector((state) => state.auth.user);
   const [undoManager, setUndoManager] = useState<Y.UndoManager | null>(null);
 
+  const docName = noteId ? `NOTE:${noteId}` : null;
+
+  // The server closes read-only sockets on any SYNC write frame; the flag
+  // makes the multiplexer suppress them (IDB hydration replays included).
   useEffect(() => {
-    if (!session) {
+    if (!session || !docName) return;
+    realtimeMultiplexer.setDocReadOnly(docName, !canEdit);
+  }, [session, docName, canEdit]);
+
+  // Sibling surfaces (metadata panel) read the live doc through the registry.
+  useEffect(() => {
+    if (!session || !noteId) return;
+    return registerLiveNoteDoc(noteId, {
+      ydoc: session.ydoc,
+      whenSynced: session.whenSynced,
+    });
+  }, [session, noteId]);
+
+  useEffect(() => {
+    if (!session || !canEdit) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset undo manager when the session drops
       setUndoManager(null);
       return;
@@ -40,7 +60,7 @@ export function useNoteRealtimeSession(
       manager.destroy();
       setUndoManager(null);
     };
-  }, [session]);
+  }, [session, canEdit]);
 
   // Awareness user payload in its own effect so avatar/name changes do not rebuild UndoManager (would drop undo history).
   useEffect(() => {
@@ -67,6 +87,15 @@ export function useNoteRealtimeSession(
     user?.avatarUrl,
   ]);
 
+  const subscribePending = useCallback(
+    (onChange: () => void) =>
+      docName ? realtimeMultiplexer.subscribeOutboundPending(docName, onChange) : () => {},
+    [docName],
+  );
+  const outboundPending = useSyncExternalStore(subscribePending, () =>
+    docName ? realtimeMultiplexer.isOutboundPending(docName) : false,
+  );
+
   const binding = useMemo<CrepeRealtimeBinding | null>(() => {
     if (!session) return null;
     return {
@@ -78,5 +107,12 @@ export function useNoteRealtimeSession(
     };
   }, [session, undoManager]);
 
-  return { binding, status: session?.status ?? 'idle' };
+  const baseStatus = session?.status ?? 'idle';
+  const status: RealtimeStatus =
+    outboundPending &&
+    (baseStatus === 'connected' || baseStatus === 'connecting' || baseStatus === 'disconnected')
+      ? 'syncing'
+      : baseStatus;
+
+  return { binding, status };
 }

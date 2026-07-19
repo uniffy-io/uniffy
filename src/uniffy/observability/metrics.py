@@ -365,6 +365,12 @@ REALTIME_SNAPSHOT_DROPPED_TOTAL = Counter(
     ["content_type", "reason"],
 )
 
+REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL = Counter(
+    "uniffy_realtime_blank_content_overwrites_total",
+    "Realtime saves that replaced non-empty content with an empty render",
+    ["content_type"],
+)
+
 REALTIME_UPDATE_MESSAGES_TOTAL = Counter(
     "uniffy_realtime_update_messages_total",
     "Yjs SYNC update frames observed per direction",

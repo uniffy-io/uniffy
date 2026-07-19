@@ -18,6 +18,7 @@ import {
 } from '@phosphor-icons/react';
 import { CommentsPanel } from '@/features/comments/components/CommentsPanel';
 import { useComments } from '@/features/comments/hooks/useComments';
+import { useLiveNoteMarkdown } from '@/features/notes/realtime/liveNoteDocs';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
 import { useNavigate } from 'react-router-dom';
@@ -97,7 +98,9 @@ export function NotesMetadataPanel() {
   // Get the note (may be undefined)
   const note = currentNoteId ? notes[currentNoteId] : undefined;
 
-  const currentContent = note?.content ?? '';
+  // Redux content lags the live doc by snapshot debounce plus refetch, so
+  // outline/links/statistics read Y.Text when the editor has a session open.
+  const currentContent = useLiveNoteMarkdown(currentNoteId ?? null, note?.content ?? '');
 
   // Parse outgoing links (mentions) from content - MUST be called before any returns
   const outgoingLinks = useMemo(

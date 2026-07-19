@@ -11,15 +11,18 @@ import {
   ySyncPluginKey,
   yCursorPlugin,
   yUndoPlugin,
-  prosemirrorToYXmlFragment,
 } from 'y-prosemirror';
 import * as Y from 'yjs';
 import type { Awareness } from 'y-protocols/awareness';
 import {
+  MARKDOWN_MIRROR_ORIGIN,
   MARKDOWN_TEXT_FIELD,
   PROSEMIRROR_FRAGMENT_FIELD,
+  fragmentHasRealContent,
   replaceMarkdownYText,
+  replaceProsemirrorFragment,
 } from '@/features/notes/realtime/markdown';
+import { HYDRATION_ORIGIN } from '@/features/realtime';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { languages } from '@codemirror/language-data';
 import { basicSetup } from 'codemirror';
@@ -44,6 +47,7 @@ import { tocPlugins } from '@/components/editor/plugins/toc';
 import { highlightPlugins, highlightMark } from '@/components/editor/plugins/highlight';
 import { HighlightPicker } from '@/components/editor/plugins/highlight/HighlightPicker';
 import { underlinePlugins } from '@/components/editor/plugins/underline';
+import { slashMenuGridNavigation } from '@/components/editor/plugins/slashMenuGridNavigation';
 import {
   insertTocBlock,
   insertVideoBlock,
@@ -124,6 +128,25 @@ const TOC_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height=
 function clearContainer(container: HTMLElement) {
   while (container.firstChild) {
     container.removeChild(container.firstChild);
+  }
+}
+
+// crepe.destroy() is async and tears the Milkdown ctx ahead of the
+// EditorView, so a binding left observing the shared fragment dispatches
+// into a view whose plugins read disposed ctx slices and throw.
+// y-prosemirror's deferred metadata flush gates on `binding.isDestroyed`,
+// but binding.destroy() never sets it - set it ourselves.
+function muteSyncBinding(view: EditorView | null | undefined) {
+  if (!view || view.isDestroyed) return;
+  try {
+    const syncState = ySyncPluginKey.getState(view.state) as { binding?: { destroy?: () => void; isDestroyed?: boolean } } | null;
+    const binding = syncState?.binding;
+    if (binding) {
+      binding.isDestroyed = true;
+      binding.destroy?.();
+    }
+  } catch {
+    // best effort
   }
 }
 
@@ -611,7 +634,11 @@ export function CrepeEditor({
 
     const container = editorRef.current;
     let cancelled = false;
-    
+    // The Y.Text mirror stays off until the cold-start seed confirms the
+    // ProseMirror doc reflects ``Y.Text("markdown")``. Mirroring an
+    // unseeded (empty) doc would overwrite real markdown with "".
+    let markdownMirrorReady = false;
+
     // Clean up any existing instance first
     if (crepeRef.current) {
       crepeRef.current.destroy();
@@ -650,6 +677,8 @@ export function CrepeEditor({
       editor.use(highlightPlugins);
       // Register underline mark plugin (both edit and readonly)
       editor.use(underlinePlugins);
+      // Arrow-key remap for the two column slash menu grid
+      editor.use(slashMenuGridNavigation);
       // Selection version notifier - drives external toolbar active-state subscriptions
       if (!readonly) {
         const scope = handleScopeRef.current;
@@ -680,15 +709,23 @@ export function CrepeEditor({
         // the snapshot pipeline. Milkdown's ``markdownUpdated`` is
         // filtered for ``ySync``-meta transactions, so we hook
         // ``view.update`` via a ``$prose`` plugin and debounce 250ms.
+        // Only the origin tab mirrors: ySync-applied transactions (peer
+        // edits, hydration rebuilds) are skipped - their origin peer
+        // already mirrored them, and N tabs re-serializing the same doc
+        // is discarded work. Writes ride ``MARKDOWN_MIRROR_ORIGIN``,
+        // which IDB persistence filters out.
         editor.use(
           $prose((ctx) => {
             let timer: ReturnType<typeof setTimeout> | null = null;
+            let pendingView: EditorView | null = null;
             const flush = (view: EditorView) => {
               timer = null;
+              pendingView = null;
+              if (!markdownMirrorReady) return;
               try {
                 const serializer = ctx.get(serializerCtx);
                 const markdown = serializer(view.state.doc);
-                replaceMarkdownYText(rt.ydoc, markdown, rt.sessionId);
+                replaceMarkdownYText(rt.ydoc, markdown, MARKDOWN_MIRROR_ORIGIN);
               } catch {
                 // Serializer not ready yet - next update retries.
               }
@@ -697,6 +734,11 @@ export function CrepeEditor({
               view: () => ({
                 update: (updatedView, prevState) => {
                   if (updatedView.state.doc.eq(prevState.doc)) return;
+                  const syncState = ySyncPluginKey.getState(updatedView.state) as {
+                    isChangeOrigin?: boolean;
+                  } | null;
+                  if (syncState?.isChangeOrigin) return;
+                  pendingView = updatedView;
                   if (timer) clearTimeout(timer);
                   timer = setTimeout(() => flush(updatedView), 250);
                 },
@@ -705,6 +747,11 @@ export function CrepeEditor({
                     clearTimeout(timer);
                     timer = null;
                   }
+                  // Flush instead of discarding: this tab is the only mirror
+                  // writer for its own edits, so an unmount inside the
+                  // debounce window would otherwise leave Y.Text stale.
+                  if (pendingView && !pendingView.isDestroyed) flush(pendingView);
+                  pendingView = null;
                 },
               }),
             });
@@ -812,8 +859,16 @@ export function CrepeEditor({
 
     // Now create the editor with plugins already registered
     crepe.create().then(() => {
-      // If effect was cleaned up before create finished, destroy immediately
+      // If effect was cleaned up before create finished, destroy immediately.
+      // The cleanup ran before this instance had a view, so detach its
+      // ySync binding here or it lingers as a live fragment observer and
+      // any fragment rebuild re-enters its half-destroyed view.
       if (cancelled) {
+        try {
+          crepe.editor.action((ctx) => muteSyncBinding(ctx.get(editorViewCtx)));
+        } catch {
+          // ctx already gone
+        }
         crepe.destroy();
         return;
       }
@@ -870,50 +925,80 @@ export function CrepeEditor({
       // Listen for markdown changes AFTER editor is fully created (only if not readonly)
       // This ensures editorViewCtx is available during serialization
       if (!readonly) {
-        const rt = realtimeRef.current;
         crepe.on((listener) => {
           listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
             // Guard against callbacks firing after editor is destroyed
             if (cancelled || !crepeRef.current) return;
             if (markdown !== prevMarkdown) {
               handleContentChange(markdown);
-              // Mirror into ``Y.Text("markdown")`` so the snapshot
-              // pipeline can render without running a JS parser.
-              if (rt) {
-                replaceMarkdownYText(rt.ydoc, markdown, rt.sessionId);
-              }
             }
           });
         });
       }
 
-      // First-attach cold-start: convert ``Y.Text("markdown")`` into
-      // ``Y.XmlFragment("prosemirror")`` for ySyncPlugin to mirror.
+      // Cold-start seed and reconciliation: ``Y.Text("markdown")`` is the
+      // canonical content by contract. Markdown mode writes only Y.Text, so
+      // the fragment can hold stale content (or the ySync placeholder) when
+      // the editor mounts. Whenever the fragment disagrees with Y.Text it is
+      // rebuilt from Y.Text; showing the stale fragment would let the mirror
+      // overwrite the markdown-mode edits on the next keystroke.
       // Gated on ``whenSynced`` to avoid racing SyncStep2.
       const rtBinding = realtimeRef.current;
       if (rtBinding && !readonly) {
         void rtBinding.whenSynced.then(() => {
           if (cancelled || !crepeRef.current) return;
           try {
-            crepeRef.current.editor.action((ctx) => {
+            crepe.editor.action((ctx) => {
               const view = ctx.get(editorViewCtx);
               if (!view || view.isDestroyed) return;
               const fragment = rtBinding.ydoc.get(
                 PROSEMIRROR_FRAGMENT_FIELD,
                 Y.XmlFragment,
               );
-              if (fragment.length > 0) return;
               const ytext = rtBinding.ydoc.get(MARKDOWN_TEXT_FIELD, Y.Text);
               const md = ytext.toString();
-              if (!md) return;
+              // Empty Y.Text never wins over fragment content; the mirror
+              // fills it from the next serialized doc instead.
+              if (!md) {
+                markdownMirrorReady = true;
+                return;
+              }
               const parser = ctx.get(parserCtx);
               const node = parser(md);
               if (!node) return;
-              rtBinding.ydoc.transact(() => {
-                prosemirrorToYXmlFragment(node, fragment);
-              }, 'hydration');
+              if (fragmentHasRealContent(fragment)) {
+                // Compare serialize-normalized forms. Markdown dialect
+                // differences (bullet chars, escapes, spacing) make a raw
+                // string compare against Y.Text useless.
+                const serializer = ctx.get(serializerCtx);
+                if (serializer(view.state.doc) === serializer(node)) {
+                  markdownMirrorReady = true;
+                  return;
+                }
+                // With a live peer attached the fragment IS the current CRDT
+                // state (their in-flight keystrokes); Y.Text merely trails it
+                // by the mirror debounce. Rebuilding would broadcast a revert
+                // of those keystrokes, so the divergence rebuild is a
+                // solo-client self-heal only.
+                const awareness = rtBinding.awareness;
+                const hasPeer = Array.from(awareness.getStates().keys()).some(
+                  (clientId) => clientId !== awareness.clientID,
+                );
+                if (hasPeer) {
+                  markdownMirrorReady = true;
+                  return;
+                }
+              }
+              // Flag first: the rebuild's Y mutations commit even when a
+              // foreign fragment observer throws mid-notification, and that
+              // throw must not leave the mirror off for a doc that already
+              // reflects Y.Text.
+              markdownMirrorReady = true;
+              replaceProsemirrorFragment(rtBinding.ydoc, node, HYDRATION_ORIGIN);
             });
           } catch (err) {
+            // Parse or serialize failure: keep showing the fragment with the
+            // mirror off rather than risk destroying content in Y.Text.
             console.warn('[CrepeEditor] realtime cold-start seed failed', err);
           }
         });
@@ -944,25 +1029,7 @@ export function CrepeEditor({
         unregisterEditorRef.current();
         unregisterEditorRef.current = null;
       }
-      // crepe.destroy() is async; without detaching the Y.Doc observer
-      // synchronously, a remote update can dispatch into the editor after
-      // Milkdown wipes its ctx, throwing "Context editorState not found".
-      // y-prosemirror's deferred metadata flush (lib.js updateMetas) gates
-      // on `binding.isDestroyed`, but binding.destroy() never sets it - set
-      // it ourselves to mute pending awareness dispatches.
-      const liveView = viewRef.current;
-      if (liveView && !liveView.isDestroyed) {
-        try {
-          const syncState = ySyncPluginKey.getState(liveView.state) as { binding?: { destroy?: () => void; isDestroyed?: boolean } } | null;
-          const binding = syncState?.binding;
-          if (binding) {
-            binding.isDestroyed = true;
-            binding.destroy?.();
-          }
-        } catch {
-          // best effort
-        }
-      }
+      muteSyncBinding(viewRef.current);
       viewRef.current = null;
       if (crepeRef.current) {
         crepeRef.current.destroy();

@@ -59,6 +59,29 @@ async def publish_doc_update(
     )
 
 
+async def publish_content_replace(
+    content_type: ContentType,
+    content_id: UUID,
+    content: str,
+) -> None:
+    """Graft a domain column write into any live doc.
+
+    Session-holding replicas apply the content as a CRDT edit on their in-memory
+    doc, so a legacy write path (mobile autosave, agent tools) cannot be
+    clobbered by a later stale-doc snapshot flush. Not origin-deduped: the
+    publishing process may itself hold the live session.
+    """
+    await publish_to_channel(
+        doc_channel(content_type, content_id),
+        {
+            "kind": "content_replace",
+            "origin_replica": replica_id(),
+            "content": content,
+            "published_at": time.time(),
+        },
+    )
+
+
 async def publish_perm_change(
     content_type: ContentType,
     content_id: UUID,

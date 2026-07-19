@@ -9,13 +9,15 @@ is covered separately by the live-stack harness.
 
 import asyncio
 import base64
-from unittest.mock import AsyncMock
+import time
+from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import pycrdt
 import pytest
 
+from uniffy.core.realtime import ydoc_manager as ydoc_manager_module
 from uniffy.core.realtime.adapter import (
     _adapters,
     get_realtime_adapter,
@@ -28,7 +30,7 @@ from uniffy.core.realtime.auth import (
     extract_bearer_from_auth_header,
     origin_is_allowed,
 )
-from uniffy.core.realtime.snapshot import SnapshotWriter
+from uniffy.core.realtime.snapshot import SNAPSHOT_MAX_DELAY, SnapshotWriter
 from uniffy.core.realtime.wire import (
     YMessageType,
     YSyncMessageType,
@@ -348,6 +350,99 @@ class TestSnapshotWriterDebounce:
 
         _run(go())
         assert flush_calls == 0
+
+    def test_overdue_pending_window_flushes_instead_of_rearming(self) -> None:
+        flush_calls: list[bool] = []
+
+        async def fake_flush(session, *, force=False):
+            flush_calls.append(force)
+
+        async def go() -> None:
+            writer = SnapshotWriter(debounce_seconds=60.0)
+            writer.flush = fake_flush  # type: ignore[method-assign]
+            session = _make_router_session()
+
+            await writer.schedule(session)
+            assert flush_calls == []
+
+            writer._first_scheduled[session.key] = time.monotonic() - (
+                SNAPSHOT_MAX_DELAY + 1
+            )
+            await writer.schedule(session)
+            assert flush_calls == [False]
+
+            await writer.cancel(session.key)
+
+        _run(go())
+
+
+class TestSnapshotForceFlush:
+    def test_force_flush_persists_in_process(self) -> None:
+        async def go() -> None:
+            writer = SnapshotWriter(debounce_seconds=60.0)
+            session = _make_router_session()
+            session.ydoc["markdown"] = pycrdt.Text("hello")
+
+            persist = AsyncMock(return_value=True)
+            get_queue = AsyncMock()
+            with (
+                patch("uniffy.core.realtime.snapshot.persist_snapshot", persist),
+                patch("uniffy.core.realtime.snapshot.get_queue_safe", get_queue),
+            ):
+                await writer.flush(session, force=True)
+
+            persist.assert_awaited_once()
+            args = persist.await_args.args
+            assert args[0] == session.key[0]
+            assert args[1] == session.key[1]
+            assert args[2] == session.organization_id
+            assert args[3]
+            get_queue.assert_not_called()
+
+        _run(go())
+
+    def test_non_force_flush_enqueues(self) -> None:
+        async def go() -> None:
+            writer = SnapshotWriter(debounce_seconds=60.0)
+            session = _make_router_session()
+            session.ydoc["markdown"] = pycrdt.Text("hello")
+
+            persist = AsyncMock(return_value=True)
+            queue = AsyncMock()
+            get_queue = AsyncMock(return_value=queue)
+            with (
+                patch("uniffy.core.realtime.snapshot.persist_snapshot", persist),
+                patch("uniffy.core.realtime.snapshot.get_queue_safe", get_queue),
+            ):
+                await writer.flush(session)
+
+            persist.assert_not_called()
+            queue.enqueue_job.assert_awaited_once()
+
+        _run(go())
+
+
+class TestEvictionFlushOrdering:
+    def test_session_registered_until_force_flush_completes(self) -> None:
+        async def go() -> None:
+            manager = YDocManager()
+            session = _make_router_session()
+            manager._sessions[session.key] = session
+            observed: list[tuple[bool, bool]] = []
+
+            async def fake_flush(s, *, force=False):
+                observed.append((s.key in manager._sessions, force))
+
+            with (
+                patch.object(ydoc_manager_module, "IDLE_EVICTION_SECONDS", 0),
+                patch.object(ydoc_manager_module.snapshot_writer, "flush", fake_flush),
+            ):
+                await manager._evict_after_idle(session.key)
+
+            assert observed == [(True, True)]
+            assert session.key not in manager._sessions
+
+        _run(go())
 
 
 class TestCanvasRender:
@@ -677,12 +772,25 @@ class TestRealtimeSaveCAS:
             note.outgoing_references = []
             note.owner_id = uuid4()
 
-            read_result = MagicMock()
-            read_result.scalar_one_or_none = MagicMock(return_value=note)
-            update_result = MagicMock()
-            update_result.rowcount = 0
+            def read_result() -> MagicMock:
+                result = MagicMock()
+                result.scalar_one_or_none = MagicMock(return_value=note)
+                return result
 
-            session.execute.side_effect = [read_result, update_result]
+            def update_result() -> MagicMock:
+                result = MagicMock()
+                result.rowcount = 0
+                return result
+
+            # Every CAS attempt loses; each retry re-reads the note first.
+            session.execute.side_effect = [
+                read_result(),
+                update_result(),
+                read_result(),
+                update_result(),
+                read_result(),
+                update_result(),
+            ]
 
             ops = NoteOperations.__new__(NoteOperations)
             ops.session = session
@@ -878,6 +986,7 @@ class _StubCallbacks:
 
     def __init__(self) -> None:
         self.applied_updates: list[tuple[YDocSession, bytes]] = []
+        self.content_replaced: list[tuple[DocKey, str]] = []
         self.enforced: list[tuple[ClientHandle, str | None]] = []
         self.closed_stale: list[tuple[UUID, int]] = []
         self.closed_by_sid: list[tuple[UUID, UUID]] = []
@@ -885,6 +994,9 @@ class _StubCallbacks:
 
     async def apply_remote_update(self, session: YDocSession, update: bytes) -> None:
         self.applied_updates.append((session, update))
+
+    async def apply_content_replace(self, key: DocKey, content: str) -> None:
+        self.content_replaced.append((key, content))
 
     async def enforce_role_change(self, handle: ClientHandle, new_role: str | None) -> None:
         self.enforced.append((handle, new_role))
@@ -905,6 +1017,7 @@ def _make_router_with_callbacks() -> tuple[RealtimeRouter, _StubCallbacks]:
     r.register_callbacks(
         RouterCallbacks(
             apply_remote_update=cb.apply_remote_update,
+            apply_content_replace=cb.apply_content_replace,
             enforce_role_change=cb.enforce_role_change,
             close_stale_user_sessions=cb.close_stale_user_sessions,
             close_user_session_by_sid=cb.close_user_session_by_sid,
@@ -941,6 +1054,41 @@ class TestRouterDocDispatch:
         }
         _run(r._handle_doc_message(channel, payload))
         assert cb.applied_updates == [(sess, update)]
+
+    def test_content_replace_dispatches_even_from_own_replica(self):
+        # The publishing process may itself hold the live session, so the
+        # graft path must not be origin-deduped.
+        r, cb = _make_router_with_callbacks()
+        sess = _make_router_session()
+        r.register_doc_session(sess.key, sess)
+
+        channel = f"realtime:doc:{sess.key[0].value}:{sess.key[1]}"
+        payload = {
+            "kind": "content_replace",
+            "origin_replica": r._self_replica,
+            "content": "fresh column text",
+        }
+        _run(r._handle_doc_message(channel, payload))
+        assert cb.content_replaced == [(sess.key, "fresh column text")]
+        assert cb.applied_updates == []
+
+    def test_content_replace_without_session_or_content_is_dropped(self):
+        r, cb = _make_router_with_callbacks()
+        _run(
+            r._handle_doc_message(
+                f"realtime:doc:NOTE:{uuid4()}",
+                {"kind": "content_replace", "content": "x"},
+            )
+        )
+        sess = _make_router_session()
+        r.register_doc_session(sess.key, sess)
+        _run(
+            r._handle_doc_message(
+                f"realtime:doc:{sess.key[0].value}:{sess.key[1]}",
+                {"kind": "content_replace", "content": 42},
+            )
+        )
+        assert cb.content_replaced == []
 
     def test_unknown_doc_session_drops_silently(self):
         r, cb = _make_router_with_callbacks()
@@ -1025,3 +1173,81 @@ class TestRouterRegistryHygiene:
         r.attach_handle(key, h)
         r.detach_handle(key, h)
         r.detach_handle(key, h)
+
+
+class TestContentReplaceGraft:
+    """Legacy column writes graft into live docs instead of being clobbered."""
+
+    def test_graft_replaces_markdown_and_fans_out(self) -> None:
+        async def go() -> None:
+            from uniffy.domains.notes import realtime_adapter  # noqa: F401  (registers NOTE)
+
+            manager = YDocManager()
+            session = _make_router_session()
+            session.ydoc["markdown"] = pycrdt.Text("old text")
+            session.clients[1] = _make_handle()
+            manager._sessions[session.key] = session
+
+            fanned: list[str] = []
+            schedule = AsyncMock()
+            with (
+                patch.object(ydoc_manager_module.snapshot_writer, "schedule", schedule),
+                patch.object(
+                    ydoc_manager_module,
+                    "enqueue_for_handle",
+                    lambda handle, frame, *, kind: fanned.append(kind),
+                ),
+            ):
+                await manager._apply_content_replace(session.key, "new text")
+
+            assert str(session.ydoc.get("markdown", type=pycrdt.Text)) == "new text"
+            assert fanned == ["update"]
+            schedule.assert_awaited_once_with(session)
+
+        _run(go())
+
+    def test_graft_is_noop_when_content_matches(self) -> None:
+        async def go() -> None:
+            from uniffy.domains.notes import realtime_adapter  # noqa: F401
+
+            manager = YDocManager()
+            session = _make_router_session()
+            session.ydoc["markdown"] = pycrdt.Text("same")
+            manager._sessions[session.key] = session
+
+            schedule = AsyncMock()
+            with patch.object(ydoc_manager_module.snapshot_writer, "schedule", schedule):
+                await manager._apply_content_replace(session.key, "same")
+
+            schedule.assert_not_awaited()
+
+        _run(go())
+
+    def test_graft_without_live_session_is_ignored(self) -> None:
+        async def go() -> None:
+            manager = YDocManager()
+            await manager._apply_content_replace((ContentType.NOTE, uuid4()), "text")
+
+        _run(go())
+
+    def test_graft_survives_concurrent_edit(self) -> None:
+        """The transform update merges with an edit made after the state
+        snapshot instead of wiping it (CRDT delete-by-id, not by index)."""
+
+        async def go() -> None:
+            from uniffy.domains.notes import realtime_adapter  # noqa: F401
+
+            manager = YDocManager()
+            session = _make_router_session()
+            session.ydoc["markdown"] = pycrdt.Text("column body")
+            manager._sessions[session.key] = session
+
+            with patch.object(ydoc_manager_module.snapshot_writer, "schedule", AsyncMock()):
+                await manager._apply_content_replace(session.key, "mobile wrote this")
+
+            ytext = session.ydoc.get("markdown", type=pycrdt.Text)
+            assert str(ytext) == "mobile wrote this"
+            ytext += " and web appended"
+            assert str(ytext) == "mobile wrote this and web appended"
+
+        _run(go())

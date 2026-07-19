@@ -12,6 +12,8 @@ export type RealtimeStatus =
   | 'idle'
   | 'connecting'
   | 'connected'
+  // Connected or reconnecting while local frames are still queued or unsent.
+  | 'syncing'
   | 'disconnected'
   | 'offline'
   | 'permission_lost'

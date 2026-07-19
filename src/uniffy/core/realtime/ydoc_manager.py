@@ -72,6 +72,7 @@ class YDocManager:
     def router_callbacks(self) -> RouterCallbacks:
         return RouterCallbacks(
             apply_remote_update=self._apply_remote_pubsub_update,
+            apply_content_replace=self._apply_content_replace,
             enforce_role_change=self._enforce_role_change,
             close_stale_user_sessions=self._close_stale_user_sessions,
             close_user_session_by_sid=self._close_user_session_by_sid,
@@ -250,13 +251,29 @@ class YDocManager:
             session = self._sessions.get(key)
             if session is None or session.clients:
                 return
+
+        # Invariant: the force flush completes while the session stays registered,
+        # so a concurrent acquire reuses the in-memory doc and can never hydrate
+        # from the pre-flush snapshot row.
+        try:
+            await snapshot_writer.flush(session, force=True)
+        except asyncio.CancelledError:
+            # A client re-attached mid-flush and cancelled this task; keep the session.
+            return
+        except Exception:
+            logger.exception(
+                f"eviction flush failed for {key[0].value}:{key[1]}",
+                component=LOGGER_COMPONENT,
+            )
+
+        async with self._global_lock:
+            session = self._sessions.get(key)
+            if session is None or session.clients:
+                return
             del self._sessions[key]
 
         router.unregister_doc_session(key)
         REALTIME_ACTIVE_DOCS.labels(content_type=key[0].value).dec()
-
-        with contextlib.suppress(Exception):
-            await snapshot_writer.flush(session, force=True)
         logger.info(
             f"evicted idle session {key[0].value}:{key[1]}",
             component=LOGGER_COMPONENT,
@@ -275,6 +292,31 @@ class YDocManager:
             frame = create_update_message(update_bytes)
             for peer in session.clients.values():
                 enqueue_for_handle(peer, frame, kind="update")
+
+        await snapshot_writer.schedule(session)
+
+    async def _apply_content_replace(self, key: DocKey, content: str) -> None:
+        """Graft a domain column write into the live doc and fan it out.
+
+        Keeps the session alive: evicting instead would make every attached
+        client re-push its old CRDT state on reconnect and double the content.
+        """
+        async with self._global_lock:
+            session = self._sessions.get(key)
+        if session is None:
+            return
+        adapter = get_realtime_adapter(key[0])
+        async with session.lock:
+            state_before = session.ydoc.get_state()
+            if not adapter.apply_external_content(session.ydoc, content):
+                return
+            update_bytes = session.ydoc.get_update(state_before)
+            frame = create_update_message(update_bytes)
+            for peer in session.clients.values():
+                enqueue_for_handle(peer, frame, kind="update")
+            REALTIME_UPDATE_MESSAGES_TOTAL.labels(
+                content_type=key[0].value, direction="content_replace"
+            ).inc()
 
         await snapshot_writer.schedule(session)
 

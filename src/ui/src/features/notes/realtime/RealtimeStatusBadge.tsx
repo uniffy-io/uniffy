@@ -6,7 +6,16 @@ interface RealtimeStatusBadgeProps {
   className?: string;
 }
 
-const COPY: Record<RealtimeStatus, { label: string; tone: string; dotPulse?: boolean } | null> = {
+const OFFLINE_COPY = {
+  label: 'Offline',
+  tone: 'bg-muted text-muted-foreground',
+  title: 'Edits stay on this device and sync when the connection returns.',
+};
+
+const COPY: Record<
+  RealtimeStatus,
+  { label: string; tone: string; dotPulse?: boolean; title?: string } | null
+> = {
   idle: null,
   connecting: {
     label: 'Connecting',
@@ -16,16 +25,16 @@ const COPY: Record<RealtimeStatus, { label: string; tone: string; dotPulse?: boo
   connected: {
     label: 'Live',
     tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+    title: 'Edits sync live and are saved on the server within a few seconds.',
   },
-  disconnected: {
-    label: 'Reconnecting',
+  syncing: {
+    label: 'Syncing',
     tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
     dotPulse: true,
+    title: 'Local edits are still being sent to the server.',
   },
-  offline: {
-    label: 'Offline - changes will sync',
-    tone: 'bg-muted text-muted-foreground',
-  },
+  disconnected: { ...OFFLINE_COPY, dotPulse: true },
+  offline: OFFLINE_COPY,
   permission_lost: {
     label: 'View-only - edit access removed',
     tone: 'bg-red-500/15 text-red-600 dark:text-red-300',
@@ -48,6 +57,7 @@ export function RealtimeStatusBadge({ status, className }: RealtimeStatusBadgePr
       )}
       role="status"
       aria-live="polite"
+      title={copy.title}
     >
       <span
         className={cn(

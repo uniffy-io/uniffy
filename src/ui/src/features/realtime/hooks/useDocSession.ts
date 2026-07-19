@@ -14,6 +14,7 @@ import {
   type RealtimeStatus,
   statusFromCloseCode,
 } from '@/features/realtime/protocol';
+import { randomUUID } from '@/shared/utils/uuid';
 
 export interface DocSession {
   ydoc: Y.Doc;
@@ -21,7 +22,7 @@ export interface DocSession {
   undoManager: Y.UndoManager | null;
   status: RealtimeStatus;
   sessionId: string;
-  /** Resolves on first server `sync` for this doc. */
+  /** Resolves once the first server `sync` AND the local IDB replay are done. */
   whenSynced: Promise<void>;
 }
 
@@ -35,11 +36,18 @@ export interface UseDocSessionOptions {
   captureTimeout?: number;
 }
 
-function newSessionId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-  return Math.random().toString(36).slice(2);
+
+// Seed-time writers gate on the composed promise. Resolving before the IDB
+// replay finishes lets a fast SyncStep2 race offline edits into a duplicated
+// document, and a failed hydrate must not wedge the gate.
+export function composeWhenSynced(
+  serverSynced: Promise<void>,
+  hydrated: Promise<void>,
+): Promise<void> {
+  const hydrationComplete = hydrated.catch((err) => {
+    console.warn('[realtime] persistence hydrate failed', err);
+  });
+  return Promise.all([serverSynced, hydrationComplete]).then(() => undefined);
 }
 
 export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
@@ -65,14 +73,14 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
 
     const ydoc = new Y.Doc();
     const awareness = new Awareness(ydoc);
-    const sessionId = newSessionId();
+    const sessionId = randomUUID();
 
     const persistence = attachEncryptedPersistence({
       contentType,
       contentId,
       ydoc,
     });
-    void persistence.hydrate();
+    const whenHydrated = persistence.hydrate();
 
     const targets = Array.isArray(undoTarget)
       ? undoTarget
@@ -86,10 +94,11 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         })
       : null;
 
-    let resolveSync!: () => void;
-    const whenSynced = new Promise<void>((resolve) => {
-      resolveSync = resolve;
+    let resolveServerSync!: () => void;
+    const whenServerSynced = new Promise<void>((resolve) => {
+      resolveServerSync = resolve;
     });
+    const whenSynced = composeWhenSynced(whenServerSynced, whenHydrated);
 
     const subscription = realtimeMultiplexer.attach({
       contentType,
@@ -97,7 +106,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       ydoc,
       awareness,
       onStatus: (next) => setStatus(next),
-      onSync: () => resolveSync(),
+      onSync: () => resolveServerSync(),
       onCloseCode: (code) => {
         const mapped = statusFromCloseCode(code);
         if (mapped) setStatus(mapped);

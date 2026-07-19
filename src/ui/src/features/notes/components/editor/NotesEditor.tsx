@@ -50,9 +50,12 @@ export function NotesEditor() {
   const editorMode = canEdit ? userSelectedMode : 'readonly';
 
   const isCanvas = currentNote?.nodeType === NodeType.CANVAS;
+  // Viewers attach too so read-only shares render the live Y.Text; the
+  // multiplexer suppresses write frames for read-only docs.
   const { binding: realtimeBinding, status: realtimeStatus } = useNoteRealtimeSession(
     currentNoteId ?? null,
-    Boolean(currentNoteId) && canEdit && !isCanvas,
+    Boolean(currentNoteId) && !isCanvas,
+    canEdit,
   );
   const { binding: canvasRealtimeBinding, status: canvasRealtimeStatus } =
     useCanvasRealtimeSession(
