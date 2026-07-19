@@ -188,7 +188,7 @@ export function NotesSidebar() {
                 const result = await dispatch(
                     createNote({
                         title: 'Untitled Note',
-                        content: '# Untitled Note\n\nStart writing here...',
+                        content: '',
                         accessMode,
                         nodeType: NodeType.NOTE,
                     })
@@ -257,7 +257,7 @@ export function NotesSidebar() {
                 const result = await dispatch(
                     createNote({
                         title: 'Untitled Note',
-                        content: '# Untitled Note\n\nStart writing here...',
+                        content: '',
                         accessMode,
                         nodeType: NodeType.NOTE,
                         parentId,

@@ -34,6 +34,7 @@ import {
 import { selectCallPreferences } from '@/features/calls/store/callPreferencesSlice';
 import { callsApi } from '@/features/calls/api/callsApi';
 import { resolveSignalingUrl } from '@/features/calls/utils/signalingUrl';
+import { buildRtcConfiguration } from '@/features/calls/utils/iceConfig';
 import { getTokenExpiryMs } from '@/features/calls/utils/livekitToken';
 import {
   clearCallMarkers,
@@ -461,12 +462,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       });
 
       const url = resolveSignalingUrl(result.wsUrl);
+      const rtcConfig = buildRtcConfiguration(result.iceServers, result.iceTransportPolicy);
       tokenRef.current = result.livekitToken;
       roomRef.current = r;
       everConnectedRef.current = false;
 
       try {
-        await r.connect(url, result.livekitToken);
+        await r.connect(url, result.livekitToken, { rtcConfig });
       } catch (error) {
         roomRef.current = null;
         tokenRef.current = null;

@@ -33,6 +33,12 @@ export interface CallData {
   participants: CallParticipantData[];
 }
 
+export interface IceServerData {
+  urls: string[];
+  username?: string;
+  credential?: string;
+}
+
 export interface RingInvite {
   callId: string;
   channelId: string;

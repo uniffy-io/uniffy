@@ -6,28 +6,16 @@ Idempotent: ``(content_type, content_id)`` UPSERTs and
 
 import base64
 import time
-from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-import pycrdt
-from loguru import logger
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import get_realtime_adapter
+from uniffy.core.realtime.snapshot import persist_snapshot
 from uniffy.core.types import ContentType
-from uniffy.db.session import open_session
 
 # Realtime adapter registration is an import side effect; the worker import
 # graph does not pull in the notes module otherwise.
 from uniffy.domains.notes import realtime_adapter as _notes_realtime_adapter  # noqa: F401
-from uniffy.observability.metrics import (
-    REALTIME_SNAPSHOT_DROPPED_TOTAL,
-    REALTIME_SNAPSHOT_TASK_DURATION,
-)
-
-LOGGER_COMPONENT = "realtime.snapshot_task"
+from uniffy.observability.metrics import REALTIME_SNAPSHOT_TASK_DURATION
 
 
 async def save_realtime_snapshot(
@@ -42,67 +30,21 @@ async def save_realtime_snapshot(
     del ctx
 
     content_type = ContentType(content_type_str)
-    content_id = UUID(content_id_str)
-    organization_id = UUID(organization_id_str)
-    update_bytes = base64.b64decode(update_b64)
-    state_vector = base64.b64decode(state_vector_b64)
     started = time.perf_counter()
 
-    ydoc = pycrdt.Doc()
-    ydoc.apply_update(update_bytes)
-
-    now = datetime.now(UTC)
-
-    async with open_session() as session:
-        stmt = (
-            pg_insert(RealtimeYjsSnapshot)
-            .values(
-                content_type=content_type,
-                content_id=content_id,
-                state_vector=state_vector,
-                updates=update_bytes,
-                created_at=now,
-                updated_at=now,
-            )
-            .on_conflict_do_update(
-                index_elements=["content_type", "content_id"],
-                set_={
-                    "state_vector": state_vector,
-                    "updates": update_bytes,
-                    "updated_at": now,
-                },
-            )
+    try:
+        rendered = await persist_snapshot(
+            content_type,
+            UUID(content_id_str),
+            UUID(organization_id_str),
+            base64.b64decode(update_b64),
+            base64.b64decode(state_vector_b64),
         )
-        await session.execute(stmt)
-        await session.commit()
+    finally:
+        REALTIME_SNAPSHOT_TASK_DURATION.labels(
+            content_type=content_type.value
+        ).observe(time.perf_counter() - started)
 
-        try:
-            adapter = get_realtime_adapter(content_type)
-        except LookupError:
-            REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
-                content_type=content_type.value, reason="adapter_missing"
-            ).inc()
-            REALTIME_SNAPSHOT_TASK_DURATION.labels(
-                content_type=content_type.value
-            ).observe(time.perf_counter() - started)
-            logger.warning(
-                f"no adapter registered for {content_type.value}; "
-                "snapshot persisted but domain render skipped",
-                component=LOGGER_COMPONENT,
-            )
-            return {"status": "snapshot_only", "content_id": content_id_str}
-
-        try:
-            await adapter.render_and_persist(session, ydoc, content_id, organization_id)
-            await session.commit()
-        except Exception:
-            REALTIME_SNAPSHOT_DROPPED_TOTAL.labels(
-                content_type=content_type.value, reason="adapter_error"
-            ).inc()
-            raise
-        finally:
-            REALTIME_SNAPSHOT_TASK_DURATION.labels(
-                content_type=content_type.value
-            ).observe(time.perf_counter() - started)
-
+    if not rendered:
+        return {"status": "snapshot_only", "content_id": content_id_str}
     return {"status": "ok", "content_id": content_id_str}

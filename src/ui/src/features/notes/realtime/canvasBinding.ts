@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+import { diffStrings } from '@/features/notes/realtime/textDiff';
 import type {
   CanvasDefaults,
   CanvasEdge,
@@ -125,7 +126,9 @@ export function readCanvasFromYDoc(ydoc: Y.Doc): {
   edges: CanvasEdge[];
 } {
   const { nodes: yNodes, edges: yEdges, order: yOrder } = getCanvasYTypes(ydoc);
-  // Dedupe ids: IDB hydration + server seed can push the same id twice; React Flow rejects duplicate keys.
+  // Two tabs racing the emptiness check can both seed, so `order` may hold duplicate ids.
+  // Dedupe on read (first occurrence wins); a write-back cleanup from every client would
+  // reintroduce the multi-writer race, so cleanup stays read-side.
   const seen = new Set<string>();
   const nodes: CanvasNode[] = [];
   for (const id of yOrder) {
@@ -377,22 +380,11 @@ export function writeNodeTextDiff(
     yText = replacement;
   }
   const text = yText as Y.Text;
-  let prefix = 0;
-  const minLen = Math.min(prev.length, next.length);
-  while (prefix < minLen && prev.charCodeAt(prefix) === next.charCodeAt(prefix)) prefix++;
-  let suffix = 0;
-  while (
-    suffix < prev.length - prefix &&
-    suffix < next.length - prefix &&
-    prev.charCodeAt(prev.length - 1 - suffix) ===
-      next.charCodeAt(next.length - 1 - suffix)
-  ) suffix++;
-  const deleteCount = prev.length - prefix - suffix;
-  const insert = next.slice(prefix, next.length - suffix);
-  if (deleteCount === 0 && insert.length === 0) return;
+  const delta = diffStrings(prev, next);
+  if (!delta || (delta.deleteCount === 0 && delta.insert.length === 0)) return;
   ydoc.transact(() => {
-    if (deleteCount > 0) text.delete(prefix, deleteCount);
-    if (insert.length > 0) text.insert(prefix, insert);
+    if (delta.deleteCount > 0) text.delete(delta.index, delta.deleteCount);
+    if (delta.insert.length > 0) text.insert(delta.index, delta.insert);
   }, origin);
 }
 

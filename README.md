@@ -2,7 +2,7 @@
 
 > **Teamwork. Simplified, amplified, unified.**  
 
-A unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. Fully private. No trackers, no advertasing, no data harvesting, no training on your data.  OPT-IN AI Agents inside your work workspace configured and controlled by you. You choose the model, skills, permissions, and behavior. 
+A unified workspace where notes, files, chat, AI assistants, calendar, and workflows exist in one application. Every piece of information can be referenced from anywhere using universal `@` mentions. Fully private. No trackers, no advertising, no data harvesting, no training on your data.  OPT-IN AI Agents inside your work workspace configured and controlled by you. You choose the model, skills, permissions, and behavior. 
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ A unified workspace where notes, files, chat, AI assistants, calendar, and workf
 - Docker and Docker Compose
 - [uv](https://github.com/astral-sh/uv) (Python package manager)
 - [buf](https://buf.build/) (Protocol Buffer compiler)
-- Go 1.23+ (optional, for CLI development and proto generation)
+- Go 1.26+ (optional, for CLI development and proto generation)
 
 ### Setup
 
@@ -165,7 +165,11 @@ uniffy/
 
 - **Note on Valkey:** While Redis should in theory work as a drop-in replacement for Valkey, this has not been tested and is not recommended by us. We only support and test against Valkey.
 
-- **Note on Calls:** LiveKit is the SFU for audio/video/screen. It reuses the existing Valkey on a separate database (DB 1; the app uses DB 0) for its room registry. All app traffic and call signaling enter through the same reverse proxy on a single TLS endpoint; the proxy routes `/livekit/*` to the LiveKit signaling port. WebRTC media (UDP 7882) cannot ride HTTP and connects directly from client to LiveKit. LiveKit's embedded TURN (UDP 3478) provides NAT traversal, so there is no separate coturn service.
+- **Note on Calls:** LiveKit is the SFU for audio/video/screen. It reuses the existing Valkey on a separate database (DB 1; the app uses DB 0) for its room registry. All app traffic and call signaling enter through the same reverse proxy on a single TLS endpoint; the proxy routes `/livekit/*` to the LiveKit signaling port (7880). The backend calls LiveKit's admin REST API server-to-server, and LiveKit posts signed webhooks back to the backend at `/internal/webhooks/livekit`. WebRTC media cannot ride HTTP and takes one of two paths depending on the deployment:
+  - **Direct media** (default; VM / docker compose / typical self-host): clients send media straight to LiveKit on UDP 7882. LiveKit's embedded TURN (UDP 3478) handles NAT traversal, so there is no separate coturn service. Join responses carry no ICE configuration.
+  - **Relayed media** (Kubernetes / STUNner; `TURN_SERVER_URLS` set): all media relays through a STUNner TURN gateway into LiveKit inside the cluster. The backend mints per-user ephemeral TURN credentials (TURN REST spec: HMAC of `TURN_SHARED_SECRET`, default TTL 8 hours), and join responses carry the `ice_servers` list plus a relay-only ICE policy.
+
+Direct media mode (default):
 
 ```
         +--------------+    +-----------+    +-------+
@@ -173,30 +177,26 @@ uniffy/
         | (React)      |    | (Expo/RN) |    +---+---+
         +------+-------+    +-----+-----+        |
                |                  |              |
-               +--------+---------+--------+-----+
-                        |
-                  HTTP/2 + WebSocket (443/tcp) | 7882/udp ( WebRTC Media ) 
-                        |                      | 3478/udp ( LiveKit embedded TURN )
-                        |                      |
-                        |                      |
-                        |                      |
-                        v                      |
-              +--------------------+           |
-              | Reverse Proxy      |  :443     |
-              | (Caddy / Envoy)    |           |
-              +--+--------------+--+           |
-                 |              |              |
-                 | h2c          | /livekit/*   |
-                 v              v              |
-           +-----------+   +-----------+       v
-           |  Backend  |<--| LiveKit   | <-7882/udp (media, direct)
-           |  FastAPI  |   |    SFU    |
-           +-----+-----+   +-----+-----+
-                 |               
-                 |
-   +-------------+----+-----------+----------+
-   |                  |           |          |
-   v                  v           v          v
+               +---------+--------+-------+------+
+                         |                |
+     HTTP/2 + WebSocket (443/tcp)         |  7882/udp  WebRTC media (direct)
+                         |                |  3478/udp  embedded TURN (NAT fallback)
+                         v                |
+               +--------------------+     |
+               | Reverse Proxy      |     |
+               | (Caddy / Envoy)    |     |
+               +--+--------------+--+     |
+                  |              |        |
+                  | h2c          | /livekit/* (signaling ws -> :7880)
+                  v              v        v
+            +-----------+ admin REST +-----------+
+            |  Backend  |----------->| LiveKit   |
+            |  FastAPI  |<-----------|    SFU    |
+            +-----+-----+  webhooks  +-----------+
+                  |
+   +--------------+---+-----------+------------+
+   |                  |           |            |
+   v                  v           v            v
 +----------+   +-----------+  +-----------+  +---------+
 | Postgres |   |Meilisearch|  | Valkey    |  | RustFS  |
 | Database |   | Search    |  | DB 0: app |  | Storage |
@@ -209,4 +209,13 @@ uniffy/
                               | core +    |
                               | egress    |
                               +-----------+
+```
+
+Relayed media mode (Kubernetes / STUNner) changes only the media path; everything else stays as above:
+
+```
+Clients --443/tcp--> Reverse Proxy --/livekit/*--> LiveKit    (app + call signaling)
+Clients --3478/udp--> STUNner (TURN) --udp--> LiveKit         (ALL media, relay-only ICE,
+                                                               per-user ephemeral credentials
+                                                               minted by the backend)
 ```

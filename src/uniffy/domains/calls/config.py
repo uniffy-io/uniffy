@@ -45,7 +45,47 @@ class LiveKitConfig:
         return cls(host=host, api_key=api_key, api_secret=api_secret, ws_url=ws_url)
 
 
+@dataclass(frozen=True)
+class TurnConfig:
+    """Ephemeral TURN credential settings (k8s/STUNner relayed-media mode).
+
+    Unset TURN_SERVER_URLS means direct media (embedded TURN via LiveKit
+    signaling) and resolves to None everywhere.
+    """
+
+    server_urls: tuple[str, ...]
+    shared_secret: str
+    credential_ttl_seconds: int
+
+    @classmethod
+    def from_env(cls) -> TurnConfig | None:
+        raw_urls = os.getenv("TURN_SERVER_URLS", "")
+        urls = tuple(url.strip() for url in raw_urls.split(",") if url.strip())
+        if not urls:
+            return None
+        shared_secret = os.getenv("TURN_SHARED_SECRET", "")
+        if not shared_secret:
+            raise LiveKitConfigError(
+                "TURN_SHARED_SECRET is required when TURN_SERVER_URLS is set"
+            )
+        try:
+            ttl = int(os.getenv("TURN_CREDENTIAL_TTL_SECONDS", "28800"))
+        except ValueError as exc:
+            raise LiveKitConfigError(
+                "TURN_CREDENTIAL_TTL_SECONDS must be an integer number of seconds"
+            ) from exc
+        if ttl <= 0:
+            raise LiveKitConfigError("TURN_CREDENTIAL_TTL_SECONDS must be positive")
+        return cls(
+            server_urls=urls,
+            shared_secret=shared_secret,
+            credential_ttl_seconds=ttl,
+        )
+
+
 _config: LiveKitConfig | None = None
+_turn_config: TurnConfig | None = None
+_turn_config_loaded = False
 
 
 def get_livekit_config() -> LiveKitConfig:
@@ -53,3 +93,11 @@ def get_livekit_config() -> LiveKitConfig:
     if _config is None:
         _config = LiveKitConfig.from_env()
     return _config
+
+
+def get_turn_config() -> TurnConfig | None:
+    global _turn_config, _turn_config_loaded
+    if not _turn_config_loaded:
+        _turn_config = TurnConfig.from_env()
+        _turn_config_loaded = True
+    return _turn_config

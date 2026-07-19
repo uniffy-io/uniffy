@@ -39,10 +39,12 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // CallService manages call lifecycle. Join-shaped RPCs return `ws_url` +
-// `livekit_token`; media and TURN negotiation happen over LiveKit signaling,
-// so there is no ice_servers field anywhere. `ws_url` is either a path the
-// client resolves against window.location (same-origin edge route) or an
-// absolute ws(s):// override for split-origin deployments.
+// `livekit_token`. In direct-media deployments media and TURN negotiation
+// happen over LiveKit signaling and `ice_servers` stays empty; in relayed
+// deployments (k8s/STUNner) join-shaped responses also carry per-user
+// ephemeral TURN credentials plus a RELAY transport policy. `ws_url` is
+// either a path the client resolves against window.location (same-origin
+// edge route) or an absolute ws(s):// override for split-origin deployments.
 type CallServiceClient interface {
 	// Idempotent per channel: if the channel already has an active call the
 	// caller is joined to it instead of a second call being created.
@@ -216,10 +218,12 @@ func (c *callServiceClient) ReportMediaState(ctx context.Context, in *ReportMedi
 // for forward compatibility.
 //
 // CallService manages call lifecycle. Join-shaped RPCs return `ws_url` +
-// `livekit_token`; media and TURN negotiation happen over LiveKit signaling,
-// so there is no ice_servers field anywhere. `ws_url` is either a path the
-// client resolves against window.location (same-origin edge route) or an
-// absolute ws(s):// override for split-origin deployments.
+// `livekit_token`. In direct-media deployments media and TURN negotiation
+// happen over LiveKit signaling and `ice_servers` stays empty; in relayed
+// deployments (k8s/STUNner) join-shaped responses also carry per-user
+// ephemeral TURN credentials plus a RELAY transport policy. `ws_url` is
+// either a path the client resolves against window.location (same-origin
+// edge route) or an absolute ws(s):// override for split-origin deployments.
 type CallServiceServer interface {
 	// Idempotent per channel: if the channel already has an active call the
 	// caller is joined to it instead of a second call being created.

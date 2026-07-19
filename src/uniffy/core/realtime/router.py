@@ -43,6 +43,7 @@ class RouterCallbacks:
     """Hooks the ``YDocManager`` registers to receive routed payloads."""
 
     apply_remote_update: Callable[[YDocSession, bytes], Awaitable[None]]
+    apply_content_replace: Callable[[DocKey, str], Awaitable[None]]
     enforce_role_change: Callable[[ClientHandle, str | None], Awaitable[None]]
     close_stale_user_sessions: Callable[[UUID, int], Awaitable[None]]
     close_user_session_by_sid: Callable[[UUID, UUID], Awaitable[None]]
@@ -236,6 +237,18 @@ class RealtimeRouter:
             delay = _RECONNECT_DELAY_INITIAL
 
     async def _handle_doc_message(self, channel: str, payload: dict[str, object]) -> None:
+        if payload.get("kind") == "content_replace":
+            # Not origin-deduped: the publishing process may hold the session.
+            key = _parse_doc_channel(channel)
+            if key is None or key not in self._doc_sessions:
+                return
+            callbacks = self._callbacks
+            content = payload.get("content")
+            if callbacks is None or not isinstance(content, str):
+                return
+            _observe_pubsub_latency("doc", payload)
+            await callbacks.apply_content_replace(key, content)
+            return
         if payload.get("origin_replica") == self._self_replica:
             return
         key = _parse_doc_channel(channel)

@@ -35,10 +35,12 @@ enum ScreenShareQuality {
 }
 
 // CallService manages call lifecycle. Join-shaped RPCs return `ws_url` +
-// `livekit_token`; media and TURN negotiation happen over LiveKit signaling,
-// so there is no ice_servers field anywhere. `ws_url` is either a path the
-// client resolves against window.location (same-origin edge route) or an
-// absolute ws(s):// override for split-origin deployments.
+// `livekit_token`. In direct-media deployments media and TURN negotiation
+// happen over LiveKit signaling and `ice_servers` stays empty; in relayed
+// deployments (k8s/STUNner) join-shaped responses also carry per-user
+// ephemeral TURN credentials plus a RELAY transport policy. `ws_url` is
+// either a path the client resolves against window.location (same-origin
+// edge route) or an absolute ws(s):// override for split-origin deployments.
 service CallService {
   // Idempotent per channel: if the channel already has an active call the
   // caller is joined to it instead of a second call being created.
@@ -67,6 +69,21 @@ service CallService {
   // stays published, so mute state cannot be inferred server-side). Fans out
   // CALL_PARTICIPANT_STATE only when a flag actually changed.
   rpc ReportMediaState(ReportMediaStateRequest) returns (ReportMediaStateResponse);
+}
+
+// One username/credential pair covers all URLs (TURN REST spec); credentials
+// are per-user and expire, so clients must not cache them across connections.
+message IceServer {
+  repeated string urls = 1;
+  optional string username = 2;
+  optional string credential = 3;
+}
+
+enum IceTransportPolicy {
+  // Client default (all candidate types).
+  ICE_TRANSPORT_POLICY_UNSPECIFIED = 0;
+  ICE_TRANSPORT_POLICY_ALL = 1;
+  ICE_TRANSPORT_POLICY_RELAY = 2;
 }
 
 message Call {
@@ -113,6 +130,9 @@ message InitiateCallResponse {
   bool joined_existing = 4;
   // Resolved screen-share ceiling for this session (org cap, else per-type default).
   ScreenShareQuality screen_share_quality_cap = 5;
+  // Empty in direct-media mode; TURN relay config when the deployment relays media.
+  repeated IceServer ice_servers = 6;
+  IceTransportPolicy ice_transport_policy = 7;
 }
 
 message JoinCallRequest {
@@ -128,6 +148,9 @@ message JoinCallResponse {
   string livekit_token = 3;
   // Resolved screen-share ceiling for this session (org cap, else per-type default).
   ScreenShareQuality screen_share_quality_cap = 4;
+  // Empty in direct-media mode; TURN relay config when the deployment relays media.
+  repeated IceServer ice_servers = 5;
+  IceTransportPolicy ice_transport_policy = 6;
 }
 
 message LeaveCallRequest {

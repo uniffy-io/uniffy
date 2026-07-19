@@ -104,7 +104,7 @@ Adapter rules:
 - `VarString` = lib0 varint length prefix + UTF-8 body. Implementations in `core/realtime/multiplex.py` (Python) and `features/realtime/multiplex.ts` (TS) are byte-compatible. Rolling your own tends to introduce subtle drift.
 - `docName = "<CONTENT_TYPE>:<uuid>"`, e.g. `"NOTE:01a3..."`. `doc_name_for(key)` / `parse_doc_name(name)` are the canonical producers / consumers.
 - `peek_var_string(buf)` returns `(doc_name, payload_offset)` without consuming the y-protocols payload. The router hands `buf[payload_offset:]` straight to the per-doc handler. Decoding + re-encoding here regresses Hocuspocus issue #724 - it is solved by design.
-- The y-protocols payload inside the envelope is unchanged. Reach for `pycrdt`'s helpers (`create_sync_message`, `handle_sync_message`, `Decoder.read_message`, `create_update_message`) via `core/realtime/wire.py`. Edit-gate predicate is `is_sync_write_frame` - VIEWERs sending a write close the whole socket with `4403`.
+- The y-protocols payload inside the envelope is unchanged. Reach for `pycrdt`'s helpers (`create_sync_message`, `handle_sync_message`, `Decoder.read_message`, `create_update_message`) via `core/realtime/wire.py`. Edit-gate predicate is `is_sync_write_frame` - VIEWERs sending a write close the whole socket with `4403`. The client multiplexer therefore marks viewer docs read-only (emits no SyncStep2/SyncUpdate writes for them) and suppresses empty `[0,0]` SyncStep2 replies for every doc; viewers get live reads + presence without tripping the gate.
 
 ---
 
@@ -160,11 +160,12 @@ Failure isolation: multiplexed transport has head-of-line blocking (slow doc can
 
 ## 7. Snapshot pipeline (P3)
 
-- `SnapshotWriter` lives in `core/realtime/snapshot.py`. `schedule(session)` re-arms a 5s per-key debounce; `flush(session)` encodes `ydoc.get_update()` + `ydoc.get_state()` under `session.lock`, base64-wraps, enqueues `save_realtime_snapshot` on the `core` ARQ queue.
+- `SnapshotWriter` lives in `core/realtime/snapshot.py`. `schedule(session)` re-arms a 5s per-key debounce, capped by `SNAPSHOT_MAX_DELAY` (30s): once a key's pending window exceeds the cap, the flush runs immediately instead of re-arming, so continuous typing cannot starve persistence. `flush(session)` encodes `ydoc.get_update()` + `ydoc.get_state()` under `session.lock`, base64-wraps, enqueues `save_realtime_snapshot` on the `core` ARQ queue; `flush(session, force=True)` persists in-process via the shared `persist_snapshot()` (UPSERT + render) with no queue dependency. The debounce task must never cancel itself when it is the one flushing (`task is not asyncio.current_task()` guard).
 - ARQ task `save_realtime_snapshot(ctx, content_type, content_id, organization_id, update_b64, state_vector_b64)` lives in `workers/tasks/realtime.py` and is registered in `CORE_TASKS`. UPSERT `realtime_yjs_snapshots` (composite PK `(content_type, content_id)`), then `adapter.render_and_persist`.
 - `_job_id` is `snapshot:{ct}:{id}:{sha256(update_bytes)[:16]}`. Hashing the payload (rather than just the key) is part of the contract - ARQ caches completed job results for `WORKER_KEEP_RESULT` seconds and a static id silently drops every subsequent enqueue. Reusing `snapshot:NOTE:<id>` froze `notes_notes.content` mid-session in an earlier revision.
 - `YDocManager.apply_local_update` AND `_apply_remote_pubsub_update` both call `snapshot_writer.schedule(session)` so the pipeline runs whichever replica receives the edit.
-- `YDocManager._evict_after_idle` force-flushes synchronously before dropping the in-memory session. The last edit always lands in PG.
+- `YDocManager._evict_after_idle` force-flushes in-process while the session STAYS registered, then re-checks for attached clients under the global lock before removal. A concurrent acquire finds the live session and never hydrates from the pre-flush snapshot row.
+- `NoteOperations.update` deletes the `realtime_yjs_snapshots` row when content changes (next cold open re-hydrates from the fresh column) AND publishes a `content_replace` payload on the doc channel. Session-holding replicas graft the new content into their live doc as a CRDT edit (`_apply_content_replace` -> `adapter.apply_external_content`, NOT origin-deduped since the publisher may hold the session) - without the graft, a live session's next flush would clobber the legacy write with stale doc state. The graft is single-session-holder correct; concurrent multi-replica holders of the same doc need the doc-epoch work before they can apply it convergently. Both note write paths CAS on `version` (3 attempts); metadata-only updates do not bump `version`, so title edits cannot starve realtime renders. `realtime_save` warns + counts a metric on non-empty to empty content transitions.
 
 ---
 
@@ -181,11 +182,11 @@ features/realtime/
 └── components/RealtimePresence.tsx
 ```
 
-`useDocSession({ contentType, contentId, enabled, undoTarget, captureTimeout })` returns `{ ydoc, awareness, undoManager, status, sessionId, whenSynced }`. `whenSynced` resolves on the first server SyncStep2 for this doc. Always gate seed-time writes on it - cold-start hydration is a race window otherwise.
+`useDocSession({ contentType, contentId, enabled, undoTarget, captureTimeout })` returns `{ ydoc, awareness, undoManager, status, sessionId, whenSynced }`. `whenSynced` resolves after BOTH the first server SyncStep2 for this doc AND encrypted-IDB hydration (a hydrate failure logs a warning and counts as complete; offline it stays pending). Always gate seed-time writes on it - cold-start hydration is a race window otherwise.
 
 Encrypted IDB persistence:
-- One DB `uniffy-realtime-yjs`, composite key `[contentType, contentId, seq]`. Registered in `ENCRYPTED_DB_NAMES` in `storageEncryption.ts` so cache-seed rotation wipes it.
-- Writes filter `HYDRATION_ORIGIN` and `REMOTE_ORIGIN` - only local edits get persisted.
+- One DB `uniffy-realtime-yjs`, composite key `[contentType, contentId, seq]` where `seq` is `${epoch}:${counter}` with a random epoch per attach - sessions and concurrent tabs can never overwrite each other's rows, and there is no meta store (Yjs updates are commutative, so replay order across epochs does not matter). Registered in `ENCRYPTED_DB_NAMES` in `storageEncryption.ts` so cache-seed rotation wipes it.
+- Writes filter `HYDRATION_ORIGIN`, `REMOTE_ORIGIN`, and `MARKDOWN_MIRROR_ORIGIN` (all Symbols; the multiplexer applies server updates under `REMOTE_ORIGIN`) - only primary local edits get persisted.
 - Update bytes are base64-wrapped before `encryptForStorage` (the encrypt helper is JSON-only).
 - Compaction every 100 updates + on `beforeunload`. Listens for `uniffy:encryption:rekey` (re-seed) and `uniffy:encryption:teardown` (no-op writes via `isStorageEncryptionReady`).
 - Per-row decrypt failure -> skip + continue. Nuking the whole doc tends to lose recoverable rows.
@@ -206,8 +207,9 @@ features/notes/realtime/
 ```
 
 Markdown:
-- `CrepeEditor` accepts a `realtime` binding. When present: skip `defaultValue` seeding (avoid seeding race), register `ySyncPlugin / yCursorPlugin / yUndoPlugin` via `$prose`, and mirror `markdownUpdated` into `Y.Text("markdown")` so the snapshot pipeline reads canonical markdown. The mirror is the `$prose` plugin variant - **not** the `markdownUpdated` listener (Milkdown's listener pipeline filters y-prosemirror's `ySync` meta key, which silently persisted empty content in an earlier revision).
-- Cold-start seed: `Y.Text("markdown")` -> `Y.XmlFragment("prosemirror")` via Milkdown's `parserCtx`, gated on `whenSynced`. Guard with `if (fragment.length > 0) return` to minimize a two-attach race.
+- `CrepeEditor` accepts a `realtime` binding. When present: skip `defaultValue` seeding (avoid seeding race), register `ySyncPlugin / yCursorPlugin / yUndoPlugin` via `$prose`, and mirror the serialized doc into `Y.Text("markdown")` so the snapshot pipeline reads canonical markdown. The mirror is a `$prose` plugin hooking `view.update` (Milkdown's `markdownUpdated` listener filters ySync transactions and must not be used), writes under `MARKDOWN_MIRROR_ORIGIN`, and stays OFF until the seed confirms the PM doc reflects `Y.Text` (`markdownMirrorReady`) - an unseeded empty doc must never overwrite real markdown. Only the ORIGIN tab mirrors: ySync-applied transactions (`isChangeOrigin`) are skipped, since their origin peer already mirrored them and N tabs re-serializing the same doc is discarded work. A pending debounced mirror write flushes on plugin destroy instead of being dropped (unmount inside the window must not leave `Y.Text` stale); the mirror writes minimal deltas via `diffStrings`, not whole-doc replaces.
+- Cold-start seed + reconciliation, gated on `whenSynced`: `Y.Text("markdown")` is canonical, the fragment yields. A placeholder-only fragment (ySync writes one empty paragraph on bind; `fragmentHasRealContent` tells it apart from real content) is rebuilt from `Y.Text`; a fragment with real but DIFFERENT content (Markdown mode edited `Y.Text` while the fragment kept old blocks) is also rebuilt - compared serialize-normalized, because markdown dialect drift makes raw string compare useless. The divergence rebuild is a SOLO-CLIENT self-heal only: with a live peer in awareness the fragment is the current CRDT state (their in-flight keystrokes; `Y.Text` trails by the mirror debounce), so rebuilding would broadcast a revert of their edits and the seed skips it. Empty `Y.Text` never wins over fragment content. Rebuilds are one `HYDRATION_ORIGIN` transaction via `replaceProsemirrorFragment`. StrictMode-cancelled Crepe instances must have their ySync binding muted (`muteSyncBinding`) or a zombie view observing the shared fragment throws mid-transact and wedges the mirror gate.
+- `RealtimeStatusBadge` derives Live / Syncing / Offline from the multiplexer's outbound-pending state; there is no server ack, so no literal "Saved" claim.
 - Markdown + readonly view modes consume `Y.Text` live via `useRealtimeMarkdownContent(ydoc, fallback, {whenSynced, debounceMs})`. Without this, switching modes renders an empty editor while the YDoc holds current content.
 - Crepe `Feature.History` is NOT a `CrepeFeature` and currently coexists with `yUndoPlugin` (acceptable v1 known gap; revisit if double-undo is observed).
 
@@ -227,9 +229,12 @@ Every local mutation tags with the session id. Three origins, three behaviors:
 
 | Origin | Source | Tracked by UndoManager? | Persisted to IDB? |
 |---|---|---|---|
-| `sessionId` (uuid per useDocSession mount) | Local edits | yes | yes |
-| `'remote'` | Server-pushed peer updates | no | no |
-| `'hydration'` | Cold-start seed (snapshot or IDB) | no | no |
+| `sessionId` (uuid per useDocSession mount) | Primary local edits (incl. Markdown-mode Y.Text writes) | yes | yes |
+| `REMOTE_ORIGIN` (Symbol) | Server-pushed updates, applied by the multiplexer | no | no |
+| `HYDRATION_ORIGIN` (Symbol) | Cold-start seed / IDB replay / fragment rebuilds | no | no |
+| `MARKDOWN_MIRROR_ORIGIN` (Symbol) | Editor's PM to Y.Text mirror (regenerated every session) | no | no |
+
+The origins are Symbols exported from `encryptedYjsPersistence.ts`; string literals like `'hydration'` do NOT match the IDB filter and must not be used as transact origins.
 
 `Y.UndoManager` is created with `trackedOrigins: new Set([sessionId])` so users undo only their own edits. The IDB write path filters by these constants - if you add a new origin and forget to filter, peer updates re-enter the local update path on cold start.
 

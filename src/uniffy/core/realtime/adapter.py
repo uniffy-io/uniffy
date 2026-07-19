@@ -44,6 +44,14 @@ class RealtimeContentAdapter(Protocol):
         """Persist the rendered domain shape on each debounced flush. Must be idempotent."""
         ...
 
+    def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
+        """Graft a domain column write into the live doc as a CRDT edit.
+
+        Returns ``False`` when the doc already matches (no update to fan out).
+        Caller holds the session lock.
+        """
+        ...
+
 
 _adapters: dict[ContentType, RealtimeContentAdapter] = {}
 

@@ -286,8 +286,7 @@ jobs:
           check_name: Pytest Results
           require_tests: true
           detailed_summary: true
-          comment: true
-          updateComment: true
+          comment: false
           job_summary: true
 
   test-frontend:
@@ -334,8 +333,7 @@ jobs:
           check_name: Vitest Results
           require_tests: true
           detailed_summary: true
-          comment: true
-          updateComment: true
+          comment: false
           job_summary: true
 
   benchmark-python:

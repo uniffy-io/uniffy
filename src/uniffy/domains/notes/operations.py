@@ -9,6 +9,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import String, cast, func, or_, select
+from sqlalchemy import delete as sql_delete
 from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +26,7 @@ from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
-from uniffy.core.errors import NotFoundError
+from uniffy.core.errors import ConflictError, NotFoundError
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
@@ -36,6 +37,8 @@ from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.content_member import ContentMember
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.publisher import publish_content_replace
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -51,6 +54,7 @@ from uniffy.domains.tags import (
     TagOperations,
     sync_inline_tags,
 )
+from uniffy.observability.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 
 logger = logger.bind(component="notes.operations")
 
@@ -291,63 +295,115 @@ class NoteOperations(BaseContentOperations[Note]):
 
         await self._require_edit(user_id, organization_id, note)
 
-        title_changed = title is not None and title != note.title
         is_canvas = note.node_type == NodeType.CANVAS
         content_changed = canvas_content is not None if is_canvas else content is not None
 
-        old_refs = note.outgoing_references if content_changed else None
-
-        previous_parent_id = note.parent_id
-        parent_changed = False
-
-        parsed_inline_names: list[str] | None = None
-        if title is not None:
-            note.title = title
+        fields: _NoteContentFields | None = None
         if content_changed:
             fields = self._extract_content_fields(
                 note.node_type, content or "", canvas_content, organization_id
             )
-            note.content = fields.content
-            note.canvas_content = fields.canvas_content
-            note.outgoing_references = fields.outgoing_references
-            parsed_inline_names = fields.parsed_inline_tag_names
-        if slug is not None:
-            note.slug = slug
-        if parent_id == "":
-            if note.parent_id is not None:
-                parent_changed = True
-            note.parent_id = None
-        elif parent_id is not None:
-            if note.parent_id != parent_id:
-                parent_changed = True
-            note.parent_id = parent_id
-        if metadata is not None:
-            # Reassign a fresh dict so SQLAlchemy picks up the JSONB change.
-            merged = copy.deepcopy(note.note_metadata) if note.note_metadata else {}
-            merged.update(metadata)
-            note.note_metadata = merged
+        parsed_inline_names = fields.parsed_inline_tag_names if fields else None
 
-        note.version += 1
-        note.updated_at = datetime.now(UTC)
+        title_changed = False
+        old_refs: list[str] | None = None
 
-        if parent_changed:
-            await write_audit_event(
-                self.session,
-                organization_id=organization_id,
-                actor_user_id=user_id,
-                action=Action.NOTE_MOVED,
-                resource_type=ContentType.NOTE.value,
-                resource_id=note.id,
-                details={
-                    "previous_parent_id": (
-                        str(previous_parent_id) if previous_parent_id else None
-                    ),
-                    "new_parent_id": str(note.parent_id) if note.parent_id else None,
-                },
+        for attempt in range(3):
+            if attempt:
+                refreshed = (
+                    await self.session.execute(
+                        select(Note)
+                        .where(
+                            Note.id == note_id,
+                            Note.organization_id == organization_id,
+                        )
+                        .execution_options(populate_existing=True)
+                    )
+                ).scalar_one_or_none()
+                if refreshed is None:
+                    raise NotFoundError("Note", note_id)
+                note = refreshed
+
+            title_changed = title is not None and title != note.title
+            old_refs = note.outgoing_references if content_changed else None
+            previous_parent_id = note.parent_id
+            parent_changed = False
+
+            values: dict[str, Any] = {"updated_at": datetime.now(UTC)}
+            if title is not None:
+                values["title"] = title
+            if fields is not None:
+                values["content"] = fields.content
+                values["canvas_content"] = fields.canvas_content
+                values["outgoing_references"] = fields.outgoing_references
+                # Only content writes bump ``version``; metadata-only edits must
+                # not starve the realtime save CAS.
+                values["version"] = note.version + 1
+            if slug is not None:
+                values["slug"] = slug
+            if parent_id == "":
+                parent_changed = note.parent_id is not None
+                values["parent_id"] = None
+            elif parent_id is not None:
+                parent_changed = note.parent_id != parent_id
+                values["parent_id"] = parent_id
+            if metadata is not None:
+                merged = copy.deepcopy(note.note_metadata) if note.note_metadata else {}
+                merged.update(metadata)
+                values["note_metadata"] = merged
+
+            result = await self.session.execute(
+                sql_update(Note)
+                .where(
+                    Note.id == note_id,
+                    Note.organization_id == organization_id,
+                    Note.version == note.version,
+                )
+                .values(**values)
+                .execution_options(synchronize_session=False)
             )
+            if result.rowcount:
+                if content_changed:
+                    # Drop the snapshot row so the next cold realtime open
+                    # re-hydrates from the fresh column; live docs get the
+                    # content grafted in via the content-replace fanout below.
+                    await self.session.execute(
+                        sql_delete(RealtimeYjsSnapshot).where(
+                            RealtimeYjsSnapshot.content_type == self.content_type,
+                            RealtimeYjsSnapshot.content_id == note_id,
+                        )
+                    )
+                if parent_changed:
+                    await write_audit_event(
+                        self.session,
+                        organization_id=organization_id,
+                        actor_user_id=user_id,
+                        action=Action.NOTE_MOVED,
+                        resource_type=ContentType.NOTE.value,
+                        resource_id=note.id,
+                        details={
+                            "previous_parent_id": (
+                                str(previous_parent_id) if previous_parent_id else None
+                            ),
+                            "new_parent_id": (
+                                None if parent_id == "" else str(parent_id)
+                            ),
+                        },
+                    )
+                await self.session.commit()
+                break
+            # Lost the version CAS (usually a realtime save); re-read and re-apply.
+            await self.session.rollback()
+        else:
+            raise ConflictError("Note", f"concurrent edits on {note_id}")
 
-        await self.session.commit()
         await self.session.refresh(note)
+
+        if content_changed and not is_canvas and fields is not None:
+            # A doc live in any replica's memory grafts this write in as a CRDT
+            # edit; without it a later stale-doc snapshot flush would silently
+            # overwrite the column.
+            await publish_content_replace(self.content_type, note_id, fields.content)
 
         await self._sync_tags_after_save(
             user_id=user_id,
@@ -477,12 +533,8 @@ class NoteOperations(BaseContentOperations[Note]):
         content: str,
         canvas_content: dict[str, Any] | None,
     ) -> Note | None:
-        """Persist a Yjs snapshot back into ``notes_notes``.
-
-        CAS on ``version`` so racing workers cannot both win; the loser
-        returns ``None``. ``owner_id`` stands in as actor for tag /
-        mention side effects because a snapshot has no single editor.
-        """
+        """CAS-persist the rendered snapshot; ``owner_id`` stands in as actor
+        because a snapshot has no single editor."""
         note = (
             await self.session.execute(
                 select(Note).where(
@@ -495,35 +547,67 @@ class NoteOperations(BaseContentOperations[Note]):
         if not note:
             return None
 
-        old_refs = note.outgoing_references
         fields = self._extract_content_fields(
             note.node_type, content, canvas_content, organization_id
         )
-        existing_version = note.version
-        new_version = existing_version + 1
-        now = datetime.now(UTC)
 
-        result = await self.session.execute(
-            sql_update(Note)
-            .where(
-                Note.id == note_id,
-                Note.organization_id == organization_id,
-                Note.is_deleted == False,  # noqa: E712
-                Note.version == existing_version,
+        if note.content and not fields.content:
+            # A cleared editor legitimately persists ""; count it so a
+            # regression in the frontend blank guard stays visible.
+            REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL.labels(
+                content_type=self.content_type.value
+            ).inc()
+            logger.warning(
+                "realtime save is replacing non-empty note content with empty content",
+                note_id=str(note_id),
+                organization_id=str(organization_id),
+                old_content_length=len(note.content),
             )
-            .values(
-                content=fields.content,
-                canvas_content=fields.canvas_content,
-                outgoing_references=fields.outgoing_references,
-                version=new_version,
-                updated_at=now,
-            )
-            .execution_options(synchronize_session=False)
-        )
-        await self.session.commit()
 
-        if result.rowcount == 0:
-            # Lost CAS race or note was soft-deleted between read and UPDATE.
+        for attempt in range(3):
+            if attempt:
+                # Lost the version CAS; re-read for a fresh attempt.
+                note = (
+                    await self.session.execute(
+                        select(Note)
+                        .where(
+                            Note.id == note_id,
+                            Note.organization_id == organization_id,
+                            Note.is_deleted == False,  # noqa: E712
+                        )
+                        .execution_options(populate_existing=True)
+                    )
+                ).scalar_one_or_none()
+                if not note:
+                    return None
+
+            old_refs = note.outgoing_references
+            result = await self.session.execute(
+                sql_update(Note)
+                .where(
+                    Note.id == note_id,
+                    Note.organization_id == organization_id,
+                    Note.is_deleted == False,  # noqa: E712
+                    Note.version == note.version,
+                )
+                .values(
+                    content=fields.content,
+                    canvas_content=fields.canvas_content,
+                    outgoing_references=fields.outgoing_references,
+                    version=note.version + 1,
+                    updated_at=datetime.now(UTC),
+                )
+                .execution_options(synchronize_session=False)
+            )
+            await self.session.commit()
+            if result.rowcount:
+                break
+        else:
+            logger.warning(
+                "realtime save lost the version CAS after 3 attempts",
+                note_id=str(note_id),
+                organization_id=str(organization_id),
+            )
             return None
 
         await self.session.refresh(note)

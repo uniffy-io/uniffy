@@ -6,9 +6,19 @@ import type {
   Call as ProtoCall,
   CallParticipant as ProtoCallParticipant,
 } from '@uniffy/proto/calls/v1/calls_pb';
+import type {
+  IceServer as ProtoIceServer,
+} from '@uniffy/proto/calls/v1/calls_pb';
 import type { CallRingPayload } from '@uniffy/proto/chat/v1/chat_stream_pb';
 import { timestampToIso } from '@/features/chat/api/chatConverters';
-import type { CallData, CallParticipantData, CallType, CallEndReason, RingInvite } from '@/features/calls/types';
+import type {
+  CallData,
+  CallParticipantData,
+  CallType,
+  CallEndReason,
+  IceServerData,
+  RingInvite,
+} from '@/features/calls/types';
 
 const CALL_TYPE_MAP: Record<number, CallType> = {
   [ProtoCallType.DIRECT]: 'DIRECT',
@@ -52,6 +62,14 @@ export function callToPlain(call: ProtoCall): CallData {
     endReason: call.endReason !== undefined ? END_REASON_MAP[call.endReason] ?? null : null,
     participants: call.participants.map(participantToPlain),
   };
+}
+
+export function iceServersToPlain(servers: ProtoIceServer[]): IceServerData[] {
+  return servers.map((server) => ({
+    urls: [...server.urls],
+    ...(server.username !== undefined && { username: server.username }),
+    ...(server.credential !== undefined && { credential: server.credential }),
+  }));
 }
 
 export function ringPayloadToInvite(payload: CallRingPayload, channelId: string): RingInvite {

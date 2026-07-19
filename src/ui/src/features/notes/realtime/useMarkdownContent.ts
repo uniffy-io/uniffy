@@ -21,28 +21,38 @@ export function useRealtimeMarkdownContent(
   const fallbackRef = useRef(fallback);
   fallbackRef.current = fallback;
 
-  const [synced, setSynced] = useState<boolean>(() => {
-    if (!ydoc) return false;
-    return getMarkdownYText(ydoc).length > 0;
-  });
-  const [content, setContent] = useState<string>(() => {
-    if (!ydoc) return fallback;
-    const initial = getMarkdownYText(ydoc).toString();
-    return initial || fallback;
-  });
+  // Sync confirmation is per doc: a plain boolean stays stale across note
+  // switches (the hook instance survives, the ydoc swaps) and made note B
+  // render empty instead of its fallback until its own sync landed.
+  const syncedDocRef = useRef<Y.Doc | null>(null);
+
+  const initialFor = (doc: Y.Doc | null): string => {
+    if (!doc) return fallback;
+    const text = getMarkdownYText(doc).toString();
+    return text || fallback;
+  };
+
+  const [content, setContent] = useState<string>(() => initialFor(ydoc));
+  // Render-time reset on doc switch so note B never flashes note A's content.
+  const [prevDoc, setPrevDoc] = useState(ydoc);
+  if (prevDoc !== ydoc) {
+    setPrevDoc(ydoc);
+    setContent(initialFor(ydoc));
+  }
+
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!ydoc) {
       setContent(fallbackRef.current);
-      setSynced(false);
       return;
     }
     const ytext = getMarkdownYText(ydoc);
+    if (ytext.length > 0) syncedDocRef.current = ydoc;
     const apply = () => {
       const next = ytext.toString();
-      if (synced || next.length > 0) {
-        if (next.length > 0 && !synced) setSynced(true);
+      if (next.length > 0) syncedDocRef.current = ydoc;
+      if (syncedDocRef.current === ydoc) {
         setContent(next);
       } else {
         setContent(fallbackRef.current);
@@ -63,7 +73,7 @@ export function useRealtimeMarkdownContent(
     if (whenSynced) {
       void whenSynced.then(() => {
         if (cancelled) return;
-        setSynced(true);
+        syncedDocRef.current = ydoc;
         apply();
       });
     }
@@ -76,7 +86,7 @@ export function useRealtimeMarkdownContent(
         timerRef.current = null;
       }
     };
-    // `fallback` read via ref so parent bumping note.content does not re-subscribe; sync flags sticky.
+    // `fallback` read via ref so parent bumping note.content does not re-subscribe.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ydoc, debounce, whenSynced]);
 

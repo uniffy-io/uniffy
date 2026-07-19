@@ -32,6 +32,12 @@ class ScreenShareQuality(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SCREEN_SHARE_QUALITY_BALANCED: _ClassVar[ScreenShareQuality]
     SCREEN_SHARE_QUALITY_HIGH: _ClassVar[ScreenShareQuality]
     SCREEN_SHARE_QUALITY_MAX: _ClassVar[ScreenShareQuality]
+
+class IceTransportPolicy(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ICE_TRANSPORT_POLICY_UNSPECIFIED: _ClassVar[IceTransportPolicy]
+    ICE_TRANSPORT_POLICY_ALL: _ClassVar[IceTransportPolicy]
+    ICE_TRANSPORT_POLICY_RELAY: _ClassVar[IceTransportPolicy]
 CALL_TYPE_UNSPECIFIED: CallType
 CALL_TYPE_DIRECT: CallType
 CALL_TYPE_GROUP_DM: CallType
@@ -46,6 +52,19 @@ SCREEN_SHARE_QUALITY_UNSPECIFIED: ScreenShareQuality
 SCREEN_SHARE_QUALITY_BALANCED: ScreenShareQuality
 SCREEN_SHARE_QUALITY_HIGH: ScreenShareQuality
 SCREEN_SHARE_QUALITY_MAX: ScreenShareQuality
+ICE_TRANSPORT_POLICY_UNSPECIFIED: IceTransportPolicy
+ICE_TRANSPORT_POLICY_ALL: IceTransportPolicy
+ICE_TRANSPORT_POLICY_RELAY: IceTransportPolicy
+
+class IceServer(_message.Message):
+    __slots__ = ("urls", "username", "credential")
+    URLS_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    CREDENTIAL_FIELD_NUMBER: _ClassVar[int]
+    urls: _containers.RepeatedScalarFieldContainer[str]
+    username: str
+    credential: str
+    def __init__(self, urls: _Optional[_Iterable[str]] = ..., username: _Optional[str] = ..., credential: _Optional[str] = ...) -> None: ...
 
 class Call(_message.Message):
     __slots__ = ("id", "organization_id", "channel_id", "call_type", "initiator_user_id", "host_user_id", "started_at", "ended_at", "end_reason", "participants")
@@ -108,18 +127,22 @@ class InitiateCallRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., device_id: _Optional[str] = ..., device_label: _Optional[str] = ...) -> None: ...
 
 class InitiateCallResponse(_message.Message):
-    __slots__ = ("call", "ws_url", "livekit_token", "joined_existing", "screen_share_quality_cap")
+    __slots__ = ("call", "ws_url", "livekit_token", "joined_existing", "screen_share_quality_cap", "ice_servers", "ice_transport_policy")
     CALL_FIELD_NUMBER: _ClassVar[int]
     WS_URL_FIELD_NUMBER: _ClassVar[int]
     LIVEKIT_TOKEN_FIELD_NUMBER: _ClassVar[int]
     JOINED_EXISTING_FIELD_NUMBER: _ClassVar[int]
     SCREEN_SHARE_QUALITY_CAP_FIELD_NUMBER: _ClassVar[int]
+    ICE_SERVERS_FIELD_NUMBER: _ClassVar[int]
+    ICE_TRANSPORT_POLICY_FIELD_NUMBER: _ClassVar[int]
     call: Call
     ws_url: str
     livekit_token: str
     joined_existing: bool
     screen_share_quality_cap: ScreenShareQuality
-    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ..., joined_existing: _Optional[bool] = ..., screen_share_quality_cap: _Optional[_Union[ScreenShareQuality, str]] = ...) -> None: ...
+    ice_servers: _containers.RepeatedCompositeFieldContainer[IceServer]
+    ice_transport_policy: IceTransportPolicy
+    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ..., joined_existing: _Optional[bool] = ..., screen_share_quality_cap: _Optional[_Union[ScreenShareQuality, str]] = ..., ice_servers: _Optional[_Iterable[_Union[IceServer, _Mapping]]] = ..., ice_transport_policy: _Optional[_Union[IceTransportPolicy, str]] = ...) -> None: ...
 
 class JoinCallRequest(_message.Message):
     __slots__ = ("organization_id", "call_id", "device_id", "device_label")
@@ -134,16 +157,20 @@ class JoinCallRequest(_message.Message):
     def __init__(self, organization_id: _Optional[str] = ..., call_id: _Optional[str] = ..., device_id: _Optional[str] = ..., device_label: _Optional[str] = ...) -> None: ...
 
 class JoinCallResponse(_message.Message):
-    __slots__ = ("call", "ws_url", "livekit_token", "screen_share_quality_cap")
+    __slots__ = ("call", "ws_url", "livekit_token", "screen_share_quality_cap", "ice_servers", "ice_transport_policy")
     CALL_FIELD_NUMBER: _ClassVar[int]
     WS_URL_FIELD_NUMBER: _ClassVar[int]
     LIVEKIT_TOKEN_FIELD_NUMBER: _ClassVar[int]
     SCREEN_SHARE_QUALITY_CAP_FIELD_NUMBER: _ClassVar[int]
+    ICE_SERVERS_FIELD_NUMBER: _ClassVar[int]
+    ICE_TRANSPORT_POLICY_FIELD_NUMBER: _ClassVar[int]
     call: Call
     ws_url: str
     livekit_token: str
     screen_share_quality_cap: ScreenShareQuality
-    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ..., screen_share_quality_cap: _Optional[_Union[ScreenShareQuality, str]] = ...) -> None: ...
+    ice_servers: _containers.RepeatedCompositeFieldContainer[IceServer]
+    ice_transport_policy: IceTransportPolicy
+    def __init__(self, call: _Optional[_Union[Call, _Mapping]] = ..., ws_url: _Optional[str] = ..., livekit_token: _Optional[str] = ..., screen_share_quality_cap: _Optional[_Union[ScreenShareQuality, str]] = ..., ice_servers: _Optional[_Iterable[_Union[IceServer, _Mapping]]] = ..., ice_transport_policy: _Optional[_Union[IceTransportPolicy, str]] = ...) -> None: ...
 
 class LeaveCallRequest(_message.Message):
     __slots__ = ("organization_id", "call_id", "device_id")

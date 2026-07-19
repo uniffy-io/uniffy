@@ -14,6 +14,7 @@ import * as encoding from 'lib0/encoding';
 import * as decoding from 'lib0/decoding';
 import { getAccessToken } from '@/config/api';
 import { encodeDocFrame, peekVarString } from '@/features/realtime/multiplex';
+import { REMOTE_ORIGIN } from '@/features/realtime/persistence/encryptedYjsPersistence';
 import {
   CANONICAL_SUBPROTOCOL,
   WS_CLOSE_FORBIDDEN,
@@ -38,6 +39,20 @@ const IDLE_CLOSE_MS = 30_000;
 // y-protocols/awareness GCs peer entries after `outdatedTimeout` (30s);
 // without periodic keep-alive, peer cursors vanish on typing pauses.
 const AWARENESS_KEEPALIVE_MS = 15_000;
+// `WebSocket.bufferedAmount` has no drain event, so flushed state is polled.
+const OUTBOUND_DRAIN_POLL_MS = 250;
+
+// The empty Yjs update (no structs, no deletions) encodes to exactly [0, 0].
+// The server ignores such updates, and a read-only handle sending ANY
+// SyncStep2 frame gets the whole socket closed with 4403, so a no-op reply
+// must never leave the tab.
+function isNoopSyncStep2(reply: Uint8Array): boolean {
+  const dec = decoding.createDecoder(reply);
+  if (decoding.readVarUint(dec) !== MESSAGE_SYNC) return false;
+  if (decoding.readVarUint(dec) !== syncProtocol.messageYjsSyncStep2) return false;
+  const update = decoding.readVarUint8Array(dec);
+  return update.length === 2 && update[0] === 0 && update[1] === 0;
+}
 
 export interface MultiplexerAttachOptions {
   contentType: string;
@@ -59,6 +74,14 @@ interface DocEntry {
   ydoc: Y.Doc;
   awareness: Awareness;
   resolvedSyncOnce: boolean;
+  // Read-only handles may not emit SYNC write frames; the server closes the
+  // whole socket with 4403 on the first one. SyncStep1 and awareness stay allowed.
+  readOnly: boolean;
+  // Local edits exist that have not been handed to the socket yet.
+  pendingLocalFrames: boolean;
+  // Pending edits were dropped while disconnected; only the reconnect
+  // handshake (our SyncStep2 reply to the server's SyncStep1) replays them.
+  droppedWhileDisconnected: boolean;
   updateHandler: (update: Uint8Array, origin: unknown) => void;
   awarenessHandler: (
     changes: { added: number[]; updated: number[]; removed: number[] },
@@ -77,6 +100,8 @@ class RealtimeMultiplexer {
   private resyncTimer: ReturnType<typeof setInterval> | null = null;
   private idleCloseTimer: ReturnType<typeof setTimeout> | null = null;
   private awarenessKeepaliveTimer: ReturnType<typeof setInterval> | null = null;
+  private outboundDrainTimer: ReturnType<typeof setInterval> | null = null;
+  private outboundListeners = new Map<string, Set<(pending: boolean) => void>>();
   private destroyed = false;
   private listenersAttached = false;
 
@@ -94,13 +119,28 @@ class RealtimeMultiplexer {
       ydoc: opts.ydoc,
       awareness: opts.awareness,
       resolvedSyncOnce: false,
+      readOnly: false,
+      pendingLocalFrames: false,
+      droppedWhileDisconnected: false,
       updateHandler: (update, origin) => {
         // Skip echoes of frames we just applied from the wire.
-        if (origin === this) return;
+        if (origin === REMOTE_ORIGIN) return;
+        // Read-only docs never push state. IDB hydration replays of
+        // server-known content would otherwise leave as write frames.
+        if (entry.readOnly) return;
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+          this.markOutboundDropped(entry);
+          return;
+        }
         const enc = encoding.createEncoder();
         encoding.writeVarUint(enc, MESSAGE_SYNC);
         syncProtocol.writeUpdate(enc, update);
         this.sendForDoc(docName, encoding.toUint8Array(enc));
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+          this.markOutboundDropped(entry);
+          return;
+        }
+        if (!entry.droppedWhileDisconnected) this.noteLocalFramesHandedToSocket(entry);
       },
       awarenessHandler: (changes, origin) => {
         if (origin === 'remote') return;
@@ -250,6 +290,12 @@ class RealtimeMultiplexer {
     this.wsConnecting = false;
     this.stopResyncTimer();
     this.stopAwarenessKeepaliveTimer();
+    this.stopOutboundDrainPoll();
+    for (const entry of this.docs.values()) {
+      // Teardown loses socket-buffered bytes; the reconnect handshake
+      // re-derives whatever the server is actually missing.
+      if (entry.pendingLocalFrames) entry.droppedWhileDisconnected = true;
+    }
   }
 
   private scheduleReconnect(): void {
@@ -375,12 +421,16 @@ class RealtimeMultiplexer {
         decoder,
         replyEncoder,
         entry.ydoc,
-        this, // origin token so our `update` handler skips re-sending
+        // Marks server-applied updates so the update handler skips re-sending
+        // them and IDB persistence skips storing them.
+        REMOTE_ORIGIN,
       );
       const replyBytes = encoding.toUint8Array(replyEncoder);
-      // `readSyncMessage` always writes the SYNC type byte; a body-less
-      // reply (SyncStep2/Update) leaves just that byte - skip the echo.
-      if (replyBytes.length > 1) {
+      if (syncMessageType === syncProtocol.messageYjsSyncStep1) {
+        this.replySyncStep2(entry, replyBytes);
+      } else if (replyBytes.length > 1) {
+        // `readSyncMessage` always writes the SYNC type byte; a body-less
+        // reply leaves just that byte - skip the echo.
         this.sendForDoc(docName, replyBytes);
       }
       if (syncMessageType === syncProtocol.messageYjsSyncStep2 && !entry.resolvedSyncOnce) {
@@ -392,6 +442,98 @@ class RealtimeMultiplexer {
     } else if (messageType === MESSAGE_QUERY_AWARENESS) {
       this.sendLocalAwareness(entry);
     }
+  }
+
+  // Our reply to a server SyncStep1 carries every local update the server
+  // lacks, including edits dropped while disconnected.
+  private replySyncStep2(entry: DocEntry, replyBytes: Uint8Array): void {
+    if (entry.readOnly || isNoopSyncStep2(replyBytes)) {
+      entry.droppedWhileDisconnected = false;
+      this.setOutboundPending(entry, false);
+      return;
+    }
+    this.sendForDoc(entry.docName, replyBytes);
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.markOutboundDropped(entry);
+      return;
+    }
+    entry.droppedWhileDisconnected = false;
+    this.noteLocalFramesHandedToSocket(entry);
+  }
+
+  private markOutboundDropped(entry: DocEntry): void {
+    entry.droppedWhileDisconnected = true;
+    this.setOutboundPending(entry, true);
+  }
+
+  private noteLocalFramesHandedToSocket(entry: DocEntry): void {
+    if (!this.ws || this.ws.bufferedAmount === 0) {
+      this.setOutboundPending(entry, false);
+      return;
+    }
+    this.setOutboundPending(entry, true);
+    this.startOutboundDrainPoll();
+  }
+
+  private setOutboundPending(entry: DocEntry, pending: boolean): void {
+    if (entry.pendingLocalFrames === pending) return;
+    entry.pendingLocalFrames = pending;
+    const listeners = this.outboundListeners.get(entry.docName);
+    if (!listeners) return;
+    for (const listener of listeners) listener(pending);
+  }
+
+  private startOutboundDrainPoll(): void {
+    if (this.outboundDrainTimer) return;
+    this.outboundDrainTimer = setInterval(() => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        this.stopOutboundDrainPoll();
+        return;
+      }
+      if (this.ws.bufferedAmount > 0) return;
+      for (const entry of this.docs.values()) {
+        if (entry.pendingLocalFrames && !entry.droppedWhileDisconnected) {
+          this.setOutboundPending(entry, false);
+        }
+      }
+      // Docs still pending are dropped ones; the handshake clears those.
+      this.stopOutboundDrainPoll();
+    }, OUTBOUND_DRAIN_POLL_MS);
+  }
+
+  private stopOutboundDrainPoll(): void {
+    if (this.outboundDrainTimer) {
+      clearInterval(this.outboundDrainTimer);
+      this.outboundDrainTimer = null;
+    }
+  }
+
+  /** VIEWER handles are flagged after attach so no SYNC write frame ever leaves. */
+  setDocReadOnly(docName: string, readOnly: boolean): void {
+    const entry = this.docs.get(docName);
+    if (!entry) return;
+    entry.readOnly = readOnly;
+    if (readOnly) {
+      entry.droppedWhileDisconnected = false;
+      this.setOutboundPending(entry, false);
+    }
+  }
+
+  isOutboundPending(docName: string): boolean {
+    return this.docs.get(docName)?.pendingLocalFrames ?? false;
+  }
+
+  subscribeOutboundPending(docName: string, listener: (pending: boolean) => void): () => void {
+    let set = this.outboundListeners.get(docName);
+    if (!set) {
+      set = new Set();
+      this.outboundListeners.set(docName, set);
+    }
+    set.add(listener);
+    return () => {
+      set.delete(listener);
+      if (set.size === 0) this.outboundListeners.delete(docName);
+    };
   }
 
   private sendForDoc(docName: string, payload: Uint8Array): void {

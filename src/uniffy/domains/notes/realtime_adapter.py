@@ -125,6 +125,19 @@ class NoteRealtimeAdapter:
             canvas_content=canvas_content,
         )
 
+    def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
+        """Replace ``Y.Text("markdown")`` with a column write from the legacy
+        ``UpdateNote`` path. Markdown docs only; canvas writes never publish
+        a content replace.
+        """
+        ytext = ydoc.get("markdown", type=pycrdt.Text)
+        if str(ytext) == content:
+            return False
+        with ydoc.transaction():
+            del ytext[:]
+            ytext += content
+        return True
+
 
 def _seed_canvas_ydoc(ydoc: pycrdt.Doc, canvas_content: dict[str, Any] | None) -> None:
     """Stamp existing ``canvas_content`` into the doc's Y types on cold start."""
