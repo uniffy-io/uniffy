@@ -189,6 +189,118 @@ func (ScreenShareQuality) EnumDescriptor() ([]byte, []int) {
 	return file_calls_v1_calls_proto_rawDescGZIP(), []int{2}
 }
 
+type IceTransportPolicy int32
+
+const (
+	// Client default (all candidate types).
+	IceTransportPolicy_ICE_TRANSPORT_POLICY_UNSPECIFIED IceTransportPolicy = 0
+	IceTransportPolicy_ICE_TRANSPORT_POLICY_ALL         IceTransportPolicy = 1
+	IceTransportPolicy_ICE_TRANSPORT_POLICY_RELAY       IceTransportPolicy = 2
+)
+
+// Enum value maps for IceTransportPolicy.
+var (
+	IceTransportPolicy_name = map[int32]string{
+		0: "ICE_TRANSPORT_POLICY_UNSPECIFIED",
+		1: "ICE_TRANSPORT_POLICY_ALL",
+		2: "ICE_TRANSPORT_POLICY_RELAY",
+	}
+	IceTransportPolicy_value = map[string]int32{
+		"ICE_TRANSPORT_POLICY_UNSPECIFIED": 0,
+		"ICE_TRANSPORT_POLICY_ALL":         1,
+		"ICE_TRANSPORT_POLICY_RELAY":       2,
+	}
+)
+
+func (x IceTransportPolicy) Enum() *IceTransportPolicy {
+	p := new(IceTransportPolicy)
+	*p = x
+	return p
+}
+
+func (x IceTransportPolicy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (IceTransportPolicy) Descriptor() protoreflect.EnumDescriptor {
+	return file_calls_v1_calls_proto_enumTypes[3].Descriptor()
+}
+
+func (IceTransportPolicy) Type() protoreflect.EnumType {
+	return &file_calls_v1_calls_proto_enumTypes[3]
+}
+
+func (x IceTransportPolicy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use IceTransportPolicy.Descriptor instead.
+func (IceTransportPolicy) EnumDescriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{3}
+}
+
+// One username/credential pair covers all URLs (TURN REST spec); credentials
+// are per-user and expire, so clients must not cache them across connections.
+type IceServer struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Urls          []string               `protobuf:"bytes,1,rep,name=urls,proto3" json:"urls,omitempty"`
+	Username      *string                `protobuf:"bytes,2,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	Credential    *string                `protobuf:"bytes,3,opt,name=credential,proto3,oneof" json:"credential,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IceServer) Reset() {
+	*x = IceServer{}
+	mi := &file_calls_v1_calls_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IceServer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IceServer) ProtoMessage() {}
+
+func (x *IceServer) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IceServer.ProtoReflect.Descriptor instead.
+func (*IceServer) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *IceServer) GetUrls() []string {
+	if x != nil {
+		return x.Urls
+	}
+	return nil
+}
+
+func (x *IceServer) GetUsername() string {
+	if x != nil && x.Username != nil {
+		return *x.Username
+	}
+	return ""
+}
+
+func (x *IceServer) GetCredential() string {
+	if x != nil && x.Credential != nil {
+		return *x.Credential
+	}
+	return ""
+}
+
 type Call struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -208,7 +320,7 @@ type Call struct {
 
 func (x *Call) Reset() {
 	*x = Call{}
-	mi := &file_calls_v1_calls_proto_msgTypes[0]
+	mi := &file_calls_v1_calls_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -220,7 +332,7 @@ func (x *Call) String() string {
 func (*Call) ProtoMessage() {}
 
 func (x *Call) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[0]
+	mi := &file_calls_v1_calls_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -233,7 +345,7 @@ func (x *Call) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Call.ProtoReflect.Descriptor instead.
 func (*Call) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{0}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Call) GetId() string {
@@ -325,7 +437,7 @@ type CallParticipant struct {
 
 func (x *CallParticipant) Reset() {
 	*x = CallParticipant{}
-	mi := &file_calls_v1_calls_proto_msgTypes[1]
+	mi := &file_calls_v1_calls_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -337,7 +449,7 @@ func (x *CallParticipant) String() string {
 func (*CallParticipant) ProtoMessage() {}
 
 func (x *CallParticipant) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[1]
+	mi := &file_calls_v1_calls_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -350,7 +462,7 @@ func (x *CallParticipant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallParticipant.ProtoReflect.Descriptor instead.
 func (*CallParticipant) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{1}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CallParticipant) GetUserId() string {
@@ -436,7 +548,7 @@ type InitiateCallRequest struct {
 
 func (x *InitiateCallRequest) Reset() {
 	*x = InitiateCallRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[2]
+	mi := &file_calls_v1_calls_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -448,7 +560,7 @@ func (x *InitiateCallRequest) String() string {
 func (*InitiateCallRequest) ProtoMessage() {}
 
 func (x *InitiateCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[2]
+	mi := &file_calls_v1_calls_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -461,7 +573,7 @@ func (x *InitiateCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitiateCallRequest.ProtoReflect.Descriptor instead.
 func (*InitiateCallRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{2}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *InitiateCallRequest) GetOrganizationId() string {
@@ -501,13 +613,16 @@ type InitiateCallResponse struct {
 	JoinedExisting bool `protobuf:"varint,4,opt,name=joined_existing,json=joinedExisting,proto3" json:"joined_existing,omitempty"`
 	// Resolved screen-share ceiling for this session (org cap, else per-type default).
 	ScreenShareQualityCap ScreenShareQuality `protobuf:"varint,5,opt,name=screen_share_quality_cap,json=screenShareQualityCap,proto3,enum=calls.v1.ScreenShareQuality" json:"screen_share_quality_cap,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Empty in direct-media mode; TURN relay config when the deployment relays media.
+	IceServers         []*IceServer       `protobuf:"bytes,6,rep,name=ice_servers,json=iceServers,proto3" json:"ice_servers,omitempty"`
+	IceTransportPolicy IceTransportPolicy `protobuf:"varint,7,opt,name=ice_transport_policy,json=iceTransportPolicy,proto3,enum=calls.v1.IceTransportPolicy" json:"ice_transport_policy,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *InitiateCallResponse) Reset() {
 	*x = InitiateCallResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[3]
+	mi := &file_calls_v1_calls_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +634,7 @@ func (x *InitiateCallResponse) String() string {
 func (*InitiateCallResponse) ProtoMessage() {}
 
 func (x *InitiateCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[3]
+	mi := &file_calls_v1_calls_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +647,7 @@ func (x *InitiateCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitiateCallResponse.ProtoReflect.Descriptor instead.
 func (*InitiateCallResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{3}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *InitiateCallResponse) GetCall() *Call {
@@ -570,6 +685,20 @@ func (x *InitiateCallResponse) GetScreenShareQualityCap() ScreenShareQuality {
 	return ScreenShareQuality_SCREEN_SHARE_QUALITY_UNSPECIFIED
 }
 
+func (x *InitiateCallResponse) GetIceServers() []*IceServer {
+	if x != nil {
+		return x.IceServers
+	}
+	return nil
+}
+
+func (x *InitiateCallResponse) GetIceTransportPolicy() IceTransportPolicy {
+	if x != nil {
+		return x.IceTransportPolicy
+	}
+	return IceTransportPolicy_ICE_TRANSPORT_POLICY_UNSPECIFIED
+}
+
 type JoinCallRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -582,7 +711,7 @@ type JoinCallRequest struct {
 
 func (x *JoinCallRequest) Reset() {
 	*x = JoinCallRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[4]
+	mi := &file_calls_v1_calls_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -594,7 +723,7 @@ func (x *JoinCallRequest) String() string {
 func (*JoinCallRequest) ProtoMessage() {}
 
 func (x *JoinCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[4]
+	mi := &file_calls_v1_calls_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -607,7 +736,7 @@ func (x *JoinCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinCallRequest.ProtoReflect.Descriptor instead.
 func (*JoinCallRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{4}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *JoinCallRequest) GetOrganizationId() string {
@@ -645,13 +774,16 @@ type JoinCallResponse struct {
 	LivekitToken string                 `protobuf:"bytes,3,opt,name=livekit_token,json=livekitToken,proto3" json:"livekit_token,omitempty"`
 	// Resolved screen-share ceiling for this session (org cap, else per-type default).
 	ScreenShareQualityCap ScreenShareQuality `protobuf:"varint,4,opt,name=screen_share_quality_cap,json=screenShareQualityCap,proto3,enum=calls.v1.ScreenShareQuality" json:"screen_share_quality_cap,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Empty in direct-media mode; TURN relay config when the deployment relays media.
+	IceServers         []*IceServer       `protobuf:"bytes,5,rep,name=ice_servers,json=iceServers,proto3" json:"ice_servers,omitempty"`
+	IceTransportPolicy IceTransportPolicy `protobuf:"varint,6,opt,name=ice_transport_policy,json=iceTransportPolicy,proto3,enum=calls.v1.IceTransportPolicy" json:"ice_transport_policy,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *JoinCallResponse) Reset() {
 	*x = JoinCallResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[5]
+	mi := &file_calls_v1_calls_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -663,7 +795,7 @@ func (x *JoinCallResponse) String() string {
 func (*JoinCallResponse) ProtoMessage() {}
 
 func (x *JoinCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[5]
+	mi := &file_calls_v1_calls_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -676,7 +808,7 @@ func (x *JoinCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinCallResponse.ProtoReflect.Descriptor instead.
 func (*JoinCallResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{5}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *JoinCallResponse) GetCall() *Call {
@@ -707,6 +839,20 @@ func (x *JoinCallResponse) GetScreenShareQualityCap() ScreenShareQuality {
 	return ScreenShareQuality_SCREEN_SHARE_QUALITY_UNSPECIFIED
 }
 
+func (x *JoinCallResponse) GetIceServers() []*IceServer {
+	if x != nil {
+		return x.IceServers
+	}
+	return nil
+}
+
+func (x *JoinCallResponse) GetIceTransportPolicy() IceTransportPolicy {
+	if x != nil {
+		return x.IceTransportPolicy
+	}
+	return IceTransportPolicy_ICE_TRANSPORT_POLICY_UNSPECIFIED
+}
+
 type LeaveCallRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -718,7 +864,7 @@ type LeaveCallRequest struct {
 
 func (x *LeaveCallRequest) Reset() {
 	*x = LeaveCallRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[6]
+	mi := &file_calls_v1_calls_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -730,7 +876,7 @@ func (x *LeaveCallRequest) String() string {
 func (*LeaveCallRequest) ProtoMessage() {}
 
 func (x *LeaveCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[6]
+	mi := &file_calls_v1_calls_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -743,7 +889,7 @@ func (x *LeaveCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaveCallRequest.ProtoReflect.Descriptor instead.
 func (*LeaveCallRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{6}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *LeaveCallRequest) GetOrganizationId() string {
@@ -776,7 +922,7 @@ type LeaveCallResponse struct {
 
 func (x *LeaveCallResponse) Reset() {
 	*x = LeaveCallResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[7]
+	mi := &file_calls_v1_calls_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -788,7 +934,7 @@ func (x *LeaveCallResponse) String() string {
 func (*LeaveCallResponse) ProtoMessage() {}
 
 func (x *LeaveCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[7]
+	mi := &file_calls_v1_calls_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -801,7 +947,7 @@ func (x *LeaveCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaveCallResponse.ProtoReflect.Descriptor instead.
 func (*LeaveCallResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{7}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *LeaveCallResponse) GetSuccess() bool {
@@ -821,7 +967,7 @@ type EndCallRequest struct {
 
 func (x *EndCallRequest) Reset() {
 	*x = EndCallRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[8]
+	mi := &file_calls_v1_calls_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -833,7 +979,7 @@ func (x *EndCallRequest) String() string {
 func (*EndCallRequest) ProtoMessage() {}
 
 func (x *EndCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[8]
+	mi := &file_calls_v1_calls_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -846,7 +992,7 @@ func (x *EndCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EndCallRequest.ProtoReflect.Descriptor instead.
 func (*EndCallRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{8}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *EndCallRequest) GetOrganizationId() string {
@@ -872,7 +1018,7 @@ type EndCallResponse struct {
 
 func (x *EndCallResponse) Reset() {
 	*x = EndCallResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[9]
+	mi := &file_calls_v1_calls_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -884,7 +1030,7 @@ func (x *EndCallResponse) String() string {
 func (*EndCallResponse) ProtoMessage() {}
 
 func (x *EndCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[9]
+	mi := &file_calls_v1_calls_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -897,7 +1043,7 @@ func (x *EndCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EndCallResponse.ProtoReflect.Descriptor instead.
 func (*EndCallResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{9}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *EndCallResponse) GetSuccess() bool {
@@ -918,7 +1064,7 @@ type RefreshCallTokenRequest struct {
 
 func (x *RefreshCallTokenRequest) Reset() {
 	*x = RefreshCallTokenRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[10]
+	mi := &file_calls_v1_calls_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -930,7 +1076,7 @@ func (x *RefreshCallTokenRequest) String() string {
 func (*RefreshCallTokenRequest) ProtoMessage() {}
 
 func (x *RefreshCallTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[10]
+	mi := &file_calls_v1_calls_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -943,7 +1089,7 @@ func (x *RefreshCallTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshCallTokenRequest.ProtoReflect.Descriptor instead.
 func (*RefreshCallTokenRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{10}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RefreshCallTokenRequest) GetOrganizationId() string {
@@ -976,7 +1122,7 @@ type RefreshCallTokenResponse struct {
 
 func (x *RefreshCallTokenResponse) Reset() {
 	*x = RefreshCallTokenResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[11]
+	mi := &file_calls_v1_calls_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -988,7 +1134,7 @@ func (x *RefreshCallTokenResponse) String() string {
 func (*RefreshCallTokenResponse) ProtoMessage() {}
 
 func (x *RefreshCallTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[11]
+	mi := &file_calls_v1_calls_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1001,7 +1147,7 @@ func (x *RefreshCallTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshCallTokenResponse.ProtoReflect.Descriptor instead.
 func (*RefreshCallTokenResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{11}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *RefreshCallTokenResponse) GetLivekitToken() string {
@@ -1021,7 +1167,7 @@ type GetActiveCallRequest struct {
 
 func (x *GetActiveCallRequest) Reset() {
 	*x = GetActiveCallRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[12]
+	mi := &file_calls_v1_calls_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1033,7 +1179,7 @@ func (x *GetActiveCallRequest) String() string {
 func (*GetActiveCallRequest) ProtoMessage() {}
 
 func (x *GetActiveCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[12]
+	mi := &file_calls_v1_calls_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1046,7 +1192,7 @@ func (x *GetActiveCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetActiveCallRequest.ProtoReflect.Descriptor instead.
 func (*GetActiveCallRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{12}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetActiveCallRequest) GetOrganizationId() string {
@@ -1072,7 +1218,7 @@ type GetActiveCallResponse struct {
 
 func (x *GetActiveCallResponse) Reset() {
 	*x = GetActiveCallResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[13]
+	mi := &file_calls_v1_calls_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1084,7 +1230,7 @@ func (x *GetActiveCallResponse) String() string {
 func (*GetActiveCallResponse) ProtoMessage() {}
 
 func (x *GetActiveCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[13]
+	mi := &file_calls_v1_calls_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1097,7 +1243,7 @@ func (x *GetActiveCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetActiveCallResponse.ProtoReflect.Descriptor instead.
 func (*GetActiveCallResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{13}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetActiveCallResponse) GetCall() *Call {
@@ -1116,7 +1262,7 @@ type ListActiveCallsRequest struct {
 
 func (x *ListActiveCallsRequest) Reset() {
 	*x = ListActiveCallsRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[14]
+	mi := &file_calls_v1_calls_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1128,7 +1274,7 @@ func (x *ListActiveCallsRequest) String() string {
 func (*ListActiveCallsRequest) ProtoMessage() {}
 
 func (x *ListActiveCallsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[14]
+	mi := &file_calls_v1_calls_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1141,7 +1287,7 @@ func (x *ListActiveCallsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActiveCallsRequest.ProtoReflect.Descriptor instead.
 func (*ListActiveCallsRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{14}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListActiveCallsRequest) GetOrganizationId() string {
@@ -1160,7 +1306,7 @@ type ListActiveCallsResponse struct {
 
 func (x *ListActiveCallsResponse) Reset() {
 	*x = ListActiveCallsResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[15]
+	mi := &file_calls_v1_calls_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1172,7 +1318,7 @@ func (x *ListActiveCallsResponse) String() string {
 func (*ListActiveCallsResponse) ProtoMessage() {}
 
 func (x *ListActiveCallsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[15]
+	mi := &file_calls_v1_calls_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1185,7 +1331,7 @@ func (x *ListActiveCallsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActiveCallsResponse.ProtoReflect.Descriptor instead.
 func (*ListActiveCallsResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{15}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListActiveCallsResponse) GetCalls() []*Call {
@@ -1205,7 +1351,7 @@ type DeclineCallRequest struct {
 
 func (x *DeclineCallRequest) Reset() {
 	*x = DeclineCallRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[16]
+	mi := &file_calls_v1_calls_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1217,7 +1363,7 @@ func (x *DeclineCallRequest) String() string {
 func (*DeclineCallRequest) ProtoMessage() {}
 
 func (x *DeclineCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[16]
+	mi := &file_calls_v1_calls_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1230,7 +1376,7 @@ func (x *DeclineCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclineCallRequest.ProtoReflect.Descriptor instead.
 func (*DeclineCallRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{16}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeclineCallRequest) GetOrganizationId() string {
@@ -1256,7 +1402,7 @@ type DeclineCallResponse struct {
 
 func (x *DeclineCallResponse) Reset() {
 	*x = DeclineCallResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[17]
+	mi := &file_calls_v1_calls_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1268,7 +1414,7 @@ func (x *DeclineCallResponse) String() string {
 func (*DeclineCallResponse) ProtoMessage() {}
 
 func (x *DeclineCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[17]
+	mi := &file_calls_v1_calls_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1281,7 +1427,7 @@ func (x *DeclineCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclineCallResponse.ProtoReflect.Descriptor instead.
 func (*DeclineCallResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{17}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *DeclineCallResponse) GetSuccess() bool {
@@ -1302,7 +1448,7 @@ type KickParticipantRequest struct {
 
 func (x *KickParticipantRequest) Reset() {
 	*x = KickParticipantRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[18]
+	mi := &file_calls_v1_calls_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1314,7 +1460,7 @@ func (x *KickParticipantRequest) String() string {
 func (*KickParticipantRequest) ProtoMessage() {}
 
 func (x *KickParticipantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[18]
+	mi := &file_calls_v1_calls_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1327,7 +1473,7 @@ func (x *KickParticipantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KickParticipantRequest.ProtoReflect.Descriptor instead.
 func (*KickParticipantRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{18}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *KickParticipantRequest) GetOrganizationId() string {
@@ -1360,7 +1506,7 @@ type KickParticipantResponse struct {
 
 func (x *KickParticipantResponse) Reset() {
 	*x = KickParticipantResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[19]
+	mi := &file_calls_v1_calls_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1372,7 +1518,7 @@ func (x *KickParticipantResponse) String() string {
 func (*KickParticipantResponse) ProtoMessage() {}
 
 func (x *KickParticipantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[19]
+	mi := &file_calls_v1_calls_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1385,7 +1531,7 @@ func (x *KickParticipantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KickParticipantResponse.ProtoReflect.Descriptor instead.
 func (*KickParticipantResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{19}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *KickParticipantResponse) GetSuccess() bool {
@@ -1406,7 +1552,7 @@ type MuteParticipantRequest struct {
 
 func (x *MuteParticipantRequest) Reset() {
 	*x = MuteParticipantRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[20]
+	mi := &file_calls_v1_calls_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1418,7 +1564,7 @@ func (x *MuteParticipantRequest) String() string {
 func (*MuteParticipantRequest) ProtoMessage() {}
 
 func (x *MuteParticipantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[20]
+	mi := &file_calls_v1_calls_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1431,7 +1577,7 @@ func (x *MuteParticipantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MuteParticipantRequest.ProtoReflect.Descriptor instead.
 func (*MuteParticipantRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{20}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *MuteParticipantRequest) GetOrganizationId() string {
@@ -1464,7 +1610,7 @@ type MuteParticipantResponse struct {
 
 func (x *MuteParticipantResponse) Reset() {
 	*x = MuteParticipantResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[21]
+	mi := &file_calls_v1_calls_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1476,7 +1622,7 @@ func (x *MuteParticipantResponse) String() string {
 func (*MuteParticipantResponse) ProtoMessage() {}
 
 func (x *MuteParticipantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[21]
+	mi := &file_calls_v1_calls_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1489,7 +1635,7 @@ func (x *MuteParticipantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MuteParticipantResponse.ProtoReflect.Descriptor instead.
 func (*MuteParticipantResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{21}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *MuteParticipantResponse) GetSuccess() bool {
@@ -1513,7 +1659,7 @@ type ReportMediaStateRequest struct {
 
 func (x *ReportMediaStateRequest) Reset() {
 	*x = ReportMediaStateRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[22]
+	mi := &file_calls_v1_calls_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1525,7 +1671,7 @@ func (x *ReportMediaStateRequest) String() string {
 func (*ReportMediaStateRequest) ProtoMessage() {}
 
 func (x *ReportMediaStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[22]
+	mi := &file_calls_v1_calls_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1538,7 +1684,7 @@ func (x *ReportMediaStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportMediaStateRequest.ProtoReflect.Descriptor instead.
 func (*ReportMediaStateRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{22}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ReportMediaStateRequest) GetOrganizationId() string {
@@ -1592,7 +1738,7 @@ type ReportMediaStateResponse struct {
 
 func (x *ReportMediaStateResponse) Reset() {
 	*x = ReportMediaStateResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[23]
+	mi := &file_calls_v1_calls_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1604,7 +1750,7 @@ func (x *ReportMediaStateResponse) String() string {
 func (*ReportMediaStateResponse) ProtoMessage() {}
 
 func (x *ReportMediaStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[23]
+	mi := &file_calls_v1_calls_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1617,7 +1763,7 @@ func (x *ReportMediaStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportMediaStateResponse.ProtoReflect.Descriptor instead.
 func (*ReportMediaStateResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{23}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ReportMediaStateResponse) GetSuccess() bool {
@@ -1644,7 +1790,7 @@ type OrgCallPolicy struct {
 
 func (x *OrgCallPolicy) Reset() {
 	*x = OrgCallPolicy{}
-	mi := &file_calls_v1_calls_proto_msgTypes[24]
+	mi := &file_calls_v1_calls_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1656,7 +1802,7 @@ func (x *OrgCallPolicy) String() string {
 func (*OrgCallPolicy) ProtoMessage() {}
 
 func (x *OrgCallPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[24]
+	mi := &file_calls_v1_calls_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1669,7 +1815,7 @@ func (x *OrgCallPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrgCallPolicy.ProtoReflect.Descriptor instead.
 func (*OrgCallPolicy) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{24}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *OrgCallPolicy) GetOrganizationId() string {
@@ -1730,7 +1876,7 @@ type GetOrgCallPolicyRequest struct {
 
 func (x *GetOrgCallPolicyRequest) Reset() {
 	*x = GetOrgCallPolicyRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[25]
+	mi := &file_calls_v1_calls_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1742,7 +1888,7 @@ func (x *GetOrgCallPolicyRequest) String() string {
 func (*GetOrgCallPolicyRequest) ProtoMessage() {}
 
 func (x *GetOrgCallPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[25]
+	mi := &file_calls_v1_calls_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1755,7 +1901,7 @@ func (x *GetOrgCallPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrgCallPolicyRequest.ProtoReflect.Descriptor instead.
 func (*GetOrgCallPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{25}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetOrgCallPolicyRequest) GetOrganizationId() string {
@@ -1774,7 +1920,7 @@ type GetOrgCallPolicyResponse struct {
 
 func (x *GetOrgCallPolicyResponse) Reset() {
 	*x = GetOrgCallPolicyResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[26]
+	mi := &file_calls_v1_calls_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1786,7 +1932,7 @@ func (x *GetOrgCallPolicyResponse) String() string {
 func (*GetOrgCallPolicyResponse) ProtoMessage() {}
 
 func (x *GetOrgCallPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[26]
+	mi := &file_calls_v1_calls_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1799,7 +1945,7 @@ func (x *GetOrgCallPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrgCallPolicyResponse.ProtoReflect.Descriptor instead.
 func (*GetOrgCallPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{26}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetOrgCallPolicyResponse) GetPolicy() *OrgCallPolicy {
@@ -1824,7 +1970,7 @@ type UpdateOrgCallPolicyRequest struct {
 
 func (x *UpdateOrgCallPolicyRequest) Reset() {
 	*x = UpdateOrgCallPolicyRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[27]
+	mi := &file_calls_v1_calls_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1836,7 +1982,7 @@ func (x *UpdateOrgCallPolicyRequest) String() string {
 func (*UpdateOrgCallPolicyRequest) ProtoMessage() {}
 
 func (x *UpdateOrgCallPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[27]
+	mi := &file_calls_v1_calls_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1849,7 +1995,7 @@ func (x *UpdateOrgCallPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOrgCallPolicyRequest.ProtoReflect.Descriptor instead.
 func (*UpdateOrgCallPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{27}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *UpdateOrgCallPolicyRequest) GetOrganizationId() string {
@@ -1910,7 +2056,7 @@ type UpdateOrgCallPolicyResponse struct {
 
 func (x *UpdateOrgCallPolicyResponse) Reset() {
 	*x = UpdateOrgCallPolicyResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[28]
+	mi := &file_calls_v1_calls_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1922,7 +2068,7 @@ func (x *UpdateOrgCallPolicyResponse) String() string {
 func (*UpdateOrgCallPolicyResponse) ProtoMessage() {}
 
 func (x *UpdateOrgCallPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[28]
+	mi := &file_calls_v1_calls_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1935,7 +2081,7 @@ func (x *UpdateOrgCallPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOrgCallPolicyResponse.ProtoReflect.Descriptor instead.
 func (*UpdateOrgCallPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{28}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *UpdateOrgCallPolicyResponse) GetPolicy() *OrgCallPolicy {
@@ -1949,7 +2095,15 @@ var File_calls_v1_calls_proto protoreflect.FileDescriptor
 
 const file_calls_v1_calls_proto_rawDesc = "" +
 	"\n" +
-	"\x14calls/v1/calls.proto\x12\bcalls.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xec\x03\n" +
+	"\x14calls/v1/calls.proto\x12\bcalls.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\x01\n" +
+	"\tIceServer\x12\x12\n" +
+	"\x04urls\x18\x01 \x03(\tR\x04urls\x12\x1f\n" +
+	"\busername\x18\x02 \x01(\tH\x00R\busername\x88\x01\x01\x12#\n" +
+	"\n" +
+	"credential\x18\x03 \x01(\tH\x01R\n" +
+	"credential\x88\x01\x01B\v\n" +
+	"\t_usernameB\r\n" +
+	"\v_credential\"\xec\x03\n" +
 	"\x04Call\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1d\n" +
@@ -1990,24 +2144,30 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n" +
 	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x12&\n" +
 	"\fdevice_label\x18\x04 \x01(\tH\x00R\vdeviceLabel\x88\x01\x01B\x0f\n" +
-	"\r_device_label\"\xf6\x01\n" +
+	"\r_device_label\"\xfc\x02\n" +
 	"\x14InitiateCallResponse\x12\"\n" +
 	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\x12\x15\n" +
 	"\x06ws_url\x18\x02 \x01(\tR\x05wsUrl\x12#\n" +
 	"\rlivekit_token\x18\x03 \x01(\tR\flivekitToken\x12'\n" +
 	"\x0fjoined_existing\x18\x04 \x01(\bR\x0ejoinedExisting\x12U\n" +
-	"\x18screen_share_quality_cap\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\"\xa9\x01\n" +
+	"\x18screen_share_quality_cap\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\x124\n" +
+	"\vice_servers\x18\x06 \x03(\v2\x13.calls.v1.IceServerR\n" +
+	"iceServers\x12N\n" +
+	"\x14ice_transport_policy\x18\a \x01(\x0e2\x1c.calls.v1.IceTransportPolicyR\x12iceTransportPolicy\"\xa9\x01\n" +
 	"\x0fJoinCallRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n" +
 	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x12&\n" +
 	"\fdevice_label\x18\x04 \x01(\tH\x00R\vdeviceLabel\x88\x01\x01B\x0f\n" +
-	"\r_device_label\"\xc9\x01\n" +
+	"\r_device_label\"\xcf\x02\n" +
 	"\x10JoinCallResponse\x12\"\n" +
 	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\x12\x15\n" +
 	"\x06ws_url\x18\x02 \x01(\tR\x05wsUrl\x12#\n" +
 	"\rlivekit_token\x18\x03 \x01(\tR\flivekitToken\x12U\n" +
-	"\x18screen_share_quality_cap\x18\x04 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\"q\n" +
+	"\x18screen_share_quality_cap\x18\x04 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\x124\n" +
+	"\vice_servers\x18\x05 \x03(\v2\x13.calls.v1.IceServerR\n" +
+	"iceServers\x12N\n" +
+	"\x14ice_transport_policy\x18\x06 \x01(\x0e2\x1c.calls.v1.IceTransportPolicyR\x12iceTransportPolicy\"q\n" +
 	"\x10LeaveCallRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n" +
@@ -2101,7 +2261,11 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	" SCREEN_SHARE_QUALITY_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dSCREEN_SHARE_QUALITY_BALANCED\x10\x01\x12\x1d\n" +
 	"\x19SCREEN_SHARE_QUALITY_HIGH\x10\x02\x12\x1c\n" +
-	"\x18SCREEN_SHARE_QUALITY_MAX\x10\x032\xc0\b\n" +
+	"\x18SCREEN_SHARE_QUALITY_MAX\x10\x03*x\n" +
+	"\x12IceTransportPolicy\x12$\n" +
+	" ICE_TRANSPORT_POLICY_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18ICE_TRANSPORT_POLICY_ALL\x10\x01\x12\x1e\n" +
+	"\x1aICE_TRANSPORT_POLICY_RELAY\x10\x022\xc0\b\n" +
 	"\vCallService\x12M\n" +
 	"\fInitiateCall\x12\x1d.calls.v1.InitiateCallRequest\x1a\x1e.calls.v1.InitiateCallResponse\x12A\n" +
 	"\bJoinCall\x12\x19.calls.v1.JoinCallRequest\x1a\x1a.calls.v1.JoinCallResponse\x12D\n" +
@@ -2129,95 +2293,101 @@ func file_calls_v1_calls_proto_rawDescGZIP() []byte {
 	return file_calls_v1_calls_proto_rawDescData
 }
 
-var file_calls_v1_calls_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_calls_v1_calls_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_calls_v1_calls_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_calls_v1_calls_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_calls_v1_calls_proto_goTypes = []any{
 	(CallType)(0),                       // 0: calls.v1.CallType
 	(CallEndReason)(0),                  // 1: calls.v1.CallEndReason
 	(ScreenShareQuality)(0),             // 2: calls.v1.ScreenShareQuality
-	(*Call)(nil),                        // 3: calls.v1.Call
-	(*CallParticipant)(nil),             // 4: calls.v1.CallParticipant
-	(*InitiateCallRequest)(nil),         // 5: calls.v1.InitiateCallRequest
-	(*InitiateCallResponse)(nil),        // 6: calls.v1.InitiateCallResponse
-	(*JoinCallRequest)(nil),             // 7: calls.v1.JoinCallRequest
-	(*JoinCallResponse)(nil),            // 8: calls.v1.JoinCallResponse
-	(*LeaveCallRequest)(nil),            // 9: calls.v1.LeaveCallRequest
-	(*LeaveCallResponse)(nil),           // 10: calls.v1.LeaveCallResponse
-	(*EndCallRequest)(nil),              // 11: calls.v1.EndCallRequest
-	(*EndCallResponse)(nil),             // 12: calls.v1.EndCallResponse
-	(*RefreshCallTokenRequest)(nil),     // 13: calls.v1.RefreshCallTokenRequest
-	(*RefreshCallTokenResponse)(nil),    // 14: calls.v1.RefreshCallTokenResponse
-	(*GetActiveCallRequest)(nil),        // 15: calls.v1.GetActiveCallRequest
-	(*GetActiveCallResponse)(nil),       // 16: calls.v1.GetActiveCallResponse
-	(*ListActiveCallsRequest)(nil),      // 17: calls.v1.ListActiveCallsRequest
-	(*ListActiveCallsResponse)(nil),     // 18: calls.v1.ListActiveCallsResponse
-	(*DeclineCallRequest)(nil),          // 19: calls.v1.DeclineCallRequest
-	(*DeclineCallResponse)(nil),         // 20: calls.v1.DeclineCallResponse
-	(*KickParticipantRequest)(nil),      // 21: calls.v1.KickParticipantRequest
-	(*KickParticipantResponse)(nil),     // 22: calls.v1.KickParticipantResponse
-	(*MuteParticipantRequest)(nil),      // 23: calls.v1.MuteParticipantRequest
-	(*MuteParticipantResponse)(nil),     // 24: calls.v1.MuteParticipantResponse
-	(*ReportMediaStateRequest)(nil),     // 25: calls.v1.ReportMediaStateRequest
-	(*ReportMediaStateResponse)(nil),    // 26: calls.v1.ReportMediaStateResponse
-	(*OrgCallPolicy)(nil),               // 27: calls.v1.OrgCallPolicy
-	(*GetOrgCallPolicyRequest)(nil),     // 28: calls.v1.GetOrgCallPolicyRequest
-	(*GetOrgCallPolicyResponse)(nil),    // 29: calls.v1.GetOrgCallPolicyResponse
-	(*UpdateOrgCallPolicyRequest)(nil),  // 30: calls.v1.UpdateOrgCallPolicyRequest
-	(*UpdateOrgCallPolicyResponse)(nil), // 31: calls.v1.UpdateOrgCallPolicyResponse
-	(*timestamppb.Timestamp)(nil),       // 32: google.protobuf.Timestamp
+	(IceTransportPolicy)(0),             // 3: calls.v1.IceTransportPolicy
+	(*IceServer)(nil),                   // 4: calls.v1.IceServer
+	(*Call)(nil),                        // 5: calls.v1.Call
+	(*CallParticipant)(nil),             // 6: calls.v1.CallParticipant
+	(*InitiateCallRequest)(nil),         // 7: calls.v1.InitiateCallRequest
+	(*InitiateCallResponse)(nil),        // 8: calls.v1.InitiateCallResponse
+	(*JoinCallRequest)(nil),             // 9: calls.v1.JoinCallRequest
+	(*JoinCallResponse)(nil),            // 10: calls.v1.JoinCallResponse
+	(*LeaveCallRequest)(nil),            // 11: calls.v1.LeaveCallRequest
+	(*LeaveCallResponse)(nil),           // 12: calls.v1.LeaveCallResponse
+	(*EndCallRequest)(nil),              // 13: calls.v1.EndCallRequest
+	(*EndCallResponse)(nil),             // 14: calls.v1.EndCallResponse
+	(*RefreshCallTokenRequest)(nil),     // 15: calls.v1.RefreshCallTokenRequest
+	(*RefreshCallTokenResponse)(nil),    // 16: calls.v1.RefreshCallTokenResponse
+	(*GetActiveCallRequest)(nil),        // 17: calls.v1.GetActiveCallRequest
+	(*GetActiveCallResponse)(nil),       // 18: calls.v1.GetActiveCallResponse
+	(*ListActiveCallsRequest)(nil),      // 19: calls.v1.ListActiveCallsRequest
+	(*ListActiveCallsResponse)(nil),     // 20: calls.v1.ListActiveCallsResponse
+	(*DeclineCallRequest)(nil),          // 21: calls.v1.DeclineCallRequest
+	(*DeclineCallResponse)(nil),         // 22: calls.v1.DeclineCallResponse
+	(*KickParticipantRequest)(nil),      // 23: calls.v1.KickParticipantRequest
+	(*KickParticipantResponse)(nil),     // 24: calls.v1.KickParticipantResponse
+	(*MuteParticipantRequest)(nil),      // 25: calls.v1.MuteParticipantRequest
+	(*MuteParticipantResponse)(nil),     // 26: calls.v1.MuteParticipantResponse
+	(*ReportMediaStateRequest)(nil),     // 27: calls.v1.ReportMediaStateRequest
+	(*ReportMediaStateResponse)(nil),    // 28: calls.v1.ReportMediaStateResponse
+	(*OrgCallPolicy)(nil),               // 29: calls.v1.OrgCallPolicy
+	(*GetOrgCallPolicyRequest)(nil),     // 30: calls.v1.GetOrgCallPolicyRequest
+	(*GetOrgCallPolicyResponse)(nil),    // 31: calls.v1.GetOrgCallPolicyResponse
+	(*UpdateOrgCallPolicyRequest)(nil),  // 32: calls.v1.UpdateOrgCallPolicyRequest
+	(*UpdateOrgCallPolicyResponse)(nil), // 33: calls.v1.UpdateOrgCallPolicyResponse
+	(*timestamppb.Timestamp)(nil),       // 34: google.protobuf.Timestamp
 }
 var file_calls_v1_calls_proto_depIdxs = []int32{
 	0,  // 0: calls.v1.Call.call_type:type_name -> calls.v1.CallType
-	32, // 1: calls.v1.Call.started_at:type_name -> google.protobuf.Timestamp
-	32, // 2: calls.v1.Call.ended_at:type_name -> google.protobuf.Timestamp
+	34, // 1: calls.v1.Call.started_at:type_name -> google.protobuf.Timestamp
+	34, // 2: calls.v1.Call.ended_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: calls.v1.Call.end_reason:type_name -> calls.v1.CallEndReason
-	4,  // 4: calls.v1.Call.participants:type_name -> calls.v1.CallParticipant
-	32, // 5: calls.v1.CallParticipant.joined_at:type_name -> google.protobuf.Timestamp
-	3,  // 6: calls.v1.InitiateCallResponse.call:type_name -> calls.v1.Call
+	6,  // 4: calls.v1.Call.participants:type_name -> calls.v1.CallParticipant
+	34, // 5: calls.v1.CallParticipant.joined_at:type_name -> google.protobuf.Timestamp
+	5,  // 6: calls.v1.InitiateCallResponse.call:type_name -> calls.v1.Call
 	2,  // 7: calls.v1.InitiateCallResponse.screen_share_quality_cap:type_name -> calls.v1.ScreenShareQuality
-	3,  // 8: calls.v1.JoinCallResponse.call:type_name -> calls.v1.Call
-	2,  // 9: calls.v1.JoinCallResponse.screen_share_quality_cap:type_name -> calls.v1.ScreenShareQuality
-	3,  // 10: calls.v1.GetActiveCallResponse.call:type_name -> calls.v1.Call
-	3,  // 11: calls.v1.ListActiveCallsResponse.calls:type_name -> calls.v1.Call
-	2,  // 12: calls.v1.OrgCallPolicy.max_screen_share_quality_direct:type_name -> calls.v1.ScreenShareQuality
-	2,  // 13: calls.v1.OrgCallPolicy.max_screen_share_quality_group:type_name -> calls.v1.ScreenShareQuality
-	2,  // 14: calls.v1.OrgCallPolicy.max_screen_share_quality_channel:type_name -> calls.v1.ScreenShareQuality
-	27, // 15: calls.v1.GetOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
-	2,  // 16: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_direct:type_name -> calls.v1.ScreenShareQuality
-	2,  // 17: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_group:type_name -> calls.v1.ScreenShareQuality
-	2,  // 18: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_channel:type_name -> calls.v1.ScreenShareQuality
-	27, // 19: calls.v1.UpdateOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
-	5,  // 20: calls.v1.CallService.InitiateCall:input_type -> calls.v1.InitiateCallRequest
-	7,  // 21: calls.v1.CallService.JoinCall:input_type -> calls.v1.JoinCallRequest
-	9,  // 22: calls.v1.CallService.LeaveCall:input_type -> calls.v1.LeaveCallRequest
-	11, // 23: calls.v1.CallService.EndCall:input_type -> calls.v1.EndCallRequest
-	13, // 24: calls.v1.CallService.RefreshCallToken:input_type -> calls.v1.RefreshCallTokenRequest
-	15, // 25: calls.v1.CallService.GetActiveCall:input_type -> calls.v1.GetActiveCallRequest
-	17, // 26: calls.v1.CallService.ListActiveCalls:input_type -> calls.v1.ListActiveCallsRequest
-	19, // 27: calls.v1.CallService.DeclineCall:input_type -> calls.v1.DeclineCallRequest
-	21, // 28: calls.v1.CallService.KickParticipant:input_type -> calls.v1.KickParticipantRequest
-	23, // 29: calls.v1.CallService.MuteParticipant:input_type -> calls.v1.MuteParticipantRequest
-	28, // 30: calls.v1.CallService.GetOrgCallPolicy:input_type -> calls.v1.GetOrgCallPolicyRequest
-	30, // 31: calls.v1.CallService.UpdateOrgCallPolicy:input_type -> calls.v1.UpdateOrgCallPolicyRequest
-	25, // 32: calls.v1.CallService.ReportMediaState:input_type -> calls.v1.ReportMediaStateRequest
-	6,  // 33: calls.v1.CallService.InitiateCall:output_type -> calls.v1.InitiateCallResponse
-	8,  // 34: calls.v1.CallService.JoinCall:output_type -> calls.v1.JoinCallResponse
-	10, // 35: calls.v1.CallService.LeaveCall:output_type -> calls.v1.LeaveCallResponse
-	12, // 36: calls.v1.CallService.EndCall:output_type -> calls.v1.EndCallResponse
-	14, // 37: calls.v1.CallService.RefreshCallToken:output_type -> calls.v1.RefreshCallTokenResponse
-	16, // 38: calls.v1.CallService.GetActiveCall:output_type -> calls.v1.GetActiveCallResponse
-	18, // 39: calls.v1.CallService.ListActiveCalls:output_type -> calls.v1.ListActiveCallsResponse
-	20, // 40: calls.v1.CallService.DeclineCall:output_type -> calls.v1.DeclineCallResponse
-	22, // 41: calls.v1.CallService.KickParticipant:output_type -> calls.v1.KickParticipantResponse
-	24, // 42: calls.v1.CallService.MuteParticipant:output_type -> calls.v1.MuteParticipantResponse
-	29, // 43: calls.v1.CallService.GetOrgCallPolicy:output_type -> calls.v1.GetOrgCallPolicyResponse
-	31, // 44: calls.v1.CallService.UpdateOrgCallPolicy:output_type -> calls.v1.UpdateOrgCallPolicyResponse
-	26, // 45: calls.v1.CallService.ReportMediaState:output_type -> calls.v1.ReportMediaStateResponse
-	33, // [33:46] is the sub-list for method output_type
-	20, // [20:33] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	4,  // 8: calls.v1.InitiateCallResponse.ice_servers:type_name -> calls.v1.IceServer
+	3,  // 9: calls.v1.InitiateCallResponse.ice_transport_policy:type_name -> calls.v1.IceTransportPolicy
+	5,  // 10: calls.v1.JoinCallResponse.call:type_name -> calls.v1.Call
+	2,  // 11: calls.v1.JoinCallResponse.screen_share_quality_cap:type_name -> calls.v1.ScreenShareQuality
+	4,  // 12: calls.v1.JoinCallResponse.ice_servers:type_name -> calls.v1.IceServer
+	3,  // 13: calls.v1.JoinCallResponse.ice_transport_policy:type_name -> calls.v1.IceTransportPolicy
+	5,  // 14: calls.v1.GetActiveCallResponse.call:type_name -> calls.v1.Call
+	5,  // 15: calls.v1.ListActiveCallsResponse.calls:type_name -> calls.v1.Call
+	2,  // 16: calls.v1.OrgCallPolicy.max_screen_share_quality_direct:type_name -> calls.v1.ScreenShareQuality
+	2,  // 17: calls.v1.OrgCallPolicy.max_screen_share_quality_group:type_name -> calls.v1.ScreenShareQuality
+	2,  // 18: calls.v1.OrgCallPolicy.max_screen_share_quality_channel:type_name -> calls.v1.ScreenShareQuality
+	29, // 19: calls.v1.GetOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
+	2,  // 20: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_direct:type_name -> calls.v1.ScreenShareQuality
+	2,  // 21: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_group:type_name -> calls.v1.ScreenShareQuality
+	2,  // 22: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_channel:type_name -> calls.v1.ScreenShareQuality
+	29, // 23: calls.v1.UpdateOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
+	7,  // 24: calls.v1.CallService.InitiateCall:input_type -> calls.v1.InitiateCallRequest
+	9,  // 25: calls.v1.CallService.JoinCall:input_type -> calls.v1.JoinCallRequest
+	11, // 26: calls.v1.CallService.LeaveCall:input_type -> calls.v1.LeaveCallRequest
+	13, // 27: calls.v1.CallService.EndCall:input_type -> calls.v1.EndCallRequest
+	15, // 28: calls.v1.CallService.RefreshCallToken:input_type -> calls.v1.RefreshCallTokenRequest
+	17, // 29: calls.v1.CallService.GetActiveCall:input_type -> calls.v1.GetActiveCallRequest
+	19, // 30: calls.v1.CallService.ListActiveCalls:input_type -> calls.v1.ListActiveCallsRequest
+	21, // 31: calls.v1.CallService.DeclineCall:input_type -> calls.v1.DeclineCallRequest
+	23, // 32: calls.v1.CallService.KickParticipant:input_type -> calls.v1.KickParticipantRequest
+	25, // 33: calls.v1.CallService.MuteParticipant:input_type -> calls.v1.MuteParticipantRequest
+	30, // 34: calls.v1.CallService.GetOrgCallPolicy:input_type -> calls.v1.GetOrgCallPolicyRequest
+	32, // 35: calls.v1.CallService.UpdateOrgCallPolicy:input_type -> calls.v1.UpdateOrgCallPolicyRequest
+	27, // 36: calls.v1.CallService.ReportMediaState:input_type -> calls.v1.ReportMediaStateRequest
+	8,  // 37: calls.v1.CallService.InitiateCall:output_type -> calls.v1.InitiateCallResponse
+	10, // 38: calls.v1.CallService.JoinCall:output_type -> calls.v1.JoinCallResponse
+	12, // 39: calls.v1.CallService.LeaveCall:output_type -> calls.v1.LeaveCallResponse
+	14, // 40: calls.v1.CallService.EndCall:output_type -> calls.v1.EndCallResponse
+	16, // 41: calls.v1.CallService.RefreshCallToken:output_type -> calls.v1.RefreshCallTokenResponse
+	18, // 42: calls.v1.CallService.GetActiveCall:output_type -> calls.v1.GetActiveCallResponse
+	20, // 43: calls.v1.CallService.ListActiveCalls:output_type -> calls.v1.ListActiveCallsResponse
+	22, // 44: calls.v1.CallService.DeclineCall:output_type -> calls.v1.DeclineCallResponse
+	24, // 45: calls.v1.CallService.KickParticipant:output_type -> calls.v1.KickParticipantResponse
+	26, // 46: calls.v1.CallService.MuteParticipant:output_type -> calls.v1.MuteParticipantResponse
+	31, // 47: calls.v1.CallService.GetOrgCallPolicy:output_type -> calls.v1.GetOrgCallPolicyResponse
+	33, // 48: calls.v1.CallService.UpdateOrgCallPolicy:output_type -> calls.v1.UpdateOrgCallPolicyResponse
+	28, // 49: calls.v1.CallService.ReportMediaState:output_type -> calls.v1.ReportMediaStateResponse
+	37, // [37:50] is the sub-list for method output_type
+	24, // [24:37] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_calls_v1_calls_proto_init() }
@@ -2228,15 +2398,16 @@ func file_calls_v1_calls_proto_init() {
 	file_calls_v1_calls_proto_msgTypes[0].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[1].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[2].OneofWrappers = []any{}
-	file_calls_v1_calls_proto_msgTypes[4].OneofWrappers = []any{}
-	file_calls_v1_calls_proto_msgTypes[13].OneofWrappers = []any{}
+	file_calls_v1_calls_proto_msgTypes[3].OneofWrappers = []any{}
+	file_calls_v1_calls_proto_msgTypes[5].OneofWrappers = []any{}
+	file_calls_v1_calls_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_calls_v1_calls_proto_rawDesc), len(file_calls_v1_calls_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   29,
+			NumEnums:      4,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

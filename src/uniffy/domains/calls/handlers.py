@@ -7,6 +7,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.calls.v1.calls_pb2 import (
+    ICE_TRANSPORT_POLICY_RELAY,
     DeclineCallRequest,
     DeclineCallResponse,
     EndCallRequest,
@@ -15,6 +16,7 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     GetActiveCallResponse,
     GetOrgCallPolicyRequest,
     GetOrgCallPolicyResponse,
+    IceServer,
     InitiateCallRequest,
     InitiateCallResponse,
     JoinCallRequest,
@@ -39,10 +41,11 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.calls import ScreenShareQuality
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
-from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config
+from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
 from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto
 from uniffy.domains.calls.livekit_client import LiveKitUnavailableError
 from uniffy.domains.calls.operations import CallOperations
+from uniffy.domains.calls.turn import mint_turn_credentials
 
 logger = logger.bind(component="calls.handlers")
 
@@ -66,6 +69,20 @@ def _optional_device_label(request) -> str | None:
         return None
     # Column cap; the label is display-only, so truncation beats rejection.
     return request.device_label[:120]
+
+
+def _ice_fields(user_id: UUID) -> dict:
+    """Kwargs for join-shaped responses: TURN relay config, or empty in direct mode."""
+    config = get_turn_config()
+    if config is None:
+        return {}
+    creds = mint_turn_credentials(user_id, config)
+    return {
+        "ice_servers": [
+            IceServer(urls=list(creds.urls), username=creds.username, credential=creds.credential)
+        ],
+        "ice_transport_policy": ICE_TRANSPORT_POLICY_RELAY,
+    }
 
 
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
@@ -101,6 +118,7 @@ class CallHandlers:
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
                 cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
+                ice_fields = _ice_fields(user_id)
             except Exception as exc:
                 raise _map_domain_error("initiate_call", exc) from exc
 
@@ -110,6 +128,7 @@ class CallHandlers:
             livekit_token=token.token,
             joined_existing=joined_existing,
             screen_share_quality_cap=int(cap),
+            **ice_fields,
         )
 
     async def join_call(self, request: JoinCallRequest, ctx: RequestContext) -> JoinCallResponse:
@@ -127,6 +146,7 @@ class CallHandlers:
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
                 cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
+                ice_fields = _ice_fields(user_id)
             except Exception as exc:
                 raise _map_domain_error("join_call", exc) from exc
 
@@ -135,6 +155,7 @@ class CallHandlers:
             ws_url=get_livekit_config().ws_url,
             livekit_token=token.token,
             screen_share_quality_cap=int(cap),
+            **ice_fields,
         )
 
     async def leave_call(

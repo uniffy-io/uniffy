@@ -12,7 +12,37 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file calls/v1/calls.proto.
  */
 export const file_calls_v1_calls: GenFile = /*@__PURE__*/
-  fileDesc("ChRjYWxscy92MS9jYWxscy5wcm90bxIIY2FsbHMudjEi+QIKBENhbGwSCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhIKCmNoYW5uZWxfaWQYAyABKAkSJQoJY2FsbF90eXBlGAQgASgOMhIuY2FsbHMudjEuQ2FsbFR5cGUSGQoRaW5pdGlhdG9yX3VzZXJfaWQYBSABKAkSFAoMaG9zdF91c2VyX2lkGAYgASgJEi4KCnN0YXJ0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjEKCGVuZGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjAKCmVuZF9yZWFzb24YCSABKA4yFy5jYWxscy52MS5DYWxsRW5kUmVhc29uSAGIAQESLwoMcGFydGljaXBhbnRzGAogAygLMhkuY2FsbHMudjEuQ2FsbFBhcnRpY2lwYW50QgsKCV9lbmRlZF9hdEINCgtfZW5kX3JlYXNvbiKlAgoPQ2FsbFBhcnRpY2lwYW50Eg8KB3VzZXJfaWQYASABKAkSEQoJZGV2aWNlX2lkGAIgASgJEhAKCGlkZW50aXR5GAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRIXCgphdmF0YXJfdXJsGAUgASgJSACIAQESGQoMZGV2aWNlX2xhYmVsGAYgASgJSAGIAQESLQoJam9pbmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgttaWNfZW5hYmxlZBgIIAEoCBIWCg5jYW1lcmFfZW5hYmxlZBgJIAEoCBIWCg5zY3JlZW5fc2hhcmluZxgKIAEoCEINCgtfYXZhdGFyX3VybEIPCg1fZGV2aWNlX2xhYmVsIoEBChNJbml0aWF0ZUNhbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpjaGFubmVsX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIZCgxkZXZpY2VfbGFiZWwYBCABKAlIAIgBAUIPCg1fZGV2aWNlX2xhYmVsIrQBChRJbml0aWF0ZUNhbGxSZXNwb25zZRIcCgRjYWxsGAEgASgLMg4uY2FsbHMudjEuQ2FsbBIOCgZ3c191cmwYAiABKAkSFQoNbGl2ZWtpdF90b2tlbhgDIAEoCRIXCg9qb2luZWRfZXhpc3RpbmcYBCABKAgSPgoYc2NyZWVuX3NoYXJlX3F1YWxpdHlfY2FwGAUgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5InoKD0pvaW5DYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSGQoMZGV2aWNlX2xhYmVsGAQgASgJSACIAQFCDwoNX2RldmljZV9sYWJlbCKXAQoQSm9pbkNhbGxSZXNwb25zZRIcCgRjYWxsGAEgASgLMg4uY2FsbHMudjEuQ2FsbBIOCgZ3c191cmwYAiABKAkSFQoNbGl2ZWtpdF90b2tlbhgDIAEoCRI+ChhzY3JlZW5fc2hhcmVfcXVhbGl0eV9jYXAYBCABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkiTwoQTGVhdmVDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkiJAoRTGVhdmVDYWxsUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCI6Cg5FbmRDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCSIiCg9FbmRDYWxsUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJWChdSZWZyZXNoQ2FsbFRva2VuUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkiMQoYUmVmcmVzaENhbGxUb2tlblJlc3BvbnNlEhUKDWxpdmVraXRfdG9rZW4YASABKAkiQwoUR2V0QWN0aXZlQ2FsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCmNoYW5uZWxfaWQYAiABKAkiQwoVR2V0QWN0aXZlQ2FsbFJlc3BvbnNlEiEKBGNhbGwYASABKAsyDi5jYWxscy52MS5DYWxsSACIAQFCBwoFX2NhbGwiMQoWTGlzdEFjdGl2ZUNhbGxzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkiOAoXTGlzdEFjdGl2ZUNhbGxzUmVzcG9uc2USHQoFY2FsbHMYASADKAsyDi5jYWxscy52MS5DYWxsIj4KEkRlY2xpbmVDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCSImChNEZWNsaW5lQ2FsbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiVAoWS2lja1BhcnRpY2lwYW50UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHY2FsbF9pZBgCIAEoCRIQCghpZGVudGl0eRgDIAEoCSIqChdLaWNrUGFydGljaXBhbnRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIlQKFk11dGVQYXJ0aWNpcGFudFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEAoIaWRlbnRpdHkYAyABKAkiKgoXTXV0ZVBhcnRpY2lwYW50UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKbAQoXUmVwb3J0TWVkaWFTdGF0ZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJEhMKC21pY19lbmFibGVkGAQgASgIEhYKDmNhbWVyYV9lbmFibGVkGAUgASgIEhYKDnNjcmVlbl9zaGFyaW5nGAYgASgIIisKGFJlcG9ydE1lZGlhU3RhdGVSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIswCCg1PcmdDYWxsUG9saWN5EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIVCg1jYWxsc19lbmFibGVkGAIgASgIEhgKEG1heF9wYXJ0aWNpcGFudHMYAyABKAUSHAoUbWF4X2R1cmF0aW9uX21pbnV0ZXMYBCABKAUSRQofbWF4X3NjcmVlbl9zaGFyZV9xdWFsaXR5X2RpcmVjdBgFIAEoDjIcLmNhbGxzLnYxLlNjcmVlblNoYXJlUXVhbGl0eRJECh5tYXhfc2NyZWVuX3NoYXJlX3F1YWxpdHlfZ3JvdXAYBiABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkSRgogbWF4X3NjcmVlbl9zaGFyZV9xdWFsaXR5X2NoYW5uZWwYByABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkiMgoXR2V0T3JnQ2FsbFBvbGljeVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIkMKGEdldE9yZ0NhbGxQb2xpY3lSZXNwb25zZRInCgZwb2xpY3kYASABKAsyFy5jYWxscy52MS5PcmdDYWxsUG9saWN5ItkCChpVcGRhdGVPcmdDYWxsUG9saWN5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFQoNY2FsbHNfZW5hYmxlZBgCIAEoCBIYChBtYXhfcGFydGljaXBhbnRzGAMgASgFEhwKFG1heF9kdXJhdGlvbl9taW51dGVzGAQgASgFEkUKH21heF9zY3JlZW5fc2hhcmVfcXVhbGl0eV9kaXJlY3QYBSABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkSRAoebWF4X3NjcmVlbl9zaGFyZV9xdWFsaXR5X2dyb3VwGAYgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5EkYKIG1heF9zY3JlZW5fc2hhcmVfcXVhbGl0eV9jaGFubmVsGAcgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5IkYKG1VwZGF0ZU9yZ0NhbGxQb2xpY3lSZXNwb25zZRInCgZwb2xpY3kYASABKAsyFy5jYWxscy52MS5PcmdDYWxsUG9saWN5KmoKCENhbGxUeXBlEhkKFUNBTExfVFlQRV9VTlNQRUNJRklFRBAAEhQKEENBTExfVFlQRV9ESVJFQ1QQARIWChJDQUxMX1RZUEVfR1JPVVBfRE0QAhIVChFDQUxMX1RZUEVfQ0hBTk5FTBADKtgBCg1DYWxsRW5kUmVhc29uEh8KG0NBTExfRU5EX1JFQVNPTl9VTlNQRUNJRklFRBAAEh4KGkNBTExfRU5EX1JFQVNPTl9IT1NUX0VOREVEEAESHAoYQ0FMTF9FTkRfUkVBU09OX0FMTF9MRUZUEAISIAocQ0FMTF9FTkRfUkVBU09OX01BWF9EVVJBVElPThADEiAKHENBTExfRU5EX1JFQVNPTl9TT0xPX1RJTUVPVVQQBBIkCiBDQUxMX0VORF9SRUFTT05fQ0hBTk5FTF9BUkNISVZFRBAFKpoBChJTY3JlZW5TaGFyZVF1YWxpdHkSJAogU0NSRUVOX1NIQVJFX1FVQUxJVFlfVU5TUEVDSUZJRUQQABIhCh1TQ1JFRU5fU0hBUkVfUVVBTElUWV9CQUxBTkNFRBABEh0KGVNDUkVFTl9TSEFSRV9RVUFMSVRZX0hJR0gQAhIcChhTQ1JFRU5fU0hBUkVfUVVBTElUWV9NQVgQAzLACAoLQ2FsbFNlcnZpY2USTQoMSW5pdGlhdGVDYWxsEh0uY2FsbHMudjEuSW5pdGlhdGVDYWxsUmVxdWVzdBoeLmNhbGxzLnYxLkluaXRpYXRlQ2FsbFJlc3BvbnNlEkEKCEpvaW5DYWxsEhkuY2FsbHMudjEuSm9pbkNhbGxSZXF1ZXN0GhouY2FsbHMudjEuSm9pbkNhbGxSZXNwb25zZRJECglMZWF2ZUNhbGwSGi5jYWxscy52MS5MZWF2ZUNhbGxSZXF1ZXN0GhsuY2FsbHMudjEuTGVhdmVDYWxsUmVzcG9uc2USPgoHRW5kQ2FsbBIYLmNhbGxzLnYxLkVuZENhbGxSZXF1ZXN0GhkuY2FsbHMudjEuRW5kQ2FsbFJlc3BvbnNlElkKEFJlZnJlc2hDYWxsVG9rZW4SIS5jYWxscy52MS5SZWZyZXNoQ2FsbFRva2VuUmVxdWVzdBoiLmNhbGxzLnYxLlJlZnJlc2hDYWxsVG9rZW5SZXNwb25zZRJQCg1HZXRBY3RpdmVDYWxsEh4uY2FsbHMudjEuR2V0QWN0aXZlQ2FsbFJlcXVlc3QaHy5jYWxscy52MS5HZXRBY3RpdmVDYWxsUmVzcG9uc2USVgoPTGlzdEFjdGl2ZUNhbGxzEiAuY2FsbHMudjEuTGlzdEFjdGl2ZUNhbGxzUmVxdWVzdBohLmNhbGxzLnYxLkxpc3RBY3RpdmVDYWxsc1Jlc3BvbnNlEkoKC0RlY2xpbmVDYWxsEhwuY2FsbHMudjEuRGVjbGluZUNhbGxSZXF1ZXN0Gh0uY2FsbHMudjEuRGVjbGluZUNhbGxSZXNwb25zZRJWCg9LaWNrUGFydGljaXBhbnQSIC5jYWxscy52MS5LaWNrUGFydGljaXBhbnRSZXF1ZXN0GiEuY2FsbHMudjEuS2lja1BhcnRpY2lwYW50UmVzcG9uc2USVgoPTXV0ZVBhcnRpY2lwYW50EiAuY2FsbHMudjEuTXV0ZVBhcnRpY2lwYW50UmVxdWVzdBohLmNhbGxzLnYxLk11dGVQYXJ0aWNpcGFudFJlc3BvbnNlElkKEEdldE9yZ0NhbGxQb2xpY3kSIS5jYWxscy52MS5HZXRPcmdDYWxsUG9saWN5UmVxdWVzdBoiLmNhbGxzLnYxLkdldE9yZ0NhbGxQb2xpY3lSZXNwb25zZRJiChNVcGRhdGVPcmdDYWxsUG9saWN5EiQuY2FsbHMudjEuVXBkYXRlT3JnQ2FsbFBvbGljeVJlcXVlc3QaJS5jYWxscy52MS5VcGRhdGVPcmdDYWxsUG9saWN5UmVzcG9uc2USWQoQUmVwb3J0TWVkaWFTdGF0ZRIhLmNhbGxzLnYxLlJlcG9ydE1lZGlhU3RhdGVSZXF1ZXN0GiIuY2FsbHMudjEuUmVwb3J0TWVkaWFTdGF0ZVJlc3BvbnNlQjdaNWdpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9jYWxscy92MTtjYWxsc3YxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("ChRjYWxscy92MS9jYWxscy5wcm90bxIIY2FsbHMudjEiZQoJSWNlU2VydmVyEgwKBHVybHMYASADKAkSFQoIdXNlcm5hbWUYAiABKAlIAIgBARIXCgpjcmVkZW50aWFsGAMgASgJSAGIAQFCCwoJX3VzZXJuYW1lQg0KC19jcmVkZW50aWFsIvkCCgRDYWxsEgoKAmlkGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCRISCgpjaGFubmVsX2lkGAMgASgJEiUKCWNhbGxfdHlwZRgEIAEoDjISLmNhbGxzLnYxLkNhbGxUeXBlEhkKEWluaXRpYXRvcl91c2VyX2lkGAUgASgJEhQKDGhvc3RfdXNlcl9pZBgGIAEoCRIuCgpzdGFydGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCghlbmRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARIwCgplbmRfcmVhc29uGAkgASgOMhcuY2FsbHMudjEuQ2FsbEVuZFJlYXNvbkgBiAEBEi8KDHBhcnRpY2lwYW50cxgKIAMoCzIZLmNhbGxzLnYxLkNhbGxQYXJ0aWNpcGFudEILCglfZW5kZWRfYXRCDQoLX2VuZF9yZWFzb24ipQIKD0NhbGxQYXJ0aWNpcGFudBIPCgd1c2VyX2lkGAEgASgJEhEKCWRldmljZV9pZBgCIAEoCRIQCghpZGVudGl0eRgDIAEoCRIUCgxkaXNwbGF5X25hbWUYBCABKAkSFwoKYXZhdGFyX3VybBgFIAEoCUgAiAEBEhkKDGRldmljZV9sYWJlbBgGIAEoCUgBiAEBEi0KCWpvaW5lZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLbWljX2VuYWJsZWQYCCABKAgSFgoOY2FtZXJhX2VuYWJsZWQYCSABKAgSFgoOc2NyZWVuX3NoYXJpbmcYCiABKAhCDQoLX2F2YXRhcl91cmxCDwoNX2RldmljZV9sYWJlbCKBAQoTSW5pdGlhdGVDYWxsUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKY2hhbm5lbF9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSGQoMZGV2aWNlX2xhYmVsGAQgASgJSACIAQFCDwoNX2RldmljZV9sYWJlbCKaAgoUSW5pdGlhdGVDYWxsUmVzcG9uc2USHAoEY2FsbBgBIAEoCzIOLmNhbGxzLnYxLkNhbGwSDgoGd3NfdXJsGAIgASgJEhUKDWxpdmVraXRfdG9rZW4YAyABKAkSFwoPam9pbmVkX2V4aXN0aW5nGAQgASgIEj4KGHNjcmVlbl9zaGFyZV9xdWFsaXR5X2NhcBgFIAEoDjIcLmNhbGxzLnYxLlNjcmVlblNoYXJlUXVhbGl0eRIoCgtpY2Vfc2VydmVycxgGIAMoCzITLmNhbGxzLnYxLkljZVNlcnZlchI6ChRpY2VfdHJhbnNwb3J0X3BvbGljeRgHIAEoDjIcLmNhbGxzLnYxLkljZVRyYW5zcG9ydFBvbGljeSJ6Cg9Kb2luQ2FsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJEhkKDGRldmljZV9sYWJlbBgEIAEoCUgAiAEBQg8KDV9kZXZpY2VfbGFiZWwi/QEKEEpvaW5DYWxsUmVzcG9uc2USHAoEY2FsbBgBIAEoCzIOLmNhbGxzLnYxLkNhbGwSDgoGd3NfdXJsGAIgASgJEhUKDWxpdmVraXRfdG9rZW4YAyABKAkSPgoYc2NyZWVuX3NoYXJlX3F1YWxpdHlfY2FwGAQgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5EigKC2ljZV9zZXJ2ZXJzGAUgAygLMhMuY2FsbHMudjEuSWNlU2VydmVyEjoKFGljZV90cmFuc3BvcnRfcG9saWN5GAYgASgOMhwuY2FsbHMudjEuSWNlVHJhbnNwb3J0UG9saWN5Ik8KEExlYXZlQ2FsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJIiQKEUxlYXZlQ2FsbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiOgoORW5kQ2FsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkiIgoPRW5kQ2FsbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiVgoXUmVmcmVzaENhbGxUb2tlblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJIjEKGFJlZnJlc2hDYWxsVG9rZW5SZXNwb25zZRIVCg1saXZla2l0X3Rva2VuGAEgASgJIkMKFEdldEFjdGl2ZUNhbGxSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpjaGFubmVsX2lkGAIgASgJIkMKFUdldEFjdGl2ZUNhbGxSZXNwb25zZRIhCgRjYWxsGAEgASgLMg4uY2FsbHMudjEuQ2FsbEgAiAEBQgcKBV9jYWxsIjEKFkxpc3RBY3RpdmVDYWxsc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIjgKF0xpc3RBY3RpdmVDYWxsc1Jlc3BvbnNlEh0KBWNhbGxzGAEgAygLMg4uY2FsbHMudjEuQ2FsbCI+ChJEZWNsaW5lQ2FsbFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkiJgoTRGVjbGluZUNhbGxSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIlQKFktpY2tQYXJ0aWNpcGFudFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2NhbGxfaWQYAiABKAkSEAoIaWRlbnRpdHkYAyABKAkiKgoXS2lja1BhcnRpY2lwYW50UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJUChZNdXRlUGFydGljaXBhbnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYWxsX2lkGAIgASgJEhAKCGlkZW50aXR5GAMgASgJIioKF011dGVQYXJ0aWNpcGFudFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgimwEKF1JlcG9ydE1lZGlhU3RhdGVSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIPCgdjYWxsX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRITCgttaWNfZW5hYmxlZBgEIAEoCBIWCg5jYW1lcmFfZW5hYmxlZBgFIAEoCBIWCg5zY3JlZW5fc2hhcmluZxgGIAEoCCIrChhSZXBvcnRNZWRpYVN0YXRlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCLMAgoNT3JnQ2FsbFBvbGljeRIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFQoNY2FsbHNfZW5hYmxlZBgCIAEoCBIYChBtYXhfcGFydGljaXBhbnRzGAMgASgFEhwKFG1heF9kdXJhdGlvbl9taW51dGVzGAQgASgFEkUKH21heF9zY3JlZW5fc2hhcmVfcXVhbGl0eV9kaXJlY3QYBSABKA4yHC5jYWxscy52MS5TY3JlZW5TaGFyZVF1YWxpdHkSRAoebWF4X3NjcmVlbl9zaGFyZV9xdWFsaXR5X2dyb3VwGAYgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5EkYKIG1heF9zY3JlZW5fc2hhcmVfcXVhbGl0eV9jaGFubmVsGAcgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5IjIKF0dldE9yZ0NhbGxQb2xpY3lSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSJDChhHZXRPcmdDYWxsUG9saWN5UmVzcG9uc2USJwoGcG9saWN5GAEgASgLMhcuY2FsbHMudjEuT3JnQ2FsbFBvbGljeSLZAgoaVXBkYXRlT3JnQ2FsbFBvbGljeVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhUKDWNhbGxzX2VuYWJsZWQYAiABKAgSGAoQbWF4X3BhcnRpY2lwYW50cxgDIAEoBRIcChRtYXhfZHVyYXRpb25fbWludXRlcxgEIAEoBRJFCh9tYXhfc2NyZWVuX3NoYXJlX3F1YWxpdHlfZGlyZWN0GAUgASgOMhwuY2FsbHMudjEuU2NyZWVuU2hhcmVRdWFsaXR5EkQKHm1heF9zY3JlZW5fc2hhcmVfcXVhbGl0eV9ncm91cBgGIAEoDjIcLmNhbGxzLnYxLlNjcmVlblNoYXJlUXVhbGl0eRJGCiBtYXhfc2NyZWVuX3NoYXJlX3F1YWxpdHlfY2hhbm5lbBgHIAEoDjIcLmNhbGxzLnYxLlNjcmVlblNoYXJlUXVhbGl0eSJGChtVcGRhdGVPcmdDYWxsUG9saWN5UmVzcG9uc2USJwoGcG9saWN5GAEgASgLMhcuY2FsbHMudjEuT3JnQ2FsbFBvbGljeSpqCghDYWxsVHlwZRIZChVDQUxMX1RZUEVfVU5TUEVDSUZJRUQQABIUChBDQUxMX1RZUEVfRElSRUNUEAESFgoSQ0FMTF9UWVBFX0dST1VQX0RNEAISFQoRQ0FMTF9UWVBFX0NIQU5ORUwQAyrYAQoNQ2FsbEVuZFJlYXNvbhIfChtDQUxMX0VORF9SRUFTT05fVU5TUEVDSUZJRUQQABIeChpDQUxMX0VORF9SRUFTT05fSE9TVF9FTkRFRBABEhwKGENBTExfRU5EX1JFQVNPTl9BTExfTEVGVBACEiAKHENBTExfRU5EX1JFQVNPTl9NQVhfRFVSQVRJT04QAxIgChxDQUxMX0VORF9SRUFTT05fU09MT19USU1FT1VUEAQSJAogQ0FMTF9FTkRfUkVBU09OX0NIQU5ORUxfQVJDSElWRUQQBSqaAQoSU2NyZWVuU2hhcmVRdWFsaXR5EiQKIFNDUkVFTl9TSEFSRV9RVUFMSVRZX1VOU1BFQ0lGSUVEEAASIQodU0NSRUVOX1NIQVJFX1FVQUxJVFlfQkFMQU5DRUQQARIdChlTQ1JFRU5fU0hBUkVfUVVBTElUWV9ISUdIEAISHAoYU0NSRUVOX1NIQVJFX1FVQUxJVFlfTUFYEAMqeAoSSWNlVHJhbnNwb3J0UG9saWN5EiQKIElDRV9UUkFOU1BPUlRfUE9MSUNZX1VOU1BFQ0lGSUVEEAASHAoYSUNFX1RSQU5TUE9SVF9QT0xJQ1lfQUxMEAESHgoaSUNFX1RSQU5TUE9SVF9QT0xJQ1lfUkVMQVkQAjLACAoLQ2FsbFNlcnZpY2USTQoMSW5pdGlhdGVDYWxsEh0uY2FsbHMudjEuSW5pdGlhdGVDYWxsUmVxdWVzdBoeLmNhbGxzLnYxLkluaXRpYXRlQ2FsbFJlc3BvbnNlEkEKCEpvaW5DYWxsEhkuY2FsbHMudjEuSm9pbkNhbGxSZXF1ZXN0GhouY2FsbHMudjEuSm9pbkNhbGxSZXNwb25zZRJECglMZWF2ZUNhbGwSGi5jYWxscy52MS5MZWF2ZUNhbGxSZXF1ZXN0GhsuY2FsbHMudjEuTGVhdmVDYWxsUmVzcG9uc2USPgoHRW5kQ2FsbBIYLmNhbGxzLnYxLkVuZENhbGxSZXF1ZXN0GhkuY2FsbHMudjEuRW5kQ2FsbFJlc3BvbnNlElkKEFJlZnJlc2hDYWxsVG9rZW4SIS5jYWxscy52MS5SZWZyZXNoQ2FsbFRva2VuUmVxdWVzdBoiLmNhbGxzLnYxLlJlZnJlc2hDYWxsVG9rZW5SZXNwb25zZRJQCg1HZXRBY3RpdmVDYWxsEh4uY2FsbHMudjEuR2V0QWN0aXZlQ2FsbFJlcXVlc3QaHy5jYWxscy52MS5HZXRBY3RpdmVDYWxsUmVzcG9uc2USVgoPTGlzdEFjdGl2ZUNhbGxzEiAuY2FsbHMudjEuTGlzdEFjdGl2ZUNhbGxzUmVxdWVzdBohLmNhbGxzLnYxLkxpc3RBY3RpdmVDYWxsc1Jlc3BvbnNlEkoKC0RlY2xpbmVDYWxsEhwuY2FsbHMudjEuRGVjbGluZUNhbGxSZXF1ZXN0Gh0uY2FsbHMudjEuRGVjbGluZUNhbGxSZXNwb25zZRJWCg9LaWNrUGFydGljaXBhbnQSIC5jYWxscy52MS5LaWNrUGFydGljaXBhbnRSZXF1ZXN0GiEuY2FsbHMudjEuS2lja1BhcnRpY2lwYW50UmVzcG9uc2USVgoPTXV0ZVBhcnRpY2lwYW50EiAuY2FsbHMudjEuTXV0ZVBhcnRpY2lwYW50UmVxdWVzdBohLmNhbGxzLnYxLk11dGVQYXJ0aWNpcGFudFJlc3BvbnNlElkKEEdldE9yZ0NhbGxQb2xpY3kSIS5jYWxscy52MS5HZXRPcmdDYWxsUG9saWN5UmVxdWVzdBoiLmNhbGxzLnYxLkdldE9yZ0NhbGxQb2xpY3lSZXNwb25zZRJiChNVcGRhdGVPcmdDYWxsUG9saWN5EiQuY2FsbHMudjEuVXBkYXRlT3JnQ2FsbFBvbGljeVJlcXVlc3QaJS5jYWxscy52MS5VcGRhdGVPcmdDYWxsUG9saWN5UmVzcG9uc2USWQoQUmVwb3J0TWVkaWFTdGF0ZRIhLmNhbGxzLnYxLlJlcG9ydE1lZGlhU3RhdGVSZXF1ZXN0GiIuY2FsbHMudjEuUmVwb3J0TWVkaWFTdGF0ZVJlc3BvbnNlQjdaNWdpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9jYWxscy92MTtjYWxsc3YxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+
+/**
+ * One username/credential pair covers all URLs (TURN REST spec); credentials
+ * are per-user and expire, so clients must not cache them across connections.
+ *
+ * @generated from message calls.v1.IceServer
+ */
+export type IceServer = Message<"calls.v1.IceServer"> & {
+  /**
+   * @generated from field: repeated string urls = 1;
+   */
+  urls: string[];
+
+  /**
+   * @generated from field: optional string username = 2;
+   */
+  username?: string | undefined;
+
+  /**
+   * @generated from field: optional string credential = 3;
+   */
+  credential?: string | undefined;
+};
+
+/**
+ * Describes the message calls.v1.IceServer.
+ * Use `create(IceServerSchema)` to create a new message.
+ */
+export const IceServerSchema: GenMessage<IceServer> = /*@__PURE__*/
+  messageDesc(file_calls_v1_calls, 0);
 
 /**
  * @generated from message calls.v1.Call
@@ -76,7 +106,7 @@ export type Call = Message<"calls.v1.Call"> & {
  * Use `create(CallSchema)` to create a new message.
  */
 export const CallSchema: GenMessage<Call> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 0);
+  messageDesc(file_calls_v1_calls, 1);
 
 /**
  * @generated from message calls.v1.CallParticipant
@@ -140,7 +170,7 @@ export type CallParticipant = Message<"calls.v1.CallParticipant"> & {
  * Use `create(CallParticipantSchema)` to create a new message.
  */
 export const CallParticipantSchema: GenMessage<CallParticipant> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 1);
+  messageDesc(file_calls_v1_calls, 2);
 
 /**
  * @generated from message calls.v1.InitiateCallRequest
@@ -174,7 +204,7 @@ export type InitiateCallRequest = Message<"calls.v1.InitiateCallRequest"> & {
  * Use `create(InitiateCallRequestSchema)` to create a new message.
  */
 export const InitiateCallRequestSchema: GenMessage<InitiateCallRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 2);
+  messageDesc(file_calls_v1_calls, 3);
 
 /**
  * @generated from message calls.v1.InitiateCallResponse
@@ -208,6 +238,18 @@ export type InitiateCallResponse = Message<"calls.v1.InitiateCallResponse"> & {
    * @generated from field: calls.v1.ScreenShareQuality screen_share_quality_cap = 5;
    */
   screenShareQualityCap: ScreenShareQuality;
+
+  /**
+   * Empty in direct-media mode; TURN relay config when the deployment relays media.
+   *
+   * @generated from field: repeated calls.v1.IceServer ice_servers = 6;
+   */
+  iceServers: IceServer[];
+
+  /**
+   * @generated from field: calls.v1.IceTransportPolicy ice_transport_policy = 7;
+   */
+  iceTransportPolicy: IceTransportPolicy;
 };
 
 /**
@@ -215,7 +257,7 @@ export type InitiateCallResponse = Message<"calls.v1.InitiateCallResponse"> & {
  * Use `create(InitiateCallResponseSchema)` to create a new message.
  */
 export const InitiateCallResponseSchema: GenMessage<InitiateCallResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 3);
+  messageDesc(file_calls_v1_calls, 4);
 
 /**
  * @generated from message calls.v1.JoinCallRequest
@@ -247,7 +289,7 @@ export type JoinCallRequest = Message<"calls.v1.JoinCallRequest"> & {
  * Use `create(JoinCallRequestSchema)` to create a new message.
  */
 export const JoinCallRequestSchema: GenMessage<JoinCallRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 4);
+  messageDesc(file_calls_v1_calls, 5);
 
 /**
  * @generated from message calls.v1.JoinCallResponse
@@ -274,6 +316,18 @@ export type JoinCallResponse = Message<"calls.v1.JoinCallResponse"> & {
    * @generated from field: calls.v1.ScreenShareQuality screen_share_quality_cap = 4;
    */
   screenShareQualityCap: ScreenShareQuality;
+
+  /**
+   * Empty in direct-media mode; TURN relay config when the deployment relays media.
+   *
+   * @generated from field: repeated calls.v1.IceServer ice_servers = 5;
+   */
+  iceServers: IceServer[];
+
+  /**
+   * @generated from field: calls.v1.IceTransportPolicy ice_transport_policy = 6;
+   */
+  iceTransportPolicy: IceTransportPolicy;
 };
 
 /**
@@ -281,7 +335,7 @@ export type JoinCallResponse = Message<"calls.v1.JoinCallResponse"> & {
  * Use `create(JoinCallResponseSchema)` to create a new message.
  */
 export const JoinCallResponseSchema: GenMessage<JoinCallResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 5);
+  messageDesc(file_calls_v1_calls, 6);
 
 /**
  * @generated from message calls.v1.LeaveCallRequest
@@ -308,7 +362,7 @@ export type LeaveCallRequest = Message<"calls.v1.LeaveCallRequest"> & {
  * Use `create(LeaveCallRequestSchema)` to create a new message.
  */
 export const LeaveCallRequestSchema: GenMessage<LeaveCallRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 6);
+  messageDesc(file_calls_v1_calls, 7);
 
 /**
  * @generated from message calls.v1.LeaveCallResponse
@@ -325,7 +379,7 @@ export type LeaveCallResponse = Message<"calls.v1.LeaveCallResponse"> & {
  * Use `create(LeaveCallResponseSchema)` to create a new message.
  */
 export const LeaveCallResponseSchema: GenMessage<LeaveCallResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 7);
+  messageDesc(file_calls_v1_calls, 8);
 
 /**
  * @generated from message calls.v1.EndCallRequest
@@ -347,7 +401,7 @@ export type EndCallRequest = Message<"calls.v1.EndCallRequest"> & {
  * Use `create(EndCallRequestSchema)` to create a new message.
  */
 export const EndCallRequestSchema: GenMessage<EndCallRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 8);
+  messageDesc(file_calls_v1_calls, 9);
 
 /**
  * @generated from message calls.v1.EndCallResponse
@@ -364,7 +418,7 @@ export type EndCallResponse = Message<"calls.v1.EndCallResponse"> & {
  * Use `create(EndCallResponseSchema)` to create a new message.
  */
 export const EndCallResponseSchema: GenMessage<EndCallResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 9);
+  messageDesc(file_calls_v1_calls, 10);
 
 /**
  * @generated from message calls.v1.RefreshCallTokenRequest
@@ -391,7 +445,7 @@ export type RefreshCallTokenRequest = Message<"calls.v1.RefreshCallTokenRequest"
  * Use `create(RefreshCallTokenRequestSchema)` to create a new message.
  */
 export const RefreshCallTokenRequestSchema: GenMessage<RefreshCallTokenRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 10);
+  messageDesc(file_calls_v1_calls, 11);
 
 /**
  * @generated from message calls.v1.RefreshCallTokenResponse
@@ -408,7 +462,7 @@ export type RefreshCallTokenResponse = Message<"calls.v1.RefreshCallTokenRespons
  * Use `create(RefreshCallTokenResponseSchema)` to create a new message.
  */
 export const RefreshCallTokenResponseSchema: GenMessage<RefreshCallTokenResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 11);
+  messageDesc(file_calls_v1_calls, 12);
 
 /**
  * @generated from message calls.v1.GetActiveCallRequest
@@ -430,7 +484,7 @@ export type GetActiveCallRequest = Message<"calls.v1.GetActiveCallRequest"> & {
  * Use `create(GetActiveCallRequestSchema)` to create a new message.
  */
 export const GetActiveCallRequestSchema: GenMessage<GetActiveCallRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 12);
+  messageDesc(file_calls_v1_calls, 13);
 
 /**
  * @generated from message calls.v1.GetActiveCallResponse
@@ -447,7 +501,7 @@ export type GetActiveCallResponse = Message<"calls.v1.GetActiveCallResponse"> & 
  * Use `create(GetActiveCallResponseSchema)` to create a new message.
  */
 export const GetActiveCallResponseSchema: GenMessage<GetActiveCallResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 13);
+  messageDesc(file_calls_v1_calls, 14);
 
 /**
  * @generated from message calls.v1.ListActiveCallsRequest
@@ -464,7 +518,7 @@ export type ListActiveCallsRequest = Message<"calls.v1.ListActiveCallsRequest"> 
  * Use `create(ListActiveCallsRequestSchema)` to create a new message.
  */
 export const ListActiveCallsRequestSchema: GenMessage<ListActiveCallsRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 14);
+  messageDesc(file_calls_v1_calls, 15);
 
 /**
  * @generated from message calls.v1.ListActiveCallsResponse
@@ -481,7 +535,7 @@ export type ListActiveCallsResponse = Message<"calls.v1.ListActiveCallsResponse"
  * Use `create(ListActiveCallsResponseSchema)` to create a new message.
  */
 export const ListActiveCallsResponseSchema: GenMessage<ListActiveCallsResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 15);
+  messageDesc(file_calls_v1_calls, 16);
 
 /**
  * @generated from message calls.v1.DeclineCallRequest
@@ -503,7 +557,7 @@ export type DeclineCallRequest = Message<"calls.v1.DeclineCallRequest"> & {
  * Use `create(DeclineCallRequestSchema)` to create a new message.
  */
 export const DeclineCallRequestSchema: GenMessage<DeclineCallRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 16);
+  messageDesc(file_calls_v1_calls, 17);
 
 /**
  * @generated from message calls.v1.DeclineCallResponse
@@ -520,7 +574,7 @@ export type DeclineCallResponse = Message<"calls.v1.DeclineCallResponse"> & {
  * Use `create(DeclineCallResponseSchema)` to create a new message.
  */
 export const DeclineCallResponseSchema: GenMessage<DeclineCallResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 17);
+  messageDesc(file_calls_v1_calls, 18);
 
 /**
  * @generated from message calls.v1.KickParticipantRequest
@@ -547,7 +601,7 @@ export type KickParticipantRequest = Message<"calls.v1.KickParticipantRequest"> 
  * Use `create(KickParticipantRequestSchema)` to create a new message.
  */
 export const KickParticipantRequestSchema: GenMessage<KickParticipantRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 18);
+  messageDesc(file_calls_v1_calls, 19);
 
 /**
  * @generated from message calls.v1.KickParticipantResponse
@@ -564,7 +618,7 @@ export type KickParticipantResponse = Message<"calls.v1.KickParticipantResponse"
  * Use `create(KickParticipantResponseSchema)` to create a new message.
  */
 export const KickParticipantResponseSchema: GenMessage<KickParticipantResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 19);
+  messageDesc(file_calls_v1_calls, 20);
 
 /**
  * @generated from message calls.v1.MuteParticipantRequest
@@ -591,7 +645,7 @@ export type MuteParticipantRequest = Message<"calls.v1.MuteParticipantRequest"> 
  * Use `create(MuteParticipantRequestSchema)` to create a new message.
  */
 export const MuteParticipantRequestSchema: GenMessage<MuteParticipantRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 20);
+  messageDesc(file_calls_v1_calls, 21);
 
 /**
  * @generated from message calls.v1.MuteParticipantResponse
@@ -608,7 +662,7 @@ export type MuteParticipantResponse = Message<"calls.v1.MuteParticipantResponse"
  * Use `create(MuteParticipantResponseSchema)` to create a new message.
  */
 export const MuteParticipantResponseSchema: GenMessage<MuteParticipantResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 21);
+  messageDesc(file_calls_v1_calls, 22);
 
 /**
  * @generated from message calls.v1.ReportMediaStateRequest
@@ -650,7 +704,7 @@ export type ReportMediaStateRequest = Message<"calls.v1.ReportMediaStateRequest"
  * Use `create(ReportMediaStateRequestSchema)` to create a new message.
  */
 export const ReportMediaStateRequestSchema: GenMessage<ReportMediaStateRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 22);
+  messageDesc(file_calls_v1_calls, 23);
 
 /**
  * @generated from message calls.v1.ReportMediaStateResponse
@@ -667,7 +721,7 @@ export type ReportMediaStateResponse = Message<"calls.v1.ReportMediaStateRespons
  * Use `create(ReportMediaStateResponseSchema)` to create a new message.
  */
 export const ReportMediaStateResponseSchema: GenMessage<ReportMediaStateResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 23);
+  messageDesc(file_calls_v1_calls, 24);
 
 /**
  * @generated from message calls.v1.OrgCallPolicy
@@ -717,7 +771,7 @@ export type OrgCallPolicy = Message<"calls.v1.OrgCallPolicy"> & {
  * Use `create(OrgCallPolicySchema)` to create a new message.
  */
 export const OrgCallPolicySchema: GenMessage<OrgCallPolicy> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 24);
+  messageDesc(file_calls_v1_calls, 25);
 
 /**
  * @generated from message calls.v1.GetOrgCallPolicyRequest
@@ -734,7 +788,7 @@ export type GetOrgCallPolicyRequest = Message<"calls.v1.GetOrgCallPolicyRequest"
  * Use `create(GetOrgCallPolicyRequestSchema)` to create a new message.
  */
 export const GetOrgCallPolicyRequestSchema: GenMessage<GetOrgCallPolicyRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 25);
+  messageDesc(file_calls_v1_calls, 26);
 
 /**
  * @generated from message calls.v1.GetOrgCallPolicyResponse
@@ -751,7 +805,7 @@ export type GetOrgCallPolicyResponse = Message<"calls.v1.GetOrgCallPolicyRespons
  * Use `create(GetOrgCallPolicyResponseSchema)` to create a new message.
  */
 export const GetOrgCallPolicyResponseSchema: GenMessage<GetOrgCallPolicyResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 26);
+  messageDesc(file_calls_v1_calls, 27);
 
 /**
  * @generated from message calls.v1.UpdateOrgCallPolicyRequest
@@ -798,7 +852,7 @@ export type UpdateOrgCallPolicyRequest = Message<"calls.v1.UpdateOrgCallPolicyRe
  * Use `create(UpdateOrgCallPolicyRequestSchema)` to create a new message.
  */
 export const UpdateOrgCallPolicyRequestSchema: GenMessage<UpdateOrgCallPolicyRequest> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 27);
+  messageDesc(file_calls_v1_calls, 28);
 
 /**
  * @generated from message calls.v1.UpdateOrgCallPolicyResponse
@@ -815,7 +869,7 @@ export type UpdateOrgCallPolicyResponse = Message<"calls.v1.UpdateOrgCallPolicyR
  * Use `create(UpdateOrgCallPolicyResponseSchema)` to create a new message.
  */
 export const UpdateOrgCallPolicyResponseSchema: GenMessage<UpdateOrgCallPolicyResponse> = /*@__PURE__*/
-  messageDesc(file_calls_v1_calls, 28);
+  messageDesc(file_calls_v1_calls, 29);
 
 /**
  * @generated from enum calls.v1.CallType
@@ -927,11 +981,41 @@ export const ScreenShareQualitySchema: GenEnum<ScreenShareQuality> = /*@__PURE__
   enumDesc(file_calls_v1_calls, 2);
 
 /**
+ * @generated from enum calls.v1.IceTransportPolicy
+ */
+export enum IceTransportPolicy {
+  /**
+   * Client default (all candidate types).
+   *
+   * @generated from enum value: ICE_TRANSPORT_POLICY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ICE_TRANSPORT_POLICY_ALL = 1;
+   */
+  ALL = 1,
+
+  /**
+   * @generated from enum value: ICE_TRANSPORT_POLICY_RELAY = 2;
+   */
+  RELAY = 2,
+}
+
+/**
+ * Describes the enum calls.v1.IceTransportPolicy.
+ */
+export const IceTransportPolicySchema: GenEnum<IceTransportPolicy> = /*@__PURE__*/
+  enumDesc(file_calls_v1_calls, 3);
+
+/**
  * CallService manages call lifecycle. Join-shaped RPCs return `ws_url` +
- * `livekit_token`; media and TURN negotiation happen over LiveKit signaling,
- * so there is no ice_servers field anywhere. `ws_url` is either a path the
- * client resolves against window.location (same-origin edge route) or an
- * absolute ws(s):// override for split-origin deployments.
+ * `livekit_token`. In direct-media deployments media and TURN negotiation
+ * happen over LiveKit signaling and `ice_servers` stays empty; in relayed
+ * deployments (k8s/STUNner) join-shaped responses also carry per-user
+ * ephemeral TURN credentials plus a RELAY transport policy. `ws_url` is
+ * either a path the client resolves against window.location (same-origin
+ * edge route) or an absolute ws(s):// override for split-origin deployments.
  *
  * @generated from service calls.v1.CallService
  */

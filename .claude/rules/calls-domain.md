@@ -25,11 +25,17 @@ participants, or those users go blind to their own call.
 ## Media transport
 
 Signaling rides a WebSocket to LiveKit (`ws_url`: an edge path the client resolves against
-`window.location`, or an absolute `ws(s)://` override for split-origin). Media and TURN go over UDP and
-are negotiated by LiveKit - the backend never touches media and there are NO ICE-server fields in the
-proto. Join-shaped RPCs return `ws_url` + a single-room-scoped `livekit_token` (short-lived user token;
-admin actions mint a separate tiny-TTL room-scoped token with no admin grants). The org id prefixes the
-room name as a cross-org isolation defense inside the shared SFU.
+`window.location`, or an absolute `ws(s)://` override for split-origin). Media and TURN go over UDP.
+In direct-media deployments (VM/compose, embedded TURN) they are negotiated by LiveKit and the
+join-shaped responses carry no ICE config. In relayed deployments (k8s/STUNner, `TURN_SERVER_URLS`
+set) join-shaped responses also carry `ice_servers` (per-user ephemeral TURN credentials, TURN REST
+spec: `username = "{expiry}:{user_id}"`, `credential = base64(HMAC-SHA1(shared_secret, username))`,
+minted in `domains/calls/turn.py`) plus `ice_transport_policy = RELAY`. Credentials cannot rotate
+mid-connection, so the TTL (default 8h) must outlive the longest call; every reconnect issues a
+fresh JoinCall and therefore fresh credentials - `RefreshCallToken` stays token-only. Join-shaped
+RPCs return `ws_url` + a single-room-scoped `livekit_token` (short-lived user token; admin actions
+mint a separate tiny-TTL room-scoped token with no admin grants). The org id prefixes the room name
+as a cross-org isolation defense inside the shared SFU.
 
 ## Durability model (load-bearing)
 

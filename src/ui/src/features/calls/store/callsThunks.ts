@@ -1,6 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { callsApi } from '@/features/calls/api/callsApi';
-import { callToPlain } from '@/features/calls/api/callsConverters';
+import { callToPlain, iceServersToPlain } from '@/features/calls/api/callsConverters';
 import {
   activeCallsSynced,
   callCleared,
@@ -9,8 +9,8 @@ import {
   ringDismissed,
 } from '@/features/calls/store/callsSlice';
 import { getDeviceId, getDeviceLabel } from '@/shared/utils/deviceId';
-import { ScreenShareQuality } from '@uniffy/proto/calls/v1/calls_pb';
-import type { CallData } from '@/features/calls/types';
+import { ScreenShareQuality, IceTransportPolicy } from '@uniffy/proto/calls/v1/calls_pb';
+import type { CallData, IceServerData } from '@/features/calls/types';
 import type { RootState } from '@/app/store';
 
 const getOrganizationId = (state: RootState): string => {
@@ -26,6 +26,9 @@ export interface CallJoinResult {
   joinedExisting: boolean;
   /** Org-resolved screen-share ceiling for this session. */
   screenShareQualityCap: ScreenShareQuality;
+  /** Empty in direct-media mode; per-user TURN relay config otherwise. */
+  iceServers: IceServerData[];
+  iceTransportPolicy: IceTransportPolicy;
 }
 
 export const fetchActiveCall = createAsyncThunk(
@@ -84,6 +87,8 @@ export const initiateCall = createAsyncThunk(
       livekitToken: res.livekitToken,
       joinedExisting: res.joinedExisting,
       screenShareQualityCap: res.screenShareQualityCap,
+      iceServers: iceServersToPlain(res.iceServers),
+      iceTransportPolicy: res.iceTransportPolicy,
     };
   },
 );
@@ -107,6 +112,8 @@ export const joinCall = createAsyncThunk(
       livekitToken: res.livekitToken,
       joinedExisting: true,
       screenShareQualityCap: res.screenShareQualityCap,
+      iceServers: iceServersToPlain(res.iceServers),
+      iceTransportPolicy: res.iceTransportPolicy,
     };
   },
 );
@@ -134,6 +141,8 @@ export async function joinCallRequest(
     livekitToken: res.livekitToken,
     joinedExisting: true,
     screenShareQualityCap: res.screenShareQualityCap,
+    iceServers: iceServersToPlain(res.iceServers),
+    iceTransportPolicy: res.iceTransportPolicy,
   };
 }
 

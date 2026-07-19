@@ -234,6 +234,20 @@ Needs two browsers on two machines/networks to exercise the adaptive downshift.
 - [ ] Self-host sanity: with `CALLS_DEFAULT_SCREEN_SHARE_QUALITY` unset, a channel call defaults
       to BALANCED and a DM defaults to MAX with no admin action.
 
+## Calls: TURN relay mode (k8s/STUNner)
+
+Relayed media path: with `TURN_SERVER_URLS` + `TURN_SHARED_SECRET` set, join-shaped RPCs return
+per-user ephemeral TURN credentials and a RELAY transport policy. With the env unset (VM/compose
+direct media), nothing changes anywhere.
+
+- [ ] On a k8s/STUNner deployment, join a call. It connects and `chrome://webrtc-internals` shows
+      selected candidate pairs of type `relay` (not `srflx`/`host`).
+- [ ] stunnerd logs show the TURN username as `<expiry-unix>:<user_id>` for the joining user, and
+      two different users show two different usernames.
+- [ ] Leave and rejoin: the new connection uses a fresh username (new expiry timestamp).
+- [ ] VM/compose mode with TURN env unset: calls still connect via LiveKit's embedded TURN,
+      responses carry no ice_servers, and webrtc-internals shows the usual candidate mix.
+
 ## Calendar meetings (channel-bound)
 
 An event can bind to a chat channel as a Uniffy online meeting. Join rides the existing calls

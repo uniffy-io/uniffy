@@ -26,6 +26,12 @@ import {
 } from "@features/calls/livekit";
 import { callToPlain, type CallEndReason } from "@features/calls/callsSerializer";
 import {
+  buildRtcConfiguration,
+  iceServersToPlain,
+  type IceServerData,
+} from "@features/calls/iceConfig";
+import type { IceTransportPolicy } from "@uniffy/proto/calls/v1/calls_pb";
+import {
   upsertActiveCall,
   lastEndedCallKey,
   type LastEndedCall,
@@ -108,6 +114,8 @@ interface JoinResult {
   wsUrl: string;
   livekitToken: string;
   serverMicEnabled: boolean | null;
+  iceServers: IceServerData[];
+  iceTransportPolicy: IceTransportPolicy;
 }
 
 function isCallGoneError(error: unknown): boolean {
@@ -274,6 +282,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             wsUrl: response.wsUrl,
             livekitToken: response.livekitToken,
             serverMicEnabled: null,
+            iceServers: iceServersToPlain(response.iceServers),
+            iceTransportPolicy: response.iceTransportPolicy,
           },
           { mic: micEnabled, camera: cameraEnabled },
         );
@@ -413,7 +423,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       });
 
       const url = resolveSignalingUrl(join.wsUrl);
-      await r.connect(url, join.livekitToken);
+      await r.connect(url, join.livekitToken, {
+        rtcConfig: buildRtcConfiguration(join.iceServers, join.iceTransportPolicy),
+      });
       scheduleTokenRefresh(join.livekitToken);
 
       // A second device joins force-muted server-side; honor it on connect.
@@ -494,6 +506,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             wsUrl: response.wsUrl,
             livekitToken: response.livekitToken,
             serverMicEnabled: ownRow ? ownRow.micEnabled : null,
+            iceServers: iceServersToPlain(response.iceServers),
+            iceTransportPolicy: response.iceTransportPolicy,
           };
         },
         channelId,
@@ -524,6 +538,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             wsUrl: response.wsUrl,
             livekitToken: response.livekitToken,
             serverMicEnabled: ownRow ? ownRow.micEnabled : null,
+            iceServers: iceServersToPlain(response.iceServers),
+            iceTransportPolicy: response.iceTransportPolicy,
           };
         },
         channelId,
