@@ -1,22 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { ConnectError, Code } from '@connectrpc/connect';
-import { toast } from 'sonner';
 import { useAppDispatch } from '@/app/hooks';
 import { runtimeApi } from '@/features/agents/api/runtimeApi';
 import {
     streamStarted,
     runIdReceived,
     clearActiveRunId,
-    appendStreamingToken,
-    addStreamingToolCall,
-    addStreamingToolResult,
-    setConfirmationRequired,
-    streamCompleted,
     streamError,
 } from '@/features/agents/store/agentMessagesSlice';
-import { messageToPlain } from '@/features/agents/store/agentMessagesThunks';
-import { upsertProposedDraft } from '@/features/agents/store/agentSkillDraftsSlice';
-import { skillDraftToPlain } from '@/features/agents/store/agentSkillDraftsThunks';
+import { createAgentStreamConsumer } from '@/features/agents/store/agentStreamFold';
 
 export interface UseAgentRunStreamResult {
     isStreaming: boolean;
@@ -45,23 +37,7 @@ export function useAgentRunStream(
         dispatch(streamStarted());
         dispatch(runIdReceived(runId));
 
-        let tokenBuffer = '';
-        let rafId: number | null = null;
-
-        const flushTokens = () => {
-            if (tokenBuffer) {
-                dispatch(appendStreamingToken(tokenBuffer));
-                tokenBuffer = '';
-            }
-            rafId = null;
-        };
-
-        const bufferToken = (text: string) => {
-            tokenBuffer += text;
-            if (rafId === null) {
-                rafId = requestAnimationFrame(flushTokens);
-            }
-        };
+        const consumer = createAgentStreamConsumer(dispatch, sessionId);
 
         const run = async () => {
             try {
@@ -72,61 +48,9 @@ export function useAgentRunStream(
 
                 for await (const envelope of stream) {
                     if (cancelled) break;
-                    const event = envelope.event;
-                    if (!event) continue;
-                    if (event.runId) {
-                        dispatch(runIdReceived(event.runId));
-                    }
-                    if (event.event.case === 'token') {
-                        bufferToken(event.event.value.text);
-                    } else if (event.event.case === 'toolCall') {
-                        dispatch(addStreamingToolCall({
-                            toolCallId: event.event.value.toolCallId,
-                            toolName: event.event.value.toolName,
-                            toolArgsJson: event.event.value.toolArgsJson,
-                        }));
-                    } else if (event.event.case === 'toolResult') {
-                        dispatch(addStreamingToolResult({
-                            toolCallId: event.event.value.toolCallId,
-                            toolName: event.event.value.toolName,
-                            success: event.event.value.success,
-                            result: event.event.value.result,
-                        }));
-                    } else if (event.event.case === 'done') {
-                        if (rafId !== null) cancelAnimationFrame(rafId);
-                        flushTokens();
-                        const assistantMsg = event.event.value.assistantMessage;
-                        dispatch(streamCompleted({
-                            sessionId,
-                            assistantMessage: assistantMsg ? messageToPlain(assistantMsg) : undefined,
-                        }));
-                    } else if (event.event.case === 'failover') {
-                        const f = event.event.value;
-                        toast.info(
-                            `Switched to ${f.toModel || 'a different provider'}`,
-                            { description: `Retry attempt ${f.attempt} (${f.reason})` },
-                        );
-                    } else if (event.event.case === 'confirmationRequired') {
-                        dispatch(setConfirmationRequired({
-                            toolCallId: event.event.value.toolCallId,
-                            toolName: event.event.value.toolName,
-                            toolArgsJson: event.event.value.toolArgsJson,
-                            description: event.event.value.description,
-                        }));
-                    } else if (event.event.case === 'skillDraft') {
-                        const draft = event.event.value.draft;
-                        if (draft) {
-                            dispatch(upsertProposedDraft({
-                                draft: skillDraftToPlain(draft),
-                                sessionId,
-                            }));
-                        }
-                    } else if (event.event.case === 'error') {
-                        if (rafId !== null) cancelAnimationFrame(rafId);
-                        flushTokens();
-                        const message = event.event.value.message;
-                        dispatch(streamError(message));
-                        setError(message);
+                    const outcome = consumer.handle(envelope);
+                    if (outcome?.status === 'error') {
+                        setError(outcome.errorMessage ?? 'Run failed');
                     }
                 }
             } catch (err) {
@@ -140,7 +64,7 @@ export function useAgentRunStream(
                 dispatch(streamError(message));
                 setError(message);
             } finally {
-                if (rafId !== null) cancelAnimationFrame(rafId);
+                consumer.dispose();
                 if (!cancelled) setIsStreaming(false);
             }
         };
@@ -150,7 +74,7 @@ export function useAgentRunStream(
         return () => {
             cancelled = true;
             controller.abort();
-            if (rafId !== null) cancelAnimationFrame(rafId);
+            consumer.dispose();
             abortRef.current = null;
         };
     }, [runId, organizationId, sessionId, dispatch]);

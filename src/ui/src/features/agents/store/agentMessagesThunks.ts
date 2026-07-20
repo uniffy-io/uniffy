@@ -1,66 +1,26 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { toast } from 'sonner';
 import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import { runtimeApi } from '@/features/agents/api/runtimeApi';
 import type { RootState } from '@/app/store';
-import type { MessageInfo } from '@uniffy/proto/agents/v1/sessions_pb';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 import {
     streamStarted,
-    runIdReceived,
     addOptimisticUserMessage,
-    reconcileStoredMessage,
-    appendStreamingToken,
-    addStreamingToolCall,
-    addStreamingToolResult,
-    setConfirmationRequired,
     clearConfirmation,
-    streamCompleted,
     streamError,
-    streamCancelled,
 } from '@/features/agents/store/agentMessagesSlice';
-import { upsertProposedDraft } from '@/features/agents/store/agentSkillDraftsSlice';
-import { skillDraftToPlain } from '@/features/agents/store/agentSkillDraftsThunks';
+import { createAgentStreamConsumer } from '@/features/agents/store/agentStreamFold';
+import { messageToPlain } from '@/features/agents/store/agentMessagesSerde';
+import type { SerializedMessage } from '@/features/agents/store/agentMessagesSerde';
+
+export { messageToPlain };
+export type { SerializedMessage };
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
     if (!orgId) throw new Error('No organization selected');
     return orgId;
 };
-
-const timestampToPlain = (ts?: { seconds: bigint | number; nanos: bigint | number }) => {
-    if (!ts) return undefined;
-    return {
-        seconds: typeof ts.seconds === 'bigint' ? Number(ts.seconds) : ts.seconds,
-        nanos: typeof ts.nanos === 'bigint' ? Number(ts.nanos) : ts.nanos,
-    };
-};
-
-export const messageToPlain = (msg: MessageInfo) => ({
-    id: msg.id,
-    sessionId: msg.sessionId,
-    role: msg.role,
-    content: msg.content,
-    inputTokens: msg.inputTokens,
-    outputTokens: msg.outputTokens,
-    model: msg.model,
-    toolName: msg.toolName,
-    toolCallId: msg.toolCallId,
-    toolArgsJson: msg.toolArgsJson,
-    toolResult: msg.toolResult,
-    isThinking: msg.isThinking,
-    isCompacted: msg.isCompacted,
-    createdAt: timestampToPlain(msg.createdAt),
-    fileIds: msg.fileIds?.length ? [...msg.fileIds] : undefined,
-    isInvalidated: msg.isInvalidated,
-    editedAt: timestampToPlain(msg.editedAt),
-    previousContent: msg.previousContent,
-    wasCancelled: msg.wasCancelled,
-    feedbackRating: msg.feedbackRating || '',
-    invokedSkillName: msg.invokedSkillName || '',
-});
-
-export type SerializedMessage = ReturnType<typeof messageToPlain>;
 
 export const fetchMessages = createAsyncThunk<
     { sessionId: string; messages: SerializedMessage[] },
@@ -127,93 +87,17 @@ export const streamSendMessage = createAsyncThunk<
             invokedSkillId: params.invokedSkillId,
         });
 
-        // RAF-batched token flush caps React re-renders at ~60fps regardless of token arrival rate.
-        let tokenBuffer = '';
-        let rafId: number | null = null;
-
-        const flushTokens = () => {
-            if (tokenBuffer) {
-                dispatch(appendStreamingToken(tokenBuffer));
-                tokenBuffer = '';
-            }
-            rafId = null;
-        };
-
-        const bufferToken = (text: string) => {
-            tokenBuffer += text;
-            if (rafId === null) {
-                rafId = requestAnimationFrame(flushTokens);
-            }
-        };
-
-        for await (const envelope of stream) {
-            const event = envelope.event;
-            if (!event) continue;
-            if (event.runId) {
-                dispatch(runIdReceived(event.runId));
-            }
-            if (event.event.case === 'token') {
-                bufferToken(event.event.value.text);
-            } else if (event.event.case === 'toolCall') {
-                dispatch(addStreamingToolCall({
-                    toolCallId: event.event.value.toolCallId,
-                    toolName: event.event.value.toolName,
-                    toolArgsJson: event.event.value.toolArgsJson,
-                }));
-            } else if (event.event.case === 'toolResult') {
-                dispatch(addStreamingToolResult({
-                    toolCallId: event.event.value.toolCallId,
-                    toolName: event.event.value.toolName,
-                    success: event.event.value.success,
-                    result: event.event.value.result,
-                }));
-            } else if (event.event.case === 'messageStored') {
-                const stored = event.event.value.message;
-                if (stored) {
-                    dispatch(reconcileStoredMessage({
-                        sessionId: params.sessionId,
-                        message: messageToPlain(stored),
-                    }));
+        const consumer = createAgentStreamConsumer(dispatch, params.sessionId);
+        try {
+            for await (const envelope of stream) {
+                const outcome = consumer.handle(envelope);
+                if (outcome?.status === 'error') {
+                    return rejectWithValue(outcome.errorMessage ?? 'Streaming failed');
                 }
-            } else if (event.event.case === 'done') {
-                if (rafId !== null) cancelAnimationFrame(rafId);
-                flushTokens();
-                const assistantMsg = event.event.value.assistantMessage;
-                dispatch(streamCompleted({
-                    sessionId: params.sessionId,
-                    assistantMessage: assistantMsg ? messageToPlain(assistantMsg) : undefined,
-                }));
-            } else if (event.event.case === 'failover') {
-                const f = event.event.value;
-                toast.info(
-                    `Switched to ${f.toModel || 'a different provider'}`,
-                    { description: `Retry attempt ${f.attempt} (${f.reason})` },
-                );
-            } else if (event.event.case === 'confirmationRequired') {
-                dispatch(setConfirmationRequired({
-                    toolCallId: event.event.value.toolCallId,
-                    toolName: event.event.value.toolName,
-                    toolArgsJson: event.event.value.toolArgsJson,
-                    description: event.event.value.description,
-                }));
-            } else if (event.event.case === 'skillDraft') {
-                const draft = event.event.value.draft;
-                if (draft) {
-                    dispatch(upsertProposedDraft({
-                        draft: skillDraftToPlain(draft),
-                        sessionId: params.sessionId,
-                    }));
-                }
-            } else if (event.event.case === 'error') {
-                if (rafId !== null) cancelAnimationFrame(rafId);
-                flushTokens();
-                if (event.event.value.message === 'cancelled') {
-                    dispatch(streamCancelled());
-                    return;
-                }
-                dispatch(streamError(event.event.value.message));
-                return rejectWithValue(event.event.value.message);
+                if (outcome) return;
             }
+        } finally {
+            consumer.dispose();
         }
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Streaming failed';
@@ -237,90 +121,17 @@ export const rerunFromMessage = createAsyncThunk<
             userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
 
-        let tokenBuffer = '';
-        let rafId: number | null = null;
-        const flushTokens = () => {
-            if (tokenBuffer) {
-                dispatch(appendStreamingToken(tokenBuffer));
-                tokenBuffer = '';
-            }
-            rafId = null;
-        };
-        const bufferToken = (text: string) => {
-            tokenBuffer += text;
-            if (rafId === null) {
-                rafId = requestAnimationFrame(flushTokens);
-            }
-        };
-
-        for await (const envelope of stream) {
-            const event = envelope.event;
-            if (!event) continue;
-            if (event.runId) {
-                dispatch(runIdReceived(event.runId));
-            }
-            if (event.event.case === 'token') {
-                bufferToken(event.event.value.text);
-            } else if (event.event.case === 'toolCall') {
-                dispatch(addStreamingToolCall({
-                    toolCallId: event.event.value.toolCallId,
-                    toolName: event.event.value.toolName,
-                    toolArgsJson: event.event.value.toolArgsJson,
-                }));
-            } else if (event.event.case === 'toolResult') {
-                dispatch(addStreamingToolResult({
-                    toolCallId: event.event.value.toolCallId,
-                    toolName: event.event.value.toolName,
-                    success: event.event.value.success,
-                    result: event.event.value.result,
-                }));
-            } else if (event.event.case === 'messageStored') {
-                const stored = event.event.value.message;
-                if (stored) {
-                    dispatch(reconcileStoredMessage({
-                        sessionId: params.sessionId,
-                        message: messageToPlain(stored),
-                    }));
+        const consumer = createAgentStreamConsumer(dispatch, params.sessionId);
+        try {
+            for await (const envelope of stream) {
+                const outcome = consumer.handle(envelope);
+                if (outcome?.status === 'error') {
+                    return rejectWithValue(outcome.errorMessage ?? 'Rerun failed');
                 }
-            } else if (event.event.case === 'done') {
-                if (rafId !== null) cancelAnimationFrame(rafId);
-                flushTokens();
-                const assistantMsg = event.event.value.assistantMessage;
-                dispatch(streamCompleted({
-                    sessionId: params.sessionId,
-                    assistantMessage: assistantMsg ? messageToPlain(assistantMsg) : undefined,
-                }));
-            } else if (event.event.case === 'failover') {
-                const f = event.event.value;
-                toast.info(
-                    `Switched to ${f.toModel || 'a different provider'}`,
-                    { description: `Retry attempt ${f.attempt} (${f.reason})` },
-                );
-            } else if (event.event.case === 'confirmationRequired') {
-                dispatch(setConfirmationRequired({
-                    toolCallId: event.event.value.toolCallId,
-                    toolName: event.event.value.toolName,
-                    toolArgsJson: event.event.value.toolArgsJson,
-                    description: event.event.value.description,
-                }));
-            } else if (event.event.case === 'skillDraft') {
-                const draft = event.event.value.draft;
-                if (draft) {
-                    dispatch(upsertProposedDraft({
-                        draft: skillDraftToPlain(draft),
-                        sessionId: params.sessionId,
-                    }));
-                }
-            } else if (event.event.case === 'error') {
-                if (rafId !== null) cancelAnimationFrame(rafId);
-                flushTokens();
-                if (event.event.value.message === 'cancelled') {
-                    dispatch(streamCancelled());
-                    return;
-                }
-                dispatch(streamError(event.event.value.message));
-                return rejectWithValue(event.event.value.message);
+                if (outcome) return;
             }
+        } finally {
+            consumer.dispose();
         }
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Rerun failed';

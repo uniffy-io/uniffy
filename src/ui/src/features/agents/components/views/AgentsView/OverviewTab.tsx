@@ -24,6 +24,13 @@ import { TagPicker } from "@/features/tags";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { ModelParamsSection } from "@/features/agents/components/ModelParamsSection";
+import {
+    parseModelParamsSchema,
+    parseModelParamValues,
+    stripInvalidParams,
+    type ModelParamValues,
+} from "@/features/agents/utils/modelParamsSchema";
 import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { roleCanEdit } from "@/shared/utils/contentRoles";
@@ -187,6 +194,31 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         dispatch(updateAgent({ agentId: agent.id, ...fields }));
     };
 
+    const modelParamValues = useMemo(
+        () => parseModelParamValues(agent.modelParams),
+        [agent.modelParams],
+    );
+
+    const primaryModelSchemaJson = useMemo(
+        () => primaryKeyModels.find((m) => m.id === agent.primaryModel)?.parameterSchemaJson ?? "",
+        [primaryKeyModels, agent.primaryModel],
+    );
+
+    const handlePrimaryModelChange = (value: string) => {
+        const fields: { primaryModel: string; modelParams?: string } = { primaryModel: value };
+        if (Object.keys(modelParamValues).length > 0) {
+            const nextSchema = parseModelParamsSchema(
+                primaryKeyModels.find((m) => m.id === value)?.parameterSchemaJson ?? "",
+            );
+            fields.modelParams = JSON.stringify(stripInvalidParams(nextSchema, modelParamValues));
+        }
+        handleUpdate(fields);
+    };
+
+    const handleModelParamsChange = (next: ModelParamValues) => {
+        handleUpdate({ modelParams: JSON.stringify(next) });
+    };
+
     const handleAvatarUpload = useCallback(
         async (file: File) => {
             const buffer = await file.arrayBuffer();
@@ -339,8 +371,8 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                     No provider keys configured
                                 </h4>
                                 <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-5">
-                                    Add an API key from Anthropic, OpenAI, or Google to start using this agent.
-                                    Provider keys are managed in the configuration panel.
+                                    Add a provider API key to start using this agent.
+                                    Provider keys are managed in the Config tab.
                                 </p>
                                 <Button
                                     size="md"
@@ -380,13 +412,19 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                         <FieldLabel>Model</FieldLabel>
                                         <Select
                                             value={agent.primaryModel}
-                                            onChange={(value) => handleUpdate({ primaryModel: value })}
+                                            onChange={handlePrimaryModelChange}
                                             options={primaryModelOptions}
                                             placeholder={primaryKeyId ? "Select model..." : "Select a provider key first"}
                                             disabled={!canEdit || !primaryKeyId}
                                             className="w-full"
                                         />
                                     </div>
+                                    <ModelParamsSection
+                                        schemaJson={primaryModelSchemaJson}
+                                        values={modelParamValues}
+                                        onChange={handleModelParamsChange}
+                                        disabled={!canEdit}
+                                    />
                                 </div>
 
                                 {/* Image Generation column */}

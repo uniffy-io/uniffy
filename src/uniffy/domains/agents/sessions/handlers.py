@@ -58,6 +58,19 @@ from uniffy.domains.auth.context import get_user_id_from_context
 logger = logger.bind(component="agents.sessions.handlers")
 
 
+def _parse_params_json(raw: str) -> dict:
+    """Parse a model-params JSON string into a plain object."""
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ConnectError(
+            Code.INVALID_ARGUMENT, "model_params_override is not valid JSON",
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise ConnectError(Code.INVALID_ARGUMENT, "model_params_override must be a JSON object")
+    return parsed
+
+
 class SessionsHandlers:
     """RPC handlers for sessions service."""
 
@@ -93,6 +106,11 @@ class SessionsHandlers:
 
         display_name = request.display_name if request.HasField("display_name") else None
         model_override = request.model_override if request.HasField("model_override") else None
+        model_params_override = (
+            _parse_params_json(request.model_params_override)
+            if request.HasField("model_params_override")
+            else None
+        )
 
         try:
             async with open_session() as session:
@@ -104,6 +122,7 @@ class SessionsHandlers:
                     kind=kind,
                     display_name=display_name,
                     model_override=model_override,
+                    model_params_override=model_params_override,
                 )
                 return CreateSessionResponse(session=session_to_proto(agent_session))
 
@@ -278,6 +297,11 @@ class SessionsHandlers:
 
         display_name = request.display_name if request.HasField("display_name") else None
         model_override = request.model_override if request.HasField("model_override") else None
+        model_params_override = (
+            _parse_params_json(request.model_params_override)
+            if request.HasField("model_params_override")
+            else None
+        )
 
         try:
             async with open_session() as session:
@@ -288,6 +312,7 @@ class SessionsHandlers:
                     session_id=session_id,
                     display_name=display_name,
                     model_override=model_override,
+                    model_params_override=model_params_override,
                 )
                 return UpdateSessionResponse(session=session_to_proto(agent_session))
 

@@ -37,6 +37,7 @@ export const agentToPlain = (agent: AgentInfo) => ({
     baselineRole: agent.baselineRole,
     userRole: agent.userRole,
     imageModel: agent.imageModel,
+    modelParams: agent.modelParams,
     promptId: agent.promptId || "",
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
     imageProviderKeyId: agent.imageProviderKeyId || "",
@@ -88,6 +89,7 @@ export const createAgent = createAsyncThunk<
         imageProviderKeyId?: string;
         promptId?: string;
         tagIds?: string[];
+        modelParams?: string;
     },
     { state: RootState; rejectValue: string }
 >('agents/createAgent', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -106,6 +108,7 @@ export const createAgent = createAsyncThunk<
             imageProviderKeyId: params.imageProviderKeyId,
             promptId: params.promptId,
             tagIds: params.tagIds ?? [],
+            modelParams: params.modelParams,
         });
         if (!response.agent) throw new Error('No agent in response');
         hydrateAgentTags(dispatch, [response.agent]);
@@ -137,6 +140,8 @@ export const updateAgent = createAsyncThunk<
         clearPrompt?: boolean;
         // Replace the agent's manual tag set; empty array clears tags; omit to leave untouched.
         tagIds?: string[];
+        // Replaces the stored params object wholesale; "{}" resets to provider defaults.
+        modelParams?: string;
     },
     { state: RootState; rejectValue: string }
 >('agents/updateAgent', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -188,6 +193,8 @@ export const cloneAgent = createAsyncThunk<
             imageModel: source.imageModel,
             primaryProviderKeyId: source.primaryProviderKeyId || undefined,
             imageProviderKeyId: source.imageProviderKeyId || undefined,
+            modelParams:
+                source.modelParams && source.modelParams !== '{}' ? source.modelParams : undefined,
         });
         if (!createResponse.agent) throw new Error('No agent in response');
         if (source.enabledTools.length > 0) {

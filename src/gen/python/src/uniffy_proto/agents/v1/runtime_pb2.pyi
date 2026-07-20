@@ -271,28 +271,54 @@ class RespondToConfirmationResponse(_message.Message):
     def __init__(self, accepted: _Optional[bool] = ...) -> None: ...
 
 class AgentStreamEvent(_message.Message):
-    __slots__ = ("token", "tool_call", "tool_result", "message_stored", "done", "error", "confirmation_required", "failover", "skill_draft", "run_id")
-    TOKEN_FIELD_NUMBER: _ClassVar[int]
-    TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
-    TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
-    MESSAGE_STORED_FIELD_NUMBER: _ClassVar[int]
-    DONE_FIELD_NUMBER: _ClassVar[int]
-    ERROR_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("reply_start", "model_call_start", "model_call_end", "text_block_start", "text_block_delta", "text_block_end", "thinking_block_start", "thinking_block_delta", "thinking_block_end", "tool_call_start", "tool_call_delta", "tool_call_end", "tool_result_start", "tool_result_delta", "tool_result_end", "confirmation_required", "failover", "skill_draft", "exceed_max_iters", "message_stored", "done", "error", "run_id")
+    REPLY_START_FIELD_NUMBER: _ClassVar[int]
+    MODEL_CALL_START_FIELD_NUMBER: _ClassVar[int]
+    MODEL_CALL_END_FIELD_NUMBER: _ClassVar[int]
+    TEXT_BLOCK_START_FIELD_NUMBER: _ClassVar[int]
+    TEXT_BLOCK_DELTA_FIELD_NUMBER: _ClassVar[int]
+    TEXT_BLOCK_END_FIELD_NUMBER: _ClassVar[int]
+    THINKING_BLOCK_START_FIELD_NUMBER: _ClassVar[int]
+    THINKING_BLOCK_DELTA_FIELD_NUMBER: _ClassVar[int]
+    THINKING_BLOCK_END_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_START_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_DELTA_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_END_FIELD_NUMBER: _ClassVar[int]
+    TOOL_RESULT_START_FIELD_NUMBER: _ClassVar[int]
+    TOOL_RESULT_DELTA_FIELD_NUMBER: _ClassVar[int]
+    TOOL_RESULT_END_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_REQUIRED_FIELD_NUMBER: _ClassVar[int]
     FAILOVER_FIELD_NUMBER: _ClassVar[int]
     SKILL_DRAFT_FIELD_NUMBER: _ClassVar[int]
+    EXCEED_MAX_ITERS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_STORED_FIELD_NUMBER: _ClassVar[int]
+    DONE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
-    token: StreamTokenEvent
-    tool_call: StreamToolCallEvent
-    tool_result: StreamToolResultEvent
-    message_stored: StreamMessageStoredEvent
-    done: StreamDoneEvent
-    error: StreamErrorEvent
+    reply_start: StreamReplyStartEvent
+    model_call_start: StreamModelCallStartEvent
+    model_call_end: StreamModelCallEndEvent
+    text_block_start: StreamTextBlockStartEvent
+    text_block_delta: StreamTextBlockDeltaEvent
+    text_block_end: StreamTextBlockEndEvent
+    thinking_block_start: StreamThinkingBlockStartEvent
+    thinking_block_delta: StreamThinkingBlockDeltaEvent
+    thinking_block_end: StreamThinkingBlockEndEvent
+    tool_call_start: StreamToolCallStartEvent
+    tool_call_delta: StreamToolCallDeltaEvent
+    tool_call_end: StreamToolCallEndEvent
+    tool_result_start: StreamToolResultStartEvent
+    tool_result_delta: StreamToolResultDeltaEvent
+    tool_result_end: StreamToolResultEndEvent
     confirmation_required: StreamConfirmationRequiredEvent
     failover: StreamFailoverEvent
     skill_draft: StreamSkillDraftEvent
+    exceed_max_iters: StreamExceedMaxItersEvent
+    message_stored: StreamMessageStoredEvent
+    done: StreamDoneEvent
+    error: StreamErrorEvent
     run_id: str
-    def __init__(self, token: _Optional[_Union[StreamTokenEvent, _Mapping]] = ..., tool_call: _Optional[_Union[StreamToolCallEvent, _Mapping]] = ..., tool_result: _Optional[_Union[StreamToolResultEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., skill_draft: _Optional[_Union[StreamSkillDraftEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, reply_start: _Optional[_Union[StreamReplyStartEvent, _Mapping]] = ..., model_call_start: _Optional[_Union[StreamModelCallStartEvent, _Mapping]] = ..., model_call_end: _Optional[_Union[StreamModelCallEndEvent, _Mapping]] = ..., text_block_start: _Optional[_Union[StreamTextBlockStartEvent, _Mapping]] = ..., text_block_delta: _Optional[_Union[StreamTextBlockDeltaEvent, _Mapping]] = ..., text_block_end: _Optional[_Union[StreamTextBlockEndEvent, _Mapping]] = ..., thinking_block_start: _Optional[_Union[StreamThinkingBlockStartEvent, _Mapping]] = ..., thinking_block_delta: _Optional[_Union[StreamThinkingBlockDeltaEvent, _Mapping]] = ..., thinking_block_end: _Optional[_Union[StreamThinkingBlockEndEvent, _Mapping]] = ..., tool_call_start: _Optional[_Union[StreamToolCallStartEvent, _Mapping]] = ..., tool_call_delta: _Optional[_Union[StreamToolCallDeltaEvent, _Mapping]] = ..., tool_call_end: _Optional[_Union[StreamToolCallEndEvent, _Mapping]] = ..., tool_result_start: _Optional[_Union[StreamToolResultStartEvent, _Mapping]] = ..., tool_result_delta: _Optional[_Union[StreamToolResultDeltaEvent, _Mapping]] = ..., tool_result_end: _Optional[_Union[StreamToolResultEndEvent, _Mapping]] = ..., confirmation_required: _Optional[_Union[StreamConfirmationRequiredEvent, _Mapping]] = ..., failover: _Optional[_Union[StreamFailoverEvent, _Mapping]] = ..., skill_draft: _Optional[_Union[StreamSkillDraftEvent, _Mapping]] = ..., exceed_max_iters: _Optional[_Union[StreamExceedMaxItersEvent, _Mapping]] = ..., message_stored: _Optional[_Union[StreamMessageStoredEvent, _Mapping]] = ..., done: _Optional[_Union[StreamDoneEvent, _Mapping]] = ..., error: _Optional[_Union[StreamErrorEvent, _Mapping]] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class StreamSendMessageResponse(_message.Message):
     __slots__ = ("event",)
@@ -312,33 +338,183 @@ class SubscribeToRunResponse(_message.Message):
     event: AgentStreamEvent
     def __init__(self, event: _Optional[_Union[AgentStreamEvent, _Mapping]] = ...) -> None: ...
 
-class StreamTokenEvent(_message.Message):
-    __slots__ = ("text",)
-    TEXT_FIELD_NUMBER: _ClassVar[int]
-    text: str
-    def __init__(self, text: _Optional[str] = ...) -> None: ...
+class StreamReplyStartEvent(_message.Message):
+    __slots__ = ("role",)
+    ROLE_FIELD_NUMBER: _ClassVar[int]
+    role: str
+    def __init__(self, role: _Optional[str] = ...) -> None: ...
 
-class StreamToolCallEvent(_message.Message):
-    __slots__ = ("tool_call_id", "tool_name", "tool_args_json")
+class StreamModelCallStartEvent(_message.Message):
+    __slots__ = ("model",)
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    model: str
+    def __init__(self, model: _Optional[str] = ...) -> None: ...
+
+class StreamModelCallEndEvent(_message.Message):
+    __slots__ = ("model", "input_tokens", "output_tokens", "cache_read_input_tokens", "thinking_tokens")
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    CACHE_READ_INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    THINKING_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    model: str
+    input_tokens: int
+    output_tokens: int
+    cache_read_input_tokens: int
+    thinking_tokens: int
+    def __init__(self, model: _Optional[str] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ..., cache_read_input_tokens: _Optional[int] = ..., thinking_tokens: _Optional[int] = ...) -> None: ...
+
+class StreamTextBlockStartEvent(_message.Message):
+    __slots__ = ("block_id", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
+
+class StreamTextBlockDeltaEvent(_message.Message):
+    __slots__ = ("block_id", "delta", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    DELTA_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    delta: str
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., delta: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
+
+class StreamTextBlockEndEvent(_message.Message):
+    __slots__ = ("block_id", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
+
+class StreamThinkingBlockStartEvent(_message.Message):
+    __slots__ = ("block_id", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
+
+class StreamThinkingBlockDeltaEvent(_message.Message):
+    __slots__ = ("block_id", "delta", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    DELTA_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    delta: str
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., delta: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
+
+class StreamThinkingBlockEndEvent(_message.Message):
+    __slots__ = ("block_id", "message_id", "sequence", "elapsed_ms")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    ELAPSED_MS_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    message_id: str
+    sequence: int
+    elapsed_ms: int
+    def __init__(self, block_id: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ..., elapsed_ms: _Optional[int] = ...) -> None: ...
+
+class StreamToolCallStartEvent(_message.Message):
+    __slots__ = ("block_id", "tool_call_id", "tool_name", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    tool_call_id: str
+    tool_name: str
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
+
+class StreamToolCallDeltaEvent(_message.Message):
+    __slots__ = ("block_id", "tool_call_id", "tool_name", "delta", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
+    DELTA_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
+    tool_call_id: str
+    tool_name: str
+    delta: str
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., delta: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
+
+class StreamToolCallEndEvent(_message.Message):
+    __slots__ = ("block_id", "tool_call_id", "tool_name", "tool_args_json", "message_id", "sequence")
+    BLOCK_ID_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
     TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
     TOOL_ARGS_JSON_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    block_id: str
     tool_call_id: str
     tool_name: str
     tool_args_json: str
-    def __init__(self, tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_args_json: _Optional[str] = ...) -> None: ...
+    message_id: str
+    sequence: int
+    def __init__(self, block_id: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., message_id: _Optional[str] = ..., sequence: _Optional[int] = ...) -> None: ...
 
-class StreamToolResultEvent(_message.Message):
-    __slots__ = ("tool_call_id", "tool_name", "success", "result")
+class StreamToolResultStartEvent(_message.Message):
+    __slots__ = ("tool_call_id", "tool_name", "tool_args_json", "message_id")
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
+    TOOL_ARGS_JSON_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    tool_call_id: str
+    tool_name: str
+    tool_args_json: str
+    message_id: str
+    def __init__(self, tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., tool_args_json: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
+
+class StreamToolResultDeltaEvent(_message.Message):
+    __slots__ = ("tool_call_id", "delta", "message_id")
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    DELTA_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    tool_call_id: str
+    delta: str
+    message_id: str
+    def __init__(self, tool_call_id: _Optional[str] = ..., delta: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
+
+class StreamToolResultEndEvent(_message.Message):
+    __slots__ = ("tool_call_id", "tool_name", "success", "result", "message_id")
     TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
     TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     RESULT_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
     tool_call_id: str
     tool_name: str
     success: bool
     result: str
-    def __init__(self, tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., success: _Optional[bool] = ..., result: _Optional[str] = ...) -> None: ...
+    message_id: str
+    def __init__(self, tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., success: _Optional[bool] = ..., result: _Optional[str] = ..., message_id: _Optional[str] = ...) -> None: ...
+
+class StreamExceedMaxItersEvent(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
 
 class StreamMessageStoredEvent(_message.Message):
     __slots__ = ("message",)

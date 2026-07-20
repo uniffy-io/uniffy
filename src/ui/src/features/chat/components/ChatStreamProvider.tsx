@@ -16,6 +16,7 @@ import {
   addReactionToMessage,
   removeReactionFromMessage,
   appendDelta,
+  appendAgentThinking,
 } from '@/features/chat/store/chatMessagesSlice';
 import { fetchMembers, fetchThreadsInbox, fetchDrafts, markChannelRead } from '@/features/chat/store/chatThunks';
 import { draftUpserted, draftRemoved, draftKey } from '@/features/chat/store/chatDraftsSlice';
@@ -295,6 +296,20 @@ function handleChannelEvent(
           delta,
           sequence: Number(sequence),
           final,
+        }));
+      }
+      break;
+    }
+    case ChatEventType.AGENT_THINKING_DELTA: {
+      if (ce.payload.case === 'agentThinkingDelta' && ce.payload.value) {
+        const { messageId, blockId, delta, sequence, final, elapsedMs } = ce.payload.value;
+        dispatch(appendAgentThinking({
+          messageId,
+          blockId,
+          delta,
+          sequence: Number(sequence),
+          final,
+          elapsedMs: Number(elapsedMs),
         }));
       }
       break;

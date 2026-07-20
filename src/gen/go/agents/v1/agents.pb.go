@@ -60,7 +60,10 @@ type AgentInfo struct {
 	UserRole *v1.ContentRole `protobuf:"varint,22,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole,oneof" json:"user_role,omitempty"`
 	// Hydrated unified-tag rows assigned to this agent. Server-populated
 	// via “TagOperations.get_for_urns“; clients should treat as read-only.
-	Tags          []*v11.Tag `protobuf:"bytes,23,rep,name=tags,proto3" json:"tags,omitempty"`
+	Tags []*v11.Tag `protobuf:"bytes,23,rep,name=tags,proto3" json:"tags,omitempty"`
+	// JSON object of tuned model parameters (knob -> value), validated
+	// against the model's parameter schema. "{}" = provider defaults.
+	ModelParams   string `protobuf:"bytes,24,opt,name=model_params,json=modelParams,proto3" json:"model_params,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -256,6 +259,13 @@ func (x *AgentInfo) GetTags() []*v11.Tag {
 	return nil
 }
 
+func (x *AgentInfo) GetModelParams() string {
+	if x != nil {
+		return x.ModelParams
+	}
+	return ""
+}
+
 type CreateAgentRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -279,7 +289,9 @@ type CreateAgentRequest struct {
 	PromptId     *string         `protobuf:"bytes,15,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
 	BaselineRole *v1.ContentRole `protobuf:"varint,16,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Optional unified-tag ids to assign on create.
-	TagIds        []string `protobuf:"bytes,17,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	TagIds []string `protobuf:"bytes,17,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	// JSON object of tuned model parameters (knob -> value)
+	ModelParams   *string `protobuf:"bytes,18,opt,name=model_params,json=modelParams,proto3,oneof" json:"model_params,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -431,6 +443,13 @@ func (x *CreateAgentRequest) GetTagIds() []string {
 		return x.TagIds
 	}
 	return nil
+}
+
+func (x *CreateAgentRequest) GetModelParams() string {
+	if x != nil && x.ModelParams != nil {
+		return *x.ModelParams
+	}
+	return ""
 }
 
 type CreateAgentResponse struct {
@@ -873,7 +892,10 @@ type UpdateAgentRequest struct {
 	// tags; field unset (HasField=false) leaves them untouched. Mirrors
 	// the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
 	// pattern.
-	TagIds        *AgentTagIds `protobuf:"bytes,20,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
+	TagIds *AgentTagIds `protobuf:"bytes,20,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
+	// JSON object of tuned model parameters (knob -> value); replaces the
+	// stored object wholesale ("{}" resets to provider defaults)
+	ModelParams   *string `protobuf:"bytes,21,opt,name=model_params,json=modelParams,proto3,oneof" json:"model_params,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1046,6 +1068,13 @@ func (x *UpdateAgentRequest) GetTagIds() *AgentTagIds {
 		return x.TagIds
 	}
 	return nil
+}
+
+func (x *UpdateAgentRequest) GetModelParams() string {
+	if x != nil && x.ModelParams != nil {
+		return *x.ModelParams
+	}
+	return ""
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from
@@ -1410,7 +1439,7 @@ var File_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xc4\a\n" +
+	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xe7\a\n" +
 	"\tAgentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1443,10 +1472,11 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\tprompt_id\x18\x14 \x01(\tR\bpromptId\x12@\n" +
 	"\rbaseline_role\x18\x15 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x128\n" +
 	"\tuser_role\x18\x16 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\buserRole\x88\x01\x01\x12 \n" +
-	"\x04tags\x18\x17 \x03(\v2\f.tags.v1.TagR\x04tagsB\x10\n" +
+	"\x04tags\x18\x17 \x03(\v2\f.tags.v1.TagR\x04tags\x12!\n" +
+	"\fmodel_params\x18\x18 \x01(\tR\vmodelParamsB\x10\n" +
 	"\x0e_baseline_roleB\f\n" +
 	"\n" +
-	"_user_role\"\x9c\a\n" +
+	"_user_role\"\xd5\a\n" +
 	"\x12CreateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -1471,7 +1501,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\tprompt_id\x18\x0f \x01(\tH\tR\bpromptId\x88\x01\x01\x12@\n" +
 	"\rbaseline_role\x18\x10 \x01(\x0e2\x16.common.v1.ContentRoleH\n" +
 	"R\fbaselineRole\x88\x01\x01\x12\x17\n" +
-	"\atag_ids\x18\x11 \x03(\tR\x06tagIdsB\x0e\n" +
+	"\atag_ids\x18\x11 \x03(\tR\x06tagIds\x12&\n" +
+	"\fmodel_params\x18\x12 \x01(\tH\vR\vmodelParams\x88\x01\x01B\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
 	"\r_avatar_emojiB\x0e\n" +
@@ -1483,7 +1514,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x16_image_provider_key_idB\f\n" +
 	"\n" +
 	"_prompt_idB\x10\n" +
-	"\x0e_baseline_role\"A\n" +
+	"\x0e_baseline_roleB\x0f\n" +
+	"\r_model_params\"A\n" +
 	"\x13CreateAgentResponse\x12*\n" +
 	"\x05agent\x18\x01 \x01(\v2\x14.agents.v1.AgentInfoR\x05agent\">\n" +
 	"\x10GetAgentResponse\x12*\n" +
@@ -1515,7 +1547,7 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x06agents\x18\x01 \x03(\v2\x14.agents.v1.AgentInfoR\x06agents\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xcc\b\n" +
+	"pagination\"\x85\t\n" +
 	"\x12UpdateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x17\n" +
@@ -1543,7 +1575,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"R\bpromptId\x88\x01\x01\x12&\n" +
 	"\fclear_prompt\x18\x12 \x01(\bH\vR\vclearPrompt\x88\x01\x01\x12@\n" +
 	"\rbaseline_role\x18\x13 \x01(\x0e2\x16.common.v1.ContentRoleH\fR\fbaselineRole\x88\x01\x01\x124\n" +
-	"\atag_ids\x18\x14 \x01(\v2\x16.agents.v1.AgentTagIdsH\rR\x06tagIds\x88\x01\x01B\a\n" +
+	"\atag_ids\x18\x14 \x01(\v2\x16.agents.v1.AgentTagIdsH\rR\x06tagIds\x88\x01\x01\x12&\n" +
+	"\fmodel_params\x18\x15 \x01(\tH\x0eR\vmodelParams\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
@@ -1559,7 +1592,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\r_clear_promptB\x10\n" +
 	"\x0e_baseline_roleB\n" +
 	"\n" +
-	"\b_tag_ids\"\x1f\n" +
+	"\b_tag_idsB\x0f\n" +
+	"\r_model_params\"\x1f\n" +
 	"\vAgentTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"X\n" +
 	"\x12DeleteAgentRequest\x12'\n" +

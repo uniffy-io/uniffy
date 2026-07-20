@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import Column, DateTime, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -28,6 +29,12 @@ class AgentSession(SQLModel, table=True):
     model_override: str | None = Field(
         default=None,
         sa_column=Column(String(100), nullable=True),
+    )
+    # Per-session model-parameter overrides, resolved over the agent's
+    # stored model_params. NULL = no overrides.
+    model_params_override: dict | None = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
     )
     total_input_tokens: int = Field(default=0, nullable=False)
     total_output_tokens: int = Field(default=0, nullable=False)

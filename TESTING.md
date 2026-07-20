@@ -318,6 +318,52 @@ on two clients (web tab A, web tab B or mobile) plus a second user for the send 
 - [ ] Kill the network, type, restore the network: the next debounce saves silently (no error
       toasts at any point).
 
+## Agents: OpenRouter and xAI provider keys
+
+Both flows need a real key for the provider under test. Run as an org
+admin; the same steps must pass on cloud-style and self-hosted deploys
+(`(both products)`).
+
+- [ ] OpenRouter: `/agents` -> Config tab -> Add Key with provider
+      `OpenRouter` and a real `sk-or-...` key -> Validate succeeds and the
+      key shows valid -> the curated OpenRouter models (slugs like
+      `anthropic/claude-sonnet-5`) appear in the agent model pickers ->
+      send one message to an agent on an OpenRouter model -> the run log
+      shows token usage and a non-null cost.
+- [ ] xAI: same flow with provider `xAI (Grok)` and a real `xai-...` key
+      -> Grok models appear in the pickers -> send one message on a Grok
+      model -> token usage and cost are logged.
+
+## Agents: reasoning display + model parameters
+
+Needs one agent per provider under test on a reasoning-capable model
+(`(both products)`).
+
+- [ ] Agents tab -> Overview -> Model parameters: set Reasoning effort on
+      a reasoning model (e.g. Opus 4.8 at `xhigh`) -> ask a multi-step
+      question in the agent session view -> a "Thinking..." pane streams
+      reasoning ABOVE the answer, never interleaved with it, then flips to
+      "Thought for Ns" and auto-collapses when the answer starts.
+- [ ] Same agent mentioned in a chat channel: the pane streams on the
+      chat message too; markdown in the reasoning (bold section headers)
+      renders formatted, not as raw `**`.
+- [ ] Reload the page after the reply finishes: the collapsed "Thought
+      for Ns" pane is still there on the historical message (session view
+      AND chat channel) with the same duration.
+- [ ] Reload MID-stream: the live view reconnects via run replay and the
+      thinking pane content survives.
+- [ ] Switch the agent's primary model to a non-reasoning model: the
+      Reasoning effort control disappears and stale knob values are
+      dropped without an error; switching to a model that rejects
+      temperature (Opus 4.8, gpt-5.x) hides the temperature/top_p
+      sliders.
+- [ ] Per provider (anthropic, openai, google, openrouter, xai): one
+      reasoning-enabled message answers correctly with tools enabled (the
+      OpenAI path must exercise a tool call - it rides the Responses
+      API).
+- [ ] Mobile chat: mention the reasoning agent -> the pane streams,
+      collapses on answer start, and shows "Thought for Ns" when done.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

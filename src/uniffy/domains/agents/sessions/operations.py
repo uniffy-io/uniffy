@@ -164,6 +164,7 @@ class SessionOperations:
         kind: str,
         display_name: str | None = None,
         model_override: str | None = None,
+        model_params_override: dict | None = None,
     ) -> AgentSession:
         """Create a new conversation session."""
         await self._org_ops.require_org_member(user_id, organization_id)
@@ -178,6 +179,7 @@ class SessionOperations:
             kind=kind,
             display_name=display_name.strip() if display_name else None,
             model_override=model_override.strip() if model_override else None,
+            model_params_override=model_params_override or None,
         )
         self._session.add(agent_session)
         await self._session.commit()
@@ -262,6 +264,7 @@ class SessionOperations:
         session_id: UUID,
         display_name: str | None = None,
         model_override: str | None = None,
+        model_params_override: dict | None = None,
     ) -> AgentSession:
         """Update session settings; `None` arguments leave the field unchanged."""
         await self._org_ops.require_org_member(user_id, organization_id)
@@ -283,6 +286,9 @@ class SessionOperations:
 
         if model_override is not None:
             agent_session.model_override = model_override.strip() or None
+
+        if model_params_override is not None:
+            agent_session.model_params_override = model_params_override or None
 
         agent_session.updated_at = datetime.now(UTC)
         await self._session.commit()
@@ -334,6 +340,7 @@ class SessionOperations:
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
         invoked_skill_name: str | None = None,
+        thinking: list[dict] | None = None,
     ) -> AgentMessage:
         """Add a message and update session aggregates (tokens, count, model)."""
         await self._org_ops.require_org_member(user_id, organization_id)
@@ -368,6 +375,7 @@ class SessionOperations:
             file_ids=file_ids,
             is_thinking=is_thinking,
             invoked_skill_name=invoked_skill_name,
+            thinking=thinking or None,
         )
         self._session.add(message)
 

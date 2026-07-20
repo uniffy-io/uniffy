@@ -160,6 +160,9 @@ def session_to_proto(session: AgentSession) -> SessionInfo:
     if session.last_model_used:
         info.last_model_used = session.last_model_used
 
+    if session.model_params_override:
+        info.model_params_override = json.dumps(session.model_params_override)
+
     return info
 
 
@@ -172,6 +175,7 @@ def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> Mes
     info = MessageInfo(
         id=str(message.id),
         session_id=str(message.session_id),
+        thinking_json=json.dumps(message.thinking) if message.thinking else "",
         role=message_role_to_proto(message.role),
         input_tokens=message.input_tokens,
         output_tokens=message.output_tokens,

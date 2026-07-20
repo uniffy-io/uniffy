@@ -79,6 +79,7 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
         "soul_prompt": agent.soul_prompt,
         "primary_model": agent.primary_model,
         "fallback_models": list(agent.fallback_models or []),
+        "model_params": dict(agent.model_params or {}),
         "image_model": agent.image_model,
         "primary_provider_key_id": (
             str(agent.primary_provider_key_id)
@@ -126,6 +127,7 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
         soul_prompt=payload["soul_prompt"],
         primary_model=payload["primary_model"],
         fallback_models=payload.get("fallback_models") or [],
+        model_params=payload.get("model_params") or {},
         image_model=payload.get("image_model", ""),
         primary_provider_key_id=(
             UUID(payload["primary_provider_key_id"])

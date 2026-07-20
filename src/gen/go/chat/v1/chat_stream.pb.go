@@ -66,6 +66,9 @@ const (
 	ChatEventType_CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE  ChatEventType = 28
 	ChatEventType_CHAT_EVENT_TYPE_CALL_RING               ChatEventType = 29
 	ChatEventType_CHAT_EVENT_TYPE_CALL_HOST_CHANGED       ChatEventType = 30
+	// Incremental reasoning for an in-flight agent message. Rendered in a
+	// separate collapsible thinking pane, never merged into message content.
+	ChatEventType_CHAT_EVENT_TYPE_AGENT_THINKING_DELTA ChatEventType = 31
 )
 
 // Enum value maps for ChatEventType.
@@ -98,6 +101,7 @@ var (
 		28: "CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE",
 		29: "CHAT_EVENT_TYPE_CALL_RING",
 		30: "CHAT_EVENT_TYPE_CALL_HOST_CHANGED",
+		31: "CHAT_EVENT_TYPE_AGENT_THINKING_DELTA",
 	}
 	ChatEventType_value = map[string]int32{
 		"CHAT_EVENT_TYPE_UNSPECIFIED":                  0,
@@ -127,6 +131,7 @@ var (
 		"CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE":       28,
 		"CHAT_EVENT_TYPE_CALL_RING":                    29,
 		"CHAT_EVENT_TYPE_CALL_HOST_CHANGED":            30,
+		"CHAT_EVENT_TYPE_AGENT_THINKING_DELTA":         31,
 	}
 )
 
@@ -269,7 +274,7 @@ func (x AgentToolCallPayload_Status) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentToolCallPayload_Status.Descriptor instead.
 func (AgentToolCallPayload_Status) EnumDescriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{9, 0}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{10, 0}
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.
@@ -299,6 +304,7 @@ type ChatEvent struct {
 	//	*ChatEvent_CallParticipant
 	//	*ChatEvent_CallRing
 	//	*ChatEvent_CallHostChanged
+	//	*ChatEvent_AgentThinkingDelta
 	Payload       isChatEvent_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -515,6 +521,15 @@ func (x *ChatEvent) GetCallHostChanged() *CallHostChangedPayload {
 	return nil
 }
 
+func (x *ChatEvent) GetAgentThinkingDelta() *AgentThinkingDeltaPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_AgentThinkingDelta); ok {
+			return x.AgentThinkingDelta
+		}
+	}
+	return nil
+}
+
 type isChatEvent_Payload interface {
 	isChatEvent_Payload()
 }
@@ -602,6 +617,11 @@ type ChatEvent_CallHostChanged struct {
 	CallHostChanged *CallHostChangedPayload `protobuf:"bytes,26,opt,name=call_host_changed,json=callHostChanged,proto3,oneof"`
 }
 
+type ChatEvent_AgentThinkingDelta struct {
+	// AGENT_THINKING_DELTA
+	AgentThinkingDelta *AgentThinkingDeltaPayload `protobuf:"bytes,27,opt,name=agent_thinking_delta,json=agentThinkingDelta,proto3,oneof"`
+}
+
 func (*ChatEvent_Message) isChatEvent_Payload() {}
 
 func (*ChatEvent_MessageDeleted) isChatEvent_Payload() {}
@@ -635,6 +655,8 @@ func (*ChatEvent_CallParticipant) isChatEvent_Payload() {}
 func (*ChatEvent_CallRing) isChatEvent_Payload() {}
 
 func (*ChatEvent_CallHostChanged) isChatEvent_Payload() {}
+
+func (*ChatEvent_AgentThinkingDelta) isChatEvent_Payload() {}
 
 type MessageDeletedPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1146,6 +1168,104 @@ func (x *AgentTokenDeltaPayload) GetFinal() bool {
 	return false
 }
 
+// AgentThinkingDeltaPayload streams reasoning for an in-flight agent
+// message. Thinking is rendered in a collapsible pane keyed to
+// message_id + block_id and never appended to message content.
+// `final=true` closes the block and carries the runtime-stamped
+// duration for the "Thought for Ns" header.
+type AgentThinkingDeltaPayload struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	AgentId   string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	BlockId   string                 `protobuf:"bytes,3,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	Delta     string                 `protobuf:"bytes,4,opt,name=delta,proto3" json:"delta,omitempty"`
+	// Shares the per-message monotonic sequence with AGENT_TOKEN_DELTA.
+	Sequence      int32 `protobuf:"varint,5,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	Final         bool  `protobuf:"varint,6,opt,name=final,proto3" json:"final,omitempty"`
+	ElapsedMs     int32 `protobuf:"varint,7,opt,name=elapsed_ms,json=elapsedMs,proto3" json:"elapsed_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentThinkingDeltaPayload) Reset() {
+	*x = AgentThinkingDeltaPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentThinkingDeltaPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentThinkingDeltaPayload) ProtoMessage() {}
+
+func (x *AgentThinkingDeltaPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentThinkingDeltaPayload.ProtoReflect.Descriptor instead.
+func (*AgentThinkingDeltaPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AgentThinkingDeltaPayload) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *AgentThinkingDeltaPayload) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *AgentThinkingDeltaPayload) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *AgentThinkingDeltaPayload) GetDelta() string {
+	if x != nil {
+		return x.Delta
+	}
+	return ""
+}
+
+func (x *AgentThinkingDeltaPayload) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *AgentThinkingDeltaPayload) GetFinal() bool {
+	if x != nil {
+		return x.Final
+	}
+	return false
+}
+
+func (x *AgentThinkingDeltaPayload) GetElapsedMs() int32 {
+	if x != nil {
+		return x.ElapsedMs
+	}
+	return 0
+}
+
 // AgentToolCallPayload signals a tool invocation by an agent.
 // Status follows: STARTED -> COMPLETED/FAILED.
 type AgentToolCallPayload struct {
@@ -1166,7 +1286,7 @@ type AgentToolCallPayload struct {
 
 func (x *AgentToolCallPayload) Reset() {
 	*x = AgentToolCallPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1178,7 +1298,7 @@ func (x *AgentToolCallPayload) String() string {
 func (*AgentToolCallPayload) ProtoMessage() {}
 
 func (x *AgentToolCallPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[9]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1191,7 +1311,7 @@ func (x *AgentToolCallPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentToolCallPayload.ProtoReflect.Descriptor instead.
 func (*AgentToolCallPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{9}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AgentToolCallPayload) GetMessageId() string {
@@ -1263,7 +1383,7 @@ type AgentConfirmationRequestedPayload struct {
 
 func (x *AgentConfirmationRequestedPayload) Reset() {
 	*x = AgentConfirmationRequestedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1275,7 +1395,7 @@ func (x *AgentConfirmationRequestedPayload) String() string {
 func (*AgentConfirmationRequestedPayload) ProtoMessage() {}
 
 func (x *AgentConfirmationRequestedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[10]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1288,7 +1408,7 @@ func (x *AgentConfirmationRequestedPayload) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AgentConfirmationRequestedPayload.ProtoReflect.Descriptor instead.
 func (*AgentConfirmationRequestedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{10}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AgentConfirmationRequestedPayload) GetMessageId() string {
@@ -1355,7 +1475,7 @@ type AgentConfirmationResolvedPayload struct {
 
 func (x *AgentConfirmationResolvedPayload) Reset() {
 	*x = AgentConfirmationResolvedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[11]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1367,7 +1487,7 @@ func (x *AgentConfirmationResolvedPayload) String() string {
 func (*AgentConfirmationResolvedPayload) ProtoMessage() {}
 
 func (x *AgentConfirmationResolvedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[11]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1380,7 +1500,7 @@ func (x *AgentConfirmationResolvedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentConfirmationResolvedPayload.ProtoReflect.Descriptor instead.
 func (*AgentConfirmationResolvedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{11}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AgentConfirmationResolvedPayload) GetRequestId() string {
@@ -1430,7 +1550,7 @@ type CallLifecyclePayload struct {
 
 func (x *CallLifecyclePayload) Reset() {
 	*x = CallLifecyclePayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[12]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1442,7 +1562,7 @@ func (x *CallLifecyclePayload) String() string {
 func (*CallLifecyclePayload) ProtoMessage() {}
 
 func (x *CallLifecyclePayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[12]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1455,7 +1575,7 @@ func (x *CallLifecyclePayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallLifecyclePayload.ProtoReflect.Descriptor instead.
 func (*CallLifecyclePayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{12}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CallLifecyclePayload) GetCall() *v1.Call {
@@ -1479,7 +1599,7 @@ type CallParticipantEventPayload struct {
 
 func (x *CallParticipantEventPayload) Reset() {
 	*x = CallParticipantEventPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1491,7 +1611,7 @@ func (x *CallParticipantEventPayload) String() string {
 func (*CallParticipantEventPayload) ProtoMessage() {}
 
 func (x *CallParticipantEventPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[13]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1504,7 +1624,7 @@ func (x *CallParticipantEventPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallParticipantEventPayload.ProtoReflect.Descriptor instead.
 func (*CallParticipantEventPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{13}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CallParticipantEventPayload) GetCallId() string {
@@ -1545,7 +1665,7 @@ type CallRingPayload struct {
 
 func (x *CallRingPayload) Reset() {
 	*x = CallRingPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[14]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1557,7 +1677,7 @@ func (x *CallRingPayload) String() string {
 func (*CallRingPayload) ProtoMessage() {}
 
 func (x *CallRingPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[14]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1570,7 +1690,7 @@ func (x *CallRingPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallRingPayload.ProtoReflect.Descriptor instead.
 func (*CallRingPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{14}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CallRingPayload) GetCallId() string {
@@ -1632,7 +1752,7 @@ type CallHostChangedPayload struct {
 
 func (x *CallHostChangedPayload) Reset() {
 	*x = CallHostChangedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[15]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1644,7 +1764,7 @@ func (x *CallHostChangedPayload) String() string {
 func (*CallHostChangedPayload) ProtoMessage() {}
 
 func (x *CallHostChangedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[15]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1657,7 +1777,7 @@ func (x *CallHostChangedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallHostChangedPayload.ProtoReflect.Descriptor instead.
 func (*CallHostChangedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{15}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CallHostChangedPayload) GetCallId() string {
@@ -1683,7 +1803,7 @@ type StreamUserChatEventsRequest struct {
 
 func (x *StreamUserChatEventsRequest) Reset() {
 	*x = StreamUserChatEventsRequest{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[16]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1695,7 +1815,7 @@ func (x *StreamUserChatEventsRequest) String() string {
 func (*StreamUserChatEventsRequest) ProtoMessage() {}
 
 func (x *StreamUserChatEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[16]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1708,7 +1828,7 @@ func (x *StreamUserChatEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamUserChatEventsRequest.ProtoReflect.Descriptor instead.
 func (*StreamUserChatEventsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{16}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *StreamUserChatEventsRequest) GetOrganizationId() string {
@@ -1736,7 +1856,7 @@ type StreamUserChatEventsResponse struct {
 
 func (x *StreamUserChatEventsResponse) Reset() {
 	*x = StreamUserChatEventsResponse{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[17]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1748,7 +1868,7 @@ func (x *StreamUserChatEventsResponse) String() string {
 func (*StreamUserChatEventsResponse) ProtoMessage() {}
 
 func (x *StreamUserChatEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[17]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1761,7 +1881,7 @@ func (x *StreamUserChatEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamUserChatEventsResponse.ProtoReflect.Descriptor instead.
 func (*StreamUserChatEventsResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{17}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *StreamUserChatEventsResponse) GetEventType() UserChatEventType {
@@ -1883,7 +2003,7 @@ type DraftChangedPayload struct {
 
 func (x *DraftChangedPayload) Reset() {
 	*x = DraftChangedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1895,7 +2015,7 @@ func (x *DraftChangedPayload) String() string {
 func (*DraftChangedPayload) ProtoMessage() {}
 
 func (x *DraftChangedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[18]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1908,7 +2028,7 @@ func (x *DraftChangedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DraftChangedPayload.ProtoReflect.Descriptor instead.
 func (*DraftChangedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{18}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *DraftChangedPayload) GetChannelId() string {
@@ -1964,7 +2084,7 @@ type UnreadCountPayload struct {
 
 func (x *UnreadCountPayload) Reset() {
 	*x = UnreadCountPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1976,7 +2096,7 @@ func (x *UnreadCountPayload) String() string {
 func (*UnreadCountPayload) ProtoMessage() {}
 
 func (x *UnreadCountPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[19]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1989,7 +2109,7 @@ func (x *UnreadCountPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnreadCountPayload.ProtoReflect.Descriptor instead.
 func (*UnreadCountPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{19}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *UnreadCountPayload) GetChannelId() string {
@@ -2026,7 +2146,7 @@ type ThreadActivityPayload struct {
 
 func (x *ThreadActivityPayload) Reset() {
 	*x = ThreadActivityPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2038,7 +2158,7 @@ func (x *ThreadActivityPayload) String() string {
 func (*ThreadActivityPayload) ProtoMessage() {}
 
 func (x *ThreadActivityPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[20]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2051,7 +2171,7 @@ func (x *ThreadActivityPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadActivityPayload.ProtoReflect.Descriptor instead.
 func (*ThreadActivityPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{20}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ThreadActivityPayload) GetRootMessageId() string {
@@ -2104,7 +2224,7 @@ type MentionReceivedPayload struct {
 
 func (x *MentionReceivedPayload) Reset() {
 	*x = MentionReceivedPayload{}
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[21]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2116,7 +2236,7 @@ func (x *MentionReceivedPayload) String() string {
 func (*MentionReceivedPayload) ProtoMessage() {}
 
 func (x *MentionReceivedPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_stream_proto_msgTypes[21]
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2129,7 +2249,7 @@ func (x *MentionReceivedPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MentionReceivedPayload.ProtoReflect.Descriptor instead.
 func (*MentionReceivedPayload) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{21}
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *MentionReceivedPayload) GetChannelId() string {
@@ -2178,8 +2298,7 @@ var File_chat_v1_chat_stream_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
-	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x14calls/v1/calls.proto\x1a\x12chat/v1/chat.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xed\n" +
-	"\n" +
+	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x14calls/v1/calls.proto\x1a\x12chat/v1/chat.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\v\n" +
 	"\tChatEvent\x125\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x16.chat.v1.ChatEventTypeR\teventType\x128\n" +
@@ -2203,7 +2322,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x0ecall_lifecycle\x18\x17 \x01(\v2\x1d.chat.v1.CallLifecyclePayloadH\x00R\rcallLifecycle\x12Q\n" +
 	"\x10call_participant\x18\x18 \x01(\v2$.chat.v1.CallParticipantEventPayloadH\x00R\x0fcallParticipant\x127\n" +
 	"\tcall_ring\x18\x19 \x01(\v2\x18.chat.v1.CallRingPayloadH\x00R\bcallRing\x12M\n" +
-	"\x11call_host_changed\x18\x1a \x01(\v2\x1f.chat.v1.CallHostChangedPayloadH\x00R\x0fcallHostChangedB\t\n" +
+	"\x11call_host_changed\x18\x1a \x01(\v2\x1f.chat.v1.CallHostChangedPayloadH\x00R\x0fcallHostChanged\x12V\n" +
+	"\x14agent_thinking_delta\x18\x1b \x01(\v2\".chat.v1.AgentThinkingDeltaPayloadH\x00R\x12agentThinkingDeltaB\t\n" +
 	"\apayload\"q\n" +
 	"\x15MessageDeletedPayload\x12\x1d\n" +
 	"\n" +
@@ -2247,7 +2367,17 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x14\n" +
 	"\x05delta\x18\x03 \x01(\tR\x05delta\x12\x1a\n" +
 	"\bsequence\x18\x04 \x01(\x05R\bsequence\x12\x14\n" +
-	"\x05final\x18\x05 \x01(\bR\x05final\"\x93\x03\n" +
+	"\x05final\x18\x05 \x01(\bR\x05final\"\xd7\x01\n" +
+	"\x19AgentThinkingDeltaPayload\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x19\n" +
+	"\bblock_id\x18\x03 \x01(\tR\ablockId\x12\x14\n" +
+	"\x05delta\x18\x04 \x01(\tR\x05delta\x12\x1a\n" +
+	"\bsequence\x18\x05 \x01(\x05R\bsequence\x12\x14\n" +
+	"\x05final\x18\x06 \x01(\bR\x05final\x12\x1d\n" +
+	"\n" +
+	"elapsed_ms\x18\a \x01(\x05R\telapsedMs\"\x93\x03\n" +
 	"\x14AgentToolCallPayload\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x19\n" +
@@ -2351,7 +2481,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x1f\n" +
 	"\vsender_name\x18\x05 \x01(\tR\n" +
 	"senderName\x12\x18\n" +
-	"\apreview\x18\x06 \x01(\tR\apreview*\x82\b\n" +
+	"\apreview\x18\x06 \x01(\tR\apreview*\xac\b\n" +
 	"\rChatEventType\x12\x1f\n" +
 	"\x1bCHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_MESSAGE_CREATED\x10\x01\x12#\n" +
@@ -2380,7 +2510,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"%CHAT_EVENT_TYPE_CALL_PARTICIPANT_LEFT\x10\x1b\x12*\n" +
 	"&CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE\x10\x1c\x12\x1d\n" +
 	"\x19CHAT_EVENT_TYPE_CALL_RING\x10\x1d\x12%\n" +
-	"!CHAT_EVENT_TYPE_CALL_HOST_CHANGED\x10\x1e*\xb1\x02\n" +
+	"!CHAT_EVENT_TYPE_CALL_HOST_CHANGED\x10\x1e\x12(\n" +
+	"$CHAT_EVENT_TYPE_AGENT_THINKING_DELTA\x10\x1f*\xb1\x02\n" +
 	"\x11UserChatEventType\x12$\n" +
 	" USER_CHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12-\n" +
 	")USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED\x10\x01\x12(\n" +
@@ -2405,7 +2536,7 @@ func file_chat_v1_chat_stream_proto_rawDescGZIP() []byte {
 }
 
 var file_chat_v1_chat_stream_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_chat_v1_chat_stream_proto_goTypes = []any{
 	(ChatEventType)(0),                        // 0: chat.v1.ChatEventType
 	(UserChatEventType)(0),                    // 1: chat.v1.UserChatEventType
@@ -2419,75 +2550,77 @@ var file_chat_v1_chat_stream_proto_goTypes = []any{
 	(*ThreadUpdatedPayload)(nil),              // 9: chat.v1.ThreadUpdatedPayload
 	(*AgentTypingPayload)(nil),                // 10: chat.v1.AgentTypingPayload
 	(*AgentTokenDeltaPayload)(nil),            // 11: chat.v1.AgentTokenDeltaPayload
-	(*AgentToolCallPayload)(nil),              // 12: chat.v1.AgentToolCallPayload
-	(*AgentConfirmationRequestedPayload)(nil), // 13: chat.v1.AgentConfirmationRequestedPayload
-	(*AgentConfirmationResolvedPayload)(nil),  // 14: chat.v1.AgentConfirmationResolvedPayload
-	(*CallLifecyclePayload)(nil),              // 15: chat.v1.CallLifecyclePayload
-	(*CallParticipantEventPayload)(nil),       // 16: chat.v1.CallParticipantEventPayload
-	(*CallRingPayload)(nil),                   // 17: chat.v1.CallRingPayload
-	(*CallHostChangedPayload)(nil),            // 18: chat.v1.CallHostChangedPayload
-	(*StreamUserChatEventsRequest)(nil),       // 19: chat.v1.StreamUserChatEventsRequest
-	(*StreamUserChatEventsResponse)(nil),      // 20: chat.v1.StreamUserChatEventsResponse
-	(*DraftChangedPayload)(nil),               // 21: chat.v1.DraftChangedPayload
-	(*UnreadCountPayload)(nil),                // 22: chat.v1.UnreadCountPayload
-	(*ThreadActivityPayload)(nil),             // 23: chat.v1.ThreadActivityPayload
-	(*MentionReceivedPayload)(nil),            // 24: chat.v1.MentionReceivedPayload
-	(*timestamppb.Timestamp)(nil),             // 25: google.protobuf.Timestamp
-	(*ChatMessage)(nil),                       // 26: chat.v1.ChatMessage
-	(*ChatChannel)(nil),                       // 27: chat.v1.ChatChannel
-	(ChannelRole)(0),                          // 28: chat.v1.ChannelRole
-	(AgentConfirmationDecision)(0),            // 29: chat.v1.AgentConfirmationDecision
-	(*v1.Call)(nil),                           // 30: calls.v1.Call
-	(*v1.CallParticipant)(nil),                // 31: calls.v1.CallParticipant
-	(v1.CallType)(0),                          // 32: calls.v1.CallType
+	(*AgentThinkingDeltaPayload)(nil),         // 12: chat.v1.AgentThinkingDeltaPayload
+	(*AgentToolCallPayload)(nil),              // 13: chat.v1.AgentToolCallPayload
+	(*AgentConfirmationRequestedPayload)(nil), // 14: chat.v1.AgentConfirmationRequestedPayload
+	(*AgentConfirmationResolvedPayload)(nil),  // 15: chat.v1.AgentConfirmationResolvedPayload
+	(*CallLifecyclePayload)(nil),              // 16: chat.v1.CallLifecyclePayload
+	(*CallParticipantEventPayload)(nil),       // 17: chat.v1.CallParticipantEventPayload
+	(*CallRingPayload)(nil),                   // 18: chat.v1.CallRingPayload
+	(*CallHostChangedPayload)(nil),            // 19: chat.v1.CallHostChangedPayload
+	(*StreamUserChatEventsRequest)(nil),       // 20: chat.v1.StreamUserChatEventsRequest
+	(*StreamUserChatEventsResponse)(nil),      // 21: chat.v1.StreamUserChatEventsResponse
+	(*DraftChangedPayload)(nil),               // 22: chat.v1.DraftChangedPayload
+	(*UnreadCountPayload)(nil),                // 23: chat.v1.UnreadCountPayload
+	(*ThreadActivityPayload)(nil),             // 24: chat.v1.ThreadActivityPayload
+	(*MentionReceivedPayload)(nil),            // 25: chat.v1.MentionReceivedPayload
+	(*timestamppb.Timestamp)(nil),             // 26: google.protobuf.Timestamp
+	(*ChatMessage)(nil),                       // 27: chat.v1.ChatMessage
+	(*ChatChannel)(nil),                       // 28: chat.v1.ChatChannel
+	(ChannelRole)(0),                          // 29: chat.v1.ChannelRole
+	(AgentConfirmationDecision)(0),            // 30: chat.v1.AgentConfirmationDecision
+	(*v1.Call)(nil),                           // 31: calls.v1.Call
+	(*v1.CallParticipant)(nil),                // 32: calls.v1.CallParticipant
+	(v1.CallType)(0),                          // 33: calls.v1.CallType
 }
 var file_chat_v1_chat_stream_proto_depIdxs = []int32{
 	0,  // 0: chat.v1.ChatEvent.event_type:type_name -> chat.v1.ChatEventType
-	25, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	26, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
+	26, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	27, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
 	4,  // 3: chat.v1.ChatEvent.message_deleted:type_name -> chat.v1.MessageDeletedPayload
 	5,  // 4: chat.v1.ChatEvent.reaction:type_name -> chat.v1.ReactionPayload
 	6,  // 5: chat.v1.ChatEvent.typing:type_name -> chat.v1.TypingPayload
 	7,  // 6: chat.v1.ChatEvent.member:type_name -> chat.v1.MemberPayload
-	27, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
+	28, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
 	9,  // 8: chat.v1.ChatEvent.thread_updated:type_name -> chat.v1.ThreadUpdatedPayload
 	10, // 9: chat.v1.ChatEvent.agent_typing:type_name -> chat.v1.AgentTypingPayload
 	11, // 10: chat.v1.ChatEvent.agent_token_delta:type_name -> chat.v1.AgentTokenDeltaPayload
-	12, // 11: chat.v1.ChatEvent.agent_tool_call:type_name -> chat.v1.AgentToolCallPayload
-	13, // 12: chat.v1.ChatEvent.agent_confirmation_requested:type_name -> chat.v1.AgentConfirmationRequestedPayload
-	14, // 13: chat.v1.ChatEvent.agent_confirmation_resolved:type_name -> chat.v1.AgentConfirmationResolvedPayload
+	13, // 11: chat.v1.ChatEvent.agent_tool_call:type_name -> chat.v1.AgentToolCallPayload
+	14, // 12: chat.v1.ChatEvent.agent_confirmation_requested:type_name -> chat.v1.AgentConfirmationRequestedPayload
+	15, // 13: chat.v1.ChatEvent.agent_confirmation_resolved:type_name -> chat.v1.AgentConfirmationResolvedPayload
 	8,  // 14: chat.v1.ChatEvent.members_changed:type_name -> chat.v1.MembersChangedPayload
-	15, // 15: chat.v1.ChatEvent.call_lifecycle:type_name -> chat.v1.CallLifecyclePayload
-	16, // 16: chat.v1.ChatEvent.call_participant:type_name -> chat.v1.CallParticipantEventPayload
-	17, // 17: chat.v1.ChatEvent.call_ring:type_name -> chat.v1.CallRingPayload
-	18, // 18: chat.v1.ChatEvent.call_host_changed:type_name -> chat.v1.CallHostChangedPayload
-	25, // 19: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
-	28, // 20: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
-	25, // 21: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
-	2,  // 22: chat.v1.AgentToolCallPayload.status:type_name -> chat.v1.AgentToolCallPayload.Status
-	25, // 23: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
-	29, // 24: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
-	25, // 25: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
-	30, // 26: chat.v1.CallLifecyclePayload.call:type_name -> calls.v1.Call
-	31, // 27: chat.v1.CallParticipantEventPayload.participant:type_name -> calls.v1.CallParticipant
-	32, // 28: chat.v1.CallRingPayload.call_type:type_name -> calls.v1.CallType
-	25, // 29: chat.v1.CallRingPayload.expires_at:type_name -> google.protobuf.Timestamp
-	1,  // 30: chat.v1.StreamUserChatEventsResponse.event_type:type_name -> chat.v1.UserChatEventType
-	25, // 31: chat.v1.StreamUserChatEventsResponse.timestamp:type_name -> google.protobuf.Timestamp
-	22, // 32: chat.v1.StreamUserChatEventsResponse.unread_count:type_name -> chat.v1.UnreadCountPayload
-	23, // 33: chat.v1.StreamUserChatEventsResponse.thread_activity:type_name -> chat.v1.ThreadActivityPayload
-	24, // 34: chat.v1.StreamUserChatEventsResponse.mention_received:type_name -> chat.v1.MentionReceivedPayload
-	3,  // 35: chat.v1.StreamUserChatEventsResponse.channel_event:type_name -> chat.v1.ChatEvent
-	21, // 36: chat.v1.StreamUserChatEventsResponse.draft_changed:type_name -> chat.v1.DraftChangedPayload
-	25, // 37: chat.v1.DraftChangedPayload.updated_at:type_name -> google.protobuf.Timestamp
-	25, // 38: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
-	19, // 39: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
-	20, // 40: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.StreamUserChatEventsResponse
-	40, // [40:41] is the sub-list for method output_type
-	39, // [39:40] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	16, // 15: chat.v1.ChatEvent.call_lifecycle:type_name -> chat.v1.CallLifecyclePayload
+	17, // 16: chat.v1.ChatEvent.call_participant:type_name -> chat.v1.CallParticipantEventPayload
+	18, // 17: chat.v1.ChatEvent.call_ring:type_name -> chat.v1.CallRingPayload
+	19, // 18: chat.v1.ChatEvent.call_host_changed:type_name -> chat.v1.CallHostChangedPayload
+	12, // 19: chat.v1.ChatEvent.agent_thinking_delta:type_name -> chat.v1.AgentThinkingDeltaPayload
+	26, // 20: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
+	29, // 21: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
+	26, // 22: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	2,  // 23: chat.v1.AgentToolCallPayload.status:type_name -> chat.v1.AgentToolCallPayload.Status
+	26, // 24: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
+	30, // 25: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
+	26, // 26: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
+	31, // 27: chat.v1.CallLifecyclePayload.call:type_name -> calls.v1.Call
+	32, // 28: chat.v1.CallParticipantEventPayload.participant:type_name -> calls.v1.CallParticipant
+	33, // 29: chat.v1.CallRingPayload.call_type:type_name -> calls.v1.CallType
+	26, // 30: chat.v1.CallRingPayload.expires_at:type_name -> google.protobuf.Timestamp
+	1,  // 31: chat.v1.StreamUserChatEventsResponse.event_type:type_name -> chat.v1.UserChatEventType
+	26, // 32: chat.v1.StreamUserChatEventsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	23, // 33: chat.v1.StreamUserChatEventsResponse.unread_count:type_name -> chat.v1.UnreadCountPayload
+	24, // 34: chat.v1.StreamUserChatEventsResponse.thread_activity:type_name -> chat.v1.ThreadActivityPayload
+	25, // 35: chat.v1.StreamUserChatEventsResponse.mention_received:type_name -> chat.v1.MentionReceivedPayload
+	3,  // 36: chat.v1.StreamUserChatEventsResponse.channel_event:type_name -> chat.v1.ChatEvent
+	22, // 37: chat.v1.StreamUserChatEventsResponse.draft_changed:type_name -> chat.v1.DraftChangedPayload
+	26, // 38: chat.v1.DraftChangedPayload.updated_at:type_name -> google.protobuf.Timestamp
+	26, // 39: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	20, // 40: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
+	21, // 41: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.StreamUserChatEventsResponse
+	41, // [41:42] is the sub-list for method output_type
+	40, // [40:41] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_chat_v1_chat_stream_proto_init() }
@@ -2514,26 +2647,27 @@ func file_chat_v1_chat_stream_proto_init() {
 		(*ChatEvent_CallParticipant)(nil),
 		(*ChatEvent_CallRing)(nil),
 		(*ChatEvent_CallHostChanged)(nil),
+		(*ChatEvent_AgentThinkingDelta)(nil),
 	}
 	file_chat_v1_chat_stream_proto_msgTypes[4].OneofWrappers = []any{}
 	file_chat_v1_chat_stream_proto_msgTypes[7].OneofWrappers = []any{}
-	file_chat_v1_chat_stream_proto_msgTypes[9].OneofWrappers = []any{}
-	file_chat_v1_chat_stream_proto_msgTypes[14].OneofWrappers = []any{}
-	file_chat_v1_chat_stream_proto_msgTypes[17].OneofWrappers = []any{
+	file_chat_v1_chat_stream_proto_msgTypes[10].OneofWrappers = []any{}
+	file_chat_v1_chat_stream_proto_msgTypes[15].OneofWrappers = []any{}
+	file_chat_v1_chat_stream_proto_msgTypes[18].OneofWrappers = []any{
 		(*StreamUserChatEventsResponse_UnreadCount)(nil),
 		(*StreamUserChatEventsResponse_ThreadActivity)(nil),
 		(*StreamUserChatEventsResponse_MentionReceived)(nil),
 		(*StreamUserChatEventsResponse_ChannelEvent)(nil),
 		(*StreamUserChatEventsResponse_DraftChanged)(nil),
 	}
-	file_chat_v1_chat_stream_proto_msgTypes[18].OneofWrappers = []any{}
+	file_chat_v1_chat_stream_proto_msgTypes[19].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_v1_chat_stream_proto_rawDesc), len(file_chat_v1_chat_stream_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -282,9 +282,12 @@ type ModelInfo struct {
 	SupportsImageGeneration bool `protobuf:"varint,17,opt,name=supports_image_generation,json=supportsImageGeneration,proto3" json:"supports_image_generation,omitempty"`
 	// Whether the id resolves to a curated catalog entry (vs a live-API model
 	// with no catalog row). The chat-model pickers show only catalog-known models.
-	CatalogKnown  bool `protobuf:"varint,18,opt,name=catalog_known,json=catalogKnown,proto3" json:"catalog_known,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CatalogKnown bool `protobuf:"varint,18,opt,name=catalog_known,json=catalogKnown,proto3" json:"catalog_known,omitempty"`
+	// JSON object describing the model's tunable parameters (knob -> bounded
+	// spec, merged from the catalog); "" when the model is not catalog-known
+	ParameterSchemaJson string `protobuf:"bytes,19,opt,name=parameter_schema_json,json=parameterSchemaJson,proto3" json:"parameter_schema_json,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ModelInfo) Reset() {
@@ -441,6 +444,13 @@ func (x *ModelInfo) GetCatalogKnown() bool {
 		return x.CatalogKnown
 	}
 	return false
+}
+
+func (x *ModelInfo) GetParameterSchemaJson() string {
+	if x != nil {
+		return x.ParameterSchemaJson
+	}
+	return ""
 }
 
 // Request to add a new provider key
@@ -1262,7 +1272,7 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x12_last_validated_atB\x0f\n" +
 	"\r_last_used_atB\r\n" +
 	"\v_last_errorB\x10\n" +
-	"\x0e_baseline_role\"\xe4\x05\n" +
+	"\x0e_baseline_role\"\x98\x06\n" +
 	"\tModelInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
@@ -1285,7 +1295,8 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x11cache_read_per_1m\x18\x0f \x01(\tR\x0ecacheReadPer1m\x12+\n" +
 	"\x12cache_write_per_1m\x18\x10 \x01(\tR\x0fcacheWritePer1m\x12:\n" +
 	"\x19supports_image_generation\x18\x11 \x01(\bR\x17supportsImageGeneration\x12#\n" +
-	"\rcatalog_known\x18\x12 \x01(\bR\fcatalogKnown\"\xf7\x02\n" +
+	"\rcatalog_known\x18\x12 \x01(\bR\fcatalogKnown\x122\n" +
+	"\x15parameter_schema_json\x18\x13 \x01(\tR\x13parameterSchemaJson\"\xf7\x02\n" +
 	"\x15AddProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12B\n" +

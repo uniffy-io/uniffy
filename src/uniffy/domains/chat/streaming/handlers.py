@@ -34,6 +34,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 from uniffy_proto.chat.v1.chat_stream_pb2 import (
     AgentConfirmationRequestedPayload,
     AgentConfirmationResolvedPayload,
+    AgentThinkingDeltaPayload,
     AgentTokenDeltaPayload,
     AgentToolCallPayload,
     AgentTypingPayload,
@@ -238,6 +239,22 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
                 delta=payload.get("delta", ""),
                 sequence=int(payload.get("sequence", 0)),
                 final=bool(payload.get("final", False)),
+            ),
+        )
+
+    if event_type == evt.AGENT_THINKING_DELTA:
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_AGENT_THINKING_DELTA,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            agent_thinking_delta=AgentThinkingDeltaPayload(
+                message_id=payload.get("message_id", ""),
+                agent_id=payload.get("agent_id", ""),
+                block_id=payload.get("block_id", ""),
+                delta=payload.get("delta", ""),
+                sequence=int(payload.get("sequence", 0)),
+                final=bool(payload.get("final", False)),
+                elapsed_ms=int(payload.get("elapsed_ms", 0)),
             ),
         )
 
@@ -585,6 +602,7 @@ _CHANNEL_EVENT_TYPES = {
     evt.THREAD_UPDATED,
     evt.AGENT_TYPING,
     evt.AGENT_TOKEN_DELTA,
+    evt.AGENT_THINKING_DELTA,
     evt.AGENT_TOOL_CALL,
     evt.AGENT_CONFIRMATION_REQUESTED,
     evt.AGENT_CONFIRMATION_RESOLVED,

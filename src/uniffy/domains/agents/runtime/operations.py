@@ -7,6 +7,7 @@ import base64
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
+from dataclasses import field as dataclass_field
 from uuid import UUID
 
 from loguru import logger
@@ -35,12 +36,10 @@ from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.agents.pricing import PRICING_CURRENCY, compute_text_cost, get_pricing
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
-    DoneEvent,
-    ErrorEvent,
+    EventType,
     StreamEvent,
-    TokenEvent,
-    ToolCallEvent,
 )
+from uniffy.domains.agents.providers.catalog import resolve_request_params
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.destinations import (
@@ -57,16 +56,6 @@ from uniffy.domains.agents.runtime.prompt import (
     build_system_prompt,
     skill_passes_activation,
     to_skill_prompt_entry,
-)
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeConfirmationRequiredEvent,
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeMessageStoredEvent,
-    RuntimeStreamEvent,
-    RuntimeTokenEvent,
-    RuntimeToolCallEvent,
-    RuntimeToolResultEvent,
 )
 from uniffy.domains.agents.runtime.writers import (
     ChatChannelMessageWriter,
@@ -517,6 +506,12 @@ class RuntimeOperations:
             agent_fallback_models=agent.fallback_models or [],
             provider=provider,
         )
+        request_params = resolve_request_params(
+            agent.model_params,
+            agent_session.model_params_override,
+            provider.name,
+            model,
+        )
 
         # 8b. Look up model context window for token-based compaction
         context_window_tokens = await _get_model_context_window(provider, model)
@@ -594,6 +589,7 @@ class RuntimeOperations:
                 system=system_prompt,
                 tools=tool_schemas,
                 cache_key=str(agent_session.agent_id),
+                params=request_params,
             )
 
             # 13. Agentic tool loop
@@ -621,6 +617,7 @@ class RuntimeOperations:
                     result=result,
                     executor=executor,
                     run_tool_calls=run_tool_calls,
+                    model_params=request_params,
                 )
                 tool_iterations = len(run_tool_calls)
 
@@ -694,6 +691,7 @@ class RuntimeOperations:
         result: CompletionResult,
         executor: ToolExecutor,
         run_tool_calls: list[dict] | None = None,
+        model_params: dict | None = None,
     ) -> CompletionResult:
         """Run the tool-use loop until the LLM produces a final response.
 
@@ -744,8 +742,11 @@ class RuntimeOperations:
                 tool_calls=len(result.tool_calls),
             )
 
-            # Build assistant message content blocks (text + tool_use)
-            assistant_content: list[dict] = []
+            # Build assistant message content blocks. Provider thinking
+            # blocks (signature included) MUST lead the turn when
+            # continuing with tool results or the API rejects it; they
+            # live only in this in-memory continuation, never in rows.
+            assistant_content: list[dict] = [*result.thinking_blocks]
             if result.content:
                 assistant_content.append({"type": "text", "text": result.content})
             for tc in result.tool_calls:
@@ -836,6 +837,7 @@ class RuntimeOperations:
                 system=system_prompt,
                 tools=tool_schemas,
                 cache_key=str(agent_id),
+                params=model_params,
             )
 
             # If the LLM is done (no more tool calls), exit the loop
@@ -1004,7 +1006,7 @@ class RuntimeOperations:
         organization_id: UUID,
         message_id: UUID,
         user_timezone: str | None = None,
-    ) -> AsyncIterator[RuntimeStreamEvent]:
+    ) -> AsyncIterator[StreamEvent]:
         """Re-run the agent from an existing edited user message.
 
         The anchor must be a non-invalidated user-role row whose
@@ -1045,7 +1047,7 @@ class RuntimeOperations:
         user_timezone: str | None = None,
         invoked_skill_id: UUID | None = None,
         rerun_anchor: AgentMessage | None = None,
-    ) -> AsyncIterator[RuntimeStreamEvent]:
+    ) -> AsyncIterator[StreamEvent]:
         """Execute the send-message flow with streaming token output.
 
         Same setup as send_message (verify org, get session, agent, provider,
@@ -1066,7 +1068,7 @@ class RuntimeOperations:
 
         Yields
         ------
-        RuntimeStreamEvent
+        StreamEvent
             Stream events: tokens, tool calls, tool results, stored messages,
             done, or error.
 
@@ -1232,6 +1234,12 @@ class RuntimeOperations:
             agent_fallback_models=agent.fallback_models or [],
             provider=provider,
         )
+        request_params = resolve_request_params(
+            agent.model_params,
+            agent_session.model_params_override if agent_session else None,
+            provider.name,
+            model,
+        )
 
         # Look up model context window for token-based compaction
         context_window_tokens = await _get_model_context_window(provider, model)
@@ -1298,11 +1306,13 @@ class RuntimeOperations:
                 file_ids=[f.file_id for f in files] if files else None,
                 invoked_skill_name=invoked_entry.display_name if invoked_entry else None,
             )
-            yield RuntimeMessageStoredEvent(message=user_message)
+            yield StreamEvent(type=EventType.MESSAGE_STORED, message=user_message)
         else:
             # Re-run path: the anchor already lives in DB; emit it so the
             # client can reconcile the optimistic edit state.
-            yield RuntimeMessageStoredEvent(message=rerun_anchor)
+            yield StreamEvent(type=EventType.MESSAGE_STORED, message=rerun_anchor)
+
+        yield StreamEvent(type=EventType.REPLY_START)
 
         # 12. Call LLM with streaming and track timing
         start_time = time.monotonic()
@@ -1316,6 +1326,7 @@ class RuntimeOperations:
             tools=tool_schemas,
             stream=True,
             cache_key=str(agent_id),
+            params=request_params,
         )
 
         # Forward tokens in real-time as they arrive from the provider.
@@ -1327,7 +1338,7 @@ class RuntimeOperations:
             if isinstance(event, _StreamSegmentResult):
                 stream_result = event
             else:
-                yield event  # RuntimeTokenEvent / RuntimeMessageStoredEvent
+                yield event  # enriched block events + placeholder MESSAGE_STORED
 
         if stream_result is None or (stream_result.completion is None and not stream_result.error):
             await self._create_run_log(
@@ -1346,7 +1357,7 @@ class RuntimeOperations:
                 error="No response from LLM",
                 provider_key_id=provider_key_id,
             )
-            yield RuntimeErrorEvent(error="No response from LLM")
+            yield StreamEvent(type=EventType.ERROR, error="No response from LLM")
             return
 
         if stream_result.error:
@@ -1366,7 +1377,7 @@ class RuntimeOperations:
                 error=stream_result.error,
                 provider_key_id=provider_key_id,
             )
-            yield RuntimeErrorEvent(error=stream_result.error)
+            yield StreamEvent(type=EventType.ERROR, error=stream_result.error)
             return
 
         completion = stream_result.completion
@@ -1388,6 +1399,7 @@ class RuntimeOperations:
                     output_tokens=completion.output_tokens,
                     cache_read_input_tokens=completion.cache_read_input_tokens,
                     model=completion.model,
+                    thinking=stream_result.thinking or None,
                 )
 
             tool_ctx = ToolContext(
@@ -1411,8 +1423,14 @@ class RuntimeOperations:
                 result=completion,
                 executor=executor,
                 run_tool_calls=run_tool_calls,
+                pending_thinking=(
+                    stream_result.thinking
+                    if stream_result.placeholder_id is None
+                    else None
+                ),
+                model_params=request_params,
             ):
-                if isinstance(event, RuntimeDoneEvent):
+                if event.type is EventType.DONE:
                     # The tool loop yielded a done event with the final result;
                     # create run log and re-yield
                     tool_iterations = len(run_tool_calls)
@@ -1423,7 +1441,7 @@ class RuntimeOperations:
                         agent_id=agent_id,
                         user_id=user_id,
                         organization_id=organization_id,
-                        model=event.model_used,
+                        model=event.model,
                         input_tokens=msg.input_tokens if msg else 0,
                         output_tokens=msg.output_tokens if msg else 0,
                         cache_read_input_tokens=(
@@ -1440,7 +1458,8 @@ class RuntimeOperations:
                     return
                 yield event
 
-            # If we got here, the tool loop raised ValidationError (max iterations)
+            # Tool loop ended without DONE: the max-iterations marker and
+            # terminal error events were already forwarded above.
             return
 
         # 14. Store final assistant message (no tool use). When the chat
@@ -1455,6 +1474,7 @@ class RuntimeOperations:
                 output_tokens=completion.output_tokens,
                 cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
+                thinking=stream_result.thinking or None,
             )
         else:
             assistant_message = await writer.add_message(
@@ -1464,6 +1484,7 @@ class RuntimeOperations:
                 output_tokens=completion.output_tokens,
                 cache_read_input_tokens=completion.cache_read_input_tokens,
                 model=completion.model,
+                thinking=stream_result.thinking or None,
             )
 
         # 15. Create run log for non-tool-use path. Both session and chat
@@ -1487,9 +1508,10 @@ class RuntimeOperations:
             provider_key_id=provider_key_id,
         )
 
-        yield RuntimeDoneEvent(
+        yield StreamEvent(
+            type=EventType.DONE,
             assistant_message=assistant_message,
-            model_used=completion.model,
+            model=completion.model,
         )
 
     async def _stream_tool_loop(
@@ -1505,7 +1527,9 @@ class RuntimeOperations:
         result: CompletionResult,
         executor: ToolExecutor,
         run_tool_calls: list[dict] | None = None,
-    ) -> AsyncIterator[RuntimeStreamEvent]:
+        pending_thinking: list[dict] | None = None,
+        model_params: dict | None = None,
+    ) -> AsyncIterator[StreamEvent]:
         """Run the streaming tool-use loop until the LLM produces a final response.
 
         Same logic as _run_tool_loop but yields streaming events and uses
@@ -1533,7 +1557,7 @@ class RuntimeOperations:
 
         Yields
         ------
-        RuntimeStreamEvent
+        StreamEvent
             Tool call, tool result, token, and done events.
 
         Raises
@@ -1549,8 +1573,11 @@ class RuntimeOperations:
                 tool_calls=len(result.tool_calls),
             )
 
-            # Build assistant message content blocks (text + tool_use)
-            assistant_content: list[dict] = []
+            # Build assistant message content blocks. Provider thinking
+            # blocks (signature included) MUST lead the turn when
+            # continuing with tool results or the API rejects it; they
+            # live only in this in-memory continuation, never in rows.
+            assistant_content: list[dict] = [*result.thinking_blocks]
             if result.content:
                 assistant_content.append({"type": "text", "text": result.content})
             for tc in result.tool_calls:
@@ -1570,7 +1597,10 @@ class RuntimeOperations:
                 "content": assistant_content,
             })
 
-            # Store the assistant tool-call message(s) and yield tool call events
+            # Store the assistant tool-call message(s) and yield tool call
+            # events. The segment's folded thinking rides on the FIRST row
+            # only (session destination; the chat destination persists it
+            # on the narration placeholder instead).
             tool_call_message_ids: dict[str, UUID] = {}
             for tc in result.tool_calls:
                 stored = await writer.add_message(
@@ -1583,12 +1613,15 @@ class RuntimeOperations:
                     output_tokens=result.output_tokens,
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
+                    thinking=pending_thinking,
                 )
+                pending_thinking = None
                 tool_call_message_ids[tc.id] = stored.id
                 # Track tool calls for run log
                 if run_tool_calls is not None:
                     run_tool_calls.append({"name": tc.name, "call_id": tc.id})
-                yield RuntimeToolCallEvent(
+                yield StreamEvent(
+                    type=EventType.TOOL_RESULT_START,
                     tool_call_id=tc.id,
                     tool_name=tc.name,
                     tool_args=tc.input,
@@ -1618,11 +1651,12 @@ class RuntimeOperations:
                     tool_call_id=tc.id,
                     tool_result=content,
                 )
-                yield RuntimeToolResultEvent(
+                yield StreamEvent(
+                    type=EventType.TOOL_RESULT_END,
                     tool_call_id=tc.id,
                     tool_name=tc.name,
                     success=res.success,
-                    result=content,
+                    tool_result=content,
                     message_id=stored_result.id,
                 )
                 results_content[tc.id] = content
@@ -1641,7 +1675,8 @@ class RuntimeOperations:
                         message_id=tool_call_message_ids.get(tc.id),
                     )
                     desc = f"The agent wants to perform a destructive action: {tc.name}"
-                    yield RuntimeConfirmationRequiredEvent(
+                    yield StreamEvent(
+                        type=EventType.CONFIRMATION_REQUIRED,
                         tool_call_id=tc.id,
                         tool_name=tc.name,
                         tool_args=tc.input,
@@ -1662,11 +1697,12 @@ class RuntimeOperations:
                             tool_call_id=tc.id,
                             tool_result=rejection,
                         )
-                        yield RuntimeToolResultEvent(
+                        yield StreamEvent(
+                            type=EventType.TOOL_RESULT_END,
                             tool_call_id=tc.id,
                             tool_name=tc.name,
                             success=False,
-                            result=rejection,
+                            tool_result=rejection,
                             message_id=stored_result.id,
                         )
                         results_content[tc.id] = rejection
@@ -1685,11 +1721,12 @@ class RuntimeOperations:
                     tool_call_id=tc.id,
                     tool_result=content,
                 )
-                yield RuntimeToolResultEvent(
+                yield StreamEvent(
+                    type=EventType.TOOL_RESULT_END,
                     tool_call_id=tc.id,
                     tool_name=tc.name,
                     success=tool_result.success,
-                    result=content,
+                    tool_result=content,
                     message_id=stored_result.id,
                 )
                 results_content[tc.id] = content
@@ -1722,6 +1759,7 @@ class RuntimeOperations:
                 tools=tool_schemas,
                 stream=True,
                 cache_key=str(agent_id),
+                params=model_params,
             )
 
             stream_result: _StreamSegmentResult | None = None
@@ -1729,16 +1767,18 @@ class RuntimeOperations:
                 if isinstance(event, _StreamSegmentResult):
                     stream_result = event
                 else:
-                    yield event  # Forward tokens (with placeholder id) + RuntimeMessageStoredEvent
+                    yield event  # enriched block events + placeholder MESSAGE_STORED
 
             if stream_result is None or (
                 stream_result.completion is None and not stream_result.error
             ):
-                yield RuntimeErrorEvent(error="No response from LLM during tool loop")
+                yield StreamEvent(
+                    type=EventType.ERROR, error="No response from LLM during tool loop"
+                )
                 return
 
             if stream_result.error:
-                yield RuntimeErrorEvent(error=stream_result.error)
+                yield StreamEvent(type=EventType.ERROR, error=stream_result.error)
                 return
 
             result = stream_result.completion
@@ -1754,6 +1794,7 @@ class RuntimeOperations:
                         output_tokens=result.output_tokens,
                         cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
+                        thinking=stream_result.thinking or None,
                     )
                 else:
                     assistant_message = await writer.add_message(
@@ -1763,10 +1804,12 @@ class RuntimeOperations:
                         output_tokens=result.output_tokens,
                         cache_read_input_tokens=result.cache_read_input_tokens,
                         model=result.model,
+                        thinking=stream_result.thinking or None,
                     )
-                yield RuntimeDoneEvent(
+                yield StreamEvent(
+                    type=EventType.DONE,
                     assistant_message=assistant_message,
-                    model_used=result.model,
+                    model=result.model,
                 )
                 return
 
@@ -1781,108 +1824,106 @@ class RuntimeOperations:
                     output_tokens=result.output_tokens,
                     cache_read_input_tokens=result.cache_read_input_tokens,
                     model=result.model,
+                    thinking=stream_result.thinking or None,
                 )
+            else:
+                pending_thinking = stream_result.thinking or None
 
-        raise ValidationError(
-            "tool_loop",
-            f"Agent exceeded maximum tool iterations ({MAX_TOOL_ITERATIONS})",
+        yield StreamEvent(type=EventType.EXCEED_MAX_ITERS)
+        yield StreamEvent(
+            type=EventType.ERROR,
+            error=f"Agent exceeded maximum tool iterations ({MAX_TOOL_ITERATIONS})",
         )
 
     async def _stream_segment(
         self,
         stream_iter: AsyncIterator[StreamEvent],
         writer: MessageWriter,
-    ) -> AsyncIterator[RuntimeStreamEvent | _StreamSegmentResult]:
-        """Forward provider stream and lazily reserve an assistant placeholder.
+    ) -> AsyncIterator[StreamEvent | _StreamSegmentResult]:
+        """Enrich and forward one provider stream segment.
 
-        On the first non-empty token, asks the writer for an in-flight
-        assistant row (`reserve_assistant_placeholder`). If the writer
-        supports it (chat destination), every subsequent
-        `RuntimeTokenEvent` carries that placeholder's `message_id` plus
-        a monotonic `sequence` so the chat translator can publish
-        `AGENT_TOKEN_DELTA` events keyed to a real DB row. The
-        placeholder envelope is also yielded as a
-        `RuntimeMessageStoredEvent` so the translator can fan an
-        empty-content `MESSAGE_CREATED` to clients before the deltas
-        arrive.
+        Block events pass through with `message_id` + one monotonic
+        `sequence` stamped once the writer supplies an in-flight
+        assistant row (chat destination; session writers return None).
+        The placeholder is reserved on the first non-empty thinking OR
+        text delta, but thinking never patches the row's content - the
+        bubble body stays empty until answer text arrives. The
+        placeholder envelope is yielded as MESSAGE_STORED so the chat
+        translator can fan MESSAGE_CREATED before the deltas.
 
-        At the end yields a `_StreamSegmentResult` sentinel carrying the
-        completion / error and the placeholder id (if one was reserved)
-        so the caller can finalize.
+        `elapsed_ms` is stamped on THINKING_BLOCK_END (time since the
+        matching start) so live view, replay, and history agree on the
+        thinking duration. The provider's MODEL_CALL_END is forwarded
+        for live token counters with its runtime-internal
+        `CompletionResult` stripped; the result travels only on the
+        terminal `_StreamSegmentResult` sentinel. Provider ERROR events
+        are captured, not forwarded - the caller emits the terminal
+        error after writing the run log.
         """
         completion: CompletionResult | None = None
         error: str | None = None
         placeholder_id: UUID | None = None
         sequence = 0
+        thinking_started: dict[str, float] = {}
+        thinking_folded: dict[str, dict] = {}
 
-        async for event in self._forward_provider_stream(stream_iter):
-            if isinstance(event, _StreamResult):
-                completion = event.completion
-                error = event.error
-                continue
-
-            if isinstance(event, RuntimeTokenEvent) and event.text:
-                if placeholder_id is None:
+        async for event in stream_iter:
+            if (
+                event.type is EventType.THINKING_BLOCK_DELTA
+                and event.block_id in thinking_folded
+            ):
+                thinking_folded[event.block_id]["content"] += event.delta
+            match event.type:
+                case EventType.MODEL_CALL_END:
+                    completion = event.result
+                    yield replace(event, result=None)
+                    continue
+                case EventType.ERROR:
+                    error = event.error
+                    continue
+                case EventType.THINKING_BLOCK_START:
+                    thinking_started[event.block_id] = time.monotonic()
+                    thinking_folded[event.block_id] = {
+                        "block_id": event.block_id,
+                        "content": "",
+                        "elapsed_ms": 0,
+                    }
+                case (
+                    EventType.TEXT_BLOCK_DELTA | EventType.THINKING_BLOCK_DELTA
+                ) if event.delta and placeholder_id is None:
                     placeholder = await writer.reserve_assistant_placeholder()
                     if placeholder is not None:
                         placeholder_id = placeholder.id
-                        yield RuntimeMessageStoredEvent(message=placeholder)
+                        yield StreamEvent(
+                            type=EventType.MESSAGE_STORED, message=placeholder
+                        )
+
+            enriched = event
+            if event.type in _BLOCK_EVENT_TYPES:
                 if placeholder_id is not None:
                     sequence += 1
-                    yield RuntimeTokenEvent(
-                        text=event.text,
-                        message_id=placeholder_id,
-                        sequence=sequence,
+                    enriched = replace(
+                        event, message_id=placeholder_id, sequence=sequence
                     )
-                    continue
-
-            yield event
+                if enriched.type is EventType.THINKING_BLOCK_END:
+                    started = thinking_started.pop(enriched.block_id, None)
+                    if started is not None:
+                        enriched = replace(
+                            enriched,
+                            elapsed_ms=int((time.monotonic() - started) * 1000),
+                        )
+                    if enriched.block_id in thinking_folded:
+                        thinking_folded[enriched.block_id]["elapsed_ms"] = (
+                            enriched.elapsed_ms
+                        )
+            yield enriched
 
         yield _StreamSegmentResult(
             completion=completion,
             error=error,
             placeholder_id=placeholder_id,
+            thinking=[b for b in thinking_folded.values() if b["content"]],
         )
-
-    async def _forward_provider_stream(
-        self,
-        stream_iter: AsyncIterator[StreamEvent],
-    ) -> AsyncIterator[RuntimeTokenEvent | _StreamResult]:
-        """Forward provider stream events in real-time.
-
-        Yields ``RuntimeTokenEvent`` immediately as each token arrives
-        from the LLM provider, giving the client true streaming output.
-        At the end, yields a ``_StreamResult`` sentinel carrying the
-        ``CompletionResult`` (with token counts, stop reason, tool calls)
-        or an error string.
-
-        Parameters
-        ----------
-        stream_iter : AsyncIterator[StreamEvent]
-            The provider streaming iterator.
-
-        Yields
-        ------
-        RuntimeTokenEvent
-            Text token forwarded in real-time.
-        _StreamResult
-            Final sentinel with completion or error (always the last item).
-
-        """
-        completion: CompletionResult | None = None
-        error: str | None = None
-
-        async for event in stream_iter:
-            if isinstance(event, TokenEvent):
-                yield RuntimeTokenEvent(text=event.text)
-            elif isinstance(event, ToolCallEvent):
-                pass  # Tool calls are captured in the DoneEvent result
-            elif isinstance(event, DoneEvent):
-                completion = event.result
-            elif isinstance(event, ErrorEvent):
-                error = event.error
-
-        yield _StreamResult(completion=completion, error=error)
 
     async def _resolve_invoked_skill(
         self,
@@ -2178,17 +2219,17 @@ class RuntimeOperations:
             return None, None
 
 
-@dataclass
-class _StreamResult:
-    """Sentinel yielded at the end of a forwarded provider stream.
-
-    After all real-time token events have been yielded, this dataclass
-    carries the final CompletionResult (or error) so the caller can
-    inspect the stop reason and decide whether to enter the tool loop.
-    """
-
-    completion: CompletionResult | None
-    error: str | None
+_BLOCK_EVENT_TYPES = frozenset({
+    EventType.TEXT_BLOCK_START,
+    EventType.TEXT_BLOCK_DELTA,
+    EventType.TEXT_BLOCK_END,
+    EventType.THINKING_BLOCK_START,
+    EventType.THINKING_BLOCK_DELTA,
+    EventType.THINKING_BLOCK_END,
+    EventType.TOOL_CALL_START,
+    EventType.TOOL_CALL_DELTA,
+    EventType.TOOL_CALL_END,
+})
 
 
 @dataclass
@@ -2204,3 +2245,6 @@ class _StreamSegmentResult:
     completion: CompletionResult | None
     error: str | None
     placeholder_id: UUID | None
+    # Display-safe reasoning folded from the segment's thinking events:
+    # [{block_id, content, elapsed_ms}], persisted onto the assistant row.
+    thinking: list[dict] = dataclass_field(default_factory=list)

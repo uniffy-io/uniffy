@@ -9,6 +9,14 @@ interface TypingEntry {
   isAgent?: boolean;
 }
 
+export interface AgentThinkingBlock {
+  blockId: string;
+  content: string;
+  elapsedMs: number;
+  done: boolean;
+  lastSequence: number;
+}
+
 interface ChatMessagesState {
   byId: Record<string, ChatMessage>;
   idsByChannel: Record<string, string[]>;
@@ -19,6 +27,9 @@ interface ChatMessagesState {
   isLoadingByChannel: Record<string, boolean>;
   typingByChannel: Record<string, TypingEntry[]>;
   typingByThread: Record<string, TypingEntry[]>;
+  // Live reasoning keyed by the in-flight agent message id. Ephemeral by
+  // design: thinking is never persisted, so history reloads drop it.
+  agentThinkingByMessage: Record<string, AgentThinkingBlock[]>;
 }
 
 const initialState: ChatMessagesState = {
@@ -31,6 +42,7 @@ const initialState: ChatMessagesState = {
   isLoadingByChannel: {},
   typingByChannel: {},
   typingByThread: {},
+  agentThinkingByMessage: {},
 };
 
 function isPinnedActive(msg: ChatMessage | undefined): boolean {
@@ -411,6 +423,33 @@ export const chatMessagesSlice = createSlice({
       }
       msg.metadata = nextMeta;
     },
+    appendAgentThinking: (
+      state,
+      action: PayloadAction<{
+        messageId: string;
+        blockId: string;
+        delta: string;
+        sequence: number;
+        final: boolean;
+        elapsedMs: number;
+      }>,
+    ) => {
+      const { messageId, blockId, delta, sequence, final, elapsedMs } = action.payload;
+      const blocks = state.agentThinkingByMessage[messageId] ?? [];
+      let block = blocks.find((b) => b.blockId === blockId);
+      if (!block) {
+        block = { blockId, content: '', elapsedMs: 0, done: false, lastSequence: 0 };
+        blocks.push(block);
+      }
+      if (sequence <= block.lastSequence && !final) return;
+      block.lastSequence = sequence;
+      if (delta) block.content += delta;
+      if (final) {
+        block.done = true;
+        block.elapsedMs = elapsedMs;
+      }
+      state.agentThinkingByMessage[messageId] = blocks;
+    },
     clearChatMessages: () => initialState,
   },
 });
@@ -436,11 +475,19 @@ export const {
   addReactionToMessage,
   removeReactionFromMessage,
   appendDelta,
+  appendAgentThinking,
   clearChatMessages,
 } = chatMessagesSlice.actions;
 
 const EMPTY_IDS: readonly string[] = Object.freeze([]);
 const EMPTY_MESSAGES: readonly ChatMessage[] = Object.freeze([]);
+const EMPTY_THINKING: readonly AgentThinkingBlock[] = Object.freeze([]);
+
+export const selectAgentThinkingForMessage = (
+  state: RootState,
+  messageId: string,
+): readonly AgentThinkingBlock[] =>
+  state.chatMessages.agentThinkingByMessage[messageId] ?? EMPTY_THINKING;
 
 export const selectMessageIdsForChannel = (
   state: RootState,

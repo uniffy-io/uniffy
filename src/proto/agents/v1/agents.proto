@@ -71,6 +71,9 @@ message AgentInfo {
   // Hydrated unified-tag rows assigned to this agent. Server-populated
   // via ``TagOperations.get_for_urns``; clients should treat as read-only.
   repeated tags.v1.Tag tags = 23;
+  // JSON object of tuned model parameters (knob -> value), validated
+  // against the model's parameter schema. "{}" = provider defaults.
+  string model_params = 24;
 }
 
 // --- Requests and Responses ---
@@ -98,6 +101,8 @@ message CreateAgentRequest {
   optional common.v1.ContentRole baseline_role = 16;
   // Optional unified-tag ids to assign on create.
   repeated string tag_ids = 17;
+  // JSON object of tuned model parameters (knob -> value)
+  optional string model_params = 18;
 }
 
 message CreateAgentResponse {
@@ -171,6 +176,9 @@ message UpdateAgentRequest {
   // the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
   // pattern.
   optional AgentTagIds tag_ids = 20;
+  // JSON object of tuned model parameters (knob -> value); replaces the
+  // stored object wholesale ("{}" resets to provider defaults)
+  optional string model_params = 21;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from

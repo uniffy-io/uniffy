@@ -605,7 +605,7 @@ class TestProposeSkillTool:
     def test_proposes_draft_and_queues_event(self, monkeypatch) -> None:
         import uniffy.domains.agents.skills.operations as ops_mod
         from uniffy.core.models.agents.skill_draft import AgentSkillDraft
-        from uniffy.domains.agents.runtime.stream_events import RuntimeSkillDraftEvent
+        from uniffy.domains.agents.providers.base import EventType
         from uniffy.domains.agents.tools.builtin.skills import _execute_propose_skill
 
         draft = AgentSkillDraft(
@@ -644,7 +644,7 @@ class TestProposeSkillTool:
         assert result.success
         assert fake_ops.propose_skill_draft.await_count == 1
         assert len(ctx.pending_events) == 1
-        assert isinstance(ctx.pending_events[0], RuntimeSkillDraftEvent)
+        assert ctx.pending_events[0].type is EventType.SKILL_DRAFT
         assert ctx.pending_events[0].draft is draft
 
     def test_missing_content_is_an_error(self, monkeypatch) -> None:

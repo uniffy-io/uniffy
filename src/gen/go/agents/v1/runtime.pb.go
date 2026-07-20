@@ -1489,21 +1489,40 @@ func (x *RespondToConfirmationResponse) GetAccepted() bool {
 // AgentStreamEvent carries one event in the agent-runtime stream. The
 // run_id is stamped by the handler from the run state hash so a tab
 // reload mid-stream can call SubscribeToRun(run_id) to resume.
+//
+// The oneof mirrors the backend EventType enum 1:1. Text, thinking,
+// and tool-call content is block-framed (START -> DELTA -> END,
+// correlated by block_id); deltas are incremental, never cumulative.
+// Thinking is a first-class block and never appears in text deltas or
+// stored message content.
 type AgentStreamEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Event:
 	//
-	//	*AgentStreamEvent_Token
-	//	*AgentStreamEvent_ToolCall
-	//	*AgentStreamEvent_ToolResult
-	//	*AgentStreamEvent_MessageStored
-	//	*AgentStreamEvent_Done
-	//	*AgentStreamEvent_Error
+	//	*AgentStreamEvent_ReplyStart
+	//	*AgentStreamEvent_ModelCallStart
+	//	*AgentStreamEvent_ModelCallEnd
+	//	*AgentStreamEvent_TextBlockStart
+	//	*AgentStreamEvent_TextBlockDelta
+	//	*AgentStreamEvent_TextBlockEnd
+	//	*AgentStreamEvent_ThinkingBlockStart
+	//	*AgentStreamEvent_ThinkingBlockDelta
+	//	*AgentStreamEvent_ThinkingBlockEnd
+	//	*AgentStreamEvent_ToolCallStart
+	//	*AgentStreamEvent_ToolCallDelta
+	//	*AgentStreamEvent_ToolCallEnd
+	//	*AgentStreamEvent_ToolResultStart
+	//	*AgentStreamEvent_ToolResultDelta
+	//	*AgentStreamEvent_ToolResultEnd
 	//	*AgentStreamEvent_ConfirmationRequired
 	//	*AgentStreamEvent_Failover
 	//	*AgentStreamEvent_SkillDraft
+	//	*AgentStreamEvent_ExceedMaxIters
+	//	*AgentStreamEvent_MessageStored
+	//	*AgentStreamEvent_Done
+	//	*AgentStreamEvent_Error
 	Event         isAgentStreamEvent_Event `protobuf_oneof:"event"`
-	RunId         string                   `protobuf:"bytes,8,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	RunId         string                   `protobuf:"bytes,30,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1545,55 +1564,136 @@ func (x *AgentStreamEvent) GetEvent() isAgentStreamEvent_Event {
 	return nil
 }
 
-func (x *AgentStreamEvent) GetToken() *StreamTokenEvent {
+func (x *AgentStreamEvent) GetReplyStart() *StreamReplyStartEvent {
 	if x != nil {
-		if x, ok := x.Event.(*AgentStreamEvent_Token); ok {
-			return x.Token
+		if x, ok := x.Event.(*AgentStreamEvent_ReplyStart); ok {
+			return x.ReplyStart
 		}
 	}
 	return nil
 }
 
-func (x *AgentStreamEvent) GetToolCall() *StreamToolCallEvent {
+func (x *AgentStreamEvent) GetModelCallStart() *StreamModelCallStartEvent {
 	if x != nil {
-		if x, ok := x.Event.(*AgentStreamEvent_ToolCall); ok {
-			return x.ToolCall
+		if x, ok := x.Event.(*AgentStreamEvent_ModelCallStart); ok {
+			return x.ModelCallStart
 		}
 	}
 	return nil
 }
 
-func (x *AgentStreamEvent) GetToolResult() *StreamToolResultEvent {
+func (x *AgentStreamEvent) GetModelCallEnd() *StreamModelCallEndEvent {
 	if x != nil {
-		if x, ok := x.Event.(*AgentStreamEvent_ToolResult); ok {
-			return x.ToolResult
+		if x, ok := x.Event.(*AgentStreamEvent_ModelCallEnd); ok {
+			return x.ModelCallEnd
 		}
 	}
 	return nil
 }
 
-func (x *AgentStreamEvent) GetMessageStored() *StreamMessageStoredEvent {
+func (x *AgentStreamEvent) GetTextBlockStart() *StreamTextBlockStartEvent {
 	if x != nil {
-		if x, ok := x.Event.(*AgentStreamEvent_MessageStored); ok {
-			return x.MessageStored
+		if x, ok := x.Event.(*AgentStreamEvent_TextBlockStart); ok {
+			return x.TextBlockStart
 		}
 	}
 	return nil
 }
 
-func (x *AgentStreamEvent) GetDone() *StreamDoneEvent {
+func (x *AgentStreamEvent) GetTextBlockDelta() *StreamTextBlockDeltaEvent {
 	if x != nil {
-		if x, ok := x.Event.(*AgentStreamEvent_Done); ok {
-			return x.Done
+		if x, ok := x.Event.(*AgentStreamEvent_TextBlockDelta); ok {
+			return x.TextBlockDelta
 		}
 	}
 	return nil
 }
 
-func (x *AgentStreamEvent) GetError() *StreamErrorEvent {
+func (x *AgentStreamEvent) GetTextBlockEnd() *StreamTextBlockEndEvent {
 	if x != nil {
-		if x, ok := x.Event.(*AgentStreamEvent_Error); ok {
-			return x.Error
+		if x, ok := x.Event.(*AgentStreamEvent_TextBlockEnd); ok {
+			return x.TextBlockEnd
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetThinkingBlockStart() *StreamThinkingBlockStartEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ThinkingBlockStart); ok {
+			return x.ThinkingBlockStart
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetThinkingBlockDelta() *StreamThinkingBlockDeltaEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ThinkingBlockDelta); ok {
+			return x.ThinkingBlockDelta
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetThinkingBlockEnd() *StreamThinkingBlockEndEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ThinkingBlockEnd); ok {
+			return x.ThinkingBlockEnd
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetToolCallStart() *StreamToolCallStartEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ToolCallStart); ok {
+			return x.ToolCallStart
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetToolCallDelta() *StreamToolCallDeltaEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ToolCallDelta); ok {
+			return x.ToolCallDelta
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetToolCallEnd() *StreamToolCallEndEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ToolCallEnd); ok {
+			return x.ToolCallEnd
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetToolResultStart() *StreamToolResultStartEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ToolResultStart); ok {
+			return x.ToolResultStart
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetToolResultDelta() *StreamToolResultDeltaEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ToolResultDelta); ok {
+			return x.ToolResultDelta
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetToolResultEnd() *StreamToolResultEndEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ToolResultEnd); ok {
+			return x.ToolResultEnd
 		}
 	}
 	return nil
@@ -1626,6 +1726,42 @@ func (x *AgentStreamEvent) GetSkillDraft() *StreamSkillDraftEvent {
 	return nil
 }
 
+func (x *AgentStreamEvent) GetExceedMaxIters() *StreamExceedMaxItersEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_ExceedMaxIters); ok {
+			return x.ExceedMaxIters
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetMessageStored() *StreamMessageStoredEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_MessageStored); ok {
+			return x.MessageStored
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetDone() *StreamDoneEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_Done); ok {
+			return x.Done
+		}
+	}
+	return nil
+}
+
+func (x *AgentStreamEvent) GetError() *StreamErrorEvent {
+	if x != nil {
+		if x, ok := x.Event.(*AgentStreamEvent_Error); ok {
+			return x.Error
+		}
+	}
+	return nil
+}
+
 func (x *AgentStreamEvent) GetRunId() string {
 	if x != nil {
 		return x.RunId
@@ -1637,59 +1773,137 @@ type isAgentStreamEvent_Event interface {
 	isAgentStreamEvent_Event()
 }
 
-type AgentStreamEvent_Token struct {
-	Token *StreamTokenEvent `protobuf:"bytes,1,opt,name=token,proto3,oneof"`
+type AgentStreamEvent_ReplyStart struct {
+	ReplyStart *StreamReplyStartEvent `protobuf:"bytes,1,opt,name=reply_start,json=replyStart,proto3,oneof"`
 }
 
-type AgentStreamEvent_ToolCall struct {
-	ToolCall *StreamToolCallEvent `protobuf:"bytes,2,opt,name=tool_call,json=toolCall,proto3,oneof"`
+type AgentStreamEvent_ModelCallStart struct {
+	ModelCallStart *StreamModelCallStartEvent `protobuf:"bytes,2,opt,name=model_call_start,json=modelCallStart,proto3,oneof"`
 }
 
-type AgentStreamEvent_ToolResult struct {
-	ToolResult *StreamToolResultEvent `protobuf:"bytes,3,opt,name=tool_result,json=toolResult,proto3,oneof"`
+type AgentStreamEvent_ModelCallEnd struct {
+	ModelCallEnd *StreamModelCallEndEvent `protobuf:"bytes,3,opt,name=model_call_end,json=modelCallEnd,proto3,oneof"`
 }
 
-type AgentStreamEvent_MessageStored struct {
-	MessageStored *StreamMessageStoredEvent `protobuf:"bytes,4,opt,name=message_stored,json=messageStored,proto3,oneof"`
+type AgentStreamEvent_TextBlockStart struct {
+	TextBlockStart *StreamTextBlockStartEvent `protobuf:"bytes,4,opt,name=text_block_start,json=textBlockStart,proto3,oneof"`
 }
 
-type AgentStreamEvent_Done struct {
-	Done *StreamDoneEvent `protobuf:"bytes,5,opt,name=done,proto3,oneof"`
+type AgentStreamEvent_TextBlockDelta struct {
+	TextBlockDelta *StreamTextBlockDeltaEvent `protobuf:"bytes,5,opt,name=text_block_delta,json=textBlockDelta,proto3,oneof"`
 }
 
-type AgentStreamEvent_Error struct {
-	Error *StreamErrorEvent `protobuf:"bytes,6,opt,name=error,proto3,oneof"`
+type AgentStreamEvent_TextBlockEnd struct {
+	TextBlockEnd *StreamTextBlockEndEvent `protobuf:"bytes,6,opt,name=text_block_end,json=textBlockEnd,proto3,oneof"`
+}
+
+type AgentStreamEvent_ThinkingBlockStart struct {
+	ThinkingBlockStart *StreamThinkingBlockStartEvent `protobuf:"bytes,7,opt,name=thinking_block_start,json=thinkingBlockStart,proto3,oneof"`
+}
+
+type AgentStreamEvent_ThinkingBlockDelta struct {
+	ThinkingBlockDelta *StreamThinkingBlockDeltaEvent `protobuf:"bytes,8,opt,name=thinking_block_delta,json=thinkingBlockDelta,proto3,oneof"`
+}
+
+type AgentStreamEvent_ThinkingBlockEnd struct {
+	ThinkingBlockEnd *StreamThinkingBlockEndEvent `protobuf:"bytes,9,opt,name=thinking_block_end,json=thinkingBlockEnd,proto3,oneof"`
+}
+
+type AgentStreamEvent_ToolCallStart struct {
+	ToolCallStart *StreamToolCallStartEvent `protobuf:"bytes,10,opt,name=tool_call_start,json=toolCallStart,proto3,oneof"`
+}
+
+type AgentStreamEvent_ToolCallDelta struct {
+	ToolCallDelta *StreamToolCallDeltaEvent `protobuf:"bytes,11,opt,name=tool_call_delta,json=toolCallDelta,proto3,oneof"`
+}
+
+type AgentStreamEvent_ToolCallEnd struct {
+	ToolCallEnd *StreamToolCallEndEvent `protobuf:"bytes,12,opt,name=tool_call_end,json=toolCallEnd,proto3,oneof"`
+}
+
+type AgentStreamEvent_ToolResultStart struct {
+	ToolResultStart *StreamToolResultStartEvent `protobuf:"bytes,13,opt,name=tool_result_start,json=toolResultStart,proto3,oneof"`
+}
+
+type AgentStreamEvent_ToolResultDelta struct {
+	ToolResultDelta *StreamToolResultDeltaEvent `protobuf:"bytes,14,opt,name=tool_result_delta,json=toolResultDelta,proto3,oneof"`
+}
+
+type AgentStreamEvent_ToolResultEnd struct {
+	ToolResultEnd *StreamToolResultEndEvent `protobuf:"bytes,15,opt,name=tool_result_end,json=toolResultEnd,proto3,oneof"`
 }
 
 type AgentStreamEvent_ConfirmationRequired struct {
-	ConfirmationRequired *StreamConfirmationRequiredEvent `protobuf:"bytes,7,opt,name=confirmation_required,json=confirmationRequired,proto3,oneof"`
+	ConfirmationRequired *StreamConfirmationRequiredEvent `protobuf:"bytes,16,opt,name=confirmation_required,json=confirmationRequired,proto3,oneof"`
 }
 
 type AgentStreamEvent_Failover struct {
-	Failover *StreamFailoverEvent `protobuf:"bytes,9,opt,name=failover,proto3,oneof"`
+	Failover *StreamFailoverEvent `protobuf:"bytes,17,opt,name=failover,proto3,oneof"`
 }
 
 type AgentStreamEvent_SkillDraft struct {
-	SkillDraft *StreamSkillDraftEvent `protobuf:"bytes,10,opt,name=skill_draft,json=skillDraft,proto3,oneof"`
+	SkillDraft *StreamSkillDraftEvent `protobuf:"bytes,18,opt,name=skill_draft,json=skillDraft,proto3,oneof"`
 }
 
-func (*AgentStreamEvent_Token) isAgentStreamEvent_Event() {}
+type AgentStreamEvent_ExceedMaxIters struct {
+	ExceedMaxIters *StreamExceedMaxItersEvent `protobuf:"bytes,19,opt,name=exceed_max_iters,json=exceedMaxIters,proto3,oneof"`
+}
 
-func (*AgentStreamEvent_ToolCall) isAgentStreamEvent_Event() {}
+type AgentStreamEvent_MessageStored struct {
+	MessageStored *StreamMessageStoredEvent `protobuf:"bytes,20,opt,name=message_stored,json=messageStored,proto3,oneof"`
+}
 
-func (*AgentStreamEvent_ToolResult) isAgentStreamEvent_Event() {}
+type AgentStreamEvent_Done struct {
+	Done *StreamDoneEvent `protobuf:"bytes,21,opt,name=done,proto3,oneof"`
+}
 
-func (*AgentStreamEvent_MessageStored) isAgentStreamEvent_Event() {}
+type AgentStreamEvent_Error struct {
+	Error *StreamErrorEvent `protobuf:"bytes,22,opt,name=error,proto3,oneof"`
+}
 
-func (*AgentStreamEvent_Done) isAgentStreamEvent_Event() {}
+func (*AgentStreamEvent_ReplyStart) isAgentStreamEvent_Event() {}
 
-func (*AgentStreamEvent_Error) isAgentStreamEvent_Event() {}
+func (*AgentStreamEvent_ModelCallStart) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ModelCallEnd) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_TextBlockStart) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_TextBlockDelta) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_TextBlockEnd) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ThinkingBlockStart) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ThinkingBlockDelta) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ThinkingBlockEnd) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ToolCallStart) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ToolCallDelta) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ToolCallEnd) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ToolResultStart) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ToolResultDelta) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ToolResultEnd) isAgentStreamEvent_Event() {}
 
 func (*AgentStreamEvent_ConfirmationRequired) isAgentStreamEvent_Event() {}
 
 func (*AgentStreamEvent_Failover) isAgentStreamEvent_Event() {}
 
 func (*AgentStreamEvent_SkillDraft) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_ExceedMaxIters) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_MessageStored) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_Done) isAgentStreamEvent_Event() {}
+
+func (*AgentStreamEvent_Error) isAgentStreamEvent_Event() {}
 
 type StreamSendMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1823,27 +2037,28 @@ func (x *SubscribeToRunResponse) GetEvent() *AgentStreamEvent {
 	return nil
 }
 
-type StreamTokenEvent struct {
+// Opens the assistant turn. Purely a framing hook for clients.
+type StreamReplyStartEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *StreamTokenEvent) Reset() {
-	*x = StreamTokenEvent{}
+func (x *StreamReplyStartEvent) Reset() {
+	*x = StreamReplyStartEvent{}
 	mi := &file_agents_v1_runtime_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StreamTokenEvent) String() string {
+func (x *StreamReplyStartEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StreamTokenEvent) ProtoMessage() {}
+func (*StreamReplyStartEvent) ProtoMessage() {}
 
-func (x *StreamTokenEvent) ProtoReflect() protoreflect.Message {
+func (x *StreamReplyStartEvent) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_runtime_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1855,41 +2070,40 @@ func (x *StreamTokenEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StreamTokenEvent.ProtoReflect.Descriptor instead.
-func (*StreamTokenEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use StreamReplyStartEvent.ProtoReflect.Descriptor instead.
+func (*StreamReplyStartEvent) Descriptor() ([]byte, []int) {
 	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{22}
 }
 
-func (x *StreamTokenEvent) GetText() string {
+func (x *StreamReplyStartEvent) GetRole() string {
 	if x != nil {
-		return x.Text
+		return x.Role
 	}
 	return ""
 }
 
-type StreamToolCallEvent struct {
+// A model invocation begins; repeats after a failover swap.
+type StreamModelCallStartEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ToolCallId    string                 `protobuf:"bytes,1,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
-	ToolName      string                 `protobuf:"bytes,2,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
-	ToolArgsJson  string                 `protobuf:"bytes,3,opt,name=tool_args_json,json=toolArgsJson,proto3" json:"tool_args_json,omitempty"`
+	Model         string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *StreamToolCallEvent) Reset() {
-	*x = StreamToolCallEvent{}
+func (x *StreamModelCallStartEvent) Reset() {
+	*x = StreamModelCallStartEvent{}
 	mi := &file_agents_v1_runtime_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StreamToolCallEvent) String() string {
+func (x *StreamModelCallStartEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StreamToolCallEvent) ProtoMessage() {}
+func (*StreamModelCallStartEvent) ProtoMessage() {}
 
-func (x *StreamToolCallEvent) ProtoReflect() protoreflect.Message {
+func (x *StreamModelCallStartEvent) ProtoReflect() protoreflect.Message {
 	mi := &file_agents_v1_runtime_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1901,57 +2115,757 @@ func (x *StreamToolCallEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StreamToolCallEvent.ProtoReflect.Descriptor instead.
-func (*StreamToolCallEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use StreamModelCallStartEvent.ProtoReflect.Descriptor instead.
+func (*StreamModelCallStartEvent) Descriptor() ([]byte, []int) {
 	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{23}
 }
 
-func (x *StreamToolCallEvent) GetToolCallId() string {
+func (x *StreamModelCallStartEvent) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+// Per-model-call token accounting, driving live token/cost counters.
+type StreamModelCallEndEvent struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Model                string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
+	InputTokens          int64                  `protobuf:"varint,2,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens         int64                  `protobuf:"varint,3,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	CacheReadInputTokens int64                  `protobuf:"varint,4,opt,name=cache_read_input_tokens,json=cacheReadInputTokens,proto3" json:"cache_read_input_tokens,omitempty"`
+	ThinkingTokens       int64                  `protobuf:"varint,5,opt,name=thinking_tokens,json=thinkingTokens,proto3" json:"thinking_tokens,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *StreamModelCallEndEvent) Reset() {
+	*x = StreamModelCallEndEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamModelCallEndEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamModelCallEndEvent) ProtoMessage() {}
+
+func (x *StreamModelCallEndEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamModelCallEndEvent.ProtoReflect.Descriptor instead.
+func (*StreamModelCallEndEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *StreamModelCallEndEvent) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *StreamModelCallEndEvent) GetInputTokens() int64 {
+	if x != nil {
+		return x.InputTokens
+	}
+	return 0
+}
+
+func (x *StreamModelCallEndEvent) GetOutputTokens() int64 {
+	if x != nil {
+		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *StreamModelCallEndEvent) GetCacheReadInputTokens() int64 {
+	if x != nil {
+		return x.CacheReadInputTokens
+	}
+	return 0
+}
+
+func (x *StreamModelCallEndEvent) GetThinkingTokens() int64 {
+	if x != nil {
+		return x.ThinkingTokens
+	}
+	return 0
+}
+
+// Block events carry the placeholder row id (message_id, chat
+// destination only; empty for session streams) plus one monotonic
+// per-message sequence shared across all block events so clients can
+// drop late deltas after a reorder.
+type StreamTextBlockStartEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamTextBlockStartEvent) Reset() {
+	*x = StreamTextBlockStartEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamTextBlockStartEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamTextBlockStartEvent) ProtoMessage() {}
+
+func (x *StreamTextBlockStartEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamTextBlockStartEvent.ProtoReflect.Descriptor instead.
+func (*StreamTextBlockStartEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *StreamTextBlockStartEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamTextBlockStartEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamTextBlockStartEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+type StreamTextBlockDeltaEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	Delta         string                 `protobuf:"bytes,2,opt,name=delta,proto3" json:"delta,omitempty"`
+	MessageId     string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,4,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamTextBlockDeltaEvent) Reset() {
+	*x = StreamTextBlockDeltaEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamTextBlockDeltaEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamTextBlockDeltaEvent) ProtoMessage() {}
+
+func (x *StreamTextBlockDeltaEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamTextBlockDeltaEvent.ProtoReflect.Descriptor instead.
+func (*StreamTextBlockDeltaEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *StreamTextBlockDeltaEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamTextBlockDeltaEvent) GetDelta() string {
+	if x != nil {
+		return x.Delta
+	}
+	return ""
+}
+
+func (x *StreamTextBlockDeltaEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamTextBlockDeltaEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+type StreamTextBlockEndEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamTextBlockEndEvent) Reset() {
+	*x = StreamTextBlockEndEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamTextBlockEndEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamTextBlockEndEvent) ProtoMessage() {}
+
+func (x *StreamTextBlockEndEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamTextBlockEndEvent.ProtoReflect.Descriptor instead.
+func (*StreamTextBlockEndEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *StreamTextBlockEndEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamTextBlockEndEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamTextBlockEndEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+type StreamThinkingBlockStartEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamThinkingBlockStartEvent) Reset() {
+	*x = StreamThinkingBlockStartEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamThinkingBlockStartEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamThinkingBlockStartEvent) ProtoMessage() {}
+
+func (x *StreamThinkingBlockStartEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamThinkingBlockStartEvent.ProtoReflect.Descriptor instead.
+func (*StreamThinkingBlockStartEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *StreamThinkingBlockStartEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamThinkingBlockStartEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamThinkingBlockStartEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+type StreamThinkingBlockDeltaEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	Delta         string                 `protobuf:"bytes,2,opt,name=delta,proto3" json:"delta,omitempty"`
+	MessageId     string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,4,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamThinkingBlockDeltaEvent) Reset() {
+	*x = StreamThinkingBlockDeltaEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamThinkingBlockDeltaEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamThinkingBlockDeltaEvent) ProtoMessage() {}
+
+func (x *StreamThinkingBlockDeltaEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamThinkingBlockDeltaEvent.ProtoReflect.Descriptor instead.
+func (*StreamThinkingBlockDeltaEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *StreamThinkingBlockDeltaEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamThinkingBlockDeltaEvent) GetDelta() string {
+	if x != nil {
+		return x.Delta
+	}
+	return ""
+}
+
+func (x *StreamThinkingBlockDeltaEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamThinkingBlockDeltaEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+// elapsed_ms is stamped by the runtime (time between the matching
+// start and this end) so live view, replay, and history all show the
+// same "Thought for Ns" duration.
+type StreamThinkingBlockEndEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	ElapsedMs     int32                  `protobuf:"varint,4,opt,name=elapsed_ms,json=elapsedMs,proto3" json:"elapsed_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamThinkingBlockEndEvent) Reset() {
+	*x = StreamThinkingBlockEndEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamThinkingBlockEndEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamThinkingBlockEndEvent) ProtoMessage() {}
+
+func (x *StreamThinkingBlockEndEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamThinkingBlockEndEvent.ProtoReflect.Descriptor instead.
+func (*StreamThinkingBlockEndEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *StreamThinkingBlockEndEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamThinkingBlockEndEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamThinkingBlockEndEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *StreamThinkingBlockEndEvent) GetElapsedMs() int32 {
+	if x != nil {
+		return x.ElapsedMs
+	}
+	return 0
+}
+
+type StreamToolCallStartEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	ToolCallId    string                 `protobuf:"bytes,2,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	ToolName      string                 `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	MessageId     string                 `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,5,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamToolCallStartEvent) Reset() {
+	*x = StreamToolCallStartEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamToolCallStartEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamToolCallStartEvent) ProtoMessage() {}
+
+func (x *StreamToolCallStartEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamToolCallStartEvent.ProtoReflect.Descriptor instead.
+func (*StreamToolCallStartEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *StreamToolCallStartEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamToolCallStartEvent) GetToolCallId() string {
 	if x != nil {
 		return x.ToolCallId
 	}
 	return ""
 }
 
-func (x *StreamToolCallEvent) GetToolName() string {
+func (x *StreamToolCallStartEvent) GetToolName() string {
 	if x != nil {
 		return x.ToolName
 	}
 	return ""
 }
 
-func (x *StreamToolCallEvent) GetToolArgsJson() string {
+func (x *StreamToolCallStartEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamToolCallStartEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+// delta is an incremental fragment of the tool-args JSON.
+type StreamToolCallDeltaEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	ToolCallId    string                 `protobuf:"bytes,2,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	ToolName      string                 `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	Delta         string                 `protobuf:"bytes,4,opt,name=delta,proto3" json:"delta,omitempty"`
+	MessageId     string                 `protobuf:"bytes,5,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,6,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamToolCallDeltaEvent) Reset() {
+	*x = StreamToolCallDeltaEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamToolCallDeltaEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamToolCallDeltaEvent) ProtoMessage() {}
+
+func (x *StreamToolCallDeltaEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamToolCallDeltaEvent.ProtoReflect.Descriptor instead.
+func (*StreamToolCallDeltaEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *StreamToolCallDeltaEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamToolCallDeltaEvent) GetToolCallId() string {
+	if x != nil {
+		return x.ToolCallId
+	}
+	return ""
+}
+
+func (x *StreamToolCallDeltaEvent) GetToolName() string {
+	if x != nil {
+		return x.ToolName
+	}
+	return ""
+}
+
+func (x *StreamToolCallDeltaEvent) GetDelta() string {
+	if x != nil {
+		return x.Delta
+	}
+	return ""
+}
+
+func (x *StreamToolCallDeltaEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamToolCallDeltaEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+type StreamToolCallEndEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BlockId       string                 `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	ToolCallId    string                 `protobuf:"bytes,2,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	ToolName      string                 `protobuf:"bytes,3,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	ToolArgsJson  string                 `protobuf:"bytes,4,opt,name=tool_args_json,json=toolArgsJson,proto3" json:"tool_args_json,omitempty"`
+	MessageId     string                 `protobuf:"bytes,5,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Sequence      int32                  `protobuf:"varint,6,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamToolCallEndEvent) Reset() {
+	*x = StreamToolCallEndEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamToolCallEndEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamToolCallEndEvent) ProtoMessage() {}
+
+func (x *StreamToolCallEndEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamToolCallEndEvent.ProtoReflect.Descriptor instead.
+func (*StreamToolCallEndEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *StreamToolCallEndEvent) GetBlockId() string {
+	if x != nil {
+		return x.BlockId
+	}
+	return ""
+}
+
+func (x *StreamToolCallEndEvent) GetToolCallId() string {
+	if x != nil {
+		return x.ToolCallId
+	}
+	return ""
+}
+
+func (x *StreamToolCallEndEvent) GetToolName() string {
+	if x != nil {
+		return x.ToolName
+	}
+	return ""
+}
+
+func (x *StreamToolCallEndEvent) GetToolArgsJson() string {
 	if x != nil {
 		return x.ToolArgsJson
 	}
 	return ""
 }
 
-type StreamToolResultEvent struct {
+func (x *StreamToolCallEndEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *StreamToolCallEndEvent) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+// Tool execution started; message_id is the persisted tool-call row.
+type StreamToolResultStartEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ToolCallId    string                 `protobuf:"bytes,1,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
 	ToolName      string                 `protobuf:"bytes,2,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
-	Success       bool                   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
-	Result        string                 `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
+	ToolArgsJson  string                 `protobuf:"bytes,3,opt,name=tool_args_json,json=toolArgsJson,proto3" json:"tool_args_json,omitempty"`
+	MessageId     string                 `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *StreamToolResultEvent) Reset() {
-	*x = StreamToolResultEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[24]
+func (x *StreamToolResultStartEvent) Reset() {
+	*x = StreamToolResultStartEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StreamToolResultEvent) String() string {
+func (x *StreamToolResultStartEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StreamToolResultEvent) ProtoMessage() {}
+func (*StreamToolResultStartEvent) ProtoMessage() {}
 
-func (x *StreamToolResultEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[24]
+func (x *StreamToolResultStartEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1962,37 +2876,210 @@ func (x *StreamToolResultEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StreamToolResultEvent.ProtoReflect.Descriptor instead.
-func (*StreamToolResultEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{24}
+// Deprecated: Use StreamToolResultStartEvent.ProtoReflect.Descriptor instead.
+func (*StreamToolResultStartEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{34}
 }
 
-func (x *StreamToolResultEvent) GetToolCallId() string {
+func (x *StreamToolResultStartEvent) GetToolCallId() string {
 	if x != nil {
 		return x.ToolCallId
 	}
 	return ""
 }
 
-func (x *StreamToolResultEvent) GetToolName() string {
+func (x *StreamToolResultStartEvent) GetToolName() string {
 	if x != nil {
 		return x.ToolName
 	}
 	return ""
 }
 
-func (x *StreamToolResultEvent) GetSuccess() bool {
+func (x *StreamToolResultStartEvent) GetToolArgsJson() string {
+	if x != nil {
+		return x.ToolArgsJson
+	}
+	return ""
+}
+
+func (x *StreamToolResultStartEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+type StreamToolResultDeltaEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ToolCallId    string                 `protobuf:"bytes,1,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	Delta         string                 `protobuf:"bytes,2,opt,name=delta,proto3" json:"delta,omitempty"`
+	MessageId     string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamToolResultDeltaEvent) Reset() {
+	*x = StreamToolResultDeltaEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamToolResultDeltaEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamToolResultDeltaEvent) ProtoMessage() {}
+
+func (x *StreamToolResultDeltaEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamToolResultDeltaEvent.ProtoReflect.Descriptor instead.
+func (*StreamToolResultDeltaEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *StreamToolResultDeltaEvent) GetToolCallId() string {
+	if x != nil {
+		return x.ToolCallId
+	}
+	return ""
+}
+
+func (x *StreamToolResultDeltaEvent) GetDelta() string {
+	if x != nil {
+		return x.Delta
+	}
+	return ""
+}
+
+func (x *StreamToolResultDeltaEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+type StreamToolResultEndEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ToolCallId    string                 `protobuf:"bytes,1,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`
+	ToolName      string                 `protobuf:"bytes,2,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"`
+	Success       bool                   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+	Result        string                 `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
+	MessageId     string                 `protobuf:"bytes,5,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamToolResultEndEvent) Reset() {
+	*x = StreamToolResultEndEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamToolResultEndEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamToolResultEndEvent) ProtoMessage() {}
+
+func (x *StreamToolResultEndEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamToolResultEndEvent.ProtoReflect.Descriptor instead.
+func (*StreamToolResultEndEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *StreamToolResultEndEvent) GetToolCallId() string {
+	if x != nil {
+		return x.ToolCallId
+	}
+	return ""
+}
+
+func (x *StreamToolResultEndEvent) GetToolName() string {
+	if x != nil {
+		return x.ToolName
+	}
+	return ""
+}
+
+func (x *StreamToolResultEndEvent) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
 	return false
 }
 
-func (x *StreamToolResultEvent) GetResult() string {
+func (x *StreamToolResultEndEvent) GetResult() string {
 	if x != nil {
 		return x.Result
 	}
 	return ""
+}
+
+func (x *StreamToolResultEndEvent) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+// The run hit the tool-iteration cap; a terminal error event follows.
+type StreamExceedMaxItersEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamExceedMaxItersEvent) Reset() {
+	*x = StreamExceedMaxItersEvent{}
+	mi := &file_agents_v1_runtime_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamExceedMaxItersEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamExceedMaxItersEvent) ProtoMessage() {}
+
+func (x *StreamExceedMaxItersEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_runtime_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamExceedMaxItersEvent.ProtoReflect.Descriptor instead.
+func (*StreamExceedMaxItersEvent) Descriptor() ([]byte, []int) {
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{37}
 }
 
 type StreamMessageStoredEvent struct {
@@ -2004,7 +3091,7 @@ type StreamMessageStoredEvent struct {
 
 func (x *StreamMessageStoredEvent) Reset() {
 	*x = StreamMessageStoredEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[25]
+	mi := &file_agents_v1_runtime_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2016,7 +3103,7 @@ func (x *StreamMessageStoredEvent) String() string {
 func (*StreamMessageStoredEvent) ProtoMessage() {}
 
 func (x *StreamMessageStoredEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[25]
+	mi := &file_agents_v1_runtime_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2029,7 +3116,7 @@ func (x *StreamMessageStoredEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamMessageStoredEvent.ProtoReflect.Descriptor instead.
 func (*StreamMessageStoredEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{25}
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *StreamMessageStoredEvent) GetMessage() *MessageInfo {
@@ -2049,7 +3136,7 @@ type StreamDoneEvent struct {
 
 func (x *StreamDoneEvent) Reset() {
 	*x = StreamDoneEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[26]
+	mi := &file_agents_v1_runtime_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2061,7 +3148,7 @@ func (x *StreamDoneEvent) String() string {
 func (*StreamDoneEvent) ProtoMessage() {}
 
 func (x *StreamDoneEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[26]
+	mi := &file_agents_v1_runtime_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2074,7 +3161,7 @@ func (x *StreamDoneEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamDoneEvent.ProtoReflect.Descriptor instead.
 func (*StreamDoneEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{26}
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *StreamDoneEvent) GetAssistantMessage() *MessageInfo {
@@ -2100,7 +3187,7 @@ type StreamErrorEvent struct {
 
 func (x *StreamErrorEvent) Reset() {
 	*x = StreamErrorEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[27]
+	mi := &file_agents_v1_runtime_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2112,7 +3199,7 @@ func (x *StreamErrorEvent) String() string {
 func (*StreamErrorEvent) ProtoMessage() {}
 
 func (x *StreamErrorEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[27]
+	mi := &file_agents_v1_runtime_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2125,7 +3212,7 @@ func (x *StreamErrorEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamErrorEvent.ProtoReflect.Descriptor instead.
 func (*StreamErrorEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{27}
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *StreamErrorEvent) GetMessage() string {
@@ -2147,7 +3234,7 @@ type StreamConfirmationRequiredEvent struct {
 
 func (x *StreamConfirmationRequiredEvent) Reset() {
 	*x = StreamConfirmationRequiredEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[28]
+	mi := &file_agents_v1_runtime_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2159,7 +3246,7 @@ func (x *StreamConfirmationRequiredEvent) String() string {
 func (*StreamConfirmationRequiredEvent) ProtoMessage() {}
 
 func (x *StreamConfirmationRequiredEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[28]
+	mi := &file_agents_v1_runtime_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2172,7 +3259,7 @@ func (x *StreamConfirmationRequiredEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamConfirmationRequiredEvent.ProtoReflect.Descriptor instead.
 func (*StreamConfirmationRequiredEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{28}
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *StreamConfirmationRequiredEvent) GetToolCallId() string {
@@ -2225,7 +3312,7 @@ type StreamFailoverEvent struct {
 
 func (x *StreamFailoverEvent) Reset() {
 	*x = StreamFailoverEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[29]
+	mi := &file_agents_v1_runtime_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2237,7 +3324,7 @@ func (x *StreamFailoverEvent) String() string {
 func (*StreamFailoverEvent) ProtoMessage() {}
 
 func (x *StreamFailoverEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[29]
+	mi := &file_agents_v1_runtime_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2250,7 +3337,7 @@ func (x *StreamFailoverEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamFailoverEvent.ProtoReflect.Descriptor instead.
 func (*StreamFailoverEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{29}
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *StreamFailoverEvent) GetFromProviderKeyId() string {
@@ -2300,7 +3387,7 @@ type StreamSkillDraftEvent struct {
 
 func (x *StreamSkillDraftEvent) Reset() {
 	*x = StreamSkillDraftEvent{}
-	mi := &file_agents_v1_runtime_proto_msgTypes[30]
+	mi := &file_agents_v1_runtime_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2312,7 +3399,7 @@ func (x *StreamSkillDraftEvent) String() string {
 func (*StreamSkillDraftEvent) ProtoMessage() {}
 
 func (x *StreamSkillDraftEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_runtime_proto_msgTypes[30]
+	mi := &file_agents_v1_runtime_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2325,7 +3412,7 @@ func (x *StreamSkillDraftEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamSkillDraftEvent.ProtoReflect.Descriptor instead.
 func (*StreamSkillDraftEvent) Descriptor() ([]byte, []int) {
-	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{30}
+	return file_agents_v1_runtime_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *StreamSkillDraftEvent) GetDraft() *SkillDraft {
@@ -2482,41 +3569,133 @@ const file_agents_v1_runtime_proto_rawDesc = "" +
 	"\x14CancelStreamResponse\x12\x1c\n" +
 	"\tcancelled\x18\x01 \x01(\bR\tcancelled\";\n" +
 	"\x1dRespondToConfirmationResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\"\x86\x05\n" +
-	"\x10AgentStreamEvent\x123\n" +
-	"\x05token\x18\x01 \x01(\v2\x1b.agents.v1.StreamTokenEventH\x00R\x05token\x12=\n" +
-	"\ttool_call\x18\x02 \x01(\v2\x1e.agents.v1.StreamToolCallEventH\x00R\btoolCall\x12C\n" +
-	"\vtool_result\x18\x03 \x01(\v2 .agents.v1.StreamToolResultEventH\x00R\n" +
-	"toolResult\x12L\n" +
-	"\x0emessage_stored\x18\x04 \x01(\v2#.agents.v1.StreamMessageStoredEventH\x00R\rmessageStored\x120\n" +
-	"\x04done\x18\x05 \x01(\v2\x1a.agents.v1.StreamDoneEventH\x00R\x04done\x123\n" +
-	"\x05error\x18\x06 \x01(\v2\x1b.agents.v1.StreamErrorEventH\x00R\x05error\x12a\n" +
-	"\x15confirmation_required\x18\a \x01(\v2*.agents.v1.StreamConfirmationRequiredEventH\x00R\x14confirmationRequired\x12<\n" +
-	"\bfailover\x18\t \x01(\v2\x1e.agents.v1.StreamFailoverEventH\x00R\bfailover\x12C\n" +
-	"\vskill_draft\x18\n" +
-	" \x01(\v2 .agents.v1.StreamSkillDraftEventH\x00R\n" +
-	"skillDraft\x12\x15\n" +
-	"\x06run_id\x18\b \x01(\tR\x05runIdB\a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xe6\r\n" +
+	"\x10AgentStreamEvent\x12C\n" +
+	"\vreply_start\x18\x01 \x01(\v2 .agents.v1.StreamReplyStartEventH\x00R\n" +
+	"replyStart\x12P\n" +
+	"\x10model_call_start\x18\x02 \x01(\v2$.agents.v1.StreamModelCallStartEventH\x00R\x0emodelCallStart\x12J\n" +
+	"\x0emodel_call_end\x18\x03 \x01(\v2\".agents.v1.StreamModelCallEndEventH\x00R\fmodelCallEnd\x12P\n" +
+	"\x10text_block_start\x18\x04 \x01(\v2$.agents.v1.StreamTextBlockStartEventH\x00R\x0etextBlockStart\x12P\n" +
+	"\x10text_block_delta\x18\x05 \x01(\v2$.agents.v1.StreamTextBlockDeltaEventH\x00R\x0etextBlockDelta\x12J\n" +
+	"\x0etext_block_end\x18\x06 \x01(\v2\".agents.v1.StreamTextBlockEndEventH\x00R\ftextBlockEnd\x12\\\n" +
+	"\x14thinking_block_start\x18\a \x01(\v2(.agents.v1.StreamThinkingBlockStartEventH\x00R\x12thinkingBlockStart\x12\\\n" +
+	"\x14thinking_block_delta\x18\b \x01(\v2(.agents.v1.StreamThinkingBlockDeltaEventH\x00R\x12thinkingBlockDelta\x12V\n" +
+	"\x12thinking_block_end\x18\t \x01(\v2&.agents.v1.StreamThinkingBlockEndEventH\x00R\x10thinkingBlockEnd\x12M\n" +
+	"\x0ftool_call_start\x18\n" +
+	" \x01(\v2#.agents.v1.StreamToolCallStartEventH\x00R\rtoolCallStart\x12M\n" +
+	"\x0ftool_call_delta\x18\v \x01(\v2#.agents.v1.StreamToolCallDeltaEventH\x00R\rtoolCallDelta\x12G\n" +
+	"\rtool_call_end\x18\f \x01(\v2!.agents.v1.StreamToolCallEndEventH\x00R\vtoolCallEnd\x12S\n" +
+	"\x11tool_result_start\x18\r \x01(\v2%.agents.v1.StreamToolResultStartEventH\x00R\x0ftoolResultStart\x12S\n" +
+	"\x11tool_result_delta\x18\x0e \x01(\v2%.agents.v1.StreamToolResultDeltaEventH\x00R\x0ftoolResultDelta\x12M\n" +
+	"\x0ftool_result_end\x18\x0f \x01(\v2#.agents.v1.StreamToolResultEndEventH\x00R\rtoolResultEnd\x12a\n" +
+	"\x15confirmation_required\x18\x10 \x01(\v2*.agents.v1.StreamConfirmationRequiredEventH\x00R\x14confirmationRequired\x12<\n" +
+	"\bfailover\x18\x11 \x01(\v2\x1e.agents.v1.StreamFailoverEventH\x00R\bfailover\x12C\n" +
+	"\vskill_draft\x18\x12 \x01(\v2 .agents.v1.StreamSkillDraftEventH\x00R\n" +
+	"skillDraft\x12P\n" +
+	"\x10exceed_max_iters\x18\x13 \x01(\v2$.agents.v1.StreamExceedMaxItersEventH\x00R\x0eexceedMaxIters\x12L\n" +
+	"\x0emessage_stored\x18\x14 \x01(\v2#.agents.v1.StreamMessageStoredEventH\x00R\rmessageStored\x120\n" +
+	"\x04done\x18\x15 \x01(\v2\x1a.agents.v1.StreamDoneEventH\x00R\x04done\x123\n" +
+	"\x05error\x18\x16 \x01(\v2\x1b.agents.v1.StreamErrorEventH\x00R\x05error\x12\x15\n" +
+	"\x06run_id\x18\x1e \x01(\tR\x05runIdB\a\n" +
 	"\x05event\"N\n" +
 	"\x19StreamSendMessageResponse\x121\n" +
 	"\x05event\x18\x01 \x01(\v2\x1b.agents.v1.AgentStreamEventR\x05event\"M\n" +
 	"\x18RerunFromMessageResponse\x121\n" +
 	"\x05event\x18\x01 \x01(\v2\x1b.agents.v1.AgentStreamEventR\x05event\"K\n" +
 	"\x16SubscribeToRunResponse\x121\n" +
-	"\x05event\x18\x01 \x01(\v2\x1b.agents.v1.AgentStreamEventR\x05event\"&\n" +
-	"\x10StreamTokenEvent\x12\x12\n" +
-	"\x04text\x18\x01 \x01(\tR\x04text\"z\n" +
-	"\x13StreamToolCallEvent\x12 \n" +
+	"\x05event\x18\x01 \x01(\v2\x1b.agents.v1.AgentStreamEventR\x05event\"+\n" +
+	"\x15StreamReplyStartEvent\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\"1\n" +
+	"\x19StreamModelCallStartEvent\x12\x14\n" +
+	"\x05model\x18\x01 \x01(\tR\x05model\"\xd7\x01\n" +
+	"\x17StreamModelCallEndEvent\x12\x14\n" +
+	"\x05model\x18\x01 \x01(\tR\x05model\x12!\n" +
+	"\finput_tokens\x18\x02 \x01(\x03R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\x03 \x01(\x03R\foutputTokens\x125\n" +
+	"\x17cache_read_input_tokens\x18\x04 \x01(\x03R\x14cacheReadInputTokens\x12'\n" +
+	"\x0fthinking_tokens\x18\x05 \x01(\x03R\x0ethinkingTokens\"q\n" +
+	"\x19StreamTextBlockStartEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x03 \x01(\x05R\bsequence\"\x87\x01\n" +
+	"\x19StreamTextBlockDeltaEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12\x14\n" +
+	"\x05delta\x18\x02 \x01(\tR\x05delta\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x03 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x04 \x01(\x05R\bsequence\"o\n" +
+	"\x17StreamTextBlockEndEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x03 \x01(\x05R\bsequence\"u\n" +
+	"\x1dStreamThinkingBlockStartEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x03 \x01(\x05R\bsequence\"\x8b\x01\n" +
+	"\x1dStreamThinkingBlockDeltaEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12\x14\n" +
+	"\x05delta\x18\x02 \x01(\tR\x05delta\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x03 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x04 \x01(\x05R\bsequence\"\x92\x01\n" +
+	"\x1bStreamThinkingBlockEndEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x03 \x01(\x05R\bsequence\x12\x1d\n" +
+	"\n" +
+	"elapsed_ms\x18\x04 \x01(\x05R\telapsedMs\"\xaf\x01\n" +
+	"\x18StreamToolCallStartEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12 \n" +
+	"\ftool_call_id\x18\x02 \x01(\tR\n" +
+	"toolCallId\x12\x1b\n" +
+	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x04 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x05 \x01(\x05R\bsequence\"\xc5\x01\n" +
+	"\x18StreamToolCallDeltaEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12 \n" +
+	"\ftool_call_id\x18\x02 \x01(\tR\n" +
+	"toolCallId\x12\x1b\n" +
+	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12\x14\n" +
+	"\x05delta\x18\x04 \x01(\tR\x05delta\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x05 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x06 \x01(\x05R\bsequence\"\xd3\x01\n" +
+	"\x16StreamToolCallEndEvent\x12\x19\n" +
+	"\bblock_id\x18\x01 \x01(\tR\ablockId\x12 \n" +
+	"\ftool_call_id\x18\x02 \x01(\tR\n" +
+	"toolCallId\x12\x1b\n" +
+	"\ttool_name\x18\x03 \x01(\tR\btoolName\x12$\n" +
+	"\x0etool_args_json\x18\x04 \x01(\tR\ftoolArgsJson\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x05 \x01(\tR\tmessageId\x12\x1a\n" +
+	"\bsequence\x18\x06 \x01(\x05R\bsequence\"\xa0\x01\n" +
+	"\x1aStreamToolResultStartEvent\x12 \n" +
 	"\ftool_call_id\x18\x01 \x01(\tR\n" +
 	"toolCallId\x12\x1b\n" +
 	"\ttool_name\x18\x02 \x01(\tR\btoolName\x12$\n" +
-	"\x0etool_args_json\x18\x03 \x01(\tR\ftoolArgsJson\"\x88\x01\n" +
-	"\x15StreamToolResultEvent\x12 \n" +
+	"\x0etool_args_json\x18\x03 \x01(\tR\ftoolArgsJson\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x04 \x01(\tR\tmessageId\"s\n" +
+	"\x1aStreamToolResultDeltaEvent\x12 \n" +
+	"\ftool_call_id\x18\x01 \x01(\tR\n" +
+	"toolCallId\x12\x14\n" +
+	"\x05delta\x18\x02 \x01(\tR\x05delta\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x03 \x01(\tR\tmessageId\"\xaa\x01\n" +
+	"\x18StreamToolResultEndEvent\x12 \n" +
 	"\ftool_call_id\x18\x01 \x01(\tR\n" +
 	"toolCallId\x12\x1b\n" +
 	"\ttool_name\x18\x02 \x01(\tR\btoolName\x12\x18\n" +
 	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x16\n" +
-	"\x06result\x18\x04 \x01(\tR\x06result\"L\n" +
+	"\x06result\x18\x04 \x01(\tR\x06result\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x05 \x01(\tR\tmessageId\"\x1b\n" +
+	"\x19StreamExceedMaxItersEvent\"L\n" +
 	"\x18StreamMessageStoredEvent\x120\n" +
 	"\amessage\x18\x01 \x01(\v2\x16.agents.v1.MessageInfoR\amessage\"u\n" +
 	"\x0fStreamDoneEvent\x12C\n" +
@@ -2560,7 +3739,7 @@ func file_agents_v1_runtime_proto_rawDescGZIP() []byte {
 	return file_agents_v1_runtime_proto_rawDescData
 }
 
-var file_agents_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_agents_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
 var file_agents_v1_runtime_proto_goTypes = []any{
 	(*GetUsageStatsRequest)(nil),            // 0: agents.v1.GetUsageStatsRequest
 	(*GetUsageStatsResponse)(nil),           // 1: agents.v1.GetUsageStatsResponse
@@ -2584,17 +3763,30 @@ var file_agents_v1_runtime_proto_goTypes = []any{
 	(*StreamSendMessageResponse)(nil),       // 19: agents.v1.StreamSendMessageResponse
 	(*RerunFromMessageResponse)(nil),        // 20: agents.v1.RerunFromMessageResponse
 	(*SubscribeToRunResponse)(nil),          // 21: agents.v1.SubscribeToRunResponse
-	(*StreamTokenEvent)(nil),                // 22: agents.v1.StreamTokenEvent
-	(*StreamToolCallEvent)(nil),             // 23: agents.v1.StreamToolCallEvent
-	(*StreamToolResultEvent)(nil),           // 24: agents.v1.StreamToolResultEvent
-	(*StreamMessageStoredEvent)(nil),        // 25: agents.v1.StreamMessageStoredEvent
-	(*StreamDoneEvent)(nil),                 // 26: agents.v1.StreamDoneEvent
-	(*StreamErrorEvent)(nil),                // 27: agents.v1.StreamErrorEvent
-	(*StreamConfirmationRequiredEvent)(nil), // 28: agents.v1.StreamConfirmationRequiredEvent
-	(*StreamFailoverEvent)(nil),             // 29: agents.v1.StreamFailoverEvent
-	(*StreamSkillDraftEvent)(nil),           // 30: agents.v1.StreamSkillDraftEvent
-	(*MessageInfo)(nil),                     // 31: agents.v1.MessageInfo
-	(*SkillDraft)(nil),                      // 32: agents.v1.SkillDraft
+	(*StreamReplyStartEvent)(nil),           // 22: agents.v1.StreamReplyStartEvent
+	(*StreamModelCallStartEvent)(nil),       // 23: agents.v1.StreamModelCallStartEvent
+	(*StreamModelCallEndEvent)(nil),         // 24: agents.v1.StreamModelCallEndEvent
+	(*StreamTextBlockStartEvent)(nil),       // 25: agents.v1.StreamTextBlockStartEvent
+	(*StreamTextBlockDeltaEvent)(nil),       // 26: agents.v1.StreamTextBlockDeltaEvent
+	(*StreamTextBlockEndEvent)(nil),         // 27: agents.v1.StreamTextBlockEndEvent
+	(*StreamThinkingBlockStartEvent)(nil),   // 28: agents.v1.StreamThinkingBlockStartEvent
+	(*StreamThinkingBlockDeltaEvent)(nil),   // 29: agents.v1.StreamThinkingBlockDeltaEvent
+	(*StreamThinkingBlockEndEvent)(nil),     // 30: agents.v1.StreamThinkingBlockEndEvent
+	(*StreamToolCallStartEvent)(nil),        // 31: agents.v1.StreamToolCallStartEvent
+	(*StreamToolCallDeltaEvent)(nil),        // 32: agents.v1.StreamToolCallDeltaEvent
+	(*StreamToolCallEndEvent)(nil),          // 33: agents.v1.StreamToolCallEndEvent
+	(*StreamToolResultStartEvent)(nil),      // 34: agents.v1.StreamToolResultStartEvent
+	(*StreamToolResultDeltaEvent)(nil),      // 35: agents.v1.StreamToolResultDeltaEvent
+	(*StreamToolResultEndEvent)(nil),        // 36: agents.v1.StreamToolResultEndEvent
+	(*StreamExceedMaxItersEvent)(nil),       // 37: agents.v1.StreamExceedMaxItersEvent
+	(*StreamMessageStoredEvent)(nil),        // 38: agents.v1.StreamMessageStoredEvent
+	(*StreamDoneEvent)(nil),                 // 39: agents.v1.StreamDoneEvent
+	(*StreamErrorEvent)(nil),                // 40: agents.v1.StreamErrorEvent
+	(*StreamConfirmationRequiredEvent)(nil), // 41: agents.v1.StreamConfirmationRequiredEvent
+	(*StreamFailoverEvent)(nil),             // 42: agents.v1.StreamFailoverEvent
+	(*StreamSkillDraftEvent)(nil),           // 43: agents.v1.StreamSkillDraftEvent
+	(*MessageInfo)(nil),                     // 44: agents.v1.MessageInfo
+	(*SkillDraft)(nil),                      // 45: agents.v1.SkillDraft
 }
 var file_agents_v1_runtime_proto_depIdxs = []int32{
 	2,  // 0: agents.v1.GetUsageStatsResponse.daily_usage:type_name -> agents.v1.DailyUsage
@@ -2605,42 +3797,55 @@ var file_agents_v1_runtime_proto_depIdxs = []int32{
 	7,  // 5: agents.v1.GetUsageStatsResponse.cron_usage:type_name -> agents.v1.CronTaskUsage
 	11, // 6: agents.v1.SendMessageRequest.chat_context:type_name -> agents.v1.ChatChannelContext
 	11, // 7: agents.v1.StreamSendMessageRequest.chat_context:type_name -> agents.v1.ChatChannelContext
-	31, // 8: agents.v1.SendMessageResponse.user_message:type_name -> agents.v1.MessageInfo
-	31, // 9: agents.v1.SendMessageResponse.assistant_message:type_name -> agents.v1.MessageInfo
-	22, // 10: agents.v1.AgentStreamEvent.token:type_name -> agents.v1.StreamTokenEvent
-	23, // 11: agents.v1.AgentStreamEvent.tool_call:type_name -> agents.v1.StreamToolCallEvent
-	24, // 12: agents.v1.AgentStreamEvent.tool_result:type_name -> agents.v1.StreamToolResultEvent
-	25, // 13: agents.v1.AgentStreamEvent.message_stored:type_name -> agents.v1.StreamMessageStoredEvent
-	26, // 14: agents.v1.AgentStreamEvent.done:type_name -> agents.v1.StreamDoneEvent
-	27, // 15: agents.v1.AgentStreamEvent.error:type_name -> agents.v1.StreamErrorEvent
-	28, // 16: agents.v1.AgentStreamEvent.confirmation_required:type_name -> agents.v1.StreamConfirmationRequiredEvent
-	29, // 17: agents.v1.AgentStreamEvent.failover:type_name -> agents.v1.StreamFailoverEvent
-	30, // 18: agents.v1.AgentStreamEvent.skill_draft:type_name -> agents.v1.StreamSkillDraftEvent
-	18, // 19: agents.v1.StreamSendMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
-	18, // 20: agents.v1.RerunFromMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
-	18, // 21: agents.v1.SubscribeToRunResponse.event:type_name -> agents.v1.AgentStreamEvent
-	31, // 22: agents.v1.StreamMessageStoredEvent.message:type_name -> agents.v1.MessageInfo
-	31, // 23: agents.v1.StreamDoneEvent.assistant_message:type_name -> agents.v1.MessageInfo
-	32, // 24: agents.v1.StreamSkillDraftEvent.draft:type_name -> agents.v1.SkillDraft
-	8,  // 25: agents.v1.RuntimeService.SendMessage:input_type -> agents.v1.SendMessageRequest
-	10, // 26: agents.v1.RuntimeService.StreamSendMessage:input_type -> agents.v1.StreamSendMessageRequest
-	9,  // 27: agents.v1.RuntimeService.RerunFromMessage:input_type -> agents.v1.RerunFromMessageRequest
-	14, // 28: agents.v1.RuntimeService.SubscribeToRun:input_type -> agents.v1.SubscribeToRunRequest
-	15, // 29: agents.v1.RuntimeService.CancelStream:input_type -> agents.v1.CancelStreamRequest
-	13, // 30: agents.v1.RuntimeService.RespondToConfirmation:input_type -> agents.v1.RespondToConfirmationRequest
-	0,  // 31: agents.v1.RuntimeService.GetUsageStats:input_type -> agents.v1.GetUsageStatsRequest
-	12, // 32: agents.v1.RuntimeService.SendMessage:output_type -> agents.v1.SendMessageResponse
-	19, // 33: agents.v1.RuntimeService.StreamSendMessage:output_type -> agents.v1.StreamSendMessageResponse
-	20, // 34: agents.v1.RuntimeService.RerunFromMessage:output_type -> agents.v1.RerunFromMessageResponse
-	21, // 35: agents.v1.RuntimeService.SubscribeToRun:output_type -> agents.v1.SubscribeToRunResponse
-	16, // 36: agents.v1.RuntimeService.CancelStream:output_type -> agents.v1.CancelStreamResponse
-	17, // 37: agents.v1.RuntimeService.RespondToConfirmation:output_type -> agents.v1.RespondToConfirmationResponse
-	1,  // 38: agents.v1.RuntimeService.GetUsageStats:output_type -> agents.v1.GetUsageStatsResponse
-	32, // [32:39] is the sub-list for method output_type
-	25, // [25:32] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	44, // 8: agents.v1.SendMessageResponse.user_message:type_name -> agents.v1.MessageInfo
+	44, // 9: agents.v1.SendMessageResponse.assistant_message:type_name -> agents.v1.MessageInfo
+	22, // 10: agents.v1.AgentStreamEvent.reply_start:type_name -> agents.v1.StreamReplyStartEvent
+	23, // 11: agents.v1.AgentStreamEvent.model_call_start:type_name -> agents.v1.StreamModelCallStartEvent
+	24, // 12: agents.v1.AgentStreamEvent.model_call_end:type_name -> agents.v1.StreamModelCallEndEvent
+	25, // 13: agents.v1.AgentStreamEvent.text_block_start:type_name -> agents.v1.StreamTextBlockStartEvent
+	26, // 14: agents.v1.AgentStreamEvent.text_block_delta:type_name -> agents.v1.StreamTextBlockDeltaEvent
+	27, // 15: agents.v1.AgentStreamEvent.text_block_end:type_name -> agents.v1.StreamTextBlockEndEvent
+	28, // 16: agents.v1.AgentStreamEvent.thinking_block_start:type_name -> agents.v1.StreamThinkingBlockStartEvent
+	29, // 17: agents.v1.AgentStreamEvent.thinking_block_delta:type_name -> agents.v1.StreamThinkingBlockDeltaEvent
+	30, // 18: agents.v1.AgentStreamEvent.thinking_block_end:type_name -> agents.v1.StreamThinkingBlockEndEvent
+	31, // 19: agents.v1.AgentStreamEvent.tool_call_start:type_name -> agents.v1.StreamToolCallStartEvent
+	32, // 20: agents.v1.AgentStreamEvent.tool_call_delta:type_name -> agents.v1.StreamToolCallDeltaEvent
+	33, // 21: agents.v1.AgentStreamEvent.tool_call_end:type_name -> agents.v1.StreamToolCallEndEvent
+	34, // 22: agents.v1.AgentStreamEvent.tool_result_start:type_name -> agents.v1.StreamToolResultStartEvent
+	35, // 23: agents.v1.AgentStreamEvent.tool_result_delta:type_name -> agents.v1.StreamToolResultDeltaEvent
+	36, // 24: agents.v1.AgentStreamEvent.tool_result_end:type_name -> agents.v1.StreamToolResultEndEvent
+	41, // 25: agents.v1.AgentStreamEvent.confirmation_required:type_name -> agents.v1.StreamConfirmationRequiredEvent
+	42, // 26: agents.v1.AgentStreamEvent.failover:type_name -> agents.v1.StreamFailoverEvent
+	43, // 27: agents.v1.AgentStreamEvent.skill_draft:type_name -> agents.v1.StreamSkillDraftEvent
+	37, // 28: agents.v1.AgentStreamEvent.exceed_max_iters:type_name -> agents.v1.StreamExceedMaxItersEvent
+	38, // 29: agents.v1.AgentStreamEvent.message_stored:type_name -> agents.v1.StreamMessageStoredEvent
+	39, // 30: agents.v1.AgentStreamEvent.done:type_name -> agents.v1.StreamDoneEvent
+	40, // 31: agents.v1.AgentStreamEvent.error:type_name -> agents.v1.StreamErrorEvent
+	18, // 32: agents.v1.StreamSendMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
+	18, // 33: agents.v1.RerunFromMessageResponse.event:type_name -> agents.v1.AgentStreamEvent
+	18, // 34: agents.v1.SubscribeToRunResponse.event:type_name -> agents.v1.AgentStreamEvent
+	44, // 35: agents.v1.StreamMessageStoredEvent.message:type_name -> agents.v1.MessageInfo
+	44, // 36: agents.v1.StreamDoneEvent.assistant_message:type_name -> agents.v1.MessageInfo
+	45, // 37: agents.v1.StreamSkillDraftEvent.draft:type_name -> agents.v1.SkillDraft
+	8,  // 38: agents.v1.RuntimeService.SendMessage:input_type -> agents.v1.SendMessageRequest
+	10, // 39: agents.v1.RuntimeService.StreamSendMessage:input_type -> agents.v1.StreamSendMessageRequest
+	9,  // 40: agents.v1.RuntimeService.RerunFromMessage:input_type -> agents.v1.RerunFromMessageRequest
+	14, // 41: agents.v1.RuntimeService.SubscribeToRun:input_type -> agents.v1.SubscribeToRunRequest
+	15, // 42: agents.v1.RuntimeService.CancelStream:input_type -> agents.v1.CancelStreamRequest
+	13, // 43: agents.v1.RuntimeService.RespondToConfirmation:input_type -> agents.v1.RespondToConfirmationRequest
+	0,  // 44: agents.v1.RuntimeService.GetUsageStats:input_type -> agents.v1.GetUsageStatsRequest
+	12, // 45: agents.v1.RuntimeService.SendMessage:output_type -> agents.v1.SendMessageResponse
+	19, // 46: agents.v1.RuntimeService.StreamSendMessage:output_type -> agents.v1.StreamSendMessageResponse
+	20, // 47: agents.v1.RuntimeService.RerunFromMessage:output_type -> agents.v1.RerunFromMessageResponse
+	21, // 48: agents.v1.RuntimeService.SubscribeToRun:output_type -> agents.v1.SubscribeToRunResponse
+	16, // 49: agents.v1.RuntimeService.CancelStream:output_type -> agents.v1.CancelStreamResponse
+	17, // 50: agents.v1.RuntimeService.RespondToConfirmation:output_type -> agents.v1.RespondToConfirmationResponse
+	1,  // 51: agents.v1.RuntimeService.GetUsageStats:output_type -> agents.v1.GetUsageStatsResponse
+	45, // [45:52] is the sub-list for method output_type
+	38, // [38:45] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_runtime_proto_init() }
@@ -2654,15 +3859,28 @@ func file_agents_v1_runtime_proto_init() {
 	file_agents_v1_runtime_proto_msgTypes[10].OneofWrappers = []any{}
 	file_agents_v1_runtime_proto_msgTypes[11].OneofWrappers = []any{}
 	file_agents_v1_runtime_proto_msgTypes[18].OneofWrappers = []any{
-		(*AgentStreamEvent_Token)(nil),
-		(*AgentStreamEvent_ToolCall)(nil),
-		(*AgentStreamEvent_ToolResult)(nil),
-		(*AgentStreamEvent_MessageStored)(nil),
-		(*AgentStreamEvent_Done)(nil),
-		(*AgentStreamEvent_Error)(nil),
+		(*AgentStreamEvent_ReplyStart)(nil),
+		(*AgentStreamEvent_ModelCallStart)(nil),
+		(*AgentStreamEvent_ModelCallEnd)(nil),
+		(*AgentStreamEvent_TextBlockStart)(nil),
+		(*AgentStreamEvent_TextBlockDelta)(nil),
+		(*AgentStreamEvent_TextBlockEnd)(nil),
+		(*AgentStreamEvent_ThinkingBlockStart)(nil),
+		(*AgentStreamEvent_ThinkingBlockDelta)(nil),
+		(*AgentStreamEvent_ThinkingBlockEnd)(nil),
+		(*AgentStreamEvent_ToolCallStart)(nil),
+		(*AgentStreamEvent_ToolCallDelta)(nil),
+		(*AgentStreamEvent_ToolCallEnd)(nil),
+		(*AgentStreamEvent_ToolResultStart)(nil),
+		(*AgentStreamEvent_ToolResultDelta)(nil),
+		(*AgentStreamEvent_ToolResultEnd)(nil),
 		(*AgentStreamEvent_ConfirmationRequired)(nil),
 		(*AgentStreamEvent_Failover)(nil),
 		(*AgentStreamEvent_SkillDraft)(nil),
+		(*AgentStreamEvent_ExceedMaxIters)(nil),
+		(*AgentStreamEvent_MessageStored)(nil),
+		(*AgentStreamEvent_Done)(nil),
+		(*AgentStreamEvent_Error)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2670,7 +3888,7 @@ func file_agents_v1_runtime_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_runtime_proto_rawDesc), len(file_agents_v1_runtime_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   31,
+			NumMessages:   44,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

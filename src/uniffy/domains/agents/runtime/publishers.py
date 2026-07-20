@@ -7,7 +7,7 @@ abstracts both so the runtime drives one shape regardless of where
 events land.
 
 - :class:`ChatStreamPublisher` -- pubsub fan-out via the existing
-  per-member channel pipe. Translates each :class:`RuntimeStreamEvent`
+  per-member channel pipe. Translates each :class:`StreamEvent`
   into the matching chat event, plus DB side-effects (placeholder
   announcement, error-message persistence) that the chat surface
   requires.
@@ -39,18 +39,8 @@ from uniffy.core.valkey.streams import (
     set_run_state,
     stream_xadd,
 )
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.converters import runtime_stream_event_to_json
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeConfirmationRequiredEvent,
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeMessageStoredEvent,
-    RuntimeSkillDraftEvent,
-    RuntimeStreamEvent,
-    RuntimeTokenEvent,
-    RuntimeToolCallEvent,
-    RuntimeToolResultEvent,
-)
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
@@ -68,7 +58,7 @@ DEFAULT_TOKEN_BUFFER_CAP = 32
 class RuntimeStreamPublisher(Protocol):
     """Surface for fanning runtime stream events out to subscribers."""
 
-    async def publish(self, event: RuntimeStreamEvent) -> None:
+    async def publish(self, event: StreamEvent) -> None:
         """Publish a single runtime event."""
 
     async def close(self) -> None:
@@ -104,118 +94,120 @@ class ChatStreamPublisher:
         self._thread_root_id = thread_root_id
         self._announced_placeholders: set[UUID] = set()
 
-    async def publish(self, event: RuntimeStreamEvent) -> None:
-        """Translate and fan one runtime event into chat events."""
-        if isinstance(event, RuntimeTokenEvent):
-            await self._publish_token(event)
-            return
+    async def publish(self, event: StreamEvent) -> None:
+        """Translate and fan one runtime event into chat events.
 
-        if isinstance(event, RuntimeMessageStoredEvent):
-            envelope = event.message
-            if envelope.role == "assistant" and envelope.id is not None:
-                self._announced_placeholders.add(envelope.id)
-                await self._publish_message_created(envelope.id)
-            return
-
-        if isinstance(event, RuntimeToolCallEvent):
-            if event.message_id is not None:
-                await self._publish_message_created(event.message_id)
-            await publish_channel_event_to_members(
-                self._member_ids,
-                chat_evt.AGENT_TOOL_CALL,
-                chat_evt.build_agent_tool_call_payload(
-                    message_id=event.message_id or self._agent_id,
-                    agent_id=self._agent_id,
-                    tool_name=event.tool_name,
-                    tool_call_id=event.tool_call_id,
-                    status="STARTED",
-                    preview=_truncate_json(event.tool_args),
-                ),
-                channel_id=self._channel_id,
-            )
-            return
-
-        if isinstance(event, RuntimeToolResultEvent):
-            if event.message_id is not None:
-                await self._publish_message_created(event.message_id)
-            await publish_channel_event_to_members(
-                self._member_ids,
-                chat_evt.AGENT_TOOL_CALL,
-                chat_evt.build_agent_tool_call_payload(
-                    message_id=event.message_id or self._agent_id,
-                    agent_id=self._agent_id,
-                    tool_name=event.tool_name,
-                    tool_call_id=event.tool_call_id,
-                    status="COMPLETED" if event.success else "FAILED",
-                    preview=_truncate(event.result),
-                    error_message=None if event.success else event.result,
-                ),
-                channel_id=self._channel_id,
-            )
-            return
-
-        if isinstance(event, RuntimeConfirmationRequiredEvent):
-            if event.message_id is not None:
-                await self._publish_message_created(event.message_id)
-            expires_at = datetime.now(UTC) + timedelta(seconds=APPROVAL_TTL_SECONDS)
-            request_id = event.request_id or event.message_id or self._agent_id
-            await publish_channel_event_to_members(
-                self._member_ids,
-                chat_evt.AGENT_CONFIRMATION_REQUESTED,
-                chat_evt.build_agent_confirmation_requested_payload(
-                    message_id=event.message_id or self._agent_id,
-                    agent_id=self._agent_id,
-                    request_id=request_id,
-                    tool_name=event.tool_name,
-                    args_preview=_truncate_json(event.tool_args),
-                    actor_user_id=self._actor_user_id,
-                    expires_at=expires_at,
-                ),
-                channel_id=self._channel_id,
-            )
-            return
-
-        if isinstance(event, RuntimeDoneEvent):
-            if event.assistant_message is not None:
-                msg_id = event.assistant_message.id
-                if msg_id in self._announced_placeholders:
-                    await publish_channel_event_to_members(
-                        self._member_ids,
-                        chat_evt.AGENT_TOKEN_DELTA,
-                        chat_evt.build_agent_token_delta_payload(
-                            message_id=msg_id,
-                            agent_id=self._agent_id,
-                            delta="",
-                            sequence=2_000_000_000,
-                            final=True,
-                        ),
-                        channel_id=self._channel_id,
-                    )
-                    await self._publish_message_event(msg_id, chat_evt.MESSAGE_UPDATED)
-                else:
-                    await self._publish_message_created(msg_id)
-            return
-
-        if isinstance(event, RuntimeSkillDraftEvent):
-            await self.write_skill_draft_card(event.draft)
-            return
-
-        if isinstance(event, RuntimeErrorEvent):
-            logger.warning(
-                f"Agent runtime error for agent={self._agent_id} "
-                f"channel={self._channel_id}: {event.error}"
-            )
-            try:
-                await self.write_agent_error_message(event.error)
-            except Exception:
-                logger.exception("Failed to write agent error message to chat")
+        Block-framing events without a chat rendering (text/tool block
+        start/end, model call framing, reply start) are dropped here;
+        the chat surface reconstructs state from deltas + tool status.
+        """
+        match event.type:
+            case EventType.TEXT_BLOCK_DELTA:
+                await self._publish_text_delta(event)
+            case (
+                EventType.THINKING_BLOCK_DELTA | EventType.THINKING_BLOCK_END
+            ):
+                await self._publish_thinking(event)
+            case EventType.MESSAGE_STORED:
+                envelope = event.message
+                if envelope.role == "assistant" and envelope.id is not None:
+                    self._announced_placeholders.add(envelope.id)
+                    await self._publish_message_created(envelope.id)
+            case EventType.TOOL_RESULT_START:
+                if event.message_id is not None:
+                    await self._publish_message_created(event.message_id)
+                await publish_channel_event_to_members(
+                    self._member_ids,
+                    chat_evt.AGENT_TOOL_CALL,
+                    chat_evt.build_agent_tool_call_payload(
+                        message_id=event.message_id or self._agent_id,
+                        agent_id=self._agent_id,
+                        tool_name=event.tool_name,
+                        tool_call_id=event.tool_call_id,
+                        status="STARTED",
+                        preview=_truncate_json(event.tool_args),
+                    ),
+                    channel_id=self._channel_id,
+                )
+            case EventType.TOOL_RESULT_END:
+                if event.message_id is not None:
+                    await self._publish_message_created(event.message_id)
+                await publish_channel_event_to_members(
+                    self._member_ids,
+                    chat_evt.AGENT_TOOL_CALL,
+                    chat_evt.build_agent_tool_call_payload(
+                        message_id=event.message_id or self._agent_id,
+                        agent_id=self._agent_id,
+                        tool_name=event.tool_name,
+                        tool_call_id=event.tool_call_id,
+                        status="COMPLETED" if event.success else "FAILED",
+                        preview=_truncate(event.tool_result),
+                        error_message=None if event.success else event.tool_result,
+                    ),
+                    channel_id=self._channel_id,
+                )
+            case EventType.CONFIRMATION_REQUIRED:
+                if event.message_id is not None:
+                    await self._publish_message_created(event.message_id)
+                expires_at = datetime.now(UTC) + timedelta(
+                    seconds=APPROVAL_TTL_SECONDS
+                )
+                request_id = event.request_id or event.message_id or self._agent_id
+                await publish_channel_event_to_members(
+                    self._member_ids,
+                    chat_evt.AGENT_CONFIRMATION_REQUESTED,
+                    chat_evt.build_agent_confirmation_requested_payload(
+                        message_id=event.message_id or self._agent_id,
+                        agent_id=self._agent_id,
+                        request_id=request_id,
+                        tool_name=event.tool_name,
+                        args_preview=_truncate_json(event.tool_args),
+                        actor_user_id=self._actor_user_id,
+                        expires_at=expires_at,
+                    ),
+                    channel_id=self._channel_id,
+                )
+            case EventType.DONE:
+                if event.assistant_message is not None:
+                    msg_id = event.assistant_message.id
+                    if msg_id in self._announced_placeholders:
+                        await publish_channel_event_to_members(
+                            self._member_ids,
+                            chat_evt.AGENT_TOKEN_DELTA,
+                            chat_evt.build_agent_token_delta_payload(
+                                message_id=msg_id,
+                                agent_id=self._agent_id,
+                                delta="",
+                                sequence=2_000_000_000,
+                                final=True,
+                            ),
+                            channel_id=self._channel_id,
+                        )
+                        await self._publish_message_event(
+                            msg_id, chat_evt.MESSAGE_UPDATED
+                        )
+                    else:
+                        await self._publish_message_created(msg_id)
+            case EventType.SKILL_DRAFT:
+                await self.write_skill_draft_card(event.draft)
+            case EventType.ERROR:
+                logger.warning(
+                    f"Agent runtime error for agent={self._agent_id} "
+                    f"channel={self._channel_id}: {event.error}"
+                )
+                try:
+                    await self.write_agent_error_message(event.error)
+                except Exception:
+                    logger.exception("Failed to write agent error message to chat")
+            case _:
+                pass
 
     async def close(self) -> None:
         """No buffers to flush; kept for protocol parity."""
         return None
 
-    async def _publish_token(self, event: RuntimeTokenEvent) -> None:
-        if event.message_id is None or not event.text:
+    async def _publish_text_delta(self, event: StreamEvent) -> None:
+        if event.message_id is None or not event.delta:
             return
         await publish_channel_event_to_members(
             self._member_ids,
@@ -223,8 +215,35 @@ class ChatStreamPublisher:
             chat_evt.build_agent_token_delta_payload(
                 message_id=event.message_id,
                 agent_id=self._agent_id,
-                delta=event.text,
+                delta=event.delta,
                 sequence=event.sequence,
+            ),
+            channel_id=self._channel_id,
+        )
+
+    async def _publish_thinking(self, event: StreamEvent) -> None:
+        """Fan a thinking delta (or the closing final marker) to the channel.
+
+        Thinking rides its own chat event and never touches message
+        content; without a placeholder row there is nothing to anchor
+        the pane to, so events before reservation are dropped.
+        """
+        if event.message_id is None:
+            return
+        final = event.type is EventType.THINKING_BLOCK_END
+        if not final and not event.delta:
+            return
+        await publish_channel_event_to_members(
+            self._member_ids,
+            chat_evt.AGENT_THINKING_DELTA,
+            chat_evt.build_agent_thinking_delta_payload(
+                message_id=event.message_id,
+                agent_id=self._agent_id,
+                block_id=event.block_id,
+                delta=event.delta if not final else "",
+                sequence=event.sequence,
+                final=final,
+                elapsed_ms=event.elapsed_ms,
             ),
             channel_id=self._channel_id,
         )
@@ -419,7 +438,7 @@ class RunStreamPublisher:
         self._maxlen = maxlen
         self._state_ttl = state_ttl
         self._seq = 0
-        self._token_buffer: list[RuntimeTokenEvent] = []
+        self._token_buffer: list[StreamEvent] = []
         self._lock = asyncio.Lock()
         self._started_at = datetime.now(UTC)
         self._pending_flush: asyncio.Task[None] | None = None
@@ -429,10 +448,21 @@ class RunStreamPublisher:
         """Highest sequence number written so far. ``0`` if nothing published."""
         return self._seq
 
-    async def publish(self, event: RuntimeStreamEvent) -> None:
-        """Append a single event, coalescing token bursts when possible."""
+    async def publish(self, event: StreamEvent) -> None:
+        """Append a single event, coalescing delta bursts when possible.
+
+        Only same-type, same-block deltas coalesce; any other event
+        (including a delta from a different block) flushes the buffer
+        first so ordering is preserved.
+        """
         async with self._lock:
-            if isinstance(event, RuntimeTokenEvent):
+            if event.type in _COALESCABLE_TYPES:
+                head = self._token_buffer[0] if self._token_buffer else None
+                if head is not None and (
+                    head.type is not event.type or head.block_id != event.block_id
+                ):
+                    self._cancel_pending_flush()
+                    await self._flush_tokens_locked()
                 self._token_buffer.append(event)
                 if len(self._token_buffer) >= self._buffer_cap or self._flush_seconds <= 0:
                     self._cancel_pending_flush()
@@ -476,24 +506,27 @@ class RunStreamPublisher:
             await self._flush_tokens_locked()
 
     async def _flush_tokens_locked(self) -> None:
-        """Coalesce buffered tokens into a single XADD."""
+        """Coalesce buffered same-block deltas into a single XADD."""
         if not self._token_buffer:
             return
-        text = "".join(t.text for t in self._token_buffer)
+        head = self._token_buffer[0]
+        delta = "".join(t.delta for t in self._token_buffer)
         message_id = next(
             (t.message_id for t in self._token_buffer if t.message_id is not None),
             None,
         )
         sequence = max((t.sequence for t in self._token_buffer), default=0)
-        coalesced = RuntimeTokenEvent(
-            text=text,
+        coalesced = StreamEvent(
+            type=head.type,
+            block_id=head.block_id,
+            delta=delta,
             message_id=message_id,
             sequence=sequence,
         )
         self._token_buffer.clear()
         await self._xadd_locked(coalesced)
 
-    async def _xadd_locked(self, event: RuntimeStreamEvent) -> None:
+    async def _xadd_locked(self, event: StreamEvent) -> None:
         """Serialise + XADD a single event, then refresh the state hash."""
         self._seq += 1
         payload = {
@@ -510,17 +543,23 @@ class RunStreamPublisher:
             session_id=self._session_id,
             status=status,
             last_seq=self._seq,
-            error=event.error if isinstance(event, RuntimeErrorEvent) else None,
+            error=event.error if event.type is EventType.ERROR else None,
             started_at=self._started_at,
             ttl=self._state_ttl,
         )
 
 
-def _status_from_event(event: RuntimeStreamEvent) -> str:
+_COALESCABLE_TYPES = frozenset({
+    EventType.TEXT_BLOCK_DELTA,
+    EventType.THINKING_BLOCK_DELTA,
+})
+
+
+def _status_from_event(event: StreamEvent) -> str:
     """Map a runtime event to a coarse run-state ``status``."""
-    if isinstance(event, RuntimeDoneEvent):
+    if event.type is EventType.DONE:
         return "done"
-    if isinstance(event, RuntimeErrorEvent):
+    if event.type is EventType.ERROR:
         return "error"
     return "running"
 

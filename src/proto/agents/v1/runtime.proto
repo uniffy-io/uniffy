@@ -250,19 +250,38 @@ message RespondToConfirmationResponse {
 // AgentStreamEvent carries one event in the agent-runtime stream. The
 // run_id is stamped by the handler from the run state hash so a tab
 // reload mid-stream can call SubscribeToRun(run_id) to resume.
+//
+// The oneof mirrors the backend EventType enum 1:1. Text, thinking,
+// and tool-call content is block-framed (START -> DELTA -> END,
+// correlated by block_id); deltas are incremental, never cumulative.
+// Thinking is a first-class block and never appears in text deltas or
+// stored message content.
 message AgentStreamEvent {
   oneof event {
-    StreamTokenEvent token = 1;
-    StreamToolCallEvent tool_call = 2;
-    StreamToolResultEvent tool_result = 3;
-    StreamMessageStoredEvent message_stored = 4;
-    StreamDoneEvent done = 5;
-    StreamErrorEvent error = 6;
-    StreamConfirmationRequiredEvent confirmation_required = 7;
-    StreamFailoverEvent failover = 9;
-    StreamSkillDraftEvent skill_draft = 10;
+    StreamReplyStartEvent reply_start = 1;
+    StreamModelCallStartEvent model_call_start = 2;
+    StreamModelCallEndEvent model_call_end = 3;
+    StreamTextBlockStartEvent text_block_start = 4;
+    StreamTextBlockDeltaEvent text_block_delta = 5;
+    StreamTextBlockEndEvent text_block_end = 6;
+    StreamThinkingBlockStartEvent thinking_block_start = 7;
+    StreamThinkingBlockDeltaEvent thinking_block_delta = 8;
+    StreamThinkingBlockEndEvent thinking_block_end = 9;
+    StreamToolCallStartEvent tool_call_start = 10;
+    StreamToolCallDeltaEvent tool_call_delta = 11;
+    StreamToolCallEndEvent tool_call_end = 12;
+    StreamToolResultStartEvent tool_result_start = 13;
+    StreamToolResultDeltaEvent tool_result_delta = 14;
+    StreamToolResultEndEvent tool_result_end = 15;
+    StreamConfirmationRequiredEvent confirmation_required = 16;
+    StreamFailoverEvent failover = 17;
+    StreamSkillDraftEvent skill_draft = 18;
+    StreamExceedMaxItersEvent exceed_max_iters = 19;
+    StreamMessageStoredEvent message_stored = 20;
+    StreamDoneEvent done = 21;
+    StreamErrorEvent error = 22;
   }
-  string run_id = 8;
+  string run_id = 30;
 }
 
 message StreamSendMessageResponse {
@@ -277,22 +296,122 @@ message SubscribeToRunResponse {
   AgentStreamEvent event = 1;
 }
 
-message StreamTokenEvent {
-  string text = 1;
+// Opens the assistant turn. Purely a framing hook for clients.
+message StreamReplyStartEvent {
+  string role = 1;
 }
 
-message StreamToolCallEvent {
+// A model invocation begins; repeats after a failover swap.
+message StreamModelCallStartEvent {
+  string model = 1;
+}
+
+// Per-model-call token accounting, driving live token/cost counters.
+message StreamModelCallEndEvent {
+  string model = 1;
+  int64 input_tokens = 2;
+  int64 output_tokens = 3;
+  int64 cache_read_input_tokens = 4;
+  int64 thinking_tokens = 5;
+}
+
+// Block events carry the placeholder row id (message_id, chat
+// destination only; empty for session streams) plus one monotonic
+// per-message sequence shared across all block events so clients can
+// drop late deltas after a reorder.
+message StreamTextBlockStartEvent {
+  string block_id = 1;
+  string message_id = 2;
+  int32 sequence = 3;
+}
+
+message StreamTextBlockDeltaEvent {
+  string block_id = 1;
+  string delta = 2;
+  string message_id = 3;
+  int32 sequence = 4;
+}
+
+message StreamTextBlockEndEvent {
+  string block_id = 1;
+  string message_id = 2;
+  int32 sequence = 3;
+}
+
+message StreamThinkingBlockStartEvent {
+  string block_id = 1;
+  string message_id = 2;
+  int32 sequence = 3;
+}
+
+message StreamThinkingBlockDeltaEvent {
+  string block_id = 1;
+  string delta = 2;
+  string message_id = 3;
+  int32 sequence = 4;
+}
+
+// elapsed_ms is stamped by the runtime (time between the matching
+// start and this end) so live view, replay, and history all show the
+// same "Thought for Ns" duration.
+message StreamThinkingBlockEndEvent {
+  string block_id = 1;
+  string message_id = 2;
+  int32 sequence = 3;
+  int32 elapsed_ms = 4;
+}
+
+message StreamToolCallStartEvent {
+  string block_id = 1;
+  string tool_call_id = 2;
+  string tool_name = 3;
+  string message_id = 4;
+  int32 sequence = 5;
+}
+
+// delta is an incremental fragment of the tool-args JSON.
+message StreamToolCallDeltaEvent {
+  string block_id = 1;
+  string tool_call_id = 2;
+  string tool_name = 3;
+  string delta = 4;
+  string message_id = 5;
+  int32 sequence = 6;
+}
+
+message StreamToolCallEndEvent {
+  string block_id = 1;
+  string tool_call_id = 2;
+  string tool_name = 3;
+  string tool_args_json = 4;
+  string message_id = 5;
+  int32 sequence = 6;
+}
+
+// Tool execution started; message_id is the persisted tool-call row.
+message StreamToolResultStartEvent {
   string tool_call_id = 1;
   string tool_name = 2;
   string tool_args_json = 3;
+  string message_id = 4;
 }
 
-message StreamToolResultEvent {
+message StreamToolResultDeltaEvent {
+  string tool_call_id = 1;
+  string delta = 2;
+  string message_id = 3;
+}
+
+message StreamToolResultEndEvent {
   string tool_call_id = 1;
   string tool_name = 2;
   bool success = 3;
   string result = 4;
+  string message_id = 5;
 }
+
+// The run hit the tool-iteration cap; a terminal error event follows.
+message StreamExceedMaxItersEvent {}
 
 message StreamMessageStoredEvent {
   agents.v1.MessageInfo message = 1;

@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +32,36 @@ from uniffy.domains.agents.cache import (
     track_agent_skill_refs,
 )
 from uniffy.domains.agents.content_policy import check_admin_content
+from uniffy.domains.agents.providers.catalog import (
+    provider_for_model,
+    validate_model_params,
+)
 from uniffy.domains.tags import TagAssignment, TagOperations
+
+logger = logger.bind(component="agents.agents.operations")
+
+
+def _check_model_params(model_id: str, params: dict | None) -> None:
+    """Validate tuned params against the model's catalog schema."""
+    if not params:
+        return
+    provider = provider_for_model(model_id)
+    try:
+        validate_model_params(provider or "", model_id, params)
+    except ValueError as exc:
+        raise ValidationError("model_params", str(exc)) from exc
+
+
+def _strip_invalid_params(model_id: str, params: dict) -> dict:
+    """Drop knobs that do not validate for ``model_id``; keep the rest."""
+    kept: dict = {}
+    for knob, value in params.items():
+        try:
+            _check_model_params(model_id, {knob: value})
+        except ValidationError:
+            continue
+        kept[knob] = value
+    return kept
 
 
 def _coerce_uuid_list(values: list | None) -> list[UUID]:
@@ -180,6 +210,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         image_provider_key_id: UUID | None = None,
         prompt_id: UUID | None = None,
         tag_ids: list[UUID] | None = None,
+        model_params: dict | None = None,
     ) -> Agent:
         """Create a new agent configuration."""
         if not name or not name.strip():
@@ -187,6 +218,8 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         if soul_prompt:
             check_admin_content(soul_prompt, "soul_prompt")
+
+        _check_model_params(primary_model, model_params)
 
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
@@ -221,6 +254,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             primary_provider_key_id=primary_provider_key_id,
             image_provider_key_id=image_provider_key_id,
             prompt_id=prompt_id,
+            model_params=model_params or {},
         )
         self.session.add(agent)
         await self.session.commit()
@@ -399,6 +433,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         prompt_id: UUID | None = None,
         clear_prompt: bool = False,
         tag_ids: list[UUID] | None = None,
+        model_params: dict | None = None,
     ) -> Agent:
         """Update an agent configuration.
 
@@ -461,6 +496,25 @@ class AgentOperations(BaseContentOperations[Agent]):
         if prompt_id is not None:
             updates["prompt_id"] = prompt_id
             agent.prompt_id = prompt_id
+        if model_params is not None:
+            _check_model_params(
+                primary_model if primary_model is not None else agent.primary_model,
+                model_params,
+            )
+            updates["model_params"] = model_params
+            agent.model_params = model_params
+
+        if primary_model is not None and model_params is None and agent.model_params:
+            kept = _strip_invalid_params(primary_model, agent.model_params)
+            if kept != agent.model_params:
+                logger.warning(
+                    "Dropped model_params invalid for the new primary model",
+                    agent_id=str(agent_id),
+                    model=primary_model,
+                    dropped=sorted(set(agent.model_params) - set(kept)),
+                )
+                updates["model_params"] = kept
+                agent.model_params = kept
 
         if clear_primary_provider_key:
             agent.primary_provider_key_id = None

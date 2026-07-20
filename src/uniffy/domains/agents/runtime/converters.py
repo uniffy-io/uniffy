@@ -1,6 +1,7 @@
 """Proto converters for runtime responses."""
 
 import json
+from dataclasses import fields
 from typing import Any
 from uuid import UUID
 
@@ -16,29 +17,31 @@ from uniffy_proto.agents.v1.runtime_pb2 import (
     StreamConfirmationRequiredEvent,
     StreamDoneEvent,
     StreamErrorEvent,
+    StreamExceedMaxItersEvent,
     StreamFailoverEvent,
     StreamMessageStoredEvent,
+    StreamModelCallEndEvent,
+    StreamModelCallStartEvent,
+    StreamReplyStartEvent,
     StreamSkillDraftEvent,
-    StreamTokenEvent,
-    StreamToolCallEvent,
-    StreamToolResultEvent,
+    StreamTextBlockDeltaEvent,
+    StreamTextBlockEndEvent,
+    StreamTextBlockStartEvent,
+    StreamThinkingBlockDeltaEvent,
+    StreamThinkingBlockEndEvent,
+    StreamThinkingBlockStartEvent,
+    StreamToolCallDeltaEvent,
+    StreamToolCallEndEvent,
+    StreamToolCallStartEvent,
+    StreamToolResultDeltaEvent,
+    StreamToolResultEndEvent,
+    StreamToolResultStartEvent,
     ToolUsage,
 )
 
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeConfirmationRequiredEvent,
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeFailoverEvent,
-    RuntimeMessageStoredEvent,
-    RuntimeSkillDraftEvent,
-    RuntimeStreamEvent,
-    RuntimeTokenEvent,
-    RuntimeToolCallEvent,
-    RuntimeToolResultEvent,
-)
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.sessions.converters import message_to_proto
 from uniffy.domains.agents.skills.converters import skill_draft_to_proto
 
@@ -73,278 +76,257 @@ def send_message_response_to_proto(
     )
 
 
-def runtime_stream_event_to_proto(
-    event: RuntimeStreamEvent,
-) -> AgentStreamEvent:
-    """Convert a domain runtime stream event to proto.
+def _message_id_str(event: StreamEvent) -> str:
+    return str(event.message_id) if event.message_id else ""
 
-    Parameters
-    ----------
-    event : RuntimeStreamEvent
-        Domain stream event.
 
-    Returns
-    -------
-    AgentStreamEvent
-        Proto event payload. The handler wraps this in the per-RPC
-        response (StreamSendMessageResponse / RerunFromMessageResponse /
-        SubscribeToRunResponse) and stamps ``run_id`` from the egress
-        run state hash.
+def _args_json(args: dict | None) -> str:
+    return json.dumps(args) if args else "{}"
 
-    Raises
-    ------
-    ValueError
-        If the event type is unknown.
 
+def runtime_stream_event_to_proto(event: StreamEvent) -> AgentStreamEvent:
+    """Convert a runtime stream event to proto.
+
+    The handler wraps the result in the per-RPC response and stamps
+    ``run_id`` from the egress run state hash. ``CompletionResult`` is
+    runtime-internal and never crosses this boundary. Raises
+    ``ValueError`` for events that must not reach the wire.
     """
-    if isinstance(event, RuntimeTokenEvent):
-        return AgentStreamEvent(token=StreamTokenEvent(text=event.text))
+    match event.type:
+        case EventType.REPLY_START:
+            return AgentStreamEvent(
+                reply_start=StreamReplyStartEvent(role="assistant")
+            )
+        case EventType.MODEL_CALL_START:
+            return AgentStreamEvent(
+                model_call_start=StreamModelCallStartEvent(model=event.model)
+            )
+        case EventType.MODEL_CALL_END:
+            return AgentStreamEvent(
+                model_call_end=StreamModelCallEndEvent(
+                    model=event.model,
+                    input_tokens=event.input_tokens,
+                    output_tokens=event.output_tokens,
+                    cache_read_input_tokens=event.cache_read_input_tokens,
+                    thinking_tokens=event.thinking_tokens,
+                )
+            )
+        case EventType.TEXT_BLOCK_START:
+            return AgentStreamEvent(
+                text_block_start=StreamTextBlockStartEvent(
+                    block_id=event.block_id,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.TEXT_BLOCK_DELTA:
+            return AgentStreamEvent(
+                text_block_delta=StreamTextBlockDeltaEvent(
+                    block_id=event.block_id,
+                    delta=event.delta,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.TEXT_BLOCK_END:
+            return AgentStreamEvent(
+                text_block_end=StreamTextBlockEndEvent(
+                    block_id=event.block_id,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.THINKING_BLOCK_START:
+            return AgentStreamEvent(
+                thinking_block_start=StreamThinkingBlockStartEvent(
+                    block_id=event.block_id,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.THINKING_BLOCK_DELTA:
+            return AgentStreamEvent(
+                thinking_block_delta=StreamThinkingBlockDeltaEvent(
+                    block_id=event.block_id,
+                    delta=event.delta,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.THINKING_BLOCK_END:
+            return AgentStreamEvent(
+                thinking_block_end=StreamThinkingBlockEndEvent(
+                    block_id=event.block_id,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                    elapsed_ms=event.elapsed_ms,
+                )
+            )
+        case EventType.TOOL_CALL_START:
+            return AgentStreamEvent(
+                tool_call_start=StreamToolCallStartEvent(
+                    block_id=event.block_id,
+                    tool_call_id=event.tool_call_id,
+                    tool_name=event.tool_name,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.TOOL_CALL_DELTA:
+            return AgentStreamEvent(
+                tool_call_delta=StreamToolCallDeltaEvent(
+                    block_id=event.block_id,
+                    tool_call_id=event.tool_call_id,
+                    tool_name=event.tool_name,
+                    delta=event.delta,
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.TOOL_CALL_END:
+            return AgentStreamEvent(
+                tool_call_end=StreamToolCallEndEvent(
+                    block_id=event.block_id,
+                    tool_call_id=event.tool_call_id,
+                    tool_name=event.tool_name,
+                    tool_args_json=_args_json(event.tool_args),
+                    message_id=_message_id_str(event),
+                    sequence=event.sequence,
+                )
+            )
+        case EventType.TOOL_RESULT_START:
+            return AgentStreamEvent(
+                tool_result_start=StreamToolResultStartEvent(
+                    tool_call_id=event.tool_call_id,
+                    tool_name=event.tool_name,
+                    tool_args_json=_args_json(event.tool_args),
+                    message_id=_message_id_str(event),
+                )
+            )
+        case EventType.TOOL_RESULT_DELTA:
+            return AgentStreamEvent(
+                tool_result_delta=StreamToolResultDeltaEvent(
+                    tool_call_id=event.tool_call_id,
+                    delta=event.delta,
+                    message_id=_message_id_str(event),
+                )
+            )
+        case EventType.TOOL_RESULT_END:
+            return AgentStreamEvent(
+                tool_result_end=StreamToolResultEndEvent(
+                    tool_call_id=event.tool_call_id,
+                    tool_name=event.tool_name,
+                    success=event.success,
+                    result=event.tool_result,
+                    message_id=_message_id_str(event),
+                )
+            )
+        case EventType.CONFIRMATION_REQUIRED:
+            return AgentStreamEvent(
+                confirmation_required=StreamConfirmationRequiredEvent(
+                    tool_call_id=event.tool_call_id,
+                    tool_name=event.tool_name,
+                    tool_args_json=_args_json(event.tool_args),
+                    description=event.description,
+                )
+            )
+        case EventType.FAILOVER:
+            return AgentStreamEvent(
+                failover=StreamFailoverEvent(
+                    from_provider_key_id=event.from_provider_key_id,
+                    to_provider_key_id=event.to_provider_key_id,
+                    to_model=event.to_model,
+                    reason=event.reason,
+                    attempt=event.attempt,
+                )
+            )
+        case EventType.SKILL_DRAFT:
+            return AgentStreamEvent(
+                skill_draft=StreamSkillDraftEvent(
+                    draft=skill_draft_to_proto(event.draft)
+                )
+            )
+        case EventType.EXCEED_MAX_ITERS:
+            return AgentStreamEvent(exceed_max_iters=StreamExceedMaxItersEvent())
+        case EventType.MESSAGE_STORED:
+            return AgentStreamEvent(
+                message_stored=StreamMessageStoredEvent(
+                    message=message_to_proto(event.message)
+                )
+            )
+        case EventType.DONE:
+            return AgentStreamEvent(
+                done=StreamDoneEvent(
+                    assistant_message=message_to_proto(event.assistant_message),
+                    model_used=event.model,
+                )
+            )
+        case EventType.ERROR:
+            return AgentStreamEvent(error=StreamErrorEvent(message=event.error))
+        case _:
+            raise ValueError(f"Event type not wire-mapped: {event.type!r}")
 
-    if isinstance(event, RuntimeToolCallEvent):
-        return AgentStreamEvent(
-            tool_call=StreamToolCallEvent(
-                tool_call_id=event.tool_call_id,
-                tool_name=event.tool_name,
-                tool_args_json=json.dumps(event.tool_args) if event.tool_args else "{}",
-            ),
-        )
 
-    if isinstance(event, RuntimeToolResultEvent):
-        return AgentStreamEvent(
-            tool_result=StreamToolResultEvent(
-                tool_call_id=event.tool_call_id,
-                tool_name=event.tool_name,
-                success=event.success,
-                result=event.result,
-            ),
-        )
-
-    if isinstance(event, RuntimeMessageStoredEvent):
-        return AgentStreamEvent(
-            message_stored=StreamMessageStoredEvent(
-                message=message_to_proto(event.message),
-            ),
-        )
-
-    if isinstance(event, RuntimeDoneEvent):
-        return AgentStreamEvent(
-            done=StreamDoneEvent(
-                assistant_message=message_to_proto(event.assistant_message),
-                model_used=event.model_used,
-            ),
-        )
-
-    if isinstance(event, RuntimeConfirmationRequiredEvent):
-        return AgentStreamEvent(
-            confirmation_required=StreamConfirmationRequiredEvent(
-                tool_call_id=event.tool_call_id,
-                tool_name=event.tool_name,
-                tool_args_json=json.dumps(event.tool_args) if event.tool_args else "{}",
-                description=event.description,
-            ),
-        )
-
-    if isinstance(event, RuntimeFailoverEvent):
-        return AgentStreamEvent(
-            failover=StreamFailoverEvent(
-                from_provider_key_id=event.from_provider_key_id,
-                to_provider_key_id=event.to_provider_key_id,
-                to_model=event.to_model,
-                reason=event.reason,
-                attempt=event.attempt,
-            ),
-        )
-
-    if isinstance(event, RuntimeSkillDraftEvent):
-        return AgentStreamEvent(
-            skill_draft=StreamSkillDraftEvent(draft=skill_draft_to_proto(event.draft)),
-        )
-
-    if isinstance(event, RuntimeErrorEvent):
-        return AgentStreamEvent(error=StreamErrorEvent(message=event.error))
-
-    raise ValueError(f"Unknown runtime stream event type: {type(event)}")
+_STREAM_EVENT_FIELDS = {f.name: f for f in fields(StreamEvent)}
+_UUID_FIELDS = frozenset({"message_id", "request_id"})
+_MESSAGE_FIELDS = frozenset({"message", "assistant_message"})
+# `result` (CompletionResult) is runtime-internal and never serialized.
+_SKIPPED_FIELDS = frozenset({"type", "result"})
 
 
-_EVENT_TYPE_TOKEN = "token"
-_EVENT_TYPE_TOOL_CALL = "tool_call"
-_EVENT_TYPE_TOOL_RESULT = "tool_result"
-_EVENT_TYPE_MESSAGE_STORED = "message_stored"
-_EVENT_TYPE_DONE = "done"
-_EVENT_TYPE_CONFIRMATION_REQUIRED = "confirmation_required"
-_EVENT_TYPE_FAILOVER = "failover"
-_EVENT_TYPE_SKILL_DRAFT = "skill_draft"
-_EVENT_TYPE_ERROR = "error"
+def runtime_stream_event_to_json(event: StreamEvent) -> dict[str, Any]:
+    """Serialise a stream event into a sparse JSON-safe envelope.
 
-
-def _message_to_jsonable(message: AgentMessage) -> dict[str, Any]:
-    """Serialise an ``AgentMessage`` row into a JSON-safe dict."""
-    return message.model_dump(mode="json")
-
-
-def _message_from_jsonable(data: dict[str, Any]) -> AgentMessage:
-    """Reconstruct an ``AgentMessage`` from its JSON-safe dict."""
-    return AgentMessage.model_validate(data)
-
-
-def runtime_stream_event_to_json(event: RuntimeStreamEvent) -> dict[str, Any]:
-    """Serialise a runtime stream event into a JSON-safe envelope.
-
-    The ``type`` field discriminates variants so the round-trip is
-    self-describing without consulting Python class names. UUIDs and
-    datetimes inside ``AgentMessage`` are serialised through pydantic's
-    ``mode="json"``.
+    ``type`` discriminates; fields still at their dataclass default are
+    omitted. UUIDs and datetimes inside ``AgentMessage`` rows serialise
+    through pydantic's ``mode="json"``.
     """
-    if isinstance(event, RuntimeTokenEvent):
-        return {
-            "type": _EVENT_TYPE_TOKEN,
-            "text": event.text,
-            "message_id": str(event.message_id) if event.message_id else None,
-            "sequence": event.sequence,
-        }
-
-    if isinstance(event, RuntimeToolCallEvent):
-        return {
-            "type": _EVENT_TYPE_TOOL_CALL,
-            "tool_call_id": event.tool_call_id,
-            "tool_name": event.tool_name,
-            "tool_args": event.tool_args,
-            "message_id": str(event.message_id) if event.message_id else None,
-        }
-
-    if isinstance(event, RuntimeToolResultEvent):
-        return {
-            "type": _EVENT_TYPE_TOOL_RESULT,
-            "tool_call_id": event.tool_call_id,
-            "tool_name": event.tool_name,
-            "success": event.success,
-            "result": event.result,
-            "message_id": str(event.message_id) if event.message_id else None,
-        }
-
-    if isinstance(event, RuntimeMessageStoredEvent):
-        return {
-            "type": _EVENT_TYPE_MESSAGE_STORED,
-            "message": _message_to_jsonable(event.message),
-        }
-
-    if isinstance(event, RuntimeDoneEvent):
-        return {
-            "type": _EVENT_TYPE_DONE,
-            "assistant_message": _message_to_jsonable(event.assistant_message),
-            "model_used": event.model_used,
-        }
-
-    if isinstance(event, RuntimeConfirmationRequiredEvent):
-        return {
-            "type": _EVENT_TYPE_CONFIRMATION_REQUIRED,
-            "tool_call_id": event.tool_call_id,
-            "tool_name": event.tool_name,
-            "tool_args": event.tool_args,
-            "description": event.description,
-            "request_id": str(event.request_id) if event.request_id else None,
-            "message_id": str(event.message_id) if event.message_id else None,
-        }
-
-    if isinstance(event, RuntimeFailoverEvent):
-        return {
-            "type": _EVENT_TYPE_FAILOVER,
-            "from_provider_key_id": event.from_provider_key_id,
-            "to_provider_key_id": event.to_provider_key_id,
-            "to_model": event.to_model,
-            "reason": event.reason,
-            "attempt": event.attempt,
-        }
-
-    if isinstance(event, RuntimeSkillDraftEvent):
-        return {
-            "type": _EVENT_TYPE_SKILL_DRAFT,
-            "draft": event.draft.model_dump(mode="json"),
-        }
-
-    if isinstance(event, RuntimeErrorEvent):
-        return {"type": _EVENT_TYPE_ERROR, "error": event.error}
-
-    raise ValueError(f"Unknown runtime stream event type: {type(event)}")
+    payload: dict[str, Any] = {"type": event.type.value}
+    for name, spec in _STREAM_EVENT_FIELDS.items():
+        if name in _SKIPPED_FIELDS:
+            continue
+        value = getattr(event, name)
+        if value == spec.default:
+            continue
+        if name in _UUID_FIELDS:
+            value = str(value)
+        elif name in _MESSAGE_FIELDS or name == "draft":
+            value = value.model_dump(mode="json")
+        payload[name] = value
+    return payload
 
 
-def runtime_stream_event_from_json(payload: dict[str, Any]) -> RuntimeStreamEvent:
+def runtime_stream_event_from_json(payload: dict[str, Any]) -> StreamEvent:
     """Reverse of :func:`runtime_stream_event_to_json`.
 
     Raises ``ValueError`` on unknown / malformed envelopes; callers
     should treat that as a fatal stream-protocol bug, not a transient
     glitch.
     """
-    event_type = payload.get("type")
+    try:
+        event_type = EventType(payload["type"])
+    except (KeyError, ValueError) as exc:
+        raise ValueError(
+            f"Unknown runtime stream event type: {payload.get('type')!r}"
+        ) from exc
 
-    if event_type == _EVENT_TYPE_TOKEN:
-        message_id = payload.get("message_id")
-        return RuntimeTokenEvent(
-            text=payload["text"],
-            message_id=UUID(message_id) if message_id else None,
-            sequence=int(payload.get("sequence", 0)),
-        )
-
-    if event_type == _EVENT_TYPE_TOOL_CALL:
-        message_id = payload.get("message_id")
-        return RuntimeToolCallEvent(
-            tool_call_id=payload["tool_call_id"],
-            tool_name=payload["tool_name"],
-            tool_args=payload.get("tool_args") or {},
-            message_id=UUID(message_id) if message_id else None,
-        )
-
-    if event_type == _EVENT_TYPE_TOOL_RESULT:
-        message_id = payload.get("message_id")
-        return RuntimeToolResultEvent(
-            tool_call_id=payload["tool_call_id"],
-            tool_name=payload["tool_name"],
-            success=bool(payload["success"]),
-            result=payload.get("result", ""),
-            message_id=UUID(message_id) if message_id else None,
-        )
-
-    if event_type == _EVENT_TYPE_MESSAGE_STORED:
-        return RuntimeMessageStoredEvent(
-            message=_message_from_jsonable(payload["message"]),
-        )
-
-    if event_type == _EVENT_TYPE_DONE:
-        return RuntimeDoneEvent(
-            assistant_message=_message_from_jsonable(payload["assistant_message"]),
-            model_used=payload["model_used"],
-        )
-
-    if event_type == _EVENT_TYPE_CONFIRMATION_REQUIRED:
-        request_id = payload.get("request_id")
-        message_id = payload.get("message_id")
-        return RuntimeConfirmationRequiredEvent(
-            tool_call_id=payload["tool_call_id"],
-            tool_name=payload["tool_name"],
-            tool_args=payload.get("tool_args") or {},
-            description=payload.get("description", ""),
-            request_id=UUID(request_id) if request_id else None,
-            message_id=UUID(message_id) if message_id else None,
-        )
-
-    if event_type == _EVENT_TYPE_FAILOVER:
-        return RuntimeFailoverEvent(
-            from_provider_key_id=payload.get("from_provider_key_id", ""),
-            to_provider_key_id=payload.get("to_provider_key_id", ""),
-            to_model=payload.get("to_model", ""),
-            reason=payload.get("reason", "other"),
-            attempt=int(payload.get("attempt", 1)),
-        )
-
-    if event_type == _EVENT_TYPE_SKILL_DRAFT:
-        return RuntimeSkillDraftEvent(
-            draft=AgentSkillDraft.model_validate(payload["draft"]),
-        )
-
-    if event_type == _EVENT_TYPE_ERROR:
-        return RuntimeErrorEvent(error=payload.get("error", ""))
-
-    raise ValueError(f"Unknown runtime stream event type: {event_type!r}")
+    kwargs: dict[str, Any] = {}
+    for name, value in payload.items():
+        if name == "type":
+            continue
+        if name not in _STREAM_EVENT_FIELDS or name in _SKIPPED_FIELDS:
+            raise ValueError(f"Unknown stream event field: {name!r}")
+        if value is None:
+            continue
+        if name in _UUID_FIELDS:
+            kwargs[name] = UUID(value)
+        elif name in _MESSAGE_FIELDS:
+            kwargs[name] = AgentMessage.model_validate(value)
+        elif name == "draft":
+            kwargs[name] = AgentSkillDraft.model_validate(value)
+        else:
+            kwargs[name] = value
+    return StreamEvent(type=event_type, **kwargs)
 
 
 def usage_stats_to_proto(stats: dict) -> GetUsageStatsResponse:

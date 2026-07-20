@@ -41,12 +41,16 @@ import { fetchSessions, createSession, fetchSessionContextStats, compactSession 
 import {
     selectMessagesForSession,
     selectStreamingContent,
+    selectStreamingThinking,
+    selectThinkingByMessage,
+    selectStreamingUsage,
     selectStreamingToolCalls,
     selectIsStreaming,
     selectActiveRunId,
     selectPendingConfirmation,
     cacheFileMetadata,
 } from "@/features/agents/store/agentMessagesSlice";
+import { ThinkingPane } from "@/features/agents/components/ThinkingPane";
 import { useAgentRunStream } from "@/features/agents/hooks/useAgentRunStream";
 import type { FileMetadata } from "@/features/agents/store/agentMessagesSlice";
 import {
@@ -892,6 +896,9 @@ function ChatPanel() {
     const activeSession = useAppSelector(selectActiveSession);
     const messages = useAppSelector(selectMessagesForSession(activeSessionId));
     const streamingContent = useAppSelector(selectStreamingContent);
+    const streamingThinking = useAppSelector(selectStreamingThinking);
+    const thinkingByMessage = useAppSelector(selectThinkingByMessage);
+    const streamingUsage = useAppSelector(selectStreamingUsage);
     const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
     const isStreaming = useAppSelector(selectIsStreaming);
     const activeRunId = useAppSelector(selectActiveRunId);
@@ -1137,7 +1144,7 @@ function ChatPanel() {
         if (isNearBottomRef.current) {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
-    }, [messages.length, streamingContent, streamingToolCalls.length, pendingConfirmation]);
+    }, [messages.length, streamingContent, streamingThinking, streamingToolCalls.length, pendingConfirmation]);
 
     useEffect(() => {
         const wrapper = contentWrapperRef.current;
@@ -1300,6 +1307,14 @@ function ChatPanel() {
                 <div className="flex-1" />
                 {isStreaming && (
                     <>
+                        {streamingUsage && (
+                            <span
+                                className="text-xs tabular-nums text-muted-foreground"
+                                title="Live token usage for this reply (in / out)"
+                            >
+                                {formatTokenCount(streamingUsage.inputTokens + streamingUsage.cacheReadInputTokens)} in / {formatTokenCount(streamingUsage.outputTokens)} out
+                            </span>
+                        )}
                         <CircleNotch size={16} className="animate-spin text-muted-foreground" />
                         <Button
                             variant="ghost"
@@ -1613,6 +1628,17 @@ function ChatPanel() {
                                                 } else {
                                                     // Skip intermediate tool-loop assistant messages (toolCallId set) - their content is preamble repeated before each tool call.
                                                     if (!message.toolCallId) {
+                                                        const thinking = thinkingByMessage[message.id];
+                                                        if (thinking?.length) {
+                                                            elements.push(
+                                                                <ThinkingPane
+                                                                    key={`thinking-${message.id}`}
+                                                                    blocks={thinking}
+                                                                    live={false}
+                                                                    answerStarted
+                                                                />,
+                                                            );
+                                                        }
                                                         elements.push(<AssistantBubble key={message.id} message={message} />);
                                                         pushDraftsAfter(message.id);
                                                     }
@@ -1622,8 +1648,16 @@ function ChatPanel() {
                                             return elements;
                                         })()}
 
-                                        {isStreaming && !streamingContent && streamingToolCalls.length === 0 && !pendingConfirmation && (
+                                        {isStreaming && !streamingContent && streamingThinking.length === 0 && streamingToolCalls.length === 0 && !pendingConfirmation && (
                                             <ThinkingIndicator agent={activeAgent} />
+                                        )}
+
+                                        {streamingThinking.length > 0 && (
+                                            <ThinkingPane
+                                                blocks={streamingThinking}
+                                                live={isStreaming && streamingThinking.some((b) => !b.done)}
+                                                answerStarted={!!streamingContent || streamingToolCalls.length > 0}
+                                            />
                                         )}
 
                                         <StreamingToolCards toolCalls={streamingToolCalls} />

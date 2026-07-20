@@ -44,6 +44,7 @@ import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { SystemMessage } from "@features/chat/components/SystemMessage";
 import { MessageAttachments } from "@features/chat/components/MessageAttachments";
 import { AgentMessageBody, isSpecialAgentKind } from "@features/agents/components/AgentMessageBody";
+import { ThinkingPane } from "@features/agents/components/ThinkingPane";
 import { AgentApprovalCard } from "@features/agents/components/AgentApprovalCard";
 import { AgentContextSheet } from "@features/agents/components/AgentContextSheet";
 import { ChannelDetailsSheet } from "@features/chat/components/ChannelDetailsSheet";
@@ -89,6 +90,8 @@ import {
   useChatStream,
   typingKey,
   useRunningAgents,
+  useAgentThinking,
+  type AgentThinkingBlock,
   type TypingEntry,
 } from "@features/chat/useChatStream";
 import { useComposerAttachments } from "@features/chat/useComposerAttachments";
@@ -246,6 +249,7 @@ export function ChatConversationScreen() {
   // last-message heuristic on polling (agent DMs only - group channels have
   // no reliable heuristic without the stream).
   const streamRunningAgents = useRunningAgents(channelId);
+  const thinkingByMessage = useAgentThinking(channelId);
   const runningAgentIds = useMemo(() => {
     if (streamRunningAgents !== undefined) return streamRunningAgents;
     const dmFallbackRunning = channel?.isAgentDm && messages[0]?.senderType === "USER";
@@ -513,6 +517,7 @@ export function ChatConversationScreen() {
               item.senderType === "USER" ? (presenceByUser[item.senderId] ?? "offline") : null
             }
             agentActive={agentRunning}
+            thinking={item.senderType === "AGENT" ? thinkingByMessage?.[item.id] : undefined}
             agentEmoji={
               item.senderType === "AGENT"
                 ? (agentById.get(item.senderId)?.avatarEmoji ?? null)
@@ -540,6 +545,7 @@ export function ChatConversationScreen() {
       firstUnreadId,
       promptFailedSend,
       agentRunning,
+      thinkingByMessage,
       agentById,
       toolResultFor,
       openThread,
@@ -1023,6 +1029,7 @@ function MessageRow({
   showHeader,
   isOwn,
   agentActive,
+  thinking,
   agentEmoji,
   agentName,
   toolResultFor,
@@ -1039,6 +1046,7 @@ function MessageRow({
   showHeader: boolean;
   isOwn: boolean;
   agentActive: boolean;
+  thinking?: AgentThinkingBlock[];
   agentEmoji?: string | null;
   agentName?: string | null;
   toolResultFor: (toolCallId: string) => SerializedMessage | undefined;
@@ -1106,6 +1114,14 @@ function MessageRow({
               {message.replyContext.contentPreview}
             </Text>
           </View>
+        ) : null}
+        {isAgent && !agentSpecial && thinking && thinking.length > 0 ? (
+          <ThinkingPane
+            blocks={thinking}
+            live={agentActive && thinking.some((b) => !b.done)}
+            answerStarted={message.content.length > 0 || !agentActive}
+            T={T}
+          />
         ) : null}
         {agentSpecial ? (
           <AgentMessageBody

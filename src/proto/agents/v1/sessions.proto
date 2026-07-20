@@ -96,6 +96,9 @@ message SessionInfo {
   bool is_archived = 12;
   google.protobuf.Timestamp created_at = 13;
   google.protobuf.Timestamp updated_at = 14;
+  // JSON object of model-parameter overrides for this session only;
+  // resolved over the agent's stored model_params
+  optional string model_params_override = 15;
 }
 
 // Message info returned to clients
@@ -133,6 +136,9 @@ message MessageInfo {
   // Display name of the skill the user ran via the slash menu for this turn.
   // Only user messages carry it; empty when no skill was invoked.
   string invoked_skill_name = 21;
+  // JSON array of persisted reasoning blocks
+  // [{block_id, content, elapsed_ms}]; "" when the turn had none
+  string thinking_json = 22;
 }
 
 message CreateSessionRequest {
@@ -141,6 +147,8 @@ message CreateSessionRequest {
   SessionKind kind = 3;
   optional string display_name = 4;
   optional string model_override = 5;
+  // JSON object of model-parameter overrides for this session only
+  optional string model_params_override = 6;
 }
 
 message CreateSessionResponse {
@@ -178,6 +186,8 @@ message UpdateSessionRequest {
   string session_id = 2;
   optional string display_name = 3;
   optional string model_override = 4;
+  // JSON object of model-parameter overrides; "{}" clears them
+  optional string model_params_override = 5;
 }
 
 message ArchiveSessionRequest {

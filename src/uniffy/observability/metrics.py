@@ -283,6 +283,12 @@ AGENT_RUN_RECONNECT_TOTAL = Counter(
     "SubscribeToRun calls that resumed an in-flight run",
 )
 
+AGENT_MODEL_PARAM_DROPPED_TOTAL = Counter(
+    "uniffy_agent_model_param_dropped_total",
+    "Tuned model params stripped at request build because the target model rejects them",
+    ["provider", "param"],
+)
+
 
 LLM_PROVIDER_LRU_HIT_TOTAL = Counter(
     "uniffy_llm_provider_lru_hit_total",

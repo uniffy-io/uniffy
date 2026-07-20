@@ -60,7 +60,7 @@ async def _execute_view_skill(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
     """Draft a new or edited skill for the user to review; never auto-activates."""
-    from uniffy.domains.agents.runtime.stream_events import RuntimeSkillDraftEvent
+    from uniffy.domains.agents.providers.base import EventType, StreamEvent
     from uniffy.domains.agents.skills.operations import SkillOperations
 
     name = (args.get("name") or "").strip()
@@ -127,7 +127,7 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
         rationale=(args.get("rationale") or "").strip(),
     )
 
-    ctx.pending_events.append(RuntimeSkillDraftEvent(draft=draft))
+    ctx.pending_events.append(StreamEvent(type=EventType.SKILL_DRAFT, draft=draft))
 
     verb = "an update to" if kind == "edit" else "a new skill"
     return ToolResult(

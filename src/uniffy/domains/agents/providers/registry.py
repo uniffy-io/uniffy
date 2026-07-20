@@ -138,9 +138,13 @@ def get_provider_registry() -> ProviderRegistry:
     from uniffy.domains.agents.providers.anthropic import AnthropicDescriptor
     from uniffy.domains.agents.providers.google import GoogleDescriptor
     from uniffy.domains.agents.providers.openai import OpenAIDescriptor
+    from uniffy.domains.agents.providers.openrouter import OpenRouterDescriptor
+    from uniffy.domains.agents.providers.xai import XAIDescriptor
 
     _registry.register(AnthropicDescriptor())
     _registry.register(OpenAIDescriptor())
     _registry.register(GoogleDescriptor())
+    _registry.register(OpenRouterDescriptor())
+    _registry.register(XAIDescriptor())
 
     return _registry

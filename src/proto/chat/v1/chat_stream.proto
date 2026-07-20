@@ -59,6 +59,9 @@ enum ChatEventType {
   CHAT_EVENT_TYPE_CALL_PARTICIPANT_STATE = 28;
   CHAT_EVENT_TYPE_CALL_RING = 29;
   CHAT_EVENT_TYPE_CALL_HOST_CHANGED = 30;
+  // Incremental reasoning for an in-flight agent message. Rendered in a
+  // separate collapsible thinking pane, never merged into message content.
+  CHAT_EVENT_TYPE_AGENT_THINKING_DELTA = 31;
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.
@@ -102,6 +105,8 @@ message ChatEvent {
     CallRingPayload call_ring = 25;
     // CALL_HOST_CHANGED
     CallHostChangedPayload call_host_changed = 26;
+    // AGENT_THINKING_DELTA
+    AgentThinkingDeltaPayload agent_thinking_delta = 27;
   }
 }
 
@@ -169,6 +174,22 @@ message AgentTokenDeltaPayload {
   int32 sequence = 4;
   // True on the final delta; clients may persist message state on this edge.
   bool final = 5;
+}
+
+// AgentThinkingDeltaPayload streams reasoning for an in-flight agent
+// message. Thinking is rendered in a collapsible pane keyed to
+// message_id + block_id and never appended to message content.
+// `final=true` closes the block and carries the runtime-stamped
+// duration for the "Thought for Ns" header.
+message AgentThinkingDeltaPayload {
+  string message_id = 1;
+  string agent_id = 2;
+  string block_id = 3;
+  string delta = 4;
+  // Shares the per-message monotonic sequence with AGENT_TOKEN_DELTA.
+  int32 sequence = 5;
+  bool final = 6;
+  int32 elapsed_ms = 7;
 }
 
 // AgentToolCallPayload signals a tool invocation by an agent.

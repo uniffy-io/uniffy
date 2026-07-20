@@ -4,7 +4,7 @@ Pins three load-bearing paths the W3 plan calls out:
 
 - Lock-loss returns ``{"status": "skipped"}`` and never touches the
   runtime, so a duplicate enqueue cannot drive a second turn.
-- Driver exceptions publish a synthetic ``RuntimeErrorEvent`` and flip
+- Driver exceptions publish a synthetic ERROR event and flip
   the run state hash to ``status="error"`` *before* re-raising so the
   ARQ failure record matches what the subscriber already saw.
 - The ``Done`` path schedules a deferred ``delete_run_stream`` cleanup
@@ -27,12 +27,7 @@ import pytest
 
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id as uuid7
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeStreamEvent,
-    RuntimeTokenEvent,
-)
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.workers.tasks import agent_run as agent_run_mod
 
 
@@ -61,11 +56,11 @@ class _FakeOpsClient:
 
 class _PublisherRecorder:
     def __init__(self) -> None:
-        self.events: list[RuntimeStreamEvent] = []
+        self.events: list[StreamEvent] = []
         self.closed = False
         self.last_seq = 0
 
-    async def publish(self, event: RuntimeStreamEvent) -> None:
+    async def publish(self, event: StreamEvent) -> None:
         self.events.append(event)
         self.last_seq += 1
 
@@ -108,7 +103,7 @@ def _install_session_stub(monkeypatch) -> list[_StubSessionOps]:
 
 def _install_runtime_stub(
     monkeypatch,
-    events: list[RuntimeStreamEvent] | None = None,
+    events: list[StreamEvent] | None = None,
     raises: BaseException | None = None,
 ) -> list[Any]:
     """Install a ``RuntimeOperations`` factory whose ``stream_send_message``
@@ -130,7 +125,7 @@ def _install_runtime_stub(
 
 
 async def _stream(
-    events: list[RuntimeStreamEvent],
+    events: list[StreamEvent],
     raises: BaseException | None,
 ):
     for ev in events:
@@ -173,8 +168,8 @@ def _install_ops_client(monkeypatch, *, lock_acquired: bool = True) -> _FakeOpsC
     return client
 
 
-def _make_done_event() -> RuntimeDoneEvent:
-    return RuntimeDoneEvent(
+def _make_done_event() -> StreamEvent:
+    return StreamEvent(type=EventType.DONE, 
         assistant_message=AgentMessage(
             id=uuid7(),
             session_id=uuid7(),
@@ -182,7 +177,7 @@ def _make_done_event() -> RuntimeDoneEvent:
             content="ok",
             created_at=datetime.now(UTC),
         ),
-        model_used="claude-sonnet-4-6",
+        model="claude-sonnet-4-6",
     )
 
 
@@ -229,7 +224,7 @@ class TestRunAgentSession:
         _install_runtime_stub(
             monkeypatch,
             events=[
-                RuntimeTokenEvent(text="hello", sequence=1),
+                StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="hello", sequence=1),
                 _make_done_event(),
             ],
         )
@@ -257,15 +252,15 @@ class TestRunAgentSession:
         assert kwargs.get("_defer_by") == agent_run_mod._DELETE_DEFER_SECONDS
         assert args == (result["run_id"],)
         # Done event was the last published; intermediate token also seen.
-        types = [type(ev).__name__ for ev in publisher.events]
-        assert types == ["RuntimeTokenEvent", "RuntimeDoneEvent"]
+        types = [ev.type for ev in publisher.events]
+        assert types == [EventType.TEXT_BLOCK_DELTA, EventType.DONE]
 
     def test_no_done_event_skips_cleanup(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
         _install_session_stub(monkeypatch)
         _install_runtime_stub(
             monkeypatch,
-            events=[RuntimeTokenEvent(text="partial", sequence=1)],
+            events=[StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="partial", sequence=1)],
         )
         _install_publisher_stub(monkeypatch)
         _install_open_session_stub(monkeypatch)
@@ -283,7 +278,7 @@ class TestRunAgentSession:
 
         result = asyncio.run(run())
         assert result["status"] == "success"
-        assert valkey.enqueued == [], "no cleanup without RuntimeDoneEvent"
+        assert valkey.enqueued == [], "no cleanup without a DONE event"
 
     def test_exception_emits_synthetic_error_and_reraises(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
@@ -308,7 +303,7 @@ class TestRunAgentSession:
             asyncio.run(run())
 
         assert publisher.closed is True
-        error_events = [e for e in publisher.events if isinstance(e, RuntimeErrorEvent)]
+        error_events = [e for e in publisher.events if e.type is EventType.ERROR]
         assert len(error_events) == 1
         assert error_events[0].error == "driver blew up"
 
