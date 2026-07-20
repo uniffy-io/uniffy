@@ -18,28 +18,6 @@ import {
 import { setContentAccessMode } from '@/features/permissions/store/permissionsThunks';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 
-const LAST_NOTE_STORAGE_KEY = 'uniffy-last-note';
-
-export function loadLastOpenedNote(): string | null {
-    try {
-        return localStorage.getItem(LAST_NOTE_STORAGE_KEY);
-    } catch {
-        return null;
-    }
-}
-
-function saveLastOpenedNote(noteId: string | null): void {
-    try {
-        if (noteId) {
-            localStorage.setItem(LAST_NOTE_STORAGE_KEY, noteId);
-        } else {
-            localStorage.removeItem(LAST_NOTE_STORAGE_KEY);
-        }
-    } catch {
-        // Ignore errors
-    }
-}
-
 function normalizeNote(note: SerializedNote): SerializedNote {
     return note;
 }
@@ -133,9 +111,6 @@ export const notesSlice = createSlice({
 
         setCurrentNote: (state, action: PayloadAction<string | null>) => {
             state.currentNoteId = action.payload;
-            if (action.payload) {
-                saveLastOpenedNote(action.payload);
-            }
         },
 
         addTab: (state, action: PayloadAction<string>) => {

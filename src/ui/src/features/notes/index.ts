@@ -8,7 +8,6 @@ export { CrepeEditor } from '@/components/editor/CrepeEditor';
 export { MarkdownSplitEditor } from '@/features/notes/components/editor/MarkdownSplitEditor';
 export { ReadOnlyViewer } from '@/features/notes/components/editor/ReadOnlyViewer';
 export { EditorHeader } from '@/features/notes/components/editor/EditorHeader';
-export { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 
 export { NotesPage } from '@/features/notes/pages/NotesPage';
 

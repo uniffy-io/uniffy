@@ -1,19 +1,27 @@
-import { useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, Suspense } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { ErrorBoundary, PageErrorFallback, PageLoader } from '@/components/feedback';
 import { NotesLayout } from '@/features/notes/components/NotesLayout';
 import { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
 import { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
 import { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMetadataPanel';
-import { NotesGraphDashboard } from '@/features/notes/components/dashboard/NotesGraphDashboard';
 import { NotesEmptyState } from '@/features/notes/components/NotesEmptyState';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { toggleSidebar, setEditorMode, setShowMarkdownPreview, setShowMarkdownLineNumbers, setSidebarOpen, toggleMetadataPanel } from '@/features/notes/store/editorSlice';
 import type { EditorMode } from '@/features/notes/store/editorSlice';
-import { setCurrentNote, fetchNote, initializeNotesData, loadLastOpenedNote } from '@/features/notes/store/notesSlice';
+import { setCurrentNote, fetchNote, initializeNotesData } from '@/features/notes/store/notesSlice';
+import { saveLastOpenedNote, clearLastOpenedNote } from '@/features/notes/utils/lastOpenedNote';
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
 import { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
+import { lazyImport } from '@/shared/utils/lazyImport';
+
+// Separate chunk: the graph pulls d3-force and never loads on the editor path.
+const NotesGraphDashboard = lazyImport(
+    () => import('@/features/notes/components/dashboard/NotesGraphDashboard'),
+    'NotesGraphDashboard',
+);
 
 export function NotesPage() {
   const dispatch = useAppDispatch();
@@ -24,6 +32,7 @@ export function NotesPage() {
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const { defaultEditor, markdownShowPreview, markdownShowLineNumbers } = useAppearanceSettings();
 
@@ -34,6 +43,7 @@ export function NotesPage() {
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
 
   const isGraphRoute = location.pathname === '/notes/graph';
+  const fromLastOpened = Boolean((location.state as { fromLastOpened?: boolean } | null)?.fromLastOpened);
 
   const currentNote = currentNoteId ? notesState?.notes[currentNoteId] : null;
   const pageTitle = isGraphRoute ? 'Knowledge Graph' : (currentNote?.title || 'Notes');
@@ -52,15 +62,6 @@ export function NotesPage() {
   }, [dispatch]);
 
   useShortcutHandler('app.toggleSidebar', handleToggleSidebar);
-
-  useLayoutEffect(() => {
-    if (!noteId && !isGraphRoute) {
-      const lastNoteId = loadLastOpenedNote();
-      if (lastNoteId) {
-        navigate(`/notes/${lastNoteId}`, { replace: true });
-      }
-    }
-  }, [noteId, isGraphRoute, navigate]);
 
   const hasAppliedDefaultEditor = useRef(false);
   useEffect(() => {
@@ -85,27 +86,40 @@ export function NotesPage() {
 
   // Always refetch on noteId change or remount - returning from /chat would serve stale content and autosave could clobber concurrent edits.
   useEffect(() => {
-    if (noteId) {
-      dispatch(setCurrentNote(noteId));
-      dispatch(fetchNote(noteId));
-    } else if (currentNoteId && !isGraphRoute) {
-      dispatch(setCurrentNote(null));
-    }
-    // currentNoteId omitted: run on mount + noteId change, not on Redux currentNoteId updates.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, isGraphRoute, dispatch]);
+    if (!noteId) return;
 
-  const showDashboard = isGraphRoute || !noteId;
+    dispatch(setCurrentNote(noteId));
+    dispatch(fetchNote(noteId))
+      .unwrap()
+      .then(() => {
+        if (organizationId && userId) {
+          saveLastOpenedNote(organizationId, userId, noteId);
+        }
+      })
+      .catch(() => {
+        // A stale last-opened pointer (deleted note, revoked access) must not trap /notes in a dead redirect.
+        if (fromLastOpened && organizationId && userId) {
+          clearLastOpenedNote(organizationId, userId);
+          navigate('/notes/graph', { replace: true });
+        }
+      });
+  }, [noteId, fromLastOpened, organizationId, userId, dispatch, navigate]);
 
   return (
     <>
       <AppHeader />
       <NotesLayout
         sidebar={<NotesSidebar />}
-        editor={showDashboard
-          ? (notesCount === 0 && !notesLoading && !isGraphRoute
+        editor={isGraphRoute
+          ? (treeLoaded && notesCount === 0 && !notesLoading
             ? <NotesEmptyState key="empty-state" />
-            : <NotesGraphDashboard key="graph-dashboard" />)
+            : (
+              <ErrorBoundary fallback={(props) => <PageErrorFallback {...props} />}>
+                <Suspense fallback={<PageLoader />}>
+                  <NotesGraphDashboard key="graph-dashboard" />
+                </Suspense>
+              </ErrorBoundary>
+            ))
           : <NotesEditor key="note-editor" />
         }
         metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}
