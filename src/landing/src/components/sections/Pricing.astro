@@ -119,14 +119,14 @@ const tiers: Tier[] = [
           <p class="mt-4 min-h-[3.5rem] text-sm leading-relaxed text-night-soft-text">
             {t.blurb}
             {t.blurbHighlight && (
-              <span class="font-semibold text-accent">{t.blurbHighlight}</span>
+              <span class="font-semibold text-accent-strong">{t.blurbHighlight}</span>
             )}
           </p>
 
           <ul class="mt-6 flex-1 space-y-2.5 text-sm">
             <li class="flex items-start gap-2">
               <span class="mt-1.5 h-1 w-2.5 flex-shrink-0 bg-accent" />
-              <span class="font-semibold text-accent">Native AI with controlled access</span>
+              <span class="font-semibold text-accent-strong">Native AI with controlled access</span>
             </li>
             {t.features.map((f) => (
               <li class="flex items-start gap-2">
@@ -139,7 +139,7 @@ const tiers: Tier[] = [
             href={t.cta.href}
             class={`mt-8 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition-opacity ${
               t.featured
-                ? "bg-accent text-ink hover:opacity-90"
+                ? "bg-accent text-white hover:opacity-90"
                 : "border border-night-hairline-strong bg-night-soft text-night-text hover:border-night-text"
             }`}
           >

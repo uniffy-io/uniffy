@@ -6,26 +6,26 @@ sidebar:
   order: 0
 ---
 
-This guide is for org owners and administrators. It covers everything inside `/admin/*` — one tenant, your tenant.
+This guide is for the people who run an organization on Uniffy. Owners and admins. It covers the admin pages, where you manage one tenant. Your tenant.
 
-For cross-tenant operations (managing multiple orgs from a single deployment), see the Platform Guide.
+If you run a whole deployment and look after more than one organization, that is a different job. The platform pages cover it, and so does the Platform Guide.
 
-## How the admin panel is organized
+## How the admin pages are organized
 
-The `/admin` sidebar groups pages by intent. The docs follow the same grouping so a page in the app maps directly to its doc page.
+The admin pages group everything by intent. These docs follow the same grouping, so a page in the app maps straight to its page here.
 
 | Group | Pages | What it covers |
 |-------|-------|----------------|
 | Access | Members, Groups, Domain Admins | Who is in the org and what role they hold |
 | Security | Default Permissions, Authentication, Encryption, Audit Log | How access is granted, proven, encrypted, and recorded |
-| Workspace | Agents, Rooms, Storage, Email | Org-scoped infrastructure and integrations |
+| Workspace | Agents, Rooms, Storage, Email | Infrastructure and integrations scoped to your org |
 
-## Who can use the admin panel
+## Who can open them
 
-Any user whose org role is `OWNER` or `ADMIN`. The route gate (`AdminRoute`) redirects everyone else to the app home.
+Anyone whose org role is owner or admin. Everyone else is sent back to the app home.
 
-A few pages have finer gates inside them — for example, only `OWNER` can transfer ownership, and `Domain Admins` can self-manage their own domain from this panel without holding `ADMIN` on the whole org.
+A few pages gate further inside. Only the owner can transfer ownership. A domain admin can manage their own area here without holding admin over the whole org.
 
-## Audit, everywhere
+## Everything here is logged
 
-Every mutation made from `/admin/*` writes an audit row. The Audit Log page is the source of truth for what changed, by whom, and when. When in doubt about whether an action was performed, check the log first.
+Every change you make from the admin pages writes an audit row. The Audit Log is the record of what changed, who changed it, and when. If you are ever unsure whether an action went through, check the log first.

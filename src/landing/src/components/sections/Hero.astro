@@ -1,172 +1,60 @@
 ---
-import ExpandedMentionCard from "@/components/ExpandedMentionCard.astro";
-import type { CardData } from "@/components/cardTypes";
-
-const heroCards: CardData[] = [
-  {
-    type: "note",
-    title: "Roadmap Q3 2026",
-    description:
-      "Three flagship initiatives this quarter: agent runtime hardening, public sharing, and the federated calendar work for enterprise.",
-    tags: ["planning", "leadership", "q3"],
-    updatedAt: "2m ago",
-    updatedBy: "Teddy",
-    isBeingEdited: true,
-    editorName: "Georgi",
-  },
-  {
-    type: "event",
-    title: "Q3 Planning sync",
-    timeRange: "Today, 2:00 - 3:30 PM",
-    location: "Sofia HQ + Zoom",
-    meetingUrl: "https://meet.example",
-    updatedAt: "12m ago",
-    temporal: "in 1h",
-  },
-  {
-    type: "file",
-    title: "Budget 2026.xlsx",
-    mime: "application/vnd.ms-excel",
-    size: "1.4 MB",
-    updatedAt: "yesterday",
-    description:
-      "Quarterly P&L breakdown with headcount projections and runway scenarios for the finance review.",
-    tags: ["finance", "q1", "approved"],
-  },
-  {
-    type: "project",
-    title: "Agent runtime hardening",
-    slug: "agent-runtime",
-    completedTasks: 14,
-    totalTasks: 23,
-    updatedAt: "1h ago",
-    description: "Egress workers, retry logic, and observability for the agent runtime fleet.",
-    tags: ["infra", "priority"],
-  },
-  {
-    type: "chat",
-    title: "#design-review",
-    lastMessage: "ship the new mention chips today? approvals already in from Teddy and Georgi.",
-    lastSender: "Ivo",
-    updatedAt: "just now",
-    memberCount: 12,
-    tags: ["design", "frontend"],
-  },
-];
 ---
 
-<section class="hero-section relative flex flex-col overflow-hidden px-5 pt-16 pb-14 sm:px-6 sm:pt-20 sm:pb-16 md:px-10 md:pt-24 md:pb-20 lg:min-h-screen">
-  <div class="hero-stars pointer-events-none absolute inset-0 z-[0]"></div>
-  <div class="relative z-[1] mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[1fr_1.2fr] lg:gap-12">
-    <div class="relative z-10 lg:-ml-24 xl:-ml-40 lg:flex lg:flex-col lg:justify-center">
-      <div class="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 self-start rounded-2xl border border-paper/15 bg-paper/[0.06] px-3 py-1.5 font-mono text-[11px] font-bold text-paper backdrop-blur-sm sm:rounded-full sm:py-1 sm:text-xs">
-        <span class="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(197,255,63,0.7)]"></span>
-        <span>Source-available</span>
-        <span class="text-paper/30">·</span>
-        <span>Self-hostable</span>
-        <span class="text-paper/30">·</span>
-        <span>EU residency</span>
-        <span class="text-paper/30">·</span>
-        <span>No Cloud Act</span>
-      </div>
+<section class="hero-section relative flex min-h-[86vh] flex-col items-center justify-center overflow-hidden px-5 py-20 text-center sm:px-6 sm:py-24 md:px-10 lg:min-h-screen">
+  <div class="hero-backdrop pointer-events-none absolute inset-0" aria-hidden="true">
+    <div class="hero-grid absolute inset-0"></div>
+    <div class="hero-aurora hero-aurora--violet"></div>
+    <div class="hero-aurora hero-aurora--pink"></div>
+    <div class="hero-aurora hero-aurora--green"></div>
+  </div>
 
-      <h1 class="hero-headline m-0 mb-6 font-sans md:mb-7">
-        Work Infrastructure<span class="hero-headline__dot"> ,</span><br class="hidden sm:inline" /> <span class="hero-headline__accent italic">finally unified</span><span class="hero-headline__dot"> .</span>
-      </h1>
+  <div class="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center">
+    <h1 class="hero-headline m-0 font-sans">
+      Teamwork<br />
+      <span class="hero-headline__line2">Simplified, Amplified, <span class="hero-headline__accent italic">Unified.</span></span>
+    </h1>
 
-      <p class="mb-8 max-w-xl text-base leading-relaxed text-paper/70 sm:text-lg md:mb-9 md:text-xl">
-        Notes, Diagrams, Chat, Files, Projects, Calendar, AI. One workspace, everything is reachable and talks back.
-        Fully private. No trackers, no advertasing, no data harvesting, no training on your data.
-      </p>
+    <p class="mt-6 max-w-2xl text-base leading-relaxed text-paper/90 sm:text-lg md:mt-7 md:text-xl">
+      Notes, Diagrams, Chat, Files, Projects, Calendar, AI. One workspace, everything is reachable and talks back.
+      Fully private. No trackers, no advertising, no data harvesting, no training on your data.
+    </p>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <a
-          href="https://cloud.uniffy.io/signup"
-          class="inline-flex items-center gap-2 rounded-full bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90 sm:px-6 sm:py-3"
-        >
-          Start free
-          <span aria-hidden>&rarr;</span>
-        </a>
-        <a
-          href="#sovereign"
-          class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-5 py-2.5 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1] sm:px-6 sm:py-3"
-        >
-          Self-host
-        </a>
-        <span class="basis-full font-mono text-xs text-paper/65 sm:basis-auto sm:ml-2">Free for teams up to 10 users forever</span>
-      </div>
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+      <a
+        href="https://cloud.uniffy.io/signup"
+        class="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+      >
+        Start free
+        <span aria-hidden>&rarr;</span>
+      </a>
+      <a
+        href="#sovereign"
+        class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-6 py-3 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+      >
+        Self-host
+      </a>
     </div>
+    <p class="mt-5 font-mono text-xs text-paper/65">Free for teams up to 10 users forever</p>
 
-    <div class="relative h-[360px] sm:h-[440px] md:h-[520px] lg:h-[680px]" data-hero-stage>
-      <div class="hero-stage__backdrop pointer-events-none absolute -inset-32 z-[0]"></div>
-
-      <div class="hero-planet pointer-events-none absolute left-1/2 top-1/2 z-[2] hidden aspect-square -translate-x-1/2 -translate-y-1/2 md:block md:w-[320px] lg:w-[340px]">
-        <svg
-          class="hero-planet__orbits absolute -inset-10 h-[calc(100%+5rem)] w-[calc(100%+5rem)]"
-          viewBox="0 0 800 800"
-          aria-hidden="true"
-        >
-          <g fill="none" vector-effect="non-scaling-stroke">
-            <ellipse cx="400" cy="400" rx="384" ry="384" stroke="rgba(255,255,255,0.07)" stroke-width="1" stroke-dasharray="3 9">
-              <animate attributeName="stroke-dashoffset" values="0;-120" dur="28s" repeatCount="indefinite" />
-            </ellipse>
-            <g transform="rotate(-22 400 400)">
-              <ellipse cx="400" cy="400" rx="396" ry="120" stroke="rgba(255,255,255,0.10)" stroke-width="1" stroke-dasharray="3 8">
-                <animate attributeName="stroke-dashoffset" values="0;-120" dur="22s" repeatCount="indefinite" />
-              </ellipse>
-            </g>
-            <g transform="rotate(28 400 400)">
-              <ellipse cx="400" cy="400" rx="400" ry="180" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="2 11">
-                <animate attributeName="stroke-dashoffset" values="0;-120" dur="32s" repeatCount="indefinite" />
-              </ellipse>
-            </g>
-          </g>
-        </svg>
-
-        <div class="hero-planet__atmo absolute -inset-1 rounded-full"></div>
-
-        <div class="hero-planet__sphere absolute inset-0 overflow-hidden rounded-full shadow-[0_30px_80px_-20px_rgba(8,28,60,0.45),inset_0_0_60px_rgba(0,0,0,0.3)]">
-          <img
-            src="/earth-blue-marble.jpg"
-            alt=""
-            class="h-full w-full scale-[1.26] object-cover"
-            loading="eager"
-            decoding="async"
-          />
-          <div class="hero-planet__rim absolute inset-0 rounded-full"></div>
-          <div class="hero-planet__specular absolute inset-0 rounded-full"></div>
-          <div class="hero-planet__terminator absolute inset-0 rounded-full"></div>
-        </div>
-      </div>
-
-      <div class="hero-card hero-card--tr absolute right-2 top-2 md:-right-4 md:top-0 lg:left-[calc(50%+45px)] lg:right-auto lg:top-[calc(50%-390px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Note">
-        <ExpandedMentionCard card={heroCards[0]} variant="dark" />
-      </div>
-      <div class="hero-card hero-card--bl absolute left-2 bottom-2 md:-left-8 md:bottom-0 lg:bottom-auto lg:left-[calc(50%-325px)] lg:top-[calc(50%+250px)] z-40 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Event">
-        <ExpandedMentionCard card={heroCards[1]} variant="dark" />
-      </div>
-      <div class="hero-card hero-card--br hidden md:block absolute md:-right-8 md:bottom-4 lg:bottom-auto lg:left-[calc(50%+55px)] lg:right-auto lg:top-[calc(50%+268px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="File">
-        <ExpandedMentionCard card={heroCards[2]} variant="dark" />
-      </div>
-      <div class="hero-card hero-card--mr hidden lg:block absolute lg:left-[calc(50%+225px)] lg:top-[calc(50%-90px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Project">
-        <ExpandedMentionCard card={heroCards[3]} variant="dark" />
-      </div>
-      <div class="hero-card hero-card--tl hidden lg:block absolute lg:left-[calc(50%-415px)] lg:top-[calc(50%-200px)] z-30 transition-transform duration-500 hover:-translate-y-1 hover:z-50" data-tether-target="Chat">
-        <ExpandedMentionCard card={heroCards[4]} variant="dark" />
-      </div>
-
-      <canvas class="hero-network pointer-events-none absolute inset-0 z-[3] hidden h-full w-full md:block" data-hero-network></canvas>
+    <div class="mt-12 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 font-mono text-[11px] font-medium uppercase tracking-wider text-paper/55">
+      <span class="inline-flex items-center gap-1.5">
+        <span class="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(105,74,255,0.7)]"></span>
+        Source available
+      </span>
+      <span class="text-paper/25">·</span>
+      <span>Self hostable</span>
+      <span class="text-paper/25">·</span>
+      <span>EU residency</span>
+      <span class="text-paper/25">·</span>
+      <span>No Cloud Act</span>
     </div>
   </div>
 </section>
 
 <style>
   .hero-section {
-    background-color: #0a0e1a;
-    background-image:
-      radial-gradient(ellipse at 75% 50%, rgba(40, 70, 50, 0.18) 0%, rgba(17, 22, 30, 0.6) 35%, rgba(10, 14, 26, 0) 65%),
-      radial-gradient(ellipse at 20% 20%, rgba(20, 28, 44, 0.45) 0%, rgba(6, 8, 13, 0) 55%),
-      radial-gradient(ellipse at 50% 100%, rgba(6, 8, 13, 0.6) 0%, rgba(10, 14, 26, 0) 60%);
+    background-color: #0a0d1a;
   }
 
   .hero-section::after {
@@ -179,463 +67,110 @@ const heroCards: CardData[] = [
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(197, 255, 63, 0.05) 20%,
-      rgba(197, 255, 63, 0.45) 55%,
-      rgba(197, 255, 63, 0.85) 100%
+      rgba(105, 74, 255, 0.7) 18%,
+      rgba(253, 126, 234, 0.7) 45%,
+      rgba(255, 85, 0, 0.7) 68%,
+      rgba(1, 183, 127, 0.8) 90%,
+      transparent 100%
     );
     pointer-events: none;
   }
 
-  .hero-stars {
+  .hero-grid {
     background-image:
-      radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.55), transparent 60%),
-      radial-gradient(1px 1px at 28% 72%, rgba(255, 255, 255, 0.4), transparent 60%),
-      radial-gradient(1.5px 1.5px at 52% 30%, rgba(255, 255, 255, 0.5), transparent 60%),
-      radial-gradient(1px 1px at 68% 84%, rgba(255, 255, 255, 0.35), transparent 60%),
-      radial-gradient(1px 1px at 82% 22%, rgba(255, 255, 255, 0.5), transparent 60%),
-      radial-gradient(1.5px 1.5px at 90% 58%, rgba(197, 255, 63, 0.35), transparent 60%),
-      radial-gradient(1px 1px at 6% 50%, rgba(255, 255, 255, 0.3), transparent 60%),
-      radial-gradient(1px 1px at 40% 92%, rgba(255, 255, 255, 0.3), transparent 60%);
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-position: center;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 44%, #000 28%, transparent 78%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 44%, #000 28%, transparent 78%);
+  }
+
+  .hero-aurora {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    transform: translate(-50%, -50%);
+    will-change: transform;
+  }
+  .hero-aurora--violet {
+    width: 60vw;
+    height: 60vw;
+    max-width: 760px;
+    max-height: 760px;
+    left: 50%;
+    top: 42%;
+    background: radial-gradient(circle, rgba(105, 74, 255, 0.5) 0%, rgba(105, 74, 255, 0) 68%);
+    animation: hero-drift-a 20s ease-in-out infinite;
+  }
+  .hero-aurora--pink {
+    width: 42vw;
+    height: 42vw;
+    max-width: 520px;
+    max-height: 520px;
+    left: 70%;
+    top: 26%;
+    background: radial-gradient(circle, rgba(253, 126, 234, 0.32) 0%, rgba(253, 126, 234, 0) 68%);
+    animation: hero-drift-b 24s ease-in-out infinite;
+  }
+  .hero-aurora--green {
+    width: 46vw;
+    height: 46vw;
+    max-width: 560px;
+    max-height: 560px;
+    left: 30%;
+    top: 70%;
+    background: radial-gradient(circle, rgba(1, 183, 127, 0.26) 0%, rgba(1, 183, 127, 0) 68%);
+    animation: hero-drift-c 28s ease-in-out infinite;
+  }
+
+  @keyframes hero-drift-a {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, calc(-50% - 26px)) scale(1.05); }
+  }
+  @keyframes hero-drift-b {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(calc(-50% + 22px), calc(-50% + 16px)) scale(1.08); }
+  }
+  @keyframes hero-drift-c {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(calc(-50% - 20px), calc(-50% - 18px)) scale(1.06); }
   }
 
   .hero-headline {
     font-weight: 500;
-    font-size: clamp(32px, 8vw, 64px);
-    line-height: 1.02;
+    font-size: clamp(36px, 8.5vw, 54px);
+    line-height: 1.06;
     letter-spacing: -0.035em;
-    color: rgba(255, 255, 255, 0.92);
-    overflow-wrap: anywhere;
+    color: rgba(255, 255, 255, 0.95);
+    text-wrap: balance;
   }
   @media (min-width: 1024px) {
     .hero-headline {
-      font-size: clamp(40px, 4.8vw, 64px);
-      line-height: 0.98;
-      white-space: nowrap;
+      font-size: clamp(46px, 5.2vw, 66px);
+      line-height: 1;
     }
   }
 
-  .hero-headline__dot {
-    color: #9ec060;
-    font-size: 0.7em;
+  .hero-headline__line2 {
+    display: inline-block;
+    margin-top: 0.12em;
+    font-size: 0.6em;
+    letter-spacing: -0.02em;
   }
 
   .hero-headline__accent {
-    font-size: 0.88em;
-  }
-
-  .hero-planet {
-    animation: hero-planet-float 14s ease-in-out infinite;
-  }
-
-  .hero-stage__backdrop {
-    display: none;
-  }
-
-  .hero-planet__sphere {
-    mask-image: radial-gradient(circle at 50% 50%, black 86%, transparent 100%);
-    -webkit-mask-image: radial-gradient(circle at 50% 50%, black 86%, transparent 100%);
-  }
-
-  .hero-planet__bloom {
-    background: radial-gradient(
-      circle at 50% 50%,
-      rgba(120, 190, 255, 0) 30%,
-      rgba(140, 205, 255, 0.30) 36%,
-      rgba(160, 215, 255, 0.20) 44%,
-      rgba(197, 255, 63, 0.55) 54%,
-      rgba(197, 255, 63, 0.22) 68%,
-      rgba(197, 255, 63, 0.05) 82%,
-      rgba(0, 0, 0, 0) 95%
-    );
-    filter: blur(24px);
-    animation: hero-aurora-breathe 8s ease-in-out infinite;
-  }
-
-  .hero-planet__aurora {
-    background: radial-gradient(
-      circle at 50% 50%,
-      rgba(197, 255, 63, 0) 40%,
-      rgba(197, 255, 63, 0.55) 48%,
-      rgba(140, 210, 80, 0.28) 56%,
-      rgba(197, 255, 63, 0.10) 70%,
-      rgba(197, 255, 63, 0) 84%
-    );
-    filter: blur(10px);
-    animation: hero-aurora-breathe 7s ease-in-out infinite;
-    animation-delay: -2s;
-  }
-
-  .hero-planet__atmo {
-    background: radial-gradient(
-      circle at 50% 50%,
-      rgba(120, 200, 255, 0) 84%,
-      rgba(150, 215, 255, 0.65) 94%,
-      rgba(200, 235, 255, 0.30) 100%
-    );
-    filter: blur(3px);
-  }
-
-  .hero-planet__rim {
-    background: radial-gradient(
-      circle at 35% 30%,
-      rgba(160, 220, 255, 0) 92%,
-      rgba(170, 220, 255, 0.55) 97%,
-      rgba(220, 240, 255, 0) 100%
-    );
-    mix-blend-mode: screen;
-  }
-
-  .hero-planet__specular {
-    background: radial-gradient(
-      circle at 30% 26%,
-      rgba(255, 255, 255, 0.25) 0%,
-      rgba(255, 255, 255, 0.08) 28%,
-      rgba(255, 255, 255, 0) 50%
-    );
-    mix-blend-mode: screen;
-  }
-
-  .hero-planet__terminator {
-    background: radial-gradient(
-      circle at 78% 76%,
-      rgba(0, 0, 0, 0.55) 0%,
-      rgba(0, 0, 0, 0.25) 50%,
-      rgba(0, 0, 0, 0) 80%
-    );
-  }
-
-  .hero-card {
-    animation: hero-card-bob 9s ease-in-out infinite;
-    filter:
-      drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55))
-      drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35))
-      drop-shadow(0 0 24px rgba(197, 255, 63, 0.10));
-  }
-  .hero-card :global(.expanded-mention-card) {
-    height: 180px;
-    display: flex;
-    flex-direction: column;
-    width: 240px;
-  }
-  @media (min-width: 640px) {
-    .hero-card :global(.expanded-mention-card) {
-      width: 280px;
-    }
-  }
-  @media (min-width: 1024px) {
-    .hero-card :global(.expanded-mention-card) {
-      width: 320px;
-    }
-  }
-  .hero-card :global(.expanded-mention-card > .border-t.bg-paper-soft) {
-    margin-top: auto;
-  }
-  .hero-card--bl { animation-delay: -3s; animation-duration: 11s; }
-  .hero-card--br { animation-delay: -6s; animation-duration: 10s; }
-  .hero-card--mr { animation-delay: -4s; animation-duration: 12s; }
-  .hero-card--tl { animation-delay: -8s; animation-duration: 13s; }
-
-  @keyframes hero-planet-float {
-    0%, 100% { transform: translate(-50%, -50%); }
-    50% { transform: translate(-50%, calc(-50% - 6px)); }
-  }
-
-  @keyframes hero-aurora-breathe {
-    0%, 100% { opacity: 0.85; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.04); }
-  }
-
-  @keyframes hero-card-bob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
+    display: inline-block;
+    padding-right: 0.08em;
+    background: linear-gradient(100deg, #8571ff 0%, #b98bff 45%, #fd7eea 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .hero-planet,
-    .hero-planet__aurora,
-    .hero-card {
+    .hero-aurora {
       animation: none;
     }
   }
 </style>
-
-<script>
-  type Node = {
-    x: number;
-    y: number;
-    cx: number;
-    cy: number;
-    radius: number;
-    angle: number;
-    orbitR: number;
-    speed: number;
-    label?: string;
-    glowPhase: number;
-  };
-
-  type Pulse = {
-    from: number;
-    to: number;
-    t: number;
-    speed: number;
-    life: number;
-  };
-
-  const LABEL_SLOTS: { label: string; angle: number; radial: number }[] = [
-    { label: "Note", angle: 0, radial: 0.78 },
-    { label: "Agent", angle: 330, radial: 0.78 },
-    { label: "Project", angle: 90, radial: 0.78 },
-    { label: "File", angle: 135, radial: 0.78 },
-    { label: "Event", angle: 180, radial: 0.78 },
-    { label: "Chat", angle: 255, radial: 0.78 },
-  ];
-  const CONNECTION_DIST = 320;
-  const MAX_PULSES = 10;
-
-  function setupHeroNetwork(stage: HTMLElement, canvas: HTMLCanvasElement) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return () => {};
-
-    const planetEl = stage.querySelector<HTMLElement>(".hero-planet");
-    const tetherEls = Array.from(stage.querySelectorAll<HTMLElement>("[data-tether-target]"));
-
-    let nodes: Node[] = [];
-    let pulses: Pulse[] = [];
-    let raf = 0;
-    let prev = 0;
-    let planetRadius = 0;
-    let planetCx = 0;
-    let planetCy = 0;
-    let width = 0;
-    let height = 0;
-
-    function readPlanet() {
-      const planetRect = planetEl?.getBoundingClientRect();
-      if (!planetEl || !planetRect || planetRect.width === 0) {
-        planetCx = width / 2;
-        planetCy = height / 2;
-        planetRadius = Math.min(width, height) * 0.42;
-        return;
-      }
-      const canvasRect = canvas.getBoundingClientRect();
-      planetCx = planetRect.left - canvasRect.left + planetRect.width / 2;
-      planetCy = planetRect.top - canvasRect.top + planetRect.height / 2;
-      planetRadius = planetRect.width / 2;
-    }
-
-    function init() {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      if (width === 0 || height === 0) return;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      readPlanet();
-
-      nodes = [];
-
-      // Labeled feature nodes — anchored to planet surface at clock positions
-      for (const slot of LABEL_SLOTS) {
-        const theta = ((slot.angle - 90) * Math.PI) / 180;
-        const r = planetRadius * slot.radial;
-        const cx = planetCx + r * Math.cos(theta);
-        const cy = planetCy + r * Math.sin(theta);
-        nodes.push({
-          x: cx,
-          y: cy,
-          cx,
-          cy,
-          radius: 2.5,
-          angle: Math.random() * Math.PI * 2,
-          orbitR: 2,
-          speed: 0.00012,
-          label: slot.label,
-          glowPhase: Math.random() * Math.PI * 2,
-        });
-      }
-
-      // Ambient dots — scatter across full canvas, including over the planet
-      const ambientCount = 36;
-      for (let i = 0; i < ambientCount; i++) {
-        const cx = Math.random() * width;
-        const cy = Math.random() * height;
-        nodes.push({
-          x: cx,
-          y: cy,
-          cx,
-          cy,
-          radius: 1.2 + Math.random() * 1.6,
-          angle: Math.random() * Math.PI * 2,
-          orbitR: 5 + Math.random() * 16,
-          speed: 0.0002 + Math.random() * 0.0004,
-          glowPhase: Math.random() * Math.PI * 2,
-        });
-      }
-
-      pulses = [];
-    }
-
-    function pointInPlanet(px: number, py: number) {
-      const dx = px - planetCx;
-      const dy = py - planetCy;
-      return dx * dx + dy * dy < planetRadius * planetRadius;
-    }
-
-    function draw(ts: number) {
-      const dt = ts - prev || 16;
-      prev = ts;
-
-      ctx!.clearRect(0, 0, width, height);
-
-      // Update node positions
-      for (const n of nodes) {
-        n.angle += n.speed * dt;
-        n.x = n.cx + Math.cos(n.angle) * n.orbitR;
-        n.y = n.cy + Math.sin(n.angle * 0.7) * n.orbitR * 0.6;
-      }
-
-      // Connections — flow freely, including across the planet face
-      const conns: [number, number][] = [];
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const a = nodes[i];
-          const b = nodes[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist >= CONNECTION_DIST) continue;
-          conns.push([i, j]);
-          const isLabeled = !!a.label || !!b.label;
-          const fade = 1 - dist / CONNECTION_DIST;
-          const baseAlpha = (isLabeled ? 0.45 : 0.28) * fade;
-          ctx!.beginPath();
-          ctx!.moveTo(a.x, a.y);
-          ctx!.lineTo(b.x, b.y);
-          ctx!.strokeStyle = `rgba(255,255,255,${baseAlpha})`;
-          ctx!.lineWidth = isLabeled ? 1.1 : 0.8;
-          ctx!.stroke();
-        }
-      }
-
-      // Tether lines — solid 1px green from card icon to planet label, with endpoint dots
-      if (tetherEls.length > 0) {
-        const canvasRect = canvas.getBoundingClientRect();
-        for (const el of tetherEls) {
-          const target = el.dataset.tetherTarget;
-          if (!target) continue;
-          const node = nodes.find((n) => n.label === target);
-          if (!node) continue;
-          const anchorEl = el.querySelector<HTMLElement>("[data-tether-anchor]") ?? el;
-          const ar = anchorEl.getBoundingClientRect();
-          const ax = ar.left - canvasRect.left + ar.width / 2;
-          const ay = ar.top - canvasRect.top + ar.height / 2;
-
-          ctx!.beginPath();
-          ctx!.moveTo(ax, ay);
-          ctx!.lineTo(node.x, node.y);
-          ctx!.strokeStyle = "rgba(158, 192, 96, 0.5)";
-          ctx!.lineWidth = 1;
-          ctx!.stroke();
-
-          ctx!.fillStyle = "#9ec060";
-          ctx!.beginPath();
-          ctx!.arc(ax, ay, 3, 0, Math.PI * 2);
-          ctx!.fill();
-          ctx!.beginPath();
-          ctx!.arc(node.x, node.y, 3, 0, Math.PI * 2);
-          ctx!.fill();
-        }
-      }
-
-      // Spawn pulses
-      if (conns.length > 0 && pulses.length < MAX_PULSES && Math.random() < 0.022) {
-        const [f, t] = conns[Math.floor(Math.random() * conns.length)];
-        pulses.push({
-          from: f,
-          to: t,
-          t: 0,
-          speed: 0.00018 + Math.random() * 0.0002,
-          life: 1,
-        });
-      }
-
-      // Draw pulses — lime accent
-      for (let p = pulses.length - 1; p >= 0; p--) {
-        const pulse = pulses[p];
-        pulse.t += pulse.speed * dt;
-        if (pulse.t > 1) pulse.life -= 0.04;
-        if (pulse.life <= 0) {
-          pulses.splice(p, 1);
-          continue;
-        }
-        const prog = Math.min(pulse.t, 1);
-        const a = nodes[pulse.from];
-        const b = nodes[pulse.to];
-        const px = a.x + (b.x - a.x) * prog;
-        const py = a.y + (b.y - a.y) * prog;
-        const alpha = 0.9 * pulse.life;
-        const grad = ctx!.createRadialGradient(px, py, 0, px, py, 12);
-        grad.addColorStop(0, `rgba(197,255,63,${alpha})`);
-        grad.addColorStop(1, "rgba(197,255,63,0)");
-        ctx!.beginPath();
-        ctx!.arc(px, py, 12, 0, Math.PI * 2);
-        ctx!.fillStyle = grad;
-        ctx!.fill();
-        ctx!.beginPath();
-        ctx!.arc(px, py, 2.4, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(255,255,255,${alpha})`;
-        ctx!.fill();
-      }
-
-      // Draw nodes
-      for (const n of nodes) {
-        if (n.label) {
-          ctx!.beginPath();
-          ctx!.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-          ctx!.fillStyle = "rgba(255,255,255,0.7)";
-          ctx!.fill();
-
-          ctx!.font = "500 11px 'Geist Variable', system-ui, sans-serif";
-          ctx!.textAlign = "center";
-          ctx!.textBaseline = "top";
-          ctx!.fillStyle = "rgba(255,255,255,0.7)";
-          ctx!.fillText(n.label, n.x, n.y + n.radius + 4);
-        } else {
-          ctx!.beginPath();
-          ctx!.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-          ctx!.fillStyle = "rgba(255,255,255,0.45)";
-          ctx!.fill();
-        }
-      }
-
-      raf = requestAnimationFrame(draw);
-    }
-
-    init();
-    raf = requestAnimationFrame(draw);
-
-    const ro = new ResizeObserver(() => init());
-    ro.observe(stage);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-    };
-  }
-
-  function boot() {
-    document.querySelectorAll<HTMLElement>("[data-hero-stage]").forEach((stage) => {
-      const canvas = stage.querySelector<HTMLCanvasElement>("[data-hero-network]");
-      if (canvas) setupHeroNetwork(stage, canvas);
-    });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot, { once: true });
-  } else {
-    boot();
-  }
-</script>

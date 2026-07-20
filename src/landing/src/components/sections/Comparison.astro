@@ -77,7 +77,7 @@ const privacyRows: Row[] = [
               Feature
             </th>
             {competitors.map((name) => (
-              <th class={`px-3 py-4 text-center font-mono text-[11px] font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-ink" : "text-night-faint"}`}>
+              <th class={`px-3 py-4 text-center font-mono text-[11px] font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-white" : "text-night-faint"}`}>
                 {name}
               </th>
             ))}
@@ -91,7 +91,7 @@ const privacyRows: Row[] = [
               </td>
               {row.values.map((v, idx) => {
                 const isUniffy = idx === competitors.length - 1;
-                const tone = v === "y" ? "font-bold text-accent" : "text-night-faint";
+                const tone = v === "y" ? "font-bold text-accent-strong" : "text-night-faint";
                 const glyph = v === "y" ? "\u2713" : "\u2014";
                 return (
                   <td class={`px-3 py-3.5 text-center text-base ${tone} ${isUniffy ? "bg-accent/10" : ""}`}>
@@ -123,7 +123,7 @@ const privacyRows: Row[] = [
               Guarantee
             </th>
             {competitors.map((name) => (
-              <th class={`px-3 py-4 text-center font-mono text-[11px] font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-ink" : "text-night-faint"}`}>
+              <th class={`px-3 py-4 text-center font-mono text-[11px] font-medium uppercase tracking-wider ${name === "Uniffy" ? "bg-accent text-white" : "text-night-faint"}`}>
                 {name}
               </th>
             ))}
@@ -137,7 +137,7 @@ const privacyRows: Row[] = [
               </td>
               {row.values.map((v, idx) => {
                 const isUniffy = idx === competitors.length - 1;
-                const tone = v === "y" ? "font-bold text-accent" : "text-night-faint";
+                const tone = v === "y" ? "font-bold text-accent-strong" : "text-night-faint";
                 const glyph = v === "y" ? "\u2713" : "\u2014";
                 return (
                   <td class={`px-3 py-3.5 text-center text-base ${tone} ${isUniffy ? "bg-accent/10" : ""}`}>

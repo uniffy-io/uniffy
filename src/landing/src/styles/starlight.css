@@ -3,12 +3,12 @@
 
 :root,
 :root[data-theme="dark"] {
-  --sl-font: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --sl-font: "Plus Jakarta Sans", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --sl-font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Code", monospace;
 
-  --sl-color-accent-low: #1d2a07;
-  --sl-color-accent: #c5ff3f;
-  --sl-color-accent-high: #d6ff7a;
+  --sl-color-accent-low: #1c1547;
+  --sl-color-accent: #694aff;
+  --sl-color-accent-high: #c4bbff;
 
   --sl-color-white: #e6edf3;
   --sl-color-gray-1: #c9d1d9;
@@ -18,17 +18,18 @@
   --sl-color-gray-5: #30363d;
   --sl-color-gray-6: #1c2128;
   --sl-color-gray-7: #151b23;
-  --sl-color-black: #0d1117;
+  --sl-color-black: #0d111e;
 
-  --sl-color-bg: #0d1117;
-  --sl-color-bg-nav: rgba(13, 17, 23, 0.8);
-  --sl-color-bg-sidebar: #0d1117;
+  --sl-color-bg: #0d111e;
+  --sl-color-bg-nav: rgba(13, 17, 30, 0.8);
+  --sl-color-bg-sidebar: #0d111e;
   --sl-color-bg-inline-code: #1c2128;
-  --sl-color-bg-accent: #c5ff3f;
+  --sl-color-bg-accent: #694aff;
 
   --sl-color-text: #e6edf3;
-  --sl-color-text-accent: #c5ff3f;
-  --sl-color-text-invert: #0a0a0a;
+  /* links need 4.5:1, so a lighter violet than the UI accent */
+  --sl-color-text-accent: #a394ff;
+  --sl-color-text-invert: #ffffff;
 
   --sl-color-hairline-light: #30363d;
   --sl-color-hairline: #30363d;
@@ -43,9 +44,9 @@
 }
 
 :root[data-theme="light"] {
-  --sl-color-accent-low: #f3ffd5;
-  --sl-color-accent: #6f9c00;
-  --sl-color-accent-high: #4a6800;
+  --sl-color-accent-low: #ece8ff;
+  --sl-color-accent: #5a37e0;
+  --sl-color-accent-high: #4326b8;
 
   --sl-color-white: #0a0a0a;
   --sl-color-gray-1: #1a1a1a;
@@ -61,11 +62,11 @@
   --sl-color-bg-nav: rgba(255, 255, 255, 0.9);
   --sl-color-bg-sidebar: #fafaf7;
   --sl-color-bg-inline-code: #f5f5f0;
-  --sl-color-bg-accent: #c5ff3f;
+  --sl-color-bg-accent: #694aff;
 
   --sl-color-text: #0a0a0a;
-  --sl-color-text-accent: #4a6800;
-  --sl-color-text-invert: #0a0a0a;
+  --sl-color-text-accent: #5a37e0;
+  --sl-color-text-invert: #ffffff;
 
   --sl-color-hairline-light: #e5e5e5;
   --sl-color-hairline: #d4d4d4;
@@ -74,22 +75,22 @@
 
 ::selection {
   background: var(--sl-color-bg-accent);
-  color: #0a0a0a;
+  color: #ffffff;
 }
 
 header.header {
   padding-inline: 0;
-  background-color: #0d1117;
+  background-color: #0d111e;
   border-bottom: 1px solid var(--sl-color-hairline);
 }
 
 .sidebar-pane {
-  background-color: #0d1117;
+  background-color: #0d111e;
 }
 
 @media (min-width: 50rem) {
   .sidebar-pane {
-    background-color: rgba(21, 27, 35, 0.6) !important;
+    background-color: rgba(21, 27, 40, 0.6) !important;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
@@ -112,19 +113,20 @@ html {
 
 body {
   font-feature-settings: "ss01", "cv11";
-  background-color: #0d1117;
+  background-color: #0d111e;
   background-image:
-    radial-gradient(ellipse at 75% 50%, rgba(40, 70, 50, 0.16) 0%, rgba(17, 22, 30, 0.5) 35%, rgba(13, 17, 23, 0) 65%),
-    radial-gradient(ellipse at 20% 20%, rgba(20, 28, 44, 0.4) 0%, rgba(6, 8, 13, 0) 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(6, 8, 13, 0.55) 0%, rgba(13, 17, 23, 0) 60%);
+    radial-gradient(ellipse 80% 60% at 78% 12%, rgba(105, 74, 255, 0.13) 0%, rgba(13, 17, 30, 0) 60%),
+    radial-gradient(ellipse 70% 60% at 12% 90%, rgba(1, 183, 127, 0.07) 0%, rgba(13, 17, 30, 0) 58%),
+    radial-gradient(ellipse 90% 70% at 50% 116%, rgba(253, 126, 234, 0.05) 0%, rgba(13, 17, 30, 0) 55%);
   background-attachment: fixed;
 }
 
 .sl-markdown-content p,
 .sl-markdown-content li {
   font-size: 1rem;
-  line-height: 1.625;
-  color: #c9d1d9;
+  line-height: 1.7;
+  font-weight: 450;
+  color: var(--sl-color-white);
 }
 @media (min-width: 640px) {
   .sl-markdown-content p,
