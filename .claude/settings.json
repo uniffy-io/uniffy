@@ -29,9 +29,9 @@
             "WebFetch(domain:connectrpc.com)",
             "WebFetch(domain:reactflow.dev)",
             "Edit(.claude/plans/**)",
-            "Write(.claude/plans/**)",
+            "Edit(.claude/plans/**)",
             "Edit(.claude/reviews/**)",
-            "Write(.claude/reviews/**)",
+            "Edit(.claude/reviews/**)",
             "mcp__playwright__*"
         ],
         "deny": [

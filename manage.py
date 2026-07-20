@@ -65,12 +65,26 @@ def container_running(service: str) -> bool:
     return sh_ok(["docker", "compose", "ps", "-q", "--status", "running", service])
 
 
-def docker_pnpm(service: str, args: list[str]) -> None:
+def docker_pnpm(
+    service: str,
+    args: list[str],
+    env_keys: tuple[str, ...] = (),
+    publish: tuple[str, ...] = (),
+) -> None:
     svc, filter_, profile = NODE_SERVICES[service]
-    if container_running(svc):
-        sh(compose("exec", *EXEC_AS_HOST, svc, "pnpm", "--filter", filter_, *args))
+    # Bare `--env KEY` makes compose read the value from this process's
+    # environment, so secrets never appear in the echoed command line.
+    env_flags = [flag for key in env_keys if os.environ.get(key) for flag in ("--env", key)]
+    if container_running(svc) and not publish:
+        sh(compose("exec", *EXEC_AS_HOST, *env_flags, svc, "pnpm", "--filter", filter_, *args))
     else:
-        sh(compose("run", "--rm", "--no-deps", svc, "pnpm", "--filter", filter_, *args, profiles=[profile]))
+        # exec cannot add port mappings, so anything with `publish` gets a
+        # one-off container even while the dev service is running.
+        port_flags = [flag for port in publish for flag in ("--publish", port)]
+        sh(compose(
+            "run", "--rm", "--no-deps", *env_flags, *port_flags,
+            svc, "pnpm", "--filter", filter_, *args, profiles=[profile],
+        ))
 
 
 def docker_uv(args: list[str]) -> None:
@@ -599,29 +613,57 @@ def landing():
     """Marketing landing page build and deploy."""
 
 
+# Wrangler inside the container cannot reuse a host login, so docker deploys
+# authenticate through these host env vars forwarded into the run.
+LANDING_DEPLOY_ENV = ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
+
+
 @landing.command("build")
-def landing_build():
-    sh(["pnpm", "--filter", "uniffy-landing", "build"])
+@stack_option
+def landing_build(stack):
+    """Build the static site into src/landing/dist."""
+    if stack == "docker":
+        docker_pnpm("landing", ["build"])
+    else:
+        sh(["pnpm", "--filter", "uniffy-landing", "build"])
 
 
 @landing.command("preview")
+@stack_option
 @click.pass_context
-def landing_preview(ctx):
+def landing_preview(ctx, stack):
     """Build and preview via Wrangler Pages (BG geo-block active under CF_PAGES)."""
-    ctx.invoke(landing_build)
-    sh(["pnpm", "exec", "wrangler", "pages", "dev", "dist"], cwd=ROOT / "src/landing")
+    ctx.invoke(landing_build, stack=stack)
+    if stack == "docker":
+        docker_pnpm(
+            "landing",
+            ["exec", "wrangler", "pages", "dev", "dist", "--ip", "0.0.0.0", "--port", "8788"],
+            publish=("8788:8788",),
+        )
+    else:
+        sh(["pnpm", "exec", "wrangler", "pages", "dev", "dist"], cwd=ROOT / "src/landing")
 
 
 @landing.command("deploy")
+@stack_option
 @click.pass_context
-def landing_deploy(ctx):
+def landing_deploy(ctx, stack):
     """Build and deploy to Cloudflare Pages (project: uniffy-landing)."""
-    if not os.environ.get("CLOUDFLARE_API_TOKEN") and not (Path.home() / ".wrangler/config/default.toml").exists():
+    token = os.environ.get("CLOUDFLARE_API_TOKEN")
+    if stack == "docker" and not token:
+        raise click.ClickException(
+            "CLOUDFLARE_API_TOKEN is not set. The container cannot reach a host "
+            "Wrangler login, so export the token or deploy with --stack local."
+        )
+    if stack == "local" and not token and not (Path.home() / ".wrangler/config/default.toml").exists():
         click.secho("Warning: CLOUDFLARE_API_TOKEN not set and no Wrangler login detected.", fg="yellow")
-    ctx.invoke(landing_build)
-    sh(["pnpm", "exec", "wrangler", "pages", "deploy", "dist",
-        "--project-name", "uniffy-landing", "--branch", "main", "--commit-dirty=true"],
-       cwd=ROOT / "src/landing")
+    ctx.invoke(landing_build, stack=stack)
+    deploy_args = ["pages", "deploy", "dist",
+                   "--project-name", "uniffy-landing", "--branch", "main", "--commit-dirty=true"]
+    if stack == "docker":
+        docker_pnpm("landing", ["exec", "wrangler", *deploy_args], env_keys=LANDING_DEPLOY_ENV)
+    else:
+        sh(["pnpm", "exec", "wrangler", *deploy_args], cwd=ROOT / "src/landing")
     click.echo("Deploy complete. Geo-block active: only cf-ipcountry=BG is served.")
 
 

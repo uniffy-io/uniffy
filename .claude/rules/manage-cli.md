@@ -20,10 +20,10 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). `./m
 | Quality | `./manage.py lint [-s backend\|ui\|mobile\|cli]`, `format`, `test [-s backend\|ui\|cli]`, `bench` |
 | Database | `./manage.py db shell\|migrate` |
 | unictl (Go) | `./manage.py cli build\|install\|run\|lint\|test` |
-| Landing | `./manage.py landing build\|preview\|deploy` |
+| Landing | `./manage.py landing build\|preview\|deploy [--stack local\|docker]` - docker (default) runs in the landing container; preview publishes wrangler on :8788; docker deploy REQUIRES `CLOUDFLARE_API_TOKEN` in the host env (forwarded into the container as bare `--env` flags, plus `CLOUDFLARE_ACCOUNT_ID` when set) |
 | Toolbox shell | `./manage.py toolbox <cmd>` (deps-manager container: pnpm + uv + buf) |
 
-Every command with a `--stack` option defaults to `docker` (`deps`, `proto`, `licenses`, `lint`, `test`, `format`, `bench`, `db migrate`). Host toolchains run only on explicit `--stack local` - a default must never implicitly create `.venv` or `node_modules` on the host. `serve` (host dev processes) and `cli` (Go) are host-only by definition.
+Every command with a `--stack` option defaults to `docker` (`deps`, `proto`, `licenses`, `lint`, `test`, `format`, `bench`, `db migrate`, `landing`). Host toolchains run only on explicit `--stack local` - a default must never implicitly create `.venv` or `node_modules` on the host. `serve` (host dev processes) and `cli` (Go) are host-only by definition.
 
 ## Detect the stack before managing dependencies
 
