@@ -33,7 +33,7 @@ const showMobileMainLinks = mobileLinksMode === "all";
 
 <a
   href="#main"
-  class="skip-link sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-accent focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:font-bold focus:uppercase focus:tracking-wider focus:text-ink"
+  class="skip-link sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-accent focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:font-bold focus:uppercase focus:tracking-wider focus:text-white"
 >
   Skip to content
 </a>
@@ -133,7 +133,7 @@ const showMobileMainLinks = mobileLinksMode === "all";
       </a>
       <a
         href="https://cloud.uniffy.io/signup"
-        class="cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-md bg-accent px-3.5 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-ink transition-shadow duration-300 hover:shadow-[0_0_0_1px_rgba(197,255,63,0.6),0_8px_24px_-6px_rgba(197,255,63,0.55)]"
+        class="cta group relative inline-flex items-center gap-1.5 overflow-hidden rounded-md bg-accent px-3.5 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-white transition-shadow duration-300 hover:shadow-[0_0_0_1px_rgba(105,74,255,0.7),0_8px_24px_-6px_rgba(105,74,255,0.6)]"
       >
         <span class="cta__shimmer pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent"></span>
         <span class="relative z-10">Start free</span>
@@ -281,7 +281,7 @@ const showMobileMainLinks = mobileLinksMode === "all";
       </a>
       <a
         href="https://cloud.uniffy.io/signup"
-        class="inline-flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider text-ink transition-opacity hover:opacity-90"
+        class="inline-flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
       >
         Start free
         <span aria-hidden>&rarr;</span>
@@ -295,12 +295,13 @@ const showMobileMainLinks = mobileLinksMode === "all";
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(197, 255, 63, 0) 15%,
-      rgba(197, 255, 63, 0.55) 50%,
-      rgba(197, 255, 63, 0) 85%,
+      rgba(105, 74, 255, 0) 12%,
+      rgba(105, 74, 255, 0.6) 38%,
+      rgba(253, 126, 234, 0.6) 62%,
+      rgba(105, 74, 255, 0) 88%,
       transparent 100%
     );
-    opacity: 0.35;
+    opacity: 0.4;
   }
 
   .nav-cell:hover .nav-cell__icon {
@@ -312,9 +313,9 @@ const showMobileMainLinks = mobileLinksMode === "all";
   }
 
   .nav-cell.is-active .nav-cell__icon {
-    border-color: rgba(197, 255, 63, 0.55);
-    background: rgba(197, 255, 63, 0.10);
-    color: var(--color-accent);
+    border-color: rgba(105, 74, 255, 0.6);
+    background: rgba(105, 74, 255, 0.12);
+    color: var(--color-accent-strong);
   }
   .nav-cell.is-active .nav-cell__label {
     color: var(--color-night-text);

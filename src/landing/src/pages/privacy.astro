@@ -1,0 +1,173 @@
+---
+import LegalLayout from "@/layouts/LegalLayout.astro";
+
+const COMPANY = "Uniffy, Inc.";
+const CONTACT = "support@uniffy.io";
+const EFFECTIVE = "19 July 2026";
+---
+
+<LegalLayout
+  title="Privacy Policy"
+  description="How Uniffy collects, uses, and protects your data across the Uniffy mobile app and the cloud.uniffy.io hosted service."
+  effectiveDate={EFFECTIVE}
+  intro="This policy explains what data Uniffy collects, why, and the choices and rights you have. It covers the Uniffy mobile app and our hosted service at cloud.uniffy.io."
+>
+  <div class="legal-note">
+    <p>
+      <strong>The short version.</strong> We do not sell your data. We do not run advertising trackers. We do
+      not use your content to train AI models. We collect the minimum we need to run the Service, and we keep
+      it in the European Union by default.
+    </p>
+  </div>
+
+  <h2 id="scope" data-toc-label="1. Scope"><span class="legal-prose__num">01</span>Scope of this policy</h2>
+  <p>
+    This Privacy Policy applies to the <strong>Uniffy</strong> mobile app and to the hosted service we operate
+    at <code>cloud.uniffy.io</code>, together with this website. It does not apply to self-hosted deployments
+    that another operator runs on their own infrastructure. In that case the operator decides how data is
+    handled. See <a href="#self-hosted">self-hosted deployments</a> below.
+  </p>
+
+  <h2 id="controller" data-toc-label="2. Who is responsible"><span class="legal-prose__num">02</span>Who is responsible for your data</h2>
+  <p>
+    For the hosted service and the app, {COMPANY} is the data controller. You can reach us about privacy at
+    {" "}<a href={`mailto:${CONTACT}`}>{CONTACT}</a>. When your organization runs its own Uniffy workspace on
+    our hosted service, your organization is the controller of the content in that workspace, and we act as a
+    processor on its behalf.
+  </p>
+
+  <h2 id="what-we-collect" data-toc-label="3. What we collect"><span class="legal-prose__num">03</span>Information we collect</h2>
+  <p>We collect the following, and no more than we need:</p>
+  <ul>
+    <li><strong>Account data.</strong> Your name, email address, and the credentials you use to sign in.</li>
+    <li><strong>Your content.</strong> The notes, files, messages, tasks, events, and other content you create, upload, or share in the Service.</li>
+    <li><strong>Usage and device data.</strong> Basic technical information needed to run and secure the Service, such as app version, device type and operating system, IP address, and diagnostic logs.</li>
+    <li><strong>Support and communications.</strong> Messages you send us, such as bug reports, feedback, and support requests.</li>
+  </ul>
+  <p>
+    We do not collect advertising identifiers, and the app does not include third-party advertising or
+    analytics trackers.
+  </p>
+
+  <h2 id="how-we-use" data-toc-label="4. How we use it"><span class="legal-prose__num">04</span>How we use your information</h2>
+  <ul>
+    <li>to provide, maintain, and secure the Service and your account;</li>
+    <li>to sync your content across your devices and deliver notifications you have enabled;</li>
+    <li>to diagnose problems, prevent abuse, and keep the Service reliable and safe;</li>
+    <li>to respond to your support requests and, during the beta, to improve the Service;</li>
+    <li>to meet legal obligations and enforce our <a href="/terms">Terms of Service</a>.</li>
+  </ul>
+
+  <h2 id="legal-bases" data-toc-label="5. Legal bases"><span class="legal-prose__num">05</span>Legal bases (GDPR)</h2>
+  <p>
+    If you are in the European Economic Area or the United Kingdom, we rely on these legal bases: performance
+    of our contract with you to provide the Service; our legitimate interests in keeping the Service secure,
+    reliable, and improving during the beta; your consent where we ask for it, such as for push notifications
+    or device permissions; and compliance with legal obligations. You can withdraw consent at any time.
+  </p>
+
+  <h2 id="ai" data-toc-label="6. AI features"><span class="legal-prose__num">06</span>AI features and your prompts</h2>
+  <p>
+    When you use an AI assistant, the content you send is processed to generate a response by the model
+    provider you choose, by a self-hosted model, or by Uniffy AI Cloud. We do not use your content or prompts
+    to train AI models. If you route a request to a third-party model provider, that provider processes the
+    request under its own terms, so choose providers you trust for sensitive content. Uniffy AI Cloud runs
+    open models on infrastructure we operate and does not retain your prompts to train models.
+  </p>
+
+  <h2 id="app-permissions" data-toc-label="7. App permissions"><span class="legal-prose__num">07</span>Mobile app permissions</h2>
+  <p>
+    The Uniffy app asks for device permissions only when a feature needs them, and you can decline or change
+    them in your device settings. These include:
+  </p>
+  <ul>
+    <li><strong>Camera and microphone</strong>, for calls, rooms, screen or media capture, and attaching photos you take;</li>
+    <li><strong>Photos and files</strong>, so you can upload and attach content;</li>
+    <li><strong>Notifications</strong>, so we can deliver the push notifications you enable;</li>
+    <li><strong>Network access</strong>, which the app needs to reach the Service.</li>
+  </ul>
+  <p>
+    The app does not collect your location, your contacts, or advertising identifiers. Push notifications are
+    delivered through Apple Push Notification service on iOS and Firebase Cloud Messaging on Android, which
+    handle delivery on our behalf.
+  </p>
+
+  <h2 id="sharing" data-toc-label="8. How we share"><span class="legal-prose__num">08</span>How we share information</h2>
+  <p>
+    We do not sell your personal data. We share it only in these limited cases:
+  </p>
+  <ul>
+    <li><strong>With people you choose.</strong> Content is visible to the users, groups, and organizations you share it with, according to the permissions you set.</li>
+    <li><strong>With service providers.</strong> Vetted providers that help us run the Service, such as cloud hosting, email delivery, push notification delivery, and AI model providers you route requests to. They process data on our instructions.</li>
+    <li><strong>For legal reasons.</strong> When required by law or to protect the rights, safety, and security of our users, the public, or Uniffy.</li>
+    <li><strong>In a business transfer.</strong> If Uniffy is involved in a merger, acquisition, or sale of assets, with notice to you and continued protection of your data.</li>
+  </ul>
+
+  <h2 id="transfers" data-toc-label="9. International transfers"><span class="legal-prose__num">09</span>Where your data is stored</h2>
+  <p>
+    We store data for the hosted service in the European Union by default. If any processing takes place
+    outside the European Economic Area, for example with a provider you choose, we use appropriate safeguards
+    such as Standard Contractual Clauses where required by law.
+  </p>
+
+  <h2 id="retention" data-toc-label="10. Retention"><span class="legal-prose__num">10</span>How long we keep it</h2>
+  <p>
+    We keep your account data and content for as long as your account is active. When you delete content or
+    your account, we delete it or anonymize it within a reasonable period, except where we must keep certain
+    records to meet legal obligations, resolve disputes, or enforce our agreements. Backups are cycled out on a
+    rolling schedule.
+  </p>
+
+  <h2 id="security" data-toc-label="11. Security"><span class="legal-prose__num">11</span>How we protect your data</h2>
+  <p>
+    We use technical and organizational measures to protect your data, including encryption in transit,
+    encryption of sensitive data at rest with keys scoped to your organization, and access controls that limit
+    who can reach your content. Operators of our hosted service do not have a routine backdoor to your content;
+    access to tenant content requires a time-bound, audit-logged support session that your organization can see
+    and revoke. No system is perfectly secure, and the beta may have weaknesses we have not yet found.
+  </p>
+
+  <h2 id="your-rights" data-toc-label="12. Your rights"><span class="legal-prose__num">12</span>Your rights</h2>
+  <p>
+    Depending on where you live, you may have the right to access, correct, delete, export, or restrict the
+    processing of your personal data, to object to certain processing, and to withdraw consent. To exercise a
+    right, write to <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. If your data sits in an organization's
+    workspace, we may direct your request to that organization as the controller. If you are in the European
+    Economic Area or the United Kingdom, you also have the right to complain to your local data protection
+    authority.
+  </p>
+
+  <h2 id="children" data-toc-label="13. Children"><span class="legal-prose__num">13</span>Children</h2>
+  <p>
+    The Service is not directed to children under 16, and we do not knowingly collect their data. If you
+    believe a child has given us personal data, contact us at <a href={`mailto:${CONTACT}`}>{CONTACT}</a> and
+    we will delete it.
+  </p>
+
+  <h2 id="cookies" data-toc-label="14. Cookies"><span class="legal-prose__num">14</span>Cookies and this website</h2>
+  <p>
+    This marketing website uses only the cookies and local storage needed to make it work and to keep you
+    signed in when you visit the hosted service. We do not use advertising cookies or third-party tracking
+    cookies on it.
+  </p>
+
+  <h2 id="self-hosted" data-toc-label="15. Self-hosted"><span class="legal-prose__num">15</span>Self-hosted deployments</h2>
+  <p>
+    Uniffy can be run as self-hosted software. If you use a Uniffy workspace that your own organization or a
+    third party runs on their infrastructure, that operator controls the data and is responsible for its own
+    privacy practices. This policy does not apply to those deployments. The software is designed to run fully
+    isolated from the internet, with no phone home enabled by default.
+  </p>
+
+  <h2 id="changes" data-toc-label="16. Changes"><span class="legal-prose__num">16</span>Changes to this policy</h2>
+  <p>
+    We may update this policy as the Service evolves. If we make a material change, we will post the updated
+    policy here with a new effective date and, where appropriate, notify you in the app.
+  </p>
+
+  <h2 id="contact" data-toc-label="17. Contact"><span class="legal-prose__num">17</span>Contact</h2>
+  <p>
+    For any privacy question or request, write to us at <a href={`mailto:${CONTACT}`}>{CONTACT}</a>, or by post
+    to {COMPANY}
+  </p>
+</LegalLayout>

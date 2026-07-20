@@ -25,12 +25,19 @@ const columns = [
       { href: "https://status.uniffy.io", label: "Status" },
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      { href: "/terms", label: "Terms of Service" },
+      { href: "/privacy", label: "Privacy Policy" },
+    ],
+  },
 ];
 ---
 
 <footer class="border-t border-night-hairline bg-night-soft">
   <div class="mx-auto max-w-7xl px-6 py-16 md:px-10">
-    <div class="grid gap-12 md:grid-cols-[2fr_1fr_1fr_1fr]">
+    <div class="grid gap-12 md:grid-cols-[1.6fr_1fr_1fr_1fr_1fr]">
       <div>
         <a href="/" class="flex items-center gap-2.5 font-sans text-lg font-bold tracking-tight">
           <img
@@ -65,10 +72,15 @@ const columns = [
         ))
       }
     </div>
-    <div class="mt-16 border-t border-night-hairline pt-8">
+    <div class="mt-16 flex flex-col gap-4 border-t border-night-hairline pt-8 sm:flex-row sm:items-center sm:justify-between">
       <p class="font-mono text-xs text-night-faint">
-        &copy; 2026 uniffy-io, Inc. Source-available under BSL 1.1.
+        &copy; 2026 Uniffy, Inc. Source-available under BSL 1.1.
       </p>
+      <nav class="flex items-center gap-4 font-mono text-xs text-night-faint" aria-label="Legal">
+        <a href="/terms" class="transition-colors hover:text-night-text">Terms</a>
+        <span class="text-night-hairline-strong">&middot;</span>
+        <a href="/privacy" class="transition-colors hover:text-night-text">Privacy</a>
+      </nav>
     </div>
   </div>
 </footer>

@@ -1,0 +1,223 @@
+---
+import LegalLayout from "@/layouts/LegalLayout.astro";
+
+const COMPANY = "Uniffy, Inc.";
+const CONTACT = "support@uniffy.io";
+const GOVERNING_LAW = "Bulgaria";
+const FORUM = "the courts of Sofia, Bulgaria";
+const EFFECTIVE = "19 July 2026";
+---
+
+<LegalLayout
+  title="Terms of Service"
+  description="The terms that govern your use of Uniffy, including the Uniffy mobile app and the cloud.uniffy.io hosted service."
+  effectiveDate={EFFECTIVE}
+  intro="These terms are a contract between you and Uniffy. They cover the Uniffy mobile app and our hosted service at cloud.uniffy.io. Please read them before you create an account or use the app."
+>
+  <h2 id="acceptance" data-toc-label="1. Acceptance"><span class="legal-prose__num">01</span>Acceptance of these terms</h2>
+  <p>
+    These Terms of Service ("Terms") govern your access to and use of the {" "}
+    <strong>Uniffy</strong> mobile application, the hosted service at <code>cloud.uniffy.io</code>,
+    and related websites and services that link to these Terms (together, the "Service"). The Service is
+    provided by {COMPANY} ("Uniffy", "we", "us", or "our").
+  </p>
+  <p>
+    By creating an account, installing the app, or otherwise using the Service, you agree to these Terms and
+    to our <a href="/privacy">Privacy Policy</a>. If you do not agree, do not use the Service. If you use the
+    Service on behalf of an organization, you confirm that you are authorized to accept these Terms for that
+    organization, and "you" includes that organization.
+  </p>
+
+  <h2 id="who-we-are" data-toc-label="2. Who we are"><span class="legal-prose__num">02</span>Who we are</h2>
+  <p>
+    The Service is operated by {COMPANY}. You can reach us at {" "}
+    <a href={`mailto:${CONTACT}`}>{CONTACT}</a> for any question about these Terms, your account, or the
+    Service.
+  </p>
+  <p>
+    Uniffy is also available as self-hosted software that an operator runs on their own infrastructure. When
+    you use a self-hosted deployment that you or your organization runs, that operator is responsible for the
+    service and for its own terms. These Terms apply to the app and to the hosted service that we operate.
+  </p>
+
+  <h2 id="beta" data-toc-label="3. Beta software"><span class="legal-prose__num">03</span>Beta and pre-release software</h2>
+  <div class="legal-note">
+    <p>
+      <strong>The Service is currently offered as a beta.</strong> It is provided for early evaluation and
+      may contain bugs, incomplete features, and rough edges. Features may change, be added, or be removed at
+      any time, and the Service may be interrupted or discontinued. We do not offer any uptime or service
+      level commitment during the beta.
+    </p>
+  </div>
+  <p>
+    You use the beta at your own risk. Do not rely on the beta as the sole store for information you cannot
+    afford to lose, and keep your own backups of anything important. If you send us feedback, bug reports, or
+    suggestions, you grant us a non-exclusive, worldwide, royalty-free license to use them to improve the
+    Service, without any obligation to you.
+  </p>
+
+  <h2 id="eligibility" data-toc-label="4. Accounts"><span class="legal-prose__num">04</span>Eligibility and accounts</h2>
+  <p>
+    You must be at least 16 years old to use the Service. If the law where you live sets a higher age of
+    digital consent, you must meet that age. The Service is not directed to children.
+  </p>
+  <p>
+    You are responsible for the accounts you create, for keeping your login credentials secure, and for all
+    activity that happens under your account. Tell us promptly at <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
+    {" "}if you believe your account has been accessed without your permission.
+  </p>
+
+  <h2 id="the-service" data-toc-label="5. The Service"><span class="legal-prose__num">05</span>The Service</h2>
+  <p>
+    Uniffy is a unified workspace for notes, files, chat, projects, tasks, calendar, diagrams, rooms, and AI
+    assistants, where content can be referenced from anywhere. Access to content is controlled by the
+    permissions you set. We grant you a limited, non-exclusive, non-transferable, revocable license to use the
+    Service for your internal business or personal purposes, subject to these Terms.
+  </p>
+  <p>
+    We may set reasonable technical limits, such as storage, request rate, or AI usage limits, and we may
+    change them. We may release updates to the app and the hosted service from time to time.
+  </p>
+
+  <h2 id="acceptable-use" data-toc-label="6. Acceptable use"><span class="legal-prose__num">06</span>Acceptable use</h2>
+  <p>You agree not to, and not to allow anyone else to:</p>
+  <ul>
+    <li>use the Service to break the law or to infringe the rights of others;</li>
+    <li>upload or share content that is illegal, harmful, or that you have no right to share;</li>
+    <li>attempt to access accounts, data, or systems that you are not authorized to access;</li>
+    <li>interfere with, overload, or disrupt the Service, or bypass its security or usage limits;</li>
+    <li>reverse engineer the hosted service except to the extent this restriction is prohibited by law;</li>
+    <li>use the Service to send spam, malware, or to harass or abuse others.</li>
+  </ul>
+  <p>
+    We may remove content or suspend access that we reasonably believe violates these Terms or puts the
+    Service or other users at risk.
+  </p>
+
+  <h2 id="your-content" data-toc-label="7. Your content"><span class="legal-prose__num">07</span>Your content</h2>
+  <p>
+    You keep all rights to the content you create, upload, or store in the Service ("Your Content"). We do not
+    claim ownership of it. You grant us a limited license to host, store, back up, transmit, and display Your
+    Content only as needed to operate and secure the Service and to provide it to you and the people you share
+    it with.
+  </p>
+  <p>
+    We do not sell Your Content, and we do not use it to train AI models. You are responsible for Your Content
+    and for having the rights needed to store and share it. How we handle personal data is described in our
+    <a href="/privacy"> Privacy Policy</a>.
+  </p>
+
+  <h2 id="ai" data-toc-label="8. AI features"><span class="legal-prose__num">08</span>AI features</h2>
+  <p>
+    The Service includes AI assistants. When you use them, the content you send to an assistant may be
+    processed by the model provider you choose, by a self-hosted model, or by Uniffy AI Cloud, in order to
+    generate a response. Every action an assistant takes on your behalf runs under your permissions, so an
+    assistant cannot access content that you cannot access.
+  </p>
+  <p>
+    AI output can be wrong, incomplete, or misleading. You are responsible for reviewing AI output before you
+    rely on it, and you should not treat it as professional advice.
+  </p>
+
+  <h2 id="fees" data-toc-label="9. Fees"><span class="legal-prose__num">09</span>Fees and paid plans</h2>
+  <p>
+    The beta is currently offered free of charge. We may introduce paid plans in the future. If you choose a
+    paid plan, we will show the price and billing terms before you buy, and any purchase you make through the
+    Apple App Store or Google Play is also subject to that store's payment terms. Taxes may apply.
+  </p>
+
+  <h2 id="our-ip" data-toc-label="10. Our IP"><span class="legal-prose__num">10</span>Our intellectual property</h2>
+  <p>
+    The Service, including the Uniffy name, logo, and software, is owned by {COMPANY} and its licensors and is
+    protected by law. Except for the rights we grant you in these Terms, we reserve all rights. The Uniffy
+    source code is published separately under its own license; nothing in these Terms limits any rights that
+    the source license grants you in that code.
+  </p>
+
+  <h2 id="app-stores" data-toc-label="11. App stores"><span class="legal-prose__num">11</span>Mobile apps and app stores</h2>
+  <p>
+    You may download the Uniffy mobile app from the Apple App Store or Google Play. Your use of the app must
+    follow the usage rules of the store you downloaded it from, and the following terms apply.
+  </p>
+  <h3>Apple App Store</h3>
+  <p>If you download the app from the Apple App Store, you acknowledge and agree that:</p>
+  <ul>
+    <li>these Terms are between you and {COMPANY} only, and not with Apple. Apple is not responsible for the app or its content;</li>
+    <li>Apple has no obligation to provide any maintenance or support for the app;</li>
+    <li>if the app fails to conform to any applicable warranty, you may notify Apple, and Apple may refund the purchase price of the app to you, if any. To the maximum extent permitted by law, Apple has no other warranty obligation for the app;</li>
+    <li>{COMPANY}, not Apple, is responsible for addressing any claims relating to the app, including product liability, legal or regulatory claims, and claims that the app fails to meet a legal or consumer requirement;</li>
+    <li>{COMPANY}, not Apple, is responsible for investigating and resolving any third-party claim that the app infringes that party's intellectual property rights;</li>
+    <li>you represent that you are not located in a country subject to a U.S. Government embargo and are not on any U.S. Government list of prohibited or restricted parties;</li>
+    <li>Apple and its subsidiaries are third-party beneficiaries of these Terms and may enforce them against you.</li>
+  </ul>
+  <h3>Google Play</h3>
+  <p>
+    If you download the app from Google Play, your use of the app must also comply with the Google Play Terms
+    of Service. Google is not a party to these Terms and is not responsible for the app.
+  </p>
+
+  <h2 id="third-party" data-toc-label="12. Third parties"><span class="legal-prose__num">12</span>Third-party services</h2>
+  <p>
+    The Service may connect to third-party services, such as AI model providers, storage, or mail providers.
+    Those services are governed by their own terms and privacy practices, and we are not responsible for them.
+    Your choice to connect a third-party service is yours.
+  </p>
+
+  <h2 id="disclaimers" data-toc-label="13. Disclaimers"><span class="legal-prose__num">13</span>Disclaimers</h2>
+  <p>
+    To the maximum extent permitted by law, the Service is provided "as is" and "as available", without
+    warranties of any kind, whether express, implied, or statutory, including warranties of merchantability,
+    fitness for a particular purpose, and non-infringement. We do not warrant that the Service will be
+    uninterrupted, error free, or secure, which is especially true during the beta. Nothing in these Terms
+    limits any rights you have that cannot be limited under the law that applies to you, including mandatory
+    consumer rights.
+  </p>
+
+  <h2 id="liability" data-toc-label="14. Liability"><span class="legal-prose__num">14</span>Limitation of liability</h2>
+  <p>
+    To the maximum extent permitted by law, {COMPANY} and its suppliers will not be liable for any indirect,
+    incidental, special, consequential, or punitive damages, or for any loss of profits, data, or goodwill,
+    arising from or related to your use of the Service. To the maximum extent permitted by law, our total
+    liability for any claim arising out of or relating to the Service is limited to the greater of the amount
+    you paid us for the Service in the three months before the event giving rise to the claim, or fifty euros
+    (EUR 50). Some laws do not allow certain limitations, so some of these may not apply to you.
+  </p>
+
+  <h2 id="indemnity" data-toc-label="15. Indemnification"><span class="legal-prose__num">15</span>Indemnification</h2>
+  <p>
+    To the extent permitted by law, you agree to defend and indemnify {COMPANY} against third-party claims,
+    damages, and reasonable costs that arise from your misuse of the Service, your violation of these Terms, or
+    Your Content, to the extent the claim is caused by you.
+  </p>
+
+  <h2 id="termination" data-toc-label="16. Termination"><span class="legal-prose__num">16</span>Suspension and termination</h2>
+  <p>
+    You may stop using the Service at any time and may delete your account. We may suspend or end your access
+    if you materially breach these Terms, if required by law, or if we discontinue the Service. When your
+    access ends, the license we grant you ends. Sections that by their nature should survive, such as content
+    ownership, disclaimers, liability limits, and governing law, will survive.
+  </p>
+
+  <h2 id="changes" data-toc-label="17. Changes"><span class="legal-prose__num">17</span>Changes to these terms</h2>
+  <p>
+    We may update these Terms as the Service evolves. If we make a material change, we will take reasonable
+    steps to let you know, for example by posting the updated Terms here with a new effective date or by a
+    notice in the app. Your continued use of the Service after the change takes effect means you accept the
+    updated Terms.
+  </p>
+
+  <h2 id="law" data-toc-label="18. Governing law"><span class="legal-prose__num">18</span>Governing law and disputes</h2>
+  <p>
+    These Terms are governed by the laws of {GOVERNING_LAW}, without regard to its conflict of law rules, and
+    subject to any mandatory consumer protection law of the country where you live. You and {COMPANY} agree to
+    the exclusive jurisdiction of {FORUM} for any dispute that is not resolved informally, unless mandatory law
+    gives you the right to bring the dispute in the courts where you live. We encourage you to contact us first
+    at <a href={`mailto:${CONTACT}`}>{CONTACT}</a> so we can try to resolve the matter directly.
+  </p>
+
+  <h2 id="contact" data-toc-label="19. Contact"><span class="legal-prose__num">19</span>Contact</h2>
+  <p>
+    Questions about these Terms? Write to us at <a href={`mailto:${CONTACT}`}>{CONTACT}</a>, or by post to
+    {" "}{COMPANY}
+  </p>
+</LegalLayout>
