@@ -364,6 +364,28 @@ Needs one agent per provider under test on a reasoning-capable model
 - [ ] Mobile chat: mention the reasoning agent -> the pane streams,
       collapses on answer start, and shows "Thought for Ns" when done.
 
+## Chat: per-DM model + parameters
+
+Agent DM channel, agents-in-chat enabled (`(both products)`).
+
+- [ ] The composer of an agent DM shows a model control reading
+      `Default (<primary model>)`; group channels and human DMs show no
+      control.
+- [ ] Pick another model -> send a message -> the agent run log records
+      the picked model, not the agent's primary.
+- [ ] Set Reasoning effort in the picker's parameters section -> next
+      reply streams a thinking pane; the agent's own Overview tab config
+      is unchanged.
+- [ ] Switch to a model that rejects the tuned knobs -> stale values are
+      stripped silently (no failed run) and the params form re-renders
+      for the new model's schema.
+- [ ] "Agent default" clears both overrides; the next run uses the
+      agent's primary model again.
+- [ ] Second device / reload: the picker shows the persisted override
+      after reload (no live sync expected mid-session).
+- [ ] Mobile: the sheet lists models, saves a pick, tunes a parameter,
+      and clears to default; the next run reflects each change.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

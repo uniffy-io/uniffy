@@ -27,6 +27,19 @@ const paramLabel = (key: string): string => {
     return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
+const PARAM_HELP: Record<string, string> = {
+    temperature: 'Sampling randomness. Lower is more focused, higher is more varied.',
+    top_p: 'Limits sampling to the most likely tokens that add up to this probability.',
+    top_k: 'Limits sampling to the K most likely tokens.',
+    max_tokens:
+        'Caps the length of the reply, in output tokens. This is not a reasoning budget. Reasoning depth comes from the effort setting.',
+    reasoning_effort:
+        'How much the model thinks before answering. Thinking spends from the same output token limit on most models.',
+    parallel_tool_calls: 'Lets the model request several tool calls in a single turn.',
+};
+
+const paramHelp = (key: string): string | undefined => PARAM_HELP[key];
+
 const scalarValue = (
     value: ParamValue | Record<string, ParamValue> | undefined,
 ): ParamValue | undefined => (typeof value === 'object' ? undefined : value);
@@ -42,12 +55,14 @@ const enumOptionLabel = (key: string, member: string, members: string[]): string
 
 function ParamRow({
     label,
+    help,
     isSet,
     disabled,
     onReset,
     children,
 }: {
     label: string;
+    help?: string;
     isSet: boolean;
     disabled: boolean;
     onReset: () => void;
@@ -79,6 +94,9 @@ function ParamRow({
                 )}
             </div>
             {children}
+            {help && (
+                <p className="mt-1 text-[10px] leading-snug text-muted-foreground/70">{help}</p>
+            )}
         </div>
     );
 }
@@ -141,6 +159,7 @@ function NumberParamControl({
     return (
         <ParamRow
             label={paramLabel(paramKey)}
+            help={paramHelp(paramKey)}
             isSet={value !== undefined}
             disabled={disabled}
             onReset={onReset}
@@ -219,6 +238,7 @@ function EnumParamControl({
     return (
         <ParamRow
             label={paramLabel(paramKey)}
+            help={paramHelp(paramKey)}
             isSet={value !== undefined}
             disabled={disabled}
             onReset={onReset}
@@ -255,6 +275,7 @@ function BooleanParamControl({
     return (
         <ParamRow
             label={paramLabel(paramKey)}
+            help={paramHelp(paramKey)}
             isSet={value !== undefined}
             disabled={disabled}
             onReset={onReset}

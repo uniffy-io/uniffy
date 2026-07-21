@@ -69,6 +69,8 @@ const (
 	ChatService_GetChannelAgentContextStatsBatch_FullMethodName = "/chat.v1.ChatService/GetChannelAgentContextStatsBatch"
 	ChatService_CompactChannelAgentContext_FullMethodName       = "/chat.v1.ChatService/CompactChannelAgentContext"
 	ChatService_ResetChannelAgentContext_FullMethodName         = "/chat.v1.ChatService/ResetChannelAgentContext"
+	ChatService_GetChannelAgentConfig_FullMethodName            = "/chat.v1.ChatService/GetChannelAgentConfig"
+	ChatService_UpdateChannelAgentConfig_FullMethodName         = "/chat.v1.ChatService/UpdateChannelAgentConfig"
 	ChatService_StopAgentRun_FullMethodName                     = "/chat.v1.ChatService/StopAgentRun"
 )
 
@@ -161,6 +163,13 @@ type ChatServiceClient interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(ctx context.Context, in *ResetChannelAgentContextRequest, opts ...grpc.CallOption) (*ResetChannelAgentContextResponse, error)
+	// Per-(channel, agent) model + parameter overrides stored on the binding
+	// row. Empty strings mean "no override" - the agent's own configuration
+	// applies.
+	GetChannelAgentConfig(ctx context.Context, in *GetChannelAgentConfigRequest, opts ...grpc.CallOption) (*GetChannelAgentConfigResponse, error)
+	// Update the binding's overrides. Absent optional fields leave the value
+	// unchanged; present-but-empty clears it (mirrors agents.v1.UpdateSession).
+	UpdateChannelAgentConfig(ctx context.Context, in *UpdateChannelAgentConfigRequest, opts ...grpc.CallOption) (*UpdateChannelAgentConfigResponse, error)
 	// Stop an in-flight agent run in a channel. Cancels the active run for the
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
@@ -675,6 +684,26 @@ func (c *chatServiceClient) ResetChannelAgentContext(ctx context.Context, in *Re
 	return out, nil
 }
 
+func (c *chatServiceClient) GetChannelAgentConfig(ctx context.Context, in *GetChannelAgentConfigRequest, opts ...grpc.CallOption) (*GetChannelAgentConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetChannelAgentConfigResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetChannelAgentConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UpdateChannelAgentConfig(ctx context.Context, in *UpdateChannelAgentConfigRequest, opts ...grpc.CallOption) (*UpdateChannelAgentConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateChannelAgentConfigResponse)
+	err := c.cc.Invoke(ctx, ChatService_UpdateChannelAgentConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) StopAgentRun(ctx context.Context, in *StopAgentRunRequest, opts ...grpc.CallOption) (*StopAgentRunResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StopAgentRunResponse)
@@ -774,6 +803,13 @@ type ChatServiceServer interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(context.Context, *ResetChannelAgentContextRequest) (*ResetChannelAgentContextResponse, error)
+	// Per-(channel, agent) model + parameter overrides stored on the binding
+	// row. Empty strings mean "no override" - the agent's own configuration
+	// applies.
+	GetChannelAgentConfig(context.Context, *GetChannelAgentConfigRequest) (*GetChannelAgentConfigResponse, error)
+	// Update the binding's overrides. Absent optional fields leave the value
+	// unchanged; present-but-empty clears it (mirrors agents.v1.UpdateSession).
+	UpdateChannelAgentConfig(context.Context, *UpdateChannelAgentConfigRequest) (*UpdateChannelAgentConfigResponse, error)
 	// Stop an in-flight agent run in a channel. Cancels the active run for the
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
@@ -937,6 +973,12 @@ func (UnimplementedChatServiceServer) CompactChannelAgentContext(context.Context
 }
 func (UnimplementedChatServiceServer) ResetChannelAgentContext(context.Context, *ResetChannelAgentContextRequest) (*ResetChannelAgentContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetChannelAgentContext not implemented")
+}
+func (UnimplementedChatServiceServer) GetChannelAgentConfig(context.Context, *GetChannelAgentConfigRequest) (*GetChannelAgentConfigResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetChannelAgentConfig not implemented")
+}
+func (UnimplementedChatServiceServer) UpdateChannelAgentConfig(context.Context, *UpdateChannelAgentConfigRequest) (*UpdateChannelAgentConfigResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateChannelAgentConfig not implemented")
 }
 func (UnimplementedChatServiceServer) StopAgentRun(context.Context, *StopAgentRunRequest) (*StopAgentRunResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StopAgentRun not implemented")
@@ -1862,6 +1904,42 @@ func _ChatService_ResetChannelAgentContext_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_GetChannelAgentConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelAgentConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetChannelAgentConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetChannelAgentConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetChannelAgentConfig(ctx, req.(*GetChannelAgentConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UpdateChannelAgentConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateChannelAgentConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UpdateChannelAgentConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UpdateChannelAgentConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UpdateChannelAgentConfig(ctx, req.(*UpdateChannelAgentConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatService_StopAgentRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StopAgentRunRequest)
 	if err := dec(in); err != nil {
@@ -2086,6 +2164,14 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResetChannelAgentContext",
 			Handler:    _ChatService_ResetChannelAgentContext_Handler,
+		},
+		{
+			MethodName: "GetChannelAgentConfig",
+			Handler:    _ChatService_GetChannelAgentConfig_Handler,
+		},
+		{
+			MethodName: "UpdateChannelAgentConfig",
+			Handler:    _ChatService_UpdateChannelAgentConfig_Handler,
 		},
 		{
 			MethodName: "StopAgentRun",

@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.provider_key import ProviderKey
@@ -1086,6 +1087,7 @@ class RuntimeOperations:
         session_id: UUID | None = None
         agent_session = None
         model_override: str | None = None
+        params_override: dict | None = None
 
         channel_id: UUID | None = None
         if isinstance(destination, SessionDestination):
@@ -1121,8 +1123,20 @@ class RuntimeOperations:
             )
             agent_id = agent_session.agent_id
             model_override = agent_session.model_override
+            params_override = agent_session.model_params_override
         else:
             agent_id = destination.agent_id
+            binding = (
+                await self._session.execute(
+                    select(AgentChannelBinding).where(
+                        AgentChannelBinding.channel_id == destination.channel_id,
+                        AgentChannelBinding.agent_id == destination.agent_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if binding is not None:
+                model_override = binding.model_override
+                params_override = binding.model_params_override
 
         agent = await self._agent_ops.get_for_runtime(
             user_id,
@@ -1236,7 +1250,7 @@ class RuntimeOperations:
         )
         request_params = resolve_request_params(
             agent.model_params,
-            agent_session.model_params_override if agent_session else None,
+            params_override,
             provider.name,
             model,
         )

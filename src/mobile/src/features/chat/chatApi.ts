@@ -42,6 +42,8 @@ import {
   GetChannelAgentContextStatsRequestSchema,
   CompactChannelAgentContextRequestSchema,
   ResetChannelAgentContextRequestSchema,
+  GetChannelAgentConfigRequestSchema,
+  UpdateChannelAgentConfigRequestSchema,
   ListCategoriesRequestSchema,
   CreateCategoryRequestSchema,
   UpdateCategoryRequestSchema,
@@ -139,6 +141,10 @@ export const chatApi = {
   ) => client.compactChannelAgentContext(req),
   resetChannelAgentContext: (req: MessageInitShape<typeof ResetChannelAgentContextRequestSchema>) =>
     client.resetChannelAgentContext(req),
+  getChannelAgentConfig: (req: MessageInitShape<typeof GetChannelAgentConfigRequestSchema>) =>
+    client.getChannelAgentConfig(req),
+  updateChannelAgentConfig: (req: MessageInitShape<typeof UpdateChannelAgentConfigRequestSchema>) =>
+    client.updateChannelAgentConfig(req),
 
   listCategories: (req: MessageInitShape<typeof ListCategoriesRequestSchema>) =>
     client.listCategories(req),

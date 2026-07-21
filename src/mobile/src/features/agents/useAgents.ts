@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@core/providers/AuthContext";
-import { agentsApi } from "@features/agents/agentsApi";
+import { agentsApi, providersApi } from "@features/agents/agentsApi";
 import { chatApi } from "@features/chat/chatApi";
 import { agentToPlain, type SerializedAgent } from "@features/agents/agentSerializer";
 
@@ -16,6 +16,47 @@ export function useAgents() {
         pagination: { page: 1, pageSize: 100 },
       });
       return res.agents.map(agentToPlain);
+    },
+  });
+}
+
+export interface AgentModelOption {
+  id: string;
+  displayName: string;
+  provider: string;
+  parameterSchemaJson: string;
+}
+
+/**
+ * Catalog-known chat models an agent can run: scoped to its pinned provider
+ * key when set, otherwise the org-wide list across all enabled keys.
+ */
+export function useAgentModels(providerKeyId: string, enabled: boolean) {
+  const { organizationId, isAuthenticated } = useAuth();
+
+  return useQuery({
+    queryKey: ["agents", "models", organizationId, providerKeyId || "org"],
+    enabled: enabled && !!organizationId && isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async (): Promise<AgentModelOption[]> => {
+      const res = providerKeyId
+        ? await providersApi.listModelsForKey({
+            organizationId: organizationId!,
+            keyId: providerKeyId,
+            forceRefresh: false,
+          })
+        : await providersApi.listAvailableModels({
+            organizationId: organizationId!,
+            forceRefresh: false,
+          });
+      return res.models
+        .filter((m) => m.catalogKnown && !m.supportsImageGeneration)
+        .map((m) => ({
+          id: m.id,
+          displayName: m.displayName,
+          provider: m.provider,
+          parameterSchemaJson: m.parameterSchemaJson,
+        }));
     },
   });
 }

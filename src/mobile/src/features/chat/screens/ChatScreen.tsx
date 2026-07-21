@@ -30,6 +30,7 @@ import {
   X,
   Gauge,
   Phone,
+  Faders,
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,6 +48,7 @@ import { AgentMessageBody, isSpecialAgentKind } from "@features/agents/component
 import { ThinkingPane } from "@features/agents/components/ThinkingPane";
 import { AgentApprovalCard } from "@features/agents/components/AgentApprovalCard";
 import { AgentContextSheet } from "@features/agents/components/AgentContextSheet";
+import { AgentModelSheet } from "@features/chat/components/AgentModelSheet";
 import { ChannelDetailsSheet } from "@features/chat/components/ChannelDetailsSheet";
 import { PreJoinSheet } from "@features/calls/components/PreJoinSheet";
 import { useCall } from "@features/calls/CallContext";
@@ -95,6 +97,7 @@ import {
   type TypingEntry,
 } from "@features/chat/useChatStream";
 import { useComposerAttachments } from "@features/chat/useComposerAttachments";
+import { useChannelAgentConfig } from "@features/chat/useChannelAgentConfig";
 import { useDraftSync } from "@features/chat/useDraftSync";
 import { useScreenFocusRef } from "@shared/hooks/useScreenFocusRef";
 import { chatApi } from "@features/chat/chatApi";
@@ -190,6 +193,7 @@ export function ChatConversationScreen() {
   const [emojiTarget, setEmojiTarget] = useState<SerializedMessage | "compose" | null>(null);
   const [pinnedOpen, setPinnedOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [modelSheetOpen, setModelSheetOpen] = useState(false);
   const [contextAgentId, setContextAgentId] = useState<string | null>(null);
   const [prejoinOpen, setPrejoinOpen] = useState(false);
   const { session: callSession, setMinimized, available: callsAvailable } = useCall();
@@ -261,6 +265,10 @@ export function ChatConversationScreen() {
     const map = new Map((agentsQuery.data ?? []).map((a) => [a.id, a]));
     return map;
   }, [agentsQuery.data]);
+
+  const dmAgentId = channel?.isAgentDm ? (channel.agentId ?? "") : "";
+  const agentConfigQuery = useChannelAgentConfig(channelId, dmAgentId, !!dmAgentId);
+  const dmModelOverride = agentConfigQuery.data?.modelOverride ?? "";
 
   const sheetDirectory = useMemo(
     () => [
@@ -723,6 +731,21 @@ export function ChatConversationScreen() {
         onStopAgents={(ids) => ids.forEach((agentId) => stopAgent.mutate({ channelId, agentId }))}
       />
 
+      {dmAgentId ? (
+        <TouchableOpacity
+          style={[styles.modelChip, { backgroundColor: T.surface, borderColor: T.border }]}
+          onPress={() => setModelSheetOpen(true)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Model for this conversation"
+        >
+          <Faders size={13} color={T.textDim} weight="bold" />
+          <Text style={[styles.modelChipText, { color: T.textDim }]} numberOfLines={1}>
+            {dmModelOverride || "Default"}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+
       <ChatComposer
         T={T}
         inputRef={inputRef}
@@ -860,6 +883,18 @@ export function ChatConversationScreen() {
             setDetailsOpen(false);
             leaveChannel.mutate(channelId, { onSuccess: () => router.back() });
           }}
+        />
+      ) : null}
+
+      {dmAgentId ? (
+        <AgentModelSheet
+          visible={modelSheetOpen}
+          T={T}
+          channelId={channelId}
+          agentId={dmAgentId}
+          agentPrimaryModel={agentById.get(dmAgentId)?.primaryModel ?? ""}
+          agentProviderKeyId={agentById.get(dmAgentId)?.primaryProviderKeyId ?? ""}
+          onClose={() => setModelSheetOpen(false)}
         />
       ) : null}
 
@@ -1402,6 +1437,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stopText: { fontSize: 13, fontFamily: FONT.semibold },
+  modelChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    marginLeft: 14,
+    marginTop: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  modelChipText: { fontSize: 11, fontFamily: FONT.semibold, maxWidth: 220 },
   liveCallAction: { flexDirection: "row", alignItems: "center", gap: 3 },
   liveCallCount: { fontSize: 12, fontFamily: FONT.semibold },
   banner: {
