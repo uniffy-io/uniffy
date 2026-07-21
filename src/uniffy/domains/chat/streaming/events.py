@@ -20,6 +20,7 @@ THREAD_UPDATED = "thread_updated"
 
 AGENT_TYPING = "agent_typing"
 AGENT_TOKEN_DELTA = "agent_token_delta"
+AGENT_THINKING_DELTA = "agent_thinking_delta"
 AGENT_TOOL_CALL = "agent_tool_call"
 AGENT_CONFIRMATION_REQUESTED = "agent_confirmation_requested"
 AGENT_CONFIRMATION_RESOLVED = "agent_confirmation_resolved"
@@ -160,6 +161,28 @@ def build_agent_token_delta_payload(
         "delta": delta,
         "sequence": sequence,
         "final": final,
+    }
+
+
+def build_agent_thinking_delta_payload(
+    message_id: UUID,
+    agent_id: UUID,
+    block_id: str,
+    delta: str,
+    sequence: int,
+    final: bool = False,
+    elapsed_ms: int = 0,
+) -> dict[str, Any]:
+    """AGENT_THINKING_DELTA payload; `final=True` closes the block and
+    carries the runtime-stamped thinking duration."""
+    return {
+        "message_id": str(message_id),
+        "agent_id": str(agent_id),
+        "block_id": block_id,
+        "delta": delta,
+        "sequence": sequence,
+        "final": final,
+        "elapsed_ms": elapsed_ms,
     }
 
 

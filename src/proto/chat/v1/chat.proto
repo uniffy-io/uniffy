@@ -109,6 +109,15 @@ service ChatService {
   // agent B's view.
   rpc ResetChannelAgentContext(ResetChannelAgentContextRequest) returns (ResetChannelAgentContextResponse) {}
 
+  // Per-(channel, agent) model + parameter overrides stored on the binding
+  // row. Empty strings mean "no override" - the agent's own configuration
+  // applies.
+  rpc GetChannelAgentConfig(GetChannelAgentConfigRequest) returns (GetChannelAgentConfigResponse) {}
+
+  // Update the binding's overrides. Absent optional fields leave the value
+  // unchanged; present-but-empty clears it (mirrors agents.v1.UpdateSession).
+  rpc UpdateChannelAgentConfig(UpdateChannelAgentConfigRequest) returns (UpdateChannelAgentConfigResponse) {}
+
   // Stop an in-flight agent run in a channel. Cancels the active run for the
   // given agent - whether it is mid tool call, image generation, or text
   // generation - via the run-state cancel flag the egress task observes.
@@ -1021,4 +1030,34 @@ message ResetChannelAgentContextResponse {
   string divider_message_id = 1;
   google.protobuf.Timestamp reset_at = 2;
   ChannelAgentContextStats stats = 3;
+}
+
+message ChannelAgentConfig {
+  // Model override for this (channel, agent); "" = none (agent default).
+  string model_override = 1;
+  // JSON object of model-parameter overrides; "" = none.
+  string model_params_override_json = 2;
+}
+
+message GetChannelAgentConfigRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string agent_id = 3;
+}
+
+message GetChannelAgentConfigResponse {
+  ChannelAgentConfig config = 1;
+}
+
+message UpdateChannelAgentConfigRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string agent_id = 3;
+  optional string model_override = 4;
+  // JSON object of model-parameter overrides; "" or "{}" clears them
+  optional string model_params_override_json = 5;
+}
+
+message UpdateChannelAgentConfigResponse {
+  ChannelAgentConfig config = 1;
 }

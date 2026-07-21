@@ -74,3 +74,26 @@ async def publish_user_chat_event(
     }
     message = json.dumps(data, default=str)
     await _publish_to_channel(f"chat:user:{user_id}", message)
+
+
+async def publish_user_chat_events(
+    events: list[tuple[UUID, str, dict[str, Any]]],
+) -> None:
+    """Pipelined per-user fan-out for payloads that differ per recipient
+    (e.g. unread counts with per-user mention counts); one RTT, not N.
+    """
+    publisher = pubsub._pubsub_client
+    if publisher is None or not events:
+        return
+
+    try:
+        async with publisher.pipeline(transaction=False) as pipe:
+            for user_id, event_type, payload in events:
+                message = json.dumps({"_type": event_type, **payload}, default=str)
+                pipe.publish(f"chat:user:{user_id}", message)
+            await pipe.execute()
+    except Exception:
+        logger.warning(
+            f"Pipelined per-user fan-out failed for {len(events)} events",
+            component=LOGGER_COMPONENT,
+        )

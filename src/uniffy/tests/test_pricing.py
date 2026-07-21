@@ -14,7 +14,11 @@ from uniffy.domains.agents.pricing import (
     compute_text_cost,
     get_pricing,
 )
-from uniffy.domains.agents.providers.catalog import get_model, load_catalog
+from uniffy.domains.agents.providers.catalog import (
+    get_model,
+    load_catalog,
+    provider_for_model,
+)
 from uniffy.domains.agents.providers.catalog.loader import cache_read_rate
 from uniffy.domains.agents.providers.catalog.schema import Model, ProviderCatalog
 
@@ -81,6 +85,17 @@ class TestComputeTextCost:
         # No cached rate -> falls back to input $3
         assert cost == Decimal("3.000000")
 
+    def test_xai_cache_read_bills_at_cached_rate(self) -> None:
+        # xai layout: read rate lives in out_cached (0.30), in_cached is 0
+        m = get_pricing(provider="xai", model="grok-4.5")
+        cost = compute_text_cost(
+            m,
+            input_tokens=0,
+            output_tokens=0,
+            cache_read_input_tokens=1_000_000,
+        )
+        assert cost == Decimal("0.300000")
+
     def test_thinking_billed_at_output_rate(self) -> None:
         # Catalog has no separate thinking rate; thinking bills at output.
         cost = compute_text_cost(
@@ -129,6 +144,10 @@ class TestCacheReadRate:
     def test_gpt5_layout_in_cached_is_read(self) -> None:
         m = get_pricing(provider="openai", model="gpt-5.5")
         assert cache_read_rate(m) == Decimal("0.5")
+
+    def test_xai_layout_out_cached_is_read(self) -> None:
+        m = get_pricing(provider="xai", model="grok-4.5")
+        assert cache_read_rate(m) == Decimal("0.30")
 
     def test_no_cached_rates_returns_none(self) -> None:
         assert cache_read_rate(_text_model(in_cached="0", out_cached="0")) is None
@@ -204,6 +223,23 @@ class TestCatalogResolution:
             "claude-sonnet-4-6"
         )
         assert get_model("openai", "gpt-4o-2024-08-06").id == "gpt-4o"
+
+    def test_openrouter_slug_resolves(self) -> None:
+        assert get_model("openrouter", "anthropic/claude-sonnet-5") is not None
+        assert provider_for_model("anthropic/claude-sonnet-5") == "openrouter"
+
+    def test_slug_does_not_shadow_first_party_id(self) -> None:
+        assert provider_for_model("claude-sonnet-5") == "anthropic"
+
+    def test_xai_models_resolve(self) -> None:
+        assert get_model("xai", "grok-4.5") is not None
+        assert get_model("xai", "grok-99") is None
+
+    def test_dated_looking_id_resolves_exactly(self) -> None:
+        # The 0309 segment looks like a date. The exact id must still win.
+        assert get_model("xai", "grok-4.20-0309-reasoning").id == (
+            "grok-4.20-0309-reasoning"
+        )
 
     def test_unknown_model_returns_none(self) -> None:
         assert get_pricing(provider="openai", model="does-not-exist") is None

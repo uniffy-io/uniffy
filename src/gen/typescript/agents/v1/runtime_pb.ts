@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/runtime.proto.
  */
 export const file_agents_v1_runtime: GenFile = /*@__PURE__*/
-  fileDesc("ChdhZ2VudHMvdjEvcnVudGltZS5wcm90bxIJYWdlbnRzLnYxIk8KFEdldFVzYWdlU3RhdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRkYXlzGAIgASgFEhAKCGludGVydmFsGAMgASgJIqUGChVHZXRVc2FnZVN0YXRzUmVzcG9uc2USEgoKdG90YWxfcnVucxgBIAEoAxIaChJ0b3RhbF9pbnB1dF90b2tlbnMYAiABKAMSGwoTdG90YWxfb3V0cHV0X3Rva2VucxgDIAEoAxIWCg50b3RhbF9zZXNzaW9ucxgEIAEoAxIXCg9hdmdfZHVyYXRpb25fbXMYBSABKAUSKgoLZGFpbHlfdXNhZ2UYBiADKAsyFS5hZ2VudHMudjEuRGFpbHlVc2FnZRIqCgttb2RlbF91c2FnZRgHIAMoCzIVLmFnZW50cy52MS5Nb2RlbFVzYWdlEi4KC2FnZW50X3VzYWdlGAggAygLMhkuYWdlbnRzLnYxLkFnZW50VXNhZ2VJbmZvEigKCnRvb2xfdXNhZ2UYCSADKAsyFC5hZ2VudHMudjEuVG9vbFVzYWdlEjcKEnByb3ZpZGVyX2tleV91c2FnZRgKIAMoCzIbLmFnZW50cy52MS5Qcm92aWRlcktleVVzYWdlEiwKCmNyb25fdXNhZ2UYCyADKAsyGC5hZ2VudHMudjEuQ3JvblRhc2tVc2FnZRIXCg9jcm9uX3RvdGFsX3J1bnMYDCABKAMSHAoUY3Jvbl90b3RhbF9zdWNjZXNzZXMYDSABKAMSGwoTY3Jvbl90b3RhbF9mYWlsdXJlcxgOIAEoAxIfChdjcm9uX3RvdGFsX2lucHV0X3Rva2VucxgPIAEoAxIgChhjcm9uX3RvdGFsX291dHB1dF90b2tlbnMYECABKAMSJQoddG90YWxfY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYESABKAMSEgoKdG90YWxfY29zdBgSIAEoCRIdChV0b3RhbF90aGlua2luZ190b2tlbnMYEyABKAMSGQoRdG90YWxfaW1hZ2VfY291bnQYFCABKAMSFQoNdG90YWxfcmV0cmllcxgVIAEoAxIXCg90b3RhbF9jYW5jZWxsZWQYFiABKAMSHwoXdG90YWxfZGVhZGxpbmVfZXhjZWVkZWQYFyABKAMSGAoQZGlzcGxheV9jdXJyZW5jeRgYIAEoCSKZAQoKRGFpbHlVc2FnZRIMCgRkYXRlGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBSABKAMSDAoEY29zdBgGIAEoCRITCgtpbWFnZV9jb3VudBgHIAEoAyJ5CgpNb2RlbFVzYWdlEg0KBW1vZGVsGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSDAoEY29zdBgFIAEoCRITCgtpbWFnZV9jb3VudBgGIAEoAyJxCg5BZ2VudFVzYWdlSW5mbxIQCghhZ2VudF9pZBgBIAEoCRISCgphZ2VudF9uYW1lGAIgASgJEgwKBHJ1bnMYAyABKAMSFAoMaW5wdXRfdG9rZW5zGAQgASgDEhUKDW91dHB1dF90b2tlbnMYBSABKAMiMgoJVG9vbFVzYWdlEhEKCXRvb2xfbmFtZRgBIAEoCRISCgpjYWxsX2NvdW50GAIgASgDIosBChBQcm92aWRlcktleVVzYWdlEhcKD3Byb3ZpZGVyX2tleV9pZBgBIAEoCRIRCglrZXlfbGFiZWwYAiABKAkSEAoIcHJvdmlkZXIYAyABKAkSDAoEcnVucxgEIAEoAxIUCgxpbnB1dF90b2tlbnMYBSABKAMSFQoNb3V0cHV0X3Rva2VucxgGIAEoAyKyAQoNQ3JvblRhc2tVc2FnZRIUCgxjcm9uX3Rhc2tfaWQYASABKAkSEQoJdGFza19uYW1lGAIgASgJEhIKCmFnZW50X25hbWUYAyABKAkSEgoKdG90YWxfcnVucxgEIAEoAxIRCglzdWNjZXNzZXMYBSABKAMSEAoIZmFpbHVyZXMYBiABKAMSFAoMaW5wdXRfdG9rZW5zGAcgASgDEhUKDW91dHB1dF90b2tlbnMYCCABKAMi+gEKElNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIl0KF1JlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhUKDXVzZXJfdGltZXpvbmUYAyABKAkigAIKGFN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIoABChJDaGF0Q2hhbm5lbENvbnRleHQSEgoKY2hhbm5lbF9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIaChJ0cmlnZ2VyX21lc3NhZ2VfaWQYAyABKAkSGAoLY29udGV4dF91cm4YBCABKAlIAIgBAUIOCgxfY29udGV4dF91cm4iigEKE1NlbmRNZXNzYWdlUmVzcG9uc2USLAoMdXNlcl9tZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEjEKEWFzc2lzdGFudF9tZXNzYWdlGAIgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEhIKCm1vZGVsX3VzZWQYAyABKAkicwocUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIUCgx0b29sX2NhbGxfaWQYAyABKAkSEAoIYXBwcm92ZWQYBCABKAgiQAoVU3Vic2NyaWJlVG9SdW5SZXF1ZXN0Eg4KBnJ1bl9pZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkiPgoTQ2FuY2VsU3RyZWFtUmVxdWVzdBIOCgZydW5faWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIikKFENhbmNlbFN0cmVhbVJlc3BvbnNlEhEKCWNhbmNlbGxlZBgBIAEoCCIxCh1SZXNwb25kVG9Db25maXJtYXRpb25SZXNwb25zZRIQCghhY2NlcHRlZBgBIAEoCCKaBAoQQWdlbnRTdHJlYW1FdmVudBIsCgV0b2tlbhgBIAEoCzIbLmFnZW50cy52MS5TdHJlYW1Ub2tlbkV2ZW50SAASMwoJdG9vbF9jYWxsGAIgASgLMh4uYWdlbnRzLnYxLlN0cmVhbVRvb2xDYWxsRXZlbnRIABI3Cgt0b29sX3Jlc3VsdBgDIAEoCzIgLmFnZW50cy52MS5TdHJlYW1Ub29sUmVzdWx0RXZlbnRIABI9Cg5tZXNzYWdlX3N0b3JlZBgEIAEoCzIjLmFnZW50cy52MS5TdHJlYW1NZXNzYWdlU3RvcmVkRXZlbnRIABIqCgRkb25lGAUgASgLMhouYWdlbnRzLnYxLlN0cmVhbURvbmVFdmVudEgAEiwKBWVycm9yGAYgASgLMhsuYWdlbnRzLnYxLlN0cmVhbUVycm9yRXZlbnRIABJLChVjb25maXJtYXRpb25fcmVxdWlyZWQYByABKAsyKi5hZ2VudHMudjEuU3RyZWFtQ29uZmlybWF0aW9uUmVxdWlyZWRFdmVudEgAEjIKCGZhaWxvdmVyGAkgASgLMh4uYWdlbnRzLnYxLlN0cmVhbUZhaWxvdmVyRXZlbnRIABI3Cgtza2lsbF9kcmFmdBgKIAEoCzIgLmFnZW50cy52MS5TdHJlYW1Ta2lsbERyYWZ0RXZlbnRIABIOCgZydW5faWQYCCABKAlCBwoFZXZlbnQiRwoZU3RyZWFtU2VuZE1lc3NhZ2VSZXNwb25zZRIqCgVldmVudBgBIAEoCzIbLmFnZW50cy52MS5BZ2VudFN0cmVhbUV2ZW50IkYKGFJlcnVuRnJvbU1lc3NhZ2VSZXNwb25zZRIqCgVldmVudBgBIAEoCzIbLmFnZW50cy52MS5BZ2VudFN0cmVhbUV2ZW50IkQKFlN1YnNjcmliZVRvUnVuUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCIgChBTdHJlYW1Ub2tlbkV2ZW50EgwKBHRleHQYASABKAkiVgoTU3RyZWFtVG9vbENhbGxFdmVudBIUCgx0b29sX2NhbGxfaWQYASABKAkSEQoJdG9vbF9uYW1lGAIgASgJEhYKDnRvb2xfYXJnc19qc29uGAMgASgJImEKFVN0cmVhbVRvb2xSZXN1bHRFdmVudBIUCgx0b29sX2NhbGxfaWQYASABKAkSEQoJdG9vbF9uYW1lGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDgoGcmVzdWx0GAQgASgJIkMKGFN0cmVhbU1lc3NhZ2VTdG9yZWRFdmVudBInCgdtZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvIlgKD1N0cmVhbURvbmVFdmVudBIxChFhc3Npc3RhbnRfbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxISCgptb2RlbF91c2VkGAIgASgJIiMKEFN0cmVhbUVycm9yRXZlbnQSDwoHbWVzc2FnZRgBIAEoCSJ3Ch9TdHJlYW1Db25maXJtYXRpb25SZXF1aXJlZEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSFgoOdG9vbF9hcmdzX2pzb24YAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkiggEKE1N0cmVhbUZhaWxvdmVyRXZlbnQSHAoUZnJvbV9wcm92aWRlcl9rZXlfaWQYASABKAkSGgoSdG9fcHJvdmlkZXJfa2V5X2lkGAIgASgJEhAKCHRvX21vZGVsGAMgASgJEg4KBnJlYXNvbhgEIAEoCRIPCgdhdHRlbXB0GAUgASgFIj0KFVN0cmVhbVNraWxsRHJhZnRFdmVudBIkCgVkcmFmdBgBIAEoCzIVLmFnZW50cy52MS5Ta2lsbERyYWZ0MpcFCg5SdW50aW1lU2VydmljZRJOCgtTZW5kTWVzc2FnZRIdLmFnZW50cy52MS5TZW5kTWVzc2FnZVJlcXVlc3QaHi5hZ2VudHMudjEuU2VuZE1lc3NhZ2VSZXNwb25zZSIAEmIKEVN0cmVhbVNlbmRNZXNzYWdlEiMuYWdlbnRzLnYxLlN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBokLmFnZW50cy52MS5TdHJlYW1TZW5kTWVzc2FnZVJlc3BvbnNlIgAwARJfChBSZXJ1bkZyb21NZXNzYWdlEiIuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0GiMuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXNwb25zZSIAMAESWQoOU3Vic2NyaWJlVG9SdW4SIC5hZ2VudHMudjEuU3Vic2NyaWJlVG9SdW5SZXF1ZXN0GiEuYWdlbnRzLnYxLlN1YnNjcmliZVRvUnVuUmVzcG9uc2UiADABElEKDENhbmNlbFN0cmVhbRIeLmFnZW50cy52MS5DYW5jZWxTdHJlYW1SZXF1ZXN0Gh8uYWdlbnRzLnYxLkNhbmNlbFN0cmVhbVJlc3BvbnNlIgASbAoVUmVzcG9uZFRvQ29uZmlybWF0aW9uEicuYWdlbnRzLnYxLlJlc3BvbmRUb0NvbmZpcm1hdGlvblJlcXVlc3QaKC5hZ2VudHMudjEuUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVzcG9uc2UiABJUCg1HZXRVc2FnZVN0YXRzEh8uYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXF1ZXN0GiAuYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXNwb25zZSIAQjlaN2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_agents_v1_sessions, file_agents_v1_skills]);
+  fileDesc("ChdhZ2VudHMvdjEvcnVudGltZS5wcm90bxIJYWdlbnRzLnYxIk8KFEdldFVzYWdlU3RhdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRkYXlzGAIgASgFEhAKCGludGVydmFsGAMgASgJIqUGChVHZXRVc2FnZVN0YXRzUmVzcG9uc2USEgoKdG90YWxfcnVucxgBIAEoAxIaChJ0b3RhbF9pbnB1dF90b2tlbnMYAiABKAMSGwoTdG90YWxfb3V0cHV0X3Rva2VucxgDIAEoAxIWCg50b3RhbF9zZXNzaW9ucxgEIAEoAxIXCg9hdmdfZHVyYXRpb25fbXMYBSABKAUSKgoLZGFpbHlfdXNhZ2UYBiADKAsyFS5hZ2VudHMudjEuRGFpbHlVc2FnZRIqCgttb2RlbF91c2FnZRgHIAMoCzIVLmFnZW50cy52MS5Nb2RlbFVzYWdlEi4KC2FnZW50X3VzYWdlGAggAygLMhkuYWdlbnRzLnYxLkFnZW50VXNhZ2VJbmZvEigKCnRvb2xfdXNhZ2UYCSADKAsyFC5hZ2VudHMudjEuVG9vbFVzYWdlEjcKEnByb3ZpZGVyX2tleV91c2FnZRgKIAMoCzIbLmFnZW50cy52MS5Qcm92aWRlcktleVVzYWdlEiwKCmNyb25fdXNhZ2UYCyADKAsyGC5hZ2VudHMudjEuQ3JvblRhc2tVc2FnZRIXCg9jcm9uX3RvdGFsX3J1bnMYDCABKAMSHAoUY3Jvbl90b3RhbF9zdWNjZXNzZXMYDSABKAMSGwoTY3Jvbl90b3RhbF9mYWlsdXJlcxgOIAEoAxIfChdjcm9uX3RvdGFsX2lucHV0X3Rva2VucxgPIAEoAxIgChhjcm9uX3RvdGFsX291dHB1dF90b2tlbnMYECABKAMSJQoddG90YWxfY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYESABKAMSEgoKdG90YWxfY29zdBgSIAEoCRIdChV0b3RhbF90aGlua2luZ190b2tlbnMYEyABKAMSGQoRdG90YWxfaW1hZ2VfY291bnQYFCABKAMSFQoNdG90YWxfcmV0cmllcxgVIAEoAxIXCg90b3RhbF9jYW5jZWxsZWQYFiABKAMSHwoXdG90YWxfZGVhZGxpbmVfZXhjZWVkZWQYFyABKAMSGAoQZGlzcGxheV9jdXJyZW5jeRgYIAEoCSKZAQoKRGFpbHlVc2FnZRIMCgRkYXRlGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBSABKAMSDAoEY29zdBgGIAEoCRITCgtpbWFnZV9jb3VudBgHIAEoAyJ5CgpNb2RlbFVzYWdlEg0KBW1vZGVsGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSDAoEY29zdBgFIAEoCRITCgtpbWFnZV9jb3VudBgGIAEoAyJxCg5BZ2VudFVzYWdlSW5mbxIQCghhZ2VudF9pZBgBIAEoCRISCgphZ2VudF9uYW1lGAIgASgJEgwKBHJ1bnMYAyABKAMSFAoMaW5wdXRfdG9rZW5zGAQgASgDEhUKDW91dHB1dF90b2tlbnMYBSABKAMiMgoJVG9vbFVzYWdlEhEKCXRvb2xfbmFtZRgBIAEoCRISCgpjYWxsX2NvdW50GAIgASgDIosBChBQcm92aWRlcktleVVzYWdlEhcKD3Byb3ZpZGVyX2tleV9pZBgBIAEoCRIRCglrZXlfbGFiZWwYAiABKAkSEAoIcHJvdmlkZXIYAyABKAkSDAoEcnVucxgEIAEoAxIUCgxpbnB1dF90b2tlbnMYBSABKAMSFQoNb3V0cHV0X3Rva2VucxgGIAEoAyKyAQoNQ3JvblRhc2tVc2FnZRIUCgxjcm9uX3Rhc2tfaWQYASABKAkSEQoJdGFza19uYW1lGAIgASgJEhIKCmFnZW50X25hbWUYAyABKAkSEgoKdG90YWxfcnVucxgEIAEoAxIRCglzdWNjZXNzZXMYBSABKAMSEAoIZmFpbHVyZXMYBiABKAMSFAoMaW5wdXRfdG9rZW5zGAcgASgDEhUKDW91dHB1dF90b2tlbnMYCCABKAMi+gEKElNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIl0KF1JlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhUKDXVzZXJfdGltZXpvbmUYAyABKAkigAIKGFN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIoABChJDaGF0Q2hhbm5lbENvbnRleHQSEgoKY2hhbm5lbF9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIaChJ0cmlnZ2VyX21lc3NhZ2VfaWQYAyABKAkSGAoLY29udGV4dF91cm4YBCABKAlIAIgBAUIOCgxfY29udGV4dF91cm4iigEKE1NlbmRNZXNzYWdlUmVzcG9uc2USLAoMdXNlcl9tZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEjEKEWFzc2lzdGFudF9tZXNzYWdlGAIgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEhIKCm1vZGVsX3VzZWQYAyABKAkicwocUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIUCgx0b29sX2NhbGxfaWQYAyABKAkSEAoIYXBwcm92ZWQYBCABKAgiQAoVU3Vic2NyaWJlVG9SdW5SZXF1ZXN0Eg4KBnJ1bl9pZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkiPgoTQ2FuY2VsU3RyZWFtUmVxdWVzdBIOCgZydW5faWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIikKFENhbmNlbFN0cmVhbVJlc3BvbnNlEhEKCWNhbmNlbGxlZBgBIAEoCCIxCh1SZXNwb25kVG9Db25maXJtYXRpb25SZXNwb25zZRIQCghhY2NlcHRlZBgBIAEoCCKZCwoQQWdlbnRTdHJlYW1FdmVudBI3CgtyZXBseV9zdGFydBgBIAEoCzIgLmFnZW50cy52MS5TdHJlYW1SZXBseVN0YXJ0RXZlbnRIABJAChBtb2RlbF9jYWxsX3N0YXJ0GAIgASgLMiQuYWdlbnRzLnYxLlN0cmVhbU1vZGVsQ2FsbFN0YXJ0RXZlbnRIABI8Cg5tb2RlbF9jYWxsX2VuZBgDIAEoCzIiLmFnZW50cy52MS5TdHJlYW1Nb2RlbENhbGxFbmRFdmVudEgAEkAKEHRleHRfYmxvY2tfc3RhcnQYBCABKAsyJC5hZ2VudHMudjEuU3RyZWFtVGV4dEJsb2NrU3RhcnRFdmVudEgAEkAKEHRleHRfYmxvY2tfZGVsdGEYBSABKAsyJC5hZ2VudHMudjEuU3RyZWFtVGV4dEJsb2NrRGVsdGFFdmVudEgAEjwKDnRleHRfYmxvY2tfZW5kGAYgASgLMiIuYWdlbnRzLnYxLlN0cmVhbVRleHRCbG9ja0VuZEV2ZW50SAASSAoUdGhpbmtpbmdfYmxvY2tfc3RhcnQYByABKAsyKC5hZ2VudHMudjEuU3RyZWFtVGhpbmtpbmdCbG9ja1N0YXJ0RXZlbnRIABJIChR0aGlua2luZ19ibG9ja19kZWx0YRgIIAEoCzIoLmFnZW50cy52MS5TdHJlYW1UaGlua2luZ0Jsb2NrRGVsdGFFdmVudEgAEkQKEnRoaW5raW5nX2Jsb2NrX2VuZBgJIAEoCzImLmFnZW50cy52MS5TdHJlYW1UaGlua2luZ0Jsb2NrRW5kRXZlbnRIABI+Cg90b29sX2NhbGxfc3RhcnQYCiABKAsyIy5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxTdGFydEV2ZW50SAASPgoPdG9vbF9jYWxsX2RlbHRhGAsgASgLMiMuYWdlbnRzLnYxLlN0cmVhbVRvb2xDYWxsRGVsdGFFdmVudEgAEjoKDXRvb2xfY2FsbF9lbmQYDCABKAsyIS5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxFbmRFdmVudEgAEkIKEXRvb2xfcmVzdWx0X3N0YXJ0GA0gASgLMiUuYWdlbnRzLnYxLlN0cmVhbVRvb2xSZXN1bHRTdGFydEV2ZW50SAASQgoRdG9vbF9yZXN1bHRfZGVsdGEYDiABKAsyJS5hZ2VudHMudjEuU3RyZWFtVG9vbFJlc3VsdERlbHRhRXZlbnRIABI+Cg90b29sX3Jlc3VsdF9lbmQYDyABKAsyIy5hZ2VudHMudjEuU3RyZWFtVG9vbFJlc3VsdEVuZEV2ZW50SAASSwoVY29uZmlybWF0aW9uX3JlcXVpcmVkGBAgASgLMiouYWdlbnRzLnYxLlN0cmVhbUNvbmZpcm1hdGlvblJlcXVpcmVkRXZlbnRIABIyCghmYWlsb3ZlchgRIAEoCzIeLmFnZW50cy52MS5TdHJlYW1GYWlsb3ZlckV2ZW50SAASNwoLc2tpbGxfZHJhZnQYEiABKAsyIC5hZ2VudHMudjEuU3RyZWFtU2tpbGxEcmFmdEV2ZW50SAASQAoQZXhjZWVkX21heF9pdGVycxgTIAEoCzIkLmFnZW50cy52MS5TdHJlYW1FeGNlZWRNYXhJdGVyc0V2ZW50SAASPQoObWVzc2FnZV9zdG9yZWQYFCABKAsyIy5hZ2VudHMudjEuU3RyZWFtTWVzc2FnZVN0b3JlZEV2ZW50SAASKgoEZG9uZRgVIAEoCzIaLmFnZW50cy52MS5TdHJlYW1Eb25lRXZlbnRIABIsCgVlcnJvchgWIAEoCzIbLmFnZW50cy52MS5TdHJlYW1FcnJvckV2ZW50SAASDgoGcnVuX2lkGB4gASgJQgcKBWV2ZW50IkcKGVN0cmVhbVNlbmRNZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJGChhSZXJ1bkZyb21NZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJEChZTdWJzY3JpYmVUb1J1blJlc3BvbnNlEioKBWV2ZW50GAEgASgLMhsuYWdlbnRzLnYxLkFnZW50U3RyZWFtRXZlbnQiJQoVU3RyZWFtUmVwbHlTdGFydEV2ZW50EgwKBHJvbGUYASABKAkiKgoZU3RyZWFtTW9kZWxDYWxsU3RhcnRFdmVudBINCgVtb2RlbBgBIAEoCSKPAQoXU3RyZWFtTW9kZWxDYWxsRW5kRXZlbnQSDQoFbW9kZWwYASABKAkSFAoMaW5wdXRfdG9rZW5zGAIgASgDEhUKDW91dHB1dF90b2tlbnMYAyABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBCABKAMSFwoPdGhpbmtpbmdfdG9rZW5zGAUgASgDIlMKGVN0cmVhbVRleHRCbG9ja1N0YXJ0RXZlbnQSEAoIYmxvY2tfaWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRIQCghzZXF1ZW5jZRgDIAEoBSJiChlTdHJlYW1UZXh0QmxvY2tEZWx0YUV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkSEAoIc2VxdWVuY2UYBCABKAUiUQoXU3RyZWFtVGV4dEJsb2NrRW5kRXZlbnQSEAoIYmxvY2tfaWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRIQCghzZXF1ZW5jZRgDIAEoBSJXCh1TdHJlYW1UaGlua2luZ0Jsb2NrU3RhcnRFdmVudBIQCghibG9ja19pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhAKCHNlcXVlbmNlGAMgASgFImYKHVN0cmVhbVRoaW5raW5nQmxvY2tEZWx0YUV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkSEAoIc2VxdWVuY2UYBCABKAUiaQobU3RyZWFtVGhpbmtpbmdCbG9ja0VuZEV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSEAoIc2VxdWVuY2UYAyABKAUSEgoKZWxhcHNlZF9tcxgEIAEoBSJ7ChhTdHJlYW1Ub29sQ2FsbFN0YXJ0RXZlbnQSEAoIYmxvY2tfaWQYASABKAkSFAoMdG9vbF9jYWxsX2lkGAIgASgJEhEKCXRvb2xfbmFtZRgDIAEoCRISCgptZXNzYWdlX2lkGAQgASgJEhAKCHNlcXVlbmNlGAUgASgFIooBChhTdHJlYW1Ub29sQ2FsbERlbHRhRXZlbnQSEAoIYmxvY2tfaWQYASABKAkSFAoMdG9vbF9jYWxsX2lkGAIgASgJEhEKCXRvb2xfbmFtZRgDIAEoCRINCgVkZWx0YRgEIAEoCRISCgptZXNzYWdlX2lkGAUgASgJEhAKCHNlcXVlbmNlGAYgASgFIpEBChZTdHJlYW1Ub29sQ2FsbEVuZEV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEhQKDHRvb2xfY2FsbF9pZBgCIAEoCRIRCgl0b29sX25hbWUYAyABKAkSFgoOdG9vbF9hcmdzX2pzb24YBCABKAkSEgoKbWVzc2FnZV9pZBgFIAEoCRIQCghzZXF1ZW5jZRgGIAEoBSJxChpTdHJlYW1Ub29sUmVzdWx0U3RhcnRFdmVudBIUCgx0b29sX2NhbGxfaWQYASABKAkSEQoJdG9vbF9uYW1lGAIgASgJEhYKDnRvb2xfYXJnc19qc29uGAMgASgJEhIKCm1lc3NhZ2VfaWQYBCABKAkiVQoaU3RyZWFtVG9vbFJlc3VsdERlbHRhRXZlbnQSFAoMdG9vbF9jYWxsX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkieAoYU3RyZWFtVG9vbFJlc3VsdEVuZEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZyZXN1bHQYBCABKAkSEgoKbWVzc2FnZV9pZBgFIAEoCSIbChlTdHJlYW1FeGNlZWRNYXhJdGVyc0V2ZW50IkMKGFN0cmVhbU1lc3NhZ2VTdG9yZWRFdmVudBInCgdtZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvIlgKD1N0cmVhbURvbmVFdmVudBIxChFhc3Npc3RhbnRfbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxISCgptb2RlbF91c2VkGAIgASgJIiMKEFN0cmVhbUVycm9yRXZlbnQSDwoHbWVzc2FnZRgBIAEoCSJ3Ch9TdHJlYW1Db25maXJtYXRpb25SZXF1aXJlZEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSFgoOdG9vbF9hcmdzX2pzb24YAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkiggEKE1N0cmVhbUZhaWxvdmVyRXZlbnQSHAoUZnJvbV9wcm92aWRlcl9rZXlfaWQYASABKAkSGgoSdG9fcHJvdmlkZXJfa2V5X2lkGAIgASgJEhAKCHRvX21vZGVsGAMgASgJEg4KBnJlYXNvbhgEIAEoCRIPCgdhdHRlbXB0GAUgASgFIj0KFVN0cmVhbVNraWxsRHJhZnRFdmVudBIkCgVkcmFmdBgBIAEoCzIVLmFnZW50cy52MS5Ta2lsbERyYWZ0MpcFCg5SdW50aW1lU2VydmljZRJOCgtTZW5kTWVzc2FnZRIdLmFnZW50cy52MS5TZW5kTWVzc2FnZVJlcXVlc3QaHi5hZ2VudHMudjEuU2VuZE1lc3NhZ2VSZXNwb25zZSIAEmIKEVN0cmVhbVNlbmRNZXNzYWdlEiMuYWdlbnRzLnYxLlN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBokLmFnZW50cy52MS5TdHJlYW1TZW5kTWVzc2FnZVJlc3BvbnNlIgAwARJfChBSZXJ1bkZyb21NZXNzYWdlEiIuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0GiMuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXNwb25zZSIAMAESWQoOU3Vic2NyaWJlVG9SdW4SIC5hZ2VudHMudjEuU3Vic2NyaWJlVG9SdW5SZXF1ZXN0GiEuYWdlbnRzLnYxLlN1YnNjcmliZVRvUnVuUmVzcG9uc2UiADABElEKDENhbmNlbFN0cmVhbRIeLmFnZW50cy52MS5DYW5jZWxTdHJlYW1SZXF1ZXN0Gh8uYWdlbnRzLnYxLkNhbmNlbFN0cmVhbVJlc3BvbnNlIgASbAoVUmVzcG9uZFRvQ29uZmlybWF0aW9uEicuYWdlbnRzLnYxLlJlc3BvbmRUb0NvbmZpcm1hdGlvblJlcXVlc3QaKC5hZ2VudHMudjEuUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVzcG9uc2UiABJUCg1HZXRVc2FnZVN0YXRzEh8uYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXF1ZXN0GiAuYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXNwb25zZSIAQjlaN2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_agents_v1_sessions, file_agents_v1_skills]);
 
 /**
  * @generated from message agents.v1.GetUsageStatsRequest
@@ -801,6 +801,12 @@ export const RespondToConfirmationResponseSchema: GenMessage<RespondToConfirmati
  * run_id is stamped by the handler from the run state hash so a tab
  * reload mid-stream can call SubscribeToRun(run_id) to resume.
  *
+ * The oneof mirrors the backend EventType enum 1:1. Text, thinking,
+ * and tool-call content is block-framed (START -> DELTA -> END,
+ * correlated by block_id); deltas are incremental, never cumulative.
+ * Thinking is a first-class block and never appears in text deltas or
+ * stored message content.
+ *
  * @generated from message agents.v1.AgentStreamEvent
  */
 export type AgentStreamEvent = Message<"agents.v1.AgentStreamEvent"> & {
@@ -809,62 +815,140 @@ export type AgentStreamEvent = Message<"agents.v1.AgentStreamEvent"> & {
    */
   event: {
     /**
-     * @generated from field: agents.v1.StreamTokenEvent token = 1;
+     * @generated from field: agents.v1.StreamReplyStartEvent reply_start = 1;
      */
-    value: StreamTokenEvent;
-    case: "token";
+    value: StreamReplyStartEvent;
+    case: "replyStart";
   } | {
     /**
-     * @generated from field: agents.v1.StreamToolCallEvent tool_call = 2;
+     * @generated from field: agents.v1.StreamModelCallStartEvent model_call_start = 2;
      */
-    value: StreamToolCallEvent;
-    case: "toolCall";
+    value: StreamModelCallStartEvent;
+    case: "modelCallStart";
   } | {
     /**
-     * @generated from field: agents.v1.StreamToolResultEvent tool_result = 3;
+     * @generated from field: agents.v1.StreamModelCallEndEvent model_call_end = 3;
      */
-    value: StreamToolResultEvent;
-    case: "toolResult";
+    value: StreamModelCallEndEvent;
+    case: "modelCallEnd";
   } | {
     /**
-     * @generated from field: agents.v1.StreamMessageStoredEvent message_stored = 4;
+     * @generated from field: agents.v1.StreamTextBlockStartEvent text_block_start = 4;
      */
-    value: StreamMessageStoredEvent;
-    case: "messageStored";
+    value: StreamTextBlockStartEvent;
+    case: "textBlockStart";
   } | {
     /**
-     * @generated from field: agents.v1.StreamDoneEvent done = 5;
+     * @generated from field: agents.v1.StreamTextBlockDeltaEvent text_block_delta = 5;
      */
-    value: StreamDoneEvent;
-    case: "done";
+    value: StreamTextBlockDeltaEvent;
+    case: "textBlockDelta";
   } | {
     /**
-     * @generated from field: agents.v1.StreamErrorEvent error = 6;
+     * @generated from field: agents.v1.StreamTextBlockEndEvent text_block_end = 6;
      */
-    value: StreamErrorEvent;
-    case: "error";
+    value: StreamTextBlockEndEvent;
+    case: "textBlockEnd";
   } | {
     /**
-     * @generated from field: agents.v1.StreamConfirmationRequiredEvent confirmation_required = 7;
+     * @generated from field: agents.v1.StreamThinkingBlockStartEvent thinking_block_start = 7;
+     */
+    value: StreamThinkingBlockStartEvent;
+    case: "thinkingBlockStart";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamThinkingBlockDeltaEvent thinking_block_delta = 8;
+     */
+    value: StreamThinkingBlockDeltaEvent;
+    case: "thinkingBlockDelta";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamThinkingBlockEndEvent thinking_block_end = 9;
+     */
+    value: StreamThinkingBlockEndEvent;
+    case: "thinkingBlockEnd";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolCallStartEvent tool_call_start = 10;
+     */
+    value: StreamToolCallStartEvent;
+    case: "toolCallStart";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolCallDeltaEvent tool_call_delta = 11;
+     */
+    value: StreamToolCallDeltaEvent;
+    case: "toolCallDelta";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolCallEndEvent tool_call_end = 12;
+     */
+    value: StreamToolCallEndEvent;
+    case: "toolCallEnd";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolResultStartEvent tool_result_start = 13;
+     */
+    value: StreamToolResultStartEvent;
+    case: "toolResultStart";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolResultDeltaEvent tool_result_delta = 14;
+     */
+    value: StreamToolResultDeltaEvent;
+    case: "toolResultDelta";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamToolResultEndEvent tool_result_end = 15;
+     */
+    value: StreamToolResultEndEvent;
+    case: "toolResultEnd";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamConfirmationRequiredEvent confirmation_required = 16;
      */
     value: StreamConfirmationRequiredEvent;
     case: "confirmationRequired";
   } | {
     /**
-     * @generated from field: agents.v1.StreamFailoverEvent failover = 9;
+     * @generated from field: agents.v1.StreamFailoverEvent failover = 17;
      */
     value: StreamFailoverEvent;
     case: "failover";
   } | {
     /**
-     * @generated from field: agents.v1.StreamSkillDraftEvent skill_draft = 10;
+     * @generated from field: agents.v1.StreamSkillDraftEvent skill_draft = 18;
      */
     value: StreamSkillDraftEvent;
     case: "skillDraft";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamExceedMaxItersEvent exceed_max_iters = 19;
+     */
+    value: StreamExceedMaxItersEvent;
+    case: "exceedMaxIters";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamMessageStoredEvent message_stored = 20;
+     */
+    value: StreamMessageStoredEvent;
+    case: "messageStored";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamDoneEvent done = 21;
+     */
+    value: StreamDoneEvent;
+    case: "done";
+  } | {
+    /**
+     * @generated from field: agents.v1.StreamErrorEvent error = 22;
+     */
+    value: StreamErrorEvent;
+    case: "error";
   } | { case: undefined; value?: undefined };
 
   /**
-   * @generated from field: string run_id = 8;
+   * @generated from field: string run_id = 30;
    */
   runId: string;
 };
@@ -928,26 +1012,397 @@ export const SubscribeToRunResponseSchema: GenMessage<SubscribeToRunResponse> = 
   messageDesc(file_agents_v1_runtime, 21);
 
 /**
- * @generated from message agents.v1.StreamTokenEvent
+ * Opens the assistant turn. Purely a framing hook for clients.
+ *
+ * @generated from message agents.v1.StreamReplyStartEvent
  */
-export type StreamTokenEvent = Message<"agents.v1.StreamTokenEvent"> & {
+export type StreamReplyStartEvent = Message<"agents.v1.StreamReplyStartEvent"> & {
   /**
-   * @generated from field: string text = 1;
+   * @generated from field: string role = 1;
    */
-  text: string;
+  role: string;
 };
 
 /**
- * Describes the message agents.v1.StreamTokenEvent.
- * Use `create(StreamTokenEventSchema)` to create a new message.
+ * Describes the message agents.v1.StreamReplyStartEvent.
+ * Use `create(StreamReplyStartEventSchema)` to create a new message.
  */
-export const StreamTokenEventSchema: GenMessage<StreamTokenEvent> = /*@__PURE__*/
+export const StreamReplyStartEventSchema: GenMessage<StreamReplyStartEvent> = /*@__PURE__*/
   messageDesc(file_agents_v1_runtime, 22);
 
 /**
- * @generated from message agents.v1.StreamToolCallEvent
+ * A model invocation begins; repeats after a failover swap.
+ *
+ * @generated from message agents.v1.StreamModelCallStartEvent
  */
-export type StreamToolCallEvent = Message<"agents.v1.StreamToolCallEvent"> & {
+export type StreamModelCallStartEvent = Message<"agents.v1.StreamModelCallStartEvent"> & {
+  /**
+   * @generated from field: string model = 1;
+   */
+  model: string;
+};
+
+/**
+ * Describes the message agents.v1.StreamModelCallStartEvent.
+ * Use `create(StreamModelCallStartEventSchema)` to create a new message.
+ */
+export const StreamModelCallStartEventSchema: GenMessage<StreamModelCallStartEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 23);
+
+/**
+ * Per-model-call token accounting, driving live token/cost counters.
+ *
+ * @generated from message agents.v1.StreamModelCallEndEvent
+ */
+export type StreamModelCallEndEvent = Message<"agents.v1.StreamModelCallEndEvent"> & {
+  /**
+   * @generated from field: string model = 1;
+   */
+  model: string;
+
+  /**
+   * @generated from field: int64 input_tokens = 2;
+   */
+  inputTokens: bigint;
+
+  /**
+   * @generated from field: int64 output_tokens = 3;
+   */
+  outputTokens: bigint;
+
+  /**
+   * @generated from field: int64 cache_read_input_tokens = 4;
+   */
+  cacheReadInputTokens: bigint;
+
+  /**
+   * @generated from field: int64 thinking_tokens = 5;
+   */
+  thinkingTokens: bigint;
+};
+
+/**
+ * Describes the message agents.v1.StreamModelCallEndEvent.
+ * Use `create(StreamModelCallEndEventSchema)` to create a new message.
+ */
+export const StreamModelCallEndEventSchema: GenMessage<StreamModelCallEndEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 24);
+
+/**
+ * Block events carry the placeholder row id (message_id, chat
+ * destination only; empty for session streams) plus one monotonic
+ * per-message sequence shared across all block events so clients can
+ * drop late deltas after a reorder.
+ *
+ * @generated from message agents.v1.StreamTextBlockStartEvent
+ */
+export type StreamTextBlockStartEvent = Message<"agents.v1.StreamTextBlockStartEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 3;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamTextBlockStartEvent.
+ * Use `create(StreamTextBlockStartEventSchema)` to create a new message.
+ */
+export const StreamTextBlockStartEventSchema: GenMessage<StreamTextBlockStartEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 25);
+
+/**
+ * @generated from message agents.v1.StreamTextBlockDeltaEvent
+ */
+export type StreamTextBlockDeltaEvent = Message<"agents.v1.StreamTextBlockDeltaEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string delta = 2;
+   */
+  delta: string;
+
+  /**
+   * @generated from field: string message_id = 3;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 4;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamTextBlockDeltaEvent.
+ * Use `create(StreamTextBlockDeltaEventSchema)` to create a new message.
+ */
+export const StreamTextBlockDeltaEventSchema: GenMessage<StreamTextBlockDeltaEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 26);
+
+/**
+ * @generated from message agents.v1.StreamTextBlockEndEvent
+ */
+export type StreamTextBlockEndEvent = Message<"agents.v1.StreamTextBlockEndEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 3;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamTextBlockEndEvent.
+ * Use `create(StreamTextBlockEndEventSchema)` to create a new message.
+ */
+export const StreamTextBlockEndEventSchema: GenMessage<StreamTextBlockEndEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 27);
+
+/**
+ * @generated from message agents.v1.StreamThinkingBlockStartEvent
+ */
+export type StreamThinkingBlockStartEvent = Message<"agents.v1.StreamThinkingBlockStartEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 3;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamThinkingBlockStartEvent.
+ * Use `create(StreamThinkingBlockStartEventSchema)` to create a new message.
+ */
+export const StreamThinkingBlockStartEventSchema: GenMessage<StreamThinkingBlockStartEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 28);
+
+/**
+ * @generated from message agents.v1.StreamThinkingBlockDeltaEvent
+ */
+export type StreamThinkingBlockDeltaEvent = Message<"agents.v1.StreamThinkingBlockDeltaEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string delta = 2;
+   */
+  delta: string;
+
+  /**
+   * @generated from field: string message_id = 3;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 4;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamThinkingBlockDeltaEvent.
+ * Use `create(StreamThinkingBlockDeltaEventSchema)` to create a new message.
+ */
+export const StreamThinkingBlockDeltaEventSchema: GenMessage<StreamThinkingBlockDeltaEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 29);
+
+/**
+ * elapsed_ms is stamped by the runtime (time between the matching
+ * start and this end) so live view, replay, and history all show the
+ * same "Thought for Ns" duration.
+ *
+ * @generated from message agents.v1.StreamThinkingBlockEndEvent
+ */
+export type StreamThinkingBlockEndEvent = Message<"agents.v1.StreamThinkingBlockEndEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string message_id = 2;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 3;
+   */
+  sequence: number;
+
+  /**
+   * @generated from field: int32 elapsed_ms = 4;
+   */
+  elapsedMs: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamThinkingBlockEndEvent.
+ * Use `create(StreamThinkingBlockEndEventSchema)` to create a new message.
+ */
+export const StreamThinkingBlockEndEventSchema: GenMessage<StreamThinkingBlockEndEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 30);
+
+/**
+ * @generated from message agents.v1.StreamToolCallStartEvent
+ */
+export type StreamToolCallStartEvent = Message<"agents.v1.StreamToolCallStartEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string tool_call_id = 2;
+   */
+  toolCallId: string;
+
+  /**
+   * @generated from field: string tool_name = 3;
+   */
+  toolName: string;
+
+  /**
+   * @generated from field: string message_id = 4;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 5;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamToolCallStartEvent.
+ * Use `create(StreamToolCallStartEventSchema)` to create a new message.
+ */
+export const StreamToolCallStartEventSchema: GenMessage<StreamToolCallStartEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 31);
+
+/**
+ * delta is an incremental fragment of the tool-args JSON.
+ *
+ * @generated from message agents.v1.StreamToolCallDeltaEvent
+ */
+export type StreamToolCallDeltaEvent = Message<"agents.v1.StreamToolCallDeltaEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string tool_call_id = 2;
+   */
+  toolCallId: string;
+
+  /**
+   * @generated from field: string tool_name = 3;
+   */
+  toolName: string;
+
+  /**
+   * @generated from field: string delta = 4;
+   */
+  delta: string;
+
+  /**
+   * @generated from field: string message_id = 5;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 6;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamToolCallDeltaEvent.
+ * Use `create(StreamToolCallDeltaEventSchema)` to create a new message.
+ */
+export const StreamToolCallDeltaEventSchema: GenMessage<StreamToolCallDeltaEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 32);
+
+/**
+ * @generated from message agents.v1.StreamToolCallEndEvent
+ */
+export type StreamToolCallEndEvent = Message<"agents.v1.StreamToolCallEndEvent"> & {
+  /**
+   * @generated from field: string block_id = 1;
+   */
+  blockId: string;
+
+  /**
+   * @generated from field: string tool_call_id = 2;
+   */
+  toolCallId: string;
+
+  /**
+   * @generated from field: string tool_name = 3;
+   */
+  toolName: string;
+
+  /**
+   * @generated from field: string tool_args_json = 4;
+   */
+  toolArgsJson: string;
+
+  /**
+   * @generated from field: string message_id = 5;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 sequence = 6;
+   */
+  sequence: number;
+};
+
+/**
+ * Describes the message agents.v1.StreamToolCallEndEvent.
+ * Use `create(StreamToolCallEndEventSchema)` to create a new message.
+ */
+export const StreamToolCallEndEventSchema: GenMessage<StreamToolCallEndEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 33);
+
+/**
+ * Tool execution started; message_id is the persisted tool-call row.
+ *
+ * @generated from message agents.v1.StreamToolResultStartEvent
+ */
+export type StreamToolResultStartEvent = Message<"agents.v1.StreamToolResultStartEvent"> & {
   /**
    * @generated from field: string tool_call_id = 1;
    */
@@ -962,19 +1417,51 @@ export type StreamToolCallEvent = Message<"agents.v1.StreamToolCallEvent"> & {
    * @generated from field: string tool_args_json = 3;
    */
   toolArgsJson: string;
+
+  /**
+   * @generated from field: string message_id = 4;
+   */
+  messageId: string;
 };
 
 /**
- * Describes the message agents.v1.StreamToolCallEvent.
- * Use `create(StreamToolCallEventSchema)` to create a new message.
+ * Describes the message agents.v1.StreamToolResultStartEvent.
+ * Use `create(StreamToolResultStartEventSchema)` to create a new message.
  */
-export const StreamToolCallEventSchema: GenMessage<StreamToolCallEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 23);
+export const StreamToolResultStartEventSchema: GenMessage<StreamToolResultStartEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 34);
 
 /**
- * @generated from message agents.v1.StreamToolResultEvent
+ * @generated from message agents.v1.StreamToolResultDeltaEvent
  */
-export type StreamToolResultEvent = Message<"agents.v1.StreamToolResultEvent"> & {
+export type StreamToolResultDeltaEvent = Message<"agents.v1.StreamToolResultDeltaEvent"> & {
+  /**
+   * @generated from field: string tool_call_id = 1;
+   */
+  toolCallId: string;
+
+  /**
+   * @generated from field: string delta = 2;
+   */
+  delta: string;
+
+  /**
+   * @generated from field: string message_id = 3;
+   */
+  messageId: string;
+};
+
+/**
+ * Describes the message agents.v1.StreamToolResultDeltaEvent.
+ * Use `create(StreamToolResultDeltaEventSchema)` to create a new message.
+ */
+export const StreamToolResultDeltaEventSchema: GenMessage<StreamToolResultDeltaEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 35);
+
+/**
+ * @generated from message agents.v1.StreamToolResultEndEvent
+ */
+export type StreamToolResultEndEvent = Message<"agents.v1.StreamToolResultEndEvent"> & {
   /**
    * @generated from field: string tool_call_id = 1;
    */
@@ -994,14 +1481,34 @@ export type StreamToolResultEvent = Message<"agents.v1.StreamToolResultEvent"> &
    * @generated from field: string result = 4;
    */
   result: string;
+
+  /**
+   * @generated from field: string message_id = 5;
+   */
+  messageId: string;
 };
 
 /**
- * Describes the message agents.v1.StreamToolResultEvent.
- * Use `create(StreamToolResultEventSchema)` to create a new message.
+ * Describes the message agents.v1.StreamToolResultEndEvent.
+ * Use `create(StreamToolResultEndEventSchema)` to create a new message.
  */
-export const StreamToolResultEventSchema: GenMessage<StreamToolResultEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 24);
+export const StreamToolResultEndEventSchema: GenMessage<StreamToolResultEndEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 36);
+
+/**
+ * The run hit the tool-iteration cap; a terminal error event follows.
+ *
+ * @generated from message agents.v1.StreamExceedMaxItersEvent
+ */
+export type StreamExceedMaxItersEvent = Message<"agents.v1.StreamExceedMaxItersEvent"> & {
+};
+
+/**
+ * Describes the message agents.v1.StreamExceedMaxItersEvent.
+ * Use `create(StreamExceedMaxItersEventSchema)` to create a new message.
+ */
+export const StreamExceedMaxItersEventSchema: GenMessage<StreamExceedMaxItersEvent> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 37);
 
 /**
  * @generated from message agents.v1.StreamMessageStoredEvent
@@ -1018,7 +1525,7 @@ export type StreamMessageStoredEvent = Message<"agents.v1.StreamMessageStoredEve
  * Use `create(StreamMessageStoredEventSchema)` to create a new message.
  */
 export const StreamMessageStoredEventSchema: GenMessage<StreamMessageStoredEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 25);
+  messageDesc(file_agents_v1_runtime, 38);
 
 /**
  * @generated from message agents.v1.StreamDoneEvent
@@ -1040,7 +1547,7 @@ export type StreamDoneEvent = Message<"agents.v1.StreamDoneEvent"> & {
  * Use `create(StreamDoneEventSchema)` to create a new message.
  */
 export const StreamDoneEventSchema: GenMessage<StreamDoneEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 26);
+  messageDesc(file_agents_v1_runtime, 39);
 
 /**
  * @generated from message agents.v1.StreamErrorEvent
@@ -1057,7 +1564,7 @@ export type StreamErrorEvent = Message<"agents.v1.StreamErrorEvent"> & {
  * Use `create(StreamErrorEventSchema)` to create a new message.
  */
 export const StreamErrorEventSchema: GenMessage<StreamErrorEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 27);
+  messageDesc(file_agents_v1_runtime, 40);
 
 /**
  * @generated from message agents.v1.StreamConfirmationRequiredEvent
@@ -1089,7 +1596,7 @@ export type StreamConfirmationRequiredEvent = Message<"agents.v1.StreamConfirmat
  * Use `create(StreamConfirmationRequiredEventSchema)` to create a new message.
  */
 export const StreamConfirmationRequiredEventSchema: GenMessage<StreamConfirmationRequiredEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 28);
+  messageDesc(file_agents_v1_runtime, 41);
 
 /**
  * Emitted once when the runtime swaps to a different provider key or
@@ -1141,7 +1648,7 @@ export type StreamFailoverEvent = Message<"agents.v1.StreamFailoverEvent"> & {
  * Use `create(StreamFailoverEventSchema)` to create a new message.
  */
 export const StreamFailoverEventSchema: GenMessage<StreamFailoverEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 29);
+  messageDesc(file_agents_v1_runtime, 42);
 
 /**
  * Emitted when the agent proposes a skill draft for the user to review. The
@@ -1162,7 +1669,7 @@ export type StreamSkillDraftEvent = Message<"agents.v1.StreamSkillDraftEvent"> &
  * Use `create(StreamSkillDraftEventSchema)` to create a new message.
  */
 export const StreamSkillDraftEventSchema: GenMessage<StreamSkillDraftEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 30);
+  messageDesc(file_agents_v1_runtime, 43);
 
 /**
  * RuntimeService handles message execution (send to LLM and store response).

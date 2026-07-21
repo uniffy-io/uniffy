@@ -11,13 +11,9 @@ import asyncio
 import pytest
 
 from uniffy.core.types import generate_id as uuid7
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime import publishers as publishers_mod
 from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeTokenEvent,
-)
 
 
 class _Recorder:
@@ -56,14 +52,14 @@ class TestRunStreamPublisher:
         pub = _make_publisher(flush_ms=1000, buffer_cap=3)
 
         async def run() -> None:
-            await pub.publish(RuntimeTokenEvent(text="a"))
-            await pub.publish(RuntimeTokenEvent(text="b"))
-            await pub.publish(RuntimeTokenEvent(text="c"))
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="a"))
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="b"))
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="c"))
 
         asyncio.run(run())
         assert len(rec.xadds) == 1
         assert rec.xadds[0][1]["seq"] == 1
-        assert rec.xadds[0][1]["event"]["text"] == "abc"
+        assert rec.xadds[0][1]["event"]["delta"] == "abc"
 
     def test_non_token_event_flushes_pending_tokens_first(self, monkeypatch) -> None:
         rec = _Recorder()
@@ -71,13 +67,38 @@ class TestRunStreamPublisher:
         pub = _make_publisher(flush_ms=0)
 
         async def run() -> None:
-            await pub.publish(RuntimeTokenEvent(text="a"))
-            await pub.publish(RuntimeTokenEvent(text="b"))
-            await pub.publish(RuntimeErrorEvent(error="boom"))
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="a"))
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="b"))
+            await pub.publish(StreamEvent(type=EventType.ERROR, error="boom"))
 
         asyncio.run(run())
         assert [x[1]["seq"] for x in rec.xadds] == [1, 2, 3]
         assert rec.xadds[-1][1]["event"]["type"] == "error"
+
+    def test_block_change_flushes_before_buffering(self, monkeypatch) -> None:
+        rec = _Recorder()
+        _patch(monkeypatch, rec)
+        pub = _make_publisher(flush_ms=1000, buffer_cap=32)
+
+        async def run() -> None:
+            await pub.publish(
+                StreamEvent(
+                    type=EventType.TEXT_BLOCK_DELTA, delta="a", block_id="b1"
+                )
+            )
+            await pub.publish(
+                StreamEvent(
+                    type=EventType.THINKING_BLOCK_DELTA, delta="t", block_id="b2"
+                )
+            )
+            await pub.close()
+
+        asyncio.run(run())
+        assert len(rec.xadds) == 2
+        assert rec.xadds[0][1]["event"]["type"] == "text_block_delta"
+        assert rec.xadds[0][1]["event"]["delta"] == "a"
+        assert rec.xadds[1][1]["event"]["type"] == "thinking_block_delta"
+        assert rec.xadds[1][1]["event"]["delta"] == "t"
 
     def test_close_flushes_pending(self, monkeypatch) -> None:
         rec = _Recorder()
@@ -85,12 +106,12 @@ class TestRunStreamPublisher:
         pub = _make_publisher(flush_ms=1000, buffer_cap=64)
 
         async def run() -> None:
-            await pub.publish(RuntimeTokenEvent(text="x"))
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="x"))
             await pub.close()
 
         asyncio.run(run())
         assert len(rec.xadds) == 1
-        assert rec.xadds[0][1]["event"]["text"] == "x"
+        assert rec.xadds[0][1]["event"]["delta"] == "x"
 
     def test_state_hash_refreshed_on_every_publish(self, monkeypatch) -> None:
         rec = _Recorder()
@@ -98,11 +119,11 @@ class TestRunStreamPublisher:
         pub = _make_publisher(flush_ms=0)
 
         async def run() -> None:
-            await pub.publish(RuntimeTokenEvent(text="a"))
+            await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="a"))
             await pub.publish(
-                RuntimeDoneEvent(
+                StreamEvent(type=EventType.DONE, 
                     assistant_message=_make_message_for_done(),
-                    model_used="claude-sonnet-4-6",
+                    model="claude-sonnet-4-6",
                 )
             )
 
@@ -117,7 +138,7 @@ class TestRunStreamPublisher:
         pub = _make_publisher(flush_ms=0)
 
         async def run() -> None:
-            await pub.publish(RuntimeErrorEvent(error="boom"))
+            await pub.publish(StreamEvent(type=EventType.ERROR, error="boom"))
 
         asyncio.run(run())
         assert rec.states[0]["status"] == "error"

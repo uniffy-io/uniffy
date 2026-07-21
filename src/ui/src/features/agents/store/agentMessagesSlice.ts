@@ -9,6 +9,7 @@ import {
     submitMessageFeedback,
 } from '@/features/agents/store/agentMessagesThunks';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
+import { persistedThinkingBlocks } from '@/features/agents/utils/thinkingBlocks';
 
 interface StreamingToolCall {
     toolCallId: string;
@@ -30,10 +31,39 @@ export interface FileMetadata {
     mediaType: string;
 }
 
+export interface ThinkingBlock {
+    blockId: string;
+    content: string;
+    elapsedMs: number;
+    done: boolean;
+}
+
+export function parsePersistedThinking(thinkingJson: string | undefined): ThinkingBlock[] {
+    if (!thinkingJson) return [];
+    try {
+        return persistedThinkingBlocks(JSON.parse(thinkingJson));
+    } catch {
+        return [];
+    }
+}
+
+export interface StreamingUsage {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadInputTokens: number;
+}
+
 interface AgentMessagesState {
     messagesBySession: Record<string, SerializedMessage[]>;
     fileMetadataCache: Record<string, FileMetadata>;
     streamingContent: string;
+    streamingThinking: ThinkingBlock[];
+    // Reasoning re-anchored to the stored assistant message on stream
+    // completion; rehydrated from each message's persisted thinking_json
+    // on history load.
+    thinkingByMessage: Record<string, ThinkingBlock[]>;
+    streamingUsage: StreamingUsage | null;
     streamingToolCalls: StreamingToolCall[];
     pendingConfirmation: PendingConfirmation | null;
     isStreaming: boolean;
@@ -74,6 +104,9 @@ const initialState: AgentMessagesState = {
     messagesBySession: {},
     fileMetadataCache: {},
     streamingContent: '',
+    streamingThinking: [],
+    thinkingByMessage: {},
+    streamingUsage: null,
     streamingToolCalls: [],
     pendingConfirmation: null,
     isStreaming: false,
@@ -89,6 +122,8 @@ export const agentMessagesSlice = createSlice({
         streamStarted: (state) => {
             state.isStreaming = true;
             state.streamingContent = '';
+            state.streamingThinking = [];
+            state.streamingUsage = null;
             state.streamingToolCalls = [];
             state.pendingConfirmation = null;
             state.activeRunId = null;
@@ -148,6 +183,7 @@ export const agentMessagesSlice = createSlice({
                 wasCancelled: false,
                 feedbackRating: '',
                 invokedSkillName: invokedSkillName || '',
+                thinkingJson: '',
             });
         },
         reconcileStoredMessage: (state, action: PayloadAction<{ sessionId: string; message: SerializedMessage }>) => {
@@ -173,6 +209,36 @@ export const agentMessagesSlice = createSlice({
         appendStreamingToken: (state, action: PayloadAction<string>) => {
             state.streamingContent += action.payload;
         },
+        // Opens the block implicitly on the first delta; replay coalescing
+        // can fold a whole block into one delta, so a separate start
+        // signal is never required.
+        appendStreamingThinking: (state, action: PayloadAction<{ blockId: string; delta: string }>) => {
+            const { blockId, delta } = action.payload;
+            const block = state.streamingThinking.find((b) => b.blockId === blockId);
+            if (block) {
+                block.content += delta;
+            } else {
+                state.streamingThinking.push({ blockId, content: delta, elapsedMs: 0, done: false });
+            }
+        },
+        endStreamingThinking: (state, action: PayloadAction<{ blockId: string; elapsedMs: number }>) => {
+            const block = state.streamingThinking.find((b) => b.blockId === action.payload.blockId);
+            if (!block) return;
+            block.done = true;
+            block.elapsedMs = action.payload.elapsedMs;
+        },
+        recordModelCallEnd: (state, action: PayloadAction<StreamingUsage>) => {
+            // Tool-loop runs invoke the model repeatedly; accumulate so the
+            // live counter reflects the whole reply, not the last segment.
+            const prev = state.streamingUsage;
+            state.streamingUsage = {
+                model: action.payload.model || prev?.model || '',
+                inputTokens: (prev?.inputTokens ?? 0) + action.payload.inputTokens,
+                outputTokens: (prev?.outputTokens ?? 0) + action.payload.outputTokens,
+                cacheReadInputTokens:
+                    (prev?.cacheReadInputTokens ?? 0) + action.payload.cacheReadInputTokens,
+            };
+        },
         addStreamingToolCall: (state, action: PayloadAction<{ toolCallId: string; toolName: string; toolArgsJson: string }>) => {
             state.streamingToolCalls.push({
                 toolCallId: action.payload.toolCallId,
@@ -197,8 +263,15 @@ export const agentMessagesSlice = createSlice({
                     state.messagesBySession[sessionId] = [];
                 }
                 state.messagesBySession[sessionId].push(assistantMessage);
+                if (state.streamingThinking.length > 0) {
+                    state.thinkingByMessage[assistantMessage.id] = state.streamingThinking.map(
+                        (b) => ({ ...b, done: true }),
+                    );
+                }
             }
             state.streamingContent = '';
+            state.streamingThinking = [];
+            state.streamingUsage = null;
             state.streamingToolCalls = [];
             state.activeRunId = null;
             writePersistedRunId(null);
@@ -213,6 +286,8 @@ export const agentMessagesSlice = createSlice({
             state.isStreaming = false;
             state.error = action.payload;
             state.streamingContent = '';
+            state.streamingThinking = [];
+            state.streamingUsage = null;
             state.streamingToolCalls = [];
             state.pendingConfirmation = null;
             state.activeRunId = null;
@@ -222,6 +297,8 @@ export const agentMessagesSlice = createSlice({
             state.isStreaming = false;
             state.error = null;
             state.streamingContent = '';
+            state.streamingThinking = [];
+            state.streamingUsage = null;
             state.streamingToolCalls = [];
             state.pendingConfirmation = null;
             state.activeRunId = null;
@@ -241,6 +318,12 @@ export const agentMessagesSlice = createSlice({
             .addCase(fetchMessages.fulfilled, (state, action) => {
                 state.loading = false;
                 state.messagesBySession[action.payload.sessionId] = action.payload.messages;
+                for (const msg of action.payload.messages) {
+                    const blocks = parsePersistedThinking(msg.thinkingJson);
+                    if (blocks.length > 0) {
+                        state.thinkingByMessage[msg.id] = blocks;
+                    }
+                }
             })
             .addCase(fetchMessages.rejected, (state, action) => {
                 state.loading = false;
@@ -302,6 +385,9 @@ export const {
     reconcileStoredMessage,
     cacheFileMetadata,
     appendStreamingToken,
+    appendStreamingThinking,
+    endStreamingThinking,
+    recordModelCallEnd,
     addStreamingToolCall,
     addStreamingToolResult,
     setConfirmationRequired,
@@ -316,6 +402,9 @@ export const {
 export const selectMessagesForSession = (sessionId: string | null) => (state: RootState) =>
     sessionId ? state.agentMessages.messagesBySession[sessionId] ?? [] : [];
 export const selectStreamingContent = (state: RootState) => state.agentMessages.streamingContent;
+export const selectStreamingThinking = (state: RootState) => state.agentMessages.streamingThinking;
+export const selectThinkingByMessage = (state: RootState) => state.agentMessages.thinkingByMessage;
+export const selectStreamingUsage = (state: RootState) => state.agentMessages.streamingUsage;
 export const selectStreamingToolCalls = (state: RootState) => state.agentMessages.streamingToolCalls;
 export const selectIsStreaming = (state: RootState) => state.agentMessages.isStreaming;
 export const selectActiveRunId = (state: RootState) => state.agentMessages.activeRunId;

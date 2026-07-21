@@ -1,5 +1,6 @@
 """Agents RPC handlers."""
 
+import json
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -120,6 +121,17 @@ def _parse_uuid(value: str, field: str) -> UUID:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
 
+def _parse_model_params(raw: str) -> dict:
+    """Parse a model_params JSON string into a plain object."""
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, "model_params is not valid JSON") from exc
+    if not isinstance(parsed, dict):
+        raise ConnectError(Code.INVALID_ARGUMENT, "model_params must be a JSON object")
+    return parsed
+
+
 def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
     """Translate a domain exception into the matching ``ConnectError``."""
     if isinstance(exc, NotFoundError):
@@ -179,6 +191,11 @@ class AgentsHandlers:
             else None
         )
         tag_ids = _parse_tag_ids(list(request.tag_ids))
+        model_params = (
+            _parse_model_params(request.model_params)
+            if request.HasField("model_params")
+            else None
+        )
 
         try:
             async with open_session() as session:
@@ -202,6 +219,7 @@ class AgentsHandlers:
                     image_provider_key_id=image_provider_key_id,
                     prompt_id=prompt_id,
                     tag_ids=tag_ids or None,
+                    model_params=model_params,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
@@ -384,6 +402,12 @@ class AgentsHandlers:
         if request.HasField("tag_ids"):
             tag_ids = _parse_tag_ids(list(request.tag_ids.ids))
 
+        model_params = (
+            _parse_model_params(request.model_params)
+            if request.HasField("model_params")
+            else None
+        )
+
         try:
             async with open_session() as session:
                 ops = AgentOperations(session)
@@ -408,6 +432,7 @@ class AgentsHandlers:
                     prompt_id=prompt_id,
                     clear_prompt=clear_prompt,
                     tag_ids=tag_ids,
+                    model_params=model_params,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])

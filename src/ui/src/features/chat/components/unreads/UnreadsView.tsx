@@ -9,7 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { SubjectAvatarById } from '@/components/subject';
-import { setActiveChannel } from '@/features/chat/store/chatChannelsSlice';
+import { setActiveChannel, selectChannels } from '@/features/chat/store/chatChannelsSlice';
 import { selectMessagesForChannel } from '@/features/chat/store/chatMessagesSlice';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
 import { MessageContent } from '@/features/chat/components/channel/MessageContent';
@@ -104,7 +104,7 @@ function UnreadMessageItem({ message, channelId, onNavigate }: {
 export function UnreadsView() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const channels = useAppSelector((state) => state.chatChannels.channels);
+  const channels = useAppSelector(selectChannels);
 
   const [markedRead, setMarkedRead] = useState<Set<string>>(new Set());
 

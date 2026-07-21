@@ -28,8 +28,6 @@
         "@dnd-kit/utilities": "^3.2.2",
         "@emoji-mart/data": "^1.2.1",
         "@emoji-mart/react": "^1.1.1",
-        "@fontsource-variable/geist": "^5.2.0",
-        "@fontsource-variable/inter": "^5.2.0",
         "@headlessui/react": "^2.2.9",
         "@lezer/highlight": "^1.2.3",
         "@milkdown/components": "^7.18.0",

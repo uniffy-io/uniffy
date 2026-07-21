@@ -187,6 +187,46 @@ class ChatAgentContextOperations:
             result[agent_id] = stats
         return result
 
+    async def get_config(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        agent_id: UUID,
+    ) -> AgentChannelBinding:
+        channel, _agent, binding = await self._load_triple(
+            organization_id, channel_id, agent_id
+        )
+        await self._require_read(user_id, organization_id, channel)
+        return binding
+
+    async def update_config(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        agent_id: UUID,
+        model_override: str | None = None,
+        model_params_override: dict | None = None,
+    ) -> AgentChannelBinding:
+        """`None` arguments leave the field unchanged; empty values clear it."""
+        channel, _agent, binding = await self._load_triple(
+            organization_id, channel_id, agent_id
+        )
+        await self._require_mutate(user_id, organization_id, channel)
+
+        if model_override is not None:
+            binding.model_override = model_override.strip() or None
+
+        if model_params_override is not None:
+            binding.model_params_override = model_params_override or None
+
+        await self._session.commit()
+        await self._session.refresh(binding)
+        return binding
+
     async def _fetch_bindings(
         self,
         channel_id: UUID,
@@ -313,7 +353,9 @@ class ChatAgentContextOperations:
         )
         await self._require_mutate(user_id, organization_id, channel)
 
-        provider, model_id = await self._resolve_provider_and_model(organization_id, agent)
+        provider, model_id = await self._resolve_provider_and_model(
+            organization_id, agent, binding
+        )
         context_window = await self._resolve_window_for_provider(provider, model_id)
 
         active_rows = await self._load_active_messages(channel_id, binding)
@@ -465,6 +507,7 @@ class ChatAgentContextOperations:
         self,
         organization_id: UUID,
         agent: Agent,
+        binding: AgentChannelBinding,
     ) -> tuple[object, str]:
         provider_ops = ProviderOperations(self._session)
         if agent.primary_provider_key_id:
@@ -473,12 +516,14 @@ class ChatAgentContextOperations:
                 key_id=agent.primary_provider_key_id,
             )
         else:
+            # The override may live on a different provider than the agent's
+            # primary model; resolve from the effective model.
             provider = await provider_ops.get_provider_for_model(
                 organization_id=organization_id,
-                model_id=agent.primary_model,
+                model_id=binding.model_override or agent.primary_model,
             )
         model_id = await resolve_model(
-            session_model_override=None,
+            session_model_override=binding.model_override,
             agent_primary_model=agent.primary_model,
             agent_fallback_models=list(agent.fallback_models or []),
             provider=provider,

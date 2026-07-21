@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Hash, MagnifyingGlass, Users, SignIn } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { selectChannels } from '@/features/chat/store/chatChannelsSlice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -12,7 +13,7 @@ import type { ChatChannel } from '@/features/chat/types';
 export function BrowseChannelsModal() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const myChannels = useAppSelector((state) => state.chatChannels.channels);
+  const myChannels = useAppSelector(selectChannels);
 
   const [publicChannels, setPublicChannels] = useState<ChatChannel[]>([]);
   const [loading, setLoading] = useState(true);

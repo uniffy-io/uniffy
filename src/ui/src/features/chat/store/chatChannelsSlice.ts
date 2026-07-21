@@ -1,9 +1,13 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createSelector, type PayloadAction } from '@reduxjs/toolkit';
 import type { ChatChannel, ChatChannelMember, ChatChannelCategory, ChannelPreferences } from '@/features/chat/types';
 import type { RootState } from '@/app/store';
 
+// Channels are normalized (byId + ids) so per-channel mutations - unread
+// bumps, activity touches - invalidate only that channel's subscribers.
+// A flat array made every message org-wide re-render every consumer.
 interface ChatChannelsState {
-  channels: ChatChannel[];
+  byId: Record<string, ChatChannel>;
+  ids: string[];
   activeChannelId: string | null;
   splitChannelId: string | null;
   channelMembers: Record<string, ChatChannelMember[]>;
@@ -13,7 +17,8 @@ interface ChatChannelsState {
 }
 
 const initialState: ChatChannelsState = {
-  channels: [],
+  byId: {},
+  ids: [],
   activeChannelId: null,
   splitChannelId: null,
   channelMembers: {},
@@ -27,27 +32,32 @@ export const chatChannelsSlice = createSlice({
   initialState,
   reducers: {
     setChannels: (state, action: PayloadAction<ChatChannel[]>) => {
-      state.channels = action.payload;
+      state.byId = {};
+      state.ids = [];
+      for (const channel of action.payload) {
+        state.byId[channel.id] = channel;
+        state.ids.push(channel.id);
+      }
     },
     addChannel: (state, action: PayloadAction<ChatChannel>) => {
       // Idempotent: backend dedups DMs and may return an id we already hold.
-      const index = state.channels.findIndex((c) => c.id === action.payload.id);
-      if (index >= 0) {
-        state.channels[index] = action.payload;
-      } else {
-        state.channels.push(action.payload);
+      if (!state.byId[action.payload.id]) {
+        state.ids.push(action.payload.id);
       }
+      state.byId[action.payload.id] = action.payload;
     },
     removeChannel: (state, action: PayloadAction<string>) => {
-      state.channels = state.channels.filter((c) => c.id !== action.payload);
+      if (state.byId[action.payload]) {
+        delete state.byId[action.payload];
+        state.ids = state.ids.filter((id) => id !== action.payload);
+      }
     },
     setActiveChannel: (state, action: PayloadAction<string | null>) => {
       state.activeChannelId = action.payload;
     },
     updateChannel: (state, action: PayloadAction<ChatChannel>) => {
-      const index = state.channels.findIndex((c) => c.id === action.payload.id);
-      if (index !== -1) {
-        state.channels[index] = action.payload;
+      if (state.byId[action.payload.id]) {
+        state.byId[action.payload.id] = action.payload;
       }
     },
     updateUnreadCounts: (
@@ -55,8 +65,9 @@ export const chatChannelsSlice = createSlice({
       action: PayloadAction<Array<{ channelId: string; unreadCount: number; mentionCount: number }>>,
     ) => {
       for (const item of action.payload) {
-        const channel = state.channels.find((c) => c.id === item.channelId);
-        if (channel) {
+        const channel = state.byId[item.channelId];
+        // Skip no-op writes so an already-clear channel keeps its object identity.
+        if (channel && (channel.unreadCount !== item.unreadCount || channel.mentionCount !== item.mentionCount)) {
           channel.unreadCount = item.unreadCount;
           channel.mentionCount = item.mentionCount;
         }
@@ -66,7 +77,7 @@ export const chatChannelsSlice = createSlice({
       state,
       action: PayloadAction<{ channelId: string; mentionCount?: number }>,
     ) => {
-      const channel = state.channels.find((c) => c.id === action.payload.channelId);
+      const channel = state.byId[action.payload.channelId];
       if (channel) {
         channel.unreadCount = (channel.unreadCount ?? 0) + 1;
         if (action.payload.mentionCount) {
@@ -74,13 +85,28 @@ export const chatChannelsSlice = createSlice({
         }
       }
     },
+    touchChannelActivity: (
+      state,
+      action: PayloadAction<{ channelId: string; at: string; isRoot: boolean }>,
+    ) => {
+      const channel = state.byId[action.payload.channelId];
+      if (!channel) return;
+      const { at, isRoot } = action.payload;
+      // Stream events can arrive out of order; only move time forward.
+      if (!channel.lastMessageAt || at > channel.lastMessageAt) {
+        channel.lastMessageAt = at;
+      }
+      if (isRoot && (!channel.lastRootMessageAt || at > channel.lastRootMessageAt)) {
+        channel.lastRootMessageAt = at;
+      }
+    },
     setChannelMembers: (
       state,
       action: PayloadAction<{ channelId: string; members: ChatChannelMember[] }>,
     ) => {
       state.channelMembers[action.payload.channelId] = action.payload.members;
-      const channel = state.channels.find((c) => c.id === action.payload.channelId);
-      if (channel) {
+      const channel = state.byId[action.payload.channelId];
+      if (channel && channel.memberCount !== action.payload.members.length) {
         channel.memberCount = action.payload.members.length;
       }
     },
@@ -133,6 +159,7 @@ export const {
   updateChannel,
   updateUnreadCounts,
   incrementUnreadCount,
+  touchChannelActivity,
   setChannelMembers,
   setChannelPreferences,
   updateChannelPreference,
@@ -143,45 +170,56 @@ export const {
   clearChatChannels,
 } = chatChannelsSlice.actions;
 
-export const selectChannels = (state: RootState): ChatChannel[] =>
-  state.chatChannels.channels;
+export const selectChannels = createSelector(
+  [(state: RootState) => state.chatChannels.byId, (state: RootState) => state.chatChannels.ids],
+  (byId, ids): ChatChannel[] => ids.map((id) => byId[id]),
+);
 
 export const selectActiveChannelId = (state: RootState): string | null =>
   state.chatChannels.activeChannelId;
 
 export const selectActiveChannel = (state: RootState): ChatChannel | undefined =>
-  state.chatChannels.channels.find((c) => c.id === state.chatChannels.activeChannelId);
+  state.chatChannels.activeChannelId
+    ? state.chatChannels.byId[state.chatChannels.activeChannelId]
+    : undefined;
 
 export const selectChannelById = (state: RootState, id: string): ChatChannel | undefined =>
-  state.chatChannels.channels.find((c) => c.id === id);
+  state.chatChannels.byId[id];
 
-const sortByLastActivity = (a: ChatChannel, b: ChatChannel): number => {
+export const sortByLastActivity = (a: ChatChannel, b: ChatChannel): number => {
   const aTime = a.lastMessageAt ?? a.createdAt ?? '';
   const bTime = b.lastMessageAt ?? b.createdAt ?? '';
   return bTime.localeCompare(aTime);
 };
 
-export const selectPublicChannels = (state: RootState): ChatChannel[] =>
-  state.chatChannels.channels
-    .filter((c) => c.channelType === 'PUBLIC')
-    .sort(sortByLastActivity);
+// Channels order by root-message activity so thread replies do not reshuffle the list.
+export const sortByRootActivity = (a: ChatChannel, b: ChatChannel): number => {
+  const aTime = a.lastRootMessageAt ?? a.createdAt ?? '';
+  const bTime = b.lastRootMessageAt ?? b.createdAt ?? '';
+  return bTime.localeCompare(aTime);
+};
 
-export const selectPrivateChannels = (state: RootState): ChatChannel[] =>
-  state.chatChannels.channels
-    .filter((c) => c.channelType === 'PRIVATE')
-    .sort(sortByLastActivity);
+export const selectPublicChannels = createSelector([selectChannels], (channels) =>
+  channels.filter((c) => c.channelType === 'PUBLIC').sort(sortByLastActivity),
+);
 
-export const selectDirectMessages = (state: RootState): ChatChannel[] =>
-  state.chatChannels.channels
+export const selectPrivateChannels = createSelector([selectChannels], (channels) =>
+  channels.filter((c) => c.channelType === 'PRIVATE').sort(sortByLastActivity),
+);
+
+export const selectDirectMessages = createSelector([selectChannels], (channels) =>
+  channels
     .filter(
       (c) =>
         !c.isAgentDm &&
         (c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM'),
     )
-    .sort(sortByLastActivity);
+    .sort(sortByLastActivity),
+);
 
-export const selectAgentChats = (state: RootState): ChatChannel[] =>
-  state.chatChannels.channels.filter((c) => c.isAgentDm).sort(sortByLastActivity);
+export const selectAgentChats = createSelector([selectChannels], (channels) =>
+  channels.filter((c) => c.isAgentDm).sort(sortByLastActivity),
+);
 
 export const selectChannelMembers = (
   state: RootState,
@@ -201,6 +239,8 @@ export const selectSplitChannelId = (state: RootState): string | null =>
   state.chatChannels.splitChannelId;
 
 export const selectSplitChannel = (state: RootState): ChatChannel | undefined =>
-  state.chatChannels.channels.find((c) => c.id === state.chatChannels.splitChannelId);
+  state.chatChannels.splitChannelId
+    ? state.chatChannels.byId[state.chatChannels.splitChannelId]
+    : undefined;
 
 export const chatChannelsReducer = chatChannelsSlice.reducer;

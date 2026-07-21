@@ -53,7 +53,17 @@ const PROVIDER_OPTIONS = [
     { value: "anthropic", label: "Anthropic" },
     { value: "openai", label: "OpenAI" },
     { value: "google", label: "Google" },
+    { value: "openrouter", label: "OpenRouter" },
+    { value: "xai", label: "xAI (Grok)" },
 ];
+
+const CREDENTIAL_PLACEHOLDERS: Record<string, string> = {
+    anthropic: "sk-ant-...",
+    openai: "sk-...",
+    google: "AIza...",
+    openrouter: "sk-or-...",
+    xai: "xai-...",
+};
 
 const CREDENTIAL_TYPE_OPTIONS = [
     { value: CredentialType.API_KEY, label: "API Key" },
@@ -275,7 +285,7 @@ function AddKeyForm({ onSubmit }: { onSubmit: () => void }) {
                     type="password"
                     value={credential}
                     onChange={(e) => setCredential(e.target.value)}
-                    placeholder="sk-ant-..."
+                    placeholder={CREDENTIAL_PLACEHOLDERS[provider] ?? "API key"}
                     className="font-mono"
                 />
             </div>

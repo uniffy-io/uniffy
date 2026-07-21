@@ -43,7 +43,9 @@ export function ChatPage() {
   const { isMobile } = useBreakpoint();
 
   const activeChannel = useAppSelector((state) =>
-    state.chatChannels.channels.find(c => c.id === state.chatChannels.activeChannelId)
+    state.chatChannels.activeChannelId
+      ? state.chatChannels.byId[state.chatChannels.activeChannelId]
+      : undefined,
   );
   const threadPanelOpen = useAppSelector((state) => state.chatUi.threadPanelOpen);
   const resourcePanelOpen = useAppSelector((state) => state.chatUi.resourcePanelOpen);

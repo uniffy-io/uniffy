@@ -23,15 +23,11 @@ from uniffy.core.valkey.streams import (
     stream_delete,
 )
 from uniffy.db.session import open_session
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.destinations import SessionDestination
 from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeMessageStoredEvent,
-)
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.observability.metrics import (
     AGENT_RUN_ACTIVE,
@@ -178,7 +174,7 @@ async def run_agent_session(
                 )
             async for event in event_stream:
                 await publisher.publish(event)
-                if isinstance(event, RuntimeDoneEvent):
+                if event.type is EventType.DONE:
                     done_seen = True
                     break
                 # Polling between events keeps the cancel window tight (one HGET per event).
@@ -188,10 +184,12 @@ async def run_agent_session(
                         session_id=sid,
                     )
                     await publisher.publish(
-                        RuntimeMessageStoredEvent(message=cancelled_msg)
+                        StreamEvent(
+                            type=EventType.MESSAGE_STORED, message=cancelled_msg
+                        )
                     )
                     await publisher.publish(
-                        RuntimeErrorEvent(error="cancelled")
+                        StreamEvent(type=EventType.ERROR, error="cancelled")
                     )
                     await set_run_state(
                         run_id=rid,
@@ -224,7 +222,7 @@ async def run_agent_session(
         error_text = str(exc)[:_ERROR_TRUNCATE_LIMIT]
         logger.exception(f"run_agent_session failed for run={run_id}: {exc}")
         try:
-            await publisher.publish(RuntimeErrorEvent(error=error_text))
+            await publisher.publish(StreamEvent(type=EventType.ERROR, error=error_text))
         except Exception:
             logger.exception(
                 f"run_agent_session: failed to publish error event for "

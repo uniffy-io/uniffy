@@ -152,8 +152,11 @@ type SessionInfo struct {
 	IsArchived        bool                   `protobuf:"varint,12,opt,name=is_archived,json=isArchived,proto3" json:"is_archived,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// JSON object of model-parameter overrides for this session only;
+	// resolved over the agent's stored model_params
+	ModelParamsOverride *string `protobuf:"bytes,15,opt,name=model_params_override,json=modelParamsOverride,proto3,oneof" json:"model_params_override,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *SessionInfo) Reset() {
@@ -284,6 +287,13 @@ func (x *SessionInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *SessionInfo) GetModelParamsOverride() string {
+	if x != nil && x.ModelParamsOverride != nil {
+		return *x.ModelParamsOverride
+	}
+	return ""
+}
+
 // Message info returned to clients
 type MessageInfo struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
@@ -320,8 +330,11 @@ type MessageInfo struct {
 	// Display name of the skill the user ran via the slash menu for this turn.
 	// Only user messages carry it; empty when no skill was invoked.
 	InvokedSkillName string `protobuf:"bytes,21,opt,name=invoked_skill_name,json=invokedSkillName,proto3" json:"invoked_skill_name,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// JSON array of persisted reasoning blocks
+	// [{block_id, content, elapsed_ms}]; "" when the turn had none
+	ThinkingJson  string `protobuf:"bytes,22,opt,name=thinking_json,json=thinkingJson,proto3" json:"thinking_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MessageInfo) Reset() {
@@ -501,6 +514,13 @@ func (x *MessageInfo) GetInvokedSkillName() string {
 	return ""
 }
 
+func (x *MessageInfo) GetThinkingJson() string {
+	if x != nil {
+		return x.ThinkingJson
+	}
+	return ""
+}
+
 type CreateSessionRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -508,8 +528,10 @@ type CreateSessionRequest struct {
 	Kind           SessionKind            `protobuf:"varint,3,opt,name=kind,proto3,enum=agents.v1.SessionKind" json:"kind,omitempty"`
 	DisplayName    *string                `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	ModelOverride  *string                `protobuf:"bytes,5,opt,name=model_override,json=modelOverride,proto3,oneof" json:"model_override,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// JSON object of model-parameter overrides for this session only
+	ModelParamsOverride *string `protobuf:"bytes,6,opt,name=model_params_override,json=modelParamsOverride,proto3,oneof" json:"model_params_override,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CreateSessionRequest) Reset() {
@@ -573,6 +595,13 @@ func (x *CreateSessionRequest) GetDisplayName() string {
 func (x *CreateSessionRequest) GetModelOverride() string {
 	if x != nil && x.ModelOverride != nil {
 		return *x.ModelOverride
+	}
+	return ""
+}
+
+func (x *CreateSessionRequest) GetModelParamsOverride() string {
+	if x != nil && x.ModelParamsOverride != nil {
+		return *x.ModelParamsOverride
 	}
 	return ""
 }
@@ -895,8 +924,10 @@ type UpdateSessionRequest struct {
 	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	DisplayName    *string                `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	ModelOverride  *string                `protobuf:"bytes,4,opt,name=model_override,json=modelOverride,proto3,oneof" json:"model_override,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// JSON object of model-parameter overrides; "{}" clears them
+	ModelParamsOverride *string `protobuf:"bytes,5,opt,name=model_params_override,json=modelParamsOverride,proto3,oneof" json:"model_params_override,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *UpdateSessionRequest) Reset() {
@@ -953,6 +984,13 @@ func (x *UpdateSessionRequest) GetDisplayName() string {
 func (x *UpdateSessionRequest) GetModelOverride() string {
 	if x != nil && x.ModelOverride != nil {
 		return *x.ModelOverride
+	}
+	return ""
+}
+
+func (x *UpdateSessionRequest) GetModelParamsOverride() string {
+	if x != nil && x.ModelParamsOverride != nil {
+		return *x.ModelParamsOverride
 	}
 	return ""
 }
@@ -2295,7 +2333,7 @@ var File_agents_v1_sessions_proto protoreflect.FileDescriptor
 
 const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\n" +
-	"\x18agents/v1/sessions.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf9\x04\n" +
+	"\x18agents/v1/sessions.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x05\n" +
 	"\vSessionInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -2314,10 +2352,12 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0f\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x127\n" +
+	"\x15model_params_override\x18\x0f \x01(\tH\x03R\x13modelParamsOverride\x88\x01\x01B\x0f\n" +
 	"\r_display_nameB\x11\n" +
 	"\x0f_model_overrideB\x12\n" +
-	"\x10_last_model_used\"\xaa\a\n" +
+	"\x10_last_model_usedB\x18\n" +
+	"\x16_model_params_override\"\xcf\a\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2345,7 +2385,8 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x10previous_content\x18\x12 \x01(\tH\aR\x0fpreviousContent\x88\x01\x01\x12#\n" +
 	"\rwas_cancelled\x18\x13 \x01(\bR\fwasCancelled\x12'\n" +
 	"\x0ffeedback_rating\x18\x14 \x01(\tR\x0efeedbackRating\x12,\n" +
-	"\x12invoked_skill_name\x18\x15 \x01(\tR\x10invokedSkillNameB\n" +
+	"\x12invoked_skill_name\x18\x15 \x01(\tR\x10invokedSkillName\x12#\n" +
+	"\rthinking_json\x18\x16 \x01(\tR\fthinkingJsonB\n" +
 	"\n" +
 	"\b_contentB\b\n" +
 	"\x06_modelB\f\n" +
@@ -2356,15 +2397,17 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\f_tool_resultB\f\n" +
 	"\n" +
 	"_edited_atB\x13\n" +
-	"\x11_previous_content\"\xfe\x01\n" +
+	"\x11_previous_content\"\xd1\x02\n" +
 	"\x14CreateSessionRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12*\n" +
 	"\x04kind\x18\x03 \x01(\x0e2\x16.agents.v1.SessionKindR\x04kind\x12&\n" +
 	"\fdisplay_name\x18\x04 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12*\n" +
-	"\x0emodel_override\x18\x05 \x01(\tH\x01R\rmodelOverride\x88\x01\x01B\x0f\n" +
+	"\x0emodel_override\x18\x05 \x01(\tH\x01R\rmodelOverride\x88\x01\x01\x127\n" +
+	"\x15model_params_override\x18\x06 \x01(\tH\x02R\x13modelParamsOverride\x88\x01\x01B\x0f\n" +
 	"\r_display_nameB\x11\n" +
-	"\x0f_model_override\"I\n" +
+	"\x0f_model_overrideB\x18\n" +
+	"\x16_model_params_override\"I\n" +
 	"\x15CreateSessionResponse\x120\n" +
 	"\asession\x18\x01 \x01(\v2\x16.agents.v1.SessionInfoR\asession\"F\n" +
 	"\x12GetSessionResponse\x120\n" +
@@ -2392,15 +2435,17 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\bsessions\x18\x01 \x03(\v2\x16.agents.v1.SessionInfoR\bsessions\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xd6\x01\n" +
+	"pagination\"\xa9\x02\n" +
 	"\x14UpdateSessionRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x12&\n" +
 	"\fdisplay_name\x18\x03 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12*\n" +
-	"\x0emodel_override\x18\x04 \x01(\tH\x01R\rmodelOverride\x88\x01\x01B\x0f\n" +
+	"\x0emodel_override\x18\x04 \x01(\tH\x01R\rmodelOverride\x88\x01\x01\x127\n" +
+	"\x15model_params_override\x18\x05 \x01(\tH\x02R\x13modelParamsOverride\x88\x01\x01B\x0f\n" +
 	"\r_display_nameB\x11\n" +
-	"\x0f_model_override\"_\n" +
+	"\x0f_model_overrideB\x18\n" +
+	"\x16_model_params_override\"_\n" +
 	"\x15ArchiveSessionRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +

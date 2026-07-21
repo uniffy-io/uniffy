@@ -169,6 +169,12 @@ const (
 	// ChatServiceResetChannelAgentContextProcedure is the fully-qualified name of the ChatService's
 	// ResetChannelAgentContext RPC.
 	ChatServiceResetChannelAgentContextProcedure = "/chat.v1.ChatService/ResetChannelAgentContext"
+	// ChatServiceGetChannelAgentConfigProcedure is the fully-qualified name of the ChatService's
+	// GetChannelAgentConfig RPC.
+	ChatServiceGetChannelAgentConfigProcedure = "/chat.v1.ChatService/GetChannelAgentConfig"
+	// ChatServiceUpdateChannelAgentConfigProcedure is the fully-qualified name of the ChatService's
+	// UpdateChannelAgentConfig RPC.
+	ChatServiceUpdateChannelAgentConfigProcedure = "/chat.v1.ChatService/UpdateChannelAgentConfig"
 	// ChatServiceStopAgentRunProcedure is the fully-qualified name of the ChatService's StopAgentRun
 	// RPC.
 	ChatServiceStopAgentRunProcedure = "/chat.v1.ChatService/StopAgentRun"
@@ -259,6 +265,13 @@ type ChatServiceClient interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error)
+	// Per-(channel, agent) model + parameter overrides stored on the binding
+	// row. Empty strings mean "no override" - the agent's own configuration
+	// applies.
+	GetChannelAgentConfig(context.Context, *connect.Request[v1.GetChannelAgentConfigRequest]) (*connect.Response[v1.GetChannelAgentConfigResponse], error)
+	// Update the binding's overrides. Absent optional fields leave the value
+	// unchanged; present-but-empty clears it (mirrors agents.v1.UpdateSession).
+	UpdateChannelAgentConfig(context.Context, *connect.Request[v1.UpdateChannelAgentConfigRequest]) (*connect.Response[v1.UpdateChannelAgentConfigResponse], error)
 	// Stop an in-flight agent run in a channel. Cancels the active run for the
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
@@ -576,6 +589,18 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("ResetChannelAgentContext")),
 			connect.WithClientOptions(opts...),
 		),
+		getChannelAgentConfig: connect.NewClient[v1.GetChannelAgentConfigRequest, v1.GetChannelAgentConfigResponse](
+			httpClient,
+			baseURL+ChatServiceGetChannelAgentConfigProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetChannelAgentConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		updateChannelAgentConfig: connect.NewClient[v1.UpdateChannelAgentConfigRequest, v1.UpdateChannelAgentConfigResponse](
+			httpClient,
+			baseURL+ChatServiceUpdateChannelAgentConfigProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UpdateChannelAgentConfig")),
+			connect.WithClientOptions(opts...),
+		),
 		stopAgentRun: connect.NewClient[v1.StopAgentRunRequest, v1.StopAgentRunResponse](
 			httpClient,
 			baseURL+ChatServiceStopAgentRunProcedure,
@@ -637,6 +662,8 @@ type chatServiceClient struct {
 	getChannelAgentContextStatsBatch *connect.Client[v1.GetChannelAgentContextStatsBatchRequest, v1.GetChannelAgentContextStatsBatchResponse]
 	compactChannelAgentContext       *connect.Client[v1.CompactChannelAgentContextRequest, v1.CompactChannelAgentContextResponse]
 	resetChannelAgentContext         *connect.Client[v1.ResetChannelAgentContextRequest, v1.ResetChannelAgentContextResponse]
+	getChannelAgentConfig            *connect.Client[v1.GetChannelAgentConfigRequest, v1.GetChannelAgentConfigResponse]
+	updateChannelAgentConfig         *connect.Client[v1.UpdateChannelAgentConfigRequest, v1.UpdateChannelAgentConfigResponse]
 	stopAgentRun                     *connect.Client[v1.StopAgentRunRequest, v1.StopAgentRunResponse]
 }
 
@@ -890,6 +917,16 @@ func (c *chatServiceClient) ResetChannelAgentContext(ctx context.Context, req *c
 	return c.resetChannelAgentContext.CallUnary(ctx, req)
 }
 
+// GetChannelAgentConfig calls chat.v1.ChatService.GetChannelAgentConfig.
+func (c *chatServiceClient) GetChannelAgentConfig(ctx context.Context, req *connect.Request[v1.GetChannelAgentConfigRequest]) (*connect.Response[v1.GetChannelAgentConfigResponse], error) {
+	return c.getChannelAgentConfig.CallUnary(ctx, req)
+}
+
+// UpdateChannelAgentConfig calls chat.v1.ChatService.UpdateChannelAgentConfig.
+func (c *chatServiceClient) UpdateChannelAgentConfig(ctx context.Context, req *connect.Request[v1.UpdateChannelAgentConfigRequest]) (*connect.Response[v1.UpdateChannelAgentConfigResponse], error) {
+	return c.updateChannelAgentConfig.CallUnary(ctx, req)
+}
+
 // StopAgentRun calls chat.v1.ChatService.StopAgentRun.
 func (c *chatServiceClient) StopAgentRun(ctx context.Context, req *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error) {
 	return c.stopAgentRun.CallUnary(ctx, req)
@@ -980,6 +1017,13 @@ type ChatServiceHandler interface {
 	// Per-agent: resetting agent A in a multi-agent channel does not affect
 	// agent B's view.
 	ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error)
+	// Per-(channel, agent) model + parameter overrides stored on the binding
+	// row. Empty strings mean "no override" - the agent's own configuration
+	// applies.
+	GetChannelAgentConfig(context.Context, *connect.Request[v1.GetChannelAgentConfigRequest]) (*connect.Response[v1.GetChannelAgentConfigResponse], error)
+	// Update the binding's overrides. Absent optional fields leave the value
+	// unchanged; present-but-empty clears it (mirrors agents.v1.UpdateSession).
+	UpdateChannelAgentConfig(context.Context, *connect.Request[v1.UpdateChannelAgentConfigRequest]) (*connect.Response[v1.UpdateChannelAgentConfigResponse], error)
 	// Stop an in-flight agent run in a channel. Cancels the active run for the
 	// given agent - whether it is mid tool call, image generation, or text
 	// generation - via the run-state cancel flag the egress task observes.
@@ -1293,6 +1337,18 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("ResetChannelAgentContext")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceGetChannelAgentConfigHandler := connect.NewUnaryHandler(
+		ChatServiceGetChannelAgentConfigProcedure,
+		svc.GetChannelAgentConfig,
+		connect.WithSchema(chatServiceMethods.ByName("GetChannelAgentConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUpdateChannelAgentConfigHandler := connect.NewUnaryHandler(
+		ChatServiceUpdateChannelAgentConfigProcedure,
+		svc.UpdateChannelAgentConfig,
+		connect.WithSchema(chatServiceMethods.ByName("UpdateChannelAgentConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceStopAgentRunHandler := connect.NewUnaryHandler(
 		ChatServiceStopAgentRunProcedure,
 		svc.StopAgentRun,
@@ -1401,6 +1457,10 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceCompactChannelAgentContextHandler.ServeHTTP(w, r)
 		case ChatServiceResetChannelAgentContextProcedure:
 			chatServiceResetChannelAgentContextHandler.ServeHTTP(w, r)
+		case ChatServiceGetChannelAgentConfigProcedure:
+			chatServiceGetChannelAgentConfigHandler.ServeHTTP(w, r)
+		case ChatServiceUpdateChannelAgentConfigProcedure:
+			chatServiceUpdateChannelAgentConfigHandler.ServeHTTP(w, r)
 		case ChatServiceStopAgentRunProcedure:
 			chatServiceStopAgentRunHandler.ServeHTTP(w, r)
 		default:
@@ -1610,6 +1670,14 @@ func (UnimplementedChatServiceHandler) CompactChannelAgentContext(context.Contex
 
 func (UnimplementedChatServiceHandler) ResetChannelAgentContext(context.Context, *connect.Request[v1.ResetChannelAgentContextRequest]) (*connect.Response[v1.ResetChannelAgentContextResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ResetChannelAgentContext is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetChannelAgentConfig(context.Context, *connect.Request[v1.GetChannelAgentConfigRequest]) (*connect.Response[v1.GetChannelAgentConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetChannelAgentConfig is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UpdateChannelAgentConfig(context.Context, *connect.Request[v1.UpdateChannelAgentConfigRequest]) (*connect.Response[v1.UpdateChannelAgentConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UpdateChannelAgentConfig is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) StopAgentRun(context.Context, *connect.Request[v1.StopAgentRunRequest]) (*connect.Response[v1.StopAgentRunResponse], error) {

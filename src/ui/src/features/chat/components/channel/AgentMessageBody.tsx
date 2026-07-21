@@ -1,13 +1,19 @@
 /** Renders an agent-authored ChatMessage by dispatching on `metadata.kind`. */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Wrench, CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, CircleNotch, Image as ImageIcon, Stop, Clock, Lightning } from '@phosphor-icons/react';
 import { StreamingMessage } from '@/features/chat/components/channel/StreamingMessage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { respondToAgentConfirmation, stopAgentRun } from '@/features/chat/store/chatThunks';
-import { selectMessagesForChannel, selectTypingUsers } from '@/features/chat/store/chatMessagesSlice';
+import {
+    selectAgentThinkingForMessage,
+    selectMessagesForChannel,
+    selectTypingUsers,
+} from '@/features/chat/store/chatMessagesSlice';
+import { ThinkingPane } from '@/features/agents/components/ThinkingPane';
+import { persistedThinkingBlocks } from '@/features/agents/utils/thinkingBlocks';
 import { formatMediaTime } from '@/shared/utils/dateFormatting';
 import { fetchSkillDraft, type SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
 import { SkillDraftEditorModal } from '@/features/agents/components/skills/SkillDraftEditorModal';
@@ -64,9 +70,34 @@ export function AgentMessageBody({ message }: AgentMessageBodyProps) {
         default: {
             // Route every final message through StreamingMessage so the word-reveal animation runs even when the full reply arrives in one chunk.
             const isStreaming = readBoolean(message.metadata, 'streaming');
-            return <StreamingMessage content={message.content} streaming={isStreaming} />;
+            return <FinalMessageWithThinking message={message} streaming={isStreaming} />;
         }
     }
+}
+
+/** Final agent reply plus its reasoning pane (thinking never merges into content).
+ * Live stream events win; after a reload the pane rehydrates from the
+ * persisted `metadata.thinking` blocks. */
+function FinalMessageWithThinking({ message, streaming }: { message: ChatMessage; streaming: boolean }) {
+    const liveThinking = useAppSelector((s) => selectAgentThinkingForMessage(s, message.id));
+    const persisted = useMemo(
+        () => persistedThinkingBlocks(message.metadata?.['thinking']),
+        [message.metadata],
+    );
+    const thinking = liveThinking.length > 0 ? liveThinking : persisted;
+
+    return (
+        <div className="min-w-0 flex-1">
+            {thinking.length > 0 && (
+                <ThinkingPane
+                    blocks={thinking}
+                    live={streaming && thinking.some((b) => !b.done)}
+                    answerStarted={!!message.content || !streaming}
+                />
+            )}
+            <StreamingMessage content={message.content} streaming={streaming} />
+        </div>
+    );
 }
 
 /** Ticks once a second while `active`; frozen otherwise. */

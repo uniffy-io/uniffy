@@ -61,6 +61,7 @@ from uniffy.core.valkey.streams import (
 )
 from uniffy.db import open_session
 from uniffy.domains.agents.budgets.operations import BudgetsOperations
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.approvals import get_approval_store
 from uniffy.domains.agents.runtime.converters import (
     runtime_stream_event_from_json,
@@ -72,12 +73,6 @@ from uniffy.domains.agents.runtime.file_loader import (
     FileContext,
     _file_contexts_to_payload,
     _load_files,
-)
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeMessageStoredEvent,
-    RuntimeStreamEvent,
 )
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations
@@ -143,21 +138,23 @@ def _stamp_run_id(event: AgentStreamEvent, run_id: UUID) -> AgentStreamEvent:
 def _synthetic_error_event(run_id: UUID, error_text: str) -> AgentStreamEvent:
     """Build an AgentStreamEvent error envelope for terminal cases."""
     return _stamp_run_id(
-        runtime_stream_event_to_proto(RuntimeErrorEvent(error=error_text)),
+        runtime_stream_event_to_proto(
+            StreamEvent(type=EventType.ERROR, error=error_text)
+        ),
         run_id,
     )
 
 
 async def _subscribe_runtime_events(
     run_id: UUID,
-) -> AsyncIterator[RuntimeStreamEvent]:
+) -> AsyncIterator[StreamEvent]:
     """Drain the per-run Valkey stream as decoded domain events.
 
-    Stops on the first :class:`RuntimeDoneEvent` /
-    :class:`RuntimeErrorEvent`. Honours a 120s wall budget across all
-    blocking rounds; on overrun yields a synthetic error event and
-    exits. Runtime errors raised by ``stream_xread`` collapse rounds to
-    empty so the wall budget remains the final stop condition.
+    Stops on the first terminal DONE / ERROR event. Honours a 120s wall
+    budget across all blocking rounds; on overrun yields a synthetic
+    error event and exits. Runtime errors raised by ``stream_xread``
+    collapse rounds to empty so the wall budget remains the final stop
+    condition.
     """
     stream_key = run_stream_key(run_id)
     last_id = "0"
@@ -167,7 +164,7 @@ async def _subscribe_runtime_events(
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             AGENT_RUN_SUBSCRIBE_TIMEOUT_TOTAL.inc()
-            yield RuntimeErrorEvent(error=SUBSCRIBE_TIMEOUT_MESSAGE)
+            yield StreamEvent(type=EventType.ERROR, error=SUBSCRIBE_TIMEOUT_MESSAGE)
             return
 
         block_ms = min(SUBSCRIBE_BLOCK_MS, max(50, int(remaining * 1000)))
@@ -196,7 +193,7 @@ async def _subscribe_runtime_events(
                 )
                 continue
             yield event
-            if isinstance(event, (RuntimeDoneEvent, RuntimeErrorEvent)):
+            if event.type in (EventType.DONE, EventType.ERROR):
                 return
 
 
@@ -212,10 +209,9 @@ class RuntimeHandlers:
 
         Runs the same enqueue + subscribe shape as the streaming handler
         but drains the events into a buffer and returns the final
-        :class:`SendMessageResponse` derived from the
-        :class:`RuntimeDoneEvent`. A terminal :class:`RuntimeErrorEvent`
-        becomes ``ConnectError(INTERNAL)``; the 120s wall budget surfaces
-        as ``ConnectError(DEADLINE_EXCEEDED)``.
+        :class:`SendMessageResponse` derived from the DONE event. A
+        terminal ERROR event becomes ``ConnectError(INTERNAL)``; the
+        120s wall budget surfaces as ``ConnectError(DEADLINE_EXCEEDED)``.
         """
         user_id = get_user_id_from_context(ctx)
 
@@ -259,17 +255,17 @@ class RuntimeHandlers:
             model_used = ""
 
             async for event in _subscribe_runtime_events(run_id):
-                if isinstance(event, RuntimeMessageStoredEvent):
+                if event.type is EventType.MESSAGE_STORED:
                     if user_message is None and event.message.role == "user":
                         user_message = event.message
                     continue
 
-                if isinstance(event, RuntimeDoneEvent):
+                if event.type is EventType.DONE:
                     assistant_message = event.assistant_message
-                    model_used = event.model_used
+                    model_used = event.model
                     break
 
-                if isinstance(event, RuntimeErrorEvent):
+                if event.type is EventType.ERROR:
                     if event.error == SUBSCRIBE_TIMEOUT_MESSAGE:
                         raise ConnectError(
                             Code.DEADLINE_EXCEEDED,

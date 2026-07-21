@@ -1,5 +1,7 @@
 """Proto <-> domain converters for the agents domain."""
 
+import json
+
 from uniffy_proto.agents.v1.agents_pb2 import AgentInfo
 
 from uniffy.core.avatars import get_avatar_url
@@ -73,6 +75,7 @@ def agent_to_proto(
             str(agent.image_provider_key_id) if agent.image_provider_key_id else ""
         ),
         prompt_id=str(agent.prompt_id) if agent.prompt_id else "",
+        model_params=json.dumps(agent.model_params or {}),
     )
 
     if resolved_baseline is not None:

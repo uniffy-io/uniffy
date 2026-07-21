@@ -7591,6 +7591,285 @@ func (x *ResetChannelAgentContextResponse) GetStats() *ChannelAgentContextStats 
 	return nil
 }
 
+type ChannelAgentConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Model override for this (channel, agent); "" = none (agent default).
+	ModelOverride string `protobuf:"bytes,1,opt,name=model_override,json=modelOverride,proto3" json:"model_override,omitempty"`
+	// JSON object of model-parameter overrides; "" = none.
+	ModelParamsOverrideJson string `protobuf:"bytes,2,opt,name=model_params_override_json,json=modelParamsOverrideJson,proto3" json:"model_params_override_json,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *ChannelAgentConfig) Reset() {
+	*x = ChannelAgentConfig{}
+	mi := &file_chat_v1_chat_proto_msgTypes[118]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelAgentConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelAgentConfig) ProtoMessage() {}
+
+func (x *ChannelAgentConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[118]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelAgentConfig.ProtoReflect.Descriptor instead.
+func (*ChannelAgentConfig) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{118}
+}
+
+func (x *ChannelAgentConfig) GetModelOverride() string {
+	if x != nil {
+		return x.ModelOverride
+	}
+	return ""
+}
+
+func (x *ChannelAgentConfig) GetModelParamsOverrideJson() string {
+	if x != nil {
+		return x.ModelParamsOverrideJson
+	}
+	return ""
+}
+
+type GetChannelAgentConfigRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ChannelId      string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	AgentId        string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetChannelAgentConfigRequest) Reset() {
+	*x = GetChannelAgentConfigRequest{}
+	mi := &file_chat_v1_chat_proto_msgTypes[119]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetChannelAgentConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetChannelAgentConfigRequest) ProtoMessage() {}
+
+func (x *GetChannelAgentConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[119]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetChannelAgentConfigRequest.ProtoReflect.Descriptor instead.
+func (*GetChannelAgentConfigRequest) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{119}
+}
+
+func (x *GetChannelAgentConfigRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetChannelAgentConfigRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *GetChannelAgentConfigRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+type GetChannelAgentConfigResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Config        *ChannelAgentConfig    `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetChannelAgentConfigResponse) Reset() {
+	*x = GetChannelAgentConfigResponse{}
+	mi := &file_chat_v1_chat_proto_msgTypes[120]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetChannelAgentConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetChannelAgentConfigResponse) ProtoMessage() {}
+
+func (x *GetChannelAgentConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[120]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetChannelAgentConfigResponse.ProtoReflect.Descriptor instead.
+func (*GetChannelAgentConfigResponse) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{120}
+}
+
+func (x *GetChannelAgentConfigResponse) GetConfig() *ChannelAgentConfig {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+type UpdateChannelAgentConfigRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ChannelId      string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	AgentId        string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	ModelOverride  *string                `protobuf:"bytes,4,opt,name=model_override,json=modelOverride,proto3,oneof" json:"model_override,omitempty"`
+	// JSON object of model-parameter overrides; "" or "{}" clears them
+	ModelParamsOverrideJson *string `protobuf:"bytes,5,opt,name=model_params_override_json,json=modelParamsOverrideJson,proto3,oneof" json:"model_params_override_json,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *UpdateChannelAgentConfigRequest) Reset() {
+	*x = UpdateChannelAgentConfigRequest{}
+	mi := &file_chat_v1_chat_proto_msgTypes[121]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateChannelAgentConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateChannelAgentConfigRequest) ProtoMessage() {}
+
+func (x *UpdateChannelAgentConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[121]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateChannelAgentConfigRequest.ProtoReflect.Descriptor instead.
+func (*UpdateChannelAgentConfigRequest) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{121}
+}
+
+func (x *UpdateChannelAgentConfigRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *UpdateChannelAgentConfigRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *UpdateChannelAgentConfigRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *UpdateChannelAgentConfigRequest) GetModelOverride() string {
+	if x != nil && x.ModelOverride != nil {
+		return *x.ModelOverride
+	}
+	return ""
+}
+
+func (x *UpdateChannelAgentConfigRequest) GetModelParamsOverrideJson() string {
+	if x != nil && x.ModelParamsOverrideJson != nil {
+		return *x.ModelParamsOverrideJson
+	}
+	return ""
+}
+
+type UpdateChannelAgentConfigResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Config        *ChannelAgentConfig    `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateChannelAgentConfigResponse) Reset() {
+	*x = UpdateChannelAgentConfigResponse{}
+	mi := &file_chat_v1_chat_proto_msgTypes[122]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateChannelAgentConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateChannelAgentConfigResponse) ProtoMessage() {}
+
+func (x *UpdateChannelAgentConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[122]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateChannelAgentConfigResponse.ProtoReflect.Descriptor instead.
+func (*UpdateChannelAgentConfigResponse) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{122}
+}
+
+func (x *UpdateChannelAgentConfigResponse) GetConfig() *ChannelAgentConfig {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
 var File_chat_v1_chat_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_proto_rawDesc = "" +
@@ -8272,7 +8551,28 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	" ResetChannelAgentContextResponse\x12,\n" +
 	"\x12divider_message_id\x18\x01 \x01(\tR\x10dividerMessageId\x125\n" +
 	"\breset_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\aresetAt\x127\n" +
-	"\x05stats\x18\x03 \x01(\v2!.chat.v1.ChannelAgentContextStatsR\x05stats*\x92\x01\n" +
+	"\x05stats\x18\x03 \x01(\v2!.chat.v1.ChannelAgentContextStatsR\x05stats\"x\n" +
+	"\x12ChannelAgentConfig\x12%\n" +
+	"\x0emodel_override\x18\x01 \x01(\tR\rmodelOverride\x12;\n" +
+	"\x1amodel_params_override_json\x18\x02 \x01(\tR\x17modelParamsOverrideJson\"\x81\x01\n" +
+	"\x1cGetChannelAgentConfigRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\"T\n" +
+	"\x1dGetChannelAgentConfigResponse\x123\n" +
+	"\x06config\x18\x01 \x01(\v2\x1b.chat.v1.ChannelAgentConfigR\x06config\"\xa4\x02\n" +
+	"\x1fUpdateChannelAgentConfigRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\x12*\n" +
+	"\x0emodel_override\x18\x04 \x01(\tH\x00R\rmodelOverride\x88\x01\x01\x12@\n" +
+	"\x1amodel_params_override_json\x18\x05 \x01(\tH\x01R\x17modelParamsOverrideJson\x88\x01\x01B\x11\n" +
+	"\x0f_model_overrideB\x1d\n" +
+	"\x1b_model_params_override_json\"W\n" +
+	" UpdateChannelAgentConfigResponse\x123\n" +
+	"\x06config\x18\x01 \x01(\v2\x1b.chat.v1.ChannelAgentConfigR\x06config*\x92\x01\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13CHANNEL_TYPE_PUBLIC\x10\x01\x12\x18\n" +
@@ -8299,7 +8599,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x19AgentConfirmationDecision\x12+\n" +
 	"'AGENT_CONFIRMATION_DECISION_UNSPECIFIED\x10\x00\x12'\n" +
 	"#AGENT_CONFIRMATION_DECISION_APPROVE\x10\x01\x12$\n" +
-	" AGENT_CONFIRMATION_DECISION_DENY\x10\x022\xef\"\n" +
+	" AGENT_CONFIRMATION_DECISION_DENY\x10\x022\xcc$\n" +
 	"\vChatService\x12P\n" +
 	"\rCreateChannel\x12\x1d.chat.v1.CreateChannelRequest\x1a\x1e.chat.v1.CreateChannelResponse\"\x00\x12G\n" +
 	"\n" +
@@ -8356,7 +8656,9 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x1bGetChannelAgentContextStats\x12+.chat.v1.GetChannelAgentContextStatsRequest\x1a,.chat.v1.GetChannelAgentContextStatsResponse\"\x00\x12\x89\x01\n" +
 	" GetChannelAgentContextStatsBatch\x120.chat.v1.GetChannelAgentContextStatsBatchRequest\x1a1.chat.v1.GetChannelAgentContextStatsBatchResponse\"\x00\x12w\n" +
 	"\x1aCompactChannelAgentContext\x12*.chat.v1.CompactChannelAgentContextRequest\x1a+.chat.v1.CompactChannelAgentContextResponse\"\x00\x12q\n" +
-	"\x18ResetChannelAgentContext\x12(.chat.v1.ResetChannelAgentContextRequest\x1a).chat.v1.ResetChannelAgentContextResponse\"\x00\x12M\n" +
+	"\x18ResetChannelAgentContext\x12(.chat.v1.ResetChannelAgentContextRequest\x1a).chat.v1.ResetChannelAgentContextResponse\"\x00\x12h\n" +
+	"\x15GetChannelAgentConfig\x12%.chat.v1.GetChannelAgentConfigRequest\x1a&.chat.v1.GetChannelAgentConfigResponse\"\x00\x12q\n" +
+	"\x18UpdateChannelAgentConfig\x12(.chat.v1.UpdateChannelAgentConfigRequest\x1a).chat.v1.UpdateChannelAgentConfigResponse\"\x00\x12M\n" +
 	"\fStopAgentRun\x12\x1c.chat.v1.StopAgentRunRequest\x1a\x1d.chat.v1.StopAgentRunResponse\"\x00B5Z3github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
 
 var (
@@ -8372,7 +8674,7 @@ func file_chat_v1_chat_proto_rawDescGZIP() []byte {
 }
 
 var file_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 121)
+var file_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 126)
 var file_chat_v1_chat_proto_goTypes = []any{
 	(ChannelType)(0),                                 // 0: chat.v1.ChannelType
 	(ChannelRole)(0),                                 // 1: chat.v1.ChannelRole
@@ -8497,42 +8799,47 @@ var file_chat_v1_chat_proto_goTypes = []any{
 	(*CompactChannelAgentContextResponse)(nil),       // 120: chat.v1.CompactChannelAgentContextResponse
 	(*ResetChannelAgentContextRequest)(nil),          // 121: chat.v1.ResetChannelAgentContextRequest
 	(*ResetChannelAgentContextResponse)(nil),         // 122: chat.v1.ResetChannelAgentContextResponse
-	nil,                                              // 123: chat.v1.ChatMessage.MetadataEntry
-	nil,                                              // 124: chat.v1.SendMessageRequest.MetadataEntry
-	nil,                                              // 125: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
-	(v1.SubjectType)(0),                              // 126: common.v1.SubjectType
-	(*timestamppb.Timestamp)(nil),                    // 127: google.protobuf.Timestamp
-	(*v11.Tag)(nil),                                  // 128: tags.v1.Tag
+	(*ChannelAgentConfig)(nil),                       // 123: chat.v1.ChannelAgentConfig
+	(*GetChannelAgentConfigRequest)(nil),             // 124: chat.v1.GetChannelAgentConfigRequest
+	(*GetChannelAgentConfigResponse)(nil),            // 125: chat.v1.GetChannelAgentConfigResponse
+	(*UpdateChannelAgentConfigRequest)(nil),          // 126: chat.v1.UpdateChannelAgentConfigRequest
+	(*UpdateChannelAgentConfigResponse)(nil),         // 127: chat.v1.UpdateChannelAgentConfigResponse
+	nil,                                              // 128: chat.v1.ChatMessage.MetadataEntry
+	nil,                                              // 129: chat.v1.SendMessageRequest.MetadataEntry
+	nil,                                              // 130: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
+	(v1.SubjectType)(0),                              // 131: common.v1.SubjectType
+	(*timestamppb.Timestamp)(nil),                    // 132: google.protobuf.Timestamp
+	(*v11.Tag)(nil),                                  // 133: tags.v1.Tag
 }
 var file_chat_v1_chat_proto_depIdxs = []int32{
-	126, // 0: chat.v1.ChatSubject.type:type_name -> common.v1.SubjectType
+	131, // 0: chat.v1.ChatSubject.type:type_name -> common.v1.SubjectType
 	0,   // 1: chat.v1.ChatChannel.channel_type:type_name -> chat.v1.ChannelType
-	127, // 2: chat.v1.ChatChannel.created_at:type_name -> google.protobuf.Timestamp
-	127, // 3: chat.v1.ChatChannel.updated_at:type_name -> google.protobuf.Timestamp
-	127, // 4: chat.v1.ChatChannel.last_message_at:type_name -> google.protobuf.Timestamp
-	127, // 5: chat.v1.ChatChannel.last_root_message_at:type_name -> google.protobuf.Timestamp
+	132, // 2: chat.v1.ChatChannel.created_at:type_name -> google.protobuf.Timestamp
+	132, // 3: chat.v1.ChatChannel.updated_at:type_name -> google.protobuf.Timestamp
+	132, // 4: chat.v1.ChatChannel.last_message_at:type_name -> google.protobuf.Timestamp
+	132, // 5: chat.v1.ChatChannel.last_root_message_at:type_name -> google.protobuf.Timestamp
 	1,   // 6: chat.v1.ChatChannel.current_user_role:type_name -> chat.v1.ChannelRole
-	128, // 7: chat.v1.ChatChannel.tags:type_name -> tags.v1.Tag
-	127, // 8: chat.v1.ThreadInfo.last_reply_at:type_name -> google.protobuf.Timestamp
+	133, // 7: chat.v1.ChatChannel.tags:type_name -> tags.v1.Tag
+	132, // 8: chat.v1.ThreadInfo.last_reply_at:type_name -> google.protobuf.Timestamp
 	2,   // 9: chat.v1.ChatMessage.sender_type:type_name -> chat.v1.SenderType
-	127, // 10: chat.v1.ChatMessage.edited_at:type_name -> google.protobuf.Timestamp
-	123, // 11: chat.v1.ChatMessage.metadata:type_name -> chat.v1.ChatMessage.MetadataEntry
-	127, // 12: chat.v1.ChatMessage.created_at:type_name -> google.protobuf.Timestamp
+	132, // 10: chat.v1.ChatMessage.edited_at:type_name -> google.protobuf.Timestamp
+	128, // 11: chat.v1.ChatMessage.metadata:type_name -> chat.v1.ChatMessage.MetadataEntry
+	132, // 12: chat.v1.ChatMessage.created_at:type_name -> google.protobuf.Timestamp
 	7,   // 13: chat.v1.ChatMessage.thread:type_name -> chat.v1.ThreadInfo
 	10,  // 14: chat.v1.ChatMessage.reactions:type_name -> chat.v1.ReactionGroup
 	8,   // 15: chat.v1.ChatMessage.reply_context:type_name -> chat.v1.ReplyContext
 	1,   // 16: chat.v1.ChatChannelMember.role:type_name -> chat.v1.ChannelRole
 	3,   // 17: chat.v1.ChatChannelMember.notification_level:type_name -> chat.v1.ChatNotificationLevel
-	127, // 18: chat.v1.ChatChannelMember.joined_at:type_name -> google.protobuf.Timestamp
-	127, // 19: chat.v1.ChatChannelMember.muted_until:type_name -> google.protobuf.Timestamp
+	132, // 18: chat.v1.ChatChannelMember.joined_at:type_name -> google.protobuf.Timestamp
+	132, // 19: chat.v1.ChatChannelMember.muted_until:type_name -> google.protobuf.Timestamp
 	5,   // 20: chat.v1.ChatChannelMember.subject:type_name -> chat.v1.ChatSubject
-	127, // 21: chat.v1.ChatChannelCategory.created_at:type_name -> google.protobuf.Timestamp
-	127, // 22: chat.v1.ChatChannelCategory.updated_at:type_name -> google.protobuf.Timestamp
+	132, // 21: chat.v1.ChatChannelCategory.created_at:type_name -> google.protobuf.Timestamp
+	132, // 22: chat.v1.ChatChannelCategory.updated_at:type_name -> google.protobuf.Timestamp
 	9,   // 23: chat.v1.ThreadInboxItem.root_message:type_name -> chat.v1.ChatMessage
-	127, // 24: chat.v1.ThreadInboxItem.last_reply_at:type_name -> google.protobuf.Timestamp
+	132, // 24: chat.v1.ThreadInboxItem.last_reply_at:type_name -> google.protobuf.Timestamp
 	9,   // 25: chat.v1.ThreadInboxItem.latest_reply:type_name -> chat.v1.ChatMessage
-	127, // 26: chat.v1.ChatResource.first_mentioned_at:type_name -> google.protobuf.Timestamp
-	127, // 27: chat.v1.ChatResource.last_mentioned_at:type_name -> google.protobuf.Timestamp
+	132, // 26: chat.v1.ChatResource.first_mentioned_at:type_name -> google.protobuf.Timestamp
+	132, // 27: chat.v1.ChatResource.last_mentioned_at:type_name -> google.protobuf.Timestamp
 	0,   // 28: chat.v1.CreateChannelRequest.channel_type:type_name -> chat.v1.ChannelType
 	5,   // 29: chat.v1.CreateChannelRequest.members:type_name -> chat.v1.ChatSubject
 	6,   // 30: chat.v1.CreateChannelResponse.channel:type_name -> chat.v1.ChatChannel
@@ -8546,9 +8853,9 @@ var file_chat_v1_chat_proto_depIdxs = []int32{
 	5,   // 38: chat.v1.RemoveMembersRequest.subjects:type_name -> chat.v1.ChatSubject
 	11,  // 39: chat.v1.GetMembersResponse.members:type_name -> chat.v1.ChatChannelMember
 	3,   // 40: chat.v1.UpdateChannelMemberRequest.notification_level:type_name -> chat.v1.ChatNotificationLevel
-	127, // 41: chat.v1.UpdateChannelMemberRequest.muted_until:type_name -> google.protobuf.Timestamp
+	132, // 41: chat.v1.UpdateChannelMemberRequest.muted_until:type_name -> google.protobuf.Timestamp
 	11,  // 42: chat.v1.UpdateChannelMemberResponse.member:type_name -> chat.v1.ChatChannelMember
-	124, // 43: chat.v1.SendMessageRequest.metadata:type_name -> chat.v1.SendMessageRequest.MetadataEntry
+	129, // 43: chat.v1.SendMessageRequest.metadata:type_name -> chat.v1.SendMessageRequest.MetadataEntry
 	9,   // 44: chat.v1.SendMessageResponse.message:type_name -> chat.v1.ChatMessage
 	9,   // 45: chat.v1.GetMessagesResponse.messages:type_name -> chat.v1.ChatMessage
 	9,   // 46: chat.v1.GetMessageResponse.message:type_name -> chat.v1.ChatMessage
@@ -8557,14 +8864,14 @@ var file_chat_v1_chat_proto_depIdxs = []int32{
 	9,   // 49: chat.v1.UnpinMessageResponse.message:type_name -> chat.v1.ChatMessage
 	9,   // 50: chat.v1.GetPinnedMessagesResponse.messages:type_name -> chat.v1.ChatMessage
 	9,   // 51: chat.v1.GetThreadResponse.root_message:type_name -> chat.v1.ChatMessage
-	127, // 52: chat.v1.GetThreadResponse.last_reply_at:type_name -> google.protobuf.Timestamp
+	132, // 52: chat.v1.GetThreadResponse.last_reply_at:type_name -> google.protobuf.Timestamp
 	9,   // 53: chat.v1.GetThreadMessagesResponse.messages:type_name -> chat.v1.ChatMessage
 	13,  // 54: chat.v1.GetThreadsInboxResponse.threads:type_name -> chat.v1.ThreadInboxItem
 	10,  // 55: chat.v1.AddReactionResponse.reaction:type_name -> chat.v1.ReactionGroup
 	79,  // 56: chat.v1.GetUnreadCountsResponse.channels:type_name -> chat.v1.ChannelUnreadCount
 	3,   // 57: chat.v1.ChannelUnreadCount.notification_level:type_name -> chat.v1.ChatNotificationLevel
-	127, // 58: chat.v1.ChannelUnreadCount.muted_until:type_name -> google.protobuf.Timestamp
-	127, // 59: chat.v1.ChatDraft.updated_at:type_name -> google.protobuf.Timestamp
+	132, // 58: chat.v1.ChannelUnreadCount.muted_until:type_name -> google.protobuf.Timestamp
+	132, // 59: chat.v1.ChatDraft.updated_at:type_name -> google.protobuf.Timestamp
 	80,  // 60: chat.v1.SaveDraftResponse.draft:type_name -> chat.v1.ChatDraft
 	80,  // 61: chat.v1.ListDraftsResponse.drafts:type_name -> chat.v1.ChatDraft
 	14,  // 62: chat.v1.GetChannelResourcesResponse.resources:type_name -> chat.v1.ChatResource
@@ -8578,124 +8885,130 @@ var file_chat_v1_chat_proto_depIdxs = []int32{
 	6,   // 70: chat.v1.MoveChannelToCategoryResponse.channel:type_name -> chat.v1.ChatChannel
 	4,   // 71: chat.v1.RespondToAgentConfirmationRequest.decision:type_name -> chat.v1.AgentConfirmationDecision
 	4,   // 72: chat.v1.RespondToAgentConfirmationResponse.decision:type_name -> chat.v1.AgentConfirmationDecision
-	127, // 73: chat.v1.RespondToAgentConfirmationResponse.decided_at:type_name -> google.protobuf.Timestamp
-	127, // 74: chat.v1.PendingAgentApproval.requested_at:type_name -> google.protobuf.Timestamp
-	127, // 75: chat.v1.PendingAgentApproval.expires_at:type_name -> google.protobuf.Timestamp
+	132, // 73: chat.v1.RespondToAgentConfirmationResponse.decided_at:type_name -> google.protobuf.Timestamp
+	132, // 74: chat.v1.PendingAgentApproval.requested_at:type_name -> google.protobuf.Timestamp
+	132, // 75: chat.v1.PendingAgentApproval.expires_at:type_name -> google.protobuf.Timestamp
 	111, // 76: chat.v1.GetChannelPendingApprovalsResponse.approvals:type_name -> chat.v1.PendingAgentApproval
-	127, // 77: chat.v1.ChannelAgentContextStats.manual_reset_at:type_name -> google.protobuf.Timestamp
+	132, // 77: chat.v1.ChannelAgentContextStats.manual_reset_at:type_name -> google.protobuf.Timestamp
 	114, // 78: chat.v1.GetChannelAgentContextStatsResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
-	125, // 79: chat.v1.GetChannelAgentContextStatsBatchResponse.stats:type_name -> chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
+	130, // 79: chat.v1.GetChannelAgentContextStatsBatchResponse.stats:type_name -> chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry
 	114, // 80: chat.v1.CompactChannelAgentContextResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
-	127, // 81: chat.v1.ResetChannelAgentContextResponse.reset_at:type_name -> google.protobuf.Timestamp
+	132, // 81: chat.v1.ResetChannelAgentContextResponse.reset_at:type_name -> google.protobuf.Timestamp
 	114, // 82: chat.v1.ResetChannelAgentContextResponse.stats:type_name -> chat.v1.ChannelAgentContextStats
-	114, // 83: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry.value:type_name -> chat.v1.ChannelAgentContextStats
-	16,  // 84: chat.v1.ChatService.CreateChannel:input_type -> chat.v1.CreateChannelRequest
-	18,  // 85: chat.v1.ChatService.GetChannel:input_type -> chat.v1.GetChannelRequest
-	20,  // 86: chat.v1.ChatService.UpdateChannel:input_type -> chat.v1.UpdateChannelRequest
-	23,  // 87: chat.v1.ChatService.ArchiveChannel:input_type -> chat.v1.ArchiveChannelRequest
-	25,  // 88: chat.v1.ChatService.DeleteChannel:input_type -> chat.v1.DeleteChannelRequest
-	27,  // 89: chat.v1.ChatService.ListChannels:input_type -> chat.v1.ListChannelsRequest
-	29,  // 90: chat.v1.ChatService.JoinChannel:input_type -> chat.v1.JoinChannelRequest
-	31,  // 91: chat.v1.ChatService.LeaveChannel:input_type -> chat.v1.LeaveChannelRequest
-	33,  // 92: chat.v1.ChatService.AddMembers:input_type -> chat.v1.AddMembersRequest
-	35,  // 93: chat.v1.ChatService.RemoveMembers:input_type -> chat.v1.RemoveMembersRequest
-	37,  // 94: chat.v1.ChatService.GetMembers:input_type -> chat.v1.GetMembersRequest
-	39,  // 95: chat.v1.ChatService.UpdateChannelMember:input_type -> chat.v1.UpdateChannelMemberRequest
-	41,  // 96: chat.v1.ChatService.SendMessage:input_type -> chat.v1.SendMessageRequest
-	43,  // 97: chat.v1.ChatService.GetMessages:input_type -> chat.v1.GetMessagesRequest
-	45,  // 98: chat.v1.ChatService.GetMessage:input_type -> chat.v1.GetMessageRequest
-	47,  // 99: chat.v1.ChatService.UpdateMessage:input_type -> chat.v1.UpdateMessageRequest
-	49,  // 100: chat.v1.ChatService.DeleteMessage:input_type -> chat.v1.DeleteMessageRequest
-	51,  // 101: chat.v1.ChatService.PinMessage:input_type -> chat.v1.PinMessageRequest
-	53,  // 102: chat.v1.ChatService.UnpinMessage:input_type -> chat.v1.UnpinMessageRequest
-	55,  // 103: chat.v1.ChatService.GetPinnedMessages:input_type -> chat.v1.GetPinnedMessagesRequest
-	57,  // 104: chat.v1.ChatService.GetThread:input_type -> chat.v1.GetThreadRequest
-	59,  // 105: chat.v1.ChatService.GetThreadMessages:input_type -> chat.v1.GetThreadMessagesRequest
-	61,  // 106: chat.v1.ChatService.GetThreadsInbox:input_type -> chat.v1.GetThreadsInboxRequest
-	63,  // 107: chat.v1.ChatService.FollowThread:input_type -> chat.v1.FollowThreadRequest
-	65,  // 108: chat.v1.ChatService.UnfollowThread:input_type -> chat.v1.UnfollowThreadRequest
-	67,  // 109: chat.v1.ChatService.AddReaction:input_type -> chat.v1.AddReactionRequest
-	69,  // 110: chat.v1.ChatService.RemoveReaction:input_type -> chat.v1.RemoveReactionRequest
-	71,  // 111: chat.v1.ChatService.SetTyping:input_type -> chat.v1.SetTypingRequest
-	73,  // 112: chat.v1.ChatService.MarkChannelRead:input_type -> chat.v1.MarkChannelReadRequest
-	75,  // 113: chat.v1.ChatService.MarkThreadRead:input_type -> chat.v1.MarkThreadReadRequest
-	77,  // 114: chat.v1.ChatService.GetUnreadCounts:input_type -> chat.v1.GetUnreadCountsRequest
-	81,  // 115: chat.v1.ChatService.SaveDraft:input_type -> chat.v1.SaveDraftRequest
-	83,  // 116: chat.v1.ChatService.DeleteDraft:input_type -> chat.v1.DeleteDraftRequest
-	85,  // 117: chat.v1.ChatService.ListDrafts:input_type -> chat.v1.ListDraftsRequest
-	87,  // 118: chat.v1.ChatService.GetChannelResources:input_type -> chat.v1.GetChannelResourcesRequest
-	89,  // 119: chat.v1.ChatService.CreateAgentChat:input_type -> chat.v1.CreateAgentChatRequest
-	91,  // 120: chat.v1.ChatService.RenameAgentChat:input_type -> chat.v1.RenameAgentChatRequest
-	93,  // 121: chat.v1.ChatService.ListAgentChats:input_type -> chat.v1.ListAgentChatsRequest
-	95,  // 122: chat.v1.ChatService.CreateCategory:input_type -> chat.v1.CreateCategoryRequest
-	97,  // 123: chat.v1.ChatService.UpdateCategory:input_type -> chat.v1.UpdateCategoryRequest
-	99,  // 124: chat.v1.ChatService.DeleteCategory:input_type -> chat.v1.DeleteCategoryRequest
-	101, // 125: chat.v1.ChatService.ListCategories:input_type -> chat.v1.ListCategoriesRequest
-	103, // 126: chat.v1.ChatService.ReorderCategories:input_type -> chat.v1.ReorderCategoriesRequest
-	105, // 127: chat.v1.ChatService.MoveChannelToCategory:input_type -> chat.v1.MoveChannelToCategoryRequest
-	107, // 128: chat.v1.ChatService.RespondToAgentConfirmation:input_type -> chat.v1.RespondToAgentConfirmationRequest
-	112, // 129: chat.v1.ChatService.GetChannelPendingApprovals:input_type -> chat.v1.GetChannelPendingApprovalsRequest
-	115, // 130: chat.v1.ChatService.GetChannelAgentContextStats:input_type -> chat.v1.GetChannelAgentContextStatsRequest
-	117, // 131: chat.v1.ChatService.GetChannelAgentContextStatsBatch:input_type -> chat.v1.GetChannelAgentContextStatsBatchRequest
-	119, // 132: chat.v1.ChatService.CompactChannelAgentContext:input_type -> chat.v1.CompactChannelAgentContextRequest
-	121, // 133: chat.v1.ChatService.ResetChannelAgentContext:input_type -> chat.v1.ResetChannelAgentContextRequest
-	109, // 134: chat.v1.ChatService.StopAgentRun:input_type -> chat.v1.StopAgentRunRequest
-	17,  // 135: chat.v1.ChatService.CreateChannel:output_type -> chat.v1.CreateChannelResponse
-	19,  // 136: chat.v1.ChatService.GetChannel:output_type -> chat.v1.GetChannelResponse
-	22,  // 137: chat.v1.ChatService.UpdateChannel:output_type -> chat.v1.UpdateChannelResponse
-	24,  // 138: chat.v1.ChatService.ArchiveChannel:output_type -> chat.v1.ArchiveChannelResponse
-	26,  // 139: chat.v1.ChatService.DeleteChannel:output_type -> chat.v1.DeleteChannelResponse
-	28,  // 140: chat.v1.ChatService.ListChannels:output_type -> chat.v1.ListChannelsResponse
-	30,  // 141: chat.v1.ChatService.JoinChannel:output_type -> chat.v1.JoinChannelResponse
-	32,  // 142: chat.v1.ChatService.LeaveChannel:output_type -> chat.v1.LeaveChannelResponse
-	34,  // 143: chat.v1.ChatService.AddMembers:output_type -> chat.v1.AddMembersResponse
-	36,  // 144: chat.v1.ChatService.RemoveMembers:output_type -> chat.v1.RemoveMembersResponse
-	38,  // 145: chat.v1.ChatService.GetMembers:output_type -> chat.v1.GetMembersResponse
-	40,  // 146: chat.v1.ChatService.UpdateChannelMember:output_type -> chat.v1.UpdateChannelMemberResponse
-	42,  // 147: chat.v1.ChatService.SendMessage:output_type -> chat.v1.SendMessageResponse
-	44,  // 148: chat.v1.ChatService.GetMessages:output_type -> chat.v1.GetMessagesResponse
-	46,  // 149: chat.v1.ChatService.GetMessage:output_type -> chat.v1.GetMessageResponse
-	48,  // 150: chat.v1.ChatService.UpdateMessage:output_type -> chat.v1.UpdateMessageResponse
-	50,  // 151: chat.v1.ChatService.DeleteMessage:output_type -> chat.v1.DeleteMessageResponse
-	52,  // 152: chat.v1.ChatService.PinMessage:output_type -> chat.v1.PinMessageResponse
-	54,  // 153: chat.v1.ChatService.UnpinMessage:output_type -> chat.v1.UnpinMessageResponse
-	56,  // 154: chat.v1.ChatService.GetPinnedMessages:output_type -> chat.v1.GetPinnedMessagesResponse
-	58,  // 155: chat.v1.ChatService.GetThread:output_type -> chat.v1.GetThreadResponse
-	60,  // 156: chat.v1.ChatService.GetThreadMessages:output_type -> chat.v1.GetThreadMessagesResponse
-	62,  // 157: chat.v1.ChatService.GetThreadsInbox:output_type -> chat.v1.GetThreadsInboxResponse
-	64,  // 158: chat.v1.ChatService.FollowThread:output_type -> chat.v1.FollowThreadResponse
-	66,  // 159: chat.v1.ChatService.UnfollowThread:output_type -> chat.v1.UnfollowThreadResponse
-	68,  // 160: chat.v1.ChatService.AddReaction:output_type -> chat.v1.AddReactionResponse
-	70,  // 161: chat.v1.ChatService.RemoveReaction:output_type -> chat.v1.RemoveReactionResponse
-	72,  // 162: chat.v1.ChatService.SetTyping:output_type -> chat.v1.SetTypingResponse
-	74,  // 163: chat.v1.ChatService.MarkChannelRead:output_type -> chat.v1.MarkChannelReadResponse
-	76,  // 164: chat.v1.ChatService.MarkThreadRead:output_type -> chat.v1.MarkThreadReadResponse
-	78,  // 165: chat.v1.ChatService.GetUnreadCounts:output_type -> chat.v1.GetUnreadCountsResponse
-	82,  // 166: chat.v1.ChatService.SaveDraft:output_type -> chat.v1.SaveDraftResponse
-	84,  // 167: chat.v1.ChatService.DeleteDraft:output_type -> chat.v1.DeleteDraftResponse
-	86,  // 168: chat.v1.ChatService.ListDrafts:output_type -> chat.v1.ListDraftsResponse
-	88,  // 169: chat.v1.ChatService.GetChannelResources:output_type -> chat.v1.GetChannelResourcesResponse
-	90,  // 170: chat.v1.ChatService.CreateAgentChat:output_type -> chat.v1.CreateAgentChatResponse
-	92,  // 171: chat.v1.ChatService.RenameAgentChat:output_type -> chat.v1.RenameAgentChatResponse
-	94,  // 172: chat.v1.ChatService.ListAgentChats:output_type -> chat.v1.ListAgentChatsResponse
-	96,  // 173: chat.v1.ChatService.CreateCategory:output_type -> chat.v1.CreateCategoryResponse
-	98,  // 174: chat.v1.ChatService.UpdateCategory:output_type -> chat.v1.UpdateCategoryResponse
-	100, // 175: chat.v1.ChatService.DeleteCategory:output_type -> chat.v1.DeleteCategoryResponse
-	102, // 176: chat.v1.ChatService.ListCategories:output_type -> chat.v1.ListCategoriesResponse
-	104, // 177: chat.v1.ChatService.ReorderCategories:output_type -> chat.v1.ReorderCategoriesResponse
-	106, // 178: chat.v1.ChatService.MoveChannelToCategory:output_type -> chat.v1.MoveChannelToCategoryResponse
-	108, // 179: chat.v1.ChatService.RespondToAgentConfirmation:output_type -> chat.v1.RespondToAgentConfirmationResponse
-	113, // 180: chat.v1.ChatService.GetChannelPendingApprovals:output_type -> chat.v1.GetChannelPendingApprovalsResponse
-	116, // 181: chat.v1.ChatService.GetChannelAgentContextStats:output_type -> chat.v1.GetChannelAgentContextStatsResponse
-	118, // 182: chat.v1.ChatService.GetChannelAgentContextStatsBatch:output_type -> chat.v1.GetChannelAgentContextStatsBatchResponse
-	120, // 183: chat.v1.ChatService.CompactChannelAgentContext:output_type -> chat.v1.CompactChannelAgentContextResponse
-	122, // 184: chat.v1.ChatService.ResetChannelAgentContext:output_type -> chat.v1.ResetChannelAgentContextResponse
-	110, // 185: chat.v1.ChatService.StopAgentRun:output_type -> chat.v1.StopAgentRunResponse
-	135, // [135:186] is the sub-list for method output_type
-	84,  // [84:135] is the sub-list for method input_type
-	84,  // [84:84] is the sub-list for extension type_name
-	84,  // [84:84] is the sub-list for extension extendee
-	0,   // [0:84] is the sub-list for field type_name
+	123, // 83: chat.v1.GetChannelAgentConfigResponse.config:type_name -> chat.v1.ChannelAgentConfig
+	123, // 84: chat.v1.UpdateChannelAgentConfigResponse.config:type_name -> chat.v1.ChannelAgentConfig
+	114, // 85: chat.v1.GetChannelAgentContextStatsBatchResponse.StatsEntry.value:type_name -> chat.v1.ChannelAgentContextStats
+	16,  // 86: chat.v1.ChatService.CreateChannel:input_type -> chat.v1.CreateChannelRequest
+	18,  // 87: chat.v1.ChatService.GetChannel:input_type -> chat.v1.GetChannelRequest
+	20,  // 88: chat.v1.ChatService.UpdateChannel:input_type -> chat.v1.UpdateChannelRequest
+	23,  // 89: chat.v1.ChatService.ArchiveChannel:input_type -> chat.v1.ArchiveChannelRequest
+	25,  // 90: chat.v1.ChatService.DeleteChannel:input_type -> chat.v1.DeleteChannelRequest
+	27,  // 91: chat.v1.ChatService.ListChannels:input_type -> chat.v1.ListChannelsRequest
+	29,  // 92: chat.v1.ChatService.JoinChannel:input_type -> chat.v1.JoinChannelRequest
+	31,  // 93: chat.v1.ChatService.LeaveChannel:input_type -> chat.v1.LeaveChannelRequest
+	33,  // 94: chat.v1.ChatService.AddMembers:input_type -> chat.v1.AddMembersRequest
+	35,  // 95: chat.v1.ChatService.RemoveMembers:input_type -> chat.v1.RemoveMembersRequest
+	37,  // 96: chat.v1.ChatService.GetMembers:input_type -> chat.v1.GetMembersRequest
+	39,  // 97: chat.v1.ChatService.UpdateChannelMember:input_type -> chat.v1.UpdateChannelMemberRequest
+	41,  // 98: chat.v1.ChatService.SendMessage:input_type -> chat.v1.SendMessageRequest
+	43,  // 99: chat.v1.ChatService.GetMessages:input_type -> chat.v1.GetMessagesRequest
+	45,  // 100: chat.v1.ChatService.GetMessage:input_type -> chat.v1.GetMessageRequest
+	47,  // 101: chat.v1.ChatService.UpdateMessage:input_type -> chat.v1.UpdateMessageRequest
+	49,  // 102: chat.v1.ChatService.DeleteMessage:input_type -> chat.v1.DeleteMessageRequest
+	51,  // 103: chat.v1.ChatService.PinMessage:input_type -> chat.v1.PinMessageRequest
+	53,  // 104: chat.v1.ChatService.UnpinMessage:input_type -> chat.v1.UnpinMessageRequest
+	55,  // 105: chat.v1.ChatService.GetPinnedMessages:input_type -> chat.v1.GetPinnedMessagesRequest
+	57,  // 106: chat.v1.ChatService.GetThread:input_type -> chat.v1.GetThreadRequest
+	59,  // 107: chat.v1.ChatService.GetThreadMessages:input_type -> chat.v1.GetThreadMessagesRequest
+	61,  // 108: chat.v1.ChatService.GetThreadsInbox:input_type -> chat.v1.GetThreadsInboxRequest
+	63,  // 109: chat.v1.ChatService.FollowThread:input_type -> chat.v1.FollowThreadRequest
+	65,  // 110: chat.v1.ChatService.UnfollowThread:input_type -> chat.v1.UnfollowThreadRequest
+	67,  // 111: chat.v1.ChatService.AddReaction:input_type -> chat.v1.AddReactionRequest
+	69,  // 112: chat.v1.ChatService.RemoveReaction:input_type -> chat.v1.RemoveReactionRequest
+	71,  // 113: chat.v1.ChatService.SetTyping:input_type -> chat.v1.SetTypingRequest
+	73,  // 114: chat.v1.ChatService.MarkChannelRead:input_type -> chat.v1.MarkChannelReadRequest
+	75,  // 115: chat.v1.ChatService.MarkThreadRead:input_type -> chat.v1.MarkThreadReadRequest
+	77,  // 116: chat.v1.ChatService.GetUnreadCounts:input_type -> chat.v1.GetUnreadCountsRequest
+	81,  // 117: chat.v1.ChatService.SaveDraft:input_type -> chat.v1.SaveDraftRequest
+	83,  // 118: chat.v1.ChatService.DeleteDraft:input_type -> chat.v1.DeleteDraftRequest
+	85,  // 119: chat.v1.ChatService.ListDrafts:input_type -> chat.v1.ListDraftsRequest
+	87,  // 120: chat.v1.ChatService.GetChannelResources:input_type -> chat.v1.GetChannelResourcesRequest
+	89,  // 121: chat.v1.ChatService.CreateAgentChat:input_type -> chat.v1.CreateAgentChatRequest
+	91,  // 122: chat.v1.ChatService.RenameAgentChat:input_type -> chat.v1.RenameAgentChatRequest
+	93,  // 123: chat.v1.ChatService.ListAgentChats:input_type -> chat.v1.ListAgentChatsRequest
+	95,  // 124: chat.v1.ChatService.CreateCategory:input_type -> chat.v1.CreateCategoryRequest
+	97,  // 125: chat.v1.ChatService.UpdateCategory:input_type -> chat.v1.UpdateCategoryRequest
+	99,  // 126: chat.v1.ChatService.DeleteCategory:input_type -> chat.v1.DeleteCategoryRequest
+	101, // 127: chat.v1.ChatService.ListCategories:input_type -> chat.v1.ListCategoriesRequest
+	103, // 128: chat.v1.ChatService.ReorderCategories:input_type -> chat.v1.ReorderCategoriesRequest
+	105, // 129: chat.v1.ChatService.MoveChannelToCategory:input_type -> chat.v1.MoveChannelToCategoryRequest
+	107, // 130: chat.v1.ChatService.RespondToAgentConfirmation:input_type -> chat.v1.RespondToAgentConfirmationRequest
+	112, // 131: chat.v1.ChatService.GetChannelPendingApprovals:input_type -> chat.v1.GetChannelPendingApprovalsRequest
+	115, // 132: chat.v1.ChatService.GetChannelAgentContextStats:input_type -> chat.v1.GetChannelAgentContextStatsRequest
+	117, // 133: chat.v1.ChatService.GetChannelAgentContextStatsBatch:input_type -> chat.v1.GetChannelAgentContextStatsBatchRequest
+	119, // 134: chat.v1.ChatService.CompactChannelAgentContext:input_type -> chat.v1.CompactChannelAgentContextRequest
+	121, // 135: chat.v1.ChatService.ResetChannelAgentContext:input_type -> chat.v1.ResetChannelAgentContextRequest
+	124, // 136: chat.v1.ChatService.GetChannelAgentConfig:input_type -> chat.v1.GetChannelAgentConfigRequest
+	126, // 137: chat.v1.ChatService.UpdateChannelAgentConfig:input_type -> chat.v1.UpdateChannelAgentConfigRequest
+	109, // 138: chat.v1.ChatService.StopAgentRun:input_type -> chat.v1.StopAgentRunRequest
+	17,  // 139: chat.v1.ChatService.CreateChannel:output_type -> chat.v1.CreateChannelResponse
+	19,  // 140: chat.v1.ChatService.GetChannel:output_type -> chat.v1.GetChannelResponse
+	22,  // 141: chat.v1.ChatService.UpdateChannel:output_type -> chat.v1.UpdateChannelResponse
+	24,  // 142: chat.v1.ChatService.ArchiveChannel:output_type -> chat.v1.ArchiveChannelResponse
+	26,  // 143: chat.v1.ChatService.DeleteChannel:output_type -> chat.v1.DeleteChannelResponse
+	28,  // 144: chat.v1.ChatService.ListChannels:output_type -> chat.v1.ListChannelsResponse
+	30,  // 145: chat.v1.ChatService.JoinChannel:output_type -> chat.v1.JoinChannelResponse
+	32,  // 146: chat.v1.ChatService.LeaveChannel:output_type -> chat.v1.LeaveChannelResponse
+	34,  // 147: chat.v1.ChatService.AddMembers:output_type -> chat.v1.AddMembersResponse
+	36,  // 148: chat.v1.ChatService.RemoveMembers:output_type -> chat.v1.RemoveMembersResponse
+	38,  // 149: chat.v1.ChatService.GetMembers:output_type -> chat.v1.GetMembersResponse
+	40,  // 150: chat.v1.ChatService.UpdateChannelMember:output_type -> chat.v1.UpdateChannelMemberResponse
+	42,  // 151: chat.v1.ChatService.SendMessage:output_type -> chat.v1.SendMessageResponse
+	44,  // 152: chat.v1.ChatService.GetMessages:output_type -> chat.v1.GetMessagesResponse
+	46,  // 153: chat.v1.ChatService.GetMessage:output_type -> chat.v1.GetMessageResponse
+	48,  // 154: chat.v1.ChatService.UpdateMessage:output_type -> chat.v1.UpdateMessageResponse
+	50,  // 155: chat.v1.ChatService.DeleteMessage:output_type -> chat.v1.DeleteMessageResponse
+	52,  // 156: chat.v1.ChatService.PinMessage:output_type -> chat.v1.PinMessageResponse
+	54,  // 157: chat.v1.ChatService.UnpinMessage:output_type -> chat.v1.UnpinMessageResponse
+	56,  // 158: chat.v1.ChatService.GetPinnedMessages:output_type -> chat.v1.GetPinnedMessagesResponse
+	58,  // 159: chat.v1.ChatService.GetThread:output_type -> chat.v1.GetThreadResponse
+	60,  // 160: chat.v1.ChatService.GetThreadMessages:output_type -> chat.v1.GetThreadMessagesResponse
+	62,  // 161: chat.v1.ChatService.GetThreadsInbox:output_type -> chat.v1.GetThreadsInboxResponse
+	64,  // 162: chat.v1.ChatService.FollowThread:output_type -> chat.v1.FollowThreadResponse
+	66,  // 163: chat.v1.ChatService.UnfollowThread:output_type -> chat.v1.UnfollowThreadResponse
+	68,  // 164: chat.v1.ChatService.AddReaction:output_type -> chat.v1.AddReactionResponse
+	70,  // 165: chat.v1.ChatService.RemoveReaction:output_type -> chat.v1.RemoveReactionResponse
+	72,  // 166: chat.v1.ChatService.SetTyping:output_type -> chat.v1.SetTypingResponse
+	74,  // 167: chat.v1.ChatService.MarkChannelRead:output_type -> chat.v1.MarkChannelReadResponse
+	76,  // 168: chat.v1.ChatService.MarkThreadRead:output_type -> chat.v1.MarkThreadReadResponse
+	78,  // 169: chat.v1.ChatService.GetUnreadCounts:output_type -> chat.v1.GetUnreadCountsResponse
+	82,  // 170: chat.v1.ChatService.SaveDraft:output_type -> chat.v1.SaveDraftResponse
+	84,  // 171: chat.v1.ChatService.DeleteDraft:output_type -> chat.v1.DeleteDraftResponse
+	86,  // 172: chat.v1.ChatService.ListDrafts:output_type -> chat.v1.ListDraftsResponse
+	88,  // 173: chat.v1.ChatService.GetChannelResources:output_type -> chat.v1.GetChannelResourcesResponse
+	90,  // 174: chat.v1.ChatService.CreateAgentChat:output_type -> chat.v1.CreateAgentChatResponse
+	92,  // 175: chat.v1.ChatService.RenameAgentChat:output_type -> chat.v1.RenameAgentChatResponse
+	94,  // 176: chat.v1.ChatService.ListAgentChats:output_type -> chat.v1.ListAgentChatsResponse
+	96,  // 177: chat.v1.ChatService.CreateCategory:output_type -> chat.v1.CreateCategoryResponse
+	98,  // 178: chat.v1.ChatService.UpdateCategory:output_type -> chat.v1.UpdateCategoryResponse
+	100, // 179: chat.v1.ChatService.DeleteCategory:output_type -> chat.v1.DeleteCategoryResponse
+	102, // 180: chat.v1.ChatService.ListCategories:output_type -> chat.v1.ListCategoriesResponse
+	104, // 181: chat.v1.ChatService.ReorderCategories:output_type -> chat.v1.ReorderCategoriesResponse
+	106, // 182: chat.v1.ChatService.MoveChannelToCategory:output_type -> chat.v1.MoveChannelToCategoryResponse
+	108, // 183: chat.v1.ChatService.RespondToAgentConfirmation:output_type -> chat.v1.RespondToAgentConfirmationResponse
+	113, // 184: chat.v1.ChatService.GetChannelPendingApprovals:output_type -> chat.v1.GetChannelPendingApprovalsResponse
+	116, // 185: chat.v1.ChatService.GetChannelAgentContextStats:output_type -> chat.v1.GetChannelAgentContextStatsResponse
+	118, // 186: chat.v1.ChatService.GetChannelAgentContextStatsBatch:output_type -> chat.v1.GetChannelAgentContextStatsBatchResponse
+	120, // 187: chat.v1.ChatService.CompactChannelAgentContext:output_type -> chat.v1.CompactChannelAgentContextResponse
+	122, // 188: chat.v1.ChatService.ResetChannelAgentContext:output_type -> chat.v1.ResetChannelAgentContextResponse
+	125, // 189: chat.v1.ChatService.GetChannelAgentConfig:output_type -> chat.v1.GetChannelAgentConfigResponse
+	127, // 190: chat.v1.ChatService.UpdateChannelAgentConfig:output_type -> chat.v1.UpdateChannelAgentConfigResponse
+	110, // 191: chat.v1.ChatService.StopAgentRun:output_type -> chat.v1.StopAgentRunResponse
+	139, // [139:192] is the sub-list for method output_type
+	86,  // [86:139] is the sub-list for method input_type
+	86,  // [86:86] is the sub-list for extension type_name
+	86,  // [86:86] is the sub-list for extension extendee
+	0,   // [0:86] is the sub-list for field type_name
 }
 
 func init() { file_chat_v1_chat_proto_init() }
@@ -8734,13 +9047,14 @@ func file_chat_v1_chat_proto_init() {
 	file_chat_v1_chat_proto_msgTypes[102].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[106].OneofWrappers = []any{}
 	file_chat_v1_chat_proto_msgTypes[109].OneofWrappers = []any{}
+	file_chat_v1_chat_proto_msgTypes[121].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_v1_chat_proto_rawDesc), len(file_chat_v1_chat_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   121,
+			NumMessages:   126,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1,5 +1,6 @@
 """RPC handlers for per-(channel, agent) context management."""
 
+import json
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -8,20 +9,28 @@ from connectrpc.request import RequestContext
 from google.protobuf.timestamp_pb2 import Timestamp
 from loguru import logger
 from uniffy_proto.chat.v1.chat_pb2 import (
+    ChannelAgentConfig as ProtoChannelAgentConfig,
+)
+from uniffy_proto.chat.v1.chat_pb2 import (
     ChannelAgentContextStats as ProtoChannelAgentContextStats,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
     CompactChannelAgentContextRequest,
     CompactChannelAgentContextResponse,
+    GetChannelAgentConfigRequest,
+    GetChannelAgentConfigResponse,
     GetChannelAgentContextStatsBatchRequest,
     GetChannelAgentContextStatsBatchResponse,
     GetChannelAgentContextStatsRequest,
     GetChannelAgentContextStatsResponse,
     ResetChannelAgentContextRequest,
     ResetChannelAgentContextResponse,
+    UpdateChannelAgentConfigRequest,
+    UpdateChannelAgentConfigResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.db import open_session
 from uniffy.domains.agents.chat_integration.context import (
     ChatAgentContextOperations,
@@ -56,6 +65,34 @@ def _stats_to_proto(stats: ContextStats) -> ProtoChannelAgentContextStats:
     return proto
 
 
+def _config_to_proto(binding: AgentChannelBinding) -> ProtoChannelAgentConfig:
+    return ProtoChannelAgentConfig(
+        model_override=binding.model_override or "",
+        model_params_override_json=(
+            json.dumps(binding.model_params_override)
+            if binding.model_params_override
+            else ""
+        ),
+    )
+
+
+def _parse_params_json(raw: str) -> dict:
+    """Empty string clears; otherwise the payload must be a JSON object."""
+    if not raw.strip():
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ConnectError(
+            Code.INVALID_ARGUMENT, "model_params_override_json is not valid JSON"
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise ConnectError(
+            Code.INVALID_ARGUMENT, "model_params_override_json must be a JSON object"
+        )
+    return parsed
+
+
 def _parse_ids(*raw: str) -> list[UUID]:
     try:
         return [UUID(r) for r in raw]
@@ -75,7 +112,7 @@ def _handle_error(e: Exception) -> None:
 
 
 class ChannelAgentContextHandlers:
-    """Mixin providing the three context RPCs on the chat service."""
+    """Mixin providing the channel-agent context and config RPCs on the chat service."""
 
     async def get_channel_agent_context_stats(
         self,
@@ -211,6 +248,81 @@ class ChannelAgentContextHandlers:
                     divider_message_id=str(result.divider_message_id),
                     reset_at=reset_at_ts,
                     stats=_stats_to_proto(result.stats),
+                )
+        except ConnectError:
+            raise
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def get_channel_agent_config(
+        self,
+        request: GetChannelAgentConfigRequest,
+        ctx: RequestContext,
+    ) -> GetChannelAgentConfigResponse:
+        """Read the model/params overrides for one (channel, agent) pair."""
+        user_id = get_user_id_from_context(ctx)
+        org_id, channel_id, agent_id = _parse_ids(
+            request.organization_id, request.channel_id, request.agent_id
+        )
+
+        try:
+            async with open_session() as session:
+                if not await is_chat_agents_enabled(session, org_id):
+                    raise ConnectError(
+                        Code.FAILED_PRECONDITION,
+                        "Agents-in-chat is not enabled for this organization",
+                    )
+                ops = ChatAgentContextOperations(session)
+                binding = await ops.get_config(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    agent_id=agent_id,
+                )
+                return GetChannelAgentConfigResponse(config=_config_to_proto(binding))
+        except ConnectError:
+            raise
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def update_channel_agent_config(
+        self,
+        request: UpdateChannelAgentConfigRequest,
+        ctx: RequestContext,
+    ) -> UpdateChannelAgentConfigResponse:
+        """Set or clear the overrides; absent optional fields stay unchanged."""
+        user_id = get_user_id_from_context(ctx)
+        org_id, channel_id, agent_id = _parse_ids(
+            request.organization_id, request.channel_id, request.agent_id
+        )
+
+        model_override = (
+            request.model_override if request.HasField("model_override") else None
+        )
+        model_params_override = (
+            _parse_params_json(request.model_params_override_json)
+            if request.HasField("model_params_override_json")
+            else None
+        )
+
+        try:
+            async with open_session() as session:
+                if not await is_chat_agents_enabled(session, org_id):
+                    raise ConnectError(
+                        Code.FAILED_PRECONDITION,
+                        "Agents-in-chat is not enabled for this organization",
+                    )
+                ops = ChatAgentContextOperations(session)
+                binding = await ops.update_config(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    channel_id=channel_id,
+                    agent_id=agent_id,
+                    model_override=model_override,
+                    model_params_override=model_params_override,
+                )
+                return UpdateChannelAgentConfigResponse(
+                    config=_config_to_proto(binding)
                 )
         except ConnectError:
             raise

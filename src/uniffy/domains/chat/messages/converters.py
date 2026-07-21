@@ -1,5 +1,6 @@
 """Proto <-> domain converters for chat messages."""
 
+import json
 from uuid import UUID
 
 from uniffy_proto.chat.v1.chat_pb2 import (
@@ -67,8 +68,10 @@ def message_to_proto(
     if message.edited_at:
         proto.edited_at.CopyFrom(datetime_to_timestamp(message.edited_at))
     if message.message_metadata:
+        # The proto metadata map is string-valued; structured values must
+        # cross as JSON (str() would emit Python repr, unparseable client-side).
         for k, v in message.message_metadata.items():
-            proto.metadata[k] = str(v)
+            proto.metadata[k] = json.dumps(v) if isinstance(v, (dict, list)) else str(v)
     if message.created_at:
         proto.created_at.CopyFrom(datetime_to_timestamp(message.created_at))
 

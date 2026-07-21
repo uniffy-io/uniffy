@@ -44,6 +44,7 @@ from uniffy.domains.agents.runtime.destinations import ChatDestination
 from uniffy.domains.agents.runtime.file_loader import FileContext, _safe_load_files
 from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.publishers import ChatStreamPublisher
+from uniffy.domains.chat.messages.operations import bump_channel_message_stats
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 from uniffy.domains.files.attachments.operations import AttachmentOperations
@@ -409,6 +410,12 @@ class AgentChatBridge:
                     },
                 )
                 self._session.add(resolved_msg)
+                await bump_channel_message_stats(
+                    self._session,
+                    channel_id,
+                    at=resolved_msg.created_at,
+                    is_root=True,
+                )
                 await self._session.commit()
                 await self._session.refresh(resolved_msg)
             except Exception:

@@ -63,6 +63,12 @@ class AgentMessage(SQLModel, table=True):
         default=None,
         sa_column=Column(JSONB, nullable=True),
     )
+    # Display-safe reasoning blocks streamed for this assistant turn:
+    # [{block_id, content, elapsed_ms}]. Never re-fed to the model.
+    thinking: list | None = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+    )
     is_thinking: bool = Field(default=False, nullable=False)
     is_compacted: bool = Field(default=False, nullable=False)
     is_invalidated: bool = Field(default=False, nullable=False)

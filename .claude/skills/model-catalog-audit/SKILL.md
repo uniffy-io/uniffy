@@ -1,6 +1,6 @@
 ---
 name: model-catalog-audit
-description: Audit the in-tree model catalog against each provider's live API (Anthropic, OpenAI, Google) using the keys in .env. Surfaces new models the catalog is missing and catalog models a provider no longer returns, so the catalog stays current. Works on both stacks (docker containers or host venv). Run periodically or when a provider ships new models / changes pricing.
+description: Audit the in-tree model catalog against each provider's live API (Anthropic, OpenAI, Google, OpenRouter, xAI) using the keys in .env. Surfaces new models the catalog is missing, catalog models a provider no longer returns, and price/context drift on the curated OpenRouter subset, so the catalog stays current. Works on both stacks (docker containers or host venv). Run periodically or when a provider ships new models / changes pricing.
 ---
 
 Keep `src/uniffy/domains/agents/providers/catalog/catalog.json` current by diffing
@@ -45,9 +45,10 @@ for the model list, pricing, capabilities, and image-gen support (see
    ```
 
    It loads provider keys from `.env` (`CLAUDE_API_KEY`, `OPENAI_API_KEY`,
-   `GOOGLE_GENAI_API_KEY`), lists each provider's live models, and diffs against
-   the catalog. A provider with no key in `.env` is skipped. It is read-only -
-   it never edits the catalog.
+   `GOOGLE_GENAI_API_KEY`, `XAI_API_KEY`), lists each provider's live models,
+   and diffs against the catalog. A provider with no key in `.env` is skipped.
+   OpenRouter uses a public endpoint and needs no key, so it always runs. It is
+   read-only - it never edits the catalog.
 
 3. **Read the report.** Per provider:
    - **NEW** - a live model the catalog does not resolve. These are candidates
@@ -57,14 +58,26 @@ for the model list, pricing, capabilities, and image-gen support (see
      add a code path. Focus on chat models and image-gen models.
    - **UNSEEN** - a catalog model this key did not return. Often just means the
      account lacks access or it is a dated snapshot; do not delete blindly.
+   - **openrouter** - different semantics. The catalog holds a deliberately
+     curated subset of 400+ upstream models, so the script never reports NEW
+     there. Instead it reports **MISSING UPSTREAM** (a catalog slug or alias
+     the live list no longer serves - candidate for replacement or
+     deprecation), **PRICE DRIFT** (catalog `cost_per_1m_*` vs live per-token
+     prices times 1M, beyond a small tolerance), and **CONTEXT DRIFT** (catalog
+     `context_window` vs live `context_length`).
+   - **xai** - standard NEW/UNSEEN via `XAI_API_KEY`. When the richer
+     `/v1/language-models` endpoint responds with pricing, the same PRICE DRIFT
+     report runs; otherwise the plain `/v1/models` list is used.
 
 4. **Review the findings with the user** before adopting anything.
 
 5. **Decide what to adopt.** For each NEW model worth adding (a real chat or
    image-gen model), and for any model whose pricing may have changed:
-   - **Research capabilities + pricing on the web** - the APIs do not return
-     pricing. Use the provider's official pricing/docs page (this is the same
-     flow used to add the Gemini "Nano Banana" models). Record the source.
+   - **Research capabilities + pricing on the web** - the anthropic/openai/
+     google APIs do not return pricing. Use the provider's official
+     pricing/docs page (this is the same flow used to add the Gemini "Nano
+     Banana" models). Record the source. For openrouter entries the audit's
+     PRICE DRIFT output already carries the live rates.
    - Confirm context window, max output tokens, vision/tools/reasoning support,
      and reasoning effort levels.
 
@@ -95,7 +108,9 @@ for the model list, pricing, capabilities, and image-gen support (see
 
 ## Notes
 
-- The script does not detect price changes (no API exposes pricing) - it only
-  finds model-id drift. Pricing is always a manual web-research step.
+- Price drift IS auto-detected for openrouter (its API exposes per-token
+  prices), and for xai when `/v1/language-models` reports pricing. Anthropic,
+  OpenAI, and Google expose no pricing, so their price changes remain a manual
+  web-research step.
 - New entries are picked up live (mtime reload); no restart needed to test.
 - Do not commit anything from `.env` or print key values.

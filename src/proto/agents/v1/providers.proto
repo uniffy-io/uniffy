@@ -109,6 +109,9 @@ message ModelInfo {
   // Whether the id resolves to a curated catalog entry (vs a live-API model
   // with no catalog row). The chat-model pickers show only catalog-known models.
   bool catalog_known = 18;
+  // JSON object describing the model's tunable parameters (knob -> bounded
+  // spec, merged from the catalog); "" when the model is not catalog-known
+  string parameter_schema_json = 19;
 }
 
 // Request to add a new provider key

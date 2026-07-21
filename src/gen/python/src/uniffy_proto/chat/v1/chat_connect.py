@@ -168,6 +168,12 @@ class ChatService(Protocol):
     async def reset_channel_agent_context(self, request: chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_channel_agent_config(self, request: chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_channel_agent_config(self, request: chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def stop_agent_run(self, request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -676,6 +682,26 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.reset_channel_agent_context,
+                ),
+                "/chat.v1.ChatService/GetChannelAgentConfig": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetChannelAgentConfig",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest,
+                        output=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_channel_agent_config,
+                ),
+                "/chat.v1.ChatService/UpdateChannelAgentConfig": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateChannelAgentConfig",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_channel_agent_config,
                 ),
                 "/chat.v1.ChatService/StopAgentRun": Endpoint.unary(
                     method=MethodInfo(
@@ -1701,6 +1727,46 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_channel_agent_config(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetChannelAgentConfig",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest,
+                output=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_channel_agent_config(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateChannelAgentConfig",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest,
+                output=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def stop_agent_run(
         self,
         request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest,
@@ -1825,6 +1891,10 @@ class ChatServiceSync(Protocol):
     def compact_channel_agent_context(self, request: chat_dot_v1_dot_chat__pb2.CompactChannelAgentContextRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CompactChannelAgentContextResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def reset_channel_agent_context(self, request: chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_channel_agent_config(self, request: chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_channel_agent_config(self, request: chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def stop_agent_run(self, request: chat_dot_v1_dot_chat__pb2.StopAgentRunRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.StopAgentRunResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -2333,6 +2403,26 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.reset_channel_agent_context,
+                ),
+                "/chat.v1.ChatService/GetChannelAgentConfig": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetChannelAgentConfig",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest,
+                        output=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_channel_agent_config,
+                ),
+                "/chat.v1.ChatService/UpdateChannelAgentConfig": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateChannelAgentConfig",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_channel_agent_config,
                 ),
                 "/chat.v1.ChatService/StopAgentRun": EndpointSync.unary(
                     method=MethodInfo(
@@ -3352,6 +3442,46 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextRequest,
                 output=chat_dot_v1_dot_chat__pb2.ResetChannelAgentContextResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_channel_agent_config(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetChannelAgentConfig",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigRequest,
+                output=chat_dot_v1_dot_chat__pb2.GetChannelAgentConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_channel_agent_config(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateChannelAgentConfig",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigRequest,
+                output=chat_dot_v1_dot_chat__pb2.UpdateChannelAgentConfigResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

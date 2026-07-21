@@ -13,7 +13,13 @@ from pathlib import Path
 from loguru import logger
 
 from uniffy.domains.agents.providers.base import ModelInfo
-from uniffy.domains.agents.providers.catalog.schema import Catalog, Model
+from uniffy.domains.agents.providers.catalog.schema import (
+    REASONING_KNOB,
+    Catalog,
+    Model,
+    ParamSpec,
+    ProviderCatalog,
+)
 
 logger = logger.bind(component="agents.providers.catalog")
 
@@ -96,6 +102,67 @@ def get_model(provider: str, model_id: str) -> Model | None:
 def resolve_pricing(provider: str, model_id: str) -> Model | None:
     """Return the catalog model carrying pricing, or ``None`` if unknown."""
     return get_model(provider, model_id)
+
+
+def _spec_entry(spec: ParamSpec, override_default: object = None) -> dict:
+    entry = spec.model_dump(exclude_none=True, exclude_defaults=True)
+    entry["type"] = spec.type
+    if override_default is not None:
+        spec.check_value("option override", override_default)
+        entry["default"] = override_default
+    if spec.type == "integer":
+        for bound in ("minimum", "maximum", "step"):
+            if bound in entry:
+                entry[bound] = int(entry[bound])
+    return entry
+
+
+def get_parameter_schema(provider: str, model_id: str) -> dict | None:
+    """Bounded per-model parameter schema, or ``None`` for unknown ids.
+
+    Merges the provider ``params_base`` with the model's ``options``
+    defaults, clamps ``max_tokens`` to the model's output ceiling, and
+    derives the reasoning knob: models with ``reasoning_levels`` get an
+    effort enum, budget-style reasoners (``can_reason`` without levels)
+    get on/off, everything else gets no knob. "off" always means "do not
+    request reasoning explicitly".
+    """
+    pc = get_catalog().providers.get(provider)
+    model = get_model(provider, model_id)
+    if pc is None or model is None:
+        return None
+    return merge_parameter_schema(pc, model)
+
+
+def merge_parameter_schema(pc: ProviderCatalog, model: Model) -> dict:
+    """The pure merge behind ``get_parameter_schema``."""
+    schema: dict[str, dict] = {}
+    for knob, spec in pc.params_base.items():
+        if knob in model.unsupported_params:
+            continue
+        entry = _spec_entry(spec, model.options.get(knob))
+        if knob == "max_tokens":
+            ceiling = model.default_max_tokens or model.context_window
+            entry["maximum"] = ceiling
+            if isinstance(entry.get("default"), int) and entry["default"] > ceiling:
+                entry["default"] = ceiling
+        schema[knob] = entry
+
+    if model.can_reason:
+        levels = ["off", *model.reasoning_levels] if model.reasoning_levels else ["off", "on"]
+        schema[REASONING_KNOB] = {"type": "enum", "enum": levels, "default": "off"}
+
+    model_opts = model.options.get("provider_options")
+    declared = {
+        key: _spec_entry(
+            spec,
+            model_opts.get(key) if isinstance(model_opts, dict) else None,
+        )
+        for key, spec in pc.provider_options.items()
+    }
+    if declared:
+        schema["provider_options"] = declared
+    return schema
 
 
 def provider_for_model(model_id: str) -> str | None:

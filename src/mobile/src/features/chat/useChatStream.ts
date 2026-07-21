@@ -66,6 +66,36 @@ export function useRunningAgents(channelId: string | undefined): string[] | unde
   return query.data;
 }
 
+export type AgentThinkingBlock = {
+  blockId: string;
+  content: string;
+  elapsedMs: number;
+  done: boolean;
+  lastSequence: number;
+};
+
+export function agentThinkingKey(orgId: string, channelId: string) {
+  return ["chat", "agentThinking", orgId, channelId];
+}
+
+/**
+ * Reasoning blocks per assistant message id, stream-patched and never
+ * fetched: thinking is not persisted server-side, so it exists only for
+ * replies streamed while this cache entry is alive.
+ */
+export function useAgentThinking(
+  channelId: string | undefined,
+): Record<string, AgentThinkingBlock[]> | undefined {
+  const { organizationId } = useAuth();
+  const query = useQuery<Record<string, AgentThinkingBlock[]>>({
+    queryKey: agentThinkingKey(organizationId ?? "", channelId ?? ""),
+    queryFn: () => ({}),
+    enabled: false,
+    staleTime: Infinity,
+  });
+  return query.data;
+}
+
 export function approvalsKey(orgId: string, channelId: string) {
   return ["chat", "approvals", orgId, channelId];
 }
@@ -357,6 +387,36 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
         return found ? next : old;
       });
       if (p.final) void queryClient.invalidateQueries({ queryKey: msgKey });
+      break;
+    }
+    case "agentThinkingDelta": {
+      const p = ce.payload.value;
+      queryClient.setQueryData<Record<string, AgentThinkingBlock[]>>(
+        agentThinkingKey(orgId, channelId),
+        (old) => {
+          const blocks = old?.[p.messageId] ?? [];
+          const existing = blocks.find((b) => b.blockId === p.blockId);
+          const base = existing ?? {
+            blockId: p.blockId,
+            content: "",
+            elapsedMs: 0,
+            done: false,
+            lastSequence: 0,
+          };
+          if (p.sequence <= base.lastSequence && !p.final) return old;
+          const updated: AgentThinkingBlock = {
+            ...base,
+            lastSequence: p.sequence,
+            content: p.delta ? base.content + p.delta : base.content,
+            done: base.done || p.final,
+            elapsedMs: p.final ? p.elapsedMs : base.elapsedMs,
+          };
+          const nextBlocks = existing
+            ? blocks.map((b) => (b.blockId === p.blockId ? updated : b))
+            : [...blocks, updated];
+          return { ...(old ?? {}), [p.messageId]: nextBlocks };
+        },
+      );
       break;
     }
     case "agentConfirmationRequested":

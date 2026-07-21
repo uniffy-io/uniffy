@@ -1,5 +1,7 @@
 """Proto <-> domain converters for providers."""
 
+import json
+
 from uniffy_proto.agents.v1.providers_pb2 import (
     CREDENTIAL_TYPE_API_KEY,
     CREDENTIAL_TYPE_SETUP_TOKEN,
@@ -19,6 +21,7 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.agents.providers.base import ModelInfo as DomainModelInfo
+from uniffy.domains.agents.providers.catalog import get_parameter_schema
 
 # Domain credential_type string <-> proto enum mappings
 
@@ -160,4 +163,12 @@ def model_info_to_proto(model: DomainModelInfo) -> ProtoModelInfo:
         cache_write_per_1m=str(model.cache_write_per_1m)
         if model.cache_write_per_1m is not None
         else "",
+        parameter_schema_json=_parameter_schema_json(model),
     )
+
+
+def _parameter_schema_json(model: DomainModelInfo) -> str:
+    if not model.catalog_known:
+        return ""
+    schema = get_parameter_schema(model.provider, model.id)
+    return json.dumps(schema) if schema else ""

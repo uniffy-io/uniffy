@@ -60,6 +60,10 @@ class AgentChannelBinding(SQLModel, table=True):
         default=None,
         sa_column=Column(Text(), nullable=True),
     )
+    model_params_override: dict | None = Field(
+        default=None,
+        sa_column=Column(PG_JSONB, nullable=True),
+    )
     tool_allowlist: list[str] | None = Field(
         default=None,
         sa_column=Column(PG_JSONB, nullable=True),

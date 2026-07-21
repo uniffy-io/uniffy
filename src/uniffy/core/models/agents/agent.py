@@ -39,6 +39,12 @@ class Agent(SQLModel, table=True):
         sa_column=Column(String(100), nullable=False, server_default=text("'claude-sonnet-4-6'")),
     )
     fallback_models: list = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
+    # Tuned model parameters (knob -> value), validated against the
+    # primary model's catalog parameter schema. {} = provider defaults.
+    model_params: dict = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'{}'::jsonb")),
+    )
     image_model: str = Field(
         default="",
         sa_column=Column(String(100), nullable=False, server_default=text("''")),

@@ -25,6 +25,7 @@ import { NotFoundPage } from '@/components/feedback/NotFoundPage';
 import { AccessPolicyDialogProvider, AccessPolicyDialog } from '@/features/permissions';
 import { MentionStateProvider } from '@/components/mention';
 import { lazyImport } from '@/shared/utils/lazyImport';
+import { loadLastOpenedNote } from '@/features/notes/utils/lastOpenedNote';
 
 // Expose toast on window in dev mode for testing
 if (import.meta.env.DEV) {
@@ -191,6 +192,21 @@ function AdminIndexRedirect() {
     }
 
     return <Navigate to="/" replace />;
+}
+
+/**
+ * NotesIndexRedirect - Sends /notes to the user's last opened note, else the graph dashboard.
+ * Redirecting during render keeps the heavy graph from mounting for a throwaway frame.
+ */
+function NotesIndexRedirect() {
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+    const userId = useAppSelector((state) => state.auth.user?.id);
+
+    const lastNoteId = organizationId && userId ? loadLastOpenedNote(organizationId, userId) : null;
+    if (lastNoteId) {
+        return <Navigate to={`/notes/${lastNoteId}`} replace state={{ fromLastOpened: true }} />;
+    }
+    return <Navigate to="/notes/graph" replace />;
 }
 
 export function App() {
@@ -375,7 +391,7 @@ export function App() {
                             path="/notes"
                             element={
                                 <ProtectedRoute>
-                                    <LazyRoute><NotesPage /></LazyRoute>
+                                    <NotesIndexRedirect />
                                 </ProtectedRoute>
                             }
                         />

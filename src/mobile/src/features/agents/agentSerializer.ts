@@ -10,6 +10,7 @@ export interface SerializedAgent {
   avatarKey: string;
   isDefault: boolean;
   primaryModel: string;
+  primaryProviderKeyId: string;
 }
 
 /** First line of the soul prompt, used as a short description. */
@@ -28,6 +29,7 @@ export function agentToPlain(proto: AgentInfo): SerializedAgent {
     avatarKey: proto.avatarKey || "",
     isDefault: proto.isDefault,
     primaryModel: proto.primaryModel,
+    primaryProviderKeyId: proto.primaryProviderKeyId,
   };
 }
 

@@ -10,16 +10,16 @@ from loguru import logger
 
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
-    DoneEvent,
-    ErrorEvent,
+    EventType,
     LLMProvider,
     ModelInfo,
     StreamEvent,
-    TokenEvent,
     ToolCall,
-    ToolCallEvent,
 )
-from uniffy.domains.agents.providers.catalog import model_infos_for_provider
+from uniffy.domains.agents.providers.catalog import (
+    model_info_for,
+    model_infos_for_provider,
+)
 from uniffy.domains.agents.providers.google.converters import (
     convert_messages_to_google,
     convert_tools_to_google,
@@ -205,6 +205,7 @@ class GoogleProvider(LLMProvider):
         tools: list[dict] | None = None,
         stream: bool = False,
         cache_key: str | None = None,
+        params: dict | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the Google Gemini API.
 
@@ -253,8 +254,10 @@ class GoogleProvider(LLMProvider):
         del cache_key  # Google ignores; see docstring.
         google_contents = convert_messages_to_google(messages)
         config = self._build_config(
+            model=model,
             system=system,
             tools=tools,
+            params=params,
         )
 
         if stream:
@@ -277,24 +280,13 @@ class GoogleProvider(LLMProvider):
     def _build_config(
         self,
         *,
+        model: str,
         system: str | None,
         tools: list[dict] | None,
+        params: dict | None = None,
     ) -> types.GenerateContentConfig:
-        """Build the GenerateContentConfig for the API call.
-
-        Parameters
-        ----------
-        system : str | None
-            System prompt.
-        tools : list[dict] | None
-            Tool definitions in Anthropic format.
-
-        Returns
-        -------
-        types.GenerateContentConfig
-            Config for the generate_content call.
-
-        """
+        """Build the GenerateContentConfig for the API call."""
+        params = params or {}
         config_kwargs: dict[str, Any] = {}
 
         if system:
@@ -306,7 +298,42 @@ class GoogleProvider(LLMProvider):
                 disable=True,
             )
 
+        if params.get("temperature") is not None:
+            config_kwargs["temperature"] = params["temperature"]
+        if params.get("top_p") is not None:
+            config_kwargs["top_p"] = params["top_p"]
+        if params.get("max_tokens"):
+            config_kwargs["max_output_tokens"] = params["max_tokens"]
+        top_k = (params.get("provider_options") or {}).get("top_k")
+        if top_k is not None:
+            config_kwargs["top_k"] = top_k
+
+        thinking = self._thinking_config(model, params.get("reasoning_effort", "off"))
+        if thinking is not None:
+            config_kwargs["thinking_config"] = thinking
+
         return types.GenerateContentConfig(**config_kwargs)
+
+    @staticmethod
+    def _thinking_config(model: str, effort: str) -> types.ThinkingConfig | None:
+        """Thinking config for the model's API generation, or None.
+
+        Models with catalog ``reasoning_levels`` (Gemini 3+) take
+        ``thinking_level``; budget-style reasoners (Gemini 2.5) take a
+        dynamic ``thinking_budget`` on "on". ``include_thoughts`` opts
+        into streamed thought summaries (the ``thought``-flagged parts
+        the stream parser turns into thinking events). "off" omits the
+        config entirely - 2.5 Pro cannot disable thinking, so a hard
+        budget of 0 would 400 there.
+        """
+        if effort == "off":
+            return None
+        info = model_info_for("google", model)
+        if info is None or not info.supports_thinking:
+            return None
+        if info.reasoning_levels:
+            return types.ThinkingConfig(thinking_level=effort, include_thoughts=True)
+        return types.ThinkingConfig(thinking_budget=-1, include_thoughts=True)
 
     async def _sync_completion(
         self,
@@ -383,22 +410,12 @@ class GoogleProvider(LLMProvider):
         contents: list[types.Content],
         config: types.GenerateContentConfig,
     ) -> AsyncIterator[StreamEvent]:
-        """Execute a streaming completion.
+        """Stream block-framed events; MODEL_CALL_END carries the CompletionResult.
 
-        Parameters
-        ----------
-        model : str
-            Model identifier.
-        contents : list[types.Content]
-            Conversation contents in Google format.
-        config : types.GenerateContentConfig
-            Generation config.
-
-        Yields
-        ------
-        StreamEvent
-            Stream events as they arrive.
-
+        Parts flagged ``thought`` are Gemini thinking summaries: they map
+        to thinking blocks and are filtered OUT of the answer text.
+        Function calls arrive whole, so each yields an immediate
+        TOOL_CALL_START / TOOL_CALL_END pair.
         """
         try:
             accumulated_content = ""
@@ -406,12 +423,16 @@ class GoogleProvider(LLMProvider):
             prompt_tokens = 0
             cached_tokens = 0
             output_tokens = 0
+            thinking_block_id = ""
+            text_block_id = ""
 
             stream = await self._client.aio.models.generate_content_stream(
                 model=model,
                 contents=contents,
                 config=config,
             )
+            yield StreamEvent(type=EventType.MODEL_CALL_START, model=model)
+
             async for chunk in stream:
                 if chunk.usage_metadata:
                     prompt_tokens, cached_tokens, output_tokens = _split_google_usage(
@@ -426,10 +447,44 @@ class GoogleProvider(LLMProvider):
                     continue
 
                 for part in candidate.content.parts:
-                    if part.text:
+                    if part.text and getattr(part, "thought", False):
+                        if not thinking_block_id:
+                            thinking_block_id = uuid.uuid4().hex[:12]
+                            yield StreamEvent(
+                                type=EventType.THINKING_BLOCK_START,
+                                block_id=thinking_block_id,
+                            )
+                        yield StreamEvent(
+                            type=EventType.THINKING_BLOCK_DELTA,
+                            block_id=thinking_block_id,
+                            delta=part.text,
+                        )
+                    elif part.text:
+                        if thinking_block_id:
+                            yield StreamEvent(
+                                type=EventType.THINKING_BLOCK_END,
+                                block_id=thinking_block_id,
+                            )
+                            thinking_block_id = ""
+                        if not text_block_id:
+                            text_block_id = uuid.uuid4().hex[:12]
+                            yield StreamEvent(
+                                type=EventType.TEXT_BLOCK_START,
+                                block_id=text_block_id,
+                            )
                         accumulated_content += part.text
-                        yield TokenEvent(text=part.text)
+                        yield StreamEvent(
+                            type=EventType.TEXT_BLOCK_DELTA,
+                            block_id=text_block_id,
+                            delta=part.text,
+                        )
                     elif part.function_call:
+                        if thinking_block_id:
+                            yield StreamEvent(
+                                type=EventType.THINKING_BLOCK_END,
+                                block_id=thinking_block_id,
+                            )
+                            thinking_block_id = ""
                         tc_id = f"toolu_{uuid.uuid4().hex[:24]}"
                         fc_args = part.function_call.args
                         tc_metadata: dict = {}
@@ -442,11 +497,36 @@ class GoogleProvider(LLMProvider):
                             metadata=tc_metadata,
                         )
                         tool_calls.append(tc)
-                        yield ToolCallEvent(tool_call=tc)
+                        tool_block_id = uuid.uuid4().hex[:12]
+                        yield StreamEvent(
+                            type=EventType.TOOL_CALL_START,
+                            block_id=tool_block_id,
+                            tool_call_id=tc.id,
+                            tool_name=tc.name,
+                        )
+                        yield StreamEvent(
+                            type=EventType.TOOL_CALL_END,
+                            block_id=tool_block_id,
+                            tool_call_id=tc.id,
+                            tool_name=tc.name,
+                            tool_args=tc.input,
+                        )
 
-            stop_reason = "tool_use" if tool_calls else "end_turn"
+            if thinking_block_id:
+                yield StreamEvent(
+                    type=EventType.THINKING_BLOCK_END, block_id=thinking_block_id
+                )
+            if text_block_id:
+                yield StreamEvent(
+                    type=EventType.TEXT_BLOCK_END, block_id=text_block_id
+                )
 
-            yield DoneEvent(
+            yield StreamEvent(
+                type=EventType.MODEL_CALL_END,
+                model=model,
+                input_tokens=prompt_tokens - cached_tokens,
+                output_tokens=output_tokens,
+                cache_read_input_tokens=cached_tokens,
                 result=CompletionResult(
                     content=accumulated_content,
                     model=model,
@@ -454,12 +534,12 @@ class GoogleProvider(LLMProvider):
                     output_tokens=output_tokens,
                     cache_read_input_tokens=cached_tokens,
                     tool_calls=tool_calls,
-                    stop_reason=stop_reason,
-                )
+                    stop_reason="tool_use" if tool_calls else "end_turn",
+                ),
             )
         except Exception as e:
             logger.error(f"Google streaming error: {e}")
-            yield ErrorEvent(error=str(e))
+            yield StreamEvent(type=EventType.ERROR, error=str(e))
 
 
 def _split_google_usage(usage_metadata) -> tuple[int, int, int]:

@@ -1,7 +1,9 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Hash } from '@phosphor-icons/react';
+import { cn } from '@/shared/utils/cn';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { ChannelHeader } from '@/features/chat/components/channel/ChannelHeader';
+import { AgentAuroraBackdrop, AgentDmGreeting, AgentDmHero } from '@/features/chat/components/channel/AgentDmHero';
 import { MessageList } from '@/features/chat/components/channel/MessageList';
 import { MessageCompose } from '@/features/chat/components/compose/MessageCompose';
 import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
@@ -32,7 +34,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const activeChannel = useAppSelector((state) =>
-    state.chatChannels.channels.find((c) => c.id === effectiveChannelId),
+    effectiveChannelId ? state.chatChannels.byId[effectiveChannelId] : undefined,
   );
   const replyToMessage = useAppSelector(selectReplyToMessage);
   const editingMessage = useAppSelector(selectEditingMessage);
@@ -40,6 +42,38 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   const channelMessages = useAppSelector((state) =>
     effectiveChannelId ? selectMessagesForChannel(state, effectiveChannelId) : null,
   );
+  // Raw ids distinguish "never fetched" (undefined) from "fetched, empty" ([]).
+  const messageIds = useAppSelector((state) =>
+    effectiveChannelId ? state.chatMessages.idsByChannel[effectiveChannelId] : undefined,
+  );
+  const dmAgent = useAppSelector((state) =>
+    activeChannel?.isAgentDm && activeChannel.agentId
+      ? state.agents.agents[activeChannel.agentId] ?? null
+      : null,
+  );
+
+  const isAgentDm = !!activeChannel?.isAgentDm && !!activeChannel?.agentId;
+  let heroPhase: 'off' | 'pending' | 'hero' = 'off';
+  if (isAgentDm) {
+    if (messageIds === undefined) heroPhase = 'pending';
+    else if (messageIds.length === 0) heroPhase = 'hero';
+  }
+
+  // Brief farewell overlay when the first message flips hero -> conversation:
+  // the greeting lifts out while the list and composer rise in.
+  const [heroExit, setHeroExit] = useState(false);
+  const prevHeroPhaseRef = useRef(heroPhase);
+  useEffect(() => {
+    const prev = prevHeroPhaseRef.current;
+    prevHeroPhaseRef.current = heroPhase;
+    if (prev === 'hero' && heroPhase === 'off') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- transition trigger on a derived phase flip, not derivable during render
+      setHeroExit(true);
+      const timer = setTimeout(() => setHeroExit(false), 550);
+      return () => clearTimeout(timer);
+    }
+  }, [heroPhase]);
+
   const { initialDraft, remoteDraft, onDraftChange, flushOnSend } = useDraftSync(
     effectiveChannelId ?? null,
   );
@@ -143,38 +177,73 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
       ? resolvedName
       : `#${resolvedName}`;
 
+  const compose = (
+    <MessageCompose
+      // Remount per channel: the contentEditable DOM would otherwise carry
+      // one channel's text into another and corrupt its draft.
+      key={effectiveChannelId ?? 'none'}
+      channelName={channelDisplayName}
+      channelId={effectiveChannelId ?? undefined}
+      organizationId={organizationId ?? undefined}
+      onSend={handleSend}
+      onTyping={handleTyping}
+      replyTo={replyToMessage}
+      onCancelReply={handleCancelReply}
+      editingMessage={editingMessage}
+      onSaveEdit={handleEdit}
+      onCancelEdit={handleCancelEdit}
+      onEditLast={handleEditLast}
+      initialDraft={initialDraft}
+      remoteDraft={remoteDraft}
+      onDraftChange={onDraftChange}
+      variant={heroPhase === 'hero' ? 'hero' : 'bar'}
+    />
+  );
+
   return (
     <div
-      className="flex flex-col h-full"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 90% 60% at 100% 0%, hsl(var(--primary) / 0.03), transparent 60%), radial-gradient(ellipse 80% 60% at 0% 100%, hsl(var(--ring) / 0.02), transparent 60%)',
-      }}
+      className="relative isolate flex flex-col h-full"
       onMouseDown={onFocus}
       data-testid="chat-channel-view"
       data-channel-id={effectiveChannelId ?? ''}
     >
+      <AgentAuroraBackdrop
+        intensity={isAgentDm ? (heroPhase !== 'off' ? 'hero' : 'ambient') : 'flat'}
+      />
       <ChannelHeader channelId={effectiveChannelId ?? undefined} showCloseButton={showCloseButton} onClose={onClose} />
       {effectiveChannelId && <CallSection channelId={effectiveChannelId} />}
-      <MessageList channelId={effectiveChannelId ?? undefined} />
-      <MessageCompose
-        // Remount per channel: the contentEditable DOM would otherwise carry
-        // one channel's text into another and corrupt its draft.
-        key={effectiveChannelId ?? 'none'}
-        channelName={channelDisplayName}
-        organizationId={organizationId ?? undefined}
-        onSend={handleSend}
-        onTyping={handleTyping}
-        replyTo={replyToMessage}
-        onCancelReply={handleCancelReply}
-        editingMessage={editingMessage}
-        onSaveEdit={handleEdit}
-        onCancelEdit={handleCancelEdit}
-        onEditLast={handleEditLast}
-        initialDraft={initialDraft}
-        remoteDraft={remoteDraft}
-        onDraftChange={onDraftChange}
-      />
+      {heroPhase === 'off' && (
+        <div
+          className={cn(
+            'relative flex min-h-0 flex-1 flex-col',
+            heroExit && 'hero-enter',
+          )}
+        >
+          <MessageList channelId={effectiveChannelId ?? undefined} />
+          {compose}
+          {heroExit && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-7 px-4 py-10">
+              <AgentDmGreeting
+                agentName={resolvedName}
+                avatarKey={dmAgent?.avatarKey}
+                avatarEmoji={dmAgent?.avatarEmoji}
+                exiting
+              />
+              <div className="h-28 w-full max-w-2xl" />
+            </div>
+          )}
+        </div>
+      )}
+      {heroPhase === 'hero' && (
+        <AgentDmHero
+          agentName={resolvedName}
+          avatarKey={dmAgent?.avatarKey}
+          avatarEmoji={dmAgent?.avatarEmoji}
+        >
+          {compose}
+        </AgentDmHero>
+      )}
+      {heroPhase === 'pending' && <div className="flex-1" />}
     </div>
   );
 }

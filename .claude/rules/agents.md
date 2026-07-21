@@ -70,7 +70,28 @@ Keys are Fernet-encrypted in `agents_provider_keys` (`provider`, `credential_typ
 
 Any key mutation publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey entry; a `PSUBSCRIBE` listener in app lifespan + worker startup drops the LRU entry on every pod. One signal, both tiers drop.
 
-Model resolution priority: session `model_override` -> agent `primary_model` -> `fallback_models` -> first catalog model -> `ValidationError`. Thinking levels map to budget tokens in code; temperature is forced to 1 when thinking is on (Anthropic requirement).
+Model resolution priority: session `model_override` -> agent `primary_model` -> `fallback_models` -> first catalog model -> `ValidationError`.
+
+## Model parameters
+
+The tunable knob surface is catalog-driven end to end; there is no per-model control list anywhere else.
+
+- The catalog (`providers/catalog/catalog.json`) declares per-provider `params_base` (ParamSpec bounds for `temperature`/`top_p`/`max_tokens`), per-provider `provider_options` (escape-hatch keys like `top_k`, `parallel_tool_calls`), per-model `options` (default overrides), and per-model `unsupported_params` (knobs the model's API rejects, e.g. temperature on Claude 4.7+ and OpenAI reasoning models). The reasoning knob is DERIVED, never declared: `reasoning_levels` -> enum `["off", ...levels]`; `can_reason` without levels -> `["off", "on"]`; `"off"` always means "do not request reasoning explicitly".
+- `get_parameter_schema(provider, model_id)` merges all of that into one bounded schema consumed by the frontend form (`ModelInfo.parameter_schema_json`), write-time validation (`AgentOperations.create/update` -> `validate_model_params`; switching `primary_model` auto-strips now-invalid knobs), and request building.
+- Values live on `Agent.model_params` (JSONB, `{}` = provider defaults; absent knob = provider default, schema defaults are never auto-injected) with a per-conversation override layer: `AgentSession.model_params_override` on the session destination, `AgentChannelBinding.model_override`/`model_params_override` on the chat destination (agent DMs; get/set via the chat service's `Get/UpdateChannelAgentConfig`, DM members mutate freely). `resolve_request_params` merges override-over-agent and strips anything the TARGET model rejects (warn log + `AGENT_MODEL_PARAM_DROPPED_TOTAL` metric) before every `chat_completion(params=...)` call.
+- Per-provider request mapping: Anthropic adaptive thinking + `output_config.effort` on models with `reasoning_levels` (legacy `enabled`+`budget_tokens` otherwise; sampling params never ride alongside thinking); OpenAI uses the RESPONSES API (`providers/openai/responses.py`, `store:false` + encrypted reasoning-item re-feed in tool loops - chat completions rejects reasoning+tools on gpt-5.4+); OpenRouter sends `extra_body.reasoning`; xAI sends nothing (grok always reasons); Google maps `thinking_level` / `thinking_budget` with `include_thoughts=True`.
+- Adding a knob: declare it in `params_base` (or `provider_options`), map it in each affected provider's request builder, done - the form renders it from the schema.
+
+## Streaming protocol
+
+One flat `StreamEvent` dataclass + `EventType` StrEnum (`providers/base.py`) travels provider -> runtime -> proto oneof (cases named 1:1) -> clients. `match evt.type` dispatch at every hop.
+
+- Blocks are framed `*_BLOCK_START -> *_BLOCK_DELTA -> *_BLOCK_END`, correlated by `block_id`; deltas are incremental. Clients fold per block (`agentStreamFold.ts` on web).
+- **Thinking separation is a hard contract:** thinking deltas travel ONLY as `THINKING_BLOCK_*` events / `AGENT_THINKING_DELTA` on the chat stream and never enter `accumulated_content`, a row's `content`, or the text fold. `elapsed_ms` is stamped by the runtime on `THINKING_BLOCK_END`; duration is never computed from client clocks.
+- The provider terminal is `MODEL_CALL_END` carrying the `CompletionResult` (stripped before forwarding; the runtime's per-run terminal is `DONE`). The tool loop consumes whole `ToolCall`s from the result; block events are display-only.
+- `CompletionResult.thinking_blocks` carries provider-native reasoning for within-turn re-feed (Anthropic signature blocks; OpenAI encrypted reasoning items). In-memory only, never persisted, never cross-provider.
+- Display persistence is separate: `_stream_segment` folds thinking into `[{block_id, content, elapsed_ms}]`, stored on `agents_messages.thinking` (sessions) or chat `message_metadata.thinking`, surfaced as `MessageInfo.thinking_json` and rehydrated into the panes after reload.
+- Every new event variant must serialize through all three surfaces: proto converter, JSON replay codec (`SubscribeToRun` replay), and the chat translator - and chat event types must be added to `_CHANNEL_EVENT_TYPES` (see `chat-domain.md`).
 
 ## Sessions and compaction
 

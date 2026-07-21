@@ -81,9 +81,10 @@ function hexToHsl(hex: string): string {
 }
 
 const FONT_FAMILIES = [
-    { id: 'inter', name: 'Inter', description: 'Clean and modern' },
-    { id: 'geist', name: 'Geist', description: 'Vercel style' },
-    { id: 'system', name: 'System', description: 'Native OS font' },
+    { id: 'inter', name: 'Inter', description: 'Clean and modern', stack: 'var(--font-inter)' },
+    { id: 'jakarta', name: 'Plus Jakarta Sans', description: 'The Uniffy brand font', stack: 'var(--font-jakarta)' },
+    { id: 'geist', name: 'Geist', description: 'Vercel style', stack: 'var(--font-geist)' },
+    { id: 'system', name: 'System', description: 'Native OS font', stack: 'var(--font-system)' },
 ];
 
 const EDITOR_OPTIONS = [
@@ -282,24 +283,33 @@ export function AppearanceSection() {
                 </div>
 
                 <div className="space-y-2">
-                    {FONT_FAMILIES.map(({ id, name, description }) => (
+                    {FONT_FAMILIES.map(({ id, name, description, stack }) => (
                         <button
                             key={id}
                             type="button"
                             disabled={saving}
-                            className={`flex items-center justify-between w-full p-4 rounded-lg border transition-colors ${
+                            className={`flex items-center justify-between w-full gap-4 p-4 rounded-lg border transition-colors ${
                                 appearance.fontFamily === id
                                     ? 'border-primary bg-primary/5'
                                     : 'border-border hover:border-primary/50 bg-card'
                             }`}
                             onClick={() => handleFontFamilyChange(id)}
+                            style={{ fontFamily: stack }}
                         >
-                            <div className="text-left">
-                                <div className="font-medium text-foreground">{name}</div>
-                                <div className="text-sm text-muted-foreground">{description}</div>
+                            <div className="flex items-center gap-4 min-w-0 text-left">
+                                <span className="text-3xl font-semibold text-foreground shrink-0 w-12 text-center" aria-hidden="true">
+                                    Ag
+                                </span>
+                                <div className="min-w-0">
+                                    <div className="font-medium text-foreground">{name}</div>
+                                    <div className="text-sm text-muted-foreground">{description}</div>
+                                    <div className="text-sm text-muted-foreground/80 truncate">
+                                        The quick brown fox jumps over the lazy dog 0123456789
+                                    </div>
+                                </div>
                             </div>
                             {appearance.fontFamily === id && (
-                                <Check size={20} weight="bold" className="text-primary" />
+                                <Check size={20} weight="bold" className="text-primary shrink-0" />
                             )}
                         </button>
                     ))}

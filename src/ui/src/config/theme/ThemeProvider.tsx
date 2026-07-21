@@ -190,6 +190,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (theme.fontFamily) {
       const fontVar = theme.fontFamily === 'inter' ? 'var(--font-inter)'
                     : theme.fontFamily === 'geist' ? 'var(--font-geist)'
+                    : theme.fontFamily === 'jakarta' ? 'var(--font-jakarta)'
                     : theme.fontFamily === 'system' ? 'var(--font-system)'
                     : 'var(--font-inter)';
       root.style.setProperty('--font-sans', fontVar);

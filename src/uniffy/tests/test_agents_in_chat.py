@@ -7,6 +7,8 @@ agent context handlers + summariser.
 """
 
 import asyncio
+import json
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -15,13 +17,21 @@ from uuid import UUID
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
+from uniffy_proto.chat.v1.chat_pb2 import (
+    GetChannelAgentConfigRequest,
+    UpdateChannelAgentConfigRequest,
+)
 
-from uniffy.core.errors import NotFoundError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import SenderType
 from uniffy.core.types import SubjectType
 from uniffy.core.types import generate_id as uuid7
+from uniffy.domains.agents.chat_integration import (
+    context_handlers as context_handlers_mod,
+)
 from uniffy.domains.agents.chat_integration.context import (
+    ChatAgentContextOperations,
     ContextStats,
     _format_chat_entry,
 )
@@ -33,12 +43,15 @@ from uniffy.domains.agents.chat_integration.mention_detector import (
     detect_agent_mentions,
 )
 from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
+from uniffy.domains.agents.runtime import operations as runtime_ops_mod
 from uniffy.domains.agents.runtime.approvals import ApprovalStore
 from uniffy.domains.agents.runtime.compactor import (
     SummaryResult,
     format_conversation_lines,
     summarise_conversation,
 )
+from uniffy.domains.agents.runtime.destinations import ChatDestination
+from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.writers import (
     ChatChannelMessageWriter,
     SessionMessageWriter,
@@ -676,3 +689,458 @@ class TestFormatChatEntry:
         label, body = _format_chat_entry(m, {}, agent_id)
         assert label == "TOOL"
         assert body.startswith("[Tool result: notes.search]")
+
+
+def _binding_row(
+    *,
+    model_override: str | None = None,
+    model_params_override: dict | None = None,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        model_override=model_override,
+        model_params_override=model_params_override,
+    )
+
+
+def _config_ops(
+    binding: SimpleNamespace,
+    *,
+    channel_type: ChannelType = ChannelType.DIRECT,
+):
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    access = MagicMock()
+    ops = ChatAgentContextOperations(session, access)
+    channel = SimpleNamespace(id=uuid7(), channel_type=channel_type)
+    agent = SimpleNamespace(id=uuid7(), name="Helper")
+    ops._load_triple = AsyncMock(return_value=(channel, agent, binding))
+    return ops, session, access
+
+
+class TestChannelAgentConfigOps:
+    def _ids(self) -> dict[str, UUID]:
+        return {
+            "user_id": uuid7(),
+            "organization_id": uuid7(),
+            "channel_id": uuid7(),
+            "agent_id": uuid7(),
+        }
+
+    def test_get_config_returns_binding_after_read_gate(self) -> None:
+        binding = _binding_row(model_override="claude-x")
+        ops, _session, access = _config_ops(binding)
+        access.check_access = AsyncMock()
+
+        out = _run(ops.get_config(**self._ids()))
+        assert out is binding
+        access.check_access.assert_awaited_once()
+
+    def test_update_config_sets_both_overrides(self) -> None:
+        binding = _binding_row()
+        ops, session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        out = _run(
+            ops.update_config(
+                **self._ids(),
+                model_override="  gpt-5.4  ",
+                model_params_override={"temperature": 0.2},
+            )
+        )
+        assert out is binding
+        assert binding.model_override == "gpt-5.4"
+        assert binding.model_params_override == {"temperature": 0.2}
+        session.commit.assert_awaited_once()
+
+    def test_update_config_none_leaves_fields_unchanged(self) -> None:
+        binding = _binding_row(
+            model_override="keep-me", model_params_override={"top_p": 0.9}
+        )
+        ops, _session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        _run(
+            ops.update_config(
+                **self._ids(), model_override=None, model_params_override=None
+            )
+        )
+        assert binding.model_override == "keep-me"
+        assert binding.model_params_override == {"top_p": 0.9}
+
+    def test_update_config_empty_values_clear(self) -> None:
+        binding = _binding_row(
+            model_override="old-model", model_params_override={"top_p": 0.9}
+        )
+        ops, _session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        _run(
+            ops.update_config(
+                **self._ids(), model_override="  ", model_params_override={}
+            )
+        )
+        assert binding.model_override is None
+        assert binding.model_params_override is None
+
+    def test_update_config_denied_for_dm_non_member(self) -> None:
+        binding = _binding_row(model_override="keep-me")
+        ops, session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=None)
+
+        with pytest.raises(PermissionDeniedError):
+            _run(
+                ops.update_config(
+                    **self._ids(),
+                    model_override="new-model",
+                    model_params_override={"temperature": 1.0},
+                )
+            )
+        assert binding.model_override == "keep-me"
+        session.commit.assert_not_awaited()
+
+
+class _FakeConfigOps:
+    def __init__(self, binding: SimpleNamespace) -> None:
+        self.binding = binding
+        self.get_calls: list[dict] = []
+        self.update_calls: list[dict] = []
+
+    async def get_config(self, **kwargs) -> SimpleNamespace:
+        self.get_calls.append(kwargs)
+        return self.binding
+
+    async def update_config(self, **kwargs) -> SimpleNamespace:
+        self.update_calls.append(kwargs)
+        return self.binding
+
+
+def _install_config_handler_env(
+    monkeypatch,
+    *,
+    binding: SimpleNamespace,
+    enabled: bool = True,
+    user_id: UUID | None = None,
+) -> _FakeConfigOps:
+    @asynccontextmanager
+    async def fake_open_session():
+        yield MagicMock()
+
+    async def fake_flag(_session, _org_id) -> bool:
+        return enabled
+
+    ops = _FakeConfigOps(binding)
+    monkeypatch.setattr(context_handlers_mod, "open_session", fake_open_session)
+    monkeypatch.setattr(context_handlers_mod, "is_chat_agents_enabled", fake_flag)
+    monkeypatch.setattr(
+        context_handlers_mod,
+        "get_user_id_from_context",
+        lambda _ctx: user_id or uuid7(),
+    )
+    monkeypatch.setattr(
+        context_handlers_mod, "ChatAgentContextOperations", lambda _session: ops
+    )
+    return ops
+
+
+class TestChannelAgentConfigHandlers:
+    def _request_ids(self) -> dict[str, str]:
+        return {
+            "organization_id": str(uuid7()),
+            "channel_id": str(uuid7()),
+            "agent_id": str(uuid7()),
+        }
+
+    def test_get_config_happy_path(self, monkeypatch) -> None:
+        binding = _binding_row(
+            model_override="claude-sonnet-5",
+            model_params_override={"temperature": 0.5},
+        )
+        fake_ops = _install_config_handler_env(monkeypatch, binding=binding)
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        response = _run(
+            handlers.get_channel_agent_config(
+                GetChannelAgentConfigRequest(**self._request_ids()), MagicMock()
+            )
+        )
+        assert response.config.model_override == "claude-sonnet-5"
+        assert json.loads(response.config.model_params_override_json) == {
+            "temperature": 0.5
+        }
+        assert len(fake_ops.get_calls) == 1
+
+    def test_get_config_empty_binding_serialises_empty_strings(
+        self, monkeypatch
+    ) -> None:
+        fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        response = _run(
+            handlers.get_channel_agent_config(
+                GetChannelAgentConfigRequest(**self._request_ids()), MagicMock()
+            )
+        )
+        assert response.config.model_override == ""
+        assert response.config.model_params_override_json == ""
+        assert len(fake_ops.get_calls) == 1
+
+    def test_update_config_passes_set_values_to_ops(self, monkeypatch) -> None:
+        fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        _run(
+            handlers.update_channel_agent_config(
+                UpdateChannelAgentConfigRequest(
+                    **self._request_ids(),
+                    model_override="gpt-5.4",
+                    model_params_override_json='{"reasoning": "high"}',
+                ),
+                MagicMock(),
+            )
+        )
+        call = fake_ops.update_calls[0]
+        assert call["model_override"] == "gpt-5.4"
+        assert call["model_params_override"] == {"reasoning": "high"}
+
+    def test_update_config_present_empty_clears(self, monkeypatch) -> None:
+        fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        _run(
+            handlers.update_channel_agent_config(
+                UpdateChannelAgentConfigRequest(
+                    **self._request_ids(),
+                    model_override="",
+                    model_params_override_json="",
+                ),
+                MagicMock(),
+            )
+        )
+        call = fake_ops.update_calls[0]
+        assert call["model_override"] == ""
+        assert call["model_params_override"] == {}
+
+    def test_update_config_absent_fields_stay_unchanged(self, monkeypatch) -> None:
+        fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        _run(
+            handlers.update_channel_agent_config(
+                UpdateChannelAgentConfigRequest(**self._request_ids()), MagicMock()
+            )
+        )
+        call = fake_ops.update_calls[0]
+        assert call["model_override"] is None
+        assert call["model_params_override"] is None
+
+    def test_update_config_rejects_invalid_json(self, monkeypatch) -> None:
+        fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        with pytest.raises(ConnectError) as exc:
+            _run(
+                handlers.update_channel_agent_config(
+                    UpdateChannelAgentConfigRequest(
+                        **self._request_ids(),
+                        model_params_override_json="{not json",
+                    ),
+                    MagicMock(),
+                )
+            )
+        assert exc.value.code == Code.INVALID_ARGUMENT
+        assert fake_ops.update_calls == []
+
+    def test_flag_off_raises_failed_precondition(self, monkeypatch) -> None:
+        fake_ops = _install_config_handler_env(
+            monkeypatch, binding=_binding_row(), enabled=False
+        )
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        with pytest.raises(ConnectError) as exc:
+            _run(
+                handlers.get_channel_agent_config(
+                    GetChannelAgentConfigRequest(**self._request_ids()), MagicMock()
+                )
+            )
+        assert exc.value.code == Code.FAILED_PRECONDITION
+
+        with pytest.raises(ConnectError) as exc:
+            _run(
+                handlers.update_channel_agent_config(
+                    UpdateChannelAgentConfigRequest(**self._request_ids()),
+                    MagicMock(),
+                )
+            )
+        assert exc.value.code == Code.FAILED_PRECONDITION
+        assert fake_ops.get_calls == []
+        assert fake_ops.update_calls == []
+
+
+class _StopFlow(Exception):
+    """Sentinel aborting stream_send_message right after param resolution."""
+
+
+def _stream_agent(
+    *,
+    primary_provider_key_id: UUID | None,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid7(),
+        name="Helper",
+        soul_prompt="",
+        primary_model="agent-primary",
+        primary_provider_key_id=primary_provider_key_id,
+        fallback_models=[],
+        model_params={"temperature": 0.7},
+        enabled_tools=[],
+        enabled_skills=[],
+        prompt_id=None,
+    )
+
+
+def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
+    """RuntimeOperations shim capturing model/params resolution for a chat run."""
+    captured: dict = {}
+
+    ops = object.__new__(RuntimeOperations)
+    session = MagicMock()
+
+    async def fake_execute(_stmt):
+        return SimpleNamespace(scalar_one_or_none=lambda: binding_row)
+
+    session.execute = AsyncMock(side_effect=fake_execute)
+    ops._session = session
+    ops._org_ops = SimpleNamespace(
+        require_org_member=AsyncMock(return_value=SimpleNamespace(role="member")),
+        get_by_id=AsyncMock(return_value=SimpleNamespace(name="Org")),
+    )
+    ops._user_ops = SimpleNamespace(
+        get_by_id=AsyncMock(
+            return_value=SimpleNamespace(full_name="Alice", username="alice")
+        )
+    )
+    ops._agent_ops = SimpleNamespace(get_for_runtime=AsyncMock(return_value=agent))
+    provider = SimpleNamespace(name="anthropic")
+    provider_key = SimpleNamespace(id=uuid7())
+
+    async def fake_key_and_provider_for_model(*, organization_id, model_id):
+        captured["provider_lookup_model"] = model_id
+        return provider, provider_key
+
+    ops._provider_ops = SimpleNamespace(
+        get_provider_for_key=AsyncMock(return_value=(provider, provider_key)),
+        get_key_and_provider_for_model=AsyncMock(
+            side_effect=fake_key_and_provider_for_model
+        ),
+    )
+    ops._session_ops = MagicMock()
+    ops._skill_ops = MagicMock()
+    ops._resolve_invoked_skill = AsyncMock(return_value=None)
+    ops._fetch_memory_context = AsyncMock(return_value="")
+    ops._build_chat_context_for_destination = AsyncMock(return_value=None)
+
+    async def fake_fetch_skills(_skill_ops, **_kwargs):
+        return []
+
+    async def fake_record_injections(_session, **_kwargs):
+        return None
+
+    async def fake_fetch_prompt(_session, **_kwargs):
+        return None
+
+    async def fake_resolve_model(**kwargs):
+        captured["resolve_model"] = kwargs
+        return "resolved-model"
+
+    def fake_resolve_request_params(agent_params, override_params, provider_name, model_id):
+        captured["request_params"] = {
+            "agent_params": agent_params,
+            "override_params": override_params,
+            "provider": provider_name,
+            "model_id": model_id,
+        }
+        raise _StopFlow()
+
+    monkeypatch.setattr(runtime_ops_mod, "fetch_agent_skills", fake_fetch_skills)
+    monkeypatch.setattr(
+        runtime_ops_mod, "record_skill_injections", fake_record_injections
+    )
+    monkeypatch.setattr(runtime_ops_mod, "fetch_agent_prompt", fake_fetch_prompt)
+    monkeypatch.setattr(
+        runtime_ops_mod, "build_system_prompt", lambda **_kwargs: "sys"
+    )
+    monkeypatch.setattr(
+        runtime_ops_mod, "get_tool_registry", lambda: MagicMock()
+    )
+    monkeypatch.setattr(runtime_ops_mod, "resolve_model", fake_resolve_model)
+    monkeypatch.setattr(
+        runtime_ops_mod, "resolve_request_params", fake_resolve_request_params
+    )
+    return ops, session, captured
+
+
+def _run_chat_stream_until_params(ops) -> None:
+    destination = ChatDestination(
+        channel_id=uuid7(), agent_id=uuid7(), trigger_message_id=uuid7()
+    )
+
+    async def go() -> None:
+        agen = ops.stream_send_message(
+            user_id=uuid7(),
+            organization_id=uuid7(),
+            destination=destination,
+            content="hello",
+        )
+        await agen.__anext__()
+
+    with pytest.raises(_StopFlow):
+        _run(go())
+
+
+class TestChatStreamBindingOverrides:
+    def test_binding_overrides_thread_into_resolution(self, monkeypatch) -> None:
+        binding = _binding_row(
+            model_override="channel-model",
+            model_params_override={"reasoning": "high"},
+        )
+        agent = _stream_agent(primary_provider_key_id=uuid7())
+        ops, session, captured = _stream_runtime_ops(
+            monkeypatch, binding_row=binding, agent=agent
+        )
+
+        _run_chat_stream_until_params(ops)
+
+        assert captured["resolve_model"]["session_model_override"] == "channel-model"
+        assert captured["request_params"]["agent_params"] == {"temperature": 0.7}
+        assert captured["request_params"]["override_params"] == {"reasoning": "high"}
+        assert captured["request_params"]["provider"] == "anthropic"
+        assert captured["request_params"]["model_id"] == "resolved-model"
+        # One indexed SELECT for the binding, nothing else on the session.
+        assert session.execute.await_count == 1
+
+    def test_binding_override_drives_provider_lookup_without_pinned_key(
+        self, monkeypatch
+    ) -> None:
+        binding = _binding_row(model_override="channel-model")
+        agent = _stream_agent(primary_provider_key_id=None)
+        ops, _session, captured = _stream_runtime_ops(
+            monkeypatch, binding_row=binding, agent=agent
+        )
+
+        _run_chat_stream_until_params(ops)
+
+        assert captured["provider_lookup_model"] == "channel-model"
+        assert captured["resolve_model"]["session_model_override"] == "channel-model"
+
+    def test_missing_binding_row_means_no_overrides(self, monkeypatch) -> None:
+        agent = _stream_agent(primary_provider_key_id=uuid7())
+        ops, _session, captured = _stream_runtime_ops(
+            monkeypatch, binding_row=None, agent=agent
+        )
+
+        _run_chat_stream_until_params(ops)
+
+        assert captured["resolve_model"]["session_model_override"] is None
+        assert captured["request_params"]["override_params"] is None
+        assert captured["request_params"]["agent_params"] == {"temperature": 0.7}

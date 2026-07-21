@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { Hash, Lock, PencilSimple, SpeakerSlash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { type ChatChannel } from '@/features/chat/types';
@@ -12,18 +12,21 @@ interface ChannelListItemProps {
     mentionCount?: number;
     isMuted?: boolean;
     hasDraft?: boolean;
-    onClick: () => void;
+    /** Stable across renders (memo boundary); receives the channel id. */
+    onSelect: (channelId: string) => void;
 }
 
 
-export function ChannelListItem({
+// Memoized: the sidebar re-renders on every message org-wide (activity sort),
+// so unchanged rows must bail out on reference-equal props.
+export const ChannelListItem = memo(function ChannelListItem({
     channel,
     isActive,
     unreadCount = 0,
     mentionCount = 0,
     isMuted = false,
     hasDraft = false,
-    onClick,
+    onSelect,
 }: ChannelListItemProps) {
     const isPrivate = channel.channelType === 'PRIVATE';
     const hasUnread = unreadCount > 0;
@@ -36,10 +39,12 @@ export function ChannelListItem({
         setContextMenu({ x: e.clientX, y: e.clientY });
     }, []);
 
+    const handleClick = useCallback(() => onSelect(channel.id), [onSelect, channel.id]);
+
     return (
         <>
             <button
-                onClick={onClick}
+                onClick={handleClick}
                 onContextMenu={handleContextMenu}
                 className={cn(
                     "flex items-center gap-2 w-full px-3 py-1.5 rounded-md mx-1.5 cursor-pointer transition-colors text-left",
@@ -113,4 +118,4 @@ export function ChannelListItem({
             )}
         </>
     );
-}
+});

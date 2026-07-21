@@ -12,6 +12,7 @@ from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.domains.chat.messages.operations import bump_channel_message_stats
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,6 +65,7 @@ class MessageWriter(Protocol):
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
         invoked_skill_name: str | None = None,
+        thinking: list[dict] | None = None,
     ) -> AgentMessage:
         """Persist a message and return an `AgentMessage`-shaped envelope."""
 
@@ -82,6 +84,7 @@ class MessageWriter(Protocol):
         input_tokens: int = 0,
         output_tokens: int = 0,
         model: str | None = None,
+        thinking: list[dict] | None = None,
     ) -> AgentMessage:
         """Persist final content + token usage onto a reserved placeholder."""
 
@@ -155,6 +158,7 @@ class SessionMessageWriter:
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
         invoked_skill_name: str | None = None,
+        thinking: list[dict] | None = None,
     ) -> AgentMessage:
         return await self._session_ops.add_message(
             user_id=self._user_id,
@@ -173,6 +177,7 @@ class SessionMessageWriter:
             is_thinking=is_thinking,
             file_ids=file_ids,
             invoked_skill_name=invoked_skill_name,
+            thinking=thinking,
         )
 
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
@@ -186,6 +191,7 @@ class SessionMessageWriter:
         input_tokens: int = 0,
         output_tokens: int = 0,
         model: str | None = None,
+        thinking: list[dict] | None = None,
     ) -> AgentMessage:
         raise NotImplementedError(
             "SessionMessageWriter does not support placeholder reservation",
@@ -313,11 +319,12 @@ class ChatChannelMessageWriter:
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
         invoked_skill_name: str | None = None,
+        thinking: list[dict] | None = None,
     ) -> AgentMessage:
         """Persist a runtime-step message into `chat_messages`.
 
         `role="user"` is a no-op (the trigger user message is already in the
-        channel); returns an envelope to keep `RuntimeMessageStoredEvent`
+        channel); returns an envelope to keep the MESSAGE_STORED event
         uniform. Other roles persist a `sender_type=AGENT` row whose
         `metadata.kind` drives the renderer card choice.
         """
@@ -353,6 +360,8 @@ class ChatChannelMessageWriter:
             meta["output_tokens"] = output_tokens
         if cache_read_input_tokens:
             meta["cache_read_input_tokens"] = cache_read_input_tokens
+        if thinking:
+            meta["thinking"] = thinking
 
         urn_mentions = (
             sorted(
@@ -378,6 +387,14 @@ class ChatChannelMessageWriter:
         await self._record_active_tokens(
             input_tokens, output_tokens, cache_read_input_tokens
         )
+        # Compaction summaries are context artifacts, not conversation activity.
+        if role != "summary":
+            await bump_channel_message_stats(
+                self._session,
+                self._channel_id,
+                at=chat_msg.created_at,
+                is_root=self._thread_root_id is None,
+            )
         await self._session.commit()
         await self._session.refresh(chat_msg)
 
@@ -417,6 +434,12 @@ class ChatChannelMessageWriter:
             message_metadata=meta,
         )
         self._session.add(chat_msg)
+        await bump_channel_message_stats(
+            self._session,
+            self._channel_id,
+            at=chat_msg.created_at,
+            is_root=self._thread_root_id is None,
+        )
         await self._session.commit()
         await self._session.refresh(chat_msg)
         return AgentMessage(
@@ -436,6 +459,7 @@ class ChatChannelMessageWriter:
         output_tokens: int = 0,
         cache_read_input_tokens: int = 0,
         model: str | None = None,
+        thinking: list[dict] | None = None,
     ) -> AgentMessage:
         """Write final content + token usage onto a reserved placeholder.
 
@@ -451,6 +475,7 @@ class ChatChannelMessageWriter:
                 output_tokens=output_tokens,
                 cache_read_input_tokens=cache_read_input_tokens,
                 model=model,
+                thinking=thinking,
             )
 
         chat_msg.content = content or ""
@@ -475,6 +500,8 @@ class ChatChannelMessageWriter:
             meta["output_tokens"] = output_tokens
         if cache_read_input_tokens:
             meta["cache_read_input_tokens"] = cache_read_input_tokens
+        if thinking:
+            meta["thinking"] = thinking
         chat_msg.message_metadata = meta
         await self._record_active_tokens(
             input_tokens, output_tokens, cache_read_input_tokens

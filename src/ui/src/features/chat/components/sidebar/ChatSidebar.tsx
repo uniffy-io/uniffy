@@ -30,7 +30,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Input } from '@/components/ui/input';
 import { SidebarOverlayContext } from '@/components/layout/CollapsibleSidebarRail';
-import { setSplitChannel, selectChannelPreferences } from '@/features/chat/store/chatChannelsSlice';
+import { setSplitChannel, selectChannelPreferences, selectChannels, sortByLastActivity, sortByRootActivity } from '@/features/chat/store/chatChannelsSlice';
 import { selectChannelsWithDrafts } from '@/features/chat/store/chatDraftsSlice';
 import {
   toggleDmSection,
@@ -94,7 +94,7 @@ export function ChatSidebar() {
   const { isMobile } = useBreakpoint();
   const isOverlay = useContext(SidebarOverlayContext);
 
-  const channels = useAppSelector((state) => state.chatChannels.channels);
+  const channels = useAppSelector(selectChannels);
   const categories = useAppSelector(selectCategories);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const dmSectionCollapsed = useAppSelector((state) => state.chatUi.dmSectionCollapsed);
@@ -143,21 +143,21 @@ export function ChatSidebar() {
   const nonDmChannels = useMemo(
     () => filteredChannels
       .filter(c => c.channelType !== 'DIRECT' && c.channelType !== 'GROUP_DM')
-      .sort((a, b) => (b.lastRootMessageAt ?? '').localeCompare(a.lastRootMessageAt ?? '')),
+      .sort(sortByRootActivity),
     [filteredChannels],
   );
 
   const directMessages = useMemo(
     () => filteredChannels
       .filter(c => !c.isAgentDm && (c.channelType === 'DIRECT' || c.channelType === 'GROUP_DM'))
-      .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),
+      .sort(sortByLastActivity),
     [filteredChannels],
   );
 
   const agentChats = useMemo(
     () => filteredChannels
       .filter(c => c.isAgentDm)
-      .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),
+      .sort(sortByLastActivity),
     [filteredChannels],
   );
 
@@ -356,13 +356,15 @@ export function ChatSidebar() {
                     mentionCount={channel.mentionCount ?? 0}
                     isMuted={isChannelMuted(channel.id)}
                     hasDraft={draftChannels.has(channel.id)}
-                    onClick={() => handleChannelSelect(channel.id)}
+                    onSelect={handleChannelSelect}
                   />
                 ))}
               </CategorySection>
             ))}
           </SortableContext>
         </DndContext>
+
+        <div className="mx-3 my-2 h-px bg-border/60" role="separator" />
 
         <div
           className="mt-1"
@@ -411,13 +413,15 @@ export function ChatSidebar() {
                     unreadCount={unreadCounts[channel.id] ?? 0}
                     isMuted={isChannelMuted(channel.id)}
                     hasDraft={draftChannels.has(channel.id)}
-                    onClick={() => handleChannelSelect(channel.id)}
+                    onSelect={handleChannelSelect}
                   />
                 ))
               )}
             </div>
           )}
         </div>
+
+        <div className="mx-3 my-2 h-px bg-border/60" role="separator" />
 
         <div className="mt-1" data-testid="chat-sidebar-dm-section" data-state={dmSectionCollapsed ? 'collapsed' : 'expanded'}>
           <div className="flex items-center justify-between w-full px-3 py-1.5 group">
@@ -451,7 +455,7 @@ export function ChatSidebar() {
                   unreadCount={unreadCounts[channel.id] ?? 0}
                   isMuted={isChannelMuted(channel.id)}
                   hasDraft={draftChannels.has(channel.id)}
-                  onClick={() => handleChannelSelect(channel.id)}
+                  onSelect={handleChannelSelect}
                 />
               ))}
             </div>

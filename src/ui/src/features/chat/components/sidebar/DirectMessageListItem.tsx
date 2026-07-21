@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { memo, useState, useCallback, useMemo } from 'react';
 import { SpeakerSlash, PencilSimple } from '@phosphor-icons/react';
 import { ChannelCallIndicator } from '@/features/calls/components/ChannelCallIndicator';
 import { cn } from '@/shared/utils/cn';
@@ -18,16 +18,19 @@ interface DirectMessageListItemProps {
   unreadCount?: number;
   isMuted?: boolean;
   hasDraft?: boolean;
-  onClick: () => void;
+  /** Stable across renders (memo boundary); receives the channel id. */
+  onSelect: (channelId: string) => void;
 }
 
-export function DirectMessageListItem({
+// Memoized: the sidebar re-renders on every message org-wide (activity sort),
+// so unchanged rows must bail out on reference-equal props.
+export const DirectMessageListItem = memo(function DirectMessageListItem({
   channel,
   isActive,
   unreadCount = 0,
   isMuted = false,
   hasDraft = false,
-  onClick,
+  onSelect,
 }: DirectMessageListItemProps) {
   const hasUnread = unreadCount > 0;
   const isGroupDm = channel.channelType === 'GROUP_DM';
@@ -90,6 +93,8 @@ export function DirectMessageListItem({
     [dispatch, channel.id],
   );
 
+  const handleClick = useCallback(() => onSelect(channel.id), [onSelect, channel.id]);
+
   return (
     <>
       <div
@@ -112,7 +117,7 @@ export function DirectMessageListItem({
       >
         <button
           type="button"
-          onClick={onClick}
+          onClick={handleClick}
           onContextMenu={handleContextMenu}
           className={cn(
             'flex items-center gap-2 flex-1 min-w-0 px-3 py-1.5 cursor-pointer text-left bg-transparent',
@@ -201,4 +206,4 @@ export function DirectMessageListItem({
       )}
     </>
   );
-}
+});

@@ -101,7 +101,7 @@ export function PreJoinScreen() {
   const { joinChannelCall } = useCall();
   const channelId = useAppSelector(selectPrejoinChannelId);
   const channel = useAppSelector((s) =>
-    channelId ? s.chatChannels.channels.find((c) => c.id === channelId) : undefined,
+    channelId ? s.chatChannels.byId[channelId] : undefined,
   );
   const activeCall = useAppSelector((s) =>
     channelId ? selectActiveCallForChannel(s, channelId) : null,

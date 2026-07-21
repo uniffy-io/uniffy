@@ -183,6 +183,18 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
             "credential_type": "api_key",
             "label": "google-g-prod",
         },
+        {
+            "env_var": "OPENROUTER_API_KEY",
+            "provider": "openrouter",
+            "credential_type": "api_key",
+            "label": "Dev OpenRouter Key",
+        },
+        {
+            "env_var": "XAI_API_KEY",
+            "provider": "xai",
+            "credential_type": "api_key",
+            "label": "Dev xAI Key",
+        },
     ]
 
     seeded_keys: list[tuple[str, ProviderKey]] = []
@@ -281,6 +293,18 @@ PROVIDER_AGENT_CONFIGS: dict[str, dict[str, str]] = {
         "primary_model": "gemini-2.5-flash",
         "avatar_emoji": "G",
         "theme_color": "#4285f4",
+    },
+    "openrouter": {
+        "name": "Uniffy OpenRouter",
+        "primary_model": "anthropic/claude-sonnet-5",
+        "avatar_emoji": "R",
+        "theme_color": "#6467f2",
+    },
+    "xai": {
+        "name": "Uniffy xAI",
+        "primary_model": "grok-4.5",
+        "avatar_emoji": "X",
+        "theme_color": "#71717a",
     },
 }
 

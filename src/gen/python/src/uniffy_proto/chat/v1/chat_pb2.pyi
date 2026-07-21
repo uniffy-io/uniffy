@@ -1291,3 +1291,47 @@ class ResetChannelAgentContextResponse(_message.Message):
     reset_at: _timestamp_pb2.Timestamp
     stats: ChannelAgentContextStats
     def __init__(self, divider_message_id: _Optional[str] = ..., reset_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., stats: _Optional[_Union[ChannelAgentContextStats, _Mapping]] = ...) -> None: ...
+
+class ChannelAgentConfig(_message.Message):
+    __slots__ = ("model_override", "model_params_override_json")
+    MODEL_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    MODEL_PARAMS_OVERRIDE_JSON_FIELD_NUMBER: _ClassVar[int]
+    model_override: str
+    model_params_override_json: str
+    def __init__(self, model_override: _Optional[str] = ..., model_params_override_json: _Optional[str] = ...) -> None: ...
+
+class GetChannelAgentConfigRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "agent_id")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    agent_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ...) -> None: ...
+
+class GetChannelAgentConfigResponse(_message.Message):
+    __slots__ = ("config",)
+    CONFIG_FIELD_NUMBER: _ClassVar[int]
+    config: ChannelAgentConfig
+    def __init__(self, config: _Optional[_Union[ChannelAgentConfig, _Mapping]] = ...) -> None: ...
+
+class UpdateChannelAgentConfigRequest(_message.Message):
+    __slots__ = ("organization_id", "channel_id", "agent_id", "model_override", "model_params_override_json")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    MODEL_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    MODEL_PARAMS_OVERRIDE_JSON_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    channel_id: str
+    agent_id: str
+    model_override: str
+    model_params_override_json: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., model_override: _Optional[str] = ..., model_params_override_json: _Optional[str] = ...) -> None: ...
+
+class UpdateChannelAgentConfigResponse(_message.Message):
+    __slots__ = ("config",)
+    CONFIG_FIELD_NUMBER: _ClassVar[int]
+    config: ChannelAgentConfig
+    def __init__(self, config: _Optional[_Union[ChannelAgentConfig, _Mapping]] = ...) -> None: ...

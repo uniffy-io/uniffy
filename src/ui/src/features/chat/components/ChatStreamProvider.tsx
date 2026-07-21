@@ -16,8 +16,9 @@ import {
   addReactionToMessage,
   removeReactionFromMessage,
   appendDelta,
+  appendAgentThinking,
 } from '@/features/chat/store/chatMessagesSlice';
-import { fetchMembers, fetchThreadsInbox, fetchDrafts, markChannelRead } from '@/features/chat/store/chatThunks';
+import { fetchMembers, fetchThreadsInbox, fetchDrafts, markChannelRead, clearActiveChannelUnread } from '@/features/chat/store/chatThunks';
 import { draftUpserted, draftRemoved, draftKey } from '@/features/chat/store/chatDraftsSlice';
 import { draftClientSessionId } from '@/features/chat/api/draftSession';
 import {
@@ -26,7 +27,7 @@ import {
   appendThreadMessage,
   appendDeltaToThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
-import { updateChannel, incrementUnreadCount, updateUnreadCounts, addChannel, removeChannel } from '@/features/chat/store/chatChannelsSlice';
+import { updateChannel, incrementUnreadCount, updateUnreadCounts, addChannel, removeChannel, touchChannelActivity } from '@/features/chat/store/chatChannelsSlice';
 import { isDocumentVisible } from '@/shared/utils/documentVisibility';
 import { chatApi } from '@/features/chat/api/chatApi';
 import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
@@ -127,6 +128,19 @@ function handleChannelEvent(
       dispatch(fetchMembers(activeChannelId));
     }
     return;
+  }
+
+  // Sidebar last-activity ordering: every new message bumps its channel,
+  // whether or not that channel is the one on screen.
+  if (ce.eventType === ChatEventType.MESSAGE_CREATED && ce.payload.case === 'message' && ce.payload.value) {
+    const created = timestampToIso(ce.payload.value.createdAt);
+    if (created) {
+      dispatch(touchChannelActivity({
+        channelId,
+        at: created,
+        isRoot: !ce.payload.value.rootId,
+      }));
+    }
   }
 
   if (!activeChannelId || channelId !== activeChannelId) return;
@@ -299,6 +313,20 @@ function handleChannelEvent(
       }
       break;
     }
+    case ChatEventType.AGENT_THINKING_DELTA: {
+      if (ce.payload.case === 'agentThinkingDelta' && ce.payload.value) {
+        const { messageId, blockId, delta, sequence, final, elapsedMs } = ce.payload.value;
+        dispatch(appendAgentThinking({
+          messageId,
+          blockId,
+          delta,
+          sequence: Number(sequence),
+          final,
+          elapsedMs: Number(elapsedMs),
+        }));
+      }
+      break;
+    }
     case ChatEventType.AGENT_TOOL_CALL: {
       // Redundant with the MESSAGE_CREATED companion the backend emits for each tool row.
       break;
@@ -351,7 +379,7 @@ function usePersistentChatStream() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
-  const channels = useAppSelector((state) => state.chatChannels.channels);
+  const channelIds = useAppSelector((state) => state.chatChannels.ids);
 
   // Refs keep the effect from re-running on channel switch or user change.
   const channelIdRef = useRef(activeChannelId);
@@ -360,10 +388,26 @@ function usePersistentChatStream() {
   userIdRef.current = currentUserId;
   const byId = useAppSelector((state) => state.chatMessages.byId);
   const channelIdsRef = useRef(new Set<string>());
-  channelIdsRef.current = new Set(channels.map((c) => c.id));
+  channelIdsRef.current = new Set(channelIds);
   const byIdRef = useRef(byId);
   byIdRef.current = byId;
   const fetchingChannelsRef = useRef(new Set<string>());
+
+  // Returning to the tab clears the badge the hidden-tab stream handlers left
+  // on the active channel (see clearActiveChannelUnread).
+  useEffect(() => {
+    const onVisible = () => {
+      if (isDocumentVisible()) {
+        dispatch(clearActiveChannelUnread());
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     if (!organizationId) return;

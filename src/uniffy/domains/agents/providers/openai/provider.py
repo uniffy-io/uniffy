@@ -4,25 +4,28 @@ import base64
 import json
 from collections.abc import AsyncIterator
 from typing import Any
+from uuid import uuid4
 
 import openai
 from loguru import logger
 
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
-    DoneEvent,
-    ErrorEvent,
+    EventType,
     LLMProvider,
     ModelInfo,
     StreamEvent,
-    TokenEvent,
     ToolCall,
-    ToolCallEvent,
 )
 from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 from uniffy.domains.agents.providers.openai.converters import (
     convert_messages_to_openai,
     convert_tools_to_openai,
+)
+from uniffy.domains.agents.providers.openai.responses import (
+    build_responses_kwargs,
+    stream_completion,
+    sync_completion,
 )
 
 logger = logger.bind(component="agents.providers.openai.provider")
@@ -48,6 +51,11 @@ class OpenAIProvider(LLMProvider):
         Must be "api_key".
 
     """
+
+    # openai.com serves reasoning + function tools only on /v1/responses
+    # (gpt-5.4+ 400s the combo on chat completions). OpenAI-compatible
+    # subclasses (OpenRouter, xAI) stay on chat completions.
+    _use_responses_api = True
 
     def __init__(self, credential: str, credential_type: str = "api_key") -> None:
         self._credential_type = credential_type
@@ -112,6 +120,7 @@ class OpenAIProvider(LLMProvider):
         tools: list[dict] | None = None,
         stream: bool = False,
         cache_key: str | None = None,
+        params: dict | None = None,
     ) -> CompletionResult | AsyncIterator[StreamEvent]:
         """Send a chat completion request to the OpenAI API.
 
@@ -143,12 +152,26 @@ class OpenAIProvider(LLMProvider):
             Result or streaming iterator.
 
         """
+        if self._use_responses_api:
+            responses_kwargs = build_responses_kwargs(
+                messages=messages,
+                model=model,
+                system=system,
+                tools=tools,
+                cache_key=cache_key,
+                params=params,
+            )
+            if stream:
+                return stream_completion(self._client, responses_kwargs)
+            return await sync_completion(self._client, responses_kwargs)
+
         kwargs = self._build_request_kwargs(
             messages=messages,
             model=model,
             system=system,
             tools=tools,
             cache_key=cache_key,
+            params=params,
         )
 
         if stream:
@@ -176,30 +199,15 @@ class OpenAIProvider(LLMProvider):
         system: str | None,
         tools: list[dict] | None,
         cache_key: str | None = None,
+        params: dict | None = None,
     ) -> dict:
         """Build the kwargs dict for the chat.completions.create() call.
 
-        Parameters
-        ----------
-        messages : list[dict]
-            Conversation messages in Anthropic format.
-        model : str
-            Model identifier.
-        system : str | None
-            System prompt.
-        tools : list[dict] | None
-            Tool definitions in Anthropic format.
-        cache_key : str | None
-            Stable identifier (typically agent_id) sent as
-            ``prompt_cache_key`` to bias OpenAI's request routing
-            toward the machine that already cached this prefix.
-
-        Returns
-        -------
-        dict
-            Keyword arguments for the API call.
-
+        ``cache_key`` (typically agent_id) is sent as ``prompt_cache_key``
+        to bias OpenAI's request routing toward the machine that already
+        cached this prefix.
         """
+        params = params or {}
         openai_messages = convert_messages_to_openai(messages, system)
 
         kwargs: dict[str, Any] = {
@@ -213,7 +221,28 @@ class OpenAIProvider(LLMProvider):
         if cache_key:
             kwargs["prompt_cache_key"] = cache_key
 
+        if params.get("max_tokens"):
+            kwargs["max_completion_tokens"] = params["max_tokens"]
+        if params.get("temperature") is not None:
+            kwargs["temperature"] = params["temperature"]
+        if params.get("top_p") is not None:
+            kwargs["top_p"] = params["top_p"]
+        parallel = (params.get("provider_options") or {}).get("parallel_tool_calls")
+        if parallel is not None and tools:
+            kwargs["parallel_tool_calls"] = parallel
+        self._apply_reasoning(kwargs, params.get("reasoning_effort", "off"))
+
         return kwargs
+
+    def _apply_reasoning(self, kwargs: dict, effort: str) -> None:
+        """Map the normalized reasoning knob onto the request.
+
+        "off" omits the parameter (the model's default behavior); "on"
+        has no chat-completions expression here and is left to
+        subclasses whose APIs support a bare enable.
+        """
+        if effort not in ("off", "on"):
+            kwargs["reasoning_effort"] = effort
 
     async def _sync_completion(self, **kwargs: Any) -> CompletionResult:
         """Execute a non-streaming completion.
@@ -269,32 +298,34 @@ class OpenAIProvider(LLMProvider):
         self,
         **kwargs: Any,
     ) -> AsyncIterator[StreamEvent]:
-        """Execute a streaming completion.
+        """Stream block-framed events; MODEL_CALL_END carries the CompletionResult.
 
-        Parameters
-        ----------
-        **kwargs
-            Arguments for chat.completions.create().
-
-        Yields
-        ------
-        StreamEvent
-            Stream events as they arrive.
-
+        The chat-completions wire has no block framing, so blocks are
+        synthesized: one thinking block for the reasoning channel
+        (``delta.reasoning_content``, OpenRouter's ``delta.reasoning``),
+        one text block for the answer, one tool block per tool-call
+        index. Reasoning never touches the accumulated answer text.
         """
         try:
             kwargs["stream"] = True
             kwargs["stream_options"] = {"include_usage": True}
             stream = await self._client.chat.completions.create(**kwargs)
 
+            yield StreamEvent(
+                type=EventType.MODEL_CALL_START, model=str(kwargs.get("model", ""))
+            )
+
             accumulated_content = ""
             pending_tool_calls: dict[int, dict[str, str]] = {}
+            tool_block_ids: dict[int, str] = {}
             tool_calls: list[ToolCall] = []
             model_name = kwargs.get("model", "")
             finish_reason: str | None = None
             prompt_tokens = 0
             cached_tokens = 0
             output_tokens = 0
+            thinking_block_id = ""
+            text_block_id = ""
 
             async for chunk in stream:
                 if chunk.usage:
@@ -314,11 +345,46 @@ class OpenAIProvider(LLMProvider):
                 if chunk.model:
                     model_name = chunk.model
 
+                reasoning = _extract_reasoning(delta)
+                if reasoning:
+                    if not thinking_block_id:
+                        thinking_block_id = uuid4().hex[:12]
+                        yield StreamEvent(
+                            type=EventType.THINKING_BLOCK_START,
+                            block_id=thinking_block_id,
+                        )
+                    yield StreamEvent(
+                        type=EventType.THINKING_BLOCK_DELTA,
+                        block_id=thinking_block_id,
+                        delta=reasoning,
+                    )
+
                 if delta.content:
+                    if thinking_block_id:
+                        yield StreamEvent(
+                            type=EventType.THINKING_BLOCK_END,
+                            block_id=thinking_block_id,
+                        )
+                        thinking_block_id = ""
+                    if not text_block_id:
+                        text_block_id = uuid4().hex[:12]
+                        yield StreamEvent(
+                            type=EventType.TEXT_BLOCK_START, block_id=text_block_id
+                        )
                     accumulated_content += delta.content
-                    yield TokenEvent(text=delta.content)
+                    yield StreamEvent(
+                        type=EventType.TEXT_BLOCK_DELTA,
+                        block_id=text_block_id,
+                        delta=delta.content,
+                    )
 
                 if delta.tool_calls:
+                    if thinking_block_id:
+                        yield StreamEvent(
+                            type=EventType.THINKING_BLOCK_END,
+                            block_id=thinking_block_id,
+                        )
+                        thinking_block_id = ""
                     for tc_delta in delta.tool_calls:
                         idx = tc_delta.index
                         if idx not in pending_tool_calls:
@@ -335,9 +401,33 @@ class OpenAIProvider(LLMProvider):
                                 pending["name"] = tc_delta.function.name
                             if tc_delta.function.arguments:
                                 pending["arguments"] += tc_delta.function.arguments
+                        if idx not in tool_block_ids:
+                            tool_block_ids[idx] = uuid4().hex[:12]
+                            yield StreamEvent(
+                                type=EventType.TOOL_CALL_START,
+                                block_id=tool_block_ids[idx],
+                                tool_call_id=pending["id"],
+                                tool_name=pending["name"],
+                            )
+                        if tc_delta.function and tc_delta.function.arguments:
+                            yield StreamEvent(
+                                type=EventType.TOOL_CALL_DELTA,
+                                block_id=tool_block_ids[idx],
+                                tool_call_id=pending["id"],
+                                tool_name=pending["name"],
+                                delta=tc_delta.function.arguments,
+                            )
 
-            # Finalize pending tool calls
-            for _idx, pending in sorted(pending_tool_calls.items()):
+            if thinking_block_id:
+                yield StreamEvent(
+                    type=EventType.THINKING_BLOCK_END, block_id=thinking_block_id
+                )
+            if text_block_id:
+                yield StreamEvent(
+                    type=EventType.TEXT_BLOCK_END, block_id=text_block_id
+                )
+
+            for idx, pending in sorted(pending_tool_calls.items()):
                 try:
                     args = json.loads(pending["arguments"])
                 except (json.JSONDecodeError, TypeError):
@@ -348,11 +438,20 @@ class OpenAIProvider(LLMProvider):
                     input=args,
                 )
                 tool_calls.append(tc)
-                yield ToolCallEvent(tool_call=tc)
+                yield StreamEvent(
+                    type=EventType.TOOL_CALL_END,
+                    block_id=tool_block_ids[idx],
+                    tool_call_id=tc.id,
+                    tool_name=tc.name,
+                    tool_args=tc.input,
+                )
 
-            stop_reason = map_finish_reason(finish_reason)
-
-            yield DoneEvent(
+            yield StreamEvent(
+                type=EventType.MODEL_CALL_END,
+                model=model_name,
+                input_tokens=prompt_tokens - cached_tokens,
+                output_tokens=output_tokens,
+                cache_read_input_tokens=cached_tokens,
                 result=CompletionResult(
                     content=accumulated_content,
                     model=model_name,
@@ -360,12 +459,26 @@ class OpenAIProvider(LLMProvider):
                     output_tokens=output_tokens,
                     cache_read_input_tokens=cached_tokens,
                     tool_calls=tool_calls,
-                    stop_reason=stop_reason,
-                )
+                    stop_reason=map_finish_reason(finish_reason),
+                ),
             )
         except Exception as e:
             logger.error(f"OpenAI streaming error: {e}")
-            yield ErrorEvent(error=str(e))
+            yield StreamEvent(type=EventType.ERROR, error=str(e))
+
+
+def _extract_reasoning(delta) -> str:
+    """Reasoning channel across OpenAI-compatible APIs.
+
+    xAI (and DeepSeek-style servers) stream it as ``reasoning_content``;
+    OpenRouter normalizes to ``reasoning``. Plain OpenAI has neither on
+    chat completions. The SDK's pydantic models allow extra fields, so
+    attribute access works for both.
+    """
+    reasoning = getattr(delta, "reasoning_content", None) or getattr(
+        delta, "reasoning", None
+    )
+    return reasoning if isinstance(reasoning, str) else ""
 
 
 def _split_openai_usage(usage) -> tuple[int, int, int]:

@@ -55,7 +55,7 @@ class ProviderKeyInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., provider: _Optional[str] = ..., credential_type: _Optional[_Union[CredentialType, str]] = ..., label: _Optional[str] = ..., key_hint: _Optional[str] = ..., is_valid: _Optional[bool] = ..., last_validated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_used_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_error: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_enabled: _Optional[bool] = ..., created_by: _Optional[str] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class ModelInfo(_message.Message):
-    __slots__ = ("id", "display_name", "provider", "context_window", "supports_tools", "supports_vision", "supports_thinking", "default_max_tokens", "supports_prompt_cache", "deprecated", "reasoning_levels", "default_reasoning_effort", "input_per_1m", "output_per_1m", "cache_read_per_1m", "cache_write_per_1m", "supports_image_generation", "catalog_known")
+    __slots__ = ("id", "display_name", "provider", "context_window", "supports_tools", "supports_vision", "supports_thinking", "default_max_tokens", "supports_prompt_cache", "deprecated", "reasoning_levels", "default_reasoning_effort", "input_per_1m", "output_per_1m", "cache_read_per_1m", "cache_write_per_1m", "supports_image_generation", "catalog_known", "parameter_schema_json")
     ID_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
@@ -74,6 +74,7 @@ class ModelInfo(_message.Message):
     CACHE_WRITE_PER_1M_FIELD_NUMBER: _ClassVar[int]
     SUPPORTS_IMAGE_GENERATION_FIELD_NUMBER: _ClassVar[int]
     CATALOG_KNOWN_FIELD_NUMBER: _ClassVar[int]
+    PARAMETER_SCHEMA_JSON_FIELD_NUMBER: _ClassVar[int]
     id: str
     display_name: str
     provider: str
@@ -92,7 +93,8 @@ class ModelInfo(_message.Message):
     cache_write_per_1m: str
     supports_image_generation: bool
     catalog_known: bool
-    def __init__(self, id: _Optional[str] = ..., display_name: _Optional[str] = ..., provider: _Optional[str] = ..., context_window: _Optional[int] = ..., supports_tools: _Optional[bool] = ..., supports_vision: _Optional[bool] = ..., supports_thinking: _Optional[bool] = ..., default_max_tokens: _Optional[int] = ..., supports_prompt_cache: _Optional[bool] = ..., deprecated: _Optional[bool] = ..., reasoning_levels: _Optional[_Iterable[str]] = ..., default_reasoning_effort: _Optional[str] = ..., input_per_1m: _Optional[str] = ..., output_per_1m: _Optional[str] = ..., cache_read_per_1m: _Optional[str] = ..., cache_write_per_1m: _Optional[str] = ..., supports_image_generation: _Optional[bool] = ..., catalog_known: _Optional[bool] = ...) -> None: ...
+    parameter_schema_json: str
+    def __init__(self, id: _Optional[str] = ..., display_name: _Optional[str] = ..., provider: _Optional[str] = ..., context_window: _Optional[int] = ..., supports_tools: _Optional[bool] = ..., supports_vision: _Optional[bool] = ..., supports_thinking: _Optional[bool] = ..., default_max_tokens: _Optional[int] = ..., supports_prompt_cache: _Optional[bool] = ..., deprecated: _Optional[bool] = ..., reasoning_levels: _Optional[_Iterable[str]] = ..., default_reasoning_effort: _Optional[str] = ..., input_per_1m: _Optional[str] = ..., output_per_1m: _Optional[str] = ..., cache_read_per_1m: _Optional[str] = ..., cache_write_per_1m: _Optional[str] = ..., supports_image_generation: _Optional[bool] = ..., catalog_known: _Optional[bool] = ..., parameter_schema_json: _Optional[str] = ...) -> None: ...
 
 class AddProviderKeyRequest(_message.Message):
     __slots__ = ("organization_id", "provider", "credential_type", "label", "credential", "access_mode", "baseline_role")

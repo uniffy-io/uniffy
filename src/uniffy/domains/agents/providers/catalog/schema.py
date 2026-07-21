@@ -17,8 +17,13 @@ An invalid catalog is a hard startup error - see ``loader.load_catalog``.
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+# The reasoning knob is derived per model from ``can_reason`` +
+# ``reasoning_levels`` by the loader; providers must not declare it.
+REASONING_KNOB = "reasoning_effort"
 
 
 def _to_decimal(value: object) -> Decimal | None:
@@ -26,6 +31,51 @@ def _to_decimal(value: object) -> Decimal | None:
     if value is None:
         return None
     return Decimal(str(value))
+
+
+class ParamSpec(BaseModel):
+    """Bounds + default for one tunable request parameter."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["number", "integer", "boolean", "enum"]
+    minimum: float | None = None
+    maximum: float | None = None
+    default: float | int | bool | str | None = None
+    enum: list[str] | None = None
+    step: float | None = None
+    hidden: bool = False
+
+    @model_validator(mode="after")
+    def _check(self) -> ParamSpec:
+        if self.type == "enum" and not self.enum:
+            raise ValueError("enum spec requires non-empty enum values")
+        if self.type != "enum" and self.enum:
+            raise ValueError(f"{self.type} spec must not carry enum values")
+        if self.default is not None:
+            self.check_value("default", self.default)
+        return self
+
+    def check_value(self, label: str, value: object) -> None:
+        """Raise ``ValueError`` when ``value`` violates this spec."""
+        match self.type:
+            case "enum":
+                if value not in (self.enum or []):
+                    raise ValueError(f"{label} {value!r} not in enum {self.enum}")
+            case "boolean":
+                if not isinstance(value, bool):
+                    raise ValueError(f"{label} {value!r} is not a boolean")
+            case "integer":
+                if isinstance(value, bool) or not isinstance(value, int):
+                    raise ValueError(f"{label} {value!r} is not an integer")
+            case "number":
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ValueError(f"{label} {value!r} is not a number")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if self.minimum is not None and value < self.minimum:
+                raise ValueError(f"{label} {value!r} below minimum {self.minimum}")
+            if self.maximum is not None and value > self.maximum:
+                raise ValueError(f"{label} {value!r} above maximum {self.maximum}")
 
 
 class Model(BaseModel):
@@ -55,6 +105,14 @@ class Model(BaseModel):
     # Flat per-image USD rate (Gemini-style), used when image_prices has no
     # matching size/quality.
     cost_per_image: Decimal | None = None
+    # Per-model default overrides for knobs declared in the provider's
+    # params_base (catwalk-scalar shape); "provider_options" nests the
+    # escape-hatch keys. Keys are validated against the provider decls.
+    options: dict[str, object] = Field(default_factory=dict)
+    # Knobs the model's API rejects outright (e.g. temperature on
+    # Claude 4.7+ / OpenAI reasoning models). Removed from the schema,
+    # rejected at write time, and never sent on the request.
+    unsupported_params: list[str] = Field(default_factory=list)
 
     @field_validator(
         "cost_per_1m_in",
@@ -90,10 +148,14 @@ class ProviderCatalog(BaseModel):
     display_name: str
     default_large_model_id: str | None = None
     default_small_model_id: str | None = None
+    params_base: dict[str, ParamSpec] = Field(default_factory=dict)
+    provider_options: dict[str, ParamSpec] = Field(default_factory=dict)
     models: list[Model]
 
     @model_validator(mode="after")
     def _check(self) -> ProviderCatalog:
+        if REASONING_KNOB in self.params_base:
+            raise ValueError(f"{REASONING_KNOB} is derived per model, not declared")
         ids: set[str] = set()
         for model in self.models:
             if model.id in ids:
@@ -102,6 +164,7 @@ class ProviderCatalog(BaseModel):
             for alias in model.aliases:
                 if alias in ids:
                     raise ValueError(f"alias {alias!r} collides with a model id")
+            self._check_options(model)
         for label, default in (
             ("default_large_model_id", self.default_large_model_id),
             ("default_small_model_id", self.default_small_model_id),
@@ -109,6 +172,32 @@ class ProviderCatalog(BaseModel):
             if default is not None and default not in ids:
                 raise ValueError(f"{label} {default!r} is not a known model id")
         return self
+
+    def _check_options(self, model: Model) -> None:
+        for name in model.unsupported_params:
+            if name not in self.params_base:
+                raise ValueError(
+                    f"model {model.id!r}: unsupported_params entry {name!r} "
+                    "is not a declared knob",
+                )
+            if name in model.options:
+                raise ValueError(f"model {model.id!r}: option {name!r} is unsupported")
+        for key, value in model.options.items():
+            if key == "provider_options":
+                if not isinstance(value, dict):
+                    raise ValueError(f"model {model.id!r}: provider_options must be an object")
+                for opt_key, opt_value in value.items():
+                    spec = self.provider_options.get(opt_key)
+                    if spec is None:
+                        raise ValueError(
+                            f"model {model.id!r}: undeclared provider option {opt_key!r}",
+                        )
+                    spec.check_value(f"model {model.id!r} option {opt_key!r}", opt_value)
+                continue
+            spec = self.params_base.get(key)
+            if spec is None:
+                raise ValueError(f"model {model.id!r}: undeclared option {key!r}")
+            spec.check_value(f"model {model.id!r} option {key!r}", value)
 
 
 class Catalog(BaseModel):

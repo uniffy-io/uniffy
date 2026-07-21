@@ -14,12 +14,14 @@ import {
 } from '@phosphor-icons/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { cn } from '@/shared/utils/cn';
+import { useAppSelector } from '@/app/hooks';
 import { ChatMentionPopup } from '@/features/agents/components/chat/ChatMentionPopup';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { getInitials } from '@/components/subject/utils';
 import { useKeybinding, matchesShortcut } from '@/features/settings';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
+import { AgentModelPicker } from '@/features/chat/components/compose/AgentModelPicker';
 import { AttachmentPreviewBar } from '@/features/chat/components/compose/AttachmentPreviewBar';
 import { uploadService } from '@/features/files/upload';
 import { attachmentsApi } from '@/features/files/api/attachmentsApi';
@@ -37,6 +39,8 @@ interface PendingFile {
 
 interface MessageComposeProps {
   channelName: string;
+  /** Enables channel-aware toolbar extras (agent DM model picker). */
+  channelId?: string;
   placeholder?: string;
   organizationId?: string;
   onSend?: (content: string, fileIds: string[]) => void;
@@ -61,6 +65,8 @@ interface MessageComposeProps {
   /** Non-null only when a remote draft change is safe to apply; replaces the editor content. */
   remoteDraft?: string | null;
   onDraftChange?: (markdown: string) => void;
+  /** 'hero' floats the composer as a glass card in the agent DM empty state. */
+  variant?: 'bar' | 'hero';
 }
 
 const MAX_HEIGHT = 200;
@@ -192,7 +198,14 @@ function hydrateFromMarkdown(container: HTMLDivElement, markdown: string): void 
   }
 }
 
-export function MessageCompose({ channelName, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit, onEditLast, initialDraft, remoteDraft, onDraftChange }: MessageComposeProps) {
+export function MessageCompose({ channelName, channelId, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit, onEditLast, initialDraft, remoteDraft, onDraftChange, variant = 'bar' }: MessageComposeProps) {
+  const channel = useAppSelector((state) =>
+    channelId ? state.chatChannels.byId[channelId] : undefined,
+  );
+  const agentDmAgentId = channel?.isAgentDm ? channel.agentId : undefined;
+  const agentDmAgent = useAppSelector((state) =>
+    agentDmAgentId ? state.agents.agents[agentDmAgentId] ?? null : null,
+  );
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
@@ -751,11 +764,18 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
         onChange={handleFileInputChange}
       />
       <div
-        className="mx-4 mb-4 border border-border rounded-xl bg-muted focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all"
+        className={cn(
+          'border border-border/70 bg-card/75 backdrop-blur-xl dark:bg-card/60',
+          'focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all',
+          variant === 'hero'
+            ? 'rounded-2xl shadow-[0_24px_80px_-20px_rgba(105,74,255,0.35)]'
+            : 'mx-4 mb-4 rounded-xl',
+        )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         data-testid="chat-compose-root"
         data-mode={editingMessage ? 'edit' : replyTo ? 'reply' : 'normal'}
+        data-variant={variant}
       >
         {editingMessage && (
           <div
@@ -874,27 +894,34 @@ export function MessageCompose({ channelName, placeholder, organizationId, onSen
             >
               <At size={18} />
             </button>
-            <button
-              type="button"
-              className={toolbarButtonClass}
-              aria-label="Insert code block"
-              onClick={handleCodeBlockInsert}
-              data-testid="chat-compose-code-button"
-            >
-              <Code size={18} />
-            </button>
+            {!agentDmAgent && (
+              <button
+                type="button"
+                className={toolbarButtonClass}
+                aria-label="Insert code block"
+                onClick={handleCodeBlockInsert}
+                data-testid="chat-compose-code-button"
+              >
+                <Code size={18} />
+              </button>
+            )}
+            {channelId && agentDmAgent && (
+              <AgentModelPicker channelId={channelId} agent={agentDmAgent} />
+            )}
           </div>
 
           <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              className={toolbarButtonClass}
-              aria-label="Toggle formatting"
-              onClick={handleBoldInsert}
-              data-testid="chat-compose-bold-button"
-            >
-              <TextB size={18} />
-            </button>
+            {!agentDmAgent && (
+              <button
+                type="button"
+                className={toolbarButtonClass}
+                aria-label="Toggle formatting"
+                onClick={handleBoldInsert}
+                data-testid="chat-compose-bold-button"
+              >
+                <TextB size={18} />
+              </button>
+            )}
             <button
               type="button"
               onClick={handleSend}

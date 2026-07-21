@@ -32,16 +32,10 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.types import generate_id as uuid7
+from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime import handlers as handlers_mod
 from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.handlers import RuntimeHandlers
-from uniffy.domains.agents.runtime.stream_events import (
-    RuntimeDoneEvent,
-    RuntimeErrorEvent,
-    RuntimeMessageStoredEvent,
-    RuntimeStreamEvent,
-    RuntimeTokenEvent,
-)
 
 
 class _FakeQueue:
@@ -206,7 +200,7 @@ def _install_queue(monkeypatch) -> _FakeQueue:
 
 def _install_subscribe(
     monkeypatch,
-    events: list[RuntimeStreamEvent],
+    events: list[StreamEvent],
 ) -> list[UUID]:
     captured: list[UUID] = []
 
@@ -434,13 +428,13 @@ class TestStreamSendMessage:
         queue = _install_queue(monkeypatch)
         _install_fixed_run_id(monkeypatch, run_id)
 
-        events: list[RuntimeStreamEvent] = [
-            RuntimeMessageStoredEvent(message=_make_user_message(session_id)),
-            RuntimeTokenEvent(text="he", sequence=1),
-            RuntimeTokenEvent(text="llo", sequence=2),
-            RuntimeDoneEvent(
+        events: list[StreamEvent] = [
+            StreamEvent(type=EventType.MESSAGE_STORED, message=_make_user_message(session_id)),
+            StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="he", sequence=1),
+            StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="llo", sequence=2),
+            StreamEvent(type=EventType.DONE, 
                 assistant_message=_make_assistant_message(session_id),
-                model_used="claude-sonnet-4-6",
+                model="claude-sonnet-4-6",
             ),
         ]
         captured = _install_subscribe(monkeypatch, events)
@@ -487,8 +481,8 @@ class TestStreamSendMessage:
         cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
         assert cases == [
             "message_stored",
-            "token",
-            "token",
+            "text_block_delta",
+            "text_block_delta",
             "done",
         ]
 
@@ -511,8 +505,8 @@ class TestStreamSendMessage:
         _install_queue(monkeypatch)
         _install_fixed_run_id(monkeypatch, run_id)
 
-        events: list[RuntimeStreamEvent] = [
-            RuntimeErrorEvent(error=handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE),
+        events: list[StreamEvent] = [
+            StreamEvent(type=EventType.ERROR, error=handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE),
         ]
         _install_subscribe(monkeypatch, events)
 
@@ -571,12 +565,12 @@ class TestSendMessageUnary:
 
         user_msg = _make_user_message(session_id)
         assistant_msg = _make_assistant_message(session_id)
-        events: list[RuntimeStreamEvent] = [
-            RuntimeMessageStoredEvent(message=user_msg),
-            RuntimeTokenEvent(text="ok", sequence=1),
-            RuntimeDoneEvent(
+        events: list[StreamEvent] = [
+            StreamEvent(type=EventType.MESSAGE_STORED, message=user_msg),
+            StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="ok", sequence=1),
+            StreamEvent(type=EventType.DONE, 
                 assistant_message=assistant_msg,
-                model_used="claude-sonnet-4-6",
+                model="claude-sonnet-4-6",
             ),
         ]
         _install_subscribe(monkeypatch, events)
@@ -610,7 +604,7 @@ class TestSendMessageUnary:
 
         _install_subscribe(
             monkeypatch,
-            [RuntimeErrorEvent(error="provider blew up")],
+            [StreamEvent(type=EventType.ERROR, error="provider blew up")],
         )
 
         request = _build_unary_request(organization_id=org_id, session_id=session_id)
@@ -644,7 +638,7 @@ class TestSendMessageUnary:
 
         _install_subscribe(
             monkeypatch,
-            [RuntimeErrorEvent(error=handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE)],
+            [StreamEvent(type=EventType.ERROR, error=handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE)],
         )
 
         request = _build_unary_request(organization_id=org_id, session_id=session_id)
@@ -792,11 +786,11 @@ class TestSubscribeToRun:
             },
         )
 
-        events: list[RuntimeStreamEvent] = [
-            RuntimeTokenEvent(text="he", sequence=1),
-            RuntimeDoneEvent(
+        events: list[StreamEvent] = [
+            StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="he", sequence=1),
+            StreamEvent(type=EventType.DONE, 
                 assistant_message=_make_assistant_message(session_id),
-                model_used="claude-sonnet-4-6",
+                model="claude-sonnet-4-6",
             ),
         ]
         captured = _install_subscribe(monkeypatch, events)
@@ -818,7 +812,7 @@ class TestSubscribeToRun:
         assert collected[0].event.WhichOneof("event") is None
 
         cases = [ev.event.WhichOneof("event") for ev in collected[1:]]
-        assert cases == ["token", "done"]
+        assert cases == ["text_block_delta", "done"]
         for ev in collected:
             assert ev.event.run_id == str(run_id)
 
@@ -838,15 +832,15 @@ class TestSubscribeRuntimeEvents:
             raising=False,
         )
 
-        async def drive() -> list[RuntimeStreamEvent]:
-            collected: list[RuntimeStreamEvent] = []
+        async def drive() -> list[StreamEvent]:
+            collected: list[StreamEvent] = []
             async for ev in handlers_mod._subscribe_runtime_events(uuid7()):
                 collected.append(ev)
             return collected
 
         collected = asyncio.run(drive())
         assert len(collected) == 1
-        assert isinstance(collected[0], RuntimeErrorEvent)
+        assert collected[0].type is EventType.ERROR
         assert collected[0].error == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
 
     def test_decodes_and_yields_events_in_order(self, monkeypatch) -> None:
@@ -856,11 +850,11 @@ class TestSubscribeRuntimeEvents:
 
         run_id = uuid7()
         session_id = uuid7()
-        events: list[RuntimeStreamEvent] = [
-            RuntimeTokenEvent(text="hello", sequence=1),
-            RuntimeDoneEvent(
+        events: list[StreamEvent] = [
+            StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="hello", sequence=1),
+            StreamEvent(type=EventType.DONE, 
                 assistant_message=_make_assistant_message(session_id),
-                model_used="claude-sonnet-4-6",
+                model="claude-sonnet-4-6",
             ),
         ]
         rounds = [
@@ -877,15 +871,15 @@ class TestSubscribeRuntimeEvents:
 
         monkeypatch.setattr(handlers_mod, "stream_xread", fake_xread)
 
-        async def drive() -> list[RuntimeStreamEvent]:
-            collected: list[RuntimeStreamEvent] = []
+        async def drive() -> list[StreamEvent]:
+            collected: list[StreamEvent] = []
             async for ev in handlers_mod._subscribe_runtime_events(run_id):
                 collected.append(ev)
             return collected
 
         collected = asyncio.run(drive())
-        types = [type(ev).__name__ for ev in collected]
-        assert types == ["RuntimeTokenEvent", "RuntimeDoneEvent"]
+        types = [ev.type for ev in collected]
+        assert types == [EventType.TEXT_BLOCK_DELTA, EventType.DONE]
 
 
 class _FakeApprovalStore:

@@ -19,7 +19,9 @@ export function useRealtimeMarkdownContent(
   const debounce = debounceMs ?? 0;
 
   const fallbackRef = useRef(fallback);
-  fallbackRef.current = fallback;
+  useEffect(() => {
+    fallbackRef.current = fallback;
+  });
 
   // Sync confirmation is per doc: a plain boolean stays stale across note
   // switches (the hook instance survives, the ydoc swaps) and made note B
@@ -87,7 +89,6 @@ export function useRealtimeMarkdownContent(
       }
     };
     // `fallback` read via ref so parent bumping note.content does not re-subscribe.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ydoc, debounce, whenSynced]);
 
   return content;
