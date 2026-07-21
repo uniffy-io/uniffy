@@ -183,6 +183,7 @@ export const agentMessagesSlice = createSlice({
                 wasCancelled: false,
                 feedbackRating: '',
                 invokedSkillName: invokedSkillName || '',
+                thinkingJson: '',
             });
         },
         reconcileStoredMessage: (state, action: PayloadAction<{ sessionId: string; message: SerializedMessage }>) => {

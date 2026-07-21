@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import { runtimeApi } from '@/features/agents/api/runtimeApi';
-import type { RootState } from '@/app/store';
+import type { RootState, AppDispatch } from '@/app/store';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 import {
     streamStarted,
@@ -87,7 +87,7 @@ export const streamSendMessage = createAsyncThunk<
             invokedSkillId: params.invokedSkillId,
         });
 
-        const consumer = createAgentStreamConsumer(dispatch, params.sessionId);
+        const consumer = createAgentStreamConsumer(dispatch as AppDispatch, params.sessionId);
         try {
             for await (const envelope of stream) {
                 const outcome = consumer.handle(envelope);
@@ -121,7 +121,7 @@ export const rerunFromMessage = createAsyncThunk<
             userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
 
-        const consumer = createAgentStreamConsumer(dispatch, params.sessionId);
+        const consumer = createAgentStreamConsumer(dispatch as AppDispatch, params.sessionId);
         try {
             for await (const envelope of stream) {
                 const outcome = consumer.handle(envelope);

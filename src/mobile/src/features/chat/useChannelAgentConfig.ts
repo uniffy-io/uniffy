@@ -55,7 +55,8 @@ export function useUpdateChannelAgentConfig(channelId: string, agentId: string) 
       const previous = queryClient.getQueryData<SerializedChannelAgentConfig>(key);
       queryClient.setQueryData<SerializedChannelAgentConfig>(key, (old) => ({
         modelOverride: patch.modelOverride ?? old?.modelOverride ?? "",
-        modelParamsOverrideJson: patch.modelParamsOverrideJson ?? old?.modelParamsOverrideJson ?? "",
+        modelParamsOverrideJson:
+          patch.modelParamsOverrideJson ?? old?.modelParamsOverrideJson ?? "",
       }));
       return { previous };
     },
