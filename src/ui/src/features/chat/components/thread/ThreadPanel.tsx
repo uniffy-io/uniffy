@@ -33,7 +33,7 @@ export function ThreadPanel() {
 
   const channelName = useAppSelector((state) => {
     if (!rootMessage) return '';
-    const channel = state.chatChannels.channels.find(c => c.id === rootMessage.channelId);
+    const channel = state.chatChannels.byId[rootMessage.channelId];
     return channel ? `#${channel.name}` : '';
   });
 

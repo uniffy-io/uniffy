@@ -198,6 +198,8 @@ class ChatReadStateOperations:
             last_read_ats.append(cur[1] if cur and cur[1] is not None else _EPOCH)
             last_read_msg_ids[cid] = cur[0] if cur else None
 
+        # Own messages never count as unread, regardless of cursor position -
+        # another session of the same user must not see a badge for its own send.
         unread_query = text(
             """
             SELECT
@@ -214,6 +216,7 @@ class ChatReadStateOperations:
             ) AS c(channel_id, last_read_at)
             JOIN chat_messages m ON c.channel_id = m.channel_id
             WHERE m.is_deleted = false AND m.root_id IS NULL
+              AND m.sender_id != :user_id
             GROUP BY c.channel_id
             """
         )
@@ -224,6 +227,7 @@ class ChatReadStateOperations:
                 "channel_ids": ordered_channel_ids,
                 "read_ats": last_read_ats,
                 "user_mention_urn": user_mention_urn,
+                "user_id": user_id,
             },
         )
         counts: dict[UUID, dict] = {}

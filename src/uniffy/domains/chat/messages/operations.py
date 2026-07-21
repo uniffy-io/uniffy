@@ -35,6 +35,40 @@ MAX_MESSAGE_LENGTH = 30_000
 EDIT_WINDOW_MINUTES = 2
 
 
+async def bump_channel_message_stats(
+    session: AsyncSession,
+    channel_id: UUID,
+    *,
+    at: datetime,
+    is_root: bool,
+) -> None:
+    """Advance the channel's message counters and activity timestamps.
+
+    Every persisted chat row - human or agent - must run through this so the
+    sidebar's last-activity ordering stays truthful. Caller owns the commit.
+    """
+    if is_root:
+        await session.execute(
+            update(ChatChannelStats)
+            .where(ChatChannelStats.channel_id == channel_id)
+            .values(
+                message_count=ChatChannelStats.message_count + 1,
+                root_message_count=ChatChannelStats.root_message_count + 1,
+                last_message_at=at,
+                last_root_message_at=at,
+            )
+        )
+    else:
+        await session.execute(
+            update(ChatChannelStats)
+            .where(ChatChannelStats.channel_id == channel_id)
+            .values(
+                message_count=ChatChannelStats.message_count + 1,
+                last_message_at=at,
+            )
+        )
+
+
 class ChatMessageOperations:
     """Message CRUD with two-phase transaction and thread auto-creation."""
 
@@ -112,28 +146,8 @@ class ChatMessageOperations:
                     source_file_id=file_id,
                 )
 
-        if root_id is None:
-            # Root message: bump both counters.
-            await self.session.execute(
-                update(ChatChannelStats)
-                .where(ChatChannelStats.channel_id == channel_id)
-                .values(
-                    message_count=ChatChannelStats.message_count + 1,
-                    root_message_count=ChatChannelStats.root_message_count + 1,
-                    last_message_at=now,
-                    last_root_message_at=now,
-                )
-            )
-        else:
-            # Thread reply: only message_count and last_message_at.
-            await self.session.execute(
-                update(ChatChannelStats)
-                .where(ChatChannelStats.channel_id == channel_id)
-                .values(
-                    message_count=ChatChannelStats.message_count + 1,
-                    last_message_at=now,
-                )
-            )
+        await bump_channel_message_stats(self.session, channel_id, at=now, is_root=root_id is None)
+        if root_id is not None:
             await self._handle_thread_reply(root_id, channel_id, user_id, now, root_msg)
 
         await self.session.commit()
@@ -177,6 +191,20 @@ class ChatMessageOperations:
     ) -> None:
         """Post-commit: synchronous publish, then background tasks. One member-id fetch shared."""
         import asyncio
+
+        # Sending marks the sender read up to their own message, so the badge
+        # never lights up in the sender's other sessions or devices.
+        if message.sender_type == SenderType.USER:
+            from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
+
+            read_ops = ChatReadStateOperations(self.session)
+            try:
+                if root_id is None:
+                    await read_ops.mark_channel_read(user_id, channel.id, message.id)
+                else:
+                    await read_ops.mark_thread_read(user_id, root_id)
+            except Exception:
+                logger.warning(f"Failed to advance sender read cursor for channel {channel.id}")
 
         member_ids = await self._get_channel_member_ids(channel.id)
 
@@ -524,12 +552,13 @@ class ChatMessageOperations:
         """Publish unread count change; skip muted/NONE; MENTIONS-only users only on @mention."""
         try:
             from uniffy.domains.chat.streaming.events import UNREAD_COUNT_CHANGED
-            from uniffy.domains.chat.streaming.publisher import publish_user_chat_event
+            from uniffy.domains.chat.streaming.publisher import publish_user_chat_events
 
             mentioned = mentioned_user_ids or set()
             skip = skip_user_ids or set()
             mentions_only = mentions_only_ids or set()
 
+            events: list[tuple[UUID, str, dict]] = []
             for uid in member_ids:
                 if uid == sender_id:
                     continue
@@ -537,16 +566,16 @@ class ChatMessageOperations:
                     continue
                 if uid in mentions_only and uid not in mentioned:
                     continue
-                mention_count = 1 if uid in mentioned else 0
-                await publish_user_chat_event(
+                events.append((
                     uid,
                     UNREAD_COUNT_CHANGED,
                     {
                         "channel_id": str(channel.id),
                         "unread_count": 1,
-                        "mention_count": mention_count,
+                        "mention_count": 1 if uid in mentioned else 0,
                     },
-                )
+                ))
+            await publish_user_chat_events(events)
         except Exception:
             logger.warning(f"Failed to publish unread notifications for channel {channel.id}")
 

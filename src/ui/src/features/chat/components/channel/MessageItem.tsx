@@ -104,7 +104,7 @@ function MessageItemInner({
   // DMs and agent chats (DIRECT, incl. is_agent_dm) thread every turn off the
   // previous message; a reply quote on each one is noise there, so suppress it.
   const isDmChannel = useAppSelector((state) => {
-    const ch = state.chatChannels.channels.find((c) => c.id === message.channelId);
+    const ch = state.chatChannels.byId[message.channelId];
     return ch?.channelType === 'DIRECT' || ch?.channelType === 'GROUP_DM';
   });
   const agent = useAppSelector((state) => state.agents.agents[message.senderId] ?? null);
@@ -226,7 +226,9 @@ function MessageItemInner({
   return (
     <div
       className={cn(
-        'bubble-enter group relative px-4',
+        // No mount animation: the list is virtualized, so rows remount on every
+        // scroll into view and a CSS entry animation replays each time.
+        'group relative px-4',
         isGrouped ? 'py-0.5' : 'py-1.5',
         'hover:bg-muted/15 transition-colors',
         isSelected && 'bg-primary/5 border-l-2 border-primary',

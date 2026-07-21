@@ -36,9 +36,7 @@ export function CallHeaderPill() {
   const session = useAppSelector(selectCallSession);
   const sessionCall = useAppSelector(selectSessionCall);
   const channel = useAppSelector((s) =>
-    session.channelId
-      ? s.chatChannels.channels.find((c) => c.id === session.channelId)
-      : undefined,
+    session.channelId ? s.chatChannels.byId[session.channelId] : undefined,
   );
   const activeChannelId = useAppSelector((s) => s.chatChannels.activeChannelId);
   const { room, leaveCurrentCall } = useCall();

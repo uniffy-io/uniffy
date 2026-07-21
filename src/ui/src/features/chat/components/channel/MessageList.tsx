@@ -120,19 +120,37 @@ function UnreadSeparator() {
   );
 }
 
-function ChannelEmptyState({ heading, description, accent }: {
+function ChannelEmptyState({ eyebrow, heading, description, accent }: {
+  eyebrow: string;
   heading: string;
   description: string;
   accent: ReactNode;
 }) {
   return (
     <div className="flex items-center justify-center h-full text-muted-foreground">
-      <div className="text-center max-w-md px-4">
-        <div className="mb-4 flex justify-center">{accent}</div>
-        <p className="text-lg font-semibold text-foreground">
+      <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
+        <div
+          className="hero-enter flex justify-center drop-shadow-[0_0_28px_rgba(105,74,255,0.35)]"
+          style={{ animationFillMode: 'backwards' }}
+        >
+          {accent}
+        </div>
+        <p
+          className="hero-enter font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80"
+          style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
+        >
+          {eyebrow}
+        </p>
+        <p
+          className="hero-enter text-2xl md:text-3xl font-medium tracking-tight text-foreground [text-wrap:balance]"
+          style={{ animationDelay: '140ms', animationFillMode: 'backwards' }}
+        >
           {heading}
         </p>
-        <p className="text-sm mt-1">
+        <p
+          className="hero-enter text-sm"
+          style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}
+        >
           {description}
         </p>
       </div>
@@ -205,7 +223,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const jumpToMessageId = useAppSelector(selectJumpToMessageId);
 
   const activeChannel = useAppSelector((state) =>
-    state.chatChannels.channels.find((c) => c.id === effectiveChannelId),
+    effectiveChannelId ? state.chatChannels.byId[effectiveChannelId] : undefined,
   );
   const messages = useAppSelector((state) =>
     effectiveChannelId ? selectMessagesForChannel(state, effectiveChannelId) : [],
@@ -272,7 +290,9 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const prevFirstIdRef = useRef<string | undefined>(undefined);
   const prevLenRef = useRef(grouped.length);
   const prevMessageCountRef = useRef(grouped.length);
+  const prevLastIdRef = useRef<string | undefined>(undefined);
   const isAtBottomRef = useRef(true);
+  const [atBottom, setAtBottom] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
@@ -282,9 +302,11 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     prevFirstIdRef.current = undefined;
     prevLenRef.current = 0;
     prevMessageCountRef.current = 0;
+    prevLastIdRef.current = undefined;
     setNewMessageCount(0);
     setHighlightedId(null);
     isAtBottomRef.current = true;
+    setAtBottom(true);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [effectiveChannelId]);
 
@@ -301,12 +323,22 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   }, [grouped]);
 
   useEffect(() => {
+    // Count only tail appends (live arrivals). History pagination prepends
+    // grow the list too but leave the last id untouched - those are old
+    // messages and must not feed the "new messages" pill.
+    const lastId = grouped[grouped.length - 1]?.message.id;
     const grew = grouped.length - prevMessageCountRef.current;
-    if (grew > 0 && !isAtBottomRef.current) {
+    if (
+      grew > 0 &&
+      !isAtBottomRef.current &&
+      prevLastIdRef.current !== undefined &&
+      lastId !== prevLastIdRef.current
+    ) {
       setNewMessageCount((c) => c + grew);
     }
     prevMessageCountRef.current = grouped.length;
-  }, [grouped.length]);
+    prevLastIdRef.current = lastId;
+  }, [grouped]);
 
   useEffect(() => {
     if (!effectiveChannelId) return;
@@ -350,9 +382,10 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     dispatch(stopAgentRun({ channelId: effectiveChannelId, agentId }));
   }, [effectiveChannelId, dispatch]);
 
-  const handleAtBottomChange = useCallback((atBottom: boolean) => {
-    isAtBottomRef.current = atBottom;
-    if (atBottom) {
+  const handleAtBottomChange = useCallback((bottom: boolean) => {
+    isAtBottomRef.current = bottom;
+    setAtBottom(bottom);
+    if (bottom) {
       setNewMessageCount(0);
     }
   }, []);
@@ -376,18 +409,24 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
 
   const components = useMemo(
     () => ({
+      // Constant header height while more history exists, so toggling the
+      // spinner never shifts the anchored rows below it.
       Header: () =>
-        isLoadingMore ? (
-          <div className="flex items-center justify-center py-4">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-            <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+        hasMore ? (
+          <div className="flex h-12 items-center justify-center">
+            {isLoadingMore && (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+              </>
+            )}
           </div>
         ) : (
           <div className="pt-4" />
         ),
       Footer: () => <div className="pb-2" />,
     }),
-    [isLoadingMore],
+    [isLoadingMore, hasMore],
   );
 
   const itemContent = useCallback(
@@ -437,6 +476,14 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     ? `This is the start of your conversation with ${peerNames}`
     : `This is the start of #${getChannelDisplayName(activeChannel)}`;
 
+  const eyebrow = isDirect
+    ? 'Private conversation'
+    : isGroupDm
+      ? 'Group conversation'
+      : isPrivate
+        ? 'Private channel'
+        : 'Team channel';
+
   const description = isDirect
     ? 'Just the two of you. Say hello.'
     : isGroupDm
@@ -472,6 +519,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
       <div className="flex-1 flex flex-col" data-testid="chat-message-list" data-empty="true">
         <div className="flex-1">
           <ChannelEmptyState
+            eyebrow={eyebrow}
             heading={heading}
             description={description}
             accent={accent}
@@ -501,7 +549,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         computeItemKey={(_idx, g) => g.message.id}
       />
 
-      <NewMessagesPill count={newMessageCount} onClick={scrollToBottom} />
+      <NewMessagesPill count={newMessageCount} showJump={!atBottom} onClick={scrollToBottom} />
       <TypingIndicator typingUsers={typingUsers} onStopAgent={handleStopAgent} />
     </div>
   );

@@ -41,6 +41,7 @@ from uniffy.core.valkey.streams import (
 )
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.converters import runtime_stream_event_to_json
+from uniffy.domains.chat.messages.operations import bump_channel_message_stats
 from uniffy.domains.chat.streaming import events as chat_evt
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 
@@ -296,6 +297,12 @@ class ChatStreamPublisher:
             message_metadata=meta,
         )
         self._session.add(row)
+        await bump_channel_message_stats(
+            self._session,
+            self._channel_id,
+            at=row.created_at,
+            is_root=self._thread_root_id is None,
+        )
         await self._session.commit()
         await self._session.refresh(row)
         await self._publish_message_created(row.id)
@@ -337,6 +344,12 @@ class ChatStreamPublisher:
             message_metadata=meta,
         )
         self._session.add(row)
+        await bump_channel_message_stats(
+            self._session,
+            self._channel_id,
+            at=row.created_at,
+            is_root=self._thread_root_id is None,
+        )
         await self._session.commit()
         await self._session.refresh(row)
 

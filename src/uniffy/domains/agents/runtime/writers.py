@@ -12,6 +12,7 @@ from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.domains.chat.messages.operations import bump_channel_message_stats
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -386,6 +387,14 @@ class ChatChannelMessageWriter:
         await self._record_active_tokens(
             input_tokens, output_tokens, cache_read_input_tokens
         )
+        # Compaction summaries are context artifacts, not conversation activity.
+        if role != "summary":
+            await bump_channel_message_stats(
+                self._session,
+                self._channel_id,
+                at=chat_msg.created_at,
+                is_root=self._thread_root_id is None,
+            )
         await self._session.commit()
         await self._session.refresh(chat_msg)
 
@@ -425,6 +434,12 @@ class ChatChannelMessageWriter:
             message_metadata=meta,
         )
         self._session.add(chat_msg)
+        await bump_channel_message_stats(
+            self._session,
+            self._channel_id,
+            at=chat_msg.created_at,
+            is_root=self._thread_root_id is None,
+        )
         await self._session.commit()
         await self._session.refresh(chat_msg)
         return AgentMessage(

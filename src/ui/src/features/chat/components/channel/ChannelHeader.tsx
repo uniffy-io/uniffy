@@ -83,7 +83,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
   const dispatch = useAppDispatch();
   const defaultActiveChannel = useAppSelector(selectActiveChannel);
   const channelFromId = useAppSelector((state) =>
-    channelId ? state.chatChannels.channels.find((c) => c.id === channelId) : undefined,
+    channelId ? state.chatChannels.byId[channelId] : undefined,
   );
   const activeChannel = channelFromId ?? defaultActiveChannel;
 

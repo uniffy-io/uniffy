@@ -233,7 +233,7 @@ export const joinChannel = createAsyncThunk<
     }
     hydrateChannelTags(dispatch, [response.channel]);
     const plain = channelToPlain(response.channel);
-    const existing = getState().chatChannels.channels.find(c => c.id === channelId);
+    const existing = getState().chatChannels.byId[channelId];
     if (existing) {
       dispatch(updateChannel(plain));
     } else {
@@ -347,9 +347,7 @@ export const fetchMessages = createAsyncThunk<
     } else {
       // Compute unread separator before marking the channel as read.
       const state = getState();
-      const channel = state.chatChannels.channels.find(
-        (c) => c.id === params.channelId
-      );
+      const channel = state.chatChannels.byId[params.channelId];
       const unreadCount = channel?.unreadCount ?? 0;
       if (unreadCount > 0 && messages.length > 0) {
         const separatorIndex = messages.length - unreadCount;
@@ -771,6 +769,26 @@ export const unfollowThreadThunk = createAsyncThunk<
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to unfollow thread');
   }
+});
+
+// Messages arriving for the ACTIVE channel while the tab is hidden accrue a
+// badge (the stream handlers skip mark-read when not visible). Reopening the
+// same channel never refetches, so this is the only path that clears it.
+export const clearActiveChannelUnread = createAsyncThunk<
+  void,
+  void,
+  { state: RootState; rejectValue: string }
+>('chat/clearActiveChannelUnread', async (_, { getState, dispatch }) => {
+  const state = getState();
+  const channelId = state.chatChannels.activeChannelId;
+  if (!channelId) return;
+  const channel = state.chatChannels.byId[channelId];
+  if (!channel || ((channel.unreadCount ?? 0) === 0 && (channel.mentionCount ?? 0) === 0)) return;
+  const ids = state.chatMessages.idsByChannel[channelId];
+  const lastId = ids?.[ids.length - 1];
+  if (!lastId) return;
+  dispatch(updateUnreadCounts([{ channelId, unreadCount: 0, mentionCount: 0 }]));
+  dispatch(markChannelRead({ channelId, lastReadMessageId: lastId }));
 });
 
 export const markChannelRead = createAsyncThunk<
@@ -1222,8 +1240,7 @@ export const initializeChat = createAsyncThunk<
     ]);
 
     const state = getState();
-    const channels = state.chatChannels.channels;
-    const targetChannelId = initialChannelId ?? channels[0]?.id;
+    const targetChannelId = initialChannelId ?? state.chatChannels.ids[0];
 
     if (targetChannelId) {
       dispatch(setActiveChannel(targetChannelId));

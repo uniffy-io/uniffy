@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Hash, Lock, MagnifyingGlass } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
+import { selectChannels } from '@/features/chat/store/chatChannelsSlice';
 import { cn } from '@/shared/utils/cn';
 import { SubjectAvatarById } from '@/components/subject';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,7 @@ export function SplitChannelPicker({ onSelect, onClose, currentChannelId }: Spli
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const channels = useAppSelector((state) => state.chatChannels.channels);
+  const channels = useAppSelector(selectChannels);
 
   const filteredChannels = useMemo(() => {
     const query = search.toLowerCase();
