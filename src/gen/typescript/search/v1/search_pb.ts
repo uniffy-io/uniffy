@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file search/v1/search.proto.
  */
 export const file_search_v1_search: GenFile = /*@__PURE__*/
-  fileDesc("ChZzZWFyY2gvdjEvc2VhcmNoLnByb3RvEglzZWFyY2gudjEiiwMKDVNlYXJjaFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg0KBXF1ZXJ5GAIgASgJEjEKDHR5cGVfZmlsdGVycxgDIAMoDjIbLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRUeXBlEg0KBWxpbWl0GAQgASgFEhMKC3RhZ19maWx0ZXJzGAUgAygJEhcKD3Byb2plY3RfZmlsdGVycxgGIAMoCRIXCg9teV9jb250ZW50X29ubHkYByABKAgSFAoMb3duZXJfZmlsdGVyGAggASgJEjIKDWV4Y2x1ZGVfdHlwZXMYCSADKA4yGy5zZWFyY2gudjEuU2VhcmNoUmVzdWx0VHlwZRJHChBtZXRhZGF0YV9maWx0ZXJzGAogAygLMi0uc2VhcmNoLnYxLlNlYXJjaFJlcXVlc3QuTWV0YWRhdGFGaWx0ZXJzRW50cnkaNgoUTWV0YWRhdGFGaWx0ZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASI8Cg5TZWFyY2hSZXNwb25zZRIqCgVpdGVtcxgBIAMoCzIbLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRJdGVtIoYCChBTZWFyY2hSZXN1bHRJdGVtEgsKA3VybhgBIAEoCRINCgV0aXRsZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIpCgR0eXBlGAQgASgOMhsuc2VhcmNoLnYxLlNlYXJjaFJlc3VsdFR5cGUSCwoDdXJsGAUgASgJEg0KBXNjb3JlGAYgASgBEjsKCG1ldGFkYXRhGAcgAygLMikuc2VhcmNoLnYxLlNlYXJjaFJlc3VsdEl0ZW0uTWV0YWRhdGFFbnRyeRIMCgR0YWdzGAggAygJGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASL+AQoQSW5kZXhJdGVtUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSCwoDdXJuGAIgASgJEikKBHR5cGUYAyABKA4yGy5zZWFyY2gudjEuU2VhcmNoUmVzdWx0VHlwZRINCgV0aXRsZRgEIAEoCRIPCgdjb250ZW50GAUgASgJEgsKA3VybBgGIAEoCRI7CghtZXRhZGF0YRgHIAMoCzIpLnNlYXJjaC52MS5JbmRleEl0ZW1SZXF1ZXN0Lk1ldGFkYXRhRW50cnkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIiQKEUluZGV4SXRlbVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiOQoRRGVsZXRlSXRlbVJlcXVlc3QSCwoDdXJuGAEgASgJEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoCSIlChJEZWxldGVJdGVtUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCKFAQoUR2V0UmVmZXJlbmNlc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnRhcmdldF91cm4YAiABKAkSMQoMdHlwZV9maWx0ZXJzGAMgAygOMhsuc2VhcmNoLnYxLlNlYXJjaFJlc3VsdFR5cGUSDQoFbGltaXQYBCABKAUiWAoVR2V0UmVmZXJlbmNlc1Jlc3BvbnNlEioKBWl0ZW1zGAEgAygLMhsuc2VhcmNoLnYxLlNlYXJjaFJlc3VsdEl0ZW0SEwoLdG90YWxfY291bnQYAiABKAUiOwoSUmVzb2x2ZVVybnNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgR1cm5zGAIgAygJIp4BChNSZXNvbHZlVXJuc1Jlc3BvbnNlEj4KCHJlc29sdmVkGAEgAygLMiwuc2VhcmNoLnYxLlJlc29sdmVVcm5zUmVzcG9uc2UuUmVzb2x2ZWRFbnRyeRpHCg1SZXNvbHZlZEVudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLnNlYXJjaC52MS5Vcm5NZXRhZGF0YToCOAEitwgKC1Vybk1ldGFkYXRhEg0KBXRpdGxlGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEikKBHR5cGUYAyABKA4yGy5zZWFyY2gudjEuU2VhcmNoUmVzdWx0VHlwZRILCgN1cmwYBCABKAkSNgoIbWV0YWRhdGEYBSADKAsyJC5zZWFyY2gudjEuVXJuTWV0YWRhdGEuTWV0YWRhdGFFbnRyeRIOCgZzdGF0dXMYCiABKAkSEAoIZHVlX2RhdGUYCyABKAkSFQoNYXNzaWduZWVfbmFtZRgMIAEoCRIZChFwcm9jZXNzaW5nX3N0YXR1cxgPIAEoCRIXCg9jb21wbGV0ZWRfdGFza3MYECABKAUSEwoLdG90YWxfdGFza3MYESABKAUSFAoMbWVtYmVyX2NvdW50GBIgASgFEhcKD3VwZGF0ZWRfYnlfbmFtZRgTIAEoCRIQCghwcmlvcml0eRgUIAEoCRIWCg5wcmlvcml0eV9sYWJlbBgVIAEoCRIWCg5wcmlvcml0eV9jb2xvchgWIAEoCRIUCgxzdGF0dXNfbGFiZWwYFyABKAkSFAoMc3RhdHVzX2NvbG9yGBggASgJEhEKCXRhc2tfdHlwZRgZIAEoCRITCgt0YXNrX251bWJlchgaIAEoBRIUCgxwcm9qZWN0X25hbWUYGyABKAkSFAoMcHJvamVjdF9zbHVnGBwgASgJEhUKDXByb2plY3RfY29sb3IYHSABKAkSGQoRc3VidGFza19jb21wbGV0ZWQYHiABKAUSFQoNc3VidGFza190b3RhbBgfIAEoBRIYChBibG9ja2VkX2J5X2NvdW50GCAgASgFEhgKEGV2ZW50X3N0YXJ0X3RpbWUYISABKAkSFgoOZXZlbnRfZW5kX3RpbWUYIiABKAkSGAoQZXZlbnRfaXNfYWxsX2RheRgjIAEoCBIWCg5ldmVudF9sb2NhdGlvbhgkIAEoCRIZChFldmVudF9tZWV0aW5nX3VybBglIAEoCRIYChBldmVudF9jaGFubmVsX2lkGDEgASgJEhYKDmZpbGVfbWltZV90eXBlGCYgASgJEhEKCWZpbGVfc2l6ZRgnIAEoAxIWCg5ub3RlX25vZGVfdHlwZRgoIAEoCRIUCgxjaGFubmVsX3R5cGUYKSABKAkSEwoLYWdlbnRfZW1vamkYKiABKAkSGQoRYWdlbnRfdGhlbWVfY29sb3IYKyABKAkSFwoPdXNlcl9hdmF0YXJfdXJsGCwgASgJEhIKCnVzZXJfZW1haWwYLSABKAkSFAoMYXNzaWduZWVfaWRzGC4gAygJEhQKDGNvbnRlbnRfdGFncxgvIAMoCRISCgp1cm5fc3RhdHVzGDAgASgJGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASrMAwoQU2VhcmNoUmVzdWx0VHlwZRIiCh5TRUFSQ0hfUkVTVUxUX1RZUEVfVU5TUEVDSUZJRUQQABIbChdTRUFSQ0hfUkVTVUxUX1RZUEVfTk9URRABEhsKF1NFQVJDSF9SRVNVTFRfVFlQRV9GSUxFEAISGwoXU0VBUkNIX1JFU1VMVF9UWVBFX0NIQVQQAxIbChdTRUFSQ0hfUkVTVUxUX1RZUEVfVVNFUhAEEiUKIVNFQVJDSF9SRVNVTFRfVFlQRV9DQUxFTkRBUl9FVkVOVBAFEh4KGlNFQVJDSF9SRVNVTFRfVFlQRV9QUk9KRUNUEAYSGwoXU0VBUkNIX1JFU1VMVF9UWVBFX1RBU0sQBxIcChhTRUFSQ0hfUkVTVUxUX1RZUEVfQUdFTlQQCBIdChlTRUFSQ0hfUkVTVUxUX1RZUEVfUFJPTVBUEAkSIwofU0VBUkNIX1JFU1VMVF9UWVBFX0NIQVRfTUVTU0FHRRAKEhsKF1NFQVJDSF9SRVNVTFRfVFlQRV9ST09NEAsSIQodU0VBUkNIX1JFU1VMVF9UWVBFX0FHRU5UX0NIQVQQDBIaChZTRUFSQ0hfUkVTVUxUX1RZUEVfVEFHEA0yjQMKDVNlYXJjaFNlcnZpY2USPwoGU2VhcmNoEhguc2VhcmNoLnYxLlNlYXJjaFJlcXVlc3QaGS5zZWFyY2gudjEuU2VhcmNoUmVzcG9uc2UiABJICglJbmRleEl0ZW0SGy5zZWFyY2gudjEuSW5kZXhJdGVtUmVxdWVzdBocLnNlYXJjaC52MS5JbmRleEl0ZW1SZXNwb25zZSIAEksKCkRlbGV0ZUl0ZW0SHC5zZWFyY2gudjEuRGVsZXRlSXRlbVJlcXVlc3QaHS5zZWFyY2gudjEuRGVsZXRlSXRlbVJlc3BvbnNlIgASVAoNR2V0UmVmZXJlbmNlcxIfLnNlYXJjaC52MS5HZXRSZWZlcmVuY2VzUmVxdWVzdBogLnNlYXJjaC52MS5HZXRSZWZlcmVuY2VzUmVzcG9uc2UiABJOCgtSZXNvbHZlVXJucxIdLnNlYXJjaC52MS5SZXNvbHZlVXJuc1JlcXVlc3QaHi5zZWFyY2gudjEuUmVzb2x2ZVVybnNSZXNwb25zZSIAQjlaN2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9zZWFyY2gvdjE7c2VhcmNodjFiBnByb3RvMw");
+  fileDesc("ChZzZWFyY2gvdjEvc2VhcmNoLnByb3RvEglzZWFyY2gudjEioQMKDVNlYXJjaFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg0KBXF1ZXJ5GAIgASgJEjEKDHR5cGVfZmlsdGVycxgDIAMoDjIbLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRUeXBlEg0KBWxpbWl0GAQgASgFEhMKC3RhZ19maWx0ZXJzGAUgAygJEhcKD3Byb2plY3RfZmlsdGVycxgGIAMoCRIXCg9teV9jb250ZW50X29ubHkYByABKAgSFAoMb3duZXJfZmlsdGVyGAggASgJEkcKEG1ldGFkYXRhX2ZpbHRlcnMYCiADKAsyLS5zZWFyY2gudjEuU2VhcmNoUmVxdWVzdC5NZXRhZGF0YUZpbHRlcnNFbnRyeRIOCgZvZmZzZXQYCyABKAUSMgoNdHlwZV9wcmlvcml0eRgMIAMoDjIbLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRUeXBlGjYKFE1ldGFkYXRhRmlsdGVyc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFKBAgJEAoiUQoOU2VhcmNoUmVzcG9uc2USKgoFaXRlbXMYASADKAsyGy5zZWFyY2gudjEuU2VhcmNoUmVzdWx0SXRlbRITCgt0b3RhbF9jb3VudBgCIAEoBSLCAgoQU2VhcmNoUmVzdWx0SXRlbRILCgN1cm4YASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSKQoEdHlwZRgEIAEoDjIbLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRUeXBlEgsKA3VybBgFIAEoCRINCgVzY29yZRgGIAEoARI7CghtZXRhZGF0YRgHIAMoCzIpLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRJdGVtLk1ldGFkYXRhRW50cnkSDAoEdGFncxgIIAMoCRIZChF0aXRsZV9oaWdobGlnaHRlZBgJIAEoCRIfChdkZXNjcmlwdGlvbl9oaWdobGlnaHRlZBgKIAEoCRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEihQEKFEdldFJlZmVyZW5jZXNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgp0YXJnZXRfdXJuGAIgASgJEjEKDHR5cGVfZmlsdGVycxgDIAMoDjIbLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRUeXBlEg0KBWxpbWl0GAQgASgFIlgKFUdldFJlZmVyZW5jZXNSZXNwb25zZRIqCgVpdGVtcxgBIAMoCzIbLnNlYXJjaC52MS5TZWFyY2hSZXN1bHRJdGVtEhMKC3RvdGFsX2NvdW50GAIgASgFIjsKElJlc29sdmVVcm5zUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDAoEdXJucxgCIAMoCSKeAQoTUmVzb2x2ZVVybnNSZXNwb25zZRI+CghyZXNvbHZlZBgBIAMoCzIsLnNlYXJjaC52MS5SZXNvbHZlVXJuc1Jlc3BvbnNlLlJlc29sdmVkRW50cnkaRwoNUmVzb2x2ZWRFbnRyeRILCgNrZXkYASABKAkSJQoFdmFsdWUYAiABKAsyFi5zZWFyY2gudjEuVXJuTWV0YWRhdGE6AjgBIrcICgtVcm5NZXRhZGF0YRINCgV0aXRsZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIpCgR0eXBlGAMgASgOMhsuc2VhcmNoLnYxLlNlYXJjaFJlc3VsdFR5cGUSCwoDdXJsGAQgASgJEjYKCG1ldGFkYXRhGAUgAygLMiQuc2VhcmNoLnYxLlVybk1ldGFkYXRhLk1ldGFkYXRhRW50cnkSDgoGc3RhdHVzGAogASgJEhAKCGR1ZV9kYXRlGAsgASgJEhUKDWFzc2lnbmVlX25hbWUYDCABKAkSGQoRcHJvY2Vzc2luZ19zdGF0dXMYDyABKAkSFwoPY29tcGxldGVkX3Rhc2tzGBAgASgFEhMKC3RvdGFsX3Rhc2tzGBEgASgFEhQKDG1lbWJlcl9jb3VudBgSIAEoBRIXCg91cGRhdGVkX2J5X25hbWUYEyABKAkSEAoIcHJpb3JpdHkYFCABKAkSFgoOcHJpb3JpdHlfbGFiZWwYFSABKAkSFgoOcHJpb3JpdHlfY29sb3IYFiABKAkSFAoMc3RhdHVzX2xhYmVsGBcgASgJEhQKDHN0YXR1c19jb2xvchgYIAEoCRIRCgl0YXNrX3R5cGUYGSABKAkSEwoLdGFza19udW1iZXIYGiABKAUSFAoMcHJvamVjdF9uYW1lGBsgASgJEhQKDHByb2plY3Rfc2x1ZxgcIAEoCRIVCg1wcm9qZWN0X2NvbG9yGB0gASgJEhkKEXN1YnRhc2tfY29tcGxldGVkGB4gASgFEhUKDXN1YnRhc2tfdG90YWwYHyABKAUSGAoQYmxvY2tlZF9ieV9jb3VudBggIAEoBRIYChBldmVudF9zdGFydF90aW1lGCEgASgJEhYKDmV2ZW50X2VuZF90aW1lGCIgASgJEhgKEGV2ZW50X2lzX2FsbF9kYXkYIyABKAgSFgoOZXZlbnRfbG9jYXRpb24YJCABKAkSGQoRZXZlbnRfbWVldGluZ191cmwYJSABKAkSGAoQZXZlbnRfY2hhbm5lbF9pZBgxIAEoCRIWCg5maWxlX21pbWVfdHlwZRgmIAEoCRIRCglmaWxlX3NpemUYJyABKAMSFgoObm90ZV9ub2RlX3R5cGUYKCABKAkSFAoMY2hhbm5lbF90eXBlGCkgASgJEhMKC2FnZW50X2Vtb2ppGCogASgJEhkKEWFnZW50X3RoZW1lX2NvbG9yGCsgASgJEhcKD3VzZXJfYXZhdGFyX3VybBgsIAEoCRISCgp1c2VyX2VtYWlsGC0gASgJEhQKDGFzc2lnbmVlX2lkcxguIAMoCRIUCgxjb250ZW50X3RhZ3MYLyADKAkSEgoKdXJuX3N0YXR1cxgwIAEoCRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqkAQKEFNlYXJjaFJlc3VsdFR5cGUSIgoeU0VBUkNIX1JFU1VMVF9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXU0VBUkNIX1JFU1VMVF9UWVBFX05PVEUQARIbChdTRUFSQ0hfUkVTVUxUX1RZUEVfRklMRRACEhsKF1NFQVJDSF9SRVNVTFRfVFlQRV9DSEFUEAMSGwoXU0VBUkNIX1JFU1VMVF9UWVBFX1VTRVIQBBIlCiFTRUFSQ0hfUkVTVUxUX1RZUEVfQ0FMRU5EQVJfRVZFTlQQBRIeChpTRUFSQ0hfUkVTVUxUX1RZUEVfUFJPSkVDVBAGEhsKF1NFQVJDSF9SRVNVTFRfVFlQRV9UQVNLEAcSHAoYU0VBUkNIX1JFU1VMVF9UWVBFX0FHRU5UEAgSHQoZU0VBUkNIX1JFU1VMVF9UWVBFX1BST01QVBAJEiMKH1NFQVJDSF9SRVNVTFRfVFlQRV9DSEFUX01FU1NBR0UQChIbChdTRUFSQ0hfUkVTVUxUX1RZUEVfUk9PTRALEiEKHVNFQVJDSF9SRVNVTFRfVFlQRV9BR0VOVF9DSEFUEAwSGgoWU0VBUkNIX1JFU1VMVF9UWVBFX1RBRxANEh0KGVNFQVJDSF9SRVNVTFRfVFlQRV9GT0xERVIQDhIjCh9TRUFSQ0hfUkVTVUxUX1RZUEVfQUdFTlRfRk9MREVSEA8y9gEKDVNlYXJjaFNlcnZpY2USPwoGU2VhcmNoEhguc2VhcmNoLnYxLlNlYXJjaFJlcXVlc3QaGS5zZWFyY2gudjEuU2VhcmNoUmVzcG9uc2UiABJUCg1HZXRSZWZlcmVuY2VzEh8uc2VhcmNoLnYxLkdldFJlZmVyZW5jZXNSZXF1ZXN0GiAuc2VhcmNoLnYxLkdldFJlZmVyZW5jZXNSZXNwb25zZSIAEk4KC1Jlc29sdmVVcm5zEh0uc2VhcmNoLnYxLlJlc29sdmVVcm5zUmVxdWVzdBoeLnNlYXJjaC52MS5SZXNvbHZlVXJuc1Jlc3BvbnNlIgBCOVo3Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL3NlYXJjaC92MTtzZWFyY2h2MWIGcHJvdG8z");
 
 /**
  * @generated from message search.v1.SearchRequest
@@ -59,18 +59,27 @@ export type SearchRequest = Message<"search.v1.SearchRequest"> & {
   ownerFilter: string;
 
   /**
-   * Types to exclude from results (e.g., exclude chat_message when not in chat domain)
-   *
-   * @generated from field: repeated search.v1.SearchResultType exclude_types = 9;
-   */
-  excludeTypes: SearchResultType[];
-
-  /**
    * Metadata field filters (e.g., {"channel_id": "uuid"} for chat message scoping)
    *
    * @generated from field: map<string, string> metadata_filters = 10;
    */
   metadataFilters: { [key: string]: string };
+
+  /**
+   * Pagination offset into the result set (max_total_hits caps the window)
+   *
+   * @generated from field: int32 offset = 11;
+   */
+  offset: number;
+
+  /**
+   * Client ranking context: listed types float to the top in this order.
+   * Applied within match-strength buckets, so a weak (typo/partial) match
+   * never outranks a full match via its type alone.
+   *
+   * @generated from field: repeated search.v1.SearchResultType type_priority = 12;
+   */
+  typePriority: SearchResultType[];
 };
 
 /**
@@ -88,6 +97,13 @@ export type SearchResponse = Message<"search.v1.SearchResponse"> & {
    * @generated from field: repeated search.v1.SearchResultItem items = 1;
    */
   items: SearchResultItem[];
+
+  /**
+   * Estimated total matches before pagination
+   *
+   * @generated from field: int32 total_count = 2;
+   */
+  totalCount: number;
 };
 
 /**
@@ -152,6 +168,19 @@ export type SearchResultItem = Message<"search.v1.SearchResultItem"> & {
    * @generated from field: repeated string tags = 8;
    */
   tags: string[];
+
+  /**
+   * Match-highlighted variants: matched spans wrapped in U+E000/U+E001
+   * markers, description cropped around the match. Empty without a text query.
+   *
+   * @generated from field: string title_highlighted = 9;
+   */
+  titleHighlighted: string;
+
+  /**
+   * @generated from field: string description_highlighted = 10;
+   */
+  descriptionHighlighted: string;
 };
 
 /**
@@ -160,111 +189,6 @@ export type SearchResultItem = Message<"search.v1.SearchResultItem"> & {
  */
 export const SearchResultItemSchema: GenMessage<SearchResultItem> = /*@__PURE__*/
   messageDesc(file_search_v1_search, 2);
-
-/**
- * @generated from message search.v1.IndexItemRequest
- */
-export type IndexItemRequest = Message<"search.v1.IndexItemRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string urn = 2;
-   */
-  urn: string;
-
-  /**
-   * @generated from field: search.v1.SearchResultType type = 3;
-   */
-  type: SearchResultType;
-
-  /**
-   * @generated from field: string title = 4;
-   */
-  title: string;
-
-  /**
-   * Content to be indexed for full text
-   *
-   * @generated from field: string content = 5;
-   */
-  content: string;
-
-  /**
-   * @generated from field: string url = 6;
-   */
-  url: string;
-
-  /**
-   * @generated from field: map<string, string> metadata = 7;
-   */
-  metadata: { [key: string]: string };
-};
-
-/**
- * Describes the message search.v1.IndexItemRequest.
- * Use `create(IndexItemRequestSchema)` to create a new message.
- */
-export const IndexItemRequestSchema: GenMessage<IndexItemRequest> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 3);
-
-/**
- * @generated from message search.v1.IndexItemResponse
- */
-export type IndexItemResponse = Message<"search.v1.IndexItemResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message search.v1.IndexItemResponse.
- * Use `create(IndexItemResponseSchema)` to create a new message.
- */
-export const IndexItemResponseSchema: GenMessage<IndexItemResponse> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 4);
-
-/**
- * @generated from message search.v1.DeleteItemRequest
- */
-export type DeleteItemRequest = Message<"search.v1.DeleteItemRequest"> & {
-  /**
-   * @generated from field: string urn = 1;
-   */
-  urn: string;
-
-  /**
-   * @generated from field: string organization_id = 2;
-   */
-  organizationId: string;
-};
-
-/**
- * Describes the message search.v1.DeleteItemRequest.
- * Use `create(DeleteItemRequestSchema)` to create a new message.
- */
-export const DeleteItemRequestSchema: GenMessage<DeleteItemRequest> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 5);
-
-/**
- * @generated from message search.v1.DeleteItemResponse
- */
-export type DeleteItemResponse = Message<"search.v1.DeleteItemResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message search.v1.DeleteItemResponse.
- * Use `create(DeleteItemResponseSchema)` to create a new message.
- */
-export const DeleteItemResponseSchema: GenMessage<DeleteItemResponse> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 6);
 
 /**
  * Request to get content that references a specific URN
@@ -304,7 +228,7 @@ export type GetReferencesRequest = Message<"search.v1.GetReferencesRequest"> & {
  * Use `create(GetReferencesRequestSchema)` to create a new message.
  */
 export const GetReferencesRequestSchema: GenMessage<GetReferencesRequest> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 7);
+  messageDesc(file_search_v1_search, 3);
 
 /**
  * Response with content that references the target URN
@@ -332,7 +256,7 @@ export type GetReferencesResponse = Message<"search.v1.GetReferencesResponse"> &
  * Use `create(GetReferencesResponseSchema)` to create a new message.
  */
 export const GetReferencesResponseSchema: GenMessage<GetReferencesResponse> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 8);
+  messageDesc(file_search_v1_search, 4);
 
 /**
  * Request with batch of URNs to resolve
@@ -358,7 +282,7 @@ export type ResolveUrnsRequest = Message<"search.v1.ResolveUrnsRequest"> & {
  * Use `create(ResolveUrnsRequestSchema)` to create a new message.
  */
 export const ResolveUrnsRequestSchema: GenMessage<ResolveUrnsRequest> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 9);
+  messageDesc(file_search_v1_search, 5);
 
 /**
  * Response with resolved URN metadata
@@ -379,7 +303,7 @@ export type ResolveUrnsResponse = Message<"search.v1.ResolveUrnsResponse"> & {
  * Use `create(ResolveUrnsResponseSchema)` to create a new message.
  */
 export const ResolveUrnsResponseSchema: GenMessage<ResolveUrnsResponse> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 10);
+  messageDesc(file_search_v1_search, 6);
 
 /**
  * Lightweight metadata for a URN
@@ -706,7 +630,7 @@ export type UrnMetadata = Message<"search.v1.UrnMetadata"> & {
  * Use `create(UrnMetadataSchema)` to create a new message.
  */
 export const UrnMetadataSchema: GenMessage<UrnMetadata> = /*@__PURE__*/
-  messageDesc(file_search_v1_search, 11);
+  messageDesc(file_search_v1_search, 7);
 
 /**
  * @generated from enum search.v1.SearchResultType
@@ -781,6 +705,16 @@ export enum SearchResultType {
    * @generated from enum value: SEARCH_RESULT_TYPE_TAG = 13;
    */
   TAG = 13,
+
+  /**
+   * @generated from enum value: SEARCH_RESULT_TYPE_FOLDER = 14;
+   */
+  FOLDER = 14,
+
+  /**
+   * @generated from enum value: SEARCH_RESULT_TYPE_AGENT_FOLDER = 15;
+   */
+  AGENT_FOLDER = 15,
 }
 
 /**
@@ -790,7 +724,9 @@ export const SearchResultTypeSchema: GenEnum<SearchResultType> = /*@__PURE__*/
   enumDesc(file_search_v1_search, 0);
 
 /**
- * The unified search service handling global search and indexing
+ * The unified search service handling global search and URN resolution.
+ * Index writes happen server-side in domain operations; there is no
+ * client-facing indexing RPC.
  *
  * @generated from service search.v1.SearchService
  */
@@ -804,26 +740,6 @@ export const SearchService: GenService<{
     methodKind: "unary";
     input: typeof SearchRequestSchema;
     output: typeof SearchResponseSchema;
-  },
-  /**
-   * Index an item (Internal use, or called by other services)
-   *
-   * @generated from rpc search.v1.SearchService.IndexItem
-   */
-  indexItem: {
-    methodKind: "unary";
-    input: typeof IndexItemRequestSchema;
-    output: typeof IndexItemResponseSchema;
-  },
-  /**
-   * Remove an item from the index
-   *
-   * @generated from rpc search.v1.SearchService.DeleteItem
-   */
-  deleteItem: {
-    methodKind: "unary";
-    input: typeof DeleteItemRequestSchema;
-    output: typeof DeleteItemResponseSchema;
   },
   /**
    * Get all content that references a specific URN (universal backlinks)

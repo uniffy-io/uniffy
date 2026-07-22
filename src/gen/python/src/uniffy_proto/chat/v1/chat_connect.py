@@ -54,6 +54,9 @@ class ChatService(Protocol):
     async def update_channel_member(self, request: chat_dot_v1_dot_chat__pb2.UpdateChannelMemberRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateChannelMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def update_member_role(self, request: chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def send_message(self, request: chat_dot_v1_dot_chat__pb2.SendMessageRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.SendMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -123,6 +126,9 @@ class ChatService(Protocol):
     async def get_channel_resources(self, request: chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelResourcesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def convert_group_dm_to_channel(self, request: chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def create_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -148,6 +154,21 @@ class ChatService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def move_channel_to_category(self, request: chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def create_agent_folder(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def rename_agent_folder(self, request: chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def delete_agent_folder(self, request: chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def list_agent_folders(self, request: chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def set_agent_chat_folder(self, request: chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def respond_to_agent_confirmation(self, request: chat_dot_v1_dot_chat__pb2.RespondToAgentConfirmationRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RespondToAgentConfirmationResponse:
@@ -302,6 +323,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_channel_member,
+                ),
+                "/chat.v1.ChatService/UpdateMemberRole": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateMemberRole",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_member_role,
                 ),
                 "/chat.v1.ChatService/SendMessage": Endpoint.unary(
                     method=MethodInfo(
@@ -533,6 +564,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                     ),
                     function=svc.get_channel_resources,
                 ),
+                "/chat.v1.ChatService/ConvertGroupDmToChannel": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ConvertGroupDmToChannel",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.convert_group_dm_to_channel,
+                ),
                 "/chat.v1.ChatService/CreateAgentChat": Endpoint.unary(
                     method=MethodInfo(
                         name="CreateAgentChat",
@@ -622,6 +663,56 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.move_channel_to_category,
+                ),
+                "/chat.v1.ChatService/CreateAgentFolder": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateAgentFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_agent_folder,
+                ),
+                "/chat.v1.ChatService/RenameAgentFolder": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RenameAgentFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.rename_agent_folder,
+                ),
+                "/chat.v1.ChatService/DeleteAgentFolder": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteAgentFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_agent_folder,
+                ),
+                "/chat.v1.ChatService/ListAgentFolders": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListAgentFolders",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_agent_folders,
+                ),
+                "/chat.v1.ChatService/SetAgentChatFolder": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetAgentChatFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_agent_chat_folder,
                 ),
                 "/chat.v1.ChatService/RespondToAgentConfirmation": Endpoint.unary(
                     method=MethodInfo(
@@ -961,6 +1052,26 @@ class ChatServiceClient(ConnectClient):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.UpdateChannelMemberRequest,
                 output=chat_dot_v1_dot_chat__pb2.UpdateChannelMemberResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_member_role(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateMemberRole",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest,
+                output=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1427,6 +1538,26 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def convert_group_dm_to_channel(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ConvertGroupDmToChannel",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest,
+                output=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_agent_chat(
         self,
         request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
@@ -1601,6 +1732,106 @@ class ChatServiceClient(ConnectClient):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryRequest,
                 output=chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def create_agent_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateAgentFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def rename_agent_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RenameAgentFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_agent_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteAgentFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_agent_folders(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAgentFolders",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest,
+                output=chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_agent_chat_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetAgentChatFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1816,6 +2047,8 @@ class ChatServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def update_channel_member(self, request: chat_dot_v1_dot_chat__pb2.UpdateChannelMemberRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateChannelMemberResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_member_role(self, request: chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def send_message(self, request: chat_dot_v1_dot_chat__pb2.SendMessageRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.SendMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_messages(self, request: chat_dot_v1_dot_chat__pb2.GetMessagesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetMessagesResponse:
@@ -1862,6 +2095,8 @@ class ChatServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_channel_resources(self, request: chat_dot_v1_dot_chat__pb2.GetChannelResourcesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.GetChannelResourcesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def convert_group_dm_to_channel(self, request: chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def create_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentChatResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def rename_agent_chat(self, request: chat_dot_v1_dot_chat__pb2.RenameAgentChatRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RenameAgentChatResponse:
@@ -1879,6 +2114,16 @@ class ChatServiceSync(Protocol):
     def reorder_categories(self, request: chat_dot_v1_dot_chat__pb2.ReorderCategoriesRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ReorderCategoriesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def move_channel_to_category(self, request: chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def create_agent_folder(self, request: chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def rename_agent_folder(self, request: chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_agent_folder(self, request: chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_agent_folders(self, request: chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_agent_chat_folder(self, request: chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def respond_to_agent_confirmation(self, request: chat_dot_v1_dot_chat__pb2.RespondToAgentConfirmationRequest, ctx: RequestContext) -> chat_dot_v1_dot_chat__pb2.RespondToAgentConfirmationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -2023,6 +2268,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_channel_member,
+                ),
+                "/chat.v1.ChatService/UpdateMemberRole": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateMemberRole",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest,
+                        output=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_member_role,
                 ),
                 "/chat.v1.ChatService/SendMessage": EndpointSync.unary(
                     method=MethodInfo(
@@ -2254,6 +2509,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.get_channel_resources,
                 ),
+                "/chat.v1.ChatService/ConvertGroupDmToChannel": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ConvertGroupDmToChannel",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.convert_group_dm_to_channel,
+                ),
                 "/chat.v1.ChatService/CreateAgentChat": EndpointSync.unary(
                     method=MethodInfo(
                         name="CreateAgentChat",
@@ -2343,6 +2608,56 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.move_channel_to_category,
+                ),
+                "/chat.v1.ChatService/CreateAgentFolder": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateAgentFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_agent_folder,
+                ),
+                "/chat.v1.ChatService/RenameAgentFolder": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RenameAgentFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.rename_agent_folder,
+                ),
+                "/chat.v1.ChatService/DeleteAgentFolder": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteAgentFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_agent_folder,
+                ),
+                "/chat.v1.ChatService/ListAgentFolders": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListAgentFolders",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest,
+                        output=chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_agent_folders,
+                ),
+                "/chat.v1.ChatService/SetAgentChatFolder": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetAgentChatFolder",
+                        service_name="chat.v1.ChatService",
+                        input=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest,
+                        output=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_agent_chat_folder,
                 ),
                 "/chat.v1.ChatService/RespondToAgentConfirmation": EndpointSync.unary(
                     method=MethodInfo(
@@ -2682,6 +2997,26 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.UpdateChannelMemberRequest,
                 output=chat_dot_v1_dot_chat__pb2.UpdateChannelMemberResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_member_role(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateMemberRole",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleRequest,
+                output=chat_dot_v1_dot_chat__pb2.UpdateMemberRoleResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -3148,6 +3483,26 @@ class ChatServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
+    def convert_group_dm_to_channel(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ConvertGroupDmToChannel",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelRequest,
+                output=chat_dot_v1_dot_chat__pb2.ConvertGroupDmToChannelResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     def create_agent_chat(
         self,
         request: chat_dot_v1_dot_chat__pb2.CreateAgentChatRequest,
@@ -3322,6 +3677,106 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryRequest,
                 output=chat_dot_v1_dot_chat__pb2.MoveChannelToCategoryResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def create_agent_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateAgentFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.CreateAgentFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.CreateAgentFolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def rename_agent_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RenameAgentFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.RenameAgentFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.RenameAgentFolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_agent_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteAgentFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.DeleteAgentFolderResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_agent_folders(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAgentFolders",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.ListAgentFoldersRequest,
+                output=chat_dot_v1_dot_chat__pb2.ListAgentFoldersResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_agent_chat_folder(
+        self,
+        request: chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetAgentChatFolder",
+                service_name="chat.v1.ChatService",
+                input=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderRequest,
+                output=chat_dot_v1_dot_chat__pb2.SetAgentChatFolderResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

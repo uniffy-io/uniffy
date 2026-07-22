@@ -62,6 +62,8 @@ enum ChatEventType {
   // Incremental reasoning for an in-flight agent message. Rendered in a
   // separate collapsible thinking pane, never merged into message content.
   CHAT_EVENT_TYPE_AGENT_THINKING_DELTA = 31;
+  // A member's channel role changed; payload is MemberPayload with the new role.
+  CHAT_EVENT_TYPE_MEMBER_UPDATED = 32;
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.

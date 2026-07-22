@@ -65,6 +65,9 @@ const (
 	// ChatServiceUpdateChannelMemberProcedure is the fully-qualified name of the ChatService's
 	// UpdateChannelMember RPC.
 	ChatServiceUpdateChannelMemberProcedure = "/chat.v1.ChatService/UpdateChannelMember"
+	// ChatServiceUpdateMemberRoleProcedure is the fully-qualified name of the ChatService's
+	// UpdateMemberRole RPC.
+	ChatServiceUpdateMemberRoleProcedure = "/chat.v1.ChatService/UpdateMemberRole"
 	// ChatServiceSendMessageProcedure is the fully-qualified name of the ChatService's SendMessage RPC.
 	ChatServiceSendMessageProcedure = "/chat.v1.ChatService/SendMessage"
 	// ChatServiceGetMessagesProcedure is the fully-qualified name of the ChatService's GetMessages RPC.
@@ -124,6 +127,9 @@ const (
 	// ChatServiceGetChannelResourcesProcedure is the fully-qualified name of the ChatService's
 	// GetChannelResources RPC.
 	ChatServiceGetChannelResourcesProcedure = "/chat.v1.ChatService/GetChannelResources"
+	// ChatServiceConvertGroupDmToChannelProcedure is the fully-qualified name of the ChatService's
+	// ConvertGroupDmToChannel RPC.
+	ChatServiceConvertGroupDmToChannelProcedure = "/chat.v1.ChatService/ConvertGroupDmToChannel"
 	// ChatServiceCreateAgentChatProcedure is the fully-qualified name of the ChatService's
 	// CreateAgentChat RPC.
 	ChatServiceCreateAgentChatProcedure = "/chat.v1.ChatService/CreateAgentChat"
@@ -151,6 +157,21 @@ const (
 	// ChatServiceMoveChannelToCategoryProcedure is the fully-qualified name of the ChatService's
 	// MoveChannelToCategory RPC.
 	ChatServiceMoveChannelToCategoryProcedure = "/chat.v1.ChatService/MoveChannelToCategory"
+	// ChatServiceCreateAgentFolderProcedure is the fully-qualified name of the ChatService's
+	// CreateAgentFolder RPC.
+	ChatServiceCreateAgentFolderProcedure = "/chat.v1.ChatService/CreateAgentFolder"
+	// ChatServiceRenameAgentFolderProcedure is the fully-qualified name of the ChatService's
+	// RenameAgentFolder RPC.
+	ChatServiceRenameAgentFolderProcedure = "/chat.v1.ChatService/RenameAgentFolder"
+	// ChatServiceDeleteAgentFolderProcedure is the fully-qualified name of the ChatService's
+	// DeleteAgentFolder RPC.
+	ChatServiceDeleteAgentFolderProcedure = "/chat.v1.ChatService/DeleteAgentFolder"
+	// ChatServiceListAgentFoldersProcedure is the fully-qualified name of the ChatService's
+	// ListAgentFolders RPC.
+	ChatServiceListAgentFoldersProcedure = "/chat.v1.ChatService/ListAgentFolders"
+	// ChatServiceSetAgentChatFolderProcedure is the fully-qualified name of the ChatService's
+	// SetAgentChatFolder RPC.
+	ChatServiceSetAgentChatFolderProcedure = "/chat.v1.ChatService/SetAgentChatFolder"
 	// ChatServiceRespondToAgentConfirmationProcedure is the fully-qualified name of the ChatService's
 	// RespondToAgentConfirmation RPC.
 	ChatServiceRespondToAgentConfirmationProcedure = "/chat.v1.ChatService/RespondToAgentConfirmation"
@@ -196,6 +217,7 @@ type ChatServiceClient interface {
 	RemoveMembers(context.Context, *connect.Request[v1.RemoveMembersRequest]) (*connect.Response[v1.RemoveMembersResponse], error)
 	GetMembers(context.Context, *connect.Request[v1.GetMembersRequest]) (*connect.Response[v1.GetMembersResponse], error)
 	UpdateChannelMember(context.Context, *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error)
+	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error)
 	// Messages
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	GetMessages(context.Context, *connect.Request[v1.GetMessagesRequest]) (*connect.Response[v1.GetMessagesResponse], error)
@@ -225,6 +247,9 @@ type ChatServiceClient interface {
 	ListDrafts(context.Context, *connect.Request[v1.ListDraftsRequest]) (*connect.Response[v1.ListDraftsResponse], error)
 	// Channel resources
 	GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error)
+	// Convert a group DM into a PRIVATE channel (owner only); members and
+	// history carry over. Group DMs are capped, channels are not.
+	ConvertGroupDmToChannel(context.Context, *connect.Request[v1.ConvertGroupDmToChannelRequest]) (*connect.Response[v1.ConvertGroupDmToChannelResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
 	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
@@ -236,6 +261,14 @@ type ChatServiceClient interface {
 	ListCategories(context.Context, *connect.Request[v1.ListCategoriesRequest]) (*connect.Response[v1.ListCategoriesResponse], error)
 	ReorderCategories(context.Context, *connect.Request[v1.ReorderCategoriesRequest]) (*connect.Response[v1.ReorderCategoriesResponse], error)
 	MoveChannelToCategory(context.Context, *connect.Request[v1.MoveChannelToCategoryRequest]) (*connect.Response[v1.MoveChannelToCategoryResponse], error)
+	// Agent chat folders - per-user sidebar grouping for agent DM chats.
+	// Unlike categories (org-wide, admin-managed), folders are private to the
+	// requesting user and only apply to their is_agent_dm channels.
+	CreateAgentFolder(context.Context, *connect.Request[v1.CreateAgentFolderRequest]) (*connect.Response[v1.CreateAgentFolderResponse], error)
+	RenameAgentFolder(context.Context, *connect.Request[v1.RenameAgentFolderRequest]) (*connect.Response[v1.RenameAgentFolderResponse], error)
+	DeleteAgentFolder(context.Context, *connect.Request[v1.DeleteAgentFolderRequest]) (*connect.Response[v1.DeleteAgentFolderResponse], error)
+	ListAgentFolders(context.Context, *connect.Request[v1.ListAgentFoldersRequest]) (*connect.Response[v1.ListAgentFoldersResponse], error)
+	SetAgentChatFolder(context.Context, *connect.Request[v1.SetAgentChatFolderRequest]) (*connect.Response[v1.SetAgentChatFolderResponse], error)
 	// Respond to a destructive-tool confirmation request raised by an agent
 	// running inside a chat channel. The chat layer is the front door; it
 	// forwards the decision to the agents runtime via the bridge.
@@ -359,6 +392,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ChatServiceUpdateChannelMemberProcedure,
 			connect.WithSchema(chatServiceMethods.ByName("UpdateChannelMember")),
+			connect.WithClientOptions(opts...),
+		),
+		updateMemberRole: connect.NewClient[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse](
+			httpClient,
+			baseURL+ChatServiceUpdateMemberRoleProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UpdateMemberRole")),
 			connect.WithClientOptions(opts...),
 		),
 		sendMessage: connect.NewClient[v1.SendMessageRequest, v1.SendMessageResponse](
@@ -499,6 +538,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("GetChannelResources")),
 			connect.WithClientOptions(opts...),
 		),
+		convertGroupDmToChannel: connect.NewClient[v1.ConvertGroupDmToChannelRequest, v1.ConvertGroupDmToChannelResponse](
+			httpClient,
+			baseURL+ChatServiceConvertGroupDmToChannelProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ConvertGroupDmToChannel")),
+			connect.WithClientOptions(opts...),
+		),
 		createAgentChat: connect.NewClient[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse](
 			httpClient,
 			baseURL+ChatServiceCreateAgentChatProcedure,
@@ -551,6 +596,36 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ChatServiceMoveChannelToCategoryProcedure,
 			connect.WithSchema(chatServiceMethods.ByName("MoveChannelToCategory")),
+			connect.WithClientOptions(opts...),
+		),
+		createAgentFolder: connect.NewClient[v1.CreateAgentFolderRequest, v1.CreateAgentFolderResponse](
+			httpClient,
+			baseURL+ChatServiceCreateAgentFolderProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("CreateAgentFolder")),
+			connect.WithClientOptions(opts...),
+		),
+		renameAgentFolder: connect.NewClient[v1.RenameAgentFolderRequest, v1.RenameAgentFolderResponse](
+			httpClient,
+			baseURL+ChatServiceRenameAgentFolderProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("RenameAgentFolder")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteAgentFolder: connect.NewClient[v1.DeleteAgentFolderRequest, v1.DeleteAgentFolderResponse](
+			httpClient,
+			baseURL+ChatServiceDeleteAgentFolderProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("DeleteAgentFolder")),
+			connect.WithClientOptions(opts...),
+		),
+		listAgentFolders: connect.NewClient[v1.ListAgentFoldersRequest, v1.ListAgentFoldersResponse](
+			httpClient,
+			baseURL+ChatServiceListAgentFoldersProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListAgentFolders")),
+			connect.WithClientOptions(opts...),
+		),
+		setAgentChatFolder: connect.NewClient[v1.SetAgentChatFolderRequest, v1.SetAgentChatFolderResponse](
+			httpClient,
+			baseURL+ChatServiceSetAgentChatFolderProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("SetAgentChatFolder")),
 			connect.WithClientOptions(opts...),
 		),
 		respondToAgentConfirmation: connect.NewClient[v1.RespondToAgentConfirmationRequest, v1.RespondToAgentConfirmationResponse](
@@ -624,6 +699,7 @@ type chatServiceClient struct {
 	removeMembers                    *connect.Client[v1.RemoveMembersRequest, v1.RemoveMembersResponse]
 	getMembers                       *connect.Client[v1.GetMembersRequest, v1.GetMembersResponse]
 	updateChannelMember              *connect.Client[v1.UpdateChannelMemberRequest, v1.UpdateChannelMemberResponse]
+	updateMemberRole                 *connect.Client[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse]
 	sendMessage                      *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
 	getMessages                      *connect.Client[v1.GetMessagesRequest, v1.GetMessagesResponse]
 	getMessage                       *connect.Client[v1.GetMessageRequest, v1.GetMessageResponse]
@@ -647,6 +723,7 @@ type chatServiceClient struct {
 	deleteDraft                      *connect.Client[v1.DeleteDraftRequest, v1.DeleteDraftResponse]
 	listDrafts                       *connect.Client[v1.ListDraftsRequest, v1.ListDraftsResponse]
 	getChannelResources              *connect.Client[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse]
+	convertGroupDmToChannel          *connect.Client[v1.ConvertGroupDmToChannelRequest, v1.ConvertGroupDmToChannelResponse]
 	createAgentChat                  *connect.Client[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse]
 	renameAgentChat                  *connect.Client[v1.RenameAgentChatRequest, v1.RenameAgentChatResponse]
 	listAgentChats                   *connect.Client[v1.ListAgentChatsRequest, v1.ListAgentChatsResponse]
@@ -656,6 +733,11 @@ type chatServiceClient struct {
 	listCategories                   *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
 	reorderCategories                *connect.Client[v1.ReorderCategoriesRequest, v1.ReorderCategoriesResponse]
 	moveChannelToCategory            *connect.Client[v1.MoveChannelToCategoryRequest, v1.MoveChannelToCategoryResponse]
+	createAgentFolder                *connect.Client[v1.CreateAgentFolderRequest, v1.CreateAgentFolderResponse]
+	renameAgentFolder                *connect.Client[v1.RenameAgentFolderRequest, v1.RenameAgentFolderResponse]
+	deleteAgentFolder                *connect.Client[v1.DeleteAgentFolderRequest, v1.DeleteAgentFolderResponse]
+	listAgentFolders                 *connect.Client[v1.ListAgentFoldersRequest, v1.ListAgentFoldersResponse]
+	setAgentChatFolder               *connect.Client[v1.SetAgentChatFolderRequest, v1.SetAgentChatFolderResponse]
 	respondToAgentConfirmation       *connect.Client[v1.RespondToAgentConfirmationRequest, v1.RespondToAgentConfirmationResponse]
 	getChannelPendingApprovals       *connect.Client[v1.GetChannelPendingApprovalsRequest, v1.GetChannelPendingApprovalsResponse]
 	getChannelAgentContextStats      *connect.Client[v1.GetChannelAgentContextStatsRequest, v1.GetChannelAgentContextStatsResponse]
@@ -725,6 +807,11 @@ func (c *chatServiceClient) GetMembers(ctx context.Context, req *connect.Request
 // UpdateChannelMember calls chat.v1.ChatService.UpdateChannelMember.
 func (c *chatServiceClient) UpdateChannelMember(ctx context.Context, req *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error) {
 	return c.updateChannelMember.CallUnary(ctx, req)
+}
+
+// UpdateMemberRole calls chat.v1.ChatService.UpdateMemberRole.
+func (c *chatServiceClient) UpdateMemberRole(ctx context.Context, req *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error) {
+	return c.updateMemberRole.CallUnary(ctx, req)
 }
 
 // SendMessage calls chat.v1.ChatService.SendMessage.
@@ -842,6 +929,11 @@ func (c *chatServiceClient) GetChannelResources(ctx context.Context, req *connec
 	return c.getChannelResources.CallUnary(ctx, req)
 }
 
+// ConvertGroupDmToChannel calls chat.v1.ChatService.ConvertGroupDmToChannel.
+func (c *chatServiceClient) ConvertGroupDmToChannel(ctx context.Context, req *connect.Request[v1.ConvertGroupDmToChannelRequest]) (*connect.Response[v1.ConvertGroupDmToChannelResponse], error) {
+	return c.convertGroupDmToChannel.CallUnary(ctx, req)
+}
+
 // CreateAgentChat calls chat.v1.ChatService.CreateAgentChat.
 func (c *chatServiceClient) CreateAgentChat(ctx context.Context, req *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {
 	return c.createAgentChat.CallUnary(ctx, req)
@@ -885,6 +977,31 @@ func (c *chatServiceClient) ReorderCategories(ctx context.Context, req *connect.
 // MoveChannelToCategory calls chat.v1.ChatService.MoveChannelToCategory.
 func (c *chatServiceClient) MoveChannelToCategory(ctx context.Context, req *connect.Request[v1.MoveChannelToCategoryRequest]) (*connect.Response[v1.MoveChannelToCategoryResponse], error) {
 	return c.moveChannelToCategory.CallUnary(ctx, req)
+}
+
+// CreateAgentFolder calls chat.v1.ChatService.CreateAgentFolder.
+func (c *chatServiceClient) CreateAgentFolder(ctx context.Context, req *connect.Request[v1.CreateAgentFolderRequest]) (*connect.Response[v1.CreateAgentFolderResponse], error) {
+	return c.createAgentFolder.CallUnary(ctx, req)
+}
+
+// RenameAgentFolder calls chat.v1.ChatService.RenameAgentFolder.
+func (c *chatServiceClient) RenameAgentFolder(ctx context.Context, req *connect.Request[v1.RenameAgentFolderRequest]) (*connect.Response[v1.RenameAgentFolderResponse], error) {
+	return c.renameAgentFolder.CallUnary(ctx, req)
+}
+
+// DeleteAgentFolder calls chat.v1.ChatService.DeleteAgentFolder.
+func (c *chatServiceClient) DeleteAgentFolder(ctx context.Context, req *connect.Request[v1.DeleteAgentFolderRequest]) (*connect.Response[v1.DeleteAgentFolderResponse], error) {
+	return c.deleteAgentFolder.CallUnary(ctx, req)
+}
+
+// ListAgentFolders calls chat.v1.ChatService.ListAgentFolders.
+func (c *chatServiceClient) ListAgentFolders(ctx context.Context, req *connect.Request[v1.ListAgentFoldersRequest]) (*connect.Response[v1.ListAgentFoldersResponse], error) {
+	return c.listAgentFolders.CallUnary(ctx, req)
+}
+
+// SetAgentChatFolder calls chat.v1.ChatService.SetAgentChatFolder.
+func (c *chatServiceClient) SetAgentChatFolder(ctx context.Context, req *connect.Request[v1.SetAgentChatFolderRequest]) (*connect.Response[v1.SetAgentChatFolderResponse], error) {
+	return c.setAgentChatFolder.CallUnary(ctx, req)
 }
 
 // RespondToAgentConfirmation calls chat.v1.ChatService.RespondToAgentConfirmation.
@@ -948,6 +1065,7 @@ type ChatServiceHandler interface {
 	RemoveMembers(context.Context, *connect.Request[v1.RemoveMembersRequest]) (*connect.Response[v1.RemoveMembersResponse], error)
 	GetMembers(context.Context, *connect.Request[v1.GetMembersRequest]) (*connect.Response[v1.GetMembersResponse], error)
 	UpdateChannelMember(context.Context, *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error)
+	UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error)
 	// Messages
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	GetMessages(context.Context, *connect.Request[v1.GetMessagesRequest]) (*connect.Response[v1.GetMessagesResponse], error)
@@ -977,6 +1095,9 @@ type ChatServiceHandler interface {
 	ListDrafts(context.Context, *connect.Request[v1.ListDraftsRequest]) (*connect.Response[v1.ListDraftsResponse], error)
 	// Channel resources
 	GetChannelResources(context.Context, *connect.Request[v1.GetChannelResourcesRequest]) (*connect.Response[v1.GetChannelResourcesResponse], error)
+	// Convert a group DM into a PRIVATE channel (owner only); members and
+	// history carry over. Group DMs are capped, channels are not.
+	ConvertGroupDmToChannel(context.Context, *connect.Request[v1.ConvertGroupDmToChannelRequest]) (*connect.Response[v1.ConvertGroupDmToChannelResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
 	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
@@ -988,6 +1109,14 @@ type ChatServiceHandler interface {
 	ListCategories(context.Context, *connect.Request[v1.ListCategoriesRequest]) (*connect.Response[v1.ListCategoriesResponse], error)
 	ReorderCategories(context.Context, *connect.Request[v1.ReorderCategoriesRequest]) (*connect.Response[v1.ReorderCategoriesResponse], error)
 	MoveChannelToCategory(context.Context, *connect.Request[v1.MoveChannelToCategoryRequest]) (*connect.Response[v1.MoveChannelToCategoryResponse], error)
+	// Agent chat folders - per-user sidebar grouping for agent DM chats.
+	// Unlike categories (org-wide, admin-managed), folders are private to the
+	// requesting user and only apply to their is_agent_dm channels.
+	CreateAgentFolder(context.Context, *connect.Request[v1.CreateAgentFolderRequest]) (*connect.Response[v1.CreateAgentFolderResponse], error)
+	RenameAgentFolder(context.Context, *connect.Request[v1.RenameAgentFolderRequest]) (*connect.Response[v1.RenameAgentFolderResponse], error)
+	DeleteAgentFolder(context.Context, *connect.Request[v1.DeleteAgentFolderRequest]) (*connect.Response[v1.DeleteAgentFolderResponse], error)
+	ListAgentFolders(context.Context, *connect.Request[v1.ListAgentFoldersRequest]) (*connect.Response[v1.ListAgentFoldersResponse], error)
+	SetAgentChatFolder(context.Context, *connect.Request[v1.SetAgentChatFolderRequest]) (*connect.Response[v1.SetAgentChatFolderResponse], error)
 	// Respond to a destructive-tool confirmation request raised by an agent
 	// running inside a chat channel. The chat layer is the front door; it
 	// forwards the decision to the agents runtime via the bridge.
@@ -1107,6 +1236,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		ChatServiceUpdateChannelMemberProcedure,
 		svc.UpdateChannelMember,
 		connect.WithSchema(chatServiceMethods.ByName("UpdateChannelMember")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUpdateMemberRoleHandler := connect.NewUnaryHandler(
+		ChatServiceUpdateMemberRoleProcedure,
+		svc.UpdateMemberRole,
+		connect.WithSchema(chatServiceMethods.ByName("UpdateMemberRole")),
 		connect.WithHandlerOptions(opts...),
 	)
 	chatServiceSendMessageHandler := connect.NewUnaryHandler(
@@ -1247,6 +1382,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("GetChannelResources")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceConvertGroupDmToChannelHandler := connect.NewUnaryHandler(
+		ChatServiceConvertGroupDmToChannelProcedure,
+		svc.ConvertGroupDmToChannel,
+		connect.WithSchema(chatServiceMethods.ByName("ConvertGroupDmToChannel")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceCreateAgentChatHandler := connect.NewUnaryHandler(
 		ChatServiceCreateAgentChatProcedure,
 		svc.CreateAgentChat,
@@ -1299,6 +1440,36 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		ChatServiceMoveChannelToCategoryProcedure,
 		svc.MoveChannelToCategory,
 		connect.WithSchema(chatServiceMethods.ByName("MoveChannelToCategory")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceCreateAgentFolderHandler := connect.NewUnaryHandler(
+		ChatServiceCreateAgentFolderProcedure,
+		svc.CreateAgentFolder,
+		connect.WithSchema(chatServiceMethods.ByName("CreateAgentFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceRenameAgentFolderHandler := connect.NewUnaryHandler(
+		ChatServiceRenameAgentFolderProcedure,
+		svc.RenameAgentFolder,
+		connect.WithSchema(chatServiceMethods.ByName("RenameAgentFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceDeleteAgentFolderHandler := connect.NewUnaryHandler(
+		ChatServiceDeleteAgentFolderProcedure,
+		svc.DeleteAgentFolder,
+		connect.WithSchema(chatServiceMethods.ByName("DeleteAgentFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListAgentFoldersHandler := connect.NewUnaryHandler(
+		ChatServiceListAgentFoldersProcedure,
+		svc.ListAgentFolders,
+		connect.WithSchema(chatServiceMethods.ByName("ListAgentFolders")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceSetAgentChatFolderHandler := connect.NewUnaryHandler(
+		ChatServiceSetAgentChatFolderProcedure,
+		svc.SetAgentChatFolder,
+		connect.WithSchema(chatServiceMethods.ByName("SetAgentChatFolder")),
 		connect.WithHandlerOptions(opts...),
 	)
 	chatServiceRespondToAgentConfirmationHandler := connect.NewUnaryHandler(
@@ -1381,6 +1552,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetMembersHandler.ServeHTTP(w, r)
 		case ChatServiceUpdateChannelMemberProcedure:
 			chatServiceUpdateChannelMemberHandler.ServeHTTP(w, r)
+		case ChatServiceUpdateMemberRoleProcedure:
+			chatServiceUpdateMemberRoleHandler.ServeHTTP(w, r)
 		case ChatServiceSendMessageProcedure:
 			chatServiceSendMessageHandler.ServeHTTP(w, r)
 		case ChatServiceGetMessagesProcedure:
@@ -1427,6 +1600,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceListDraftsHandler.ServeHTTP(w, r)
 		case ChatServiceGetChannelResourcesProcedure:
 			chatServiceGetChannelResourcesHandler.ServeHTTP(w, r)
+		case ChatServiceConvertGroupDmToChannelProcedure:
+			chatServiceConvertGroupDmToChannelHandler.ServeHTTP(w, r)
 		case ChatServiceCreateAgentChatProcedure:
 			chatServiceCreateAgentChatHandler.ServeHTTP(w, r)
 		case ChatServiceRenameAgentChatProcedure:
@@ -1445,6 +1620,16 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceReorderCategoriesHandler.ServeHTTP(w, r)
 		case ChatServiceMoveChannelToCategoryProcedure:
 			chatServiceMoveChannelToCategoryHandler.ServeHTTP(w, r)
+		case ChatServiceCreateAgentFolderProcedure:
+			chatServiceCreateAgentFolderHandler.ServeHTTP(w, r)
+		case ChatServiceRenameAgentFolderProcedure:
+			chatServiceRenameAgentFolderHandler.ServeHTTP(w, r)
+		case ChatServiceDeleteAgentFolderProcedure:
+			chatServiceDeleteAgentFolderHandler.ServeHTTP(w, r)
+		case ChatServiceListAgentFoldersProcedure:
+			chatServiceListAgentFoldersHandler.ServeHTTP(w, r)
+		case ChatServiceSetAgentChatFolderProcedure:
+			chatServiceSetAgentChatFolderHandler.ServeHTTP(w, r)
 		case ChatServiceRespondToAgentConfirmationProcedure:
 			chatServiceRespondToAgentConfirmationHandler.ServeHTTP(w, r)
 		case ChatServiceGetChannelPendingApprovalsProcedure:
@@ -1518,6 +1703,10 @@ func (UnimplementedChatServiceHandler) GetMembers(context.Context, *connect.Requ
 
 func (UnimplementedChatServiceHandler) UpdateChannelMember(context.Context, *connect.Request[v1.UpdateChannelMemberRequest]) (*connect.Response[v1.UpdateChannelMemberResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UpdateChannelMember is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UpdateMemberRole(context.Context, *connect.Request[v1.UpdateMemberRoleRequest]) (*connect.Response[v1.UpdateMemberRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.UpdateMemberRole is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
@@ -1612,6 +1801,10 @@ func (UnimplementedChatServiceHandler) GetChannelResources(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.GetChannelResources is not implemented"))
 }
 
+func (UnimplementedChatServiceHandler) ConvertGroupDmToChannel(context.Context, *connect.Request[v1.ConvertGroupDmToChannelRequest]) (*connect.Response[v1.ConvertGroupDmToChannelResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ConvertGroupDmToChannel is not implemented"))
+}
+
 func (UnimplementedChatServiceHandler) CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.CreateAgentChat is not implemented"))
 }
@@ -1646,6 +1839,26 @@ func (UnimplementedChatServiceHandler) ReorderCategories(context.Context, *conne
 
 func (UnimplementedChatServiceHandler) MoveChannelToCategory(context.Context, *connect.Request[v1.MoveChannelToCategoryRequest]) (*connect.Response[v1.MoveChannelToCategoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.MoveChannelToCategory is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) CreateAgentFolder(context.Context, *connect.Request[v1.CreateAgentFolderRequest]) (*connect.Response[v1.CreateAgentFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.CreateAgentFolder is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) RenameAgentFolder(context.Context, *connect.Request[v1.RenameAgentFolderRequest]) (*connect.Response[v1.RenameAgentFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.RenameAgentFolder is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) DeleteAgentFolder(context.Context, *connect.Request[v1.DeleteAgentFolderRequest]) (*connect.Response[v1.DeleteAgentFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.DeleteAgentFolder is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListAgentFolders(context.Context, *connect.Request[v1.ListAgentFoldersRequest]) (*connect.Response[v1.ListAgentFoldersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ListAgentFolders is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) SetAgentChatFolder(context.Context, *connect.Request[v1.SetAgentChatFolderRequest]) (*connect.Response[v1.SetAgentChatFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.SetAgentChatFolder is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) RespondToAgentConfirmation(context.Context, *connect.Request[v1.RespondToAgentConfirmationRequest]) (*connect.Response[v1.RespondToAgentConfirmationResponse], error) {

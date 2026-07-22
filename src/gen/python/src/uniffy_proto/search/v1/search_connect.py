@@ -21,12 +21,6 @@ class SearchService(Protocol):
     async def search(self, request: search_dot_v1_dot_search__pb2.SearchRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.SearchResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def index_item(self, request: search_dot_v1_dot_search__pb2.IndexItemRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.IndexItemResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def delete_item(self, request: search_dot_v1_dot_search__pb2.DeleteItemRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.DeleteItemResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def get_references(self, request: search_dot_v1_dot_search__pb2.GetReferencesRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.GetReferencesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -48,26 +42,6 @@ class SearchServiceASGIApplication(ConnectASGIApplication[SearchService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.search,
-                ),
-                "/search.v1.SearchService/IndexItem": Endpoint.unary(
-                    method=MethodInfo(
-                        name="IndexItem",
-                        service_name="search.v1.SearchService",
-                        input=search_dot_v1_dot_search__pb2.IndexItemRequest,
-                        output=search_dot_v1_dot_search__pb2.IndexItemResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.index_item,
-                ),
-                "/search.v1.SearchService/DeleteItem": Endpoint.unary(
-                    method=MethodInfo(
-                        name="DeleteItem",
-                        service_name="search.v1.SearchService",
-                        input=search_dot_v1_dot_search__pb2.DeleteItemRequest,
-                        output=search_dot_v1_dot_search__pb2.DeleteItemResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.delete_item,
                 ),
                 "/search.v1.SearchService/GetReferences": Endpoint.unary(
                     method=MethodInfo(
@@ -123,46 +97,6 @@ class SearchServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def index_item(
-        self,
-        request: search_dot_v1_dot_search__pb2.IndexItemRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> search_dot_v1_dot_search__pb2.IndexItemResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="IndexItem",
-                service_name="search.v1.SearchService",
-                input=search_dot_v1_dot_search__pb2.IndexItemRequest,
-                output=search_dot_v1_dot_search__pb2.IndexItemResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def delete_item(
-        self,
-        request: search_dot_v1_dot_search__pb2.DeleteItemRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> search_dot_v1_dot_search__pb2.DeleteItemResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteItem",
-                service_name="search.v1.SearchService",
-                input=search_dot_v1_dot_search__pb2.DeleteItemRequest,
-                output=search_dot_v1_dot_search__pb2.DeleteItemResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def get_references(
         self,
         request: search_dot_v1_dot_search__pb2.GetReferencesRequest,
@@ -210,10 +144,6 @@ class SearchServiceClient(ConnectClient):
 class SearchServiceSync(Protocol):
     def search(self, request: search_dot_v1_dot_search__pb2.SearchRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.SearchResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def index_item(self, request: search_dot_v1_dot_search__pb2.IndexItemRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.IndexItemResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_item(self, request: search_dot_v1_dot_search__pb2.DeleteItemRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.DeleteItemResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_references(self, request: search_dot_v1_dot_search__pb2.GetReferencesRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.GetReferencesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def resolve_urns(self, request: search_dot_v1_dot_search__pb2.ResolveUrnsRequest, ctx: RequestContext) -> search_dot_v1_dot_search__pb2.ResolveUrnsResponse:
@@ -233,26 +163,6 @@ class SearchServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.search,
-                ),
-                "/search.v1.SearchService/IndexItem": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="IndexItem",
-                        service_name="search.v1.SearchService",
-                        input=search_dot_v1_dot_search__pb2.IndexItemRequest,
-                        output=search_dot_v1_dot_search__pb2.IndexItemResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.index_item,
-                ),
-                "/search.v1.SearchService/DeleteItem": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="DeleteItem",
-                        service_name="search.v1.SearchService",
-                        input=search_dot_v1_dot_search__pb2.DeleteItemRequest,
-                        output=search_dot_v1_dot_search__pb2.DeleteItemResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.delete_item,
                 ),
                 "/search.v1.SearchService/GetReferences": EndpointSync.unary(
                     method=MethodInfo(
@@ -302,46 +212,6 @@ class SearchServiceClientSync(ConnectClientSync):
                 service_name="search.v1.SearchService",
                 input=search_dot_v1_dot_search__pb2.SearchRequest,
                 output=search_dot_v1_dot_search__pb2.SearchResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def index_item(
-        self,
-        request: search_dot_v1_dot_search__pb2.IndexItemRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> search_dot_v1_dot_search__pb2.IndexItemResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="IndexItem",
-                service_name="search.v1.SearchService",
-                input=search_dot_v1_dot_search__pb2.IndexItemRequest,
-                output=search_dot_v1_dot_search__pb2.IndexItemResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def delete_item(
-        self,
-        request: search_dot_v1_dot_search__pb2.DeleteItemRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> search_dot_v1_dot_search__pb2.DeleteItemResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteItem",
-                service_name="search.v1.SearchService",
-                input=search_dot_v1_dot_search__pb2.DeleteItemRequest,
-                output=search_dot_v1_dot_search__pb2.DeleteItemResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

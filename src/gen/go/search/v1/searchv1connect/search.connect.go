@@ -35,11 +35,6 @@ const (
 const (
 	// SearchServiceSearchProcedure is the fully-qualified name of the SearchService's Search RPC.
 	SearchServiceSearchProcedure = "/search.v1.SearchService/Search"
-	// SearchServiceIndexItemProcedure is the fully-qualified name of the SearchService's IndexItem RPC.
-	SearchServiceIndexItemProcedure = "/search.v1.SearchService/IndexItem"
-	// SearchServiceDeleteItemProcedure is the fully-qualified name of the SearchService's DeleteItem
-	// RPC.
-	SearchServiceDeleteItemProcedure = "/search.v1.SearchService/DeleteItem"
 	// SearchServiceGetReferencesProcedure is the fully-qualified name of the SearchService's
 	// GetReferences RPC.
 	SearchServiceGetReferencesProcedure = "/search.v1.SearchService/GetReferences"
@@ -52,10 +47,6 @@ const (
 type SearchServiceClient interface {
 	// Perform a global search across all entities (Spotlight-like)
 	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
-	// Index an item (Internal use, or called by other services)
-	IndexItem(context.Context, *connect.Request[v1.IndexItemRequest]) (*connect.Response[v1.IndexItemResponse], error)
-	// Remove an item from the index
-	DeleteItem(context.Context, *connect.Request[v1.DeleteItemRequest]) (*connect.Response[v1.DeleteItemResponse], error)
 	// Get all content that references a specific URN (universal backlinks)
 	GetReferences(context.Context, *connect.Request[v1.GetReferencesRequest]) (*connect.Response[v1.GetReferencesResponse], error)
 	// Resolve metadata for a batch of URNs
@@ -79,18 +70,6 @@ func NewSearchServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(searchServiceMethods.ByName("Search")),
 			connect.WithClientOptions(opts...),
 		),
-		indexItem: connect.NewClient[v1.IndexItemRequest, v1.IndexItemResponse](
-			httpClient,
-			baseURL+SearchServiceIndexItemProcedure,
-			connect.WithSchema(searchServiceMethods.ByName("IndexItem")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteItem: connect.NewClient[v1.DeleteItemRequest, v1.DeleteItemResponse](
-			httpClient,
-			baseURL+SearchServiceDeleteItemProcedure,
-			connect.WithSchema(searchServiceMethods.ByName("DeleteItem")),
-			connect.WithClientOptions(opts...),
-		),
 		getReferences: connect.NewClient[v1.GetReferencesRequest, v1.GetReferencesResponse](
 			httpClient,
 			baseURL+SearchServiceGetReferencesProcedure,
@@ -109,8 +88,6 @@ func NewSearchServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 // searchServiceClient implements SearchServiceClient.
 type searchServiceClient struct {
 	search        *connect.Client[v1.SearchRequest, v1.SearchResponse]
-	indexItem     *connect.Client[v1.IndexItemRequest, v1.IndexItemResponse]
-	deleteItem    *connect.Client[v1.DeleteItemRequest, v1.DeleteItemResponse]
 	getReferences *connect.Client[v1.GetReferencesRequest, v1.GetReferencesResponse]
 	resolveUrns   *connect.Client[v1.ResolveUrnsRequest, v1.ResolveUrnsResponse]
 }
@@ -118,16 +95,6 @@ type searchServiceClient struct {
 // Search calls search.v1.SearchService.Search.
 func (c *searchServiceClient) Search(ctx context.Context, req *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
 	return c.search.CallUnary(ctx, req)
-}
-
-// IndexItem calls search.v1.SearchService.IndexItem.
-func (c *searchServiceClient) IndexItem(ctx context.Context, req *connect.Request[v1.IndexItemRequest]) (*connect.Response[v1.IndexItemResponse], error) {
-	return c.indexItem.CallUnary(ctx, req)
-}
-
-// DeleteItem calls search.v1.SearchService.DeleteItem.
-func (c *searchServiceClient) DeleteItem(ctx context.Context, req *connect.Request[v1.DeleteItemRequest]) (*connect.Response[v1.DeleteItemResponse], error) {
-	return c.deleteItem.CallUnary(ctx, req)
 }
 
 // GetReferences calls search.v1.SearchService.GetReferences.
@@ -144,10 +111,6 @@ func (c *searchServiceClient) ResolveUrns(ctx context.Context, req *connect.Requ
 type SearchServiceHandler interface {
 	// Perform a global search across all entities (Spotlight-like)
 	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
-	// Index an item (Internal use, or called by other services)
-	IndexItem(context.Context, *connect.Request[v1.IndexItemRequest]) (*connect.Response[v1.IndexItemResponse], error)
-	// Remove an item from the index
-	DeleteItem(context.Context, *connect.Request[v1.DeleteItemRequest]) (*connect.Response[v1.DeleteItemResponse], error)
 	// Get all content that references a specific URN (universal backlinks)
 	GetReferences(context.Context, *connect.Request[v1.GetReferencesRequest]) (*connect.Response[v1.GetReferencesResponse], error)
 	// Resolve metadata for a batch of URNs
@@ -167,18 +130,6 @@ func NewSearchServiceHandler(svc SearchServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(searchServiceMethods.ByName("Search")),
 		connect.WithHandlerOptions(opts...),
 	)
-	searchServiceIndexItemHandler := connect.NewUnaryHandler(
-		SearchServiceIndexItemProcedure,
-		svc.IndexItem,
-		connect.WithSchema(searchServiceMethods.ByName("IndexItem")),
-		connect.WithHandlerOptions(opts...),
-	)
-	searchServiceDeleteItemHandler := connect.NewUnaryHandler(
-		SearchServiceDeleteItemProcedure,
-		svc.DeleteItem,
-		connect.WithSchema(searchServiceMethods.ByName("DeleteItem")),
-		connect.WithHandlerOptions(opts...),
-	)
 	searchServiceGetReferencesHandler := connect.NewUnaryHandler(
 		SearchServiceGetReferencesProcedure,
 		svc.GetReferences,
@@ -195,10 +146,6 @@ func NewSearchServiceHandler(svc SearchServiceHandler, opts ...connect.HandlerOp
 		switch r.URL.Path {
 		case SearchServiceSearchProcedure:
 			searchServiceSearchHandler.ServeHTTP(w, r)
-		case SearchServiceIndexItemProcedure:
-			searchServiceIndexItemHandler.ServeHTTP(w, r)
-		case SearchServiceDeleteItemProcedure:
-			searchServiceDeleteItemHandler.ServeHTTP(w, r)
 		case SearchServiceGetReferencesProcedure:
 			searchServiceGetReferencesHandler.ServeHTTP(w, r)
 		case SearchServiceResolveUrnsProcedure:
@@ -214,14 +161,6 @@ type UnimplementedSearchServiceHandler struct{}
 
 func (UnimplementedSearchServiceHandler) Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("search.v1.SearchService.Search is not implemented"))
-}
-
-func (UnimplementedSearchServiceHandler) IndexItem(context.Context, *connect.Request[v1.IndexItemRequest]) (*connect.Response[v1.IndexItemResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("search.v1.SearchService.IndexItem is not implemented"))
-}
-
-func (UnimplementedSearchServiceHandler) DeleteItem(context.Context, *connect.Request[v1.DeleteItemRequest]) (*connect.Response[v1.DeleteItemResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("search.v1.SearchService.DeleteItem is not implemented"))
 }
 
 func (UnimplementedSearchServiceHandler) GetReferences(context.Context, *connect.Request[v1.GetReferencesRequest]) (*connect.Response[v1.GetReferencesResponse], error) {

@@ -4,16 +4,12 @@ package search.v1;
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/search/v1;searchv1";
 
-// The unified search service handling global search and indexing
+// The unified search service handling global search and URN resolution.
+// Index writes happen server-side in domain operations; there is no
+// client-facing indexing RPC.
 service SearchService {
   // Perform a global search across all entities (Spotlight-like)
   rpc Search(SearchRequest) returns (SearchResponse) {}
-
-  // Index an item (Internal use, or called by other services)
-  rpc IndexItem(IndexItemRequest) returns (IndexItemResponse) {}
-
-  // Remove an item from the index
-  rpc DeleteItem(DeleteItemRequest) returns (DeleteItemResponse) {}
 
   // Get all content that references a specific URN (universal backlinks)
   rpc GetReferences(GetReferencesRequest) returns (GetReferencesResponse) {}
@@ -37,6 +33,8 @@ enum SearchResultType {
   SEARCH_RESULT_TYPE_ROOM = 11;
   SEARCH_RESULT_TYPE_AGENT_CHAT = 12;
   SEARCH_RESULT_TYPE_TAG = 13;
+  SEARCH_RESULT_TYPE_FOLDER = 14;
+  SEARCH_RESULT_TYPE_AGENT_FOLDER = 15;
 }
 
 message SearchRequest {
@@ -51,15 +49,24 @@ message SearchRequest {
   bool my_content_only = 7;
   string owner_filter = 8;
 
-  // Types to exclude from results (e.g., exclude chat_message when not in chat domain)
-  repeated SearchResultType exclude_types = 9;
+  reserved 9;
 
   // Metadata field filters (e.g., {"channel_id": "uuid"} for chat message scoping)
   map<string, string> metadata_filters = 10;
+
+  // Pagination offset into the result set (max_total_hits caps the window)
+  int32 offset = 11;
+
+  // Client ranking context: listed types float to the top in this order.
+  // Applied within match-strength buckets, so a weak (typo/partial) match
+  // never outranks a full match via its type alone.
+  repeated SearchResultType type_priority = 12;
 }
 
 message SearchResponse {
   repeated SearchResultItem items = 1;
+  // Estimated total matches before pagination
+  int32 total_count = 2;
 }
 
 message SearchResultItem {
@@ -71,29 +78,10 @@ message SearchResultItem {
   double score = 6; // Relevance score
   map<string, string> metadata = 7; // Extra icon info, etc.
   repeated string tags = 8; // Tags associated with the content
-}
-
-message IndexItemRequest {
-  string organization_id = 1;
-  string urn = 2;
-  SearchResultType type = 3;
-  string title = 4;
-  string content = 5; // Content to be indexed for full text
-  string url = 6;
-  map<string, string> metadata = 7;
-}
-
-message IndexItemResponse {
-  bool success = 1;
-}
-
-message DeleteItemRequest {
-  string urn = 1;
-  string organization_id = 2;
-}
-
-message DeleteItemResponse {
-  bool success = 1;
+  // Match-highlighted variants: matched spans wrapped in U+E000/U+E001
+  // markers, description cropped around the match. Empty without a text query.
+  string title_highlighted = 9;
+  string description_highlighted = 10;
 }
 
 // Request to get content that references a specific URN

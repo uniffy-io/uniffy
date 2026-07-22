@@ -31,6 +31,7 @@ const (
 	ChatService_RemoveMembers_FullMethodName                    = "/chat.v1.ChatService/RemoveMembers"
 	ChatService_GetMembers_FullMethodName                       = "/chat.v1.ChatService/GetMembers"
 	ChatService_UpdateChannelMember_FullMethodName              = "/chat.v1.ChatService/UpdateChannelMember"
+	ChatService_UpdateMemberRole_FullMethodName                 = "/chat.v1.ChatService/UpdateMemberRole"
 	ChatService_SendMessage_FullMethodName                      = "/chat.v1.ChatService/SendMessage"
 	ChatService_GetMessages_FullMethodName                      = "/chat.v1.ChatService/GetMessages"
 	ChatService_GetMessage_FullMethodName                       = "/chat.v1.ChatService/GetMessage"
@@ -54,6 +55,7 @@ const (
 	ChatService_DeleteDraft_FullMethodName                      = "/chat.v1.ChatService/DeleteDraft"
 	ChatService_ListDrafts_FullMethodName                       = "/chat.v1.ChatService/ListDrafts"
 	ChatService_GetChannelResources_FullMethodName              = "/chat.v1.ChatService/GetChannelResources"
+	ChatService_ConvertGroupDmToChannel_FullMethodName          = "/chat.v1.ChatService/ConvertGroupDmToChannel"
 	ChatService_CreateAgentChat_FullMethodName                  = "/chat.v1.ChatService/CreateAgentChat"
 	ChatService_RenameAgentChat_FullMethodName                  = "/chat.v1.ChatService/RenameAgentChat"
 	ChatService_ListAgentChats_FullMethodName                   = "/chat.v1.ChatService/ListAgentChats"
@@ -63,6 +65,11 @@ const (
 	ChatService_ListCategories_FullMethodName                   = "/chat.v1.ChatService/ListCategories"
 	ChatService_ReorderCategories_FullMethodName                = "/chat.v1.ChatService/ReorderCategories"
 	ChatService_MoveChannelToCategory_FullMethodName            = "/chat.v1.ChatService/MoveChannelToCategory"
+	ChatService_CreateAgentFolder_FullMethodName                = "/chat.v1.ChatService/CreateAgentFolder"
+	ChatService_RenameAgentFolder_FullMethodName                = "/chat.v1.ChatService/RenameAgentFolder"
+	ChatService_DeleteAgentFolder_FullMethodName                = "/chat.v1.ChatService/DeleteAgentFolder"
+	ChatService_ListAgentFolders_FullMethodName                 = "/chat.v1.ChatService/ListAgentFolders"
+	ChatService_SetAgentChatFolder_FullMethodName               = "/chat.v1.ChatService/SetAgentChatFolder"
 	ChatService_RespondToAgentConfirmation_FullMethodName       = "/chat.v1.ChatService/RespondToAgentConfirmation"
 	ChatService_GetChannelPendingApprovals_FullMethodName       = "/chat.v1.ChatService/GetChannelPendingApprovals"
 	ChatService_GetChannelAgentContextStats_FullMethodName      = "/chat.v1.ChatService/GetChannelAgentContextStats"
@@ -94,6 +101,7 @@ type ChatServiceClient interface {
 	RemoveMembers(ctx context.Context, in *RemoveMembersRequest, opts ...grpc.CallOption) (*RemoveMembersResponse, error)
 	GetMembers(ctx context.Context, in *GetMembersRequest, opts ...grpc.CallOption) (*GetMembersResponse, error)
 	UpdateChannelMember(ctx context.Context, in *UpdateChannelMemberRequest, opts ...grpc.CallOption) (*UpdateChannelMemberResponse, error)
+	UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error)
 	// Messages
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 	GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*GetMessagesResponse, error)
@@ -123,6 +131,9 @@ type ChatServiceClient interface {
 	ListDrafts(ctx context.Context, in *ListDraftsRequest, opts ...grpc.CallOption) (*ListDraftsResponse, error)
 	// Channel resources
 	GetChannelResources(ctx context.Context, in *GetChannelResourcesRequest, opts ...grpc.CallOption) (*GetChannelResourcesResponse, error)
+	// Convert a group DM into a PRIVATE channel (owner only); members and
+	// history carry over. Group DMs are capped, channels are not.
+	ConvertGroupDmToChannel(ctx context.Context, in *ConvertGroupDmToChannelRequest, opts ...grpc.CallOption) (*ConvertGroupDmToChannelResponse, error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(ctx context.Context, in *CreateAgentChatRequest, opts ...grpc.CallOption) (*CreateAgentChatResponse, error)
 	RenameAgentChat(ctx context.Context, in *RenameAgentChatRequest, opts ...grpc.CallOption) (*RenameAgentChatResponse, error)
@@ -134,6 +145,14 @@ type ChatServiceClient interface {
 	ListCategories(ctx context.Context, in *ListCategoriesRequest, opts ...grpc.CallOption) (*ListCategoriesResponse, error)
 	ReorderCategories(ctx context.Context, in *ReorderCategoriesRequest, opts ...grpc.CallOption) (*ReorderCategoriesResponse, error)
 	MoveChannelToCategory(ctx context.Context, in *MoveChannelToCategoryRequest, opts ...grpc.CallOption) (*MoveChannelToCategoryResponse, error)
+	// Agent chat folders - per-user sidebar grouping for agent DM chats.
+	// Unlike categories (org-wide, admin-managed), folders are private to the
+	// requesting user and only apply to their is_agent_dm channels.
+	CreateAgentFolder(ctx context.Context, in *CreateAgentFolderRequest, opts ...grpc.CallOption) (*CreateAgentFolderResponse, error)
+	RenameAgentFolder(ctx context.Context, in *RenameAgentFolderRequest, opts ...grpc.CallOption) (*RenameAgentFolderResponse, error)
+	DeleteAgentFolder(ctx context.Context, in *DeleteAgentFolderRequest, opts ...grpc.CallOption) (*DeleteAgentFolderResponse, error)
+	ListAgentFolders(ctx context.Context, in *ListAgentFoldersRequest, opts ...grpc.CallOption) (*ListAgentFoldersResponse, error)
+	SetAgentChatFolder(ctx context.Context, in *SetAgentChatFolderRequest, opts ...grpc.CallOption) (*SetAgentChatFolderResponse, error)
 	// Respond to a destructive-tool confirmation request raised by an agent
 	// running inside a chat channel. The chat layer is the front door; it
 	// forwards the decision to the agents runtime via the bridge.
@@ -298,6 +317,16 @@ func (c *chatServiceClient) UpdateChannelMember(ctx context.Context, in *UpdateC
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateChannelMemberResponse)
 	err := c.cc.Invoke(ctx, ChatService_UpdateChannelMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UpdateMemberRole(ctx context.Context, in *UpdateMemberRoleRequest, opts ...grpc.CallOption) (*UpdateMemberRoleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateMemberRoleResponse)
+	err := c.cc.Invoke(ctx, ChatService_UpdateMemberRole_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -534,6 +563,16 @@ func (c *chatServiceClient) GetChannelResources(ctx context.Context, in *GetChan
 	return out, nil
 }
 
+func (c *chatServiceClient) ConvertGroupDmToChannel(ctx context.Context, in *ConvertGroupDmToChannelRequest, opts ...grpc.CallOption) (*ConvertGroupDmToChannelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConvertGroupDmToChannelResponse)
+	err := c.cc.Invoke(ctx, ChatService_ConvertGroupDmToChannel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) CreateAgentChat(ctx context.Context, in *CreateAgentChatRequest, opts ...grpc.CallOption) (*CreateAgentChatResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateAgentChatResponse)
@@ -618,6 +657,56 @@ func (c *chatServiceClient) MoveChannelToCategory(ctx context.Context, in *MoveC
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MoveChannelToCategoryResponse)
 	err := c.cc.Invoke(ctx, ChatService_MoveChannelToCategory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) CreateAgentFolder(ctx context.Context, in *CreateAgentFolderRequest, opts ...grpc.CallOption) (*CreateAgentFolderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAgentFolderResponse)
+	err := c.cc.Invoke(ctx, ChatService_CreateAgentFolder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) RenameAgentFolder(ctx context.Context, in *RenameAgentFolderRequest, opts ...grpc.CallOption) (*RenameAgentFolderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RenameAgentFolderResponse)
+	err := c.cc.Invoke(ctx, ChatService_RenameAgentFolder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) DeleteAgentFolder(ctx context.Context, in *DeleteAgentFolderRequest, opts ...grpc.CallOption) (*DeleteAgentFolderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteAgentFolderResponse)
+	err := c.cc.Invoke(ctx, ChatService_DeleteAgentFolder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) ListAgentFolders(ctx context.Context, in *ListAgentFoldersRequest, opts ...grpc.CallOption) (*ListAgentFoldersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAgentFoldersResponse)
+	err := c.cc.Invoke(ctx, ChatService_ListAgentFolders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) SetAgentChatFolder(ctx context.Context, in *SetAgentChatFolderRequest, opts ...grpc.CallOption) (*SetAgentChatFolderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetAgentChatFolderResponse)
+	err := c.cc.Invoke(ctx, ChatService_SetAgentChatFolder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -734,6 +823,7 @@ type ChatServiceServer interface {
 	RemoveMembers(context.Context, *RemoveMembersRequest) (*RemoveMembersResponse, error)
 	GetMembers(context.Context, *GetMembersRequest) (*GetMembersResponse, error)
 	UpdateChannelMember(context.Context, *UpdateChannelMemberRequest) (*UpdateChannelMemberResponse, error)
+	UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error)
 	// Messages
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
 	GetMessages(context.Context, *GetMessagesRequest) (*GetMessagesResponse, error)
@@ -763,6 +853,9 @@ type ChatServiceServer interface {
 	ListDrafts(context.Context, *ListDraftsRequest) (*ListDraftsResponse, error)
 	// Channel resources
 	GetChannelResources(context.Context, *GetChannelResourcesRequest) (*GetChannelResourcesResponse, error)
+	// Convert a group DM into a PRIVATE channel (owner only); members and
+	// history carry over. Group DMs are capped, channels are not.
+	ConvertGroupDmToChannel(context.Context, *ConvertGroupDmToChannelRequest) (*ConvertGroupDmToChannelResponse, error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *CreateAgentChatRequest) (*CreateAgentChatResponse, error)
 	RenameAgentChat(context.Context, *RenameAgentChatRequest) (*RenameAgentChatResponse, error)
@@ -774,6 +867,14 @@ type ChatServiceServer interface {
 	ListCategories(context.Context, *ListCategoriesRequest) (*ListCategoriesResponse, error)
 	ReorderCategories(context.Context, *ReorderCategoriesRequest) (*ReorderCategoriesResponse, error)
 	MoveChannelToCategory(context.Context, *MoveChannelToCategoryRequest) (*MoveChannelToCategoryResponse, error)
+	// Agent chat folders - per-user sidebar grouping for agent DM chats.
+	// Unlike categories (org-wide, admin-managed), folders are private to the
+	// requesting user and only apply to their is_agent_dm channels.
+	CreateAgentFolder(context.Context, *CreateAgentFolderRequest) (*CreateAgentFolderResponse, error)
+	RenameAgentFolder(context.Context, *RenameAgentFolderRequest) (*RenameAgentFolderResponse, error)
+	DeleteAgentFolder(context.Context, *DeleteAgentFolderRequest) (*DeleteAgentFolderResponse, error)
+	ListAgentFolders(context.Context, *ListAgentFoldersRequest) (*ListAgentFoldersResponse, error)
+	SetAgentChatFolder(context.Context, *SetAgentChatFolderRequest) (*SetAgentChatFolderResponse, error)
 	// Respond to a destructive-tool confirmation request raised by an agent
 	// running inside a chat channel. The chat layer is the front door; it
 	// forwards the decision to the agents runtime via the bridge.
@@ -860,6 +961,9 @@ func (UnimplementedChatServiceServer) GetMembers(context.Context, *GetMembersReq
 func (UnimplementedChatServiceServer) UpdateChannelMember(context.Context, *UpdateChannelMemberRequest) (*UpdateChannelMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateChannelMember not implemented")
 }
+func (UnimplementedChatServiceServer) UpdateMemberRole(context.Context, *UpdateMemberRoleRequest) (*UpdateMemberRoleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMemberRole not implemented")
+}
 func (UnimplementedChatServiceServer) SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendMessage not implemented")
 }
@@ -929,6 +1033,9 @@ func (UnimplementedChatServiceServer) ListDrafts(context.Context, *ListDraftsReq
 func (UnimplementedChatServiceServer) GetChannelResources(context.Context, *GetChannelResourcesRequest) (*GetChannelResourcesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetChannelResources not implemented")
 }
+func (UnimplementedChatServiceServer) ConvertGroupDmToChannel(context.Context, *ConvertGroupDmToChannelRequest) (*ConvertGroupDmToChannelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConvertGroupDmToChannel not implemented")
+}
 func (UnimplementedChatServiceServer) CreateAgentChat(context.Context, *CreateAgentChatRequest) (*CreateAgentChatResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAgentChat not implemented")
 }
@@ -955,6 +1062,21 @@ func (UnimplementedChatServiceServer) ReorderCategories(context.Context, *Reorde
 }
 func (UnimplementedChatServiceServer) MoveChannelToCategory(context.Context, *MoveChannelToCategoryRequest) (*MoveChannelToCategoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MoveChannelToCategory not implemented")
+}
+func (UnimplementedChatServiceServer) CreateAgentFolder(context.Context, *CreateAgentFolderRequest) (*CreateAgentFolderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAgentFolder not implemented")
+}
+func (UnimplementedChatServiceServer) RenameAgentFolder(context.Context, *RenameAgentFolderRequest) (*RenameAgentFolderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RenameAgentFolder not implemented")
+}
+func (UnimplementedChatServiceServer) DeleteAgentFolder(context.Context, *DeleteAgentFolderRequest) (*DeleteAgentFolderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAgentFolder not implemented")
+}
+func (UnimplementedChatServiceServer) ListAgentFolders(context.Context, *ListAgentFoldersRequest) (*ListAgentFoldersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAgentFolders not implemented")
+}
+func (UnimplementedChatServiceServer) SetAgentChatFolder(context.Context, *SetAgentChatFolderRequest) (*SetAgentChatFolderResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetAgentChatFolder not implemented")
 }
 func (UnimplementedChatServiceServer) RespondToAgentConfirmation(context.Context, *RespondToAgentConfirmationRequest) (*RespondToAgentConfirmationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RespondToAgentConfirmation not implemented")
@@ -1216,6 +1338,24 @@ func _ChatService_UpdateChannelMember_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).UpdateChannelMember(ctx, req.(*UpdateChannelMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UpdateMemberRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMemberRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UpdateMemberRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UpdateMemberRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UpdateMemberRole(ctx, req.(*UpdateMemberRoleRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1634,6 +1774,24 @@ func _ChatService_GetChannelResources_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_ConvertGroupDmToChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConvertGroupDmToChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ConvertGroupDmToChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ConvertGroupDmToChannel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ConvertGroupDmToChannel(ctx, req.(*ConvertGroupDmToChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatService_CreateAgentChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateAgentChatRequest)
 	if err := dec(in); err != nil {
@@ -1792,6 +1950,96 @@ func _ChatService_MoveChannelToCategory_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).MoveChannelToCategory(ctx, req.(*MoveChannelToCategoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_CreateAgentFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAgentFolderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).CreateAgentFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_CreateAgentFolder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).CreateAgentFolder(ctx, req.(*CreateAgentFolderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_RenameAgentFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenameAgentFolderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).RenameAgentFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_RenameAgentFolder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).RenameAgentFolder(ctx, req.(*RenameAgentFolderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_DeleteAgentFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAgentFolderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).DeleteAgentFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_DeleteAgentFolder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).DeleteAgentFolder(ctx, req.(*DeleteAgentFolderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_ListAgentFolders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAgentFoldersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ListAgentFolders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ListAgentFolders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ListAgentFolders(ctx, req.(*ListAgentFoldersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_SetAgentChatFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetAgentChatFolderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).SetAgentChatFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_SetAgentChatFolder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).SetAgentChatFolder(ctx, req.(*SetAgentChatFolderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2014,6 +2262,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChatService_UpdateChannelMember_Handler,
 		},
 		{
+			MethodName: "UpdateMemberRole",
+			Handler:    _ChatService_UpdateMemberRole_Handler,
+		},
+		{
 			MethodName: "SendMessage",
 			Handler:    _ChatService_SendMessage_Handler,
 		},
@@ -2106,6 +2358,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChatService_GetChannelResources_Handler,
 		},
 		{
+			MethodName: "ConvertGroupDmToChannel",
+			Handler:    _ChatService_ConvertGroupDmToChannel_Handler,
+		},
+		{
 			MethodName: "CreateAgentChat",
 			Handler:    _ChatService_CreateAgentChat_Handler,
 		},
@@ -2140,6 +2396,26 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MoveChannelToCategory",
 			Handler:    _ChatService_MoveChannelToCategory_Handler,
+		},
+		{
+			MethodName: "CreateAgentFolder",
+			Handler:    _ChatService_CreateAgentFolder_Handler,
+		},
+		{
+			MethodName: "RenameAgentFolder",
+			Handler:    _ChatService_RenameAgentFolder_Handler,
+		},
+		{
+			MethodName: "DeleteAgentFolder",
+			Handler:    _ChatService_DeleteAgentFolder_Handler,
+		},
+		{
+			MethodName: "ListAgentFolders",
+			Handler:    _ChatService_ListAgentFolders_Handler,
+		},
+		{
+			MethodName: "SetAgentChatFolder",
+			Handler:    _ChatService_SetAgentChatFolder_Handler,
 		},
 		{
 			MethodName: "RespondToAgentConfirmation",

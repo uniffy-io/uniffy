@@ -28,6 +28,7 @@ class ContentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONTENT_TYPE_AGENT_CRON_TASK: _ClassVar[ContentType]
     CONTENT_TYPE_AGENT_CHAT: _ClassVar[ContentType]
     CONTENT_TYPE_TAG: _ClassVar[ContentType]
+    CONTENT_TYPE_AGENT_FOLDER: _ClassVar[ContentType]
 
 class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -112,6 +113,7 @@ CONTENT_TYPE_ROOM: ContentType
 CONTENT_TYPE_AGENT_CRON_TASK: ContentType
 CONTENT_TYPE_AGENT_CHAT: ContentType
 CONTENT_TYPE_TAG: ContentType
+CONTENT_TYPE_AGENT_FOLDER: ContentType
 SUBJECT_TYPE_UNSPECIFIED: SubjectType
 SUBJECT_TYPE_USER: SubjectType
 SUBJECT_TYPE_GROUP: SubjectType
