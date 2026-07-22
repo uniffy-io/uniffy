@@ -6,6 +6,8 @@ import { ErrorBoundary, PageErrorFallback, PageLoader } from '@/components/feedb
 import { NotesLayout } from '@/features/notes/components/NotesLayout';
 import { NotesSidebar } from '@/features/notes/components/sidebar/NotesSidebar';
 import { NotesEditor } from '@/features/notes/components/editor/NotesEditor';
+import { NoteFolderView } from '@/features/notes/components/folder/NoteFolderView';
+import { NodeType } from '@uniffy/proto/notes/v1/notes_pb';
 import { NotesMetadataPanel } from '@/features/notes/components/metadata/NotesMetadataPanel';
 import { NotesEmptyState } from '@/features/notes/components/NotesEmptyState';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
@@ -16,6 +18,8 @@ import { saveLastOpenedNote, clearLastOpenedNote } from '@/features/notes/utils/
 import { useShortcutHandler, useAppearanceSettings } from '@/features/settings';
 import { useNotesCacheSync } from '@/features/notes/hooks/useNotesCacheSync';
 import { lazyImport } from '@/shared/utils/lazyImport';
+import { recordRecentItem } from '@/features/search/utils/recentItems';
+import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 
 // Separate chunk: the graph pulls d3-force and never loads on the editor path.
 const NotesGraphDashboard = lazyImport(
@@ -73,6 +77,16 @@ export function NotesPage() {
     }
   }, [dispatch, defaultEditor, markdownShowPreview, markdownShowLineNumbers]);
 
+  useEffect(() => {
+    if (!organizationId || !userId || !currentNoteId || !currentNote?.title) return;
+    recordRecentItem(organizationId, userId, {
+        urn: `urn:uniffy:content:NOTE:${currentNoteId}`,
+        title: currentNote.title,
+        type: SearchResultType.NOTE,
+        url: `/notes/${currentNoteId}`,
+    });
+  }, [organizationId, userId, currentNoteId, currentNote?.title]);
+
   const notesLoading = notesState?.loading ?? false;
   const notesCount = Object.keys(notesState?.notes ?? {}).length;
   const treeLoaded = useAppSelector((state) => state.notesTree.treeLoaded);
@@ -120,7 +134,9 @@ export function NotesPage() {
                 </Suspense>
               </ErrorBoundary>
             ))
-          : <NotesEditor key="note-editor" />
+          : currentNote?.nodeType === NodeType.FOLDER
+            ? <NoteFolderView key="folder-view" />
+            : <NotesEditor key="note-editor" />
         }
         metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}
         showSidebar={!isZenMode && isSidebarOpen}

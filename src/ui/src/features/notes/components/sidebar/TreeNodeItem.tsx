@@ -150,9 +150,16 @@ export function TreeNodeItem({
                         drag.onDragStart(node.id);
                     }}
                     onDragEnd={drag.onDragEnd}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group ${
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent transition-colors text-left group cursor-pointer ${
                         isDragOver ? 'bg-primary/10 ring-2 ring-primary' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${isSelected ? 'bg-accent ring-2 ring-primary/50' : ''}`}
+                    onClick={() => {
+                        if (isEditing) return;
+                        actions.onSelect(node.id);
+                        if (!isExpanded) {
+                            actions.onToggle(node.id);
+                        }
+                    }}
                     onDragOver={(e) => {
                         if (canDropHere) {
                             e.preventDefault();
@@ -169,7 +176,13 @@ export function TreeNodeItem({
                         }
                     }}
                 >
-                    <button onClick={() => actions.onToggle(node.id)} className="flex items-center">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            actions.onToggle(node.id);
+                        }}
+                        className="flex items-center"
+                    >
                         {isExpanded ? (
                             <CaretDown size={14} weight="bold" className="text-muted-foreground" />
                         ) : (
