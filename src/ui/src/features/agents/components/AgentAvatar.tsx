@@ -1,20 +1,23 @@
 import { useState } from "react";
 import { Robot } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { getAgentAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 
 type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
+// Matches the SubjectAvatar scale so agent and user avatars sit at the
+// same size in shared lists (sidebar, pickers, member rows).
 const SIZE_CLASSES: Record<AvatarSize, string> = {
-    xs: "w-5 h-5 text-[10px]",
-    sm: "w-7 h-7 text-sm",
-    md: "w-8 h-8 text-sm",
-    lg: "w-10 h-10 text-base",
-    xl: "w-12 h-12 text-lg",
+    xs: "w-5 h-5 text-[9px]",
+    sm: "w-6 h-6 text-[10px]",
+    md: "w-8 h-8 text-xs",
+    lg: "w-10 h-10 text-sm",
+    xl: "w-12 h-12 text-base",
 };
 
 const ICON_SIZES: Record<AvatarSize, number> = {
     xs: 10,
-    sm: 14,
+    sm: 12,
     md: 16,
     lg: 20,
     xl: 24,
@@ -60,21 +63,24 @@ export function AgentAvatar({
 
     const fallback = avatarEmoji || null;
 
+    // Same identity treatment as user avatars: deterministic gradient keyed
+    // by name (see components/subject/utils.ts), initials on top.
     return (
         <div
             className={cn(
-                "rounded-full bg-muted flex items-center justify-center font-medium text-foreground shrink-0",
+                "rounded-full flex items-center justify-center font-medium text-white shrink-0",
                 sizeClass,
                 className,
             )}
+            style={getAgentAvatarGradientStyle(agentName)}
             data-testid="agent-avatar"
             data-agent-name={agentName}
             data-fallback={fallback ? "emoji" : "initial"}
         >
             {fallback || (
                 agentName
-                    ? agentName.charAt(0)
-                    : <Robot size={ICON_SIZES[size]} className="text-muted-foreground" />
+                    ? getInitials(agentName)
+                    : <Robot size={ICON_SIZES[size]} />
             )}
         </div>
     );
