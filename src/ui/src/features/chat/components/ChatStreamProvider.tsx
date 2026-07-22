@@ -27,11 +27,12 @@ import {
   appendThreadMessage,
   appendDeltaToThreadMessage,
 } from '@/features/chat/store/chatThreadsSlice';
-import { updateChannel, incrementUnreadCount, updateUnreadCounts, addChannel, removeChannel, touchChannelActivity } from '@/features/chat/store/chatChannelsSlice';
+import { updateChannel, incrementUnreadCount, updateUnreadCounts, addChannel, removeChannel, touchChannelActivity, setMemberRole } from '@/features/chat/store/chatChannelsSlice';
 import { isDocumentVisible } from '@/shared/utils/documentVisibility';
 import { chatApi } from '@/features/chat/api/chatApi';
 import { channelToPlain as apiChannelToPlain } from '@/features/chat/api/chatConverters';
 import { ChatEventType, UserChatEventType } from '@uniffy/proto/chat/v1/chat_stream_pb';
+import { ChannelRole } from '@uniffy/proto/chat/v1/chat_pb';
 import { handleCallStreamEvent } from '@/features/calls/streamHandlers';
 import { syncActiveCalls } from '@/features/calls/store/callsThunks';
 import type { AppDispatch } from '@/app/store';
@@ -90,6 +91,18 @@ function handleChannelEvent(
     }
     if (activeChannelId && channelId === activeChannelId) {
       dispatch(fetchMembers(activeChannelId));
+    }
+    return;
+  }
+
+  if (ce.eventType === ChatEventType.MEMBER_UPDATED) {
+    if (ce.payload.case === 'member' && ce.payload.value) {
+      const { userId, role } = ce.payload.value;
+      dispatch(setMemberRole({
+        channelId,
+        userId,
+        role: role === ChannelRole.OWNER ? 'OWNER' : role === ChannelRole.ADMIN ? 'ADMIN' : 'MEMBER',
+      }));
     }
     return;
   }

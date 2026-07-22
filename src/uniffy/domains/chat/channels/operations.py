@@ -56,6 +56,8 @@ logger = logger.bind(component="chat.channels.operations")
 
 DEFAULT_PAGE_SIZE = 200
 MAX_PAGE_SIZE = 500
+# Past this size a group chat must become a channel.
+GROUP_DM_MAX_PARTICIPANTS = 4
 
 
 def _encode_cursor(payload: dict[str, Any]) -> str:
@@ -238,6 +240,16 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         }
         if model.is_agent_dm and model.agent_id is not None:
             metadata["agent_id"] = str(model.agent_id)
+            # Agent identity rides the doc so search rows render the same
+            # avatar (emoji or name-keyed gradient) as the chat sidebar.
+            agent_row = await self.session.execute(
+                select(Agent.name, Agent.avatar_emoji).where(Agent.id == model.agent_id)
+            )
+            agent_identity = agent_row.first()
+            if agent_identity:
+                metadata["agent_name"] = agent_identity[0]
+                if agent_identity[1]:
+                    metadata["emoji"] = agent_identity[1]
 
         await self.search_indexer.index(
             urn=f"urn:uniffy:content:{urn_type.value}:{model.id}",
@@ -405,8 +417,11 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         if len(all_user_ids) < 2:
             raise ValidationError("members", "DM requires at least 2 participants")
-        if len(all_user_ids) > 8:
-            raise ValidationError("members", "Group DMs support up to 8 participants")
+        if len(all_user_ids) > GROUP_DM_MAX_PARTICIPANTS:
+            raise ValidationError(
+                "members",
+                f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. Create a channel for a bigger group.",
+            )
 
         is_direct = len(all_user_ids) == 2
         channel_type = ChannelType.DIRECT if is_direct else ChannelType.GROUP_DM
@@ -437,13 +452,18 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         tag_ids: list[UUID] | None = None,
-    ) -> tuple[list[tuple[ChatChannel, ChatChannelStats, ChannelRole]], str | None]:
+    ) -> tuple[list[tuple[ChatChannel, ChatChannelStats, ChannelRole, UUID | None]], str | None]:
         # Keyset by (coalesce(last_root_message_at, epoch) DESC, channel_id ASC).
         epoch_ts = datetime(1, 1, 1, tzinfo=UTC)
         sort_ts = func.coalesce(ChatChannelStats.last_root_message_at, epoch_ts)
 
         base_query = (
-            select(ChatChannel, ChatChannelStats, ChatChannelMember.role)
+            select(
+                ChatChannel,
+                ChatChannelStats,
+                ChatChannelMember.role,
+                ChatChannelMember.agent_folder_id,
+            )
             .join(
                 ChatChannelStats,
                 ChatChannelStats.channel_id == ChatChannel.id,
@@ -486,7 +506,7 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         next_cursor: str | None = None
         if len(rows) > page_size:
             rows = rows[:page_size]
-            last_channel, last_stats, _ = rows[-1]
+            last_channel, last_stats, _, _ = rows[-1]
             last_ts = last_stats.last_root_message_at or epoch_ts
             next_cursor = _encode_cursor(
                 {"sort_ts": last_ts.isoformat(), "channel_id": str(last_channel.id)}
@@ -640,6 +660,105 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
         return channel
 
+    async def convert_group_dm_to_channel(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        name: str,
+        target_type: ChannelType = ChannelType.PRIVATE,
+    ) -> ChatChannel:
+        """Owner-only GROUP_DM -> PUBLIC/PRIVATE channel; members and history carry over."""
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+        if channel.channel_type != ChannelType.GROUP_DM:
+            raise ValidationError("channel", "Only group chats can be converted to a channel")
+        if target_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
+            raise ValidationError("channel_type", "Converted channels must be public or private")
+
+        membership = await self.access.get_membership(channel_id, user_id)
+        if membership is None or membership.role != ChannelRole.OWNER:
+            raise PermissionDeniedError(
+                "convert", "Only the conversation owner can convert to a channel"
+            )
+
+        clean = name.strip()
+        if not clean:
+            raise ValidationError("name", "Channel name is required")
+        if len(clean) > 100:
+            raise ValidationError("name", "Channel name too long (max 100)")
+
+        slug = slugify(clean)
+        existing = await self.session.execute(
+            select(ChatChannel.id).where(
+                ChatChannel.organization_id == organization_id,
+                ChatChannel.slug == slug,
+                ChatChannel.id != channel_id,
+                ChatChannel.is_deleted == False,  # noqa: E712
+            )
+        )
+        if existing.scalar_one_or_none():
+            slug = f"{slug}-{str(channel_id)[:8]}"
+
+        channel.channel_type = target_type
+        channel.name = clean
+        channel.slug = slug
+        channel.custom_name = None
+        channel.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.CHAT_CHANNEL_UPDATED,
+            resource_type=ContentType.CHAT.value,
+            resource_id=channel.id,
+            details={"converted_from": "GROUP_DM", "name": clean, "channel_type": target_type.value},
+        )
+
+        await self.session.commit()
+        await self.session.refresh(channel)
+
+        await invalidate_cached_channel(channel.id)
+        await invalidate_cached_member_ids(channel.id)
+        await invalidate_cached_dm_peers(channel.id)
+
+        await self._post_membership_conversion_message(user_id, organization_id, channel)
+
+        # PRIVATE channels index as EXPLICIT_MEMBERS; the GROUP_DM never was indexed.
+        await self._refresh_channel_live_state(channel)
+
+        # Every member's client refetches the channel on a self-inclusive
+        # MEMBERS_ADDED, moving it from the DM section to Channels live.
+        member_ids = await self._get_all_member_ids(channel.id)
+        await self._publish_members_changed(channel.id, member_ids, added=True)
+
+        return channel
+
+    async def _post_membership_conversion_message(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        channel: ChatChannel,
+    ) -> None:
+        try:
+            from uniffy.core.models.chat.message import SenderType
+            from uniffy.domains.chat.messages.operations import ChatMessageOperations
+
+            resolver = SenderResolver(self.session)
+            info = await resolver.resolve_one(SenderType.USER, actor_user_id)
+            actor = f"[[[{info.display_name}|urn:uniffy:content:USER:{actor_user_id}]]]"
+            kind = "public" if channel.channel_type == ChannelType.PUBLIC else "private"
+            msg_ops = ChatMessageOperations(self.session)
+            await msg_ops.send_message(
+                user_id=actor_user_id,
+                organization_id=organization_id,
+                channel_id=channel.id,
+                content=f"{actor} converted this conversation to the {kind} channel #{channel.name}",
+                sender_type=SenderType.SYSTEM,
+            )
+        except Exception:
+            logger.warning(f"Failed to post conversion message for channel {channel.id}")
+
     async def archive_channel(
         self,
         user_id: UUID,
@@ -723,7 +842,10 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             from uniffy.core.search.indexer import SearchIndexer
 
             indexer = SearchIndexer(self.session)
-            urn = f"urn:uniffy:content:CHAT:{channel.id}"
+            # Agent DMs are indexed under AGENT_CHAT (see _index_for_search);
+            # removing the wrong URN type leaves the doc searchable forever.
+            urn_type = ContentType.AGENT_CHAT if channel.is_agent_dm else ContentType.CHAT
+            urn = f"urn:uniffy:content:{urn_type.value}:{channel.id}"
             await indexer.remove(urn)
             # Cascade: drop chat_message docs under this channel so global search excludes them.
             await indexer.remove_by_filter(
@@ -855,6 +977,32 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if not member:
             return
 
+        if member.role == ChannelRole.OWNER:
+            counts = await self.session.execute(
+                select(
+                    func.count().filter(ChatChannelMember.role == ChannelRole.OWNER),
+                    func.count(),
+                ).where(
+                    ChatChannelMember.channel_id == channel_id,
+                    ChatChannelMember.subject_type == SubjectType.USER,
+                )
+            )
+            owner_count, user_member_count = counts.one()
+            if owner_count <= 1 and user_member_count > 1:
+                raise ValidationError(
+                    "channel", "Promote another member to owner before leaving"
+                )
+
+        # send_message requires membership, so the departure notice posts
+        # while the row still exists.
+        await self._post_membership_system_message(
+            user_id,
+            organization_id,
+            channel,
+            [ChatSubject(SubjectType.USER, user_id)],
+            action="removed",
+        )
+
         await self.session.execute(
             delete(ChatChannelMember).where(
                 ChatChannelMember.channel_id == channel_id,
@@ -866,9 +1014,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             .where(ChatChannelStats.channel_id == channel_id)
             .values(member_count=ChatChannelStats.member_count - 1)
         )
+        if channel.channel_type == ChannelType.GROUP_DM:
+            await self._refresh_group_dm_name(channel)
         await self.session.commit()
         self.access.invalidate_membership(channel_id, user_id)
         await invalidate_cached_member_ids(channel_id)
+        if channel.channel_type == ChannelType.GROUP_DM:
+            await invalidate_cached_dm_peers(channel_id)
         await invalidate_visible_sets_for_user(organization_id, user_id)
 
         await kick_user_from_active_call(self.session, channel_id, user_id)
@@ -964,12 +1116,26 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         member_user_ids: list[UUID],
     ) -> None:
-        """Remove members; requires admin/owner role."""
-        channel = await self.get_by_id(user_id, organization_id, channel_id)
-        await self._require_edit(user_id, organization_id, channel)
+        """Remove members; requires admin/owner role.
 
-        if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
-            raise ValidationError("channel", "Cannot remove members from DMs")
+        Group DMs: the conversation owner can remove others; anyone can remove
+        themselves (leave). 1:1 DMs stay immutable.
+        """
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+
+        if channel.channel_type == ChannelType.DIRECT:
+            raise ValidationError("channel", "Cannot remove members from a 1:1 DM")
+
+        if channel.channel_type == ChannelType.GROUP_DM:
+            is_self_leave = set(member_user_ids) == {user_id}
+            if not is_self_leave:
+                membership = await self.access.get_membership(channel_id, user_id)
+                if membership is None or membership.role != ChannelRole.OWNER:
+                    raise PermissionDeniedError(
+                        "members", "Only the conversation owner can remove people"
+                    )
+        else:
+            await self._require_edit(user_id, organization_id, channel)
 
         members_result = await self.session.execute(
             select(ChatChannelMember).where(
@@ -1013,9 +1179,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                     details={"target_user_id": str(removed_id)},
                 )
 
+            if channel.channel_type == ChannelType.GROUP_DM:
+                await self._refresh_group_dm_name(channel)
             await self.session.commit()
 
             await invalidate_cached_member_ids(channel_id)
+            if channel.channel_type == ChannelType.GROUP_DM:
+                await invalidate_cached_dm_peers(channel_id)
 
             for removed_id in removable_ids:
                 if removed_id is not None:
@@ -1161,6 +1331,136 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         user = user_result.scalar_one()
         return member, user
 
+    async def update_member_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel_id: UUID,
+        target_user_id: UUID,
+        role: ChannelRole,
+    ) -> tuple[ChatChannelMember, User]:
+        """Change a USER member's channel role.
+
+        Channel admins move members between MEMBER and ADMIN; granting or
+        revoking OWNER takes an owner (or chat moderation) actor, and the
+        last owner can never be demoted.
+        """
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+
+        if channel.channel_type == ChannelType.DIRECT:
+            raise ValidationError("channel", "1:1 DMs have no roles")
+
+        actor_member = await self.access.get_membership(channel_id, user_id)
+        actor_is_owner = bool(actor_member and actor_member.role == ChannelRole.OWNER)
+        if not actor_is_owner:
+            actor_is_owner = await self.access.is_org_admin(
+                user_id, organization_id
+            ) or await self.access.is_chat_domain_admin(user_id, organization_id)
+        actor_is_admin = actor_is_owner or bool(
+            actor_member and actor_member.role == ChannelRole.ADMIN
+        )
+        if not actor_is_admin:
+            raise PermissionDeniedError("members", "Only channel admins can change roles")
+
+        result = await self.session.execute(
+            select(ChatChannelMember).where(
+                ChatChannelMember.channel_id == channel_id,
+                ChatChannelMember.subject_type == SubjectType.USER,
+                ChatChannelMember.subject_id == target_user_id,
+            )
+        )
+        member = result.scalar_one_or_none()
+        if not member:
+            raise NotFoundError("channel_member", target_user_id)
+
+        touches_owner = ChannelRole.OWNER in (role, member.role)
+        if touches_owner and not actor_is_owner:
+            raise PermissionDeniedError(
+                "members", "Only an owner can grant or revoke ownership"
+            )
+
+        if member.role == ChannelRole.OWNER and role != ChannelRole.OWNER:
+            owners_result = await self.session.execute(
+                select(func.count())
+                .select_from(ChatChannelMember)
+                .where(
+                    ChatChannelMember.channel_id == channel_id,
+                    ChatChannelMember.subject_type == SubjectType.USER,
+                    ChatChannelMember.role == ChannelRole.OWNER,
+                )
+            )
+            if owners_result.scalar_one() <= 1:
+                raise ValidationError("role", "Promote another member to owner first")
+
+        user_result = await self.session.execute(
+            select(User).where(User.id == target_user_id)
+        )
+        user = user_result.scalar_one()
+
+        if member.role == role:
+            return member, user
+
+        old_role = member.role
+        member.role = role
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.CHAT_CHANNEL_MEMBER_ROLE_CHANGED,
+            resource_type=ContentType.CHAT.value,
+            resource_id=channel_id,
+            details={
+                "target_user_id": str(target_user_id),
+                "old_role": old_role.value,
+                "new_role": role.value,
+            },
+        )
+
+        await self.session.commit()
+        await self.session.refresh(member)
+
+        self.access.invalidate_membership(channel_id, target_user_id)
+        await invalidate_cached_member_ids(channel_id)
+
+        await self._publish_member_role_changed(
+            channel_id, target_user_id, role, user.full_name or ""
+        )
+
+        return member, user
+
+    async def _publish_member_role_changed(
+        self,
+        channel_id: UUID,
+        member_user_id: UUID,
+        role: ChannelRole,
+        display_name: str,
+    ) -> None:
+        try:
+            from uniffy.domains.chat.streaming.events import (
+                MEMBER_UPDATED,
+                build_member_payload,
+            )
+            from uniffy.domains.chat.streaming.publisher import (
+                publish_channel_event_to_members,
+            )
+
+            recipients = await self._get_all_member_ids(channel_id)
+            await publish_channel_event_to_members(
+                recipients,
+                MEMBER_UPDATED,
+                build_member_payload(
+                    user_id=member_user_id,
+                    display_name=display_name,
+                    role=role.value,
+                ),
+                channel_id=channel_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                f"Failed to publish member role change for channel {channel_id}: {exc}"
+            )
+
     async def require_send(
         self,
         user_id: UUID,
@@ -1282,6 +1582,22 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
 
     async def _build_dm_name(self, user_ids: list[UUID]) -> str:
         return await self._build_dm_name_from_subjects([ChatSubject.user(uid) for uid in user_ids])
+
+    async def _refresh_group_dm_name(self, channel: ChatChannel) -> None:
+        """Group-DM names carry the participant list; rebuild after membership changes.
+
+        Caller owns the commit and the live-state refresh.
+        """
+        member_rows = await self.session.execute(
+            select(ChatChannelMember.user_id).where(
+                ChatChannelMember.channel_id == channel.id,
+                ChatChannelMember.subject_type == SubjectType.USER,
+                ChatChannelMember.user_id.is_not(None),
+            )
+        )
+        user_ids = sorted({row[0] for row in member_rows.all()})
+        if user_ids:
+            channel.name = await self._build_dm_name(user_ids)
 
     async def _build_dm_name_from_subjects(self, subjects: list[ChatSubject]) -> str:
         """DM name for mixed USER + AGENT participants via SenderResolver."""
@@ -1696,12 +2012,36 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         subjects: list[ChatSubject],
     ) -> list[ChatChannelMember]:
-        """Add USER/AGENT members; actor needs channel MANAGE plus VIEWER+ on each AGENT."""
-        channel = await self.get_by_id(user_id, organization_id, channel_id)
-        await self._require_edit(user_id, organization_id, channel)
+        """Add USER/AGENT members; actor needs channel MANAGE plus VIEWER+ on each AGENT.
 
-        if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
-            raise ValidationError("channel", "Cannot add members to DMs")
+        Group DMs: any participant can add people (users only, 8-person cap);
+        1:1 DMs stay immutable - adding a third person means a new conversation.
+        """
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+
+        if channel.channel_type == ChannelType.DIRECT:
+            raise ValidationError("channel", "Cannot add members to a 1:1 DM")
+
+        if channel.channel_type == ChannelType.GROUP_DM:
+            membership = await self.access.get_membership(channel_id, user_id)
+            if membership is None:
+                raise PermissionDeniedError("members", "Only participants can add people")
+            if any(s.subject_type != SubjectType.USER for s in subjects):
+                raise ValidationError("members", "Group DMs only contain users")
+            count_result = await self.session.execute(
+                select(func.count()).where(
+                    ChatChannelMember.channel_id == channel_id,
+                    ChatChannelMember.subject_type == SubjectType.USER,
+                )
+            )
+            current_count = count_result.scalar_one()
+            if current_count + len({s.subject_id for s in subjects}) > GROUP_DM_MAX_PARTICIPANTS:
+                raise ValidationError(
+                    "members",
+                    f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. Convert this conversation to a channel to add more.",
+                )
+        else:
+            await self._require_edit(user_id, organization_id, channel)
 
         for s in subjects:
             if s.subject_type == SubjectType.AGENT:
@@ -1744,9 +2084,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 [m.subject_id for m in added if m.subject_type == SubjectType.AGENT],
                 actor_user_id=user_id,
             )
+            if channel.channel_type == ChannelType.GROUP_DM:
+                await self._refresh_group_dm_name(channel)
             await self.session.commit()
 
             await invalidate_cached_member_ids(channel_id)
+            if channel.channel_type == ChannelType.GROUP_DM:
+                await invalidate_cached_dm_peers(channel_id)
 
             await self._publish_members_changed(
                 channel_id,
@@ -1756,6 +2100,14 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                     if m.subject_type == SubjectType.USER and m.user_id is not None
                 ],
                 added=True,
+            )
+
+            await self._post_membership_system_message(
+                user_id,
+                organization_id,
+                channel,
+                [ChatSubject(m.subject_type, m.subject_id) for m in added],
+                action="added",
             )
 
             await self._refresh_channel_live_state(channel)
@@ -1769,12 +2121,26 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         channel_id: UUID,
         subjects: list[ChatSubject],
     ) -> None:
-        """Remove USER/AGENT members; owners cannot be removed."""
-        channel = await self.get_by_id(user_id, organization_id, channel_id)
-        await self._require_edit(user_id, organization_id, channel)
+        """Remove USER/AGENT members; owners cannot be removed.
 
-        if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
-            raise ValidationError("channel", "Cannot remove members from DMs")
+        Group DMs: the conversation owner can remove others; anyone can remove
+        themselves (leave). 1:1 DMs stay immutable.
+        """
+        channel = await self.get_by_id(user_id, organization_id, channel_id)
+
+        if channel.channel_type == ChannelType.DIRECT:
+            raise ValidationError("channel", "Cannot remove members from a 1:1 DM")
+
+        if channel.channel_type == ChannelType.GROUP_DM:
+            is_self_leave = {s.subject_id for s in subjects} == {user_id}
+            if not is_self_leave:
+                membership = await self.access.get_membership(channel_id, user_id)
+                if membership is None or membership.role != ChannelRole.OWNER:
+                    raise PermissionDeniedError(
+                        "members", "Only the conversation owner can remove people"
+                    )
+        else:
+            await self._require_edit(user_id, organization_id, channel)
 
         members_result = await self.session.execute(
             select(ChatChannelMember).where(
@@ -1802,9 +2168,13 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 .where(ChatChannelStats.channel_id == channel_id)
                 .values(member_count=ChatChannelStats.member_count - len(removable))
             )
+            if channel.channel_type == ChannelType.GROUP_DM:
+                await self._refresh_group_dm_name(channel)
             await self.session.commit()
 
             await invalidate_cached_member_ids(channel_id)
+            if channel.channel_type == ChannelType.GROUP_DM:
+                await invalidate_cached_dm_peers(channel_id)
 
             removed_user_ids = [sid for (t, sid) in removable if t == SubjectType.USER]
             for removed_user_id in removed_user_ids:
@@ -1816,7 +2186,66 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
                 added=False,
             )
 
+            await self._post_membership_system_message(
+                user_id,
+                organization_id,
+                channel,
+                [ChatSubject(t, i) for (t, i) in removable],
+                action="removed",
+            )
+
             await self._refresh_channel_live_state(channel)
+
+    async def _post_membership_system_message(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        channel: ChatChannel,
+        subjects: list[ChatSubject],
+        *,
+        action: str,
+    ) -> None:
+        """Post "Actor added/removed X, Y" as a SYSTEM message; non-fatal."""
+        try:
+            from uniffy.core.models.chat.message import SenderType
+            from uniffy.domains.chat.messages.operations import ChatMessageOperations
+
+            resolver = SenderResolver(self.session)
+            refs = [(SenderType.USER, actor_user_id)] + [
+                (
+                    SenderType.USER if s.subject_type == SubjectType.USER else SenderType.AGENT,
+                    s.subject_id,
+                )
+                for s in subjects
+            ]
+            # resolve_many keys its result by bare id.
+            infos = await resolver.resolve_many(refs)
+
+            def mention(sender_type: SenderType, subject_id: UUID) -> str:
+                info = infos.get(subject_id)
+                name = info.display_name if info else "Someone"
+                urn_type = "USER" if sender_type == SenderType.USER else "AGENT"
+                return f"[[[{name}|urn:uniffy:content:{urn_type}:{subject_id}]]]"
+
+            actor = mention(SenderType.USER, actor_user_id)
+            targets = ", ".join(mention(t, i) for t, i in refs[1:])
+            is_self = len(subjects) == 1 and subjects[0].subject_id == actor_user_id
+            place = "the conversation" if channel.channel_type == ChannelType.GROUP_DM else "the channel"
+            if is_self and action == "removed":
+                content = f"{actor} left {place}"
+            else:
+                content = f"{actor} {action} {targets} to {place}" if action == "added" else f"{actor} {action} {targets} from {place}"
+
+            msg_ops = ChatMessageOperations(self.session)
+            await msg_ops.send_message(
+                user_id=actor_user_id,
+                organization_id=organization_id,
+                channel_id=channel.id,
+                content=content,
+                sender_type=SenderType.SYSTEM,
+            )
+        except Exception:
+            logger.warning(f"Failed to post membership system message for channel {channel.id}")
 
     async def _post_join_system_message(
         self,

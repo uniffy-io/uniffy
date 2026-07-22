@@ -50,6 +50,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     UpdateChannelMemberResponse,
     UpdateChannelRequest,
     UpdateChannelResponse,
+    UpdateMemberRoleRequest,
+    UpdateMemberRoleResponse,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatNotificationLevel as ProtoNL,
@@ -63,6 +65,7 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.models.chat.channel import ChannelType
+from uniffy.core.models.chat.channel_member import ChannelRole
 from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChannelMemberModel
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, SubjectType
@@ -75,6 +78,8 @@ from uniffy.domains.chat.cache import (
     set_cached_dm_peers,
 )
 from uniffy.domains.chat.channels.converters import (
+    CHANNEL_ROLE_FROM_PROTO,
+    CHANNEL_TYPE_FROM_PROTO,
     channel_to_proto,
     channel_type_from_proto,
     member_to_proto,
@@ -506,6 +511,42 @@ class ChannelHandlers:
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
+    async def convert_group_dm_to_channel(
+        self,
+        request,
+        ctx: RequestContext,
+    ):
+        from uniffy_proto.chat.v1.chat_pb2 import ConvertGroupDmToChannelResponse
+
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            channel_id = UUID(request.channel_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        target_type = CHANNEL_TYPE_FROM_PROTO.get(request.channel_type, ChannelType.PRIVATE)
+        if target_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):
+            target_type = ChannelType.PRIVATE
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(session)
+                channel = await ops.convert_group_dm_to_channel(
+                    user_id, org_id, channel_id, request.name, target_type=target_type
+                )
+                tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+                return ConvertGroupDmToChannelResponse(
+                    channel=channel_to_proto(
+                        channel,
+                        current_user_role=ChannelRole.OWNER,
+                        is_member=True,
+                        tags=tags_by_id.get(channel.id),
+                    )
+                )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
     async def archive_channel(
         self,
         request: ArchiveChannelRequest,
@@ -604,7 +645,7 @@ class ChannelHandlers:
                     # DM-peer cache MGET, with a single PG backfill for misses.
                     dm_channel_ids = [
                         ch.id
-                        for ch, _, _ in rows
+                        for ch, _, _, _ in rows
                         if ch.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM)
                     ]
                     dm_members_map: dict[str, list[str]] = {}
@@ -638,7 +679,7 @@ class ChannelHandlers:
 
                     user_channel_ids = [
                         ch.id
-                        for ch, _, _ in rows
+                        for ch, _, _, _ in rows
                         if ch.channel_type not in (ChannelType.DIRECT, ChannelType.GROUP_DM)
                     ]
                     user_tags = await _hydrate_channel_tags(
@@ -652,8 +693,9 @@ class ChannelHandlers:
                             is_member=True,
                             dm_member_ids=dm_members_map.get(str(ch.id)),
                             tags=user_tags.get(ch.id),
+                            agent_folder_id=folder_id,
                         )
-                        for ch, stats, role in rows
+                        for ch, stats, role, folder_id in rows
                     ]
 
                 response = ListChannelsResponse(channels=channels)
@@ -862,6 +904,37 @@ class ChannelHandlers:
                 return UpdateChannelMemberResponse(
                     member=member_to_proto(member, user),
                 )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
+            _handle_error(e)
+
+    async def update_member_role(
+        self,
+        request: UpdateMemberRoleRequest,
+        ctx: RequestContext,
+    ) -> UpdateMemberRoleResponse:
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            channel_id = UUID(request.channel_id)
+            target_user_id = UUID(request.user_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        role = CHANNEL_ROLE_FROM_PROTO.get(request.role)
+        if role is None:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid role")
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(session)
+                member, user = await ops.update_member_role(
+                    user_id,
+                    org_id,
+                    channel_id,
+                    target_user_id,
+                    role,
+                )
+                return UpdateMemberRoleResponse(member=member_to_proto(member, user))
         except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 

@@ -29,6 +29,9 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     ChatMessage as ProtoChatMessage,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
+    ChannelRole as ProtoChannelRole,
+)
+from uniffy_proto.chat.v1.chat_pb2 import (
     SenderType as ProtoSenderType,
 )
 from uniffy_proto.chat.v1.chat_stream_pb2 import (
@@ -162,6 +165,25 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             member=MemberPayload(
                 user_id=payload.get("user_id", ""),
                 display_name=payload.get("display_name", ""),
+            ),
+        )
+
+    if event_type == evt.MEMBER_UPDATED:
+        role_by_name = {
+            "MEMBER": ProtoChannelRole.CHANNEL_ROLE_MEMBER,
+            "ADMIN": ProtoChannelRole.CHANNEL_ROLE_ADMIN,
+            "OWNER": ProtoChannelRole.CHANNEL_ROLE_OWNER,
+        }
+        return ChatEvent(
+            event_type=ChatEventType.CHAT_EVENT_TYPE_MEMBER_UPDATED,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            member=MemberPayload(
+                user_id=payload.get("user_id", ""),
+                display_name=payload.get("display_name", ""),
+                role=role_by_name.get(
+                    payload.get("role", "MEMBER"), ProtoChannelRole.CHANNEL_ROLE_MEMBER
+                ),
             ),
         )
 
@@ -596,6 +618,7 @@ _CHANNEL_EVENT_TYPES = {
     evt.TYPING_STOPPED,
     evt.MEMBER_JOINED,
     evt.MEMBER_LEFT,
+    evt.MEMBER_UPDATED,
     evt.MEMBERS_ADDED,
     evt.MEMBERS_REMOVED,
     evt.CHANNEL_UPDATED,

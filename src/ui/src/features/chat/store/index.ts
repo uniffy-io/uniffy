@@ -155,6 +155,7 @@ export {
   createChannel,
   joinChannel,
   leaveChannel,
+  updateMemberRoleThunk,
   archiveChannel,
   deleteChannel,
   fetchMessages,
