@@ -5,12 +5,14 @@ import { useSearch } from '@/features/search/hooks/useSearch';
 import { SearchResultsList } from '@/features/search/components/SearchResultsList';
 import { cn } from '@/shared/utils/cn';
 import { useFormattedKeybinding } from '@/features/settings';
-import { useAppDispatch } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { recordRecentItem } from '@/features/search/utils/recentItems';
 import { openViewerWithFetch } from '@/features/files';
 import { createChannel } from '@/features/chat/store/chatThunks';
 import { ChannelType } from '@uniffy/proto/chat/v1/chat_pb';
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
+import { getRouteTypePriority } from '@/features/search/utils/typePriority';
 
 export function GlobalSearch() {
     const navigate = useNavigate();
@@ -21,14 +23,15 @@ export function GlobalSearch() {
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Chat messages only surface when the user is already inside the chat domain.
-    const isInChatDomain = location.pathname.startsWith('/chat');
-    const searchOptions = useMemo(() => {
-        if (isInChatDomain) return undefined;
-        return { excludeTypes: [SearchResultType.CHAT_MESSAGE] };
-    }, [isInChatDomain]);
+    const routePriority = getRouteTypePriority(location.pathname);
+    const searchOptions = useMemo(
+        () => (routePriority ? { typePriority: routePriority } : undefined),
+        [routePriority],
+    );
 
-    const { query, setQuery, results, isLoading, clearResults } = useSearch(searchOptions);
+    const { query, setQuery, results, totalCount, isLoading, clearResults } = useSearch(searchOptions);
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+    const userId = useAppSelector((state) => state.auth.user?.id);
     const searchShortcut = useFormattedKeybinding('nav.search');
 
     useEffect(() => {
@@ -50,6 +53,15 @@ export function GlobalSearch() {
     };
 
     const handleResultSelect = async (result: SearchResultItem) => {
+        if (organizationId && userId) {
+            recordRecentItem(organizationId, userId, {
+                urn: result.urn,
+                title: result.title,
+                type: result.type,
+                url: result.url,
+            });
+        }
+
         // Files open in the viewer modal so the user stays on the current page.
         if (result.type === SearchResultType.FILE) {
             const fileId = result.urn.split(':').pop();
@@ -199,6 +211,7 @@ export function GlobalSearch() {
                         onClose={handleClose}
                         className="max-h-[70vh]"
                         showHeader={false}
+                        totalCount={totalCount}
                     />
                 </div>
             )}

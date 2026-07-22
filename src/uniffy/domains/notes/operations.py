@@ -172,6 +172,10 @@ class NoteOperations(BaseContentOperations[Note]):
         slugs = sorted({tag.slug for tag in bulk.get(urn, [])})
         return slugs or None
 
+    def _get_search_metadata(self, model: Note) -> dict[str, str] | None:
+        # node_type lets search results badge folders and canvases as such.
+        return {"node_type": model.node_type.value}
+
     async def _get_search_metadata_async(self, model: Note) -> dict[str, str] | None:
         # Adds parent-folder title so mention chips show a breadcrumb.
         meta = dict(self._get_search_metadata(model) or {})

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlass, Tag, Hash, ChatCircle } from '@phosphor-icons/react';
+import { MagnifyingGlass, Tag, Hash, ChatCircle, Folder, PresentationChart } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import type { SearchResultItem } from '@uniffy/proto/search/v1/search_pb';
@@ -8,29 +8,20 @@ import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { type UrnTypeTheme } from '@/config/theme/urnColors';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
+import { hasHighlight, renderHighlightedText } from '@/features/search/utils/highlight';
 import { useThumbnailUrl } from '@/features/files/hooks/useThumbnail';
-import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
-
-function UserSearchAvatar({ userId, fallback }: { userId: string; fallback: React.ReactNode }) {
-  const [failed, setFailed] = useState(false);
-  const avatarSrc = useAvatarUrl(userId, 'sm');
-  if (failed) return <>{fallback}</>;
-  return (
-    <img
-      src={avatarSrc ?? undefined}
-      alt=""
-      className="w-8 h-8 rounded-full shrink-0 object-cover"
-      onError={() => setFailed(true)}
-    />
-  );
-}
+import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
+import { SUBJECT_TYPE } from '@/components/subject/types';
+import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
 
 /** SearchResultType to UrnType. Update when adding a new content type. */
 const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.NOTE]: UrnType.NOTE,
   [SearchResultType.FILE]: UrnType.FILE,
+  [SearchResultType.FOLDER]: UrnType.FOLDER,
   [SearchResultType.CHAT]: UrnType.CHAT,
   [SearchResultType.AGENT_CHAT]: UrnType.AGENT_CHAT,
+  [SearchResultType.AGENT_FOLDER]: UrnType.AGENT_FOLDER,
   [SearchResultType.CHAT_MESSAGE]: UrnType.CHAT_MESSAGE,
   [SearchResultType.USER]: UrnType.USER,
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
@@ -47,9 +38,21 @@ interface ResultTheme extends UrnTypeTheme {
   label: string;
 }
 
-function getResultTheme(type: SearchResultType): ResultTheme {
-  const urnType = SEARCH_RESULT_TYPE_TO_URN_TYPE[type] || UrnType.UNKNOWN;
+function getResultTheme(result: SearchResultItem): ResultTheme {
+  const urnType = SEARCH_RESULT_TYPE_TO_URN_TYPE[result.type] || UrnType.UNKNOWN;
   const config = getContentTypeConfig(urnType);
+
+  // Notes-tree folders and canvases index as NOTE; the node_type metadata
+  // distinguishes them so the badge does not claim "Note".
+  if (result.type === SearchResultType.NOTE) {
+    const nodeType = result.metadata['node_type'];
+    if (nodeType === 'FOLDER') {
+      return { ...config.theme, icon: Folder, label: 'Folder' };
+    }
+    if (nodeType === 'CANVAS') {
+      return { ...config.theme, icon: PresentationChart, label: 'Canvas' };
+    }
+  }
 
   return {
     ...config.theme,
@@ -96,6 +99,15 @@ interface SearchResultsListProps {
   selectedIndex?: number;
   onSelectedIndexChange?: (index: number) => void;
   copiedUrn?: boolean;
+  /** Estimated total matches before pagination; shows "N of M" when it exceeds the page. */
+  totalCount?: number;
+}
+
+function resultCountLabel(shown: number, totalCount?: number): string {
+  if (totalCount !== undefined && totalCount > shown) {
+    return `${shown} of ${totalCount} results`;
+  }
+  return `${shown} result${shown !== 1 ? 's' : ''}`;
 }
 
 export function SearchResultsList({
@@ -111,6 +123,7 @@ export function SearchResultsList({
   selectedIndex: controlledIndex,
   onSelectedIndexChange,
   copiedUrn = false,
+  totalCount,
 }: SearchResultsListProps) {
   const [internalIndex, setInternalIndex] = useState(0);
   const itemRefs = useRef<Map<number, HTMLLIElement>>(new Map());
@@ -183,7 +196,7 @@ export function SearchResultsList({
             </span>
             {results.length > 0 && (
               <span className="text-[10px] text-muted-foreground/70 ml-auto">
-                {results.length} result{results.length !== 1 ? 's' : ''}
+                {resultCountLabel(results.length, totalCount)}
               </span>
             )}
           </div>
@@ -211,9 +224,13 @@ export function SearchResultsList({
         <>
           <ul className="py-1.5 max-h-96 overflow-auto">
             {results.map((result, index) => {
-              const theme = getResultTheme(result.type);
+              const theme = getResultTheme(result);
               const Icon = theme.icon;
               const isSelected = index === selectedIndex;
+              const description = result.description ? stripMarkdown(result.description) : '';
+              // Chat messages index their content as both title and description;
+              // the duplicate line is noise unless the crop adds context.
+              const showDescription = !!description && description !== result.title;
 
               return (
                 <li
@@ -254,16 +271,21 @@ export function SearchResultsList({
                         }
                       />
                     ) : result.type === SearchResultType.USER ? (
-                      <UserSearchAvatar
-                        userId={parseUrn(result.urn).id || ''}
-                        fallback={
-                          <div className={cn(
-                            'grid place-items-center w-8 h-8 rounded-md shrink-0 transition-all duration-200',
-                            isSelected ? theme.iconBoxAccent : 'bg-muted text-muted-foreground'
-                          )}>
-                            <Icon size={16} weight={isSelected ? 'fill' : 'duotone'} />
-                          </div>
-                        }
+                      <SubjectAvatar
+                        subject={{
+                          id: parseUrn(result.urn).id || '',
+                          type: SUBJECT_TYPE.USER,
+                          name: result.title,
+                        }}
+                        size="md"
+                        className="shrink-0"
+                      />
+                    ) : result.type === SearchResultType.AGENT
+                      || result.type === SearchResultType.AGENT_CHAT ? (
+                      <AgentAvatar
+                        agentName={result.metadata['agent_name'] || result.title}
+                        avatarEmoji={result.metadata['emoji']}
+                        size="md"
                       />
                     ) : (
                       <div className={cn(
@@ -280,7 +302,9 @@ export function SearchResultsList({
                           'text-sm font-medium truncate',
                           isSelected ? 'text-foreground' : 'text-foreground/80'
                         )}>
-                          {result.title}
+                          {hasHighlight(result.titleHighlighted)
+                            ? renderHighlightedText(result.titleHighlighted)
+                            : result.title}
                         </span>
                         <span className={cn(
                           'text-[10px] font-medium shrink-0 px-1.5 py-0.5 rounded',
@@ -319,9 +343,11 @@ export function SearchResultsList({
                           )}
                         </div>
                       )}
-                      {result.description && (
+                      {showDescription && (
                         <p className="text-xs text-muted-foreground/60 truncate mt-0.5">
-                          {stripMarkdown(result.description)}
+                          {hasHighlight(result.descriptionHighlighted)
+                            ? renderHighlightedText(stripMarkdown(result.descriptionHighlighted))
+                            : description}
                         </p>
                       )}
                     </div>
@@ -333,6 +359,11 @@ export function SearchResultsList({
 
           {showFooter && (
             <div className="border-t border-border/50 px-3 py-2 flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
+              {!showHeader && (
+                <span className="mr-auto text-muted-foreground/60">
+                  {resultCountLabel(results.length, totalCount)}
+                </span>
+              )}
               <span className="flex items-center gap-1">
                 <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono">↑↓</kbd>
                 <span>navigate</span>

@@ -1022,10 +1022,11 @@ class FileOperations(BaseContentOperations[File]):
 class FolderOperations:
     """Folder CRUD operations.
 
-    Folders are not searchable but they participate in the permission
-    system through the same generic ``ContentMember`` table. Most access
-    checks are delegated to :class:`PermissionChecker` directly so folders
-    don't pull in the full :class:`BaseContentOperations` machinery.
+    Folders participate in the permission system through the same generic
+    ``ContentMember`` table. Most access checks are delegated to
+    :class:`PermissionChecker` directly so folders don't pull in the full
+    :class:`BaseContentOperations` machinery; search indexing is wired
+    manually for the same reason.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -1034,6 +1035,71 @@ class FolderOperations:
         self.content_type = ContentType.FOLDER
         self.access_query = ContentAccessQuery(session)
         self.permission_checker = PermissionChecker(session)
+
+    async def _index_for_search(self, folder: Folder) -> None:
+        """System folders (auto-provisioned Attachments/Recordings) stay out
+        of the index; every user owning an identical copy is pure noise.
+        """
+        if folder.is_system or folder.is_deleted:
+            return
+
+        from uniffy.core.search.indexer import SearchIndexer
+
+        members = await self.session.execute(
+            select(
+                ContentMember.subject_type,
+                ContentMember.subject_id,
+                ContentMember.role,
+            ).where(
+                ContentMember.content_type == ContentType.FOLDER,
+                ContentMember.content_id == folder.id,
+            )
+        )
+        shared_users: list[UUID] = []
+        shared_groups: list[UUID] = []
+        blocked_users: list[UUID] = []
+        blocked_groups: list[UUID] = []
+        for subject_type, subject_id, role in members.all():
+            blocked = role == ContentRole.BLOCKED
+            if subject_type == SubjectType.USER:
+                (blocked_users if blocked else shared_users).append(subject_id)
+            elif subject_type == SubjectType.GROUP:
+                (blocked_groups if blocked else shared_groups).append(subject_id)
+
+        parent_label = ""
+        if folder.parent_id:
+            parent = await self.get_by_id(folder.parent_id, folder.organization_id)
+            parent_label = parent.name if parent else ""
+
+        indexer = SearchIndexer(self.session)
+        await indexer.index(
+            urn=build_content_urn(ContentType.FOLDER, folder.id),
+            organization_id=folder.organization_id,
+            title=folder.name,
+            entity_type=ContentType.FOLDER.value,
+            url_path=f"/files?folder={folder.id}",
+            owner_id=folder.owner_id,
+            access_mode=(folder.access_mode or AccessMode.OWNER_ONLY).value,
+            baseline_role=folder.baseline_role.value if folder.baseline_role else None,
+            keywords=folder.name,
+            shared_user_ids=shared_users or None,
+            shared_group_ids=shared_groups or None,
+            blocked_user_ids=blocked_users or None,
+            blocked_group_ids=blocked_groups or None,
+            metadata={
+                "parent_id": str(folder.parent_id) if folder.parent_id else "",
+                "parent_label": parent_label,
+            },
+        )
+
+    async def _remove_from_search(self, folder_id: UUID) -> None:
+        from uniffy.core.search.indexer import SearchIndexer
+
+        try:
+            indexer = SearchIndexer(self.session)
+            await indexer.remove(build_content_urn(ContentType.FOLDER, folder_id))
+        except Exception:
+            logger.warning(f"Search remove failed for folder {folder_id}")
 
     async def create(
         self,
@@ -1076,6 +1142,11 @@ class FolderOperations:
                 action="granted",
                 organization_id=organization_id,
             )
+
+        try:
+            await self._index_for_search(folder)
+        except Exception:
+            logger.warning(f"Search index failed for folder {folder.id}")
 
         return folder
 
@@ -1139,6 +1210,11 @@ class FolderOperations:
 
         await self.session.commit()
         await self.session.refresh(folder)
+
+        try:
+            await self._index_for_search(folder)
+        except Exception:
+            logger.warning(f"Search index failed for folder {folder.id}")
 
         # Folder rename: every file inside carries the folder name as
         # ``parent_label`` in its search-index metadata, so re-index
@@ -1221,6 +1297,8 @@ class FolderOperations:
 
         await self.session.commit()
 
+        await self._remove_from_search(folder_id)
+
         return files_deleted, folders_deleted + 1
 
     async def restore_folder(
@@ -1252,10 +1330,27 @@ class FolderOperations:
         folder_obj.deleted_at = None
 
         # Cascade restore to every descendant (file or folder) that was deleted.
-        await self._restore_contents(folder_id, organization_id, user_id)
+        restored_files, restored_folders = await self._restore_contents(
+            folder_id, organization_id, user_id
+        )
 
         await self.session.commit()
         await self.session.refresh(folder_obj)
+
+        # Deletion dropped every doc from the search index; restore must
+        # put them back or restored content stays unfindable.
+        file_ops = FileOperations(self.session)
+        for restored in [folder_obj, *restored_folders]:
+            try:
+                await self._index_for_search(restored)
+            except Exception:
+                logger.warning(f"Search index failed for restored folder {restored.id}")
+        for file in restored_files:
+            try:
+                await file_ops._index_for_search(model=file)
+            except Exception:
+                logger.warning(f"Search index failed for restored file {file.id}")
+
         return folder_obj
 
     async def _restore_contents(
@@ -1263,8 +1358,13 @@ class FolderOperations:
         folder_id: UUID,
         organization_id: UUID,
         user_id: UUID,
-    ) -> None:
-        """Recursively un-delete files and subfolders owned by the user."""
+    ) -> tuple[list[File], list[Folder]]:
+        """Recursively un-delete files and subfolders owned by the user;
+        returns everything it touched so the caller can re-index after commit.
+        """
+        restored_files: list[File] = []
+        restored_folders: list[Folder] = []
+
         files_result = await self.session.execute(
             select(File).where(
                 File.folder_id == folder_id,
@@ -1276,6 +1376,7 @@ class FolderOperations:
         for file in files_result.scalars().all():
             file.is_deleted = False
             file.deleted_at = None
+            restored_files.append(file)
 
         folders_result = await self.session.execute(
             select(Folder).where(
@@ -1288,7 +1389,14 @@ class FolderOperations:
         for child in folders_result.scalars().all():
             child.is_deleted = False
             child.deleted_at = None
-            await self._restore_contents(child.id, organization_id, user_id)
+            restored_folders.append(child)
+            child_files, child_folders = await self._restore_contents(
+                child.id, organization_id, user_id
+            )
+            restored_files.extend(child_files)
+            restored_folders.extend(child_folders)
+
+        return restored_files, restored_folders
 
     async def _delete_contents(
         self,
@@ -1406,6 +1514,7 @@ class FolderOperations:
             else:
                 child_folder.is_deleted = True
                 child_folder.deleted_at = datetime.now(UTC)
+            await self._remove_from_search(child_folder.id)
             folders_deleted += 1
 
         return files_deleted, folders_deleted
@@ -1429,6 +1538,7 @@ class FolderOperations:
         )
 
         created: list[dict] = []
+        created_folders: list[Folder] = []
 
         async def create_recursive(
             nodes: list[dict],
@@ -1463,6 +1573,7 @@ class FolderOperations:
                     "path": path,
                     "parent_id": current_parent_id,
                 })
+                created_folders.append(folder)
 
                 children = node.get("children", [])
                 if children:
@@ -1470,6 +1581,12 @@ class FolderOperations:
 
         await create_recursive(tree, parent_id, "", 0)
         await self.session.commit()
+
+        for folder in created_folders:
+            try:
+                await self._index_for_search(folder)
+            except Exception:
+                logger.warning(f"Search index failed for folder {folder.id}")
 
         return created
 

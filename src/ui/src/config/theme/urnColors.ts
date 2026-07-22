@@ -4,8 +4,10 @@ import { UrnType } from '@/shared/utils/urnTypes';
 export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.NOTE]: '#8b5cf6',           // violet-500 (fallback, usually uses primary)
   [UrnType.FILE]: '#3b82f6',           // blue-500
+  [UrnType.FOLDER]: '#f59e0b',         // amber-500
   [UrnType.CHAT]: '#8b5cf6',           // violet-500
   [UrnType.AGENT_CHAT]: '#06b6d4',     // cyan-500 (matches AGENT)
+  [UrnType.AGENT_FOLDER]: '#06b6d4',   // cyan-500 (container of agent chats)
   [UrnType.USER]: '#10b981',           // emerald-500
   [UrnType.CALENDAR_EVENT]: '#f43f5e', // rose-500
   [UrnType.PROJECT]: '#f97316',        // orange-500
@@ -53,6 +55,26 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: 'border-blue-500/40 dark:border-blue-500/20',
     shadow: 'shadow-blue-500/50',
     glow: 'inset-shadow-sm inset-shadow-blue-500/30',
+  },
+  [UrnType.FOLDER]: {
+    gradient: 'from-amber-500/10 via-amber-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
+    accentText: 'text-amber-600 dark:text-amber-400',
+    badgeBg: 'bg-amber-500/10',
+    border: 'border-amber-500/40 dark:border-amber-500/20',
+    shadow: 'shadow-amber-500/50',
+    glow: 'inset-shadow-sm inset-shadow-amber-500/30',
+  },
+  [UrnType.AGENT_FOLDER]: {
+    gradient: 'from-cyan-500/10 via-cyan-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
+    iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
+    accentText: 'text-cyan-600 dark:text-cyan-400',
+    badgeBg: 'bg-cyan-500/10',
+    border: 'border-cyan-500/40 dark:border-cyan-500/20',
+    shadow: 'shadow-cyan-500/50',
+    glow: 'inset-shadow-[0_2px_4px_rgb(6_182_212_/_0.45)]',
   },
   [UrnType.CHAT]: {
     gradient: 'from-violet-500/10 via-violet-500/5 to-transparent',
@@ -193,6 +215,7 @@ export const URN_TYPE_LEGEND: Array<{
   { type: UrnType.NOTE, label: 'Notes', hexColor: URN_TYPE_HEX_COLORS[UrnType.NOTE], tailwindBg: 'bg-primary' },
   { type: UrnType.USER, label: 'Users', hexColor: URN_TYPE_HEX_COLORS[UrnType.USER], tailwindBg: 'bg-emerald-500' },
   { type: UrnType.FILE, label: 'Files', hexColor: URN_TYPE_HEX_COLORS[UrnType.FILE], tailwindBg: 'bg-blue-500' },
+  { type: UrnType.FOLDER, label: 'Folders', hexColor: URN_TYPE_HEX_COLORS[UrnType.FOLDER], tailwindBg: 'bg-amber-500' },
   { type: UrnType.CHAT, label: 'Chats', hexColor: URN_TYPE_HEX_COLORS[UrnType.CHAT], tailwindBg: 'bg-violet-500' },
   { type: UrnType.AGENT_CHAT, label: 'Agent Chats', hexColor: URN_TYPE_HEX_COLORS[UrnType.AGENT_CHAT], tailwindBg: 'bg-cyan-500' },
   { type: UrnType.CALENDAR_EVENT, label: 'Events', hexColor: URN_TYPE_HEX_COLORS[UrnType.CALENDAR_EVENT], tailwindBg: 'bg-rose-500' },

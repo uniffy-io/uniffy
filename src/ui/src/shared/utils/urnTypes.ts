@@ -2,8 +2,10 @@
 export const UrnType = {
   NOTE: 'note',
   FILE: 'file',
+  FOLDER: 'folder',
   CHAT: 'chat',
   AGENT_CHAT: 'agent_chat',
+  AGENT_FOLDER: 'agent_folder',
   CHAT_MESSAGE: 'chat_message',
   USER: 'user',
   CALENDAR_EVENT: 'calendar_event',

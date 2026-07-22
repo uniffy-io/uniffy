@@ -139,6 +139,10 @@ class AgentOperations(BaseContentOperations[Agent]):
         """Return a description snippet from the soul prompt."""
         return model.soul_prompt[:200] if model.soul_prompt else None
 
+    def _get_search_metadata(self, model: Agent) -> dict[str, str] | None:
+        # Search rows render the agent identity avatar (emoji or gradient).
+        return {"emoji": model.avatar_emoji} if model.avatar_emoji else None
+
     async def _get_search_tags_async(self, model: Agent) -> list[str] | None:
         """Return the slug list assigned to this agent via the unified store."""
         tag_ops = TagOperations(self.session)

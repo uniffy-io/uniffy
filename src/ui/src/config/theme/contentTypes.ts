@@ -1,6 +1,7 @@
 import type { Icon } from '@phosphor-icons/react';
 import {
   NotePencil,
+  Folder,
   FolderSimple,
   ChatTeardrop,
   ChatText,
@@ -46,6 +47,24 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: 'files',
     theme: getUrnTypeTheme(UrnType.FILE),
     hexColor: getUrnTypeHexColor(UrnType.FILE),
+  },
+  [UrnType.FOLDER]: {
+    type: UrnType.FOLDER,
+    icon: Folder,
+    label: 'Folder',
+    labelPlural: 'Folders',
+    route: 'files',
+    theme: getUrnTypeTheme(UrnType.FOLDER),
+    hexColor: getUrnTypeHexColor(UrnType.FOLDER),
+  },
+  [UrnType.AGENT_FOLDER]: {
+    type: UrnType.AGENT_FOLDER,
+    icon: Folder,
+    label: 'Agent Chat Folder',
+    labelPlural: 'Agent Chat Folders',
+    route: 'chat',
+    theme: getUrnTypeTheme(UrnType.AGENT_FOLDER),
+    hexColor: getUrnTypeHexColor(UrnType.AGENT_FOLDER),
   },
   [UrnType.CHAT]: {
     type: UrnType.CHAT,

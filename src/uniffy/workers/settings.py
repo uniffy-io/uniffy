@@ -42,6 +42,7 @@ from uniffy.workers.tasks import (
     execute_agent_cron_tasks,
     expire_support_sessions,
     flush_chat_read_cursors,
+    flush_search_removals,
     notify_pending_org_purges,
     on_job_end,
     on_job_start,
@@ -74,6 +75,7 @@ class CoreWorkerSettings:
         cron(expire_support_sessions, minute=None),
         cron(reconcile_calls, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
         cron(cleanup_orphan_call_rooms, minute={30}),
+        cron(flush_search_removals, minute={2, 7, 12, 17, 22, 27, 32, 37, 42, 47, 52, 57}),
     ]
     on_startup = core_on_startup
     on_shutdown = core_on_shutdown

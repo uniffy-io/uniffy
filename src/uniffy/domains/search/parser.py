@@ -1,8 +1,10 @@
 """Google-style keyword search parser.
 
-Syntax: `note:` / `file:` / `user:` / `calendar:` / `chat:` / `book:` /
-`password:` / `space:` for type, `tag:` / `project:` for metadata,
-`my:` for current-user content, quoted phrases preserved in the residual text.
+Type keywords (`note:`, `file:`, `message:`, ...) and `my:` are bare
+prefixes: they only toggle a filter and the text after them stays in the
+free-text query. Only `tag:` / `owner:` / `type:` consume a value
+(`tag:work`, `tag:"project alpha"`). Standalone quoted phrases are left
+in the residual text so Meilisearch enforces the exact match.
 """
 
 import re
@@ -22,9 +24,6 @@ class ParsedSearchQuery(BaseModel):
     tags: list[str] = Field(default_factory=list)
     """Tag filters."""
 
-    projects: list[str] = Field(default_factory=list)
-    """Project filters."""
-
     my_content_only: bool = False
     """Only show current user's content."""
 
@@ -38,11 +37,19 @@ class ParsedSearchQuery(BaseModel):
     """Original raw query string."""
 
 
+# Keyword -> canonical entity_type (the keys of ENTITY_TYPE_TO_PROTO in
+# converters.py). Mirrors the frontend queryParser.ts map - keep in sync.
 TYPE_KEYWORD_MAP: dict[str, str] = {
     "note": "note",
     "notes": "note",
     "file": "file",
     "files": "file",
+    "folder": "folder",
+    "folders": "folder",
+    "agentfolder": "agent_folder",
+    "agentfolders": "agent_folder",
+    "agent-folder": "agent_folder",
+    "agent-folders": "agent_folder",
     "user": "user",
     "users": "user",
     "calendar": "calendar_event",
@@ -50,47 +57,46 @@ TYPE_KEYWORD_MAP: dict[str, str] = {
     "events": "calendar_event",
     "chat": "chat",
     "chats": "chat",
-    "book": "book",
-    "books": "book",
-    "password": "password",
-    "passwords": "password",
-    "space": "space",
-    "spaces": "space",
-    "workflow": "workflow",
-    "workflows": "workflow",
+    "agentchat": "agent_chat",
+    "agentchats": "agent_chat",
+    "agent-chat": "agent_chat",
+    "agent-chats": "agent_chat",
+    "chatmessage": "chat_message",
+    "message": "chat_message",
+    "msg": "chat_message",
+    "project": "project",
+    "projects": "project",
+    "task": "task",
+    "tasks": "task",
+    "agent": "agent",
+    "agents": "agent",
+    "prompt": "prompt",
+    "prompts": "prompt",
+    "room": "room",
+    "rooms": "room",
+    "tagentity": "tag",
+    "tagentities": "tag",
 }
 
-FILTER_PREFIXES = [
-    "note",
-    "notes",
-    "file",
-    "files",
-    "user",
-    "users",
-    "calendar",
-    "event",
-    "events",
-    "chat",
-    "chats",
-    "book",
-    "books",
-    "password",
-    "passwords",
-    "space",
-    "spaces",
-    "workflow",
-    "workflows",
-    "tag",
-    "project",
-    "my",
-    "owner",
-]
+# Longest-first so `agent-chats:` wins over `agent:`.
+_BARE_PREFIXES = sorted([*TYPE_KEYWORD_MAP, "my"], key=len, reverse=True)
 
-# Matches `keyword:value` or `keyword:"quoted value"`.
-FILTER_PATTERN = re.compile(
-    rf'\b({"|".join(FILTER_PREFIXES)}):\s*(?:"([^"]+)"|(\S+))',
+# Bare prefixes consume only the `keyword:` token itself.
+BARE_FILTER_PATTERN = re.compile(
+    rf'\b({"|".join(_BARE_PREFIXES)}):',
     re.IGNORECASE,
 )
+
+# Value keywords consume `keyword:value` or `keyword:"quoted value"`; a
+# dangling `keyword:` with no value is stripped without adding a filter.
+VALUE_FILTER_PATTERN = re.compile(
+    r'\b(tag|owner|type):\s*(?:"([^"]+)"|([^\s"]+))?',
+    re.IGNORECASE,
+)
+
+# Standalone quoted phrases (quote not glued to a `keyword:`); protected
+# from filter extraction so `"note: literal"` stays literal search text.
+QUOTED_SEGMENT_SPLIT = re.compile(r'((?<!:)"[^"]*")')
 
 # Negative lookbehind avoids matching filter values like tag:"value".
 PHRASE_PATTERN = re.compile(r'(?<![a-z]:)"([^"]+)"', re.IGNORECASE)
@@ -102,52 +108,45 @@ def parse_search_query(query: str) -> ParsedSearchQuery:
     if not query or not query.strip():
         return result
 
-    remaining_text = query
-    extracted_filters: list[tuple[str, str, str]] = []
+    def add_type_filter(keyword: str) -> None:
+        entity_type = TYPE_KEYWORD_MAP.get(keyword)
+        if entity_type and entity_type not in result.type_filters:
+            result.type_filters.append(entity_type)
 
-    for match in FILTER_PATTERN.finditer(query):
-        full_match = match.group(0)
+    def extract_value_filters(match: re.Match) -> str:
         keyword = match.group(1).lower()
-        quoted_value = match.group(2)
-        unquoted_value = match.group(3)
-        value = (quoted_value or unquoted_value or "").strip()
-
-        if value:
-            extracted_filters.append((full_match, keyword, value))
-
-    for full_match, keyword, value in extracted_filters:
-        remaining_text = remaining_text.replace(full_match, " ", 1)
-
-        if keyword in TYPE_KEYWORD_MAP:
-            entity_type = TYPE_KEYWORD_MAP[keyword]
-            if entity_type not in result.type_filters:
-                result.type_filters.append(entity_type)
-            continue
-
+        value = (match.group(2) or match.group(3) or "").strip()
+        if not value:
+            return " "
         if keyword == "tag":
             if value not in result.tags:
                 result.tags.append(value)
-            continue
+        elif keyword == "owner":
+            result.owner = value
+        elif keyword == "type":
+            add_type_filter(value.lower())
+        return " "
 
-        if keyword == "project":
-            if value not in result.projects:
-                result.projects.append(value)
-            continue
-
+    def strip_bare_filters(match: re.Match) -> str:
+        keyword = match.group(1).lower()
         if keyword == "my":
             result.my_content_only = True
-            continue
+        else:
+            add_type_filter(keyword)
+        return " "
 
-        if keyword == "owner":
-            result.owner = value
+    pieces = QUOTED_SEGMENT_SPLIT.split(query)
+    for i, piece in enumerate(pieces):
+        if i % 2 == 1:
             continue
+        piece = VALUE_FILTER_PATTERN.sub(extract_value_filters, piece)
+        pieces[i] = BARE_FILTER_PATTERN.sub(strip_bare_filters, piece)
 
-    remaining_text = re.sub(r"\s+", " ", remaining_text).strip()
-    result.text = remaining_text
+    result.text = re.sub(r"\s+", " ", "".join(pieces)).strip()
 
     # Quotes stay inside the residual text so Meilisearch can use them; we only
     # capture phrases here for analytics.
-    for phrase_match in PHRASE_PATTERN.finditer(remaining_text):
+    for phrase_match in PHRASE_PATTERN.finditer(result.text):
         phrase = phrase_match.group(1).strip()
         if phrase and phrase not in result.exact_phrases:
             result.exact_phrases.append(phrase)
@@ -159,7 +158,6 @@ def has_active_filters(parsed: ParsedSearchQuery) -> bool:
     return (
         len(parsed.type_filters) > 0
         or len(parsed.tags) > 0
-        or len(parsed.projects) > 0
         or parsed.my_content_only
         or parsed.owner is not None
         or len(parsed.exact_phrases) > 0

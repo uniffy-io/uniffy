@@ -1,3 +1,3 @@
-"""Placeholder for PostgreSQL-backed search models (none today; Meilisearch owns search)."""
+from uniffy.core.models.search.removal_queue import SearchRemovalQueue
 
-__all__: list[str] = []
+__all__ = ["SearchRemovalQueue"]

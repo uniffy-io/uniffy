@@ -22,9 +22,13 @@ from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import Tag, TagAssignment
-from uniffy.core.search.indexer import SearchIndexer
-from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.domains.search.queries import SearchResult, execute_search, get_documents_by_urns
+from uniffy.core.types import AccessMode, ContentType
+from uniffy.domains.search.queries import (
+    SearchResult,
+    apply_type_priority,
+    execute_search,
+    get_documents_by_urns,
+)
 from uniffy.domains.tags import TagOperations
 from uniffy.domains.tags.visibility import TagVisibilityFilter
 
@@ -35,7 +39,6 @@ class SearchOperations:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.access_query = ContentAccessQuery(session)
-        self.indexer = SearchIndexer(session)
 
     async def search(
         self,
@@ -43,15 +46,21 @@ class SearchOperations:
         organization_id: UUID,
         query_text: str,
         type_filters: list[str] | None = None,
-        exclude_type_filters: list[str] | None = None,
         tag_filters: list[str] | None = None,
         my_content_only: bool = False,
         owner_filter: UUID | None = None,
         metadata_filters: dict[str, str] | None = None,
         limit: int = 20,
         offset: int = 0,
+        type_priority: list[str] | None = None,
     ) -> tuple[list[SearchResult], int]:
         user_group_ids = await self._get_user_group_ids(user_id)
+
+        # Type-priority re-ranking needs a window larger than the page: the
+        # boosted types sit at the bottom of the Meili order (low rank_score)
+        # and would otherwise never enter the page at all. Re-rank the
+        # window, then slice locally.
+        window = min(max((offset + limit) * 3, 60), 300) if type_priority else None
 
         results, total = await execute_search(
             query_text=query_text,
@@ -59,13 +68,12 @@ class SearchOperations:
             user_id=user_id,
             user_group_ids=user_group_ids,
             type_filters=type_filters,
-            exclude_type_filters=exclude_type_filters,
             tag_filters=tag_filters,
             my_content_only=my_content_only,
             owner_filter=owner_filter,
             metadata_filters=metadata_filters,
-            limit=limit,
-            offset=offset,
+            limit=window if window else limit,
+            offset=0 if window else offset,
         )
 
         # Tag entity rows are indexed OPEN_TO_ORG so Meili lets every org
@@ -85,42 +93,11 @@ class SearchOperations:
                 if r.entity_type != "tag" or r.urn in visible_urns
             ]
 
+        if type_priority:
+            results = apply_type_priority(results, type_priority)
+            results = results[offset : offset + limit]
+
         return results, total
-
-    async def index_item(
-        self,
-        organization_id: UUID,
-        urn: str,
-        entity_type: str,
-        title: str,
-        url_path: str,
-        access_mode: AccessMode,
-        baseline_role: ContentRole | None,
-        owner_id: UUID,
-        keywords: str | None = None,
-        description: str | None = None,
-        shared_group_ids: list[UUID] | None = None,
-        shared_user_ids: list[UUID] | None = None,
-        tags: list[str] | None = None,
-    ) -> None:
-        await self.indexer.index(
-            urn=urn,
-            organization_id=organization_id,
-            title=title,
-            entity_type=entity_type,
-            url_path=url_path,
-            access_mode=access_mode,
-            baseline_role=baseline_role,
-            owner_id=owner_id,
-            keywords=keywords,
-            description=description,
-            shared_group_ids=shared_group_ids,
-            shared_user_ids=shared_user_ids,
-            tags=tags,
-        )
-
-    async def delete_item(self, urn: str, organization_id: UUID | None = None) -> None:
-        await self.indexer.remove(urn, organization_id)
 
     async def get_references(
         self,
