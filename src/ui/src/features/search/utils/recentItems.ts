@@ -1,4 +1,6 @@
+import { create } from '@bufbuild/protobuf';
 import type { SearchResultItem, SearchResultType } from '@uniffy/proto/search/v1/search_pb';
+import { SearchResultItemSchema } from '@uniffy/proto/search/v1/search_pb';
 
 // Local per-user open history feeding the spotlight zero state. Keyed per
 // org AND user so shared machines never leak titles across accounts.
@@ -52,16 +54,10 @@ export function recordRecentItem(
 }
 
 export function recentItemToSearchResult(item: RecentItem): SearchResultItem {
-    return {
+    return create(SearchResultItemSchema, {
         urn: item.urn,
         title: item.title,
-        description: '',
         type: item.type,
         url: item.url,
-        score: 0,
-        metadata: {},
-        tags: [],
-        titleHighlighted: '',
-        descriptionHighlighted: '',
-    } as SearchResultItem;
+    });
 }
