@@ -23,13 +23,13 @@ from uniffy_proto.calls.v1.calls_pb2 import (
 )
 from uniffy_proto.chat.v1.chat_pb2 import AgentConfirmationDecision
 from uniffy_proto.chat.v1.chat_pb2 import (
+    ChannelRole as ProtoChannelRole,
+)
+from uniffy_proto.chat.v1.chat_pb2 import (
     ChatChannel as ProtoChatChannel,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatMessage as ProtoChatMessage,
-)
-from uniffy_proto.chat.v1.chat_pb2 import (
-    ChannelRole as ProtoChannelRole,
 )
 from uniffy_proto.chat.v1.chat_pb2 import (
     SenderType as ProtoSenderType,

@@ -1,5 +1,7 @@
 """Proto <-> domain converters for chat channels."""
 
+from uuid import UUID
+
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChannelRole as ProtoChannelRole,
 )
@@ -22,8 +24,6 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     ChatSubject as ProtoChatSubject,
 )
 from uniffy_proto.common.v1.common_pb2 import SubjectType as ProtoSubjectType
-
-from uuid import UUID
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp

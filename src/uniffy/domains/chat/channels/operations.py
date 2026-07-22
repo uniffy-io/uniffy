@@ -420,7 +420,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
         if len(all_user_ids) > GROUP_DM_MAX_PARTICIPANTS:
             raise ValidationError(
                 "members",
-                f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. Create a channel for a bigger group.",
+                f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. "
+                "Create a channel for a bigger group.",
             )
 
         is_direct = len(all_user_ids) == 2
@@ -2038,7 +2039,8 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             if current_count + len({s.subject_id for s in subjects}) > GROUP_DM_MAX_PARTICIPANTS:
                 raise ValidationError(
                     "members",
-                    f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. Convert this conversation to a channel to add more.",
+                    f"Group chats are limited to {GROUP_DM_MAX_PARTICIPANTS} people. "
+                    "Convert this conversation to a channel to add more.",
                 )
         else:
             await self._require_edit(user_id, organization_id, channel)
@@ -2230,11 +2232,15 @@ class ChatChannelOperations(BaseContentOperations[ChatChannel]):
             actor = mention(SenderType.USER, actor_user_id)
             targets = ", ".join(mention(t, i) for t, i in refs[1:])
             is_self = len(subjects) == 1 and subjects[0].subject_id == actor_user_id
-            place = "the conversation" if channel.channel_type == ChannelType.GROUP_DM else "the channel"
+            place = (
+                "the conversation" if channel.channel_type == ChannelType.GROUP_DM else "the channel"
+            )
             if is_self and action == "removed":
                 content = f"{actor} left {place}"
+            elif action == "added":
+                content = f"{actor} {action} {targets} to {place}"
             else:
-                content = f"{actor} {action} {targets} to {place}" if action == "added" else f"{actor} {action} {targets} from {place}"
+                content = f"{actor} {action} {targets} from {place}"
 
             msg_ops = ChatMessageOperations(self.session)
             await msg_ops.send_message(
