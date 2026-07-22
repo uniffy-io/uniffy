@@ -6,6 +6,7 @@ from uniffy.domains.agents.chat_integration.context_handlers import (
 from uniffy.domains.agents.chat_integration.handlers import (
     AgentConfirmationHandlers,
 )
+from uniffy.domains.chat.agent_folders.handlers import AgentFolderHandlers
 from uniffy.domains.chat.categories.handlers import CategoryHandlers
 from uniffy.domains.chat.channels.handlers import ChannelHandlers
 from uniffy.domains.chat.drafts.handlers import DraftHandlers
@@ -20,6 +21,7 @@ class ChatServiceImpl(
     ThreadHandlers,
     ReactionHandlers,
     CategoryHandlers,
+    AgentFolderHandlers,
     DraftHandlers,
     AgentConfirmationHandlers,
     ChannelAgentContextHandlers,

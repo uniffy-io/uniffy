@@ -74,6 +74,7 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.PROMPT: ProtoContentType.CONTENT_TYPE_PROMPT,
     DomainContentType.CHAT: ProtoContentType.CONTENT_TYPE_CHAT,
     DomainContentType.AGENT_CHAT: ProtoContentType.CONTENT_TYPE_AGENT_CHAT,
+    DomainContentType.AGENT_FOLDER: ProtoContentType.CONTENT_TYPE_AGENT_FOLDER,
     DomainContentType.ROOM: ProtoContentType.CONTENT_TYPE_ROOM,
     DomainContentType.AGENT_CRON_TASK: ProtoContentType.CONTENT_TYPE_AGENT_CRON_TASK,
     DomainContentType.TAG: ProtoContentType.CONTENT_TYPE_TAG,

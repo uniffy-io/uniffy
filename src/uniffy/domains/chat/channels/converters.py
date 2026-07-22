@@ -23,6 +23,8 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 from uniffy_proto.common.v1.common_pb2 import SubjectType as ProtoSubjectType
 
+from uuid import UUID
+
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
@@ -93,6 +95,7 @@ def channel_to_proto(
     is_member: bool | None = None,
     dm_member_ids: list[str] | None = None,
     tags: list[Tag] | None = None,
+    agent_folder_id: UUID | None = None,
 ) -> ProtoChatChannel:
     proto = ProtoChatChannel(
         id=str(channel.id),
@@ -118,6 +121,8 @@ def channel_to_proto(
         proto.custom_name = channel.custom_name
     if channel.agent_id is not None:
         proto.agent_id = str(channel.agent_id)
+    if agent_folder_id is not None:
+        proto.agent_folder_id = str(agent_folder_id)
 
     if channel.created_at:
         proto.created_at.CopyFrom(datetime_to_timestamp(channel.created_at))

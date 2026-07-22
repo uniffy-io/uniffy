@@ -47,9 +47,16 @@ export interface ChatChannel {
   isAgentDm: boolean;
   customName?: string;
   agentId?: string;
+  agentFolderId: string | null;
   tagIds: string[];
   unreadCount?: number;
   mentionCount?: number;
+}
+
+export interface ChatAgentFolder {
+  id: string;
+  name: string;
+  position: number;
 }
 
 export interface ReactionGroupData {
