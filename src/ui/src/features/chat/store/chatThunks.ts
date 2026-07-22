@@ -5,6 +5,7 @@ import { chatApi } from '@/features/chat/api/chatApi';
 import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import type { ChatChannel as ProtoChatChannel } from '@uniffy/proto/chat/v1/chat_pb';
+import { ChannelRole } from '@uniffy/proto/chat/v1/chat_pb';
 import {
   channelToPlain,
   messageToPlain,
@@ -21,9 +22,14 @@ import {
   removeChannel,
   updateChannel,
   setChannelMembers,
+  setMemberRole,
   setChannelPreferences,
   updateChannelPreference,
   setCategories,
+  setAgentFolders,
+  upsertAgentFolder,
+  removeAgentFolder,
+  setChannelAgentFolder,
   setLoading,
   updateUnreadCounts,
   setActiveChannel,
@@ -955,6 +961,126 @@ export const fetchCategories = createAsyncThunk<
   }
 });
 
+export const convertGroupDmToChannel = createAsyncThunk<
+  ChatChannel,
+  { channelId: string; name: string; channelType: ProtoChannelType },
+  { state: RootState; rejectValue: string }
+>('chat/convertGroupDmToChannel', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.convertGroupDmToChannel({
+      organizationId,
+      channelId: params.channelId,
+      name: params.name,
+      channelType: params.channelType,
+    });
+    if (!response.channel) {
+      return rejectWithValue('Failed to convert conversation');
+    }
+    hydrateChannelTags(dispatch, [response.channel]);
+    const plain = channelToPlain(response.channel);
+    dispatch(updateChannel(plain));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to convert conversation');
+  }
+});
+
+export const fetchAgentFolders = createAsyncThunk<
+  void,
+  void,
+  { state: RootState; rejectValue: string }
+>('chat/fetchAgentFolders', async (_, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.listAgentFolders({ organizationId });
+    dispatch(setAgentFolders(
+      response.folders.map((f) => ({ id: f.id, name: f.name, position: f.position })),
+    ));
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch folders');
+  }
+});
+
+export const createAgentFolder = createAsyncThunk<
+  { id: string; name: string; position: number } | null,
+  string,
+  { state: RootState; rejectValue: string }
+>('chat/createAgentFolder', async (name, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.createAgentFolder({ organizationId, name });
+    if (!response.folder) return null;
+    const plain = {
+      id: response.folder.id,
+      name: response.folder.name,
+      position: response.folder.position,
+    };
+    dispatch(upsertAgentFolder(plain));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to create folder');
+  }
+});
+
+export const renameAgentFolder = createAsyncThunk<
+  void,
+  { folderId: string; name: string },
+  { state: RootState; rejectValue: string }
+>('chat/renameAgentFolder', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.renameAgentFolder({
+      organizationId,
+      folderId: params.folderId,
+      name: params.name,
+    });
+    if (response.folder) {
+      dispatch(upsertAgentFolder({
+        id: response.folder.id,
+        name: response.folder.name,
+        position: response.folder.position,
+      }));
+    }
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to rename folder');
+  }
+});
+
+export const deleteAgentFolder = createAsyncThunk<
+  void,
+  string,
+  { state: RootState; rejectValue: string }
+>('chat/deleteAgentFolder', async (folderId, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.deleteAgentFolder({ organizationId, folderId });
+    dispatch(removeAgentFolder(folderId));
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete folder');
+  }
+});
+
+export const setAgentChatFolder = createAsyncThunk<
+  void,
+  { channelId: string; folderId: string | null },
+  { state: RootState; rejectValue: string }
+>('chat/setAgentChatFolder', async (params, { getState, dispatch, rejectWithValue }) => {
+  const previous = getState().chatChannels.byId[params.channelId]?.agentFolderId ?? null;
+  dispatch(setChannelAgentFolder(params));
+  try {
+    const organizationId = getOrganizationId(getState());
+    await chatApi.setAgentChatFolder({
+      organizationId,
+      channelId: params.channelId,
+      folderId: params.folderId ?? undefined,
+    });
+  } catch (error) {
+    dispatch(setChannelAgentFolder({ channelId: params.channelId, folderId: previous }));
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to move chat');
+  }
+});
+
 export const reorderCategoriesThunk = createAsyncThunk<
   void,
   string[],
@@ -1223,6 +1349,34 @@ export const updateChannelMember = createAsyncThunk<
   }
 });
 
+export const updateMemberRoleThunk = createAsyncThunk<
+  ChatChannelMember,
+  { channelId: string; userId: string; role: 'MEMBER' | 'ADMIN' | 'OWNER' },
+  { state: RootState; rejectValue: string }
+>('chat/updateMemberRole', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.updateMemberRole({
+      organizationId,
+      channelId: params.channelId,
+      userId: params.userId,
+      role: ChannelRole[params.role],
+    });
+    if (!response.member) {
+      return rejectWithValue('Failed to update role');
+    }
+    const plain = memberToPlain(response.member);
+    dispatch(setMemberRole({
+      channelId: params.channelId,
+      userId: params.userId,
+      role: plain.role,
+    }));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to update role');
+  }
+});
+
 export const initializeChat = createAsyncThunk<
   void,
   { channelId?: string; messageId?: string },
@@ -1233,6 +1387,7 @@ export const initializeChat = createAsyncThunk<
     await Promise.all([
       dispatch(fetchChannels()).unwrap(),
       dispatch(fetchCategories()).unwrap(),
+      dispatch(fetchAgentFolders()).unwrap().catch(() => {}),
       dispatch(fetchUnreadCounts()).unwrap(),
       dispatch(fetchThreadsInbox()).unwrap(),
       dispatch(fetchDrafts()).unwrap().catch(() => {}),

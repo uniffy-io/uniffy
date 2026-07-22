@@ -6,19 +6,14 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.search.v1.search_pb2 import (
-    DeleteItemRequest,
-    DeleteItemResponse,
     GetReferencesRequest,
     GetReferencesResponse,
-    IndexItemRequest,
-    IndexItemResponse,
     ResolveUrnsRequest,
     ResolveUrnsResponse,
     SearchRequest,
     SearchResponse,
 )
 
-from uniffy.core.types import AccessMode, ContentRole
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.search.converters import (
@@ -85,14 +80,15 @@ class SearchHandlers:
             with contextlib.suppress(ValueError):
                 owner_filter = UUID(request.owner_filter)
 
-        exclude_type_filters: list[str] = []
-        if request.exclude_types:
-            for et in request.exclude_types:
-                entity_type = proto_to_entity_type(et)
-                if entity_type and entity_type not in exclude_type_filters:
-                    exclude_type_filters.append(entity_type)
+        type_priority: list[str] = []
+        if request.type_priority:
+            for tp in request.type_priority:
+                entity_type = proto_to_entity_type(tp)
+                if entity_type and entity_type not in type_priority:
+                    type_priority.append(entity_type)
 
         limit = min(max(request.limit or 20, 1), 100)
+        offset = max(request.offset, 0)
 
         metadata_filters: dict[str, str] | None = None
         if request.metadata_filters:
@@ -101,101 +97,28 @@ class SearchHandlers:
         try:
             async with open_session() as session:
                 ops = SearchOperations(session)
-                results, _total = await ops.search(
+                results, total = await ops.search(
                     user_id=user_id,
                     organization_id=organization_id,
                     query_text=query_text,
                     type_filters=type_filters if type_filters else None,
-                    exclude_type_filters=exclude_type_filters if exclude_type_filters else None,
                     tag_filters=tag_filters if tag_filters else None,
                     my_content_only=my_content_only,
                     owner_filter=owner_filter,
                     metadata_filters=metadata_filters,
                     limit=limit,
+                    offset=offset,
+                    type_priority=type_priority if type_priority else None,
                 )
 
                 items = [search_result_to_proto(item) for item in results]
 
-                return SearchResponse(items=items)
+                return SearchResponse(items=items, total_count=total)
 
         except ConnectError:
             raise
         except Exception as e:
             logger.exception(f"Error performing search: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
-
-    async def index_item(
-        self,
-        request: IndexItemRequest,
-        ctx: RequestContext,
-    ) -> IndexItemResponse:
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
-        if not request.urn:
-            raise ConnectError(Code.INVALID_ARGUMENT, "URN is required")
-        if not request.title:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Title is required")
-        if not request.url:
-            raise ConnectError(Code.INVALID_ARGUMENT, "URL is required")
-
-        entity_type = proto_to_entity_type(request.type)
-        if not entity_type:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid entity type")
-
-        try:
-            owner_id_str = request.metadata.get("owner_id")
-            if not owner_id_str:
-                raise ConnectError(Code.INVALID_ARGUMENT, "owner_id required in metadata")
-
-            owner_id = UUID(owner_id_str)
-            access_mode = AccessMode(request.metadata.get("access_mode", AccessMode.OWNER_ONLY))
-            baseline_role_str = request.metadata.get("baseline_role") or None
-            baseline_role = ContentRole(baseline_role_str) if baseline_role_str else None
-
-            async with open_session() as session:
-                ops = SearchOperations(session)
-                await ops.index_item(
-                    organization_id=organization_id,
-                    urn=request.urn,
-                    entity_type=entity_type,
-                    title=request.title,
-                    url_path=request.url,
-                    access_mode=access_mode,
-                    baseline_role=baseline_role,
-                    owner_id=owner_id,
-                    keywords=request.content if request.content else None,
-                )
-
-                return IndexItemResponse(success=True)
-
-        except ConnectError:
-            raise
-        except ValueError as e:
-            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
-        except Exception as e:
-            logger.exception(f"Error indexing item: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
-
-    async def delete_item(
-        self,
-        request: DeleteItemRequest,
-        ctx: RequestContext,
-    ) -> DeleteItemResponse:
-        if not request.urn:
-            raise ConnectError(Code.INVALID_ARGUMENT, "URN is required")
-
-        try:
-            async with open_session() as session:
-                ops = SearchOperations(session)
-                await ops.delete_item(request.urn)
-
-                return DeleteItemResponse(success=True)
-
-        except Exception as e:
-            logger.exception(f"Error deleting item: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
 
     async def get_references(

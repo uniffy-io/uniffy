@@ -64,7 +64,7 @@ export function useChatSearch(): UseChatSearchResult {
 
         if (!controller.signal.aborted) {
           setResults([...response.items]);
-          setTotalCount(response.items.length);
+          setTotalCount(response.totalCount || response.items.length);
           setIsLoading(false);
         }
       } catch (err) {

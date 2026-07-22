@@ -20,6 +20,8 @@ ENTITY_TYPE_TO_PROTO: dict[str, SearchResultType] = {
     "room": SearchResultType.SEARCH_RESULT_TYPE_ROOM,
     "agent_chat": SearchResultType.SEARCH_RESULT_TYPE_AGENT_CHAT,
     "tag": SearchResultType.SEARCH_RESULT_TYPE_TAG,
+    "folder": SearchResultType.SEARCH_RESULT_TYPE_FOLDER,
+    "agent_folder": SearchResultType.SEARCH_RESULT_TYPE_AGENT_FOLDER,
 }
 
 PROTO_TO_ENTITY_TYPE: dict[SearchResultType, str] = {v: k for k, v in ENTITY_TYPE_TO_PROTO.items()}
@@ -53,6 +55,8 @@ def search_result_to_proto(
         score=final_score,
         metadata=item.metadata or {},
         tags=item.tags or [],
+        title_highlighted=item.title_highlighted or "",
+        description_highlighted=item.description_highlighted or "",
     )
 
 

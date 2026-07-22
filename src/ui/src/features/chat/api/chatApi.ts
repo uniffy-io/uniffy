@@ -45,7 +45,14 @@ import {
   ListCategoriesRequestSchema,
   ReorderCategoriesRequestSchema,
   MoveChannelToCategoryRequestSchema,
+  ConvertGroupDmToChannelRequestSchema,
+  CreateAgentFolderRequestSchema,
+  RenameAgentFolderRequestSchema,
+  DeleteAgentFolderRequestSchema,
+  ListAgentFoldersRequestSchema,
+  SetAgentChatFolderRequestSchema,
   UpdateChannelMemberRequestSchema,
+  UpdateMemberRoleRequestSchema,
   RespondToAgentConfirmationRequestSchema,
   GetChannelPendingApprovalsRequestSchema,
   GetChannelAgentContextStatsRequestSchema,
@@ -98,6 +105,8 @@ export const chatApi = {
     chatClient.getMembers(req),
   updateChannelMember: (req: MessageInitShape<typeof UpdateChannelMemberRequestSchema>) =>
     chatClient.updateChannelMember(req),
+  updateMemberRole: (req: MessageInitShape<typeof UpdateMemberRoleRequestSchema>) =>
+    chatClient.updateMemberRole(req),
 
   sendMessage: (req: MessageInitShape<typeof SendMessageRequestSchema>) =>
     chatClient.sendMessage(req),
@@ -164,6 +173,20 @@ export const chatApi = {
     chatClient.reorderCategories(req),
   moveChannelToCategory: (req: MessageInitShape<typeof MoveChannelToCategoryRequestSchema>) =>
     chatClient.moveChannelToCategory(req),
+
+  convertGroupDmToChannel: (req: MessageInitShape<typeof ConvertGroupDmToChannelRequestSchema>) =>
+    chatClient.convertGroupDmToChannel(req),
+
+  createAgentFolder: (req: MessageInitShape<typeof CreateAgentFolderRequestSchema>) =>
+    chatClient.createAgentFolder(req),
+  renameAgentFolder: (req: MessageInitShape<typeof RenameAgentFolderRequestSchema>) =>
+    chatClient.renameAgentFolder(req),
+  deleteAgentFolder: (req: MessageInitShape<typeof DeleteAgentFolderRequestSchema>) =>
+    chatClient.deleteAgentFolder(req),
+  listAgentFolders: (req: MessageInitShape<typeof ListAgentFoldersRequestSchema>) =>
+    chatClient.listAgentFolders(req),
+  setAgentChatFolder: (req: MessageInitShape<typeof SetAgentChatFolderRequestSchema>) =>
+    chatClient.setAgentChatFolder(req),
 
   respondToAgentConfirmation: (req: MessageInitShape<typeof RespondToAgentConfirmationRequestSchema>) =>
     chatClient.respondToAgentConfirmation(req),

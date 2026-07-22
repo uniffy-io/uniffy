@@ -44,6 +44,7 @@ const (
 	ContentType_CONTENT_TYPE_AGENT_CRON_TASK ContentType = 18
 	ContentType_CONTENT_TYPE_AGENT_CHAT      ContentType = 19
 	ContentType_CONTENT_TYPE_TAG             ContentType = 20
+	ContentType_CONTENT_TYPE_AGENT_FOLDER    ContentType = 21
 )
 
 // Enum value maps for ContentType.
@@ -66,6 +67,7 @@ var (
 		18: "CONTENT_TYPE_AGENT_CRON_TASK",
 		19: "CONTENT_TYPE_AGENT_CHAT",
 		20: "CONTENT_TYPE_TAG",
+		21: "CONTENT_TYPE_AGENT_FOLDER",
 	}
 	ContentType_value = map[string]int32{
 		"CONTENT_TYPE_UNSPECIFIED":     0,
@@ -85,6 +87,7 @@ var (
 		"CONTENT_TYPE_AGENT_CRON_TASK": 18,
 		"CONTENT_TYPE_AGENT_CHAT":      19,
 		"CONTENT_TYPE_TAG":             20,
+		"CONTENT_TYPE_AGENT_FOLDER":    21,
 	}
 )
 
@@ -1375,7 +1378,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\vtotal_count\x18\x03 \x01(\x05R\n" +
 	"totalCount\x12\x1f\n" +
 	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
-	"totalPages*\xcd\x03\n" +
+	"totalPages*\xec\x03\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CONTENT_TYPE_NOTE\x10\x01\x12\x15\n" +
@@ -1394,7 +1397,8 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x11CONTENT_TYPE_ROOM\x10\x11\x12 \n" +
 	"\x1cCONTENT_TYPE_AGENT_CRON_TASK\x10\x12\x12\x1b\n" +
 	"\x17CONTENT_TYPE_AGENT_CHAT\x10\x13\x12\x14\n" +
-	"\x10CONTENT_TYPE_TAG\x10\x14*\x91\x01\n" +
+	"\x10CONTENT_TYPE_TAG\x10\x14\x12\x1d\n" +
+	"\x19CONTENT_TYPE_AGENT_FOLDER\x10\x15*\x91\x01\n" +
 	"\vSubjectType\x12\x1c\n" +
 	"\x18SUBJECT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_TYPE_USER\x10\x01\x12\x16\n" +

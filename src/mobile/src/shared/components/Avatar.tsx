@@ -7,15 +7,30 @@ import { refreshSession } from "@core/auth/refresh";
 import { FONT } from "@theme/typography";
 import { PresenceDot } from "@shared/presence/PresenceDot";
 
+// Unity Violet <-> Belonging Pink axis only, mirror of
+// components/subject/utils.ts on web (docs/brand/palette.md).
 const GRADIENT_PAIRS: [string, string][] = [
-  ["#7C5CFC", "#E64980"],
-  ["#3b82f6", "#06b6d4"],
-  ["#f43f5e", "#f97316"],
-  ["#8b5cf6", "#ec4899"],
-  ["#10b981", "#14b8a6"],
-  ["#f59e0b", "#ef4444"],
-  ["#6366f1", "#818cf8"],
-  ["#0ea5e9", "#7c3aed"],
+  ["#694aff", "#fd7eea"],
+  ["#fd7eea", "#694aff"],
+  ["#694aff", "#b364f4"],
+  ["#b364f4", "#fd7eea"],
+  ["#543bcc", "#d871ef"],
+  ["#8e57fa", "#fd7eea"],
+  ["#694aff", "#d871ef"],
+  ["#8e57fa", "#b364f4"],
+];
+
+// Same axis, darkened stops - agents read as a distinct species next to
+// people. Mirror of AGENT_GRADIENT_PAIRS on web.
+const AGENT_GRADIENT_PAIRS: [string, string][] = [
+  ["#4a34b3", "#b158a4"],
+  ["#b158a4", "#4a34b3"],
+  ["#4a34b3", "#7d46ab"],
+  ["#7d46ab", "#b158a4"],
+  ["#3a298c", "#8c499b"],
+  ["#5d43d6", "#b158a4"],
+  ["#4a34b3", "#8c499b"],
+  ["#5d43d6", "#7d46ab"],
 ];
 
 function hashName(name: string): number {
@@ -34,8 +49,9 @@ function getInitials(name: string): string {
   return (parts[0]?.[0] ?? "?").toUpperCase();
 }
 
-function getGradient(name: string): [string, string] {
-  return GRADIENT_PAIRS[hashName(name) % GRADIENT_PAIRS.length];
+function getGradient(name: string, isAgent: boolean): [string, string] {
+  const pairs = isAgent ? AGENT_GRADIENT_PAIRS : GRADIENT_PAIRS;
+  return pairs[hashName(name) % pairs.length];
 }
 
 type AvatarProps = {
@@ -48,6 +64,8 @@ type AvatarProps = {
   /** Presence status string ("online", "away", ...) - renders a corner dot. */
   presence?: string | null;
   presenceRingColor?: string;
+  /** Agents draw from the darker gradient pool. */
+  isAgent?: boolean;
 };
 
 export function Avatar({
@@ -58,6 +76,7 @@ export function Avatar({
   emoji,
   presence,
   presenceRingColor,
+  isAgent = false,
 }: AvatarProps) {
   // A dead avatar URL (deleted image, unrecoverable 401) falls through to
   // the emoji/gradient branches instead of leaving a blank square.
@@ -74,6 +93,7 @@ export function Avatar({
           size={size}
           accentColor={accentColor}
           emoji={emoji}
+          isAgent={isAgent}
         />
         <PresenceDot
           status={presence}
@@ -128,7 +148,7 @@ export function Avatar({
     );
   }
 
-  const [start, end] = getGradient(name);
+  const [start, end] = getGradient(name, isAgent);
 
   return (
     <LinearGradient

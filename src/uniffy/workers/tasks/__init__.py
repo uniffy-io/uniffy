@@ -37,6 +37,7 @@ from uniffy.workers.tasks.permissions_reindex import reindex_org_content_for_def
 from uniffy.workers.tasks.platform_org_purge import notify_pending_org_purges
 from uniffy.workers.tasks.realtime import save_realtime_snapshot
 from uniffy.workers.tasks.reminders import check_calendar_reminders
+from uniffy.workers.tasks.search_removals import flush_search_removals
 from uniffy.workers.tasks.storage_recalculation import recalculate_all_storage_usage
 from uniffy.workers.tasks.support_session_expiry import expire_support_sessions
 from uniffy.workers.tasks.tags_reindex import reindex_tag_doc, reindex_tag_urns
@@ -69,6 +70,7 @@ CORE_TASKS = (
     reap_expired_multipart_uploads,
     reindex_org_content_for_defaults,
     save_realtime_snapshot,
+    flush_search_removals,
 )
 
 EGRESS_TASKS = (
@@ -103,6 +105,7 @@ __all__ = [
     "extract_document_content",
     "extract_image_metadata",
     "flush_chat_read_cursors",
+    "flush_search_removals",
     "generate_image_thumbnail",
     "generate_pdf_thumbnail",
     "generate_video_thumbnail",

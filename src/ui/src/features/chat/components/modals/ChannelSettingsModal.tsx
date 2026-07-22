@@ -37,6 +37,7 @@ import {
   updateChannelThunk,
   addMembersThunk,
   removeMemberThunk,
+  updateMemberRoleThunk,
   fetchMembers,
   deleteChannel,
   archiveChannel,
@@ -113,6 +114,22 @@ export function ChannelSettingsModal() {
   );
   const currentUserRole = currentUserMember?.role;
   const canEdit = canManageChat || currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
+  const actorIsOwner = canManageChat || currentUserRole === 'OWNER';
+  const actorIsAdmin = actorIsOwner || currentUserRole === 'ADMIN';
+  const ownerCount = useMemo(
+    () => members.filter((m) => m.subjectType === 'USER' && m.role === 'OWNER').length,
+    [members],
+  );
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+
+  const handleRoleChange = async (userId: string, role: 'MEMBER' | 'ADMIN' | 'OWNER') => {
+    setChangingRoleId(userId);
+    try {
+      await dispatch(updateMemberRoleThunk({ channelId, userId, role })).unwrap();
+    } finally {
+      setChangingRoleId(null);
+    }
+  };
 
   const isDirty = useMemo(() => {
     if (!activeChannel) return false;
@@ -149,6 +166,14 @@ export function ChannelSettingsModal() {
     { value: '', label: 'No category' },
     ...categories.map((c) => ({ value: c.id, label: c.name })),
   ], [categories]);
+
+  const roleSelectOptions = useMemo(() => {
+    const base = [
+      { value: 'MEMBER', label: 'Member' },
+      { value: 'ADMIN', label: 'Admin' },
+    ];
+    return actorIsOwner ? [...base, { value: 'OWNER', label: 'Owner' }] : base;
+  }, [actorIsOwner]);
 
   const isChannelPublic = activeChannel?.channelType === 'PUBLIC';
 
@@ -588,6 +613,12 @@ export function ChannelSettingsModal() {
                       const isSelf = !isAgentMember && member.userId === currentUserId;
                       const isRemoving = removingMemberId === memberKey;
                       const isAgentExpanded = isAgentMember && expandedAgentId === member.subjectId;
+                      // The last owner keeps a static badge; demoting them
+                      // would orphan the channel and the backend rejects it.
+                      const canChangeRole =
+                        !isAgentMember &&
+                        actorIsAdmin &&
+                        (!isOwner || (actorIsOwner && ownerCount > 1));
 
                       return (
                         <div
@@ -633,13 +664,27 @@ export function ChannelSettingsModal() {
                                 </p>
                               )}
                             </div>
-                            <span className={cn(
-                              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0',
-                              ROLE_BADGE_STYLES[member.role],
-                            )}>
-                              {RoleIcon && <RoleIcon size={11} weight="fill" />}
-                              {member.role}
-                            </span>
+                            {canChangeRole ? (
+                              <div className="shrink-0 w-[104px]" data-testid={`chat-member-role-select-${member.userId}`}>
+                                <Select
+                                  value={member.role}
+                                  onChange={(v) =>
+                                    handleRoleChange(member.userId, v as 'MEMBER' | 'ADMIN' | 'OWNER')
+                                  }
+                                  options={roleSelectOptions}
+                                  size="sm"
+                                  disabled={changingRoleId === member.userId}
+                                />
+                              </div>
+                            ) : (
+                              <span className={cn(
+                                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0',
+                                ROLE_BADGE_STYLES[member.role],
+                              )}>
+                                {RoleIcon && <RoleIcon size={11} weight="fill" />}
+                                {member.role}
+                              </span>
+                            )}
                             {isAgentMember && (
                               <button
                                 type="button"

@@ -32,6 +32,10 @@ class SearchResult:
     rank_score: float
     search_score: float | None  # Meilisearch ranking score
 
+    # _formatted variants; matched spans wrapped in HIGHLIGHT_PRE/POST_TAG.
+    title_highlighted: str | None = None
+    description_highlighted: str | None = None
+
     # "OK" / "DELETED". Not in Meilisearch; resolve_urns sets it so the converter
     # can pass tombstone state through to mention chips.
     urn_status: str | None = None
@@ -97,11 +101,15 @@ class SearchResult:
             with contextlib.suppress(ValueError, TypeError):
                 updated_at = datetime.fromtimestamp(hit["updated_at"])
 
+        formatted = hit.get("_formatted") or {}
+
         return cls(
             urn=hit.get("urn", ""),
             organization_id=UUID(hit["organization_id"]),
             title=hit.get("title", ""),
             description=hit.get("description"),
+            title_highlighted=formatted.get("title"),
+            description_highlighted=formatted.get("description"),
             entity_type=hit.get("entity_type", ""),
             url_path=hit.get("url_path", ""),
             access_mode=hit.get("access_mode", "OWNER_ONLY"),
@@ -115,13 +123,45 @@ class SearchResult:
         )
 
 
+# A result whose ranking score falls below this fraction of the page's best
+# score is a weak (typo / partial-word) match; type tiers must not lift it
+# above full matches.
+_STRONG_MATCH_RATIO = 0.85
+
+
+def apply_type_priority(
+    results: list[SearchResult],
+    type_priority: list[str],
+) -> list[SearchResult]:
+    """Stable re-rank: match-strength bucket, then the caller's type tier,
+    then the original Meilisearch order. Types not listed rank after all
+    listed types within their bucket.
+    """
+    if not type_priority or not results:
+        return results
+
+    tier = {entity_type: i for i, entity_type in enumerate(type_priority)}
+    fallback_tier = len(type_priority)
+    scores = [r.search_score for r in results if r.search_score is not None]
+    strong_floor = max(scores) * _STRONG_MATCH_RATIO if scores else None
+
+    def sort_key(item: tuple[int, SearchResult]) -> tuple[int, int, int]:
+        index, result = item
+        if strong_floor is None or result.search_score is None:
+            bucket = 0
+        else:
+            bucket = 0 if result.search_score >= strong_floor else 1
+        return (bucket, tier.get(result.entity_type, fallback_tier), index)
+
+    return [r for _, r in sorted(enumerate(results), key=sort_key)]
+
+
 async def execute_search(
     query_text: str,
     organization_id: UUID,
     user_id: UUID,
     user_group_ids: list[UUID],
     type_filters: list[str] | None = None,
-    exclude_type_filters: list[str] | None = None,
     tag_filters: list[str] | None = None,
     my_content_only: bool = False,
     owner_filter: UUID | None = None,
@@ -137,7 +177,6 @@ async def execute_search(
         user_id=user_id,
         user_group_ids=user_group_ids,
         type_filters=type_filters,
-        exclude_type_filters=exclude_type_filters,
         tag_filters=tag_filters,
         my_content_only=my_content_only,
         owner_filter=owner_filter,

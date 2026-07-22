@@ -8,13 +8,12 @@ import {
     type ParsedQuery,
     type SearchFilters,
 } from '@/features/search/utils/queryParser';
-
 const DEBOUNCE_DELAY_MS = 150;
 
 interface UseSearchOptions {
     typeFilters?: SearchResultType[];
-    /** Ignored when explicit typeFilters are set. */
-    excludeTypes?: SearchResultType[];
+    /** Ranking context sent to the backend: listed types float to the top in this order. */
+    typePriority?: SearchResultType[];
     limit?: number;
 }
 
@@ -22,6 +21,8 @@ interface UseSearchResult {
     query: string;
     setQuery: (query: string) => void;
     results: SearchResultItem[];
+    /** Meilisearch estimate of all matches before pagination (0 while empty). */
+    totalCount: number;
     isLoading: boolean;
     error: string | null;
     clearResults: () => void;
@@ -32,6 +33,7 @@ interface UseSearchResult {
 export function useSearch(options?: UseSearchOptions): UseSearchResult {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResultItem[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +53,7 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
 
         if (!hasSearchCriteria || !organizationId) {
             setResults([]);
+            setTotalCount(0);
             setIsLoading(false);
             return;
         }
@@ -73,33 +76,30 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
                 }
             }
 
-            // excludeTypes only applies when no explicit type filter is set
-            const excludeTypes = (typeFilters.length === 0 && options?.excludeTypes)
-                ? options.excludeTypes
-                : [];
-
             const response = await searchApi.search({
                 organizationId,
                 query: searchText,
                 typeFilters: typeFilters.length > 0 ? typeFilters : [],
-                excludeTypes: excludeTypes.length > 0 ? excludeTypes : [],
                 tagFilters: filters.tags.length > 0 ? filters.tags : [],
                 projectFilters: filters.projects.length > 0 ? filters.projects : [],
                 myContentOnly: filters.myContentOnly,
+                typePriority: options?.typePriority ?? [],
                 limit: options?.limit || 20,
             });
 
             setResults(response.items);
+            setTotalCount(response.totalCount);
         } catch (err) {
             if (err instanceof Error && err.name === 'AbortError') {
                 return;
             }
             setError(err instanceof Error ? err.message : 'Search failed');
             setResults([]);
+            setTotalCount(0);
         } finally {
             setIsLoading(false);
         }
-    }, [organizationId, options?.typeFilters, options?.excludeTypes, options?.limit]);
+    }, [organizationId, options?.typeFilters, options?.typePriority, options?.limit]);
 
     useEffect(() => {
         if (debounceRef.current) {
@@ -111,6 +111,7 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
 
         if (!hasSearchCriteria) {
             setResults([]);
+            setTotalCount(0);
             setIsLoading(false);
             return;
         }
@@ -131,6 +132,7 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
     const clearResults = useCallback(() => {
         setQuery('');
         setResults([]);
+        setTotalCount(0);
         setError(null);
     }, []);
 
@@ -138,6 +140,7 @@ export function useSearch(options?: UseSearchOptions): UseSearchResult {
         query,
         setQuery,
         results,
+        totalCount,
         isLoading,
         error,
         clearResults,

@@ -43,7 +43,6 @@ class UserSearchIndexer:
             owner_id=user.id,
             keywords=keywords,
             description=user.email,
-            rank_score=1.0,
             metadata=metadata,
         )
 

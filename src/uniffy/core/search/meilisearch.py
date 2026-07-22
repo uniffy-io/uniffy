@@ -28,6 +28,30 @@ logger = logger.bind(component="search.meilisearch")
 
 UNIFFY_INDEX_NAME = "uniffy"
 
+# Private-use characters wrap matched spans in _formatted hits; they cannot
+# collide with real text and pass through JSON untouched. The frontend
+# mirror lives in ui features/search/utils/highlight.tsx.
+HIGHLIGHT_PRE_TAG = "\ue000"
+HIGHLIGHT_POST_TAG = "\ue001"
+
+# Everything hit rendering needs; deliberately excludes the searchable
+# ``content`` blob (can be a whole note) and the permission id lists.
+SEARCH_HIT_FIELDS = [
+    "urn",
+    "organization_id",
+    "title",
+    "description",
+    "entity_type",
+    "url_path",
+    "access_mode",
+    "baseline_role",
+    "owner_id",
+    "tags",
+    "metadata",
+    "updated_at",
+    "rank_score",
+]
+
 
 @dataclass
 class MeilisearchConfig:
@@ -97,6 +121,23 @@ INDEX_SETTINGS = MeilisearchSettings(
     ),
     faceting=Faceting(max_values_per_facet=100),
     pagination=Pagination(max_total_hits=1000),
+    # Meilisearch synonyms are one-directional; every set is spelled out
+    # per direction. Kept small on purpose: broad synonym nets degrade
+    # precision faster than they help recall.
+    synonyms={
+        "meeting": ["call"],
+        "call": ["meeting"],
+        "doc": ["document", "note"],
+        "document": ["doc", "note"],
+        "note": ["doc", "document"],
+        "image": ["photo", "picture"],
+        "photo": ["image", "picture"],
+        "picture": ["image", "photo"],
+        "task": ["todo"],
+        "todo": ["task"],
+        "folder": ["directory"],
+        "directory": ["folder"],
+    },
 )
 
 
@@ -200,7 +241,9 @@ class MeilisearchClient:
         rank_score: float = 1.0,
         metadata: dict[str, str] | None = None,
     ) -> None:
-        """Index or update one document."""
+        """Index or update one document. ``entity_type`` is normalized to
+        lowercase so facets and exact comparisons see one casing.
+        """
         doc_id = build_document_id(urn, organization_id)
 
         document = {
@@ -210,7 +253,7 @@ class MeilisearchClient:
             "title": title,
             "content": content or "",
             "description": description or "",
-            "entity_type": entity_type,
+            "entity_type": entity_type.lower(),
             "url_path": url_path,
             "access_mode": access_mode,
             "baseline_role": baseline_role,
@@ -318,7 +361,7 @@ class MeilisearchClient:
                 "Meilisearch: delete_documents_by_filter_expr failed",
                 filter=filter_expr
             )
-            return
+            raise
         elapsed_ms = (time.perf_counter() - start) * 1000
         SEARCH_OPERATIONS_TOTAL.labels(operation="delete").inc()
         SEARCH_OPERATION_DURATION.labels(operation="delete").observe(elapsed_ms / 1000)
@@ -335,7 +378,6 @@ class MeilisearchClient:
         user_id: UUID,
         user_group_ids: list[UUID] | None = None,
         type_filters: list[str] | None = None,
-        exclude_type_filters: list[str] | None = None,
         tag_filters: list[str] | None = None,
         my_content_only: bool = False,
         owner_filter: UUID | None = None,
@@ -358,10 +400,6 @@ class MeilisearchClient:
             type_filter = " OR ".join(f'entity_type = "{t}"' for t in type_filters)
             filters = f"({filters}) AND ({type_filter})"
 
-        if exclude_type_filters:
-            exclude_filter = " AND ".join(f'entity_type != "{t}"' for t in exclude_type_filters)
-            filters = f"({filters}) AND ({exclude_filter})"
-
         if tag_filters:
             tag_conditions = " AND ".join(f'tags = "{tag}"' for tag in tag_filters)
             filters = f"({filters}) AND ({tag_conditions})"
@@ -373,13 +411,23 @@ class MeilisearchClient:
             filters = f"({filters}) AND ({meta_conditions})"
 
         start = time.perf_counter()
+        # With a text query the sort keys act as tiebreakers via the "sort"
+        # ranking rule: entity-type weight first, then recency. Without a
+        # query they define the whole order (filter-only browsing).
         results = await index.search(
             query=query if query else None,
             filter=filters,
             limit=limit,
             offset=offset,
-            sort=["rank_score:desc", "updated_at:desc"] if not query else None,
+            sort=["rank_score:desc", "updated_at:desc"],
             show_ranking_score=True,
+            attributes_to_retrieve=SEARCH_HIT_FIELDS,
+            attributes_to_highlight=["title", "description"],
+            highlight_pre_tag=HIGHLIGHT_PRE_TAG,
+            highlight_post_tag=HIGHLIGHT_POST_TAG,
+            attributes_to_crop=["description"],
+            crop_length=20,
+            crop_marker="…",
         )
         elapsed_ms = (time.perf_counter() - start) * 1000
         SEARCH_OPERATIONS_TOTAL.labels(operation="search").inc()

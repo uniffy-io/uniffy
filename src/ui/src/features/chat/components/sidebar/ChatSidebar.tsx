@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect, useMemo, useContext, type ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   PencilSimple,
@@ -12,16 +12,21 @@ import {
   CaretDoubleLeft,
   CaretDoubleRight,
   Robot,
+  FolderSimplePlus,
 } from '@phosphor-icons/react';
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  useDraggable,
+  useDroppable,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -30,11 +35,14 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Input } from '@/components/ui/input';
 import { SidebarOverlayContext } from '@/components/layout/CollapsibleSidebarRail';
-import { setSplitChannel, selectChannelPreferences, selectChannels, sortByLastActivity, sortByRootActivity } from '@/features/chat/store/chatChannelsSlice';
+import { setSplitChannel, selectChannelPreferences, selectChannels, selectAgentFolders, sortByLastActivity, sortByRootActivity } from '@/features/chat/store/chatChannelsSlice';
+import { createAgentFolder, setAgentChatFolder } from '@/features/chat/store/chatThunks';
+import { AgentChatFolderGroup } from '@/features/chat/components/sidebar/AgentChatFolderGroup';
 import { selectChannelsWithDrafts } from '@/features/chat/store/chatDraftsSlice';
 import {
   toggleDmSection,
   toggleAgentChatsSection,
+  revealAgentFolder,
   openAgentChatPicker,
   collapseSidebar,
   expandSidebar,
@@ -53,6 +61,39 @@ import { CategorySection } from '@/features/chat/components/sidebar/CategorySect
 import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
 import { cn } from '@/shared/utils/cn';
 import type { Icon } from '@phosphor-icons/react';
+
+function DraggableAgentChat({ channelId, children }: { channelId: string; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `agent-chat:${channelId}`,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{ transform: CSS.Translate.toString(transform) }}
+      className={isDragging ? 'relative z-30 opacity-70' : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+function AgentUnfiledDropZone({ children }: { children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: 'agent-folder-root' });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'rounded-md transition-colors',
+        isOver && 'bg-primary/5 ring-1 ring-primary/30',
+      )}
+      data-testid="chat-sidebar-agent-unfiled-zone"
+    >
+      {children}
+    </div>
+  );
+}
 
 function CompactActionButton({
   icon: IconComponent,
@@ -160,6 +201,81 @@ export function ChatSidebar() {
       .sort(sortByLastActivity),
     [filteredChannels],
   );
+
+  const agentFolders = useAppSelector(selectAgentFolders);
+  // Nullish fallback: persisted chatUi state from before this key existed omits it.
+  const collapsedAgentFolders = useAppSelector((state) => state.chatUi.collapsedAgentFolders) ?? {};
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const agentFolderParam = searchParams.get('agentFolder');
+
+  // Deep link from a search result: open the section and the folder, scroll
+  // to it, then strip the param so a refresh does not re-trigger the reveal.
+  useEffect(() => {
+    if (!agentFolderParam) return;
+    dispatch(revealAgentFolder(agentFolderParam));
+    const timer = setTimeout(() => {
+      document
+        .querySelector(`[data-testid="chat-sidebar-agent-folder-${agentFolderParam}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    setSearchParams((params) => {
+      params.delete('agentFolder');
+      return params;
+    }, { replace: true });
+    return () => clearTimeout(timer);
+  }, [agentFolderParam, dispatch, setSearchParams]);
+
+  // Chats pointing at a folder this user no longer has fall back to unfiled.
+  const agentChatGroups = useMemo(() => {
+    const folderIds = new Set(agentFolders.map((f) => f.id));
+    const byFolder = new Map<string, typeof agentChats>();
+    const unfiled: typeof agentChats = [];
+    for (const chat of agentChats) {
+      if (chat.agentFolderId && folderIds.has(chat.agentFolderId)) {
+        const bucket = byFolder.get(chat.agentFolderId);
+        if (bucket) {
+          bucket.push(chat);
+        } else {
+          byFolder.set(chat.agentFolderId, [chat]);
+        }
+      } else {
+        unfiled.push(chat);
+      }
+    }
+    return { byFolder, unfiled };
+  }, [agentChats, agentFolders]);
+
+  const handleCreateFolder = useCallback(async () => {
+    const name = newFolderName.trim();
+    setCreatingFolder(false);
+    setNewFolderName('');
+    if (name) {
+      await dispatch(createAgentFolder(name));
+    }
+  }, [dispatch, newFolderName]);
+
+  const handleAgentDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = String(active.id);
+    if (!activeId.startsWith('agent-chat:')) return;
+    const channelId = activeId.slice('agent-chat:'.length);
+    const overId = String(over.id);
+    let folderId: string | null;
+    if (overId === 'agent-folder-root') {
+      folderId = null;
+    } else if (overId.startsWith('agent-folder:')) {
+      folderId = overId.slice('agent-folder:'.length);
+    } else {
+      return;
+    }
+    const current = channels.find((c) => c.id === channelId)?.agentFolderId ?? null;
+    if (current === folderId) return;
+    dispatch(setAgentChatFolder({ channelId, folderId }));
+  }, [dispatch, channels]);
 
   const categorizedChannels = useMemo(() => {
     const sortedCategories = [...categories].sort((a, b) => a.position - b.position);
@@ -381,43 +497,107 @@ export function ChatSidebar() {
               {agentChatsSectionCollapsed ? <CaretRight size={10} /> : <CaretDown size={10} />}
               Agent Chats
             </button>
-            <button
-              type="button"
-              onClick={() => dispatch(openAgentChatPicker())}
-              aria-label="New agent chat"
-              className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground"
-              data-testid="chat-sidebar-new-agent-chat-button"
-            >
-              <Plus size={14} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => { setCreatingFolder(true); setNewFolderName(''); }}
+                aria-label="New folder"
+                title="New folder"
+                className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground"
+                data-testid="chat-sidebar-new-agent-folder-button"
+              >
+                <FolderSimplePlus size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch(openAgentChatPicker())}
+                aria-label="New agent chat"
+                className="text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground"
+                data-testid="chat-sidebar-new-agent-chat-button"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
           </div>
 
-          {!agentChatsSectionCollapsed && (
-            <div className="space-y-px">
-              {agentChats.length === 0 ? (
-                <button
-                  type="button"
-                  onClick={() => dispatch(openAgentChatPicker())}
-                  className="flex items-center gap-2 w-full px-3 py-1.5 mx-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors max-w-[calc(100%-12px)]"
-                  data-testid="chat-sidebar-agent-chats-empty"
-                >
-                  <Robot size={14} />
-                  Start a new agent chat
-                </button>
-              ) : (
-                agentChats.map(channel => (
-                  <DirectMessageListItem
-                    key={channel.id}
-                    channel={channel}
-                    isActive={channel.id === activeChannelId}
-                    unreadCount={unreadCounts[channel.id] ?? 0}
-                    isMuted={isChannelMuted(channel.id)}
-                    hasDraft={draftChannels.has(channel.id)}
-                    onSelect={handleChannelSelect}
-                  />
-                ))
-              )}
+          {creatingFolder && (
+            <div className="px-3 pb-1 mx-1.5 max-w-[calc(100%-12px)]">
+              <input
+                autoFocus
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onBlur={handleCreateFolder}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateFolder();
+                  if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
+                }}
+                placeholder="Folder name..."
+                className="w-full bg-input border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                data-testid="chat-sidebar-new-agent-folder-input"
+              />
             </div>
+          )}
+
+          {!agentChatsSectionCollapsed && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragEnd={handleAgentDragEnd}
+            >
+              <div className="space-y-px">
+                {agentFolders.map((folder) => {
+                  const chats = agentChatGroups.byFolder.get(folder.id) ?? [];
+                  if (chats.length === 0 && searchQuery) return null;
+                  return (
+                    <AgentChatFolderGroup
+                      key={folder.id}
+                      folder={folder}
+                      collapsed={!!collapsedAgentFolders[folder.id]}
+                      chatCount={chats.length}
+                    >
+                      {chats.map(channel => (
+                        <DraggableAgentChat key={channel.id} channelId={channel.id}>
+                          <DirectMessageListItem
+                            channel={channel}
+                            isActive={channel.id === activeChannelId}
+                            unreadCount={unreadCounts[channel.id] ?? 0}
+                            isMuted={isChannelMuted(channel.id)}
+                            hasDraft={draftChannels.has(channel.id)}
+                            onSelect={handleChannelSelect}
+                          />
+                        </DraggableAgentChat>
+                      ))}
+                    </AgentChatFolderGroup>
+                  );
+                })}
+                {agentChats.length === 0 && agentFolders.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => dispatch(openAgentChatPicker())}
+                    className="flex items-center gap-2 w-full px-3 py-1.5 mx-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors max-w-[calc(100%-12px)]"
+                    data-testid="chat-sidebar-agent-chats-empty"
+                  >
+                    <Robot size={14} />
+                    Start a new agent chat
+                  </button>
+                ) : (
+                  <AgentUnfiledDropZone>
+                    {agentChatGroups.unfiled.map(channel => (
+                      <DraggableAgentChat key={channel.id} channelId={channel.id}>
+                        <DirectMessageListItem
+                          channel={channel}
+                          isActive={channel.id === activeChannelId}
+                          unreadCount={unreadCounts[channel.id] ?? 0}
+                          isMuted={isChannelMuted(channel.id)}
+                          hasDraft={draftChannels.has(channel.id)}
+                          onSelect={handleChannelSelect}
+                        />
+                      </DraggableAgentChat>
+                    ))}
+                  </AgentUnfiledDropZone>
+                )}
+              </div>
+            </DndContext>
           )}
         </div>
 

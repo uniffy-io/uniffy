@@ -38,6 +38,8 @@ const (
 	SearchResultType_SEARCH_RESULT_TYPE_ROOM           SearchResultType = 11
 	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT     SearchResultType = 12
 	SearchResultType_SEARCH_RESULT_TYPE_TAG            SearchResultType = 13
+	SearchResultType_SEARCH_RESULT_TYPE_FOLDER         SearchResultType = 14
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER   SearchResultType = 15
 )
 
 // Enum value maps for SearchResultType.
@@ -57,6 +59,8 @@ var (
 		11: "SEARCH_RESULT_TYPE_ROOM",
 		12: "SEARCH_RESULT_TYPE_AGENT_CHAT",
 		13: "SEARCH_RESULT_TYPE_TAG",
+		14: "SEARCH_RESULT_TYPE_FOLDER",
+		15: "SEARCH_RESULT_TYPE_AGENT_FOLDER",
 	}
 	SearchResultType_value = map[string]int32{
 		"SEARCH_RESULT_TYPE_UNSPECIFIED":    0,
@@ -73,6 +77,8 @@ var (
 		"SEARCH_RESULT_TYPE_ROOM":           11,
 		"SEARCH_RESULT_TYPE_AGENT_CHAT":     12,
 		"SEARCH_RESULT_TYPE_TAG":            13,
+		"SEARCH_RESULT_TYPE_FOLDER":         14,
+		"SEARCH_RESULT_TYPE_AGENT_FOLDER":   15,
 	}
 )
 
@@ -114,12 +120,16 @@ type SearchRequest struct {
 	ProjectFilters []string `protobuf:"bytes,6,rep,name=project_filters,json=projectFilters,proto3" json:"project_filters,omitempty"`
 	MyContentOnly  bool     `protobuf:"varint,7,opt,name=my_content_only,json=myContentOnly,proto3" json:"my_content_only,omitempty"`
 	OwnerFilter    string   `protobuf:"bytes,8,opt,name=owner_filter,json=ownerFilter,proto3" json:"owner_filter,omitempty"`
-	// Types to exclude from results (e.g., exclude chat_message when not in chat domain)
-	ExcludeTypes []SearchResultType `protobuf:"varint,9,rep,packed,name=exclude_types,json=excludeTypes,proto3,enum=search.v1.SearchResultType" json:"exclude_types,omitempty"`
 	// Metadata field filters (e.g., {"channel_id": "uuid"} for chat message scoping)
 	MetadataFilters map[string]string `protobuf:"bytes,10,rep,name=metadata_filters,json=metadataFilters,proto3" json:"metadata_filters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Pagination offset into the result set (max_total_hits caps the window)
+	Offset int32 `protobuf:"varint,11,opt,name=offset,proto3" json:"offset,omitempty"`
+	// Client ranking context: listed types float to the top in this order.
+	// Applied within match-strength buckets, so a weak (typo/partial) match
+	// never outranks a full match via its type alone.
+	TypePriority  []SearchResultType `protobuf:"varint,12,rep,packed,name=type_priority,json=typePriority,proto3,enum=search.v1.SearchResultType" json:"type_priority,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchRequest) Reset() {
@@ -208,13 +218,6 @@ func (x *SearchRequest) GetOwnerFilter() string {
 	return ""
 }
 
-func (x *SearchRequest) GetExcludeTypes() []SearchResultType {
-	if x != nil {
-		return x.ExcludeTypes
-	}
-	return nil
-}
-
 func (x *SearchRequest) GetMetadataFilters() map[string]string {
 	if x != nil {
 		return x.MetadataFilters
@@ -222,9 +225,25 @@ func (x *SearchRequest) GetMetadataFilters() map[string]string {
 	return nil
 }
 
+func (x *SearchRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *SearchRequest) GetTypePriority() []SearchResultType {
+	if x != nil {
+		return x.TypePriority
+	}
+	return nil
+}
+
 type SearchResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*SearchResultItem    `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Items []*SearchResultItem    `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	// Estimated total matches before pagination
+	TotalCount    int32 `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -266,18 +285,29 @@ func (x *SearchResponse) GetItems() []*SearchResultItem {
 	return nil
 }
 
+func (x *SearchResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
 type SearchResultItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Urn           string                 `protobuf:"bytes,1,opt,name=urn,proto3" json:"urn,omitempty"` // Universal Resource Name (urn:uniffy:note:uuid)
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"` // Snippet or subtitle
-	Type          SearchResultType       `protobuf:"varint,4,opt,name=type,proto3,enum=search.v1.SearchResultType" json:"type,omitempty"`
-	Url           string                 `protobuf:"bytes,5,opt,name=url,proto3" json:"url,omitempty"`                                                                                     // Frontend route path
-	Score         float64                `protobuf:"fixed64,6,opt,name=score,proto3" json:"score,omitempty"`                                                                               // Relevance score
-	Metadata      map[string]string      `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Extra icon info, etc.
-	Tags          []string               `protobuf:"bytes,8,rep,name=tags,proto3" json:"tags,omitempty"`                                                                                   // Tags associated with the content
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Urn         string                 `protobuf:"bytes,1,opt,name=urn,proto3" json:"urn,omitempty"` // Universal Resource Name (urn:uniffy:note:uuid)
+	Title       string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"` // Snippet or subtitle
+	Type        SearchResultType       `protobuf:"varint,4,opt,name=type,proto3,enum=search.v1.SearchResultType" json:"type,omitempty"`
+	Url         string                 `protobuf:"bytes,5,opt,name=url,proto3" json:"url,omitempty"`                                                                                     // Frontend route path
+	Score       float64                `protobuf:"fixed64,6,opt,name=score,proto3" json:"score,omitempty"`                                                                               // Relevance score
+	Metadata    map[string]string      `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Extra icon info, etc.
+	Tags        []string               `protobuf:"bytes,8,rep,name=tags,proto3" json:"tags,omitempty"`                                                                                   // Tags associated with the content
+	// Match-highlighted variants: matched spans wrapped in U+E000/U+E001
+	// markers, description cropped around the match. Empty without a text query.
+	TitleHighlighted       string `protobuf:"bytes,9,opt,name=title_highlighted,json=titleHighlighted,proto3" json:"title_highlighted,omitempty"`
+	DescriptionHighlighted string `protobuf:"bytes,10,opt,name=description_highlighted,json=descriptionHighlighted,proto3" json:"description_highlighted,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *SearchResultItem) Reset() {
@@ -366,236 +396,18 @@ func (x *SearchResultItem) GetTags() []string {
 	return nil
 }
 
-type IndexItemRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	Urn            string                 `protobuf:"bytes,2,opt,name=urn,proto3" json:"urn,omitempty"`
-	Type           SearchResultType       `protobuf:"varint,3,opt,name=type,proto3,enum=search.v1.SearchResultType" json:"type,omitempty"`
-	Title          string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
-	Content        string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"` // Content to be indexed for full text
-	Url            string                 `protobuf:"bytes,6,opt,name=url,proto3" json:"url,omitempty"`
-	Metadata       map[string]string      `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *IndexItemRequest) Reset() {
-	*x = IndexItemRequest{}
-	mi := &file_search_v1_search_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *IndexItemRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IndexItemRequest) ProtoMessage() {}
-
-func (x *IndexItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[3]
+func (x *SearchResultItem) GetTitleHighlighted() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IndexItemRequest.ProtoReflect.Descriptor instead.
-func (*IndexItemRequest) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *IndexItemRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
+		return x.TitleHighlighted
 	}
 	return ""
 }
 
-func (x *IndexItemRequest) GetUrn() string {
+func (x *SearchResultItem) GetDescriptionHighlighted() string {
 	if x != nil {
-		return x.Urn
+		return x.DescriptionHighlighted
 	}
 	return ""
-}
-
-func (x *IndexItemRequest) GetType() SearchResultType {
-	if x != nil {
-		return x.Type
-	}
-	return SearchResultType_SEARCH_RESULT_TYPE_UNSPECIFIED
-}
-
-func (x *IndexItemRequest) GetTitle() string {
-	if x != nil {
-		return x.Title
-	}
-	return ""
-}
-
-func (x *IndexItemRequest) GetContent() string {
-	if x != nil {
-		return x.Content
-	}
-	return ""
-}
-
-func (x *IndexItemRequest) GetUrl() string {
-	if x != nil {
-		return x.Url
-	}
-	return ""
-}
-
-func (x *IndexItemRequest) GetMetadata() map[string]string {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
-type IndexItemResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *IndexItemResponse) Reset() {
-	*x = IndexItemResponse{}
-	mi := &file_search_v1_search_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *IndexItemResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IndexItemResponse) ProtoMessage() {}
-
-func (x *IndexItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IndexItemResponse.ProtoReflect.Descriptor instead.
-func (*IndexItemResponse) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *IndexItemResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-type DeleteItemRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Urn            string                 `protobuf:"bytes,1,opt,name=urn,proto3" json:"urn,omitempty"`
-	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *DeleteItemRequest) Reset() {
-	*x = DeleteItemRequest{}
-	mi := &file_search_v1_search_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteItemRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteItemRequest) ProtoMessage() {}
-
-func (x *DeleteItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteItemRequest.ProtoReflect.Descriptor instead.
-func (*DeleteItemRequest) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *DeleteItemRequest) GetUrn() string {
-	if x != nil {
-		return x.Urn
-	}
-	return ""
-}
-
-func (x *DeleteItemRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-type DeleteItemResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteItemResponse) Reset() {
-	*x = DeleteItemResponse{}
-	mi := &file_search_v1_search_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteItemResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteItemResponse) ProtoMessage() {}
-
-func (x *DeleteItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteItemResponse.ProtoReflect.Descriptor instead.
-func (*DeleteItemResponse) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *DeleteItemResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
 }
 
 // Request to get content that references a specific URN
@@ -614,7 +426,7 @@ type GetReferencesRequest struct {
 
 func (x *GetReferencesRequest) Reset() {
 	*x = GetReferencesRequest{}
-	mi := &file_search_v1_search_proto_msgTypes[7]
+	mi := &file_search_v1_search_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -626,7 +438,7 @@ func (x *GetReferencesRequest) String() string {
 func (*GetReferencesRequest) ProtoMessage() {}
 
 func (x *GetReferencesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[7]
+	mi := &file_search_v1_search_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -639,7 +451,7 @@ func (x *GetReferencesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReferencesRequest.ProtoReflect.Descriptor instead.
 func (*GetReferencesRequest) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{7}
+	return file_search_v1_search_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetReferencesRequest) GetOrganizationId() string {
@@ -683,7 +495,7 @@ type GetReferencesResponse struct {
 
 func (x *GetReferencesResponse) Reset() {
 	*x = GetReferencesResponse{}
-	mi := &file_search_v1_search_proto_msgTypes[8]
+	mi := &file_search_v1_search_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -695,7 +507,7 @@ func (x *GetReferencesResponse) String() string {
 func (*GetReferencesResponse) ProtoMessage() {}
 
 func (x *GetReferencesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[8]
+	mi := &file_search_v1_search_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -708,7 +520,7 @@ func (x *GetReferencesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReferencesResponse.ProtoReflect.Descriptor instead.
 func (*GetReferencesResponse) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{8}
+	return file_search_v1_search_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetReferencesResponse) GetItems() []*SearchResultItem {
@@ -737,7 +549,7 @@ type ResolveUrnsRequest struct {
 
 func (x *ResolveUrnsRequest) Reset() {
 	*x = ResolveUrnsRequest{}
-	mi := &file_search_v1_search_proto_msgTypes[9]
+	mi := &file_search_v1_search_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -749,7 +561,7 @@ func (x *ResolveUrnsRequest) String() string {
 func (*ResolveUrnsRequest) ProtoMessage() {}
 
 func (x *ResolveUrnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[9]
+	mi := &file_search_v1_search_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -762,7 +574,7 @@ func (x *ResolveUrnsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveUrnsRequest.ProtoReflect.Descriptor instead.
 func (*ResolveUrnsRequest) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{9}
+	return file_search_v1_search_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ResolveUrnsRequest) GetOrganizationId() string {
@@ -790,7 +602,7 @@ type ResolveUrnsResponse struct {
 
 func (x *ResolveUrnsResponse) Reset() {
 	*x = ResolveUrnsResponse{}
-	mi := &file_search_v1_search_proto_msgTypes[10]
+	mi := &file_search_v1_search_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -802,7 +614,7 @@ func (x *ResolveUrnsResponse) String() string {
 func (*ResolveUrnsResponse) ProtoMessage() {}
 
 func (x *ResolveUrnsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[10]
+	mi := &file_search_v1_search_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -815,7 +627,7 @@ func (x *ResolveUrnsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveUrnsResponse.ProtoReflect.Descriptor instead.
 func (*ResolveUrnsResponse) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{10}
+	return file_search_v1_search_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ResolveUrnsResponse) GetResolved() map[string]*UrnMetadata {
@@ -891,7 +703,7 @@ type UrnMetadata struct {
 
 func (x *UrnMetadata) Reset() {
 	*x = UrnMetadata{}
-	mi := &file_search_v1_search_proto_msgTypes[11]
+	mi := &file_search_v1_search_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -903,7 +715,7 @@ func (x *UrnMetadata) String() string {
 func (*UrnMetadata) ProtoMessage() {}
 
 func (x *UrnMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_search_v1_search_proto_msgTypes[11]
+	mi := &file_search_v1_search_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -916,7 +728,7 @@ func (x *UrnMetadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UrnMetadata.ProtoReflect.Descriptor instead.
 func (*UrnMetadata) Descriptor() ([]byte, []int) {
-	return file_search_v1_search_proto_rawDescGZIP(), []int{11}
+	return file_search_v1_search_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UrnMetadata) GetTitle() string {
@@ -1224,7 +1036,7 @@ var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x16search/v1/search.proto\x12\tsearch.v1\"\x99\x04\n" +
+	"\x16search/v1/search.proto\x12\tsearch.v1\"\xb7\x04\n" +
 	"\rSearchRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12>\n" +
@@ -1234,15 +1046,19 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"tagFilters\x12'\n" +
 	"\x0fproject_filters\x18\x06 \x03(\tR\x0eprojectFilters\x12&\n" +
 	"\x0fmy_content_only\x18\a \x01(\bR\rmyContentOnly\x12!\n" +
-	"\fowner_filter\x18\b \x01(\tR\vownerFilter\x12@\n" +
-	"\rexclude_types\x18\t \x03(\x0e2\x1b.search.v1.SearchResultTypeR\fexcludeTypes\x12X\n" +
+	"\fowner_filter\x18\b \x01(\tR\vownerFilter\x12X\n" +
 	"\x10metadata_filters\x18\n" +
-	" \x03(\v2-.search.v1.SearchRequest.MetadataFiltersEntryR\x0fmetadataFilters\x1aB\n" +
+	" \x03(\v2-.search.v1.SearchRequest.MetadataFiltersEntryR\x0fmetadataFilters\x12\x16\n" +
+	"\x06offset\x18\v \x01(\x05R\x06offset\x12@\n" +
+	"\rtype_priority\x18\f \x03(\x0e2\x1b.search.v1.SearchResultTypeR\ftypePriority\x1aB\n" +
 	"\x14MetadataFiltersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\t\x10\n" +
+	"\"d\n" +
 	"\x0eSearchResponse\x121\n" +
-	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\"\xcd\x02\n" +
+	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x05R\n" +
+	"totalCount\"\xb3\x03\n" +
 	"\x10SearchResultItem\x12\x10\n" +
 	"\x03urn\x18\x01 \x01(\tR\x03urn\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -1251,28 +1067,13 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x03url\x18\x05 \x01(\tR\x03url\x12\x14\n" +
 	"\x05score\x18\x06 \x01(\x01R\x05score\x12E\n" +
 	"\bmetadata\x18\a \x03(\v2).search.v1.SearchResultItem.MetadataEntryR\bmetadata\x12\x12\n" +
-	"\x04tags\x18\b \x03(\tR\x04tags\x1a;\n" +
+	"\x04tags\x18\b \x03(\tR\x04tags\x12+\n" +
+	"\x11title_highlighted\x18\t \x01(\tR\x10titleHighlighted\x127\n" +
+	"\x17description_highlighted\x18\n" +
+	" \x01(\tR\x16descriptionHighlighted\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc4\x02\n" +
-	"\x10IndexItemRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x10\n" +
-	"\x03urn\x18\x02 \x01(\tR\x03urn\x12/\n" +
-	"\x04type\x18\x03 \x01(\x0e2\x1b.search.v1.SearchResultTypeR\x04type\x12\x14\n" +
-	"\x05title\x18\x04 \x01(\tR\x05title\x12\x18\n" +
-	"\acontent\x18\x05 \x01(\tR\acontent\x12\x10\n" +
-	"\x03url\x18\x06 \x01(\tR\x03url\x12E\n" +
-	"\bmetadata\x18\a \x03(\v2).search.v1.IndexItemRequest.MetadataEntryR\bmetadata\x1a;\n" +
-	"\rMetadataEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"-\n" +
-	"\x11IndexItemResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"N\n" +
-	"\x11DeleteItemRequest\x12\x10\n" +
-	"\x03urn\x18\x01 \x01(\tR\x03urn\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\".\n" +
-	"\x12DeleteItemResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xb4\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb4\x01\n" +
 	"\x14GetReferencesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -1343,7 +1144,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"urn_status\x180 \x01(\tR\turnStatus\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xcc\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x90\x04\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1359,12 +1160,11 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_ROOM\x10\v\x12!\n" +
 	"\x1dSEARCH_RESULT_TYPE_AGENT_CHAT\x10\f\x12\x1a\n" +
-	"\x16SEARCH_RESULT_TYPE_TAG\x10\r2\x8d\x03\n" +
+	"\x16SEARCH_RESULT_TYPE_TAG\x10\r\x12\x1d\n" +
+	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\x0e\x12#\n" +
+	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0f2\xf6\x01\n" +
 	"\rSearchService\x12?\n" +
-	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12H\n" +
-	"\tIndexItem\x12\x1b.search.v1.IndexItemRequest\x1a\x1c.search.v1.IndexItemResponse\"\x00\x12K\n" +
-	"\n" +
-	"DeleteItem\x12\x1c.search.v1.DeleteItemRequest\x1a\x1d.search.v1.DeleteItemResponse\"\x00\x12T\n" +
+	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12T\n" +
 	"\rGetReferences\x12\x1f.search.v1.GetReferencesRequest\x1a .search.v1.GetReferencesResponse\"\x00\x12N\n" +
 	"\vResolveUrns\x12\x1d.search.v1.ResolveUrnsRequest\x1a\x1e.search.v1.ResolveUrnsResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/search/v1;searchv1b\x06proto3"
 
@@ -1381,57 +1181,46 @@ func file_search_v1_search_proto_rawDescGZIP() []byte {
 }
 
 var file_search_v1_search_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_search_v1_search_proto_goTypes = []any{
 	(SearchResultType)(0),         // 0: search.v1.SearchResultType
 	(*SearchRequest)(nil),         // 1: search.v1.SearchRequest
 	(*SearchResponse)(nil),        // 2: search.v1.SearchResponse
 	(*SearchResultItem)(nil),      // 3: search.v1.SearchResultItem
-	(*IndexItemRequest)(nil),      // 4: search.v1.IndexItemRequest
-	(*IndexItemResponse)(nil),     // 5: search.v1.IndexItemResponse
-	(*DeleteItemRequest)(nil),     // 6: search.v1.DeleteItemRequest
-	(*DeleteItemResponse)(nil),    // 7: search.v1.DeleteItemResponse
-	(*GetReferencesRequest)(nil),  // 8: search.v1.GetReferencesRequest
-	(*GetReferencesResponse)(nil), // 9: search.v1.GetReferencesResponse
-	(*ResolveUrnsRequest)(nil),    // 10: search.v1.ResolveUrnsRequest
-	(*ResolveUrnsResponse)(nil),   // 11: search.v1.ResolveUrnsResponse
-	(*UrnMetadata)(nil),           // 12: search.v1.UrnMetadata
-	nil,                           // 13: search.v1.SearchRequest.MetadataFiltersEntry
-	nil,                           // 14: search.v1.SearchResultItem.MetadataEntry
-	nil,                           // 15: search.v1.IndexItemRequest.MetadataEntry
-	nil,                           // 16: search.v1.ResolveUrnsResponse.ResolvedEntry
-	nil,                           // 17: search.v1.UrnMetadata.MetadataEntry
+	(*GetReferencesRequest)(nil),  // 4: search.v1.GetReferencesRequest
+	(*GetReferencesResponse)(nil), // 5: search.v1.GetReferencesResponse
+	(*ResolveUrnsRequest)(nil),    // 6: search.v1.ResolveUrnsRequest
+	(*ResolveUrnsResponse)(nil),   // 7: search.v1.ResolveUrnsResponse
+	(*UrnMetadata)(nil),           // 8: search.v1.UrnMetadata
+	nil,                           // 9: search.v1.SearchRequest.MetadataFiltersEntry
+	nil,                           // 10: search.v1.SearchResultItem.MetadataEntry
+	nil,                           // 11: search.v1.ResolveUrnsResponse.ResolvedEntry
+	nil,                           // 12: search.v1.UrnMetadata.MetadataEntry
 }
 var file_search_v1_search_proto_depIdxs = []int32{
 	0,  // 0: search.v1.SearchRequest.type_filters:type_name -> search.v1.SearchResultType
-	0,  // 1: search.v1.SearchRequest.exclude_types:type_name -> search.v1.SearchResultType
-	13, // 2: search.v1.SearchRequest.metadata_filters:type_name -> search.v1.SearchRequest.MetadataFiltersEntry
+	9,  // 1: search.v1.SearchRequest.metadata_filters:type_name -> search.v1.SearchRequest.MetadataFiltersEntry
+	0,  // 2: search.v1.SearchRequest.type_priority:type_name -> search.v1.SearchResultType
 	3,  // 3: search.v1.SearchResponse.items:type_name -> search.v1.SearchResultItem
 	0,  // 4: search.v1.SearchResultItem.type:type_name -> search.v1.SearchResultType
-	14, // 5: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
-	0,  // 6: search.v1.IndexItemRequest.type:type_name -> search.v1.SearchResultType
-	15, // 7: search.v1.IndexItemRequest.metadata:type_name -> search.v1.IndexItemRequest.MetadataEntry
-	0,  // 8: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
-	3,  // 9: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
-	16, // 10: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
-	0,  // 11: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
-	17, // 12: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
-	12, // 13: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
-	1,  // 14: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
-	4,  // 15: search.v1.SearchService.IndexItem:input_type -> search.v1.IndexItemRequest
-	6,  // 16: search.v1.SearchService.DeleteItem:input_type -> search.v1.DeleteItemRequest
-	8,  // 17: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
-	10, // 18: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
-	2,  // 19: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
-	5,  // 20: search.v1.SearchService.IndexItem:output_type -> search.v1.IndexItemResponse
-	7,  // 21: search.v1.SearchService.DeleteItem:output_type -> search.v1.DeleteItemResponse
-	9,  // 22: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
-	11, // 23: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
-	19, // [19:24] is the sub-list for method output_type
-	14, // [14:19] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	10, // 5: search.v1.SearchResultItem.metadata:type_name -> search.v1.SearchResultItem.MetadataEntry
+	0,  // 6: search.v1.GetReferencesRequest.type_filters:type_name -> search.v1.SearchResultType
+	3,  // 7: search.v1.GetReferencesResponse.items:type_name -> search.v1.SearchResultItem
+	11, // 8: search.v1.ResolveUrnsResponse.resolved:type_name -> search.v1.ResolveUrnsResponse.ResolvedEntry
+	0,  // 9: search.v1.UrnMetadata.type:type_name -> search.v1.SearchResultType
+	12, // 10: search.v1.UrnMetadata.metadata:type_name -> search.v1.UrnMetadata.MetadataEntry
+	8,  // 11: search.v1.ResolveUrnsResponse.ResolvedEntry.value:type_name -> search.v1.UrnMetadata
+	1,  // 12: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
+	4,  // 13: search.v1.SearchService.GetReferences:input_type -> search.v1.GetReferencesRequest
+	6,  // 14: search.v1.SearchService.ResolveUrns:input_type -> search.v1.ResolveUrnsRequest
+	2,  // 15: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
+	5,  // 16: search.v1.SearchService.GetReferences:output_type -> search.v1.GetReferencesResponse
+	7,  // 17: search.v1.SearchService.ResolveUrns:output_type -> search.v1.ResolveUrnsResponse
+	15, // [15:18] is the sub-list for method output_type
+	12, // [12:15] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_search_v1_search_proto_init() }
@@ -1445,7 +1234,7 @@ func file_search_v1_search_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_search_v1_search_proto_rawDesc), len(file_search_v1_search_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   17,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

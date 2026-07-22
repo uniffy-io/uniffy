@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTreeStateSync } from '@/features/notes/hooks/useTreeStateSync';
 import {
@@ -70,7 +70,46 @@ export function NotesSidebar() {
     const expandedNodes = useAppSelector((state) => state.notesTree.expandedNodes);
     const selectedNodeId = useAppSelector((state) => state.notesTree.selectedNodeId);
     const loading = useAppSelector((state) => state.notesTree.loading);
+    const treeLoaded = useAppSelector((state) => state.notesTree.treeLoaded);
     const creatingNote = useAppSelector((state) => state.notes.creatingNote);
+
+    // Reveal the routed note in the tree (deep link / search result click):
+    // expand its section and ancestor folders, expand the node itself when it
+    // is a folder, and scroll it into view. Runs once per note id.
+    const revealedNoteIdRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!currentNoteId || !treeLoaded) return;
+        if (revealedNoteIdRef.current === currentNoteId) return;
+
+        const findPath = (nodes: TreeNode[], trail: TreeNode[]): TreeNode[] | null => {
+            for (const node of nodes) {
+                if (node.id === currentNoteId) return [...trail, node];
+                if (node.children) {
+                    const found = findPath(node.children, [...trail, node]);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        for (const section of ['personal', 'shared', 'organization'] as const) {
+            const path = findPath(tree[section], []);
+            if (!path) continue;
+            revealedNoteIdRef.current = currentNoteId;
+            dispatch(expandNode(section));
+            for (const node of path) {
+                if (node.type === 'folder') {
+                    dispatch(expandNode(node.id));
+                }
+            }
+            const timer = setTimeout(() => {
+                document
+                    .querySelector(`[data-node-id="${currentNoteId}"]`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [currentNoteId, treeLoaded, tree, dispatch]);
 
     useBookmarks();
     const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);

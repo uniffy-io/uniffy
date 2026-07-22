@@ -16,6 +16,7 @@ interface ChatUiState {
   channelsSectionCollapsed: boolean;
   dmSectionCollapsed: boolean;
   agentChatsSectionCollapsed: boolean;
+  collapsedAgentFolders: Record<string, boolean>;
   agentChatPickerOpen: boolean;
   renameAgentChatChannelId: string | null;
   splitActive: boolean;
@@ -53,6 +54,7 @@ const initialState: ChatUiState = {
   channelsSectionCollapsed: false,
   dmSectionCollapsed: false,
   agentChatsSectionCollapsed: false,
+  collapsedAgentFolders: {},
   agentChatPickerOpen: false,
   renameAgentChatChannelId: null,
   splitActive: false,
@@ -143,6 +145,17 @@ export const chatUiSlice = createSlice({
     },
     toggleAgentChatsSection: (state) => {
       state.agentChatsSectionCollapsed = !state.agentChatsSectionCollapsed;
+    },
+    toggleAgentFolderCollapsed: (state, action: PayloadAction<string>) => {
+      // Rehydrated persisted state from before this key existed lacks the map.
+      if (!state.collapsedAgentFolders) state.collapsedAgentFolders = {};
+      state.collapsedAgentFolders[action.payload] = !state.collapsedAgentFolders[action.payload];
+    },
+    revealAgentFolder: (state, action: PayloadAction<string>) => {
+      // Deep link (search result click): the folder and its section both open.
+      state.agentChatsSectionCollapsed = false;
+      if (!state.collapsedAgentFolders) state.collapsedAgentFolders = {};
+      state.collapsedAgentFolders[action.payload] = false;
     },
     openAgentChatPicker: (state) => {
       state.agentChatPickerOpen = true;
@@ -252,6 +265,8 @@ export const {
   toggleChannelsSection,
   toggleDmSection,
   toggleAgentChatsSection,
+  toggleAgentFolderCollapsed,
+  revealAgentFolder,
   openAgentChatPicker,
   closeAgentChatPicker,
   openRenameAgentChatDialog,

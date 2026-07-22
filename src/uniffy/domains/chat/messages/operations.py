@@ -444,6 +444,11 @@ class ChatMessageOperations:
         if channel.is_encrypted:
             return
 
+        # System messages (joined/left channel, call started/ended, member
+        # added) are UI narration, not content; they only pollute search.
+        if message.sender_type == SenderType.SYSTEM:
+            return
+
         # Mention-only content indexes badly (would surface under the *referenced* item's name).
         from uniffy.core.content.references import (
             is_mention_only_content,

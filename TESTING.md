@@ -386,6 +386,61 @@ Agent DM channel, agents-in-chat enabled (`(both products)`).
 - [ ] Mobile: the sheet lists models, saves a pick, tunes a parameter,
       and clears to default; the next run reflects each change.
 
+## Search
+
+Spotlight (`Ctrl+K`) and the header search against a seeded org with notes,
+files, folders, channels, agent chats, and chat history (`(both products)`).
+
+- [ ] `note: docker compose` returns notes matching "docker compose"; the
+      text after the keyword is searched, not swallowed. Same for
+      `file:`, `folder:`, `message:`, `task:`, `project:`.
+- [ ] `tag:work report` filters by the tag and searches "report";
+      `tag:"multi word"` works quoted. A dangling `tag:` searches as if
+      absent.
+- [ ] `"note: literal"` (quoted) searches the literal text; no note
+      filter chip appears.
+- [ ] Filter chips render for active filters and clicking x on a chip
+      removes only that filter from the query text.
+- [ ] Outside `/chat`, a term matching both a note title and many chat
+      messages ranks the note above the messages (rank weight, no
+      exclusion). `message: <term>` narrows to messages only.
+- [ ] On a `/chat` route, the same query re-ranks: matching users first,
+      then channels, then agent chats, then messages, then other content.
+- [ ] Search a file folder name -> result opens `/files?folder={id}` with
+      the tree expanded to that folder. Search an agent folder name ->
+      `/chat?agentFolder={id}` reveals and expands it in the sidebar.
+      A system folder (Attachments) never appears in results.
+- [ ] Search a notes-tree folder name -> the result badges "Folder" (not
+      "Note") and opens the notes folder screen listing its children;
+      clicking a child navigates to it. A canvas result badges "Canvas".
+- [ ] Search results highlight the matched terms in title and snippet;
+      a long chat message shows a cropped snippet around the match, and
+      message rows do not repeat the same text twice.
+- [ ] Per-route boost: the same ambiguous query ranks files first on
+      `/files`, notes first on `/notes`, events first on `/calendar`,
+      tasks first on `/projects`. An exact-match result from another
+      domain still beats a weak (typo/partial) boosted match.
+- [ ] Open the spotlight without typing: recent DM contacts and the last
+      opened notes/channels/results appear; clicking one navigates.
+      Log in as a different user on the same browser: their zero state
+      is their own (history is keyed per org and user).
+- [ ] Synonyms: searching "call" finds content titled "meeting" and
+      vice versa.
+- [ ] System chat messages (join/leave notices) never appear under
+      `message:`.
+- [ ] Delete a note and a chat channel: neither the note, the channel,
+      nor the channel's messages are searchable afterwards. Delete an
+      agent DM: the agent chat disappears from search too.
+- [ ] Removal durability: stop Meilisearch, delete an indexed note,
+      start Meilisearch again. Within ~5 minutes (removal flush worker)
+      the note is gone from search without any manual action.
+- [ ] Permissions: user B searches for user A's private note title ->
+      no hit. Share it with B -> B finds it without re-indexing. Block B
+      on an `OPEN_TO_ORG` note -> the hit disappears for B.
+- [ ] The retired index RPCs stay dead: POST to
+      `/search.v1.SearchService/IndexItem` and `/DeleteItem` return
+      not-found/unimplemented, never 200.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

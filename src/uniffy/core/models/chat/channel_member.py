@@ -79,3 +79,10 @@ class ChatChannelMember(SQLModel, table=True):
     mobile_enabled: bool | None = Field(default=None)
     badge_all_messages: bool = Field(default=False, nullable=False)
     follow_all_threads: bool = Field(default=False, nullable=False)
+    # Per-user sidebar folder for agent DM chats; NULL = unfiled.
+    agent_folder_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            ForeignKey("chat_agent_folders.id", ondelete="SET NULL"), nullable=True
+        ),
+    )

@@ -25,6 +25,7 @@ service ChatService {
   rpc RemoveMembers(RemoveMembersRequest) returns (RemoveMembersResponse) {}
   rpc GetMembers(GetMembersRequest) returns (GetMembersResponse) {}
   rpc UpdateChannelMember(UpdateChannelMemberRequest) returns (UpdateChannelMemberResponse) {}
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse) {}
 
   // Messages
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
@@ -61,6 +62,10 @@ service ChatService {
   // Channel resources
   rpc GetChannelResources(GetChannelResourcesRequest) returns (GetChannelResourcesResponse) {}
 
+  // Convert a group DM into a PRIVATE channel (owner only); members and
+  // history carry over. Group DMs are capped, channels are not.
+  rpc ConvertGroupDmToChannel(ConvertGroupDmToChannelRequest) returns (ConvertGroupDmToChannelResponse) {}
+
   // Named agent chats - multiple chats per (user, agent) pair, each renamable.
   rpc CreateAgentChat(CreateAgentChatRequest) returns (CreateAgentChatResponse) {}
   rpc RenameAgentChat(RenameAgentChatRequest) returns (RenameAgentChatResponse) {}
@@ -73,6 +78,15 @@ service ChatService {
   rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse) {}
   rpc ReorderCategories(ReorderCategoriesRequest) returns (ReorderCategoriesResponse) {}
   rpc MoveChannelToCategory(MoveChannelToCategoryRequest) returns (MoveChannelToCategoryResponse) {}
+
+  // Agent chat folders - per-user sidebar grouping for agent DM chats.
+  // Unlike categories (org-wide, admin-managed), folders are private to the
+  // requesting user and only apply to their is_agent_dm channels.
+  rpc CreateAgentFolder(CreateAgentFolderRequest) returns (CreateAgentFolderResponse) {}
+  rpc RenameAgentFolder(RenameAgentFolderRequest) returns (RenameAgentFolderResponse) {}
+  rpc DeleteAgentFolder(DeleteAgentFolderRequest) returns (DeleteAgentFolderResponse) {}
+  rpc ListAgentFolders(ListAgentFoldersRequest) returns (ListAgentFoldersResponse) {}
+  rpc SetAgentChatFolder(SetAgentChatFolderRequest) returns (SetAgentChatFolderResponse) {}
 
   // Respond to a destructive-tool confirmation request raised by an agent
   // running inside a chat channel. The chat layer is the front door; it
@@ -206,6 +220,9 @@ message ChatChannel {
   // Only meaningful for non-DM channels (PUBLIC / PRIVATE); DM channels
   // do not carry tags.
   repeated tags.v1.Tag tags = 36;
+  // The requesting user's agent-chat folder holding this channel. Per-user
+  // (from the member row), only set on is_agent_dm channels.
+  optional string agent_folder_id = 37;
 }
 
 // ThreadInfo holds thread metadata embedded in root messages.
@@ -489,6 +506,18 @@ message UpdateChannelMemberRequest {
 }
 
 message UpdateChannelMemberResponse {
+  ChatChannelMember member = 1;
+}
+
+message UpdateMemberRoleRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Target user. Role changes apply to USER members only; agents stay MEMBER.
+  string user_id = 3;
+  ChannelRole role = 4;
+}
+
+message UpdateMemberRoleResponse {
   ChatChannelMember member = 1;
 }
 
@@ -872,6 +901,68 @@ message MoveChannelToCategoryRequest {
 message MoveChannelToCategoryResponse {
   ChatChannel channel = 1;
 }
+
+message ConvertGroupDmToChannelRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  string name = 3;
+  // PUBLIC or PRIVATE; unspecified defaults to PRIVATE.
+  ChannelType channel_type = 4;
+}
+
+message ConvertGroupDmToChannelResponse {
+  ChatChannel channel = 1;
+}
+
+// AgentChatFolder is a per-user sidebar folder for organizing agent DM chats.
+message AgentChatFolder {
+  string id = 1;
+  string name = 2;
+  int32 position = 3;
+}
+
+message CreateAgentFolderRequest {
+  string organization_id = 1;
+  string name = 2;
+}
+
+message CreateAgentFolderResponse {
+  AgentChatFolder folder = 1;
+}
+
+message RenameAgentFolderRequest {
+  string organization_id = 1;
+  string folder_id = 2;
+  string name = 3;
+}
+
+message RenameAgentFolderResponse {
+  AgentChatFolder folder = 1;
+}
+
+message DeleteAgentFolderRequest {
+  string organization_id = 1;
+  string folder_id = 2;
+}
+
+message DeleteAgentFolderResponse {}
+
+message ListAgentFoldersRequest {
+  string organization_id = 1;
+}
+
+message ListAgentFoldersResponse {
+  repeated AgentChatFolder folders = 1;
+}
+
+message SetAgentChatFolderRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // Omit to move the chat back to the unfiled root of the Agent Chats section.
+  optional string folder_id = 3;
+}
+
+message SetAgentChatFolderResponse {}
 
 // AgentConfirmationDecision is the user's response to a destructive-tool
 // confirmation request raised by an agent.

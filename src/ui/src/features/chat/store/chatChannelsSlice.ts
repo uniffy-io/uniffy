@@ -1,5 +1,5 @@
 import { createSlice, createSelector, type PayloadAction } from '@reduxjs/toolkit';
-import type { ChatChannel, ChatChannelMember, ChatChannelCategory, ChannelPreferences } from '@/features/chat/types';
+import type { ChatChannel, ChatChannelMember, ChatChannelCategory, ChatAgentFolder, ChannelPreferences } from '@/features/chat/types';
 import type { RootState } from '@/app/store';
 
 // Channels are normalized (byId + ids) so per-channel mutations - unread
@@ -13,6 +13,7 @@ interface ChatChannelsState {
   channelMembers: Record<string, ChatChannelMember[]>;
   channelPreferences: Record<string, ChannelPreferences>;
   categories: ChatChannelCategory[];
+  agentFolders: ChatAgentFolder[];
   isLoading: boolean;
 }
 
@@ -24,6 +25,7 @@ const initialState: ChatChannelsState = {
   channelMembers: {},
   channelPreferences: {},
   categories: [],
+  agentFolders: [],
   isLoading: false,
 };
 
@@ -41,10 +43,16 @@ export const chatChannelsSlice = createSlice({
     },
     addChannel: (state, action: PayloadAction<ChatChannel>) => {
       // Idempotent: backend dedups DMs and may return an id we already hold.
-      if (!state.byId[action.payload.id]) {
+      const existing = state.byId[action.payload.id];
+      if (!existing) {
         state.ids.push(action.payload.id);
       }
-      state.byId[action.payload.id] = action.payload;
+      // Only ListChannels populates the per-user folder id; a single-channel
+      // fetch or stream payload carrying null must not unfile the chat.
+      state.byId[action.payload.id] = {
+        ...action.payload,
+        agentFolderId: action.payload.agentFolderId ?? existing?.agentFolderId ?? null,
+      };
     },
     removeChannel: (state, action: PayloadAction<string>) => {
       if (state.byId[action.payload]) {
@@ -56,8 +64,12 @@ export const chatChannelsSlice = createSlice({
       state.activeChannelId = action.payload;
     },
     updateChannel: (state, action: PayloadAction<ChatChannel>) => {
-      if (state.byId[action.payload.id]) {
-        state.byId[action.payload.id] = action.payload;
+      const existing = state.byId[action.payload.id];
+      if (existing) {
+        state.byId[action.payload.id] = {
+          ...action.payload,
+          agentFolderId: action.payload.agentFolderId ?? existing.agentFolderId ?? null,
+        };
       }
     },
     updateUnreadCounts: (
@@ -110,8 +122,49 @@ export const chatChannelsSlice = createSlice({
         channel.memberCount = action.payload.members.length;
       }
     },
+    setMemberRole: (
+      state,
+      action: PayloadAction<{ channelId: string; userId: string; role: ChatChannelMember['role'] }>,
+    ) => {
+      const members = state.channelMembers[action.payload.channelId];
+      const member = members?.find(
+        (m) => m.subjectType === 'USER' && m.userId === action.payload.userId,
+      );
+      if (member) {
+        member.role = action.payload.role;
+      }
+    },
     setCategories: (state, action: PayloadAction<ChatChannelCategory[]>) => {
       state.categories = action.payload;
+    },
+    setAgentFolders: (state, action: PayloadAction<ChatAgentFolder[]>) => {
+      state.agentFolders = action.payload;
+    },
+    upsertAgentFolder: (state, action: PayloadAction<ChatAgentFolder>) => {
+      const index = state.agentFolders.findIndex((f) => f.id === action.payload.id);
+      if (index >= 0) {
+        state.agentFolders[index] = action.payload;
+      } else {
+        state.agentFolders.push(action.payload);
+      }
+    },
+    removeAgentFolder: (state, action: PayloadAction<string>) => {
+      state.agentFolders = state.agentFolders.filter((f) => f.id !== action.payload);
+      for (const id of state.ids) {
+        const channel = state.byId[id];
+        if (channel?.agentFolderId === action.payload) {
+          channel.agentFolderId = null;
+        }
+      }
+    },
+    setChannelAgentFolder: (
+      state,
+      action: PayloadAction<{ channelId: string; folderId: string | null }>,
+    ) => {
+      const channel = state.byId[action.payload.channelId];
+      if (channel) {
+        channel.agentFolderId = action.payload.folderId;
+      }
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
@@ -161,9 +214,14 @@ export const {
   incrementUnreadCount,
   touchChannelActivity,
   setChannelMembers,
+  setMemberRole,
   setChannelPreferences,
   updateChannelPreference,
   setCategories,
+  setAgentFolders,
+  upsertAgentFolder,
+  removeAgentFolder,
+  setChannelAgentFolder,
   setLoading,
   setSplitChannel,
   clearSplitChannel,
@@ -228,6 +286,9 @@ export const selectChannelMembers = (
 
 export const selectCategories = (state: RootState): ChatChannelCategory[] =>
   state.chatChannels.categories;
+
+export const selectAgentFolders = (state: RootState): ChatAgentFolder[] =>
+  state.chatChannels.agentFolders;
 
 export const selectIsLoading = (state: RootState): boolean =>
   state.chatChannels.isLoading;

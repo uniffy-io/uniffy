@@ -20,8 +20,6 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	SearchService_Search_FullMethodName        = "/search.v1.SearchService/Search"
-	SearchService_IndexItem_FullMethodName     = "/search.v1.SearchService/IndexItem"
-	SearchService_DeleteItem_FullMethodName    = "/search.v1.SearchService/DeleteItem"
 	SearchService_GetReferences_FullMethodName = "/search.v1.SearchService/GetReferences"
 	SearchService_ResolveUrns_FullMethodName   = "/search.v1.SearchService/ResolveUrns"
 )
@@ -30,14 +28,12 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// The unified search service handling global search and indexing
+// The unified search service handling global search and URN resolution.
+// Index writes happen server-side in domain operations; there is no
+// client-facing indexing RPC.
 type SearchServiceClient interface {
 	// Perform a global search across all entities (Spotlight-like)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
-	// Index an item (Internal use, or called by other services)
-	IndexItem(ctx context.Context, in *IndexItemRequest, opts ...grpc.CallOption) (*IndexItemResponse, error)
-	// Remove an item from the index
-	DeleteItem(ctx context.Context, in *DeleteItemRequest, opts ...grpc.CallOption) (*DeleteItemResponse, error)
 	// Get all content that references a specific URN (universal backlinks)
 	GetReferences(ctx context.Context, in *GetReferencesRequest, opts ...grpc.CallOption) (*GetReferencesResponse, error)
 	// Resolve metadata for a batch of URNs
@@ -56,26 +52,6 @@ func (c *searchServiceClient) Search(ctx context.Context, in *SearchRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SearchResponse)
 	err := c.cc.Invoke(ctx, SearchService_Search_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *searchServiceClient) IndexItem(ctx context.Context, in *IndexItemRequest, opts ...grpc.CallOption) (*IndexItemResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(IndexItemResponse)
-	err := c.cc.Invoke(ctx, SearchService_IndexItem_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *searchServiceClient) DeleteItem(ctx context.Context, in *DeleteItemRequest, opts ...grpc.CallOption) (*DeleteItemResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteItemResponse)
-	err := c.cc.Invoke(ctx, SearchService_DeleteItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +82,12 @@ func (c *searchServiceClient) ResolveUrns(ctx context.Context, in *ResolveUrnsRe
 // All implementations must embed UnimplementedSearchServiceServer
 // for forward compatibility.
 //
-// The unified search service handling global search and indexing
+// The unified search service handling global search and URN resolution.
+// Index writes happen server-side in domain operations; there is no
+// client-facing indexing RPC.
 type SearchServiceServer interface {
 	// Perform a global search across all entities (Spotlight-like)
 	Search(context.Context, *SearchRequest) (*SearchResponse, error)
-	// Index an item (Internal use, or called by other services)
-	IndexItem(context.Context, *IndexItemRequest) (*IndexItemResponse, error)
-	// Remove an item from the index
-	DeleteItem(context.Context, *DeleteItemRequest) (*DeleteItemResponse, error)
 	// Get all content that references a specific URN (universal backlinks)
 	GetReferences(context.Context, *GetReferencesRequest) (*GetReferencesResponse, error)
 	// Resolve metadata for a batch of URNs
@@ -130,12 +104,6 @@ type UnimplementedSearchServiceServer struct{}
 
 func (UnimplementedSearchServiceServer) Search(context.Context, *SearchRequest) (*SearchResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Search not implemented")
-}
-func (UnimplementedSearchServiceServer) IndexItem(context.Context, *IndexItemRequest) (*IndexItemResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method IndexItem not implemented")
-}
-func (UnimplementedSearchServiceServer) DeleteItem(context.Context, *DeleteItemRequest) (*DeleteItemResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteItem not implemented")
 }
 func (UnimplementedSearchServiceServer) GetReferences(context.Context, *GetReferencesRequest) (*GetReferencesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetReferences not implemented")
@@ -178,42 +146,6 @@ func _SearchService_Search_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SearchServiceServer).Search(ctx, req.(*SearchRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SearchService_IndexItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IndexItemRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SearchServiceServer).IndexItem(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SearchService_IndexItem_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SearchServiceServer).IndexItem(ctx, req.(*IndexItemRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SearchService_DeleteItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteItemRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SearchServiceServer).DeleteItem(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SearchService_DeleteItem_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SearchServiceServer).DeleteItem(ctx, req.(*DeleteItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -264,14 +196,6 @@ var SearchService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Search",
 			Handler:    _SearchService_Search_Handler,
-		},
-		{
-			MethodName: "IndexItem",
-			Handler:    _SearchService_IndexItem_Handler,
-		},
-		{
-			MethodName: "DeleteItem",
-			Handler:    _SearchService_DeleteItem_Handler,
 		},
 		{
 			MethodName: "GetReferences",

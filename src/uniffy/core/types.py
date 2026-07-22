@@ -59,6 +59,7 @@ class ContentType(str, Enum):
     AGENT_CRON_TASK = "AGENT_CRON_TASK"
     CHAT = "CHAT"
     AGENT_CHAT = "AGENT_CHAT"
+    AGENT_FOLDER = "AGENT_FOLDER"
     ROOM = "ROOM"
     TAG = "TAG"
 

@@ -1,4 +1,13 @@
-/** Parses `keyword:value` filters into structured search filters. */
+/**
+ * Parses keyword filters out of a search query.
+ *
+ * Type keywords (`note:`, `file:`, `message:`, ...) and `my:` are bare
+ * prefixes: they only toggle a filter and the text after them stays in the
+ * free-text query. Only `tag:` / `owner:` / `type:` consume a value
+ * (`tag:work`, `tag:"project alpha"`). Standalone quoted phrases are left
+ * in the residual text so Meilisearch enforces the exact match.
+ * Mirrors the backend parser in domains/search/parser.py - keep in sync.
+ */
 
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 
@@ -23,6 +32,12 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'notes': SearchResultType.NOTE,
     'file': SearchResultType.FILE,
     'files': SearchResultType.FILE,
+    'folder': SearchResultType.FOLDER,
+    'folders': SearchResultType.FOLDER,
+    'agentfolder': SearchResultType.AGENT_FOLDER,
+    'agentfolders': SearchResultType.AGENT_FOLDER,
+    'agent-folder': SearchResultType.AGENT_FOLDER,
+    'agent-folders': SearchResultType.AGENT_FOLDER,
     'user': SearchResultType.USER,
     'users': SearchResultType.USER,
     'calendar': SearchResultType.CALENDAR_EVENT,
@@ -52,43 +67,24 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'tagentities': SearchResultType.TAG,
 };
 
-/** `type:tag` meta-prefix (filters results to a specific entity type). */
-const TYPE_META_MAP: Record<string, SearchResultType> = {
-    'tag': SearchResultType.TAG,
-    'note': SearchResultType.NOTE,
-    'file': SearchResultType.FILE,
-    'user': SearchResultType.USER,
-    'event': SearchResultType.CALENDAR_EVENT,
-    'calendar': SearchResultType.CALENDAR_EVENT,
-    'project': SearchResultType.PROJECT,
-    'task': SearchResultType.TASK,
-    'agent': SearchResultType.AGENT,
-    'chat': SearchResultType.CHAT,
-    'message': SearchResultType.CHAT_MESSAGE,
-    'prompt': SearchResultType.PROMPT,
-    'room': SearchResultType.ROOM,
-};
+/** Longest-first so `agent-chats:` wins over `agent:`. */
+const BARE_PREFIXES = [...Object.keys(TYPE_KEYWORD_MAP), 'my']
+    .sort((a, b) => b.length - a.length);
 
-/** Recognized filter prefixes - shorthands (`notes`, `tagentities`, `msg`) feed into TYPE_KEYWORD_MAP. */
-const FILTER_PREFIXES = [
-    'note', 'notes', 'file', 'files', 'user', 'users',
-    'calendar', 'event', 'events', 'chat', 'chats',
-    'agentchat', 'agentchats', 'agent-chat', 'agent-chats',
-    'chatmessage', 'message', 'msg',
-    'project', 'projects', 'task', 'tasks',
-    'agent', 'agents',
-    'prompt', 'prompts',
-    'room', 'rooms',
-    'tagentity', 'tagentities',
-    'type',
-    'tag',
-    'my', 'owner',
-];
+/** Bare prefixes consume only the `keyword:` token itself. */
+const BARE_FILTER_PATTERN = new RegExp(`\\b(${BARE_PREFIXES.join('|')}):`, 'gi');
 
-const FILTER_PATTERN = new RegExp(
-    `\\b(${FILTER_PREFIXES.join('|')}):\\s*(?:"([^"]+)"|([^\\s"]+))`,
-    'gi'
-);
+/**
+ * Value keywords consume `keyword:value` or `keyword:"quoted value"`; a
+ * dangling `keyword:` with no value is stripped without adding a filter.
+ */
+const VALUE_FILTER_PATTERN = /\b(tag|owner|type):\s*(?:"([^"]+)"|([^\s"]+))?/gi;
+
+/**
+ * Standalone quoted phrases (quote not glued to a `keyword:`); protected
+ * from filter extraction so `"note: literal"` stays literal search text.
+ */
+const QUOTED_SEGMENT_SPLIT = /((?<!:)"[^"]*")/;
 
 /** Standalone quoted phrases; negative lookbehind skips filter values like `tag:"value"`. */
 const PHRASE_PATTERN = /(?<![a-z]:)"([^"]+)"/gi;
@@ -107,72 +103,48 @@ export function parseSearchQuery(query: string): ParsedQuery {
         return { text: '', filters, rawQuery: query };
     }
 
-    let remainingText = query;
-    const extractedFilters: Array<{ match: string; keyword: string; value: string }> = [];
-
-    let match: RegExpExecArray | null;
-    FILTER_PATTERN.lastIndex = 0;
-
-    while ((match = FILTER_PATTERN.exec(query)) !== null) {
-        const [fullMatch, keyword, quotedValue, unquotedValue] = match;
-        const value = (quotedValue || unquotedValue || '').trim();
-
-        if (value) {
-            extractedFilters.push({
-                match: fullMatch,
-                keyword: keyword.toLowerCase(),
-                value,
-            });
+    const addTypeFilter = (keyword: string) => {
+        const resultType = TYPE_KEYWORD_MAP[keyword];
+        if (resultType !== undefined && !filters.types.includes(resultType)) {
+            filters.types.push(resultType);
         }
+    };
+
+    const pieces = query.split(QUOTED_SEGMENT_SPLIT);
+    for (let i = 0; i < pieces.length; i++) {
+        if (i % 2 === 1) continue;
+
+        let piece = pieces[i].replace(
+            VALUE_FILTER_PATTERN,
+            (_match, keyword: string, quotedValue?: string, unquotedValue?: string) => {
+                const value = (quotedValue || unquotedValue || '').trim();
+                if (!value) return ' ';
+                const kw = keyword.toLowerCase();
+                if (kw === 'tag') {
+                    if (!filters.tags.includes(value)) filters.tags.push(value);
+                } else if (kw === 'owner') {
+                    filters.owner = value;
+                } else if (kw === 'type') {
+                    addTypeFilter(value.toLowerCase());
+                }
+                return ' ';
+            },
+        );
+
+        piece = piece.replace(BARE_FILTER_PATTERN, (_match, keyword: string) => {
+            const kw = keyword.toLowerCase();
+            if (kw === 'my') {
+                filters.myContentOnly = true;
+            } else {
+                addTypeFilter(kw);
+            }
+            return ' ';
+        });
+
+        pieces[i] = piece;
     }
 
-    for (const { match, keyword, value } of extractedFilters) {
-        remainingText = remainingText.replace(match, ' ');
-
-        if (keyword in TYPE_KEYWORD_MAP) {
-            const resultType = TYPE_KEYWORD_MAP[keyword];
-            if (!filters.types.includes(resultType)) {
-                filters.types.push(resultType);
-            }
-            continue;
-        }
-
-        if (keyword === 'type') {
-            const meta = TYPE_META_MAP[value.toLowerCase()];
-            if (meta !== undefined && !filters.types.includes(meta)) {
-                filters.types.push(meta);
-            }
-            continue;
-        }
-
-        if (keyword === 'tag') {
-            if (!filters.tags.includes(value)) {
-                filters.tags.push(value);
-            }
-            continue;
-        }
-
-        if (keyword === 'project') {
-            if (!filters.projects.includes(value)) {
-                filters.projects.push(value);
-            }
-            continue;
-        }
-
-        if (keyword === 'my') {
-            filters.myContentOnly = true;
-            continue;
-        }
-
-        if (keyword === 'owner') {
-            filters.owner = value;
-            continue;
-        }
-    }
-
-    remainingText = remainingText
-        .replace(/\s+/g, ' ')
-        .trim();
+    const remainingText = pieces.join('').replace(/\s+/g, ' ').trim();
 
     // Quotes stay in remainingText so Meilisearch enforces the phrase match.
     PHRASE_PATTERN.lastIndex = 0;
@@ -208,12 +180,20 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Notes';
         case SearchResultType.FILE:
             return 'Files';
+        case SearchResultType.FOLDER:
+            return 'Folders';
+        case SearchResultType.AGENT_FOLDER:
+            return 'Agent Chat Folders';
         case SearchResultType.USER:
             return 'Users';
         case SearchResultType.CALENDAR_EVENT:
             return 'Events';
         case SearchResultType.CHAT:
             return 'Chats';
+        case SearchResultType.AGENT_CHAT:
+            return 'Agent Chats';
+        case SearchResultType.CHAT_MESSAGE:
+            return 'Messages';
         case SearchResultType.PROJECT:
             return 'Projects';
         case SearchResultType.TASK:
@@ -222,6 +202,8 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Agents';
         case SearchResultType.PROMPT:
             return 'Prompts';
+        case SearchResultType.ROOM:
+            return 'Rooms';
         case SearchResultType.TAG:
             return 'Tags';
         default:
@@ -235,6 +217,10 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'note';
         case SearchResultType.FILE:
             return 'file';
+        case SearchResultType.FOLDER:
+            return 'folder';
+        case SearchResultType.AGENT_FOLDER:
+            return 'agentfolder';
         case SearchResultType.USER:
             return 'user';
         case SearchResultType.CALENDAR_EVENT:
@@ -243,6 +229,8 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'chat';
         case SearchResultType.AGENT_CHAT:
             return 'agentchat';
+        case SearchResultType.CHAT_MESSAGE:
+            return 'message';
         case SearchResultType.PROJECT:
             return 'project';
         case SearchResultType.TASK:
@@ -251,6 +239,8 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'agent';
         case SearchResultType.PROMPT:
             return 'prompt';
+        case SearchResultType.ROOM:
+            return 'room';
         case SearchResultType.TAG:
             return 'tagentity';
         default:
@@ -259,11 +249,18 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
 }
 
 export function removeTypeFilterFromQuery(query: string, type: SearchResultType): string {
-    const keyword = getTypeFilterKeyword(type);
-    if (!keyword) return query;
+    const aliases = Object.keys(TYPE_KEYWORD_MAP)
+        .filter((k) => TYPE_KEYWORD_MAP[k] === type)
+        .sort((a, b) => b.length - a.length);
+    if (aliases.length === 0) return query;
 
-    const pattern = new RegExp(`\\b${keyword}s?:\\s*(?:"[^"]*"|[^\\s]*)\\s*`, 'gi');
-    return query.replace(pattern, '').replace(/\s+/g, ' ').trim();
+    // Both the bare `note:` form and the `type:note` form.
+    const alternation = aliases.join('|');
+    const pattern = new RegExp(
+        `\\b(?:type:\\s*(?:${alternation})\\b|(?:${alternation}):)\\s*`,
+        'gi'
+    );
+    return query.replace(pattern, ' ').replace(/\s+/g, ' ').trim();
 }
 
 export function removeTagFilterFromQuery(query: string, tag: string): string {
@@ -279,8 +276,7 @@ export function removeProjectFilterFromQuery(query: string, project: string): st
 }
 
 export function removeMyFilterFromQuery(query: string): string {
-    const pattern = /\bmy:\s*(?:"[^"]*"|[^\s]*)\s*/gi;
-    return query.replace(pattern, '').replace(/\s+/g, ' ').trim();
+    return query.replace(/\bmy:\s*/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
 export function removePhraseFromQuery(query: string, phrase: string): string {
@@ -293,8 +289,10 @@ export const FILTER_HINTS = [
     { prefix: '"..."', description: 'Exact phrase match', example: '"docker --platform"' },
     { prefix: 'note:', description: 'Search notes', example: 'note: meeting' },
     { prefix: 'file:', description: 'Search files', example: 'file: report' },
+    { prefix: 'folder:', description: 'Search folders', example: 'folder: invoices' },
     { prefix: 'user:', description: 'Search users', example: 'user: john' },
     { prefix: 'calendar:', description: 'Search events', example: 'calendar: standup' },
+    { prefix: 'message:', description: 'Search chat messages', example: 'message: deploy' },
     { prefix: 'tag:', description: 'Filter by tag', example: 'tag:work' },
     { prefix: 'my:', description: 'My content only', example: 'my: drafts' },
 ] as const;
