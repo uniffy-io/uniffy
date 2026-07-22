@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { useShortcutHandler } from '@/features/settings';
@@ -14,6 +14,8 @@ import { ResourcePanel } from '@/features/chat/components/channel/ResourcePanel'
 import { ThreadsInbox } from '@/features/chat/components/thread/ThreadsInbox';
 import { UnreadsView } from '@/features/chat/components/unreads/UnreadsView';
 import { setActiveChannel } from '@/features/chat/store/chatChannelsSlice';
+import { recordRecentItem } from '@/features/search/utils/recentItems';
+import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import {
   toggleSidebar,
   collapseSidebar,
@@ -30,23 +32,58 @@ import { CreateCategoryModal } from '@/features/chat/components/modals/CreateCat
 import { BrowseChannelsModal } from '@/features/chat/components/modals/BrowseChannelsModal';
 import { NewDmModal } from '@/features/chat/components/modals/NewDmModal';
 import { ChannelSettingsModal } from '@/features/chat/components/modals/ChannelSettingsModal';
+import { DmMembersModal } from '@/features/chat/components/modals/DmMembersModal';
 import { AgentChatPickerModal } from '@/features/chat/components/modals/AgentChatPickerModal';
 import { RenameAgentChatDialog } from '@/features/chat/components/modals/RenameAgentChatDialog';
 import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
+import { saveLastOpenedChannel, clearLastOpenedChannel } from '@/features/chat/utils/lastOpenedChannel';
 import '@/features/chat/styles/chat.css';
 
 export function ChatPage() {
   const dispatch = useAppDispatch();
   const { channelId } = useParams<{ channelId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const initializedRef = useRef(false);
   const { isMobile } = useBreakpoint();
+
+  const fromLastOpened = Boolean((location.state as { fromLastOpened?: boolean } | null)?.fromLastOpened);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const userId = useAppSelector((state) => state.auth.user?.id);
+  const channelInStore = useAppSelector((state) => (channelId ? !!state.chatChannels.byId[channelId] : false));
+  const channelsLoaded = useAppSelector((state) => state.chatChannels.ids.length > 0);
+
+  useEffect(() => {
+    if (channelId && channelInStore && organizationId && userId) {
+      saveLastOpenedChannel(organizationId, userId, channelId);
+    }
+  }, [channelId, channelInStore, organizationId, userId]);
+
+  // A stale last-opened pointer (deleted chat, lost membership) must not trap
+  // /chat in a dead redirect; deep links stay untouched and just 404 naturally.
+  useEffect(() => {
+    if (fromLastOpened && channelId && channelsLoaded && !channelInStore && organizationId && userId) {
+      clearLastOpenedChannel(organizationId, userId);
+      navigate('/chat', { replace: true });
+    }
+  }, [fromLastOpened, channelId, channelsLoaded, channelInStore, organizationId, userId, navigate]);
 
   const activeChannel = useAppSelector((state) =>
     state.chatChannels.activeChannelId
       ? state.chatChannels.byId[state.chatChannels.activeChannelId]
       : undefined,
   );
+  useEffect(() => {
+    if (!organizationId || !userId || !activeChannel) return;
+    recordRecentItem(organizationId, userId, {
+      urn: `urn:uniffy:content:${activeChannel.isAgentDm ? 'AGENT_CHAT' : 'CHAT'}:${activeChannel.id}`,
+      title: getChannelDisplayName(activeChannel),
+      type: activeChannel.isAgentDm ? SearchResultType.AGENT_CHAT : SearchResultType.CHAT,
+      url: `/chat/${activeChannel.id}`,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- record once per channel visit, not on every unread/activity mutation of the row
+  }, [organizationId, userId, activeChannel?.id]);
+
   const threadPanelOpen = useAppSelector((state) => state.chatUi.threadPanelOpen);
   const resourcePanelOpen = useAppSelector((state) => state.chatUi.resourcePanelOpen);
   const activeThreadId = useAppSelector((state) => state.chatThreads.activeThreadId);
@@ -178,7 +215,11 @@ export function ChatPage() {
       {createCategoryOpen && <CreateCategoryModal />}
       {browseChannelsOpen && <BrowseChannelsModal />}
       {newDmOpen && <NewDmModal />}
-      {channelSettingsOpen && <ChannelSettingsModal />}
+      {channelSettingsOpen && (
+        activeChannel?.channelType === 'DIRECT' || activeChannel?.channelType === 'GROUP_DM'
+          ? <DmMembersModal />
+          : <ChannelSettingsModal />
+      )}
       {agentChatPickerOpen && <AgentChatPickerModal />}
       {renameAgentChatChannelId && <RenameAgentChatDialog />}
     </>

@@ -26,6 +26,7 @@ import { AccessPolicyDialogProvider, AccessPolicyDialog } from '@/features/permi
 import { MentionStateProvider } from '@/components/mention';
 import { lazyImport } from '@/shared/utils/lazyImport';
 import { loadLastOpenedNote } from '@/features/notes/utils/lastOpenedNote';
+import { loadLastOpenedChannel } from '@/features/chat/utils/lastOpenedChannel';
 
 // Expose toast on window in dev mode for testing
 if (import.meta.env.DEV) {
@@ -207,6 +208,22 @@ function NotesIndexRedirect() {
         return <Navigate to={`/notes/${lastNoteId}`} replace state={{ fromLastOpened: true }} />;
     }
     return <Navigate to="/notes/graph" replace />;
+}
+
+/**
+ * ChatIndexRedirect - Sends bare /chat to the user's last opened channel.
+ * Deep links (/chat/:channelId) and the unreads/threads views bypass this,
+ * so notification links always land on their target.
+ */
+function ChatIndexRedirect() {
+    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+    const userId = useAppSelector((state) => state.auth.user?.id);
+
+    const lastChannelId = organizationId && userId ? loadLastOpenedChannel(organizationId, userId) : null;
+    if (lastChannelId) {
+        return <Navigate to={`/chat/${lastChannelId}`} replace state={{ fromLastOpened: true }} />;
+    }
+    return <LazyRoute><ChatPage /></LazyRoute>;
 }
 
 export function App() {
@@ -527,7 +544,7 @@ export function App() {
                             path="/chat"
                             element={
                                 <ProtectedRoute>
-                                    <LazyRoute><ChatPage /></LazyRoute>
+                                    <ChatIndexRedirect />
                                 </ProtectedRoute>
                             }
                         />
