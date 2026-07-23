@@ -1,12 +1,11 @@
 """Generate JPEG thumbnails for images, PDFs, and videos; upload to S3."""
 
+import contextlib
 import io
-import subprocess
-import tempfile
-from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+import av
 import fitz  # PyMuPDF
 from loguru import logger
 from PIL import Image, ImageOps
@@ -224,7 +223,7 @@ async def generate_video_thumbnail(
     file_id: str,
     organization_id: str,
 ) -> dict[str, Any]:
-    """Extract a video frame via ffmpeg and upload it as a JPEG thumbnail."""
+    """Decode a video frame in-process and upload it as a JPEG thumbnail."""
     log = logger.bind(task="thumbnail", kind="video", file_id=file_id)
     log.info("Started")
 
@@ -365,76 +364,37 @@ def _create_pdf_thumbnail(pdf_bytes: bytes) -> tuple[bytes, int, int]:
         doc.close()
 
 
+def _first_video_frame(
+    container: av.container.InputContainer,
+    stream: av.video.stream.VideoStream,
+) -> Image.Image | None:
+    for frame in container.decode(stream):
+        return frame.to_image()
+    return None
+
+
 def _create_video_thumbnail(video_bytes: bytes) -> tuple[bytes, int, int]:
-    """Extract a video frame via ffmpeg and encode it as a JPEG thumbnail."""
-    # ffmpeg seeking requires a real file, not a stream.
-    with tempfile.NamedTemporaryFile(suffix=".video", delete=True) as video_file:
-        video_file.write(video_bytes)
-        video_file.flush()
-        video_path = Path(video_file.name)
+    """Decode a representative frame in-process (PyAV) and encode it as a JPEG thumbnail."""
+    with av.open(io.BytesIO(video_bytes)) as container:
+        stream = container.streams.video[0]
+        stream.thread_type = "AUTO"
+        # Seek ~1s in for a representative frame; short clips rewind to the first frame.
+        with contextlib.suppress(av.FFmpegError):
+            container.seek(1_000_000, backward=True)
+        image = _first_video_frame(container, stream)
+        if image is None:
+            container.seek(0, backward=True)
+            image = _first_video_frame(container, stream)
 
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=True) as output_file:
-            output_path = Path(output_file.name)
+    if image is None:
+        raise RuntimeError("ffmpeg: no decodable video frame")
 
-            cmd = [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(video_path),
-                "-ss",
-                "1",
-                "-vframes",
-                "1",
-                "-vf",
-                f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
-                ":force_original_aspect_ratio=decrease",
-                "-q:v",
-                "2",
-                str(output_path),
-            ]
+    if image.mode != "RGB":
+        image = image.convert("RGB")
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                timeout=30,
-            )
+    image.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)
+    width, height = image.size
 
-            if result.returncode != 0:
-                # Seek failed (video shorter than 1s); fall back to the first frame.
-                cmd_first_frame = [
-                    "ffmpeg",
-                    "-y",
-                    "-i",
-                    str(video_path),
-                    "-vframes",
-                    "1",
-                    "-vf",
-                    f"scale='min({THUMB_MAX_SIZE[0]},iw)':min'({THUMB_MAX_SIZE[1]},ih)'"
-                    ":force_original_aspect_ratio=decrease",
-                    "-q:v",
-                    "2",
-                    str(output_path),
-                ]
-                result = subprocess.run(
-                    cmd_first_frame,
-                    capture_output=True,
-                    timeout=30,
-                )
-
-                if result.returncode != 0:
-                    error_msg = result.stderr.decode("utf-8", errors="replace")
-                    raise RuntimeError(f"ffmpeg failed: {error_msg[:500]}")
-
-            frame_bytes = output_path.read_bytes()
-
-            with Image.open(io.BytesIO(frame_bytes)) as img:
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-
-                img.thumbnail(THUMB_MAX_SIZE, Image.Resampling.LANCZOS)
-
-                width, height = img.size
-
-                buffer = io.BytesIO()
-                img.save(buffer, format=THUMB_FORMAT, quality=THUMB_QUALITY, optimize=True)
-                return buffer.getvalue(), width, height
+    buffer = io.BytesIO()
+    image.save(buffer, format=THUMB_FORMAT, quality=THUMB_QUALITY, optimize=True)
+    return buffer.getvalue(), width, height
