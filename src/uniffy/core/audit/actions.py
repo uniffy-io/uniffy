@@ -137,6 +137,7 @@ class Action:
     FILE_PERMANENTLY_DELETED = "file.permanently_deleted"
     FILE_MOVED = "file.moved"
     FILE_UPLOADED = "file.uploaded"  # behind feature flag, default off
+    FILE_VERSION_RESTORED = "file.version_restored"
 
     # Calendar
     CALENDAR_EVENT_DELETED = "calendar_event.deleted"
