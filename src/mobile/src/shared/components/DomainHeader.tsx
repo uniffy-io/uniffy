@@ -83,7 +83,7 @@ export function DomainHeader({
           { borderColor: glassBorder },
           // A leading avatar/icon nests concentrically in the pill's rounded
           // corner when its left gap matches its vertical inset.
-          (leading || IconComponent) && { paddingLeft: 4 },
+          Boolean(leading || IconComponent) && { paddingLeft: 4 },
         ]}
       >
         <GlassSurface

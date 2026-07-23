@@ -457,6 +457,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         speakerOn: sessionRef.current.speakerOn || media.camera,
         secondDeviceMuted,
         connectedAtMs: Date.now(),
+        cameraFacing: "user",
       });
       scheduleMediaReport();
     },

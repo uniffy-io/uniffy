@@ -49,7 +49,7 @@ export function ChatComposer({
   attachments = [],
   onRemoveAttachment,
 }: {
-  T: ThemeColors;
+  T: ThemeColors & { isDark: boolean };
   inputRef?: React.RefObject<TextInput | null>;
   draft: string;
   onChangeDraft: (text: string) => void;
