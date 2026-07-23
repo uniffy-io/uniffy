@@ -36,5 +36,5 @@ export async function buildWatermarkedPdf(
     }
 
     const bytes = await doc.save();
-    return new Blob([bytes], { type: 'application/pdf' });
+    return new Blob([new Uint8Array(bytes)], { type: 'application/pdf' });
 }

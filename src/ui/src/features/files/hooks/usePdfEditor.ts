@@ -142,7 +142,7 @@ export function usePdfEditor({ fileId, organizationId, filename }: UsePdfEditorO
                 output.addPage(page);
             });
             const bytes = await output.save();
-            return new Blob([bytes], { type: 'application/pdf' });
+            return new Blob([new Uint8Array(bytes)], { type: 'application/pdf' });
         },
         [sourceBlob]
     );
