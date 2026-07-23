@@ -150,6 +150,7 @@ export function ChatConversationScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const barSpace = bottomBarBlockHeight(insets.bottom);
+  const [footerHeight, setFooterHeight] = useState(0);
   const { user, organizationId } = useAuth();
   const { pendingReference, clearPendingReference, openAt } = useUniffy();
   const queryClient = useQueryClient();
@@ -335,10 +336,26 @@ export function ChatConversationScreen() {
     editing: !!editing,
   });
 
+  const dmPeer = useMemo(() => {
+    if (!channel || channel.isAgentDm || channel.channelType !== "DIRECT") return null;
+    const peerId = channel.dmMemberIds.find((id) => id !== user?.id);
+    if (!peerId) return null;
+    const member = membersQuery.data?.find((m) => m.subjectId === peerId);
+    const subject = directory.byId.get(peerId);
+    const name = member?.displayName || subject?.name || "";
+    if (!name) return null;
+    return { name, avatarUrl: member?.avatarUrl ?? subject?.avatarUrl ?? undefined };
+  }, [channel, membersQuery.data, directory.byId, user?.id]);
+
+  // DMs and agent chats thread every turn off the previous message, so a reply
+  // quote on each one is noise - suppress it, matching the web MessageItem.
+  const hideReplyContext = channel?.channelType === "DIRECT" || channel?.channelType === "GROUP_DM";
+
   const title = useMemo(() => {
     if (!channel) return "Channel";
+    if (dmPeer) return dmPeer.name;
     return resolveChannelTitle(channel, membersQuery.data, user?.id ?? "");
-  }, [channel, membersQuery.data, user?.id]);
+  }, [channel, dmPeer, membersQuery.data, user?.id]);
 
   const subtitle = channel
     ? channel.channelType === "DIRECT"
@@ -419,6 +436,12 @@ export function ChatConversationScreen() {
     resetCompose();
     attachments.clear();
     sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
+    // Sending from a scrolled-up position should snap back to the newest
+    // message (offset 0 in the inverted list); defer a frame so the optimistic
+    // row is inserted before we scroll.
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    });
   }, [draft, editing, replyTo, attachments, sendMessage, editMessage, resetCompose, flushOnSend]);
 
   const handleReact = useCallback(
@@ -520,6 +543,7 @@ export function ChatConversationScreen() {
             T={T}
             organizationId={organizationId ?? ""}
             showHeader={showHeader}
+            hideReplyContext={hideReplyContext}
             isOwn={item.senderId === user?.id}
             senderPresence={
               item.senderType === "USER" ? (presenceByUser[item.senderId] ?? "offline") : null
@@ -559,6 +583,7 @@ export function ChatConversationScreen() {
       openThread,
       adjustScrollForDetails,
       presenceByUser,
+      hideReplyContext,
     ],
   );
 
@@ -577,60 +602,72 @@ export function ChatConversationScreen() {
     !attachments.uploading && (!!draft.trim() || (!editing && attachments.readyFileIds.length > 0));
 
   return (
-    <View style={[styles.container, { backgroundColor: T.pageBg, paddingBottom: barSpace }]}>
-      <DomainHeader
-        title={title}
-        subtitle={subtitle}
-        color={T.accent}
-        icon="chat"
-        rightActions={
-          <>
-            {callsAvailable && channel && !channel.isAgentDm ? (
+    <View style={[styles.container, { backgroundColor: T.pageBg }]}>
+      <View style={styles.headerOverlay}>
+        <DomainHeader
+          title={title}
+          subtitle={subtitle}
+          color={T.accent}
+          icon="chat"
+          translucent
+          leading={
+            dmPeer ? (
+              <Avatar name={dmPeer.name} avatarUrl={dmPeer.avatarUrl} size={30} circle />
+            ) : undefined
+          }
+          rightActions={
+            <>
+              {callsAvailable && channel && !channel.isAgentDm ? (
+                <TouchableOpacity
+                  onPress={() => (inCallHere ? setMinimized(false) : setPrejoinOpen(true))}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={activeCall ? "Join live call" : "Start call"}
+                >
+                  {activeCall ? (
+                    <View style={styles.liveCallAction}>
+                      <Phone size={18} color={T.green} weight="fill" />
+                      <Text style={[styles.liveCallCount, { color: T.green }]}>
+                        {activeCall.participants.length}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Phone size={18} color={T.textDim} weight="bold" />
+                  )}
+                </TouchableOpacity>
+              ) : null}
+              {channel?.isAgentDm && channel.agentId ? (
+                <TouchableOpacity
+                  onPress={() => setContextAgentId(channel.agentId)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Agent context usage"
+                >
+                  <Gauge size={18} color={T.textDim} weight="bold" />
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
-                onPress={() => (inCallHere ? setMinimized(false) : setPrejoinOpen(true))}
+                onPress={() => setPinnedOpen(true)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
-                accessibilityLabel={activeCall ? "Join live call" : "Start call"}
+                accessibilityLabel="Pinned messages"
               >
-                {activeCall ? (
-                  <View style={styles.liveCallAction}>
-                    <Phone size={18} color={T.green} weight="fill" />
-                    <Text style={[styles.liveCallCount, { color: T.green }]}>
-                      {activeCall.participants.length}
-                    </Text>
-                  </View>
-                ) : (
-                  <Phone size={18} color={T.textDim} weight="bold" />
-                )}
+                <PushPin size={18} color={T.textDim} weight="bold" />
               </TouchableOpacity>
-            ) : null}
-            {channel?.isAgentDm && channel.agentId ? (
-              <TouchableOpacity
-                onPress={() => setContextAgentId(channel.agentId)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Agent context usage"
-              >
-                <Gauge size={18} color={T.textDim} weight="bold" />
-              </TouchableOpacity>
-            ) : null}
-            <TouchableOpacity
-              onPress={() => setPinnedOpen(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <PushPin size={18} color={T.textDim} weight="bold" />
-            </TouchableOpacity>
-            {channel ? (
-              <TouchableOpacity
-                onPress={() => setDetailsOpen(true)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <ChannelTypeBadge channel={channel} T={T} />
-              </TouchableOpacity>
-            ) : null}
-          </>
-        }
-      />
+              {channel ? (
+                <TouchableOpacity
+                  onPress={() => setDetailsOpen(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Channel details"
+                >
+                  <ChannelTypeBadge channel={channel} T={T} />
+                </TouchableOpacity>
+              ) : null}
+            </>
+          }
+        />
+      </View>
 
       {messagesQuery.isLoading ? (
         <View style={styles.loadingWrap}>
@@ -660,7 +697,7 @@ export function ChatConversationScreen() {
       ) : (
         <FlatList
           ref={listRef}
-          style={styles.list}
+          style={[styles.list, { marginBottom: -(footerHeight + barSpace) }]}
           data={messages}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
@@ -668,7 +705,10 @@ export function ChatConversationScreen() {
           scrollEventThrottle={16}
           inverted
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingTop: footerHeight + barSpace + 12, paddingBottom: insets.top + 12 },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           onEndReached={() => void messagesQuery.loadOlder()}
@@ -683,88 +723,93 @@ export function ChatConversationScreen() {
         />
       )}
 
-      {(approvalsQuery.data ?? []).map((approval) => (
-        <AgentApprovalCard
-          key={approval.requestId}
-          approval={approval}
-          T={T}
-          isActor={approval.actorUserId === user?.id}
-          responding={respondToConfirmation.isPending}
-          onRespond={(approve) =>
-            respondToConfirmation.mutate({
-              messageId: approval.messageId,
-              requestId: approval.requestId,
-              approve,
-            })
-          }
+      <View
+        style={{ marginBottom: barSpace }}
+        onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+      >
+        {(approvalsQuery.data ?? []).map((approval) => (
+          <AgentApprovalCard
+            key={approval.requestId}
+            approval={approval}
+            T={T}
+            isActor={approval.actorUserId === user?.id}
+            responding={respondToConfirmation.isPending}
+            onRespond={(approve) =>
+              respondToConfirmation.mutate({
+                messageId: approval.messageId,
+                requestId: approval.requestId,
+                approve,
+              })
+            }
+          />
+        ))}
+
+        {callsAvailable && activeCall && !inCallHere ? (
+          <TouchableOpacity
+            style={[styles.stopPill, { backgroundColor: T.surface, borderColor: T.green }]}
+            onPress={() => setPrejoinOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Join the live call"
+          >
+            <Phone size={14} color={T.green} weight="fill" />
+            <Text style={[styles.stopText, { color: T.text }]}>
+              Join call · {activeCall.participants.length}{" "}
+              {activeCall.participants.length === 1 ? "person" : "people"}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {replyTo || editing ? (
+          <ComposeBanner
+            T={T}
+            mode={editing ? "edit" : "reply"}
+            message={(editing ?? replyTo)!}
+            onCancel={resetCompose}
+          />
+        ) : null}
+
+        <TypingIndicator
+          agentIds={runningAgentIds}
+          humans={typingHumans}
+          onStopAgents={(ids) => ids.forEach((agentId) => stopAgent.mutate({ channelId, agentId }))}
         />
-      ))}
 
-      {callsAvailable && activeCall && !inCallHere ? (
-        <TouchableOpacity
-          style={[styles.stopPill, { backgroundColor: T.surface, borderColor: T.green }]}
-          onPress={() => setPrejoinOpen(true)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Join the live call"
-        >
-          <Phone size={14} color={T.green} weight="fill" />
-          <Text style={[styles.stopText, { color: T.text }]}>
-            Join call · {activeCall.participants.length}{" "}
-            {activeCall.participants.length === 1 ? "person" : "people"}
-          </Text>
-        </TouchableOpacity>
-      ) : null}
+        {dmAgentId ? (
+          <TouchableOpacity
+            style={[styles.modelChip, { backgroundColor: T.surface, borderColor: T.border }]}
+            onPress={() => setModelSheetOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Model for this conversation"
+          >
+            <Faders size={13} color={T.textDim} weight="bold" />
+            <Text style={[styles.modelChipText, { color: T.textDim }]} numberOfLines={1}>
+              {dmModelOverride || "Default"}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
-      {replyTo || editing ? (
-        <ComposeBanner
+        <ChatComposer
           T={T}
-          mode={editing ? "edit" : "reply"}
-          message={(editing ?? replyTo)!}
-          onCancel={resetCompose}
+          inputRef={inputRef}
+          draft={draft}
+          onChangeDraft={setDraft}
+          onSelectionChange={(e) => (selectionRef.current = e.nativeEvent.selection)}
+          placeholder={editing ? "Edit message" : `Message ${title}`}
+          canSend={canSend}
+          editing={!!editing}
+          onSend={handleSend}
+          tools={{
+            onEmoji: () => setEmojiTarget("compose"),
+            onMention: () => openAt(true),
+            onAttach: attachments.handleAttach,
+            onWrap: wrapSelection,
+          }}
+          attachments={attachments.pending}
+          onRemoveAttachment={attachments.remove}
         />
-      ) : null}
-
-      <TypingIndicator
-        agentIds={runningAgentIds}
-        humans={typingHumans}
-        onStopAgents={(ids) => ids.forEach((agentId) => stopAgent.mutate({ channelId, agentId }))}
-      />
-
-      {dmAgentId ? (
-        <TouchableOpacity
-          style={[styles.modelChip, { backgroundColor: T.surface, borderColor: T.border }]}
-          onPress={() => setModelSheetOpen(true)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Model for this conversation"
-        >
-          <Faders size={13} color={T.textDim} weight="bold" />
-          <Text style={[styles.modelChipText, { color: T.textDim }]} numberOfLines={1}>
-            {dmModelOverride || "Default"}
-          </Text>
-        </TouchableOpacity>
-      ) : null}
-
-      <ChatComposer
-        T={T}
-        inputRef={inputRef}
-        draft={draft}
-        onChangeDraft={setDraft}
-        onSelectionChange={(e) => (selectionRef.current = e.nativeEvent.selection)}
-        placeholder={editing ? "Edit message" : `Message ${title}`}
-        canSend={canSend}
-        editing={!!editing}
-        onSend={handleSend}
-        tools={{
-          onEmoji: () => setEmojiTarget("compose"),
-          onMention: () => openAt(true),
-          onAttach: attachments.handleAttach,
-          onWrap: wrapSelection,
-        }}
-        attachments={attachments.pending}
-        onRemoveAttachment={attachments.remove}
-      />
+      </View>
 
       <MessageActionSheet
         message={actionMessage}
@@ -1062,6 +1107,7 @@ function MessageRow({
   T,
   organizationId,
   showHeader,
+  hideReplyContext,
   isOwn,
   agentActive,
   thinking,
@@ -1079,6 +1125,7 @@ function MessageRow({
   T: ThemeColors;
   organizationId: string;
   showHeader: boolean;
+  hideReplyContext: boolean;
   isOwn: boolean;
   agentActive: boolean;
   thinking?: AgentThinkingBlock[];
@@ -1140,7 +1187,7 @@ function MessageRow({
             {message.isPinned ? <PushPin size={11} color={T.accent} weight="fill" /> : null}
           </View>
         ) : null}
-        {message.replyContext ? (
+        {!hideReplyContext && message.replyContext ? (
           <View style={[styles.replyContext, { borderLeftColor: T.border }]}>
             <Text style={[styles.replyContextName, { color: T.textDim }]} numberOfLines={1}>
               {message.replyContext.senderName}
@@ -1363,6 +1410,7 @@ function SheetAction({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyWrap: {
     flex: 1,
@@ -1379,9 +1427,9 @@ const styles = StyleSheet.create({
   msgRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingTop: 10 },
   msgRowGrouped: { paddingTop: 1 },
   msgAvatar: { width: 36 },
-  msgBody: { flex: 1, gap: 3 },
+  msgBody: { flex: 1, gap: 1 },
   msgHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
-  msgSender: { fontSize: 14, fontFamily: FONT.semibold, flexShrink: 1 },
+  msgSender: { fontSize: 14, lineHeight: 16, fontFamily: FONT.semibold, flexShrink: 1 },
   agentTag: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
   agentTagText: { fontSize: 9, fontFamily: FONT.bold, letterSpacing: 0.4 },
   msgTime: { fontSize: 11, fontFamily: FONT.regular },

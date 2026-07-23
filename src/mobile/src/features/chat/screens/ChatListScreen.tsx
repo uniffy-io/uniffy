@@ -171,6 +171,18 @@ export function ChatListScreen() {
     },
     [presenceByUser, user?.id],
   );
+  const directory = useDirectory();
+  const dmPeer = useCallback(
+    (channel: SerializedChannel) => {
+      if (channel.channelType !== "DIRECT") return null;
+      const peerId = channel.dmMemberIds.find((memberId) => memberId !== user?.id);
+      if (!peerId) return null;
+      const subject = directory.byId.get(peerId);
+      if (!subject?.name) return null;
+      return { name: subject.name, avatarUrl: subject.avatarUrl };
+    },
+    [directory.byId, user?.id],
+  );
 
   const categorized = useMemo(() => {
     const cats = categories.data ?? [];
@@ -333,6 +345,7 @@ export function ChatListScreen() {
               T={T}
               onPress={() => openChannel(item.id)}
               presence={dmPresence(item)}
+              peer={dmPeer(item)}
             />
           )}
           showsVerticalScrollIndicator={false}
@@ -424,6 +437,7 @@ export function ChatListScreen() {
                 T={T}
                 onPress={() => openChannel(c.id)}
                 presence={dmPresence(c)}
+                peer={dmPeer(c)}
               />
             ))}
           </CategorySection>
@@ -793,11 +807,13 @@ function ChannelRow({
   T,
   onPress,
   presence,
+  peer,
 }: {
   channel: SerializedChannel;
   T: ThemeColors;
   onPress: () => void;
   presence?: string | null;
+  peer?: { name: string; avatarUrl?: string } | null;
 }) {
   const hasUnread = channel.unreadCount > 0;
   const liveCall = useActiveCall(channel.id);
@@ -807,8 +823,12 @@ function ChannelRow({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: T.accentSoft }]}>
-        <ChannelIcon channel={channel} color={T.accent} />
+      <View style={[styles.rowIcon, { backgroundColor: peer ? "transparent" : T.accentSoft }]}>
+        {peer ? (
+          <Avatar name={peer.name} avatarUrl={peer.avatarUrl} size={40} />
+        ) : (
+          <ChannelIcon channel={channel} color={T.accent} />
+        )}
         {presence ? <PresenceDot status={presence} size={12} ringColor={T.pageBg} /> : null}
       </View>
       <View style={styles.rowBody}>
@@ -819,7 +839,7 @@ function ChannelRow({
           ]}
           numberOfLines={1}
         >
-          {channel.displayName}
+          {peer ? peer.name : channel.displayName}
         </Text>
         <Text style={[styles.rowSub, { color: T.textDim }]} numberOfLines={1}>
           {channel.description

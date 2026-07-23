@@ -102,7 +102,10 @@ export function approvalsKey(orgId: string, channelId: string) {
 
 export const STREAM_HEALTH_KEY = ["chat", "stream", "healthy"];
 
-const TYPING_TTL_MS = 8000;
+// Match web: humans clear fast (5s), agents linger (15s) since a long run
+// publishes no keepalive between its start and stop typing events.
+const HUMAN_TYPING_TTL_MS = 5000;
+const AGENT_TYPING_TTL_MS = 15000;
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
 // The server heartbeats every 30s; 75s of silence means the socket is gone
@@ -157,7 +160,7 @@ function start(orgId: string, queryClient: QueryClient) {
   controller = ctl;
   currentOrgId = orgId;
   if (sweepTimer) clearInterval(sweepTimer);
-  sweepTimer = setInterval(() => sweepTyping(queryClient), 5000);
+  sweepTimer = setInterval(() => sweepTyping(queryClient), 2000);
   for (const unsub of lifecycleUnsubs) unsub();
   const appStateSub = AppState.addEventListener("change", (state) => {
     if (state === "active") kick();
@@ -329,6 +332,16 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
         if (withoutSelf.length === old.length && plain.isDeleted) return old;
         return [plain, ...withoutSelf].sort((a, b) => b.createdAtSeconds - a.createdAtSeconds);
       });
+      // Drop the sender's typing row the instant their message lands, so it
+      // never lingers behind the message (web parity). Agents keep their row
+      // until their explicit stop event, since they stream after the first row.
+      if (plain.senderType === "USER") {
+        updateTyping(queryClient, orgId, channelId, plain.senderId, {
+          started: false,
+          name: "",
+          isAgent: false,
+        });
+      }
       // Refetch fills in what the event lacks (attachments) and keeps the
       // channel list ordering fresh.
       void queryClient.invalidateQueries({ queryKey: msgKey });
@@ -494,11 +507,13 @@ function updateTyping(
 }
 
 function sweepTyping(queryClient: QueryClient) {
-  const cutoff = Date.now() - TYPING_TTL_MS;
+  const now = Date.now();
   const entries = queryClient.getQueriesData<TypingEntry[]>({ queryKey: ["chat", "typing"] });
   for (const [key, value] of entries) {
     if (!value || value.length === 0) continue;
-    const fresh = value.filter((t) => t.at >= cutoff);
+    const fresh = value.filter(
+      (t) => now - t.at < (t.isAgent ? AGENT_TYPING_TTL_MS : HUMAN_TYPING_TTL_MS),
+    );
     if (fresh.length !== value.length) queryClient.setQueryData(key, fresh);
   }
 }
