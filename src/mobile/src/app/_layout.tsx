@@ -27,6 +27,7 @@ import { ThemeProvider } from "@core/providers/ThemeContext";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BottomNav, bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { useUnreadNotificationCount } from "@features/notifications/useNotifications";
+import { useNotificationStream } from "@features/notifications/useNotificationStream";
 import { KeyboardSpacer } from "@shared/components/KeyboardSpacer";
 import { AtOverlay } from "@features/mentions/AtOverlay";
 import { CallIndicator } from "@features/calls/components/CallIndicator";
@@ -98,6 +99,7 @@ function RootLayoutNav() {
   const { session: callSession, minimized: callMinimized, setMinimized } = useCall();
 
   usePresenceHeartbeat();
+  useNotificationStream();
 
   const showAppChrome = isAuthenticated && !!organizationId;
 
