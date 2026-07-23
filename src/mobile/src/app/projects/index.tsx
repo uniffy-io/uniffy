@@ -1,2 +1,2 @@
-export { ProjectsListScreen as default } from "@features/projects/screens/ProjectsListScreen";
-export * from "@features/projects/screens/ProjectsListScreen";
+export { ProjectsUnderConstructionScreen as default } from "@features/projects/screens/ProjectsUnderConstructionScreen";
+export * from "@features/projects/screens/ProjectsUnderConstructionScreen";
