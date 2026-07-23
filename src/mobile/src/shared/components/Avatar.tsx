@@ -66,6 +66,8 @@ type AvatarProps = {
   presenceRingColor?: string;
   /** Agents draw from the darker gradient pool. */
   isAgent?: boolean;
+  /** Fully round instead of the default rounded square. */
+  circle?: boolean;
 };
 
 export function Avatar({
@@ -77,12 +79,13 @@ export function Avatar({
   presence,
   presenceRingColor,
   isAgent = false,
+  circle,
 }: AvatarProps) {
   // A dead avatar URL (deleted image, unrecoverable 401) falls through to
   // the emoji/gradient branches instead of leaving a blank square.
   const [imgFailed, setImgFailed] = useState(false);
   const fontSize = size * 0.35;
-  const borderRadius = size * 0.25;
+  const borderRadius = circle ? size / 2 : size * 0.25;
 
   if (presence) {
     return (
@@ -94,6 +97,7 @@ export function Avatar({
           accentColor={accentColor}
           emoji={emoji}
           isAgent={isAgent}
+          circle={circle}
         />
         <PresenceDot
           status={presence}

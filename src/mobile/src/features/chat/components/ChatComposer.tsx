@@ -23,6 +23,7 @@ import {
 } from "phosphor-react-native";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
+import { GlassSurface } from "@shared/components/GlassSurface";
 import type { PendingAttachment } from "@features/chat/useComposerAttachments";
 
 export type ComposerTools = {
@@ -64,7 +65,15 @@ export function ChatComposer({
   const [toolsOpen, setToolsOpen] = useState(false);
 
   return (
-    <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
+    <View style={[styles.card, { borderColor: T.border }]}>
+      <GlassSurface
+        style={StyleSheet.absoluteFill}
+        tintColor={T.isDark ? "rgba(20,22,34,0.5)" : "rgba(255,255,255,0.5)"}
+        interactive
+        isDark={T.isDark}
+        blurIntensity={40}
+        solidColor={T.isDark ? "rgba(22,24,36,0.78)" : "rgba(248,249,252,0.82)"}
+      />
       {attachments.length > 0 ? (
         <ScrollView
           horizontal
@@ -190,6 +199,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: 24,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
     paddingHorizontal: 12,
     paddingTop: 4,
     paddingBottom: 10,

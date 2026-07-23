@@ -8,7 +8,6 @@ import {
   Pressable,
   useWindowDimensions,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { GlassSurface } from "@shared/components/GlassSurface";
 import { GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import type { ComposedGesture, GestureType } from "react-native-gesture-handler";
@@ -29,8 +28,8 @@ export type HubItem = {
 // Chat holds the middle slot: the wheel opens centered on it, and only the
 // center position keeps every item's arc spot on screen at once.
 export const HUB_ITEMS: HubItem[] = [
-  { key: "calendar", label: "Calendar", path: "/calendar", Icon: CalendarBlank },
   { key: "notes", label: "Notes", path: "/notes", Icon: NotePencil },
+  { key: "calendar", label: "Calendar", path: "/calendar", Icon: CalendarBlank },
   { key: "chat", label: "Chat", path: "/chat", Icon: ChatCircle },
   { key: "files", label: "Files", path: "/files", Icon: FolderSimple },
   { key: "projects", label: "Projects", path: "/projects", Icon: Kanban },
@@ -47,8 +46,10 @@ type HubItemViewProps = {
   item: HubItem;
   index: number;
   offset: SharedValue<number>;
+  openProgress: SharedValue<number>;
   centerBottom: number;
   centerX: number;
+  iconBottom: number;
   focused: boolean;
   onPress: () => void;
 };
@@ -57,27 +58,36 @@ function HubItemView({
   item,
   index,
   offset,
+  openProgress,
   centerBottom,
   centerX,
+  iconBottom,
   focused,
   onPress,
 }: HubItemViewProps) {
   const T = useTheme();
 
   const animatedStyle = useAnimatedStyle(() => {
+    const p = openProgress.value;
     const delta = index - offset.value;
     const angle = ((90 + delta * HUB_STEP_DEG) * Math.PI) / 180;
     const dist = Math.abs(delta);
-    // Emphasis is real width/height layout, never transform or opacity: a
-    // GlassView under an ancestor with an animated opacity or transform
-    // silently renders as a plain view (expo/expo#41024).
-    const size =
+    // Emphasis and the open/close expansion are real width/height/position,
+    // never transform or opacity: a GlassView under an ancestor with an
+    // animated opacity or transform silently renders as a plain view
+    // (expo/expo#41024). At progress 0 every bubble collapses onto the logo
+    // and shrinks away, so the wheel reads as unfolding out of the icon and
+    // folding back into it.
+    const fullSize =
       ITEM_SIZE * interpolate(dist, [0, 1, 2.5, 4], [1.28, 1, 0.85, 0.45], Extrapolation.CLAMP);
+    const size = fullSize * interpolate(p, [0, 1], [0.28, 1], Extrapolation.CLAMP);
+    const fullLeft = centerX + HUB_RADIUS * Math.cos(angle) - size / 2;
+    const fullBottom = centerBottom + HUB_RADIUS * Math.sin(angle) - size / 2;
     return {
       width: size,
       height: size,
-      left: centerX + HUB_RADIUS * Math.cos(angle) - size / 2,
-      bottom: centerBottom + HUB_RADIUS * Math.sin(angle) - size / 2,
+      left: interpolate(p, [0, 1], [centerX - size / 2, fullLeft]),
+      bottom: interpolate(p, [0, 1], [iconBottom - size / 2, fullBottom]),
     };
   });
 
@@ -115,8 +125,11 @@ function HubItemView({
 type HubCarouselProps = {
   open: boolean;
   offset: SharedValue<number>;
+  openProgress: SharedValue<number>;
   focusedIndex: number;
   centerBottom: number;
+  iconBottom: number;
+  barSlot?: () => React.ReactNode;
   gesture: ComposedGesture | GestureType;
   showHint: boolean;
   onItemPress: (index: number) => void;
@@ -126,8 +139,11 @@ type HubCarouselProps = {
 export function HubCarousel({
   open,
   offset,
+  openProgress,
   focusedIndex,
   centerBottom,
+  iconBottom,
+  barSlot,
   gesture,
   showHint,
   onItemPress,
@@ -158,19 +174,18 @@ export function HubCarousel({
     >
       <GestureHandlerRootView style={styles.fill}>
         <GestureDetector gesture={gesture}>
-          {/* The backdrop mounts with no animation: a Reanimated entering fade
-            on an absolute-fill view collapses it on iOS 26 Fabric so it
-            never draws, and animated opacity above glass would break the
-            bubbles anyway (expo/expo#41024). Strong enough that text or file
-            pages behind cannot compete with the wheel's icons, while the page
-            stays faintly recognizable. */}
-          <View style={StyleSheet.absoluteFill} collapsable={false}>
-            <BlurView
-              intensity={55}
-              tint={T.isDark ? "dark" : "light"}
-              style={[styles.backdrop, { backgroundColor: T.isDark ? "#0d111ee6" : "#eeeeeee6" }]}
-            />
-          </View>
+          {/* Full-screen solid scrim, tap-anywhere to close. Solid, not a
+            BlurView: animating the bubbles over a full-screen blur recomposes
+            it every frame and drags on Android, and at this opacity the blur
+            was barely visible anyway. The real nav bar is re-rendered on top
+            (barSlot) so it sits crisp over the dim without punching a hole. */}
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: T.isDark ? "#0d111eF2" : "#eeeeeeF2" },
+            ]}
+            collapsable={false}
+          />
         </GestureDetector>
 
         <Text
@@ -198,12 +213,24 @@ export function HubCarousel({
             item={item}
             index={i}
             offset={offset}
+            openProgress={openProgress}
             centerBottom={centerBottom}
             centerX={width / 2}
+            iconBottom={iconBottom}
             focused={i === focusedIndex}
             onPress={() => onItemPress(i)}
           />
         ))}
+
+        {/* A non-interactive twin of the shell bar, drawn crisp on top of the
+          dim. pointerEvents none so every tap (including on the logo) falls
+          through to the backdrop and closes; the shell copy behind the dim
+          still owns the hub gesture and stays mounted, so nothing remounts. */}
+        {barSlot ? (
+          <View style={styles.barLayer} pointerEvents="none">
+            {barSlot()}
+          </View>
+        ) : null}
       </GestureHandlerRootView>
     </Modal>
   );
@@ -213,8 +240,11 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
+  barLayer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   item: {
     position: "absolute",
