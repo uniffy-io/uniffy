@@ -109,8 +109,8 @@ function DetailsCaret({ T, open }: { T: ThemeColors; open: boolean }) {
 // list on Android. The cap keeps a giant payload from bloating the list.
 const MONO_CHAR_LIMIT = 20000;
 
-// Matches styles.card gap: the details stack adds this much on top of its own
-// measured height when it mounts.
+// Matches the pane's row gap: expanded details add this on top of their own
+// measured height, so the inverted-list scroll compensation stays exact.
 const CARD_GAP = 6;
 
 function MonoBlock({ T, text }: { T: ThemeColors; text: string }) {
@@ -164,14 +164,9 @@ function ToolCallRow({
       : `${humanizeToolName(toolName)} ${failed ? "failed" : "completed"}`;
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: failed ? T.red + "14" : T.surface, borderColor: T.border },
-      ]}
-    >
+    <View style={styles.toolPane}>
       <TouchableOpacity
-        style={styles.cardHeader}
+        style={styles.toolHeader}
         onPress={() => {
           if (showDetails) {
             const height = detailsHeightRef.current;
@@ -184,25 +179,22 @@ function ToolCallRow({
         activeOpacity={0.6}
       >
         {running ? (
-          <ActivityIndicator size={14} color={T.accent} />
+          <ActivityIndicator size={14} color={T.textDim} />
         ) : failed ? (
-          <XCircle size={16} color={T.red} weight="fill" />
+          <XCircle size={15} color={T.red} weight="fill" />
         ) : resultMsg ? (
-          <CheckCircle size={16} color={T.green} weight="fill" />
+          <CheckCircle size={15} color={T.green} weight="fill" />
         ) : (
-          <Wrench size={16} color={T.textDim} weight="duotone" />
+          <Wrench size={15} color={T.textDim} weight="duotone" />
         )}
-        <View style={styles.cardHeaderText}>
-          <Text style={[styles.cardTitle, { color: T.text }]}>{label}</Text>
-          <Text style={[styles.cardMono, { color: T.textDim }]} numberOfLines={1}>
-            {toolName}
-          </Text>
-        </View>
+        <Text style={[styles.toolLabel, { color: T.textDim }]} numberOfLines={2}>
+          {label}
+        </Text>
         {hasDetails ? <DetailsCaret T={T} open={showDetails} /> : null}
       </TouchableOpacity>
       {showDetails ? (
         <View
-          style={styles.detailsStack}
+          style={[styles.toolBody, { borderLeftColor: T.border }]}
           onLayout={(e) => {
             const height = e.nativeEvent.layout.height;
             if (detailsHeightRef.current === 0 && height > 0) {
@@ -237,14 +229,9 @@ function ToolResultRow({
   const hasResult = result.trim().length > 0;
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: failed ? T.red + "14" : T.surface, borderColor: T.border },
-      ]}
-    >
+    <View style={styles.toolPane}>
       <TouchableOpacity
-        style={styles.cardHeader}
+        style={styles.toolHeader}
         onPress={() => {
           if (showDetails) {
             const height = detailsHeightRef.current;
@@ -257,17 +244,18 @@ function ToolResultRow({
         activeOpacity={0.6}
       >
         {failed ? (
-          <XCircle size={16} color={T.red} weight="fill" />
+          <XCircle size={15} color={T.red} weight="fill" />
         ) : (
-          <CheckCircle size={16} color={T.green} weight="fill" />
+          <CheckCircle size={15} color={T.green} weight="fill" />
         )}
-        <Text style={[styles.cardMono, { color: T.textDim, flex: 1 }]} numberOfLines={1}>
-          {toolName} {failed ? "failed" : "completed"}
+        <Text style={[styles.toolLabel, { color: T.textDim }]} numberOfLines={2}>
+          {humanizeToolName(toolName)} {failed ? "failed" : "completed"}
         </Text>
         {hasResult ? <DetailsCaret T={T} open={showDetails} /> : null}
       </TouchableOpacity>
       {showDetails ? (
         <View
+          style={[styles.toolBody, { borderLeftColor: T.border }]}
           onLayout={(e) => {
             const height = e.nativeEvent.layout.height;
             if (detailsHeightRef.current === 0 && height > 0) {
@@ -429,7 +417,10 @@ const styles = StyleSheet.create({
   },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   cardHeaderText: { flex: 1 },
-  detailsStack: { gap: 6 },
+  toolPane: { alignSelf: "stretch", marginBottom: 4, gap: 6 },
+  toolHeader: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 2 },
+  toolLabel: { flex: 1, fontSize: 13, fontFamily: FONT.regular, lineHeight: 18 },
+  toolBody: { borderLeftWidth: 2, paddingLeft: 10, gap: 6 },
   cardTitle: { fontSize: 13, fontFamily: FONT.medium, lineHeight: 18 },
   cardMono: { fontSize: 11, fontFamily: MONO_FONT, marginTop: 1 },
   caret: { paddingTop: 2 },
