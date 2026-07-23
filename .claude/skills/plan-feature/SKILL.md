@@ -35,7 +35,7 @@ Then map the territory (use the codebase-memory MCP tools and parallel Explore s
 
 ## 3. External research (when the feature pulls in new tech)
 
-Fetch official docs for any new library (with section anchors), note version constraints, known gotchas, and how existing dependencies already integrate. Respect the supply-chain policy (`manage-cli.md`): no CDN-fetching deps, `minimumReleaseAge` applies.
+Fetch official docs for any new library (with section anchors), note version constraints, known gotchas, and how existing dependencies already integrate. Respect the supply-chain policy (`CLAUDE.md`): no CDN-fetching deps, `minimumReleaseAge` applies.
 
 ## 4. Think through the design
 

@@ -188,7 +188,11 @@ services:
         pull_policy: never
         restart: unless-stopped
         # verify-deps off: see the ui service note.
-        command: pnpm --config.verify-deps-before-run=false --filter uniffy-landing exec astro dev --host 0.0.0.0
+        # astro writes .astro/dev.json (a PID lock) into the bind-mounted source
+        # tree; a hard container restart orphans it, and the next boot then
+        # refuses to start ("another dev server is already running") and crash
+        # loops. Clear the stale lock before launching.
+        command: pnpm --config.verify-deps-before-run=false --filter uniffy-landing exec sh -c "rm -f .astro/dev.json; exec astro dev --host 0.0.0.0"
         environment:
             PNPM_FILTER: "uniffy-landing..."
             HOST_UID: "${HOST_UID:-1000}"
@@ -197,6 +201,7 @@ services:
             npm_config_confirm_modules_purge: "false"
             npm_config_strict_dep_builds: "false"
             npm_config_verify_deps_before_run: "false"
+            ASTRO_TELEMETRY_DISABLED: "1"
         volumes: *node-volumes
         ports:
             - "4321:4321"
