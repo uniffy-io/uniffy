@@ -68,6 +68,9 @@ const SHORTCUT_CATEGORIES = [
             { action: 'viewer.rotateRight', label: 'Rotate Right' },
             { action: 'viewer.download', label: 'Download File' },
             { action: 'viewer.edit', label: 'Edit Image' },
+            { action: 'viewer.toggleSidebar', label: 'Toggle Sidebar' },
+            { action: 'viewer.search', label: 'Search in Document' },
+            { action: 'viewer.print', label: 'Print' },
         ],
     },
     {
