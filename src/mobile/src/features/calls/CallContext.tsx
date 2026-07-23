@@ -62,6 +62,11 @@ export interface CallSession {
   speakerOn: boolean;
   secondDeviceMuted: boolean;
   connectedAtMs: number;
+  // Which physical camera the local capture is on. Doubles as a remount key for
+  // the local self-view: restarting the track to flip cameras does not repaint
+  // the native RTCView on its own, so the tile keys off this to force a fresh
+  // view bound to the restarted track.
+  cameraFacing: "user" | "environment";
 }
 
 export interface CallEndedInfo {
@@ -104,6 +109,7 @@ const IDLE_SESSION: CallSession = {
   speakerOn: false,
   secondDeviceMuted: false,
   connectedAtMs: 0,
+  cameraFacing: "user",
 };
 
 const CallContext = createContext<CallContextValue | null>(null);
@@ -383,7 +389,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // mature dual peer connection path.
         singlePeerConnection: false,
         dynacast: true,
-        videoCaptureDefaults: { resolution: { width: 720, height: 1280 } },
+        // Capture the front sensor's native 3:4 (portrait) frame. A 9:16 hint
+        // made the S24 hand back a 1:1 center-crop, which reads as a heavy zoom;
+        // 3:4 uses the full sensor width for a wider, less "in your face" view.
+        videoCaptureDefaults: { resolution: { width: 960, height: 1280 } },
       });
       roomRef.current = r;
 
@@ -586,17 +595,26 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!info) return;
     setEndedInfo(null);
     const s = sessionRef.current;
-    await joinCallById(info.callId, info.channelId, {
-      mic: s.micEnabled,
-      camera: s.cameraEnabled,
-    });
+    try {
+      await joinCallById(info.callId, info.channelId, {
+        mic: s.micEnabled,
+        camera: s.cameraEnabled,
+      });
+    } catch {
+      // startJoin already resets to idle and surfaces any disabled-call message.
+    }
   }, [endedInfo, joinCallById]);
 
   const toggleMic = useCallback(async () => {
     const r = roomRef.current;
     if (!r) return;
     const next = !r.localParticipant.isMicrophoneEnabled;
-    await r.localParticipant.setMicrophoneEnabled(next);
+    try {
+      await r.localParticipant.setMicrophoneEnabled(next);
+    } catch {
+      // Device/permission failure: leave the mic state untouched.
+      return;
+    }
     setSession((prev) => ({ ...prev, micEnabled: next, secondDeviceMuted: false }));
     scheduleMediaReport();
   }, [scheduleMediaReport]);
@@ -605,7 +623,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const r = roomRef.current;
     if (!r) return;
     const next = !r.localParticipant.isCameraEnabled;
-    await r.localParticipant.setCameraEnabled(next);
+    try {
+      await r.localParticipant.setCameraEnabled(next);
+    } catch {
+      // Device/permission failure: leave the camera state untouched.
+      return;
+    }
     setSession((prev) => ({ ...prev, cameraEnabled: next }));
     scheduleMediaReport();
   }, [scheduleMediaReport]);
@@ -617,8 +640,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const track = publication?.track;
     if (!(track instanceof livekit.LocalVideoTrack)) return;
     const next = facingModeRef.current === "user" ? "environment" : "user";
-    await track.restartTrack({ facingMode: next });
+    // restartTrack is the only method that actually re-opens the other physical
+    // lens on this device: _switchCamera / applyConstraints({ facingMode }) just
+    // re-apply constraints to the running capture and never switch cameras. The
+    // catch is that a bare restart freezes the local self-view (the native
+    // RTCView keeps the pre-restart frame and never repaints), so cameraFacing is
+    // pushed into state - the local tile keys off it and remounts onto the fresh
+    // track. The remote side updates on its own from the republished track.
+    try {
+      await track.restartTrack({ facingMode: next });
+    } catch {
+      return;
+    }
     facingModeRef.current = next;
+    setSession((prev) => ({ ...prev, cameraFacing: next }));
   }, []);
 
   const toggleSpeaker = useCallback(async () => {
@@ -664,10 +699,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (state !== "background") return;
       const r = roomRef.current;
       if (r && sessionRef.current.status === "connected" && r.localParticipant.isCameraEnabled) {
-        void r.localParticipant.setCameraEnabled(false).then(() => {
-          setSession((prev) => ({ ...prev, cameraEnabled: false }));
-          scheduleMediaReport();
-        });
+        void r.localParticipant
+          .setCameraEnabled(false)
+          .then(() => {
+            setSession((prev) => ({ ...prev, cameraEnabled: false }));
+            scheduleMediaReport();
+          })
+          .catch(() => {});
       }
     });
     return () => subscription.remove();

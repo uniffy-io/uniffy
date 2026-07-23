@@ -4,6 +4,7 @@ import { MicrophoneSlash, CellSignalLow } from "phosphor-react-native";
 import type { Participant, Track } from "livekit-client";
 import { Avatar } from "@shared/components/Avatar";
 import { loadLivekitClient, VideoTrackView } from "@features/calls/livekit";
+import { useCall } from "@features/calls/CallContext";
 import { identityUserId } from "@features/calls/callsSerializer";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
@@ -30,6 +31,7 @@ export function ParticipantTile({
   // Reads mutable livekit state (publications, mute flags, speaking) during
   // render; opt out of React Compiler memoization or the tile never updates.
   "use no memo";
+  const { session } = useCall();
   // Participants only exist on clients where livekit loads.
   if (!livekit) return null;
   const trackSource = source ?? livekit.Track.Source.Camera;
@@ -55,10 +57,18 @@ export function ParticipantTile({
     >
       {hasVideo && publication ? (
         <VideoTrackView
+          // Flipping the local camera restarts the track but does not repaint the
+          // native view; re-key on the facing direction so it remounts onto the
+          // fresh track instead of freezing on the last front-camera frame.
+          key={participant.isLocal && !isScreen ? session.cameraFacing : undefined}
           trackRef={{ participant, publication, source: trackSource }}
           style={styles.video}
+          // Camera fills its tile; only a shared screen is letterboxed so no
+          // content is cropped away.
           objectFit={isScreen ? "contain" : "cover"}
-          mirror={participant.isLocal && !isScreen}
+          // Only the front (selfie) camera is mirrored; the back camera shows the
+          // world the right way round.
+          mirror={participant.isLocal && !isScreen && session.cameraFacing === "user"}
         />
       ) : (
         <View style={styles.avatarWrap}>
