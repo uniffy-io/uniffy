@@ -18,6 +18,9 @@ import {
     ListTrashRequestSchema,
     RestoreFolderRequestSchema,
     ListFileVersionsRequestSchema,
+    RestoreFileVersionRequestSchema,
+    GetOrgFileVersionPolicyRequestSchema,
+    UpdateOrgFileVersionPolicyRequestSchema,
     UploadChunkRequestSchema,
     CompleteUploadRequestSchema,
     MoveItemsRequestSchema,
@@ -105,6 +108,18 @@ export const filesApi = {
 
     listFileVersions: async (request: MessageInitShape<typeof ListFileVersionsRequestSchema>) => {
         return filesClient.listFileVersions(request);
+    },
+
+    restoreFileVersion: async (request: MessageInitShape<typeof RestoreFileVersionRequestSchema>) => {
+        return filesClient.restoreFileVersion(request);
+    },
+
+    getOrgFileVersionPolicy: async (request: MessageInitShape<typeof GetOrgFileVersionPolicyRequestSchema>) => {
+        return filesClient.getOrgFileVersionPolicy(request);
+    },
+
+    updateOrgFileVersionPolicy: async (request: MessageInitShape<typeof UpdateOrgFileVersionPolicyRequestSchema>) => {
+        return filesClient.updateOrgFileVersionPolicy(request);
     },
 
     moveItems: async (request: MessageInitShape<typeof MoveItemsRequestSchema>) => {

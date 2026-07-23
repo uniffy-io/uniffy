@@ -8,6 +8,7 @@ import {
     fetchMembers,
 } from '@/features/admin/store/adminThunks';
 import { OrgQuotaSection } from '@/features/admin/components/storage/OrgQuotaSection';
+import { VersionRetentionSection } from '@/features/admin/components/storage/VersionRetentionSection';
 import { UserQuotaTable } from '@/features/admin/components/storage/UserQuotaTable';
 
 export function StoragePage() {
@@ -34,6 +35,7 @@ export function StoragePage() {
             </div>
 
             <OrgQuotaSection />
+            <VersionRetentionSection />
             <UserQuotaTable />
         </div>
     );

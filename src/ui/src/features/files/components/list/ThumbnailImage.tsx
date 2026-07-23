@@ -42,8 +42,9 @@ export function ThumbnailImage({ file, fallback }: ThumbnailImageProps) {
         return <>{fallback}</>;
     }
 
-    // Cache-bust with extractionStatus so browser doesn't serve a cached 404
-    const cacheBustedUrl = `${url}?v=${file.extractionStatus}`;
+    // Cache-bust with the file version (new bytes -> new thumbnail) and
+    // extractionStatus (so a cached 404 is retried once processing completes).
+    const cacheBustedUrl = `${url}?v=${file.version}-${file.extractionStatus}`;
 
     return (
         <img

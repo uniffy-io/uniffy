@@ -1,8 +1,9 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { filesApi } from '@/features/files/api/filesApi';
+import { removeCachedBlob } from '@/features/files/components/viewer/hooks/blobCache';
 import { bulkUpsertTags, tagToPlain } from '@/features/tags';
 import type { RootState } from '@/app/store';
-import type { File } from '@uniffy/proto/files/v1/files_pb';
+import type { File, FileVersion } from '@uniffy/proto/files/v1/files_pb';
 import type { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 
 const getOrganizationId = (state: RootState): string => {
@@ -223,6 +224,59 @@ export const restoreFile = createAsyncThunk<
         return fileToPlain(response.file);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to restore file');
+    }
+});
+
+export const fileVersionToPlain = (version: FileVersion) => ({
+    id: version.id,
+    fileId: version.fileId,
+    versionNumber: version.versionNumber,
+    sizeBytes: typeof version.sizeBytes === 'bigint' ? Number(version.sizeBytes) : version.sizeBytes,
+    uploadedBy: version.uploadedBy,
+    createdAt: version.createdAt ? {
+        seconds: typeof version.createdAt.seconds === 'bigint' ? Number(version.createdAt.seconds) : version.createdAt.seconds,
+        nanos: typeof version.createdAt.nanos === 'bigint' ? Number(version.createdAt.nanos) : version.createdAt.nanos,
+    } : undefined,
+});
+
+export type SerializedFileVersion = ReturnType<typeof fileVersionToPlain>;
+
+export const fetchFileVersions = createAsyncThunk<
+    { fileId: string; versions: SerializedFileVersion[] },
+    string,
+    { state: RootState; rejectValue: string }
+>('files/fetchFileVersions', async (fileId, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await filesApi.listFileVersions({ fileId, organizationId });
+        return { fileId, versions: response.versions.map(fileVersionToPlain) };
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch file versions');
+    }
+});
+
+export const restoreFileVersion = createAsyncThunk<
+    SerializedFile,
+    { fileId: string; versionId: string },
+    { state: RootState; rejectValue: string }
+>('files/restoreFileVersion', async (params, { dispatch, getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await filesApi.restoreFileVersion({
+            fileId: params.fileId,
+            organizationId,
+            versionId: params.versionId,
+        });
+        if (!response.file) {
+            return rejectWithValue('Failed to restore version');
+        }
+        // The current-version cache entry now holds superseded bytes.
+        removeCachedBlob(params.fileId);
+        hydrateFileTags(response.file, dispatch);
+        void dispatch(fetchFileVersions(params.fileId));
+        return fileToPlain(response.file);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to restore version');
     }
 });
 

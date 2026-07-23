@@ -9,6 +9,9 @@ const ImageViewer = lazy(() =>
 const ImageEditor = lazy(() =>
     import('./editor/ImageEditor').then((m) => ({ default: m.ImageEditor }))
 );
+const PdfEditor = lazy(() =>
+    import('./editor/pdf/PdfEditor').then((m) => ({ default: m.PdfEditor }))
+);
 const VideoViewer = lazy(() =>
     import('./viewers/VideoViewer').then((m) => ({ default: m.VideoViewer }))
 );
@@ -72,6 +75,11 @@ export function ViewerContent({ file, isEditing, initialRotation, onExitEdit }: 
         // Image editing mode
         if (mimeType.startsWith('image/') && isEditing && onExitEdit) {
             return <ImageEditor file={file} initialRotation={initialRotation} onClose={onExitEdit} />;
+        }
+
+        // PDF structural editing mode
+        if (mimeType === 'application/pdf' && isEditing && onExitEdit) {
+            return <PdfEditor file={file} onClose={onExitEdit} />;
         }
 
         // Images

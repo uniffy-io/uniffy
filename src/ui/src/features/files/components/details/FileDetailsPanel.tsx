@@ -25,6 +25,7 @@ import {
     Waveform,
     SpeakerHigh,
     Lock,
+    ClockCounterClockwise,
     X,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';
 import { TagChip } from '@/features/tags';
 import { useTagsByIds } from '@/features/tags/store/selectors';
+import { FileVersionsTab } from '@/features/files/components/details/FileVersionsTab';
 
 interface FileDetailsPanelProps {
     file: SerializedFile | null;
@@ -137,6 +139,7 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
         { id: 'info', label: 'Info', icon: Info },
         { id: 'metadata', label: 'Metadata', icon: Camera },
         { id: 'permissions', label: 'Access', icon: Lock },
+        { id: 'versions', label: 'Versions', icon: ClockCounterClockwise },
     ];
 
     // Determine file type for metadata display
@@ -447,6 +450,8 @@ export function FileDetailsPanel({ file }: FileDetailsPanelProps) {
                 return renderMetadataTab();
             case 'permissions':
                 return renderPermissionsTab();
+            case 'versions':
+                return <FileVersionsTab file={file} />;
             default:
                 return renderInfoTab();
         }
