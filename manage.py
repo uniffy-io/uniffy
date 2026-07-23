@@ -5,6 +5,7 @@
 # ///
 """Uniffy project CLI. Run `./manage.py` for the command tree."""
 
+import json
 import os
 import shlex
 import subprocess
@@ -61,8 +62,22 @@ def compose(*args: str, profiles: list[str] | None = None) -> list[str]:
     return [*cmd, *args]
 
 
+def compose_project() -> str:
+    """The docker compose project name - the prefix on every volume and network."""
+    out = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout
+    return json.loads(out)["name"]
+
+
 def container_running(service: str) -> bool:
-    return sh_ok(["docker", "compose", "ps", "-q", "--status", "running", service])
+    # Enable every profile: a bare `compose ps` hides services whose profile is
+    # not active (e.g. mobile), so a running container would read as stopped.
+    return sh_ok([
+        "docker", "compose", "--profile", "core", "--profile", "dev", "--profile", "mobile",
+        "ps", "-q", "--status", "running", service,
+    ])
 
 
 def docker_pnpm(
@@ -148,14 +163,20 @@ def _docker_sync(compose_svc: str, profile: str) -> None:
 
 
 def _resync_after_lock_change(service: str) -> None:
-    """After a dependency mutation, sync the sibling containers that share the
-    mutated lockfile but not the mutated container's volumes."""
-    if service == "backend":
-        siblings = [(svc, profile) for svc, profile in BACKEND_COMPOSE_SERVICES if svc != "backend"]
-    else:
-        siblings = [(svc, profile) for name, (svc, _, profile) in NODE_SERVICES.items() if name != service]
-    for svc, profile in siblings:
-        if container_running(svc):
+    """Restart the sibling backend containers after a backend dependency change.
+
+    Only backend has siblings that need it: backend, worker-core and
+    worker-egress run the same `uniffy` package from a shared lockfile into
+    separate `.venv` volumes, so a new dep reaches them only on an entrypoint
+    re-run. Node workspaces install distinct `--filter`ed subsets into
+    container-private node_modules, so a dep added to one (e.g. ui) never
+    changes another's (landing / mobile) install - those self-heal on their
+    next start via the entrypoint lockfile-hash guard.
+    """
+    if service != "backend":
+        return
+    for svc, profile in BACKEND_COMPOSE_SERVICES:
+        if svc != "backend" and container_running(svc):
             sh(compose("restart", svc, profiles=[profile]))
 
 
@@ -172,9 +193,11 @@ def deps_install(service: str, stack: str):
                     sh(compose("restart", svc, profiles=[profile]))
         elif service == "backend":
             _docker_sync("backend", "dev")
+            _resync_after_lock_change("backend")
         else:
             svc, _, profile = NODE_SERVICES[service]
             _docker_sync(svc, profile)
+            _resync_after_lock_change(service)
         return
     if service in ("backend", "all"):
         sh(["uv", "sync"])
@@ -223,7 +246,13 @@ def deps_remove(packages, service, stack):
 def deps_update(packages, service, stack):
     """Update packages (all in range when none given)."""
     if service == "backend":
-        workspace_cmd("backend", stack, ["sync", "--upgrade", *(f"--upgrade-package={p}" for p in packages)])
+        if packages:
+            # Bare `uv sync --upgrade` upgrades the WHOLE lock; scope to the named
+            # packages by re-locking just those, then install.
+            workspace_cmd("backend", stack, ["lock", *(f"--upgrade-package={p}" for p in packages)])
+            workspace_cmd("backend", stack, ["sync"])
+        else:
+            workspace_cmd("backend", stack, ["sync", "--upgrade"])
     else:
         workspace_cmd(service, stack, ["update", *packages])
     if stack == "docker":
@@ -282,26 +311,55 @@ def stack_down(profiles):
     sh(compose("down", profiles=list(profiles)))
 
 
+def _image_siblings(target: str) -> list[tuple[str, str]]:
+    """Every (service, profile) sharing one built image with `target`.
+
+    backend/worker-core/worker-egress share `uniffy-dev-backend`;
+    ui/landing/mobile share `uniffy-dev-node`. Rebuilding one must recreate its
+    siblings so the new image and the entrypoint's frozen dep-sync reach them all.
+    """
+    node = [(name, prof) for name, (_, _, prof) in NODE_SERVICES.items()]
+    if target in ("backend", "worker-core", "worker-egress"):
+        return list(BACKEND_COMPOSE_SERVICES)
+    if target in NODE_SERVICES:
+        return node
+    return [(target, "dev")]
+
+
 @stack.command("rebuild")
 @click.argument("services", nargs=-1)
 def stack_rebuild(services):
-    """Rebuild dev images without cache (after a Dockerfile change)."""
-    sh(compose("build", "--no-cache", *(services or ("backend", "ui", "deps-manager")), profiles=["dev"]))
+    """Rebuild dev images without cache (after a Dockerfile change) and recreate the running containers on them."""
+    targets = services or ("backend", "ui", "deps-manager")
+    sh(compose("build", "--no-cache", *targets, profiles=["dev"]))
+    by_profile: dict[str, list[str]] = {}
+    for svc, profile in {s: p for t in targets for s, p in _image_siblings(t)}.items():
+        if container_running(svc):
+            by_profile.setdefault(profile, []).append(svc)
+    for profile, running in by_profile.items():
+        sh(compose("up", "-d", "--no-deps", *running, profiles=[profile]))
 
 
 @stack.command("recreate")
+@click.argument("services", nargs=-1)
 @profiles_option
 @click.option("--detach", "-d", is_flag=True, help="Start and return without tailing logs.")
 @click.option("--no-build", is_flag=True, help="Start without rebuilding changed images.")
 @click.option("--yes", "-y", is_flag=True, help="Skip the confirmation prompt.")
 @click.pass_context
-def stack_recreate(ctx, profiles, detach, no_build, yes):
-    """Tear down EVERYTHING and start fresh - containers, all volumes, orphans.
+def stack_recreate(ctx, services, profiles, detach, no_build, yes):
+    """Recreate containers so compose changes (command, env, volumes) take effect.
 
-    Wipes all data (postgres, valkey, meilisearch, rustfs) plus every tooling
-    cache volume (venvs, node_modules, pnpm store, uv cache), then runs the
-    same flow as `stack up`.
+    With SERVICES, force-recreate just those containers and nothing else - the
+    surgical way to apply an edited command/env without a rebuild or data loss.
+    With no SERVICES, tear down EVERYTHING and start fresh: all containers, all
+    volumes (postgres/valkey/meilisearch/rustfs plus every cache volume) and
+    orphans, then run the `stack up` flow.
     """
+    if services:
+        sh(compose("up", "-d", "--force-recreate", "--no-deps", *services,
+                   profiles=["core", "dev", "mobile"]))
+        return
     if not yes:
         click.confirm(
             "This deletes ALL containers and volumes for every profile (data is gone). Continue?",
@@ -314,12 +372,10 @@ def stack_recreate(ctx, profiles, detach, no_build, yes):
 @stack.command("reset-data")
 def stack_reset_data():
     """Wipe postgres/valkey/meilisearch/rustfs volumes and restart the backend."""
+    prefix = compose_project()
     volumes = [
-        "uniffy-local_postgres_data",
-        "uniffy-local_valkey_data",
-        "uniffy-local_meilisearch_data",
-        "uniffy-local_rustfs_data",
-        "uniffy-local_rustfs_logs",
+        f"{prefix}_{suffix}"
+        for suffix in ("postgres_data", "valkey_data", "meilisearch_data", "rustfs_data", "rustfs_logs")
     ]
     click.echo("This will WIPE these docker volumes (data is gone):")
     for volume in volumes:
@@ -418,14 +474,15 @@ def start(ctx, stack, profiles):
 
 
 @cli.command()
-@click.option("--service", "-s", default=None, help="One service; omit for combined logs.")
+@click.option("--service", "-s", "services", multiple=True,
+              help="Service(s) to tail; repeatable (-s backend -s ui). Omit for all.")
 @click.option("--stack", type=Stack, default="docker", show_default=True)
-def logs(service, stack):
+def logs(services, stack):
     """Tail logs. docker = compose services; local = processes started by `serve all`."""
     if stack == "docker":
-        sh(compose("logs", "-f", *([service] if service else []), profiles=["core", "dev", "mobile"]))
+        sh(compose("logs", "-f", *services, profiles=["core", "dev", "mobile"]))
         return
-    files = [LOG_DIR / f"{service}.log"] if service else sorted(LOG_DIR.glob("*.log"))
+    files = [LOG_DIR / f"{s}.log" for s in services] if services else sorted(LOG_DIR.glob("*.log"))
     files = [f for f in files if f.exists()]
     if not files:
         raise click.ClickException("No local log files in .logs/ - start processes with ./manage.py serve all")
@@ -487,8 +544,6 @@ def licenses(stack):
         ["pnpm", "licenses", "list", "--prod", "--json"],
         cwd=ROOT / "src/ui", check=True, capture_output=True, text=True,
     ).stdout
-    import json
-
     rows = []
     for license_name, pkgs in json.loads(node_json).items():
         for pkg in pkgs:

@@ -441,6 +441,106 @@ files, folders, channels, agent chats, and chat history (`(both products)`).
       `/search.v1.SearchService/IndexItem` and `/DeleteItem` return
       not-found/unimplemented, never 200.
 
+## Files - PDF viewer
+
+Open PDFs from a multi-file folder so the playlist has neighbors
+(`(both products)`). Use one 100+ page document, one with an outline,
+one password-protected, and one over 16 MB.
+
+- [ ] Continuous scroll on a 100+ page doc stays responsive; only pages
+      near the viewport hold live canvases (inspect DOM); the scrollbar
+      never jumps while pages mount.
+- [ ] Thumbnail rail: current page highlighted, click jumps, rail
+      auto-scrolls to keep the current page visible. Outline tab appears
+      only on documents with bookmarks and its entries jump correctly.
+- [ ] Default view opens with the sidebar visible at a comfortable
+      width (~80% of fit-width); the fit-width button fully stretches;
+      fit-page fits the whole page; both recompute on window resize and
+      rotation; the zoom percent always matches the real scale.
+- [ ] Rotate via toolbar and `R`; rotation resets when switching files.
+- [ ] Page indicator accepts a typed page number (Enter commits, Esc
+      cancels without closing the viewer).
+- [ ] ArrowRight on the last page advances to the next playlist file;
+      ArrowLeft on page 1 goes back; toolbar carets stay page-only.
+- [ ] Ctrl+F: match counts, Enter/Shift+Enter navigation with wrap,
+      visible highlights, Escape closes search before the viewer.
+- [ ] Print produces a correct dialog for the full document; a file
+      still transcoding disables the print button.
+- [ ] A >16 MB PDF paints page 1 without a full download (206 responses
+      in the network tab); breaking the range route falls back to the
+      blob path automatically.
+- [ ] Rapid wheel-zoom stays smooth (CSS-scale interim) and lands crisp
+      within ~200ms; canvas DPR capped at 2 (inspect canvas width vs
+      CSS width on a 3x display).
+- [ ] After opening one file in a playlist, a small next file opens
+      instantly from cache; video/audio and >20 MB neighbors are never
+      prefetched (network tab).
+- [ ] Copy link to page -> fresh tab opens the PDF scrolled to that page
+      (clamped when past the end); `?page=` beats the stored position.
+- [ ] Reopen a multi-page PDF -> resumes at the last read page.
+- [ ] Encrypted PDF prompts inline, wrong password shows the retry
+      line, cancel shows the error state; the form is centered.
+- [ ] Info popover shows title/author/created/producer/version/pages/
+      size; absent metadata rows are omitted.
+- [ ] Night mode inverts pages while selection and search highlights
+      keep working; sticky across file switches.
+- [ ] Presentation mode fullscreens single pages; arrows flip and fall
+      through to the next file at deck end; Escape exits presentation
+      before closing the viewer; browser-level fullscreen exit syncs.
+- [ ] Two-page spread at 1024px+: cover alone then pairs; suppressed in
+      presentation and below 1024px; scrollbar stable.
+- [ ] Select text -> Copy and Copy as quote; the quote pastes as a
+      blockquote with a live file mention chip in a note and in chat.
+- [ ] Edit mode (pencil): rotate/delete/reorder (drag)/extract pages;
+      undo/redo/reset; save as new file and as new version - both open
+      correctly in the viewer afterwards; extract locked to New File.
+- [ ] New Version (edit mode, watermark, and image editor) does NOT
+      create a second file row: the file list stays at one entry, the
+      file's version history gains an entry, the viewer shows the new
+      bytes, and restore-version brings the old content back. A viewer
+      lacking EDIT on the file gets a permission error. Saving an image
+      version in a different format is rejected with a clear MIME
+      message.
+- [ ] Mobile 375px: sidebar is an overlay drawer with backdrop close;
+      touch targets usable.
+- [ ] Watermark: dialog applies a diagonal preview on every page with
+      the chosen opacity; Remove clears it; switching files drops it.
+- [ ] Save watermarked copy: Save button appears once a watermark is
+      pending; New File defaults to `{base}_watermarked.pdf`; New
+      Version keeps the name; the saved copy shows the baked watermark
+      in the viewer and in an external PDF reader; the preview clears
+      after save. Non-Latin watermark text fails with a clear message
+      instead of a broken file.
+
+## Files - version history and retention
+
+Use a text file so version bytes are easy to tell apart. `(both products)`.
+
+- [ ] Restore round-trip: upload a file, save 2 new versions (viewer New
+      Version), open the details panel Versions tab, restore version 1 ->
+      a NEW version appears (numbering keeps climbing, never reuses), the
+      restored bytes download as current, the file list/viewer show the
+      new size, and version 1 is still listed afterwards.
+- [ ] Per-version download from the Versions tab returns that version's
+      exact bytes, not the current ones.
+- [ ] Prune at N: set retention to 2 on the admin storage page, save 3+
+      versions -> only the newest 2 remain in the list AND the pruned
+      S3 objects are gone from the bucket (check rustfs). The current
+      version is never pruned.
+- [ ] Quota accounting: user usage on the admin storage page rises by the
+      version size on each save/restore and falls when versions prune;
+      RecalculateStorageUsage still reports current-file bytes only.
+- [ ] Permission denial: a user with VIEWER on the file sees the version
+      list but no Restore button; a forced RestoreFileVersion RPC returns
+      PERMISSION_DENIED. Restore requires EDIT.
+- [ ] Restoring the current version is rejected with a clear message.
+- [ ] Screen recording (transcoded WebM->MP4): after the 24h delayed
+      WebM delete, restoring the WebM version fails with "bytes no
+      longer available", not a 500.
+- [ ] Retention setting: non-admin org member gets denied on the update
+      RPC; value floor 1 / ceiling 100 enforced; self-host env default
+      `FILE_VERSION_RETENTION` applies when no org row exists.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

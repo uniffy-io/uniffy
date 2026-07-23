@@ -137,17 +137,19 @@ def test_run_ffmpeg_raises_on_nonzero_exit(monkeypatch, tmp_path) -> None:
     worker can flip ``transcode_status=FAILED`` and leave the WebM live.
     """
 
-    class _Result:
+    class _FakeProc:
         returncode = 1
-        stderr = b"boom"
 
-    def _fake_run(*args, **kwargs):
-        return _Result()
+        async def communicate(self):
+            return b"", b"boom"
 
-    monkeypatch.setattr(transcode_mod.subprocess, "run", _fake_run)
+    async def _fake_exec(*args, **kwargs):
+        return _FakeProc()
+
+    monkeypatch.setattr(transcode_mod.asyncio, "create_subprocess_exec", _fake_exec)
 
     with pytest.raises(RuntimeError, match="ffmpeg failed"):
-        transcode_mod._run_ffmpeg(tmp_path / "in.webm", tmp_path / "out.mp4")
+        asyncio.run(transcode_mod._run_ffmpeg(tmp_path / "in.webm", tmp_path / "out.mp4"))
 
 
 def test_get_jobs_for_webm_includes_transcode() -> None:

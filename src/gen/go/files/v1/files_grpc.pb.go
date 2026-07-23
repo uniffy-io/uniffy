@@ -45,6 +45,8 @@ const (
 	FilesService_RestoreFolder_FullMethodName                  = "/files.v1.FilesService/RestoreFolder"
 	FilesService_ListFileVersions_FullMethodName               = "/files.v1.FilesService/ListFileVersions"
 	FilesService_RestoreFileVersion_FullMethodName             = "/files.v1.FilesService/RestoreFileVersion"
+	FilesService_GetOrgFileVersionPolicy_FullMethodName        = "/files.v1.FilesService/GetOrgFileVersionPolicy"
+	FilesService_UpdateOrgFileVersionPolicy_FullMethodName     = "/files.v1.FilesService/UpdateOrgFileVersionPolicy"
 	FilesService_GetOrgStorageQuota_FullMethodName             = "/files.v1.FilesService/GetOrgStorageQuota"
 	FilesService_SetOrgStorageQuota_FullMethodName             = "/files.v1.FilesService/SetOrgStorageQuota"
 	FilesService_GetUserStorageQuota_FullMethodName            = "/files.v1.FilesService/GetUserStorageQuota"
@@ -129,6 +131,10 @@ type FilesServiceClient interface {
 	ListFileVersions(ctx context.Context, in *ListFileVersionsRequest, opts ...grpc.CallOption) (*ListFileVersionsResponse, error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(ctx context.Context, in *RestoreFileVersionRequest, opts ...grpc.CallOption) (*RestoreFileVersionResponse, error)
+	// Get the org's file version retention policy (org admin).
+	GetOrgFileVersionPolicy(ctx context.Context, in *GetOrgFileVersionPolicyRequest, opts ...grpc.CallOption) (*GetOrgFileVersionPolicyResponse, error)
+	// Update the org's file version retention policy (org admin).
+	UpdateOrgFileVersionPolicy(ctx context.Context, in *UpdateOrgFileVersionPolicyRequest, opts ...grpc.CallOption) (*UpdateOrgFileVersionPolicyResponse, error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(ctx context.Context, in *GetOrgStorageQuotaRequest, opts ...grpc.CallOption) (*GetOrgStorageQuotaResponse, error)
 	// Set or update the organization storage quota configuration.
@@ -456,6 +462,26 @@ func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, in *Restore
 	return out, nil
 }
 
+func (c *filesServiceClient) GetOrgFileVersionPolicy(ctx context.Context, in *GetOrgFileVersionPolicyRequest, opts ...grpc.CallOption) (*GetOrgFileVersionPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOrgFileVersionPolicyResponse)
+	err := c.cc.Invoke(ctx, FilesService_GetOrgFileVersionPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *filesServiceClient) UpdateOrgFileVersionPolicy(ctx context.Context, in *UpdateOrgFileVersionPolicyRequest, opts ...grpc.CallOption) (*UpdateOrgFileVersionPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateOrgFileVersionPolicyResponse)
+	err := c.cc.Invoke(ctx, FilesService_UpdateOrgFileVersionPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *filesServiceClient) GetOrgStorageQuota(ctx context.Context, in *GetOrgStorageQuotaRequest, opts ...grpc.CallOption) (*GetOrgStorageQuotaResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetOrgStorageQuotaResponse)
@@ -718,6 +744,10 @@ type FilesServiceServer interface {
 	ListFileVersions(context.Context, *ListFileVersionsRequest) (*ListFileVersionsResponse, error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*RestoreFileVersionResponse, error)
+	// Get the org's file version retention policy (org admin).
+	GetOrgFileVersionPolicy(context.Context, *GetOrgFileVersionPolicyRequest) (*GetOrgFileVersionPolicyResponse, error)
+	// Update the org's file version retention policy (org admin).
+	UpdateOrgFileVersionPolicy(context.Context, *UpdateOrgFileVersionPolicyRequest) (*UpdateOrgFileVersionPolicyResponse, error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(context.Context, *GetOrgStorageQuotaRequest) (*GetOrgStorageQuotaResponse, error)
 	// Set or update the organization storage quota configuration.
@@ -850,6 +880,12 @@ func (UnimplementedFilesServiceServer) ListFileVersions(context.Context, *ListFi
 }
 func (UnimplementedFilesServiceServer) RestoreFileVersion(context.Context, *RestoreFileVersionRequest) (*RestoreFileVersionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RestoreFileVersion not implemented")
+}
+func (UnimplementedFilesServiceServer) GetOrgFileVersionPolicy(context.Context, *GetOrgFileVersionPolicyRequest) (*GetOrgFileVersionPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrgFileVersionPolicy not implemented")
+}
+func (UnimplementedFilesServiceServer) UpdateOrgFileVersionPolicy(context.Context, *UpdateOrgFileVersionPolicyRequest) (*UpdateOrgFileVersionPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateOrgFileVersionPolicy not implemented")
 }
 func (UnimplementedFilesServiceServer) GetOrgStorageQuota(context.Context, *GetOrgStorageQuotaRequest) (*GetOrgStorageQuotaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrgStorageQuota not implemented")
@@ -1382,6 +1418,42 @@ func _FilesService_RestoreFileVersion_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FilesService_GetOrgFileVersionPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrgFileVersionPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).GetOrgFileVersionPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_GetOrgFileVersionPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).GetOrgFileVersionPolicy(ctx, req.(*GetOrgFileVersionPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FilesService_UpdateOrgFileVersionPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOrgFileVersionPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FilesServiceServer).UpdateOrgFileVersionPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FilesService_UpdateOrgFileVersionPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FilesServiceServer).UpdateOrgFileVersionPolicy(ctx, req.(*UpdateOrgFileVersionPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FilesService_GetOrgStorageQuota_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetOrgStorageQuotaRequest)
 	if err := dec(in); err != nil {
@@ -1844,6 +1916,14 @@ var FilesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RestoreFileVersion",
 			Handler:    _FilesService_RestoreFileVersion_Handler,
+		},
+		{
+			MethodName: "GetOrgFileVersionPolicy",
+			Handler:    _FilesService_GetOrgFileVersionPolicy_Handler,
+		},
+		{
+			MethodName: "UpdateOrgFileVersionPolicy",
+			Handler:    _FilesService_UpdateOrgFileVersionPolicy_Handler,
 		},
 		{
 			MethodName: "GetOrgStorageQuota",

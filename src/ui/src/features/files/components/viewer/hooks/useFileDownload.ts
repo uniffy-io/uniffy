@@ -22,6 +22,71 @@ interface UseFileDownloadOptions {
     versionId?: string;
 }
 
+export interface FetchedFileBlob {
+    blob: Blob;
+    url: string;
+    mimeType: string;
+    filename: string;
+    size: number;
+}
+
+/**
+ * Downloads a file into the blob LRU (which assumes ownership of the blob URL).
+ * Returns null when cancelled mid-stream.
+ */
+export async function fetchFileBlob(
+    fileId: string,
+    organizationId: string,
+    options?: {
+        versionId?: string;
+        onProgress?: (percent: number) => void;
+        isCancelled?: () => boolean;
+    }
+): Promise<FetchedFileBlob | null> {
+    const chunks: Uint8Array[] = [];
+    let totalSize = 0;
+    let receivedBytes = 0;
+    let mimeType = 'application/octet-stream';
+    let filename = 'file';
+
+    for await (const response of filesApi.downloadFile({
+        fileId,
+        organizationId,
+        versionId: options?.versionId,
+    })) {
+        if (options?.isCancelled?.()) return null;
+
+        chunks.push(response.data);
+        receivedBytes += response.data.length;
+
+        if (response.chunkNumber === 1) {
+            totalSize = Number(response.totalSize);
+            mimeType = response.mimeType || 'application/octet-stream';
+            filename = response.filename || 'file';
+        }
+
+        if (totalSize > 0) {
+            options?.onProgress?.(Math.round((receivedBytes / totalSize) * 100));
+        }
+    }
+
+    if (options?.isCancelled?.()) return null;
+
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const combined = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    const blob = new Blob([combined], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    setCachedBlob(fileId, blob, url, mimeType, filename, options?.versionId);
+
+    return { blob, url, mimeType, filename, size: totalLength };
+}
+
 export function useFileDownload(
     fileId: string | null,
     options?: UseFileDownloadOptions
@@ -72,56 +137,24 @@ export function useFileDownload(
             setError(null);
 
             try {
-                const chunks: Uint8Array[] = [];
-                let totalSize = 0;
-                let receivedBytes = 0;
-                let fileMimeType = 'application/octet-stream';
-                let fileFilename = 'file';
-
-                for await (const response of filesApi.downloadFile({
-                    fileId,
-                    organizationId,
+                const result = await fetchFileBlob(fileId, organizationId, {
                     versionId: options?.versionId,
-                })) {
-                    if (cancelled) break;
+                    onProgress: (percent) => {
+                        if (!cancelled) setProgress(percent);
+                    },
+                    isCancelled: () => cancelled,
+                });
 
-                    chunks.push(response.data);
-                    receivedBytes += response.data.length;
+                if (cancelled || !result) return;
 
-                    if (response.chunkNumber === 1) {
-                        totalSize = Number(response.totalSize);
-                        fileMimeType = response.mimeType || 'application/octet-stream';
-                        fileFilename = response.filename || 'file';
-                    }
+                // The cache owns the blob URL (lifecycle handled by LRU eviction).
+                urlRef.current = result.url;
 
-                    if (totalSize > 0) {
-                        setProgress(Math.round((receivedBytes / totalSize) * 100));
-                    }
-                }
-
-                if (cancelled) return;
-
-                const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-                const combined = new Uint8Array(totalLength);
-                let offset = 0;
-                for (const chunk of chunks) {
-                    combined.set(chunk, offset);
-                    offset += chunk.length;
-                }
-
-                const fileBlob = new Blob([combined], { type: fileMimeType });
-                const blobUrl = URL.createObjectURL(fileBlob);
-
-                // The cache assumes ownership of the blob URL (lifecycle handled by LRU eviction).
-                setCachedBlob(fileId, fileBlob, blobUrl, fileMimeType, fileFilename, options?.versionId);
-
-                urlRef.current = blobUrl;
-
-                setBlob(fileBlob);
-                setUrl(blobUrl);
-                setMimeType(fileMimeType);
-                setFilename(fileFilename);
-                setSize(totalLength);
+                setBlob(result.blob);
+                setUrl(result.url);
+                setMimeType(result.mimeType);
+                setFilename(result.filename);
+                setSize(result.size);
                 setProgress(100);
             } catch (err) {
                 if (!cancelled) {

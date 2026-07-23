@@ -26,17 +26,67 @@ When a design decision pulls in opposite directions, pick the option that satisf
 
 ## Commands
 
+All project commands go through `./manage.py`, a PEP 723 uv script (click). Every `--stack` command defaults to `docker`; `--stack local` runs the host toolchain.
+
 ```bash
-./manage.py deps install --stack local   # Install host dependencies (uv + pnpm workspace)
-./manage.py proto                        # Generate protobuf code (run after ANY .proto edit)
-./manage.py lint [-s backend|ui|mobile]  # Linters (ruff / eslint)
-./manage.py test [-s ui]                 # Tests (pytest / vitest)
-./manage.py bench                        # Benchmarks
+# First start
+./manage.py start                            # docker: full containerized stack
+./manage.py start --stack local              # host app + native processes, infra in docker
+
+# Compose stack (default profiles core+dev; add -p mobile)
+./manage.py stack up [-d] [--no-build]       # start detached (cached build), tail logs (Ctrl+C detaches)
+./manage.py stack down                       # stop the stack
+./manage.py stack rebuild [services...]      # --no-cache image rebuild, then recreate them + image-siblings
+./manage.py stack recreate <services...>     # force-recreate just these (apply an edited command/env, no data loss)
+./manage.py stack recreate                   # no args = DESTRUCTIVE full reset: down --volumes ALL profiles, then up
+./manage.py stack reset-data                 # wipe only data volumes (pg/valkey/meili/rustfs), restart backend
+
+# Logs
+./manage.py logs                             # tail all docker services
+./manage.py logs -s backend -s ui            # tail specific services (-s repeatable)
+./manage.py logs --stack local               # tail .logs/*.log written by `serve all`
+
+# Host dev processes (native hot reload; infra stays in docker)
+./manage.py serve all                        # backend + both workers + vite
+./manage.py serve backend|worker-core|worker-egress|ui|landing|mobile
+
+# Dependencies (per workspace; -s backend|ui|mobile|landing)
+./manage.py deps install -s all              # sync from lockfiles (backend sync also resyncs the workers)
+./manage.py deps add <pkg[@ver]> -s ui       # add (pkg@ver pins the version); --dev for a dev dep
+./manage.py deps remove <pkg> -s backend     # remove a package
+./manage.py deps update [pkgs] -s backend    # upgrade named pkgs (bare = upgrade all in range)
+./manage.py deps run -s backend -- <args>    # raw uv (backend) / pnpm (node) passthrough
+
+# Codegen / housekeeping
+./manage.py proto                            # regenerate protobuf (run after ANY .proto edit)
+./manage.py licenses                         # regenerate docs/LICENSES.md
+./manage.py clean                            # remove generated code + build caches
+./manage.py toolbox <cmd>                    # run in deps-manager container (pnpm/uv/buf); try: toolbox bash
+
+# Quality
+./manage.py lint [-s backend|ui|mobile|cli]  # ruff / eslint / go vet
+./manage.py format                           # ruff format (backend)
+./manage.py test [-s backend|ui|cli]         # pytest / vitest / go test
+./manage.py bench                            # backend benchmarks
+
+# Database
+./manage.py db shell                         # psql into postgres
+./manage.py db migrate                       # alembic upgrade head (also runs automatically on startup)
+
+# unictl (Go CLI)
+./manage.py cli build|install|run|lint|test
+
+# Landing site (--stack defaults to docker)
+./manage.py landing build|preview|deploy     # preview on :8788; deploy needs CLOUDFLARE_API_TOKEN in host env
 ```
 
-Full command map: `.claude/rules/manage-cli.md`. Migrations run automatically on startup. Backend tests live in `src/uniffy/tests/`, frontend tests in `src/ui/`; tests mirror the domain structure (unit tests for operations, integration tests for handlers).
+Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed). Backend tests live in `src/uniffy/tests/`, frontend tests in `src/ui/`.
 
-Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed).
+Stack and container invariants:
+
+- `--stack local` never auto-creates `.venv`/`node_modules` on the host; `serve` and `cli` are host-only. Docker deps live in per-container `.venv`/`node_modules` volumes the entrypoint syncs on restart - never hand-edit a `package.json` then `deps install` (the frozen lockfile refuses).
+- Supply-chain: `pnpm-workspace.yaml` `minimumReleaseAge` (5d) refuses too-fresh versions on host and in containers - do not bypass. Surface a blocked deliberate upgrade to the user.
+- Containers that run third-party code use `cap_drop: ALL` + read-only rootfs (`<<: *contained` in `dev.yaml`); a new code-running service gets that anchor. Writes stay host-owned via `HOST_UID`/`setpriv`, so never chown `/app` from inside a container.
 
 ## Rules
 

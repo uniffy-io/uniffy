@@ -9,6 +9,8 @@ from loguru import logger
 from uniffy_proto.files.v1.files_pb2 import (
     CheckStorageQuotaRequest,
     CheckStorageQuotaResponse,
+    GetOrgFileVersionPolicyRequest,
+    GetOrgFileVersionPolicyResponse,
     GetOrgStorageQuotaRequest,
     GetOrgStorageQuotaResponse,
     GetStorageUsageRequest,
@@ -19,6 +21,7 @@ from uniffy_proto.files.v1.files_pb2 import (
     ListOrgStorageUsageResponse,
     ListUserStorageQuotaOverridesRequest,
     ListUserStorageQuotaOverridesResponse,
+    OrgFileVersionPolicy,
     RecalculateStorageUsageRequest,
     RecalculateStorageUsageResponse,
     RemoveUserStorageQuotaOverrideRequest,
@@ -27,6 +30,8 @@ from uniffy_proto.files.v1.files_pb2 import (
     SetOrgStorageQuotaResponse,
     SetUserStorageQuotaOverrideRequest,
     SetUserStorageQuotaOverrideResponse,
+    UpdateOrgFileVersionPolicyRequest,
+    UpdateOrgFileVersionPolicyResponse,
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
@@ -39,6 +44,10 @@ from uniffy.domains.files.quota_converters import (
     user_usage_row_to_proto,
 )
 from uniffy.domains.files.quota_operations import QuotaOperations
+from uniffy.domains.files.version_policy import (
+    get_org_version_policy_view,
+    update_org_version_policy,
+)
 
 logger = logger.bind(component="files.quota_handlers")
 
@@ -473,4 +482,74 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error checking storage quota: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def get_org_file_version_policy(
+        self,
+        request: GetOrgFileVersionPolicyRequest,
+        ctx: RequestContext,
+    ) -> GetOrgFileVersionPolicyResponse:
+        """Effective version retention policy for the admin surface."""
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                policy = await get_org_version_policy_view(
+                    session, user_id, organization_id
+                )
+                return GetOrgFileVersionPolicyResponse(
+                    policy=OrgFileVersionPolicy(
+                        organization_id=str(policy.organization_id),
+                        keep_versions=policy.keep_versions,
+                    )
+                )
+
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error getting file version policy: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+
+    async def update_org_file_version_policy(
+        self,
+        request: UpdateOrgFileVersionPolicyRequest,
+        ctx: RequestContext,
+    ) -> UpdateOrgFileVersionPolicyResponse:
+        try:
+            organization_id = UUID(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                policy = await update_org_version_policy(
+                    session,
+                    user_id,
+                    organization_id,
+                    keep_versions=request.keep_versions,
+                )
+                return UpdateOrgFileVersionPolicyResponse(
+                    policy=OrgFileVersionPolicy(
+                        organization_id=str(policy.organization_id),
+                        keep_versions=policy.keep_versions,
+                    )
+                )
+
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error updating file version policy: {e}")
             raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")

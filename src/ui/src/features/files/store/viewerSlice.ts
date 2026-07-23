@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { fetchFile, restoreFileVersion } from '@/features/files/store/filesThunks';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 
 interface ViewerState {
@@ -29,9 +30,39 @@ interface ViewerState {
     totalPages: number;
     pdfZoom: number;
     pdfRotation: number;
+    pdfFitMode: PdfFitMode;
+    /** Session preferences: survive file switches, unlike zoom/rotation/fit. */
+    pdfSidebarOpen: boolean;
+    pdfInvert: boolean;
+    pdfSpread: boolean;
+    /** Resets per openViewer but survives nextFile so a folder of decks stays a slideshow. */
+    pdfPresentation: boolean;
+    /** Page requested by a `?page=` deep link; applies to the opened file only. */
+    pdfInitialPage: number | null;
+    pdfDocumentInfo: PdfDocumentInfo | null;
+
+    /** Pending watermark; bakes into a saved copy via pdf-lib. */
+    pdfWatermark: PdfWatermark | null;
 
     loading: boolean;
     error: string | null;
+}
+
+export interface PdfWatermark {
+    text: string;
+    /** 0..1 */
+    opacity: number;
+}
+
+/** `auto` is the opening default: fit-width scaled down for comfortable margins. */
+export type PdfFitMode = 'auto' | 'width' | 'page' | 'custom';
+
+export interface PdfDocumentInfo {
+    title?: string;
+    author?: string;
+    createdAt?: string;
+    producer?: string;
+    formatVersion?: string;
 }
 
 const initialState: ViewerState = {
@@ -54,6 +85,14 @@ const initialState: ViewerState = {
     totalPages: 0,
     pdfZoom: 1,
     pdfRotation: 0,
+    pdfFitMode: 'auto',
+    pdfSidebarOpen: true,
+    pdfInvert: false,
+    pdfSpread: false,
+    pdfPresentation: false,
+    pdfInitialPage: null,
+    pdfDocumentInfo: null,
+    pdfWatermark: null,
     loading: false,
     error: null,
 };
@@ -64,9 +103,14 @@ export const viewerSlice = createSlice({
     reducers: {
         openViewer: (
             state,
-            action: PayloadAction<{ fileId: string; playlist?: string[]; fileData?: SerializedFile }>
+            action: PayloadAction<{
+                fileId: string;
+                playlist?: string[];
+                fileData?: SerializedFile;
+                initialPage?: number;
+            }>
         ) => {
-            const { fileId, playlist = [], fileData } = action.payload;
+            const { fileId, playlist = [], fileData, initialPage } = action.payload;
             state.isOpen = true;
             state.currentFileId = fileId;
             state.playlist = playlist;
@@ -82,6 +126,11 @@ export const viewerSlice = createSlice({
             state.totalPages = 0;
             state.pdfZoom = 1;
             state.pdfRotation = 0;
+            state.pdfFitMode = 'auto';
+            state.pdfPresentation = false;
+            state.pdfInitialPage = initialPage && initialPage > 0 ? initialPage : null;
+            state.pdfDocumentInfo = null;
+            state.pdfWatermark = null;
             state.isPlaying = false;
             state.currentTime = 0;
         },
@@ -107,6 +156,13 @@ export const viewerSlice = createSlice({
                 state.panY = 0;
                 state.rotation = 0;
                 state.currentPage = 1;
+                state.totalPages = 0;
+                state.pdfZoom = 1;
+                state.pdfRotation = 0;
+                state.pdfFitMode = 'auto';
+                state.pdfInitialPage = null;
+                state.pdfDocumentInfo = null;
+                state.pdfWatermark = null;
                 state.isPlaying = false;
                 state.currentTime = 0;
             }
@@ -122,6 +178,13 @@ export const viewerSlice = createSlice({
                 state.panY = 0;
                 state.rotation = 0;
                 state.currentPage = 1;
+                state.totalPages = 0;
+                state.pdfZoom = 1;
+                state.pdfRotation = 0;
+                state.pdfFitMode = 'auto';
+                state.pdfInitialPage = null;
+                state.pdfDocumentInfo = null;
+                state.pdfWatermark = null;
                 state.isPlaying = false;
                 state.currentTime = 0;
             }
@@ -202,6 +265,42 @@ export const viewerSlice = createSlice({
             state.pdfRotation = action.payload % 360;
         },
 
+        setPdfFitMode: (state, action: PayloadAction<PdfFitMode>) => {
+            state.pdfFitMode = action.payload;
+        },
+
+        togglePdfSidebar: (state) => {
+            state.pdfSidebarOpen = !state.pdfSidebarOpen;
+        },
+
+        setPdfSidebarOpen: (state, action: PayloadAction<boolean>) => {
+            state.pdfSidebarOpen = action.payload;
+        },
+
+        togglePdfInvert: (state) => {
+            state.pdfInvert = !state.pdfInvert;
+        },
+
+        togglePdfSpread: (state) => {
+            state.pdfSpread = !state.pdfSpread;
+        },
+
+        togglePdfPresentation: (state) => {
+            state.pdfPresentation = !state.pdfPresentation;
+        },
+
+        setPdfPresentation: (state, action: PayloadAction<boolean>) => {
+            state.pdfPresentation = action.payload;
+        },
+
+        setPdfDocumentInfo: (state, action: PayloadAction<PdfDocumentInfo | null>) => {
+            state.pdfDocumentInfo = action.payload;
+        },
+
+        setPdfWatermark: (state, action: PayloadAction<PdfWatermark | null>) => {
+            state.pdfWatermark = action.payload;
+        },
+
         setLoading: (state, action: PayloadAction<boolean>) => {
             state.loading = action.payload;
         },
@@ -210,6 +309,21 @@ export const viewerSlice = createSlice({
             state.error = action.payload;
             state.loading = false;
         },
+    },
+    extraReducers: (builder) => {
+        // The viewer-owned snapshot wins over the files store, so single-file
+        // refetches and restores must sync it or the open viewer goes stale.
+        builder
+            .addCase(fetchFile.fulfilled, (state, action) => {
+                if (state.currentFileId === action.payload.id && state.fileData) {
+                    state.fileData = action.payload;
+                }
+            })
+            .addCase(restoreFileVersion.fulfilled, (state, action) => {
+                if (state.currentFileId === action.payload.id && state.fileData) {
+                    state.fileData = action.payload;
+                }
+            });
     },
 });
 
@@ -236,6 +350,15 @@ export const {
     setTotalPages,
     setPdfZoom,
     setPdfRotation,
+    setPdfFitMode,
+    togglePdfSidebar,
+    setPdfSidebarOpen,
+    togglePdfInvert,
+    togglePdfSpread,
+    togglePdfPresentation,
+    setPdfPresentation,
+    setPdfDocumentInfo,
+    setPdfWatermark,
     setLoading,
     setError,
 } = viewerSlice.actions;

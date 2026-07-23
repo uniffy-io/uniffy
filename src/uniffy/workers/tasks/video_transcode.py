@@ -7,8 +7,8 @@ task replaces the bytes. Idempotent via `SET NX transcode_lock:{file_id}` plus a
 `transcode_status` flips to FAILED so downloads keep working.
 """
 
+import asyncio
 import os
-import subprocess
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -75,12 +75,15 @@ def _ffmpeg_video_codec_args() -> list[str]:
     return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
 
 
-def _run_ffmpeg(input_path: Path, output_path: Path) -> None:
+async def _run_ffmpeg(input_path: Path, output_path: Path) -> None:
     """Re-encode WebM to H.264/AAC MP4 with `+faststart`.
 
     Container-only remux is not enough: QuickTime / iOS cannot decode VP9 or
     Opus. `+faststart` moves the moov atom to the head so inline `<video>`
     playback starts before the byte stream finishes.
+
+    The child process is awaited so a long transcode does not stall the
+    worker's event loop or its heartbeats.
     """
     cmd = [
         "ffmpeg",
@@ -96,14 +99,22 @@ def _run_ffmpeg(input_path: Path, output_path: Path) -> None:
         "+faststart",
         str(output_path),
     ]
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        timeout=_FFMPEG_TIMEOUT_SECONDS,
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.PIPE,
     )
-    if result.returncode != 0:
-        stderr = result.stderr.decode("utf-8", errors="replace")
-        raise RuntimeError(f"ffmpeg failed: {stderr[:500]}")
+    try:
+        _, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=_FFMPEG_TIMEOUT_SECONDS
+        )
+    except TimeoutError:
+        proc.kill()
+        await proc.wait()
+        raise RuntimeError(f"ffmpeg timed out after {_FFMPEG_TIMEOUT_SECONDS}s")
+    if proc.returncode != 0:
+        message = stderr.decode("utf-8", errors="replace") if stderr else ""
+        raise RuntimeError(f"ffmpeg failed: {message[:500]}")
 
 
 async def transcode_video_to_mp4(
@@ -163,7 +174,7 @@ async def transcode_video_to_mp4(
             del webm_bytes
 
             log.info("Running ffmpeg")
-            _run_ffmpeg(webm_path, mp4_path)
+            await _run_ffmpeg(webm_path, mp4_path)
 
             mp4_size = mp4_path.stat().st_size
             if mp4_size <= 0:
@@ -216,11 +227,14 @@ async def transcode_video_to_mp4(
             await session.commit()
             await session.refresh(file)
 
+            ops = FileOperations(session)
             try:
-                await FileOperations(session)._index_for_search(file)
+                await ops._index_for_search(file)
                 await session.commit()
             except Exception:
                 log.warning("Search re-index failed after transcode swap")
+
+            await ops.prune_file_versions(file)
 
         valkey = ctx.get("valkey") if ctx else None
         if valkey is not None and old_storage_key:

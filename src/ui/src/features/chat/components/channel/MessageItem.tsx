@@ -7,7 +7,7 @@ import { MessageContent } from '@/features/chat/components/channel/MessageConten
 import { SystemMessage } from '@/features/chat/components/channel/SystemMessage';
 import { MessageAttachments } from '@/features/chat/components/channel/MessageAttachments';
 import { ThreadFooter } from '@/features/chat/components/channel/ThreadFooter';
-import { AgentMessageBody } from '@/features/chat/components/channel/AgentMessageBody';
+import { AgentMessageBody, AgentToolActivityPane } from '@/features/chat/components/channel/AgentMessageBody';
 import { ReactionBar } from '@/features/chat/components/reactions/ReactionBar';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
 import { SubjectAvatarById, UserHoverCard } from '@/components/subject';
@@ -56,6 +56,8 @@ interface MessageItemProps {
   isFirstInGroup: boolean;
   isHighlighted?: boolean;
   isSelected?: boolean;
+  /** A folded run of consecutive agent tool calls rendered as one activity pane. */
+  toolRun?: ChatMessage[];
 }
 
 function messageRev(m: ChatMessage): string {
@@ -78,6 +80,14 @@ function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps
   if (prev.isFirstInGroup !== next.isFirstInGroup) return false;
   if ((prev.isHighlighted ?? false) !== (next.isHighlighted ?? false)) return false;
   if ((prev.isSelected ?? false) !== (next.isSelected ?? false)) return false;
+  // A growing tool run keeps the same representative message, so compare the run
+  // membership and its last member; the pane reads result/typing state itself.
+  const prevRun = prev.toolRun;
+  const nextRun = next.toolRun;
+  if ((prevRun?.length ?? 0) !== (nextRun?.length ?? 0)) return false;
+  if (prevRun && nextRun && nextRun.length > 0) {
+    if (messageRev(prevRun[prevRun.length - 1]) !== messageRev(nextRun[nextRun.length - 1])) return false;
+  }
   return messageRev(prev.message) === messageRev(next.message);
 }
 
@@ -87,6 +97,7 @@ function MessageItemInner({
   isFirstInGroup,
   isHighlighted = false,
   isSelected = false,
+  toolRun,
 }: MessageItemProps) {
   const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
@@ -218,6 +229,51 @@ function MessageItemInner({
           <span className="text-xs text-muted-foreground/50 italic">
             This message was deleted
           </span>
+        </div>
+      </div>
+    );
+  }
+
+  // A folded run of tool calls renders as a single activity pane under the agent
+  // shell, without the message chrome (reactions, threads, hover edit).
+  if (toolRun && toolRun.length > 0) {
+    return (
+      <div
+        className={cn('group relative px-4', isGrouped ? 'py-0.5' : 'py-1.5')}
+        data-testid={`chat-message-${message.id}`}
+        data-message-id={message.id}
+        data-message-kind="agent-tool-run"
+        data-sender-type={message.senderType}
+        data-sender-id={message.senderId}
+      >
+        <div className="flex items-start gap-3">
+          {isFirstInGroup ? (
+            <div className="shrink-0 mt-0.5">
+              <AgentAvatar
+                avatarKey={agent?.avatarKey}
+                avatarEmoji={agent?.avatarEmoji}
+                agentName={senderName}
+                size="md"
+              />
+            </div>
+          ) : (
+            <div className="w-8 flex-shrink-0" />
+          )}
+          <div className="min-w-0 flex-1">
+            {isFirstInGroup && (
+              <div className="flex items-baseline gap-2 mb-0.5">
+                <span className="text-[13px] font-semibold text-foreground">{senderName}</span>
+                <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded-full">
+                  <Robot size={10} />
+                  via Agent
+                </span>
+                <span className="text-[11px] text-muted-foreground/60">
+                  {formatMessageTimestamp(message.createdAt)}
+                </span>
+              </div>
+            )}
+            <AgentToolActivityPane toolMessages={toolRun} />
+          </div>
         </div>
       </div>
     );

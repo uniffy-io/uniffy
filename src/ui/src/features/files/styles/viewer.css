@@ -151,10 +151,291 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* PDF page container */
+/* PDF layout: sidebar rail + scrollable page column, both inside the Document context */
+.viewer-pdf-layout {
+  @apply relative w-full h-full flex overflow-hidden;
+}
+
+/* react-pdf wraps loading/error content in an unstyled message div; stretch it so
+   the password form and spinner center within the layout instead of hugging content */
+.viewer-pdf-layout .react-pdf__message {
+  @apply w-full h-full;
+}
+
 .viewer-pdf-content {
-  @apply w-full h-full overflow-auto flex justify-center p-6;
+  @apply flex-1 h-full overflow-auto p-6;
   background: transparent;
+}
+
+/* Pages center via the column wrapper; max-content keeps horizontal scroll sane when zoomed past the container */
+.viewer-pdf-pages {
+  @apply flex flex-col items-center;
+  width: max-content;
+  min-width: 100%;
+  margin: 0 auto;
+}
+
+.viewer-pdf-page {
+  @apply relative;
+  margin-bottom: 1rem;
+}
+
+.viewer-pdf-page-placeholder {
+  @apply block w-full animate-pulse rounded-sm;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Sidebar rail */
+.viewer-pdf-sidebar {
+  @apply h-full flex flex-col flex-none;
+  width: 170px;
+  background: rgba(18, 18, 26, 0.6);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Overlay drawer variant below md */
+.viewer-pdf-sidebar-drawer {
+  @apply absolute inset-y-0 left-0 z-20;
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.4);
+}
+
+.viewer-pdf-drawer-backdrop {
+  @apply absolute inset-0 z-10;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.viewer-pdf-tabs {
+  @apply flex flex-none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.viewer-pdf-tab {
+  @apply flex-1 py-2.5 text-xs font-medium text-center transition-colors;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.viewer-pdf-tab:hover {
+  color: #fff;
+}
+
+.viewer-pdf-tab-active {
+  color: #fff;
+  box-shadow: inset 0 -2px 0 hsl(var(--primary));
+}
+
+.viewer-pdf-thumbs {
+  @apply flex-1 overflow-y-auto p-3 flex flex-col gap-3 items-center;
+}
+
+.viewer-pdf-thumb {
+  @apply relative rounded-sm cursor-pointer overflow-hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.viewer-pdf-thumb:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.viewer-pdf-thumb-active {
+  border-color: hsl(var(--primary));
+}
+
+.viewer-pdf-thumb-placeholder {
+  @apply block animate-pulse rounded-sm;
+  width: 120px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.viewer-pdf-thumb-label {
+  @apply text-center text-xs mt-1;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.viewer-pdf-outline {
+  @apply flex-1 overflow-y-auto p-3 text-sm;
+}
+
+.viewer-pdf-outline ul {
+  @apply pl-3 space-y-1;
+}
+
+.viewer-pdf-outline a {
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+}
+
+.viewer-pdf-outline a:hover {
+  color: #fff;
+}
+
+/* Floating in-document search bar (top-right of the PDF layout, below the toolbar) */
+.viewer-pdf-searchbar {
+  @apply absolute top-3 right-5 z-20 flex items-center gap-1 px-2 py-1.5 rounded-xl;
+  background: rgba(18, 18, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.viewer-pdf-searchbar-input {
+  @apply text-sm rounded-lg outline-none;
+  width: 11rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+.viewer-pdf-searchbar-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.viewer-pdf-searchbar-count {
+  @apply text-xs min-w-[4.5rem] text-center inline-flex items-center justify-center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Search hit marks injected by customTextRenderer into the transparent text layer;
+   color stays transparent so the canvas glyphs underneath remain the visible text. */
+.viewer-pdf-hit {
+  background: rgba(250, 204, 21, 0.45);
+  color: transparent;
+  border-radius: 2px;
+}
+
+/* Two-page spread row */
+.viewer-pdf-row {
+  @apply flex justify-center;
+  gap: 16px;
+}
+
+/* Night reading: invert canvases only; the text layer stays untouched so selection
+   and search highlights keep working. Embedded images invert too - accepted tradeoff. */
+.viewer-pdf-night .react-pdf__Page__canvas {
+  filter: invert(0.92) hue-rotate(180deg);
+}
+
+/* Presentation mode: single centered page filling the content area */
+.viewer-pdf-presentation {
+  @apply flex-1 h-full flex items-center justify-center overflow-hidden;
+}
+
+/* Password prompt */
+.viewer-pdf-password-input {
+  @apply text-sm rounded-lg outline-none;
+  width: 14rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+}
+
+.viewer-pdf-password-error {
+  @apply text-sm;
+  color: #f87171;
+}
+
+/* Document info popover panel */
+.viewer-pdf-info-panel {
+  @apply rounded-xl p-4 text-sm;
+  width: 18rem;
+  background: rgba(18, 18, 26, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  color: #f8fafc;
+}
+
+.viewer-pdf-info-rows {
+  @apply space-y-2;
+}
+
+.viewer-pdf-info-row {
+  @apply flex justify-between gap-4;
+}
+
+.viewer-pdf-info-row dt {
+  color: rgba(255, 255, 255, 0.5);
+  flex: none;
+}
+
+.viewer-pdf-info-row dd {
+  @apply text-right break-words min-w-0;
+}
+
+.viewer-pdf-info-empty {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Text-selection floating actions */
+.viewer-pdf-selection-popover {
+  @apply absolute z-30 flex items-center gap-0.5 p-1 rounded-xl;
+  transform: translate(-50%, calc(-100% - 8px));
+  background: rgba(18, 18, 26, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Structural PDF editor: page-card grid */
+.viewer-pdf-editor-body {
+  @apply flex-1 min-h-0;
+}
+
+.viewer-pdf-editor-body .react-pdf__message {
+  @apply w-full h-full;
+}
+
+.viewer-pdf-editor-grid {
+  @apply h-full overflow-y-auto p-6 grid gap-4 content-start justify-center;
+  grid-template-columns: repeat(auto-fill, 156px);
+}
+
+.viewer-pdf-editor-card {
+  @apply relative flex flex-col items-center p-1.5 rounded-lg cursor-pointer select-none;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.viewer-pdf-editor-card:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.viewer-pdf-editor-card-selected {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+}
+
+.viewer-pdf-editor-thumb {
+  @apply relative flex items-center justify-center overflow-hidden rounded-sm;
+}
+
+.viewer-pdf-editor-badge {
+  @apply text-xs mt-1.5;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Pending-watermark preview overlay */
+.viewer-pdf-watermark-layer {
+  @apply absolute inset-0;
+  /* pdf.js text/annotation layers carry z-index 2/3; render the preview above them. */
+  z-index: 10;
+  pointer-events: none;
+}
+
+.viewer-pdf-watermark-preview {
+  @apply absolute top-1/2 left-1/2 font-bold select-none whitespace-nowrap;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  color: #737373;
+}
+
+/* Inline page-jump input swapped in for the page indicator */
+.viewer-page-input {
+  @apply text-sm text-center rounded-lg outline-none;
+  width: 3.5rem;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
 }
 
 /* Text viewer container */
@@ -242,10 +523,14 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Page indicator text */
+/* Page indicator button; click swaps in the page-jump input */
 .viewer-page-indicator {
-  @apply text-sm min-w-[100px] text-center;
+  @apply text-sm min-w-[100px] text-center rounded-lg py-1 transition-colors;
   color: #f8fafc;
+}
+
+.viewer-page-indicator:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Time display */

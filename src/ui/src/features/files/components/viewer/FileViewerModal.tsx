@@ -13,10 +13,15 @@ import {
     setRotation,
     resetImageView,
     setPage,
+    setPdfRotation,
+    setPdfPresentation,
+    togglePdfSidebar,
 } from '@/features/files/store/viewerSlice';
 import { ViewerToolbar } from '@/features/files/components/viewer/ViewerToolbar';
 import { ViewerNavigation } from '@/features/files/components/viewer/ViewerNavigation';
 import { ViewerContent } from '@/features/files/components/viewer/ViewerContent';
+import { usePlaylistPrefetch } from '@/features/files/components/viewer/hooks/usePlaylistPrefetch';
+import { printPdf } from '@/features/files/components/viewer/pdf/printPdf';
 import { buildMediaUrl } from '@/shared/utils/fileUrls';
 import type { SerializedFile } from '@/features/files/store/filesThunks';
 import { getDownloadGateState } from '@/features/files/utils/transcodeGate';
@@ -42,6 +47,8 @@ export function FileViewerModal() {
     const rotation = useAppSelector((state) => state.fileViewer.rotation);
     const currentPage = useAppSelector((state) => state.fileViewer.currentPage);
     const totalPages = useAppSelector((state) => state.fileViewer.totalPages);
+    const pdfRotation = useAppSelector((state) => state.fileViewer.pdfRotation);
+    const pdfPresentation = useAppSelector((state) => state.fileViewer.pdfPresentation);
     // Narrow the files-store subscription to the single row we need so an
     // unrelated file mutation does not re-render the viewer.
     const fileFromStore = useAppSelector((state) =>
@@ -56,6 +63,8 @@ export function FileViewerModal() {
 
     const hasNext = playlistIndex < playlist.length - 1;
     const hasPrev = playlistIndex > 0;
+
+    usePlaylistPrefetch();
 
     // Check if current file is a PDF
     const isPdf = useMemo(() => file?.mimeType === 'application/pdf', [file?.mimeType]);
@@ -90,18 +99,13 @@ export function FileViewerModal() {
         document.body.removeChild(link);
     }, [file]);
 
-    // PDF page navigation
-    const handlePdfPrevPage = useCallback(() => {
-        if (currentPage > 1) {
-            dispatch(setPage(currentPage - 1));
-        }
-    }, [dispatch, currentPage]);
-
-    const handlePdfNextPage = useCallback(() => {
-        if (currentPage < totalPages) {
-            dispatch(setPage(currentPage + 1));
-        }
-    }, [dispatch, currentPage, totalPages]);
+    // Always the same-origin media URL: the CSP (default-src 'self') forbids
+    // framing blob: URLs, and the asset cookie authenticates the request.
+    const handlePrint = useCallback(() => {
+        if (!file || !isPdf) return;
+        if (getDownloadGateState(file.transcodeStatus).disabled) return;
+        printPdf(buildMediaUrl(file.organizationId, file.id));
+    }, [file, isPdf]);
 
     // Close viewer and return to origin when opened via /files/:fileId deep link
     // (mention chip click, pasted URL, file row click). Without this the user
@@ -117,29 +121,35 @@ export function FileViewerModal() {
         }
     }, [dispatch, navigate, location.pathname, location.key]);
 
-    // Keyboard shortcuts - PDF mode changes arrow key behavior
     // Disable most shortcuts when in edit mode (editor has its own shortcuts)
     useShortcutHandlers(
         {
+            // Escape ordering: search (handled inside PdfSearchBar via a capture
+            // listener) > presentation > edit > close viewer.
             'viewer.close': () => {
-                if (isEditing) {
+                if (pdfPresentation) {
+                    dispatch(setPdfPresentation(false));
+                    if (document.fullscreenElement) {
+                        void document.exitFullscreen();
+                    }
+                } else if (isEditing) {
                     setIsEditing(false);
                 } else {
                     handleClose();
                 }
             },
+            // PDF arrows page through the document, then fall through to the
+            // playlist at the boundaries so every file type switches the same way.
             'viewer.next': () => {
-                if (isPdf) {
-                    // In PDF mode, arrow right goes to next page
-                    handlePdfNextPage();
+                if (isPdf && currentPage < totalPages) {
+                    dispatch(setPage(currentPage + 1));
                 } else if (hasNext) {
                     dispatch(nextFile());
                 }
             },
             'viewer.previous': () => {
-                if (isPdf) {
-                    // In PDF mode, arrow left goes to previous page
-                    handlePdfPrevPage();
+                if (isPdf && currentPage > 1) {
+                    dispatch(setPage(currentPage - 1));
                 } else if (hasPrev) {
                     dispatch(previousFile());
                 }
@@ -150,13 +160,26 @@ export function FileViewerModal() {
             'viewer.zoomOut': () => dispatch(setZoom(Math.max(0.1, zoom - 0.25))),
             'viewer.zoomReset': () => dispatch(resetImageView()),
             'viewer.rotateRight': () => {
-                if (isImage && !isEditing) {
+                if (isEditing) return;
+                if (isImage) {
                     dispatch(setRotation((rotation + 90) % 360));
+                } else if (isPdf) {
+                    dispatch(setPdfRotation((pdfRotation + 90) % 360));
+                }
+            },
+            'viewer.toggleSidebar': () => {
+                if (isPdf) {
+                    dispatch(togglePdfSidebar());
                 }
             },
             'viewer.download': handleDownload,
+            'viewer.print': () => {
+                if (isPdf) {
+                    handlePrint();
+                }
+            },
             'viewer.edit': () => {
-                if (isImage && !isEditing) {
+                if ((isImage || isPdf) && !isEditing) {
                     handleEdit();
                 }
             },
@@ -164,17 +187,17 @@ export function FileViewerModal() {
         { enabled: isOpen && !isEditing }
     );
 
+    // Leaving browser fullscreen (F11/Esc at browser level) also exits presentation mode.
     useEffect(() => {
         const handleFullscreenChange = () => {
-            if (!document.fullscreenElement) {
-                // Exited fullscreen via browser UI (ESC or F11)
-                // Keep our state in sync but don't close the viewer
+            if (!document.fullscreenElement && pdfPresentation) {
+                dispatch(setPdfPresentation(false));
             }
         };
 
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    }, []);
+    }, [dispatch, pdfPresentation]);
 
     if (!file) {
         return null;
@@ -214,6 +237,7 @@ export function FileViewerModal() {
                                 file={file}
                                 onClose={handleClose}
                                 onDownload={handleDownload}
+                                onPrint={handlePrint}
                                 onEdit={handleEdit}
                                 isEditing={isEditing}
                             />
@@ -229,8 +253,10 @@ export function FileViewerModal() {
                                 />
                             )}
 
-                            {/* Content */}
+                            {/* Content: keyed by version so a restore or new
+                                version remounts and fetches the new bytes. */}
                             <ViewerContent
+                                key={`${file.id}-${file.version}`}
                                 file={file}
                                 isEditing={isEditing}
                                 initialRotation={rotation}

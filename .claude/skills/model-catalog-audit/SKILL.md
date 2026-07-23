@@ -17,7 +17,7 @@ for the model list, pricing, capabilities, and image-gen support (see
 
 ## Steps
 
-1. **Detect the stack** (same protocol as `.claude/rules/manage-cli.md`) - never
+1. **Detect the stack** (same protocol as the stack notes in `CLAUDE.md`) - never
    assume:
 
    ```bash

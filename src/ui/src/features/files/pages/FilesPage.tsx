@@ -114,9 +114,17 @@ export function FilesPage() {
             deepLinkHandledRef.current = true;
             // Create playlist from all files
             const playlist = allFiles.map((f) => f.id);
-            dispatch(openViewer({ fileId: urlFileId, playlist, fileData: file }));
+            const parsedPage = Number.parseInt(searchParams.get('page') ?? '', 10);
+            dispatch(
+                openViewer({
+                    fileId: urlFileId,
+                    playlist,
+                    fileData: file,
+                    initialPage: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : undefined,
+                })
+            );
         }
-    }, [urlFileId, loading, allFiles, viewerIsOpen, dispatch]);
+    }, [urlFileId, loading, allFiles, viewerIsOpen, searchParams, dispatch]);
 
     const handleDownload = useCallback(
         async (fileId: string) => {

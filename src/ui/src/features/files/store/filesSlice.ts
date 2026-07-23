@@ -6,12 +6,15 @@ import {
     updateFile,
     deleteFile,
     restoreFile,
+    fetchFileVersions,
+    restoreFileVersion,
     initializeFilesData,
     type SerializedFile,
+    type SerializedFileVersion,
 } from '@/features/files/store/filesThunks';
 import type { SerializedFilterCriteria } from '@/features/files/store/savedFiltersSlice';
 
-export type DetailsPanelTab = 'info' | 'metadata' | 'permissions';
+export type DetailsPanelTab = 'info' | 'metadata' | 'permissions' | 'versions';
 
 const FILES_VIEW_STORAGE_KEY = 'uniffy-files-view';
 
@@ -135,6 +138,9 @@ interface FilesState {
     isDetailsPanelOpen: boolean;
     detailsPanelTab: DetailsPanelTab;
 
+    fileVersions: Record<string, SerializedFileVersion[]>;
+    fileVersionsLoading: boolean;
+
     sidebarOpen: boolean;
 
     myStorageUsage: {
@@ -184,6 +190,8 @@ const initialState: FilesState = {
     iconSize: persistedViewSettings.iconSize,
     isDetailsPanelOpen: false,
     detailsPanelTab: 'info',
+    fileVersions: {},
+    fileVersionsLoading: false,
     sidebarOpen: true,
     myStorageUsage: {
         usedBytes: 0,
@@ -438,6 +446,7 @@ export const filesSlice = createSlice({
             state.isSelectMode = false;
             state.selectedFileIds = [];
             state.selectedFolderIds = [];
+            state.fileVersions = {};
         },
     },
     extraReducers: (builder) => {
@@ -511,6 +520,23 @@ export const filesSlice = createSlice({
             .addCase(restoreFile.fulfilled, (state, action) => {
                 state.files[action.payload.id] = action.payload;
                 state.deletedFileIds = state.deletedFileIds.filter(id => id !== action.payload.id);
+            });
+
+        builder
+            .addCase(fetchFileVersions.pending, (state) => {
+                state.fileVersionsLoading = true;
+            })
+            .addCase(fetchFileVersions.fulfilled, (state, action) => {
+                state.fileVersionsLoading = false;
+                state.fileVersions[action.payload.fileId] = action.payload.versions;
+            })
+            .addCase(fetchFileVersions.rejected, (state) => {
+                state.fileVersionsLoading = false;
+            });
+
+        builder
+            .addCase(restoreFileVersion.fulfilled, (state, action) => {
+                state.files[action.payload.id] = action.payload;
             });
 
         builder
@@ -593,5 +619,7 @@ export {
     updateFile,
     deleteFile,
     restoreFile,
+    fetchFileVersions,
+    restoreFileVersion,
     initializeFilesData,
 } from '@/features/files/store/filesThunks';

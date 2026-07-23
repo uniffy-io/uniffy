@@ -279,7 +279,9 @@ export function useImageEditor(options: UseImageEditorOptions) {
                     });
                 }
 
-                await filesApi.completeUpload({ uploadId });
+                // A new version swaps the bytes on the existing file row; the
+                // backend requires the MIME type to stay the same.
+                await filesApi.completeUpload({ uploadId, versionOfFileId: fileId });
 
                 dispatch(setSaving(false));
                 dispatch(closeSaveDialog());
@@ -292,7 +294,7 @@ export function useImageEditor(options: UseImageEditorOptions) {
                 return false;
             }
         },
-        [dispatch, exportImage, organizationId, filename]
+        [dispatch, exportImage, organizationId, filename, fileId]
     );
 
     const previewFilter = getCssFilter(editorState.brightness, editorState.contrast);

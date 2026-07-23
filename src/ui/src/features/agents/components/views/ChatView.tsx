@@ -3,7 +3,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { PaperPlaneRight, Paperclip, FileText, Wrench, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, Eye, PencilSimple, Stop, Trash, Lightning, ThumbsUp, ThumbsDown } from "@phosphor-icons/react";
+import { PaperPlaneRight, Paperclip, FileText, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, PencilSimple, Stop, Trash, Lightning, ThumbsUp, ThumbsDown } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -51,6 +51,7 @@ import {
     cacheFileMetadata,
 } from "@/features/agents/store/agentMessagesSlice";
 import { ThinkingPane } from "@/features/agents/components/ThinkingPane";
+import { ToolActivityPane, type ToolStep } from "@/features/agents/components/ToolActivityPane";
 import { useAgentRunStream } from "@/features/agents/hooks/useAgentRunStream";
 import type { FileMetadata } from "@/features/agents/store/agentMessagesSlice";
 import {
@@ -574,92 +575,29 @@ function ToolResultHuman({ result }: { result: string }) {
 }
 
 function ToolCallGroup({ messages }: { messages: SerializedMessage[] }) {
-    const [expanded, setExpanded] = useState(false);
-    const [viewMode, setViewMode] = useState<"human" | "technical">("human");
-
     if (messages.length === 0) return null;
 
-    const toolNames = [...new Set(messages.map((m) => m.toolName).filter(Boolean))];
-    const label = toolNames.length === 1
-        ? getToolActionLabel(toolNames[0]!)
-        : `${messages.length} actions`;
+    const steps: ToolStep[] = messages.map((msg) => {
+        const toolName = msg.toolName ?? "";
+        const result = msg.toolResult ?? "";
+        const failed = /^(Error|Permission denied|Not found|Validation error)/i.test(result);
+        return {
+            id: msg.id,
+            toolName,
+            label: getToolActionLabel(toolName),
+            args: msg.toolArgsJson,
+            result: result || undefined,
+            status: failed ? "failed" : "completed",
+        };
+    });
 
     return (
-        <div className="flex flex-col items-start">
-            <button
-                type="button"
-                onClick={() => setExpanded((v) => !v)}
-                className={cn(
-                    "flex items-center gap-2.5 px-4 py-2.5 rounded-2xl rounded-bl-sm",
-                    "bg-muted/60 hover:bg-muted/80 transition-colors cursor-pointer text-left",
-                )}
-            >
-                <Wrench size={16} weight="duotone" className="text-muted-foreground shrink-0" />
-                <span className="text-sm text-foreground">
-                    {label}
-                </span>
-                {messages.length > 1 && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                        {messages.length}
-                    </Badge>
-                )}
-                <span className={cn(
-                    "text-xs text-muted-foreground transition-transform",
-                    expanded && "rotate-180",
-                )}>
-                    &#x25BE;
-                </span>
-            </button>
-            {expanded && (
-                <div className="mt-1.5 ml-4 max-w-[70%]">
-                    <div className="flex items-center justify-end mb-1">
-                        <button
-                            type="button"
-                            onClick={() => setViewMode((v) => v === "human" ? "technical" : "human")}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            title={viewMode === "human" ? "Show technical details" : "Show summary"}
-                        >
-                            {viewMode === "human" ? (
-                                <><Code size={13} /> Technical</>
-                            ) : (
-                                <><Eye size={13} /> Summary</>
-                            )}
-                        </button>
-                    </div>
-                    <div className="space-y-1.5">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className="bg-card border border-border rounded-lg overflow-hidden text-xs">
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border-b border-border">
-                                    <span className="font-medium text-foreground">
-                                        {getToolActionLabel(msg.toolName ?? "")}
-                                    </span>
-                                </div>
-                                <div className="px-3 py-1.5">
-                                    {viewMode === "technical" ? (
-                                        <div className="space-y-1">
-                                            {msg.toolArgsJson && (
-                                                <pre className="font-mono bg-muted/30 rounded p-1.5 overflow-x-auto text-foreground">
-                                                    {msg.toolArgsJson}
-                                                </pre>
-                                            )}
-                                            {msg.toolResult && (
-                                                <pre className="font-mono bg-muted/30 rounded p-1.5 overflow-x-auto text-foreground">
-                                                    {msg.toolResult}
-                                                </pre>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        msg.toolResult
-                                            ? <ToolResultHuman result={msg.toolResult} />
-                                            : <span className="text-muted-foreground italic">No result</span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
+        <ToolActivityPane
+            steps={steps}
+            live={false}
+            answerStarted
+            renderResult={(r) => <ToolResultHuman result={r} />}
+        />
     );
 }
 
@@ -703,41 +641,36 @@ function StreamingBubble({ content }: { content: string }) {
     );
 }
 
-function StreamingToolCards({ toolCalls }: { toolCalls: Array<{ toolCallId: string; toolName: string; toolArgsJson: string; result?: string; success?: boolean }> }) {
+function StreamingToolCards({
+    toolCalls,
+    answerStarted,
+}: {
+    toolCalls: Array<{ toolCallId: string; toolName: string; toolArgsJson: string; result?: string; success?: boolean }>;
+    answerStarted: boolean;
+}) {
     if (toolCalls.length === 0) return null;
 
-    const completed = toolCalls.filter((tc) => tc.result !== undefined);
-    const active = toolCalls.find((tc) => tc.result === undefined);
-    const isWorking = !!active;
+    const steps: ToolStep[] = toolCalls.map((tc) => {
+        const done = tc.result !== undefined;
+        const failed = done && tc.success === false;
+        return {
+            id: tc.toolCallId,
+            toolName: tc.toolName,
+            label: getToolActionLabel(tc.toolName),
+            args: tc.toolArgsJson,
+            result: tc.result || undefined,
+            status: !done ? "running" : failed ? "failed" : "completed",
+        };
+    });
+    const live = toolCalls.some((tc) => tc.result === undefined);
 
     return (
-        <div className="flex flex-col items-start bubble-enter">
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-muted/60 rounded-2xl rounded-bl-sm">
-                <Wrench
-                    size={18}
-                    weight="duotone"
-                    className={cn(
-                        "text-primary shrink-0",
-                        isWorking && "wrench-active",
-                    )}
-                />
-                <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-foreground">
-                        {isWorking
-                            ? getToolActionLabel(active.toolName)
-                            : "Done"}
-                    </span>
-                    {toolCalls.length > 1 && (
-                        <span className="text-xs text-muted-foreground">
-                            {completed.length} of {toolCalls.length} actions completed
-                        </span>
-                    )}
-                </div>
-                {isWorking && (
-                    <CircleNotch size={14} className="animate-spin text-muted-foreground ml-1" />
-                )}
-            </div>
-        </div>
+        <ToolActivityPane
+            steps={steps}
+            live={live}
+            answerStarted={answerStarted}
+            renderResult={(r) => <ToolResultHuman result={r} />}
+        />
     );
 }
 
@@ -1660,7 +1593,7 @@ function ChatPanel() {
                                             />
                                         )}
 
-                                        <StreamingToolCards toolCalls={streamingToolCalls} />
+                                        <StreamingToolCards toolCalls={streamingToolCalls} answerStarted={!!streamingContent} />
 
                                         {pendingConfirmation && (
                                             <ConfirmationDialog

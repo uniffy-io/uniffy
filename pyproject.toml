@@ -15,26 +15,29 @@ requires-python = ">=3.14"
 dependencies = [
   "uniffy-proto",
   "aiofiles>=25.1.0",
-  "alembic>=1.13.0",
+  "alembic>=1.18.5",
   "asyncpg>=0.30.0",
   "bcrypt>=4.2.1",
   "argon2-cffi>=25.1.0",
+  "cryptography>=49.0.0",
   # MFA (TOTP)
   "pyotp>=2.9.0",
   "segno>=1.6.6",
   "colorama>=0.4.6",
   "aiosmtplib>=5.1.0",
-  "fastapi>=0.128.0",
+  "fastapi>=0.139.2",
+  "starlette>=1.3.1",
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
   "meilisearch-python-sdk>=5.5.0",
   "psycopg2-binary>=2.9.10",
-  "pydantic[email]>=2.12.5",
+  "pydantic[email]>=2.13.4",
   "pyjwt>=2.10.0",
   "python-dotenv>=1.2.1",
-  "python-multipart>=0.0.21",
-  "sqlmodel>=0.0.25",
-  "granian>=2.7.0",
+  "python-multipart>=0.0.32",
+  "sqlmodel>=0.0.39",
+  "sqlalchemy>=2.0.51",
+  "granian>=2.7.9",
   "aioboto3>=13.0.0",
   "types-aiobotocore[s3]>=2.15.0",
   # Background jobs: arq is vendored under uniffy.vendor.arq (valkey-backed); it needs click.
@@ -43,9 +46,9 @@ dependencies = [
   # Image processing
   "pillow>=11.0.0",
   # PDF thumbnail generation
-  "pymupdf>=1.25.0",
-  # Video thumbnail generation (requires ffmpeg binary on system)
-  "ffmpeg-python>=0.2.0",
+  "pymupdf>=1.28.0",
+  # Video: PyAV (in-process libav) decodes thumbnail frames; transcode still shells to the ffmpeg binary
+  "av>=18.0.0",
   # Audio metadata extraction
   "mutagen>=1.47.0",
   # Document text extraction
@@ -63,7 +66,7 @@ dependencies = [
   "croniter>=6.0.0",
   "google-genai>=2.12.1",
   "connectrpc>=0.10.0",
-  "pyqwest>=0.6.2",
+  "pyqwest>=0.7.0",
   # Realtime collaboration (CRDT)
   "pycrdt>=0.13.0",
   "pycrdt-websocket>=0.16.1",

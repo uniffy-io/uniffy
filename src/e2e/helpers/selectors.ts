@@ -118,12 +118,10 @@ export const compose = {
 
 export const streaming = {
   content: 'chat-streaming-content',
-  toolCall: (id: string) => `chat-agent-tool-call-${id}`,
-  toolCallToggle: (id: string) => `chat-agent-tool-call-toggle-${id}`,
-  toolCallArgs: (id: string) => `chat-agent-tool-call-args-${id}`,
+  // Folded run of tool calls keyed by the first call's message id; individual
+  // steps within carry `data-tool-name` + `data-tool-status`.
+  toolActivity: (id: string) => `chat-agent-tool-activity-${id}`,
   toolResult: (id: string) => `chat-agent-tool-result-${id}`,
-  toolResultToggle: (id: string) => `chat-agent-tool-result-toggle-${id}`,
-  toolResultBody: (id: string) => `chat-agent-tool-result-body-${id}`,
   confirmation: (id: string) => `chat-agent-confirmation-${id}`,
   confirmationAllow: (id: string) => `chat-agent-confirmation-allow-${id}`,
   confirmationDeny: (id: string) => `chat-agent-confirmation-deny-${id}`,

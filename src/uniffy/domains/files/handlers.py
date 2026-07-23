@@ -290,6 +290,13 @@ class FilesHandlers:
 
         tag_ids = _parse_tag_id_list(list(request.tag_ids)) if request.tag_ids else None
 
+        version_of_file_id: UUID | None = None
+        if request.version_of_file_id:
+            try:
+                version_of_file_id = UUID(request.version_of_file_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid version_of_file_id")
+
         try:
             async with open_session() as session:
                 ops = FileOperations(session)
@@ -298,6 +305,7 @@ class FilesHandlers:
                     upload_id=upload_id,
                     user_id=user_id,
                     tag_ids=tag_ids,
+                    version_of_file_id=version_of_file_id,
                 )
 
                 tags_by_urn = await _hydrate_file_tags(session, file.organization_id, [file])
@@ -540,6 +548,7 @@ class FilesHandlers:
             async with open_session() as session:
                 ops = FileOperations(session)
                 file = await ops.get_by_id(user_id, organization_id, file_id)
+                user_role = await ops._resolve_role(user_id, organization_id, file)
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
                 eff_mode, eff_baseline = await _resolve_file_effective_policy(
                     session, organization_id, file,
@@ -547,6 +556,7 @@ class FilesHandlers:
                 return GetFileResponse(
                     file=file_to_proto(
                         file,
+                        user_role=user_role,
                         tags=tags_by_urn.get(_file_urn(file.id), []),
                         effective_access_mode=eff_mode,
                         effective_baseline_role=eff_baseline,
@@ -1615,5 +1625,45 @@ class FilesHandlers:
         request: RestoreFileVersionRequest,
         ctx: RequestContext,
     ) -> RestoreFileVersionResponse:
-        """Restore a previous version of a file."""
-        raise ConnectError(Code.UNIMPLEMENTED, "RestoreFileVersion not yet implemented")
+        """Restore a previous version of a file as a new current version."""
+        try:
+            file_id = UUID(request.file_id)
+            organization_id = UUID(request.organization_id)
+            version_id = UUID(request.version_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
+
+        user_id = get_user_id_from_context(ctx)
+
+        try:
+            async with open_session() as session:
+                ops = FileOperations(session)
+                file = await ops.restore_file_version(
+                    user_id, organization_id, file_id, version_id
+                )
+                user_role = await ops._resolve_role(user_id, organization_id, file)
+                tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])
+                eff_mode, eff_baseline = await _resolve_file_effective_policy(
+                    session, organization_id, file,
+                )
+                return RestoreFileVersionResponse(
+                    file=file_to_proto(
+                        file,
+                        user_role=user_role,
+                        tags=tags_by_urn.get(_file_urn(file.id), []),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
+
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "File version not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Access denied")
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error restoring file version: {e}")
+            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
