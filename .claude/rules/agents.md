@@ -103,7 +103,9 @@ One flat `StreamEvent` dataclass + `EventType` StrEnum (`providers/base.py`) tra
 ## Skills and memories
 
 - Skills are markdown snippets in `agents_skills`, injected into the system prompt. Scopes: `bundled` (read-only, shipped), `organization` (org admins manage), `personal` (owner manages). Enabled per agent via `enabled_skills` + `always_active`.
-- Memories (`agents_memories`) are per-agent-user KV facts; top 10 by `importance DESC, updated_at DESC` auto-load into every prompt; managed by the memory tools during conversation.
+- Memories (`agents_memories`) are audience-scoped (`scope` = user/channel/session/org) and the scope is resolved by the runtime from the surface (`_resolve_memory_scope`): personal scope ONLY for direct/cron sessions and 1:1 agent DMs; group/global sessions and channels get their shared subject's scope. This routing is a security boundary - a run must never read or write another audience's entries; tools error out when `ToolContext.memory_scope` is missing rather than falling back to personal. One consent exception: the personal-memory bridge (`memories/bridge.py`, per-user opt-in row + `personal_memory_bridge_enabled` org gate in the `agents/runtime` settings blob) widens the READ set of shared-space runs the opted-in user triggers with their own user scope (`ToolContext.memory_bridge_scope`); it never affects writes.
+- Prompt injection is index-only: `_build_memory_context` renders org scope + surface scope as `key (category): description` lines via the `agentmem:{agent}:{scope}:{subject}` Valkey cache; full content enters context only through `memory.read` or the human-pinned tier (pin caps 5 entries / 2000 chars, pinning is UI-only, never tool-settable). Every memory mutation invalidates the index cache in the same operation.
+- Memory quotas: 200 entries per scope subject, 4000-char content, description required (it is the index hook). `memory.forget` refuses pinned rows; org scope is tool-read-only and mutable only with agent MANAGE.
 - Session access: user owns the session or kind is `global`. Provider key add/remove = org admin; list/validate = org member.
 
 ## Key files

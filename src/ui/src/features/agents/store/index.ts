@@ -4,4 +4,4 @@ export { agentSessionsReducer, setActiveSession, selectAllSessions, selectActive
 export { agentMessagesReducer, selectMessagesForSession, selectStreamingContent, selectStreamingToolCalls, selectIsStreaming, selectMessagesLoading } from "./agentMessagesSlice";
 export { agentSkillsReducer, selectAllSkills, selectSkillById, selectSkillsLoading } from "./agentSkillsSlice";
 export { agentProvidersReducer, selectProviderKeys, selectAvailableModels, selectProvidersLoading } from "./agentProvidersSlice";
-export { agentMemoriesReducer, selectAllMemories, selectMemoriesLoading } from "./agentMemoriesSlice";
+export { agentMemoriesReducer, selectMemoryScope } from "./agentMemoriesSlice";

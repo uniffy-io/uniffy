@@ -386,6 +386,48 @@ Agent DM channel, agents-in-chat enabled (`(both products)`).
 - [ ] Mobile: the sheet lists models, saves a pick, tunes a parameter,
       and clears to default; the next run reflects each change.
 
+## Agents: memory scopes
+
+Needs two users (A, B) in one org, one shared agent, agents-in-chat enabled,
+and a public channel with the agent bound (`(both products)`).
+
+- [ ] As A in a private agent session, ask the agent to remember a personal
+      fact -> the tool card says the memory is private; the entry appears in
+      the agent's Memories tab under "My memory" with description + provenance.
+- [ ] As A in the public channel, trigger the agent and inspect the run: the
+      personal fact is neither mentioned nor reachable (`memory.list` in the
+      channel shows channel + org entries only). This is the leak guard.
+- [ ] As B in the channel, ask the agent to remember a team fact -> as A,
+      trigger the agent and ask about it: the agent reads the channel entry
+      (visible memory.read call in the activity pane) and answers.
+- [ ] Channel memory dialog (composer agent picker -> "Memory") lists the
+      entry with "saved by B"; as a plain member A cannot delete B's entry;
+      as a channel moderator the delete works.
+- [ ] As A, ask the agent in the channel to remember something "just for me"
+      -> the agent must decline and point to the DM (no user-scope write from
+      a channel run).
+- [ ] Pin flow: in "My memory" pin an entry -> preview system prompt (agent
+      editor) shows its full content under "Pinned"; unpinned entries show as
+      one index line each. Pin a 6th entry -> clear limit error.
+- [ ] Org memory: as a non-manager the Org segment is read-only; as the agent
+      owner add + pin an org entry -> both A's and B's next runs can read it.
+- [ ] `memory.forget` on a pinned entry via chat ("forget X") -> tool refuses
+      and names the pin; unpinning in the UI then repeating succeeds.
+- [ ] Group DM with the agent: memories save to the conversation, not to the
+      trigger user ("My memory" stays unchanged).
+- [ ] Quota: import/save until the scope cap (200) -> tool returns the limit
+      error and the agent relays it without a failed run.
+- [ ] Sharing OFF (default): with a personal "call me G" memory, ping the agent
+      in a channel -> it does not know the name and explains memory is kept
+      separate per space.
+- [ ] Sharing ON (Memories tab -> "Use my personal memory in shared spaces"):
+      same ping -> the agent knows the name; asking it to SAVE something
+      personal from the channel still refuses (bridge is read-only).
+- [ ] Org gate: set `personal_memory_bridge_enabled=false` in the org's
+      `agents/runtime` settings blob -> the toggle shows "Disabled by your
+      organization", enabling it fails, and an already-opted-in user's channel
+      runs stop seeing personal memory.
+
 ## Search
 
 Spotlight (`Ctrl+K`) and the header search against a seeded org with notes,

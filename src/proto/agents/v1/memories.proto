@@ -7,19 +7,28 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
-// MemoriesService manages agent memory entries for users.
+// MemoriesService manages audience-scoped agent memory entries.
 service MemoriesService {
-  // List memories for a specific agent (scoped to current user)
+  // List memories for an agent within one scope the caller can see
   rpc ListMemories(ListMemoriesRequest) returns (ListMemoriesResponse) {}
 
   // Create a new memory entry
   rpc CreateMemory(CreateMemoryRequest) returns (CreateMemoryResponse) {}
 
-  // Update a memory entry (content, category, importance)
+  // Update a memory entry (description, content, category, importance)
   rpc UpdateMemory(UpdateMemoryRequest) returns (UpdateMemoryResponse) {}
 
   // Delete a memory entry
   rpc DeleteMemory(DeleteMemoryRequest) returns (DeleteMemoryResponse) {}
+
+  // Pin or unpin a memory entry (pinned entries inject in full)
+  rpc SetMemoryPinned(SetMemoryPinnedRequest) returns (SetMemoryPinnedResponse) {}
+
+  // Read the caller's personal-memory sharing preference (shared-space bridge)
+  rpc GetMemorySharing(GetMemorySharingRequest) returns (GetMemorySharingResponse) {}
+
+  // Set the caller's personal-memory sharing preference
+  rpc SetMemorySharing(SetMemorySharingRequest) returns (SetMemorySharingResponse) {}
 }
 
 // Memory category
@@ -29,6 +38,22 @@ enum MemoryCategory {
   MEMORY_CATEGORY_FACTS = 2;
   MEMORY_CATEGORY_CONTEXT = 3;
   MEMORY_CATEGORY_INSTRUCTIONS = 4;
+}
+
+// Audience scope of a memory entry
+enum MemoryScope {
+  MEMORY_SCOPE_UNSPECIFIED = 0;
+  MEMORY_SCOPE_USER = 1;
+  MEMORY_SCOPE_CHANNEL = 2;
+  MEMORY_SCOPE_SESSION = 3;
+  MEMORY_SCOPE_ORG = 4;
+}
+
+// How a memory entry was created
+enum MemorySource {
+  MEMORY_SOURCE_UNSPECIFIED = 0;
+  MEMORY_SOURCE_TOOL = 1;
+  MEMORY_SOURCE_MANUAL = 2;
 }
 
 // Memory info returned to clients
@@ -42,16 +67,29 @@ message MemoryInfo {
   int32 access_count = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  MemoryScope scope = 10;
+  string description = 11;
+  bool pinned = 12;
+  MemorySource source = 13;
+  string created_by_user_id = 14;
+  string created_by_name = 15;
+  optional string channel_id = 16;
+  optional string session_id = 17;
 }
 
 // --- Requests and Responses ---
 
+// Scope defaults to MEMORY_SCOPE_USER (the caller's own entries).
+// channel_id / session_id are required subject ids for their scopes.
 message ListMemoriesRequest {
   string organization_id = 1;
   string agent_id = 2;
   optional MemoryCategory category = 3;
   optional string search = 4;
   optional common.v1.PaginationRequest pagination = 5;
+  MemoryScope scope = 6;
+  optional string channel_id = 7;
+  optional string session_id = 8;
 }
 
 message ListMemoriesResponse {
@@ -66,6 +104,10 @@ message CreateMemoryRequest {
   string content = 4;
   MemoryCategory category = 5;
   optional float importance = 6;
+  MemoryScope scope = 7;
+  optional string channel_id = 8;
+  optional string session_id = 9;
+  string description = 10;
 }
 
 message UpdateMemoryRequest {
@@ -74,6 +116,7 @@ message UpdateMemoryRequest {
   optional string content = 3;
   optional MemoryCategory category = 4;
   optional float importance = 5;
+  optional string description = 6;
 }
 
 message CreateMemoryResponse {
@@ -91,4 +134,33 @@ message DeleteMemoryRequest {
 
 message DeleteMemoryResponse {
   bool success = 1;
+}
+
+message SetMemoryPinnedRequest {
+  string organization_id = 1;
+  string memory_id = 2;
+  bool pinned = 3;
+}
+
+message SetMemoryPinnedResponse {
+  MemoryInfo memory = 1;
+}
+
+message GetMemorySharingRequest {
+  string organization_id = 1;
+}
+
+message GetMemorySharingResponse {
+  bool use_in_shared_spaces = 1;
+  bool org_allows = 2;
+}
+
+message SetMemorySharingRequest {
+  string organization_id = 1;
+  bool use_in_shared_spaces = 2;
+}
+
+message SetMemorySharingResponse {
+  bool use_in_shared_spaces = 1;
+  bool org_allows = 2;
 }

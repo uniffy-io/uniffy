@@ -37,6 +37,7 @@ class ResolvedRuntimeSettings:
     circuit_breaker_failure_threshold: int
     circuit_breaker_recovery_seconds: int
     display_currency: str
+    personal_memory_bridge_enabled: bool
 
 
 _CACHE_TTL_SECONDS = 30.0
@@ -51,6 +52,7 @@ def _defaults() -> ResolvedRuntimeSettings:
         circuit_breaker_failure_threshold=DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
         circuit_breaker_recovery_seconds=DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS,
         display_currency=DEFAULT_DISPLAY_CURRENCY,
+        personal_memory_bridge_enabled=True,
     )
 
 
@@ -67,6 +69,9 @@ def _from_blob(blob: dict) -> ResolvedRuntimeSettings:
             blob.get("circuit_breaker_recovery_seconds", DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS)
         ),
         display_currency=str(blob.get("display_currency") or DEFAULT_DISPLAY_CURRENCY),
+        personal_memory_bridge_enabled=bool(
+            blob.get("personal_memory_bridge_enabled", True)
+        ),
     )
 
 

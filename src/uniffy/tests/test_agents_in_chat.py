@@ -23,6 +23,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 )
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import SenderType
 from uniffy.core.types import SubjectType
@@ -43,6 +44,7 @@ from uniffy.domains.agents.chat_integration.mention_detector import (
     detect_agent_mentions,
 )
 from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
+from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.runtime import operations as runtime_ops_mod
 from uniffy.domains.agents.runtime.approvals import ApprovalStore
 from uniffy.domains.agents.runtime.compactor import (
@@ -1037,7 +1039,11 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
     ops._session_ops = MagicMock()
     ops._skill_ops = MagicMock()
     ops._resolve_invoked_skill = AsyncMock(return_value=None)
-    ops._fetch_memory_context = AsyncMock(return_value="")
+    ops._resolve_memory_scope = AsyncMock(
+        return_value=MemoryScopeRef(MemoryScope.CHANNEL, uuid7())
+    )
+    ops._resolve_memory_bridge = AsyncMock(return_value=None)
+    ops._build_memory_context = AsyncMock(return_value=None)
     ops._build_chat_context_for_destination = AsyncMock(return_value=None)
 
     async def fake_fetch_skills(_skill_ops, **_kwargs):

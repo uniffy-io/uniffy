@@ -7,7 +7,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.agents_pb2 import (
     CreateAgentRequest,
@@ -37,13 +36,17 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.agents.converters import agent_to_proto
 from uniffy.domains.agents.agents.operations import AgentOperations
+from uniffy.domains.agents.cache import fetch_memory_index
+from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.runtime.prompt import (
+    MemoryScopeBlock,
+    build_memory_block,
     build_system_prompt,
     skill_passes_activation,
     to_skill_prompt_entry,
@@ -618,7 +621,7 @@ class AgentsHandlers:
                     user_role=user_role,
                     enabled_tools=agent.enabled_tools or [],
                     skills=skill_entries or None,
-                    memory_context=memory_context or None,
+                    memory_context=memory_context,
                     prompt_content=prompt_content,
                 )
 
@@ -635,27 +638,39 @@ class AgentsHandlers:
         agent_id: UUID,
         user_id: UUID,
         organization_id: UUID,
-        limit: int = 10,
-    ) -> list[str]:
-        """Fetch memory context strings for prompt preview."""
+    ) -> str | None:
+        """Preview renders what a private session would inject: org + personal scope."""
         try:
-            result = await session.execute(
-                select(AgentMemory)
-                .where(
-                    AgentMemory.agent_id == agent_id,
-                    AgentMemory.user_id == user_id,
-                    AgentMemory.organization_id == organization_id,
+            labels = {
+                MemoryScope.ORG: (
+                    "Organization memory (curated by agent managers; "
+                    "visible to all members)"
+                ),
+                MemoryScope.USER: "Personal memory for this user (private to them)",
+            }
+            blocks: list[MemoryScopeBlock] = []
+            for ref in (
+                MemoryScopeRef(MemoryScope.ORG),
+                MemoryScopeRef(MemoryScope.USER, user_id),
+            ):
+                payload = await fetch_memory_index(
+                    session,
+                    agent_id=agent_id,
+                    organization_id=organization_id,
+                    scope_ref=ref,
                 )
-                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
-                .limit(limit)
-            )
-            memories = list(result.scalars().all())
-            if not memories:
-                return []
-            return [f"[{m.category}] {m.key}: {m.content}" for m in memories]
+                blocks.append(
+                    MemoryScopeBlock(
+                        label=labels[ref.scope],
+                        pinned=payload.get("pinned") or [],
+                        index=payload.get("index") or [],
+                        total=int(payload.get("total") or 0),
+                    )
+                )
+            return build_memory_block(blocks)
         except Exception:
             logger.opt(exception=True).warning("Failed to fetch memory context for preview")
-            return []
+            return None
 
     @staticmethod
     async def _resolve_prompt_for_preview(

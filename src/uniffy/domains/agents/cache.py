@@ -549,6 +549,86 @@ def _is_uuid(value: str) -> bool:
     return True
 
 
+_MEMORY_INDEX_TTL_SECONDS = 300
+MEMORY_INDEX_LIMIT = 50
+
+
+def _memory_index_key(agent_id: UUID, scope: str, subject: str) -> str:
+    return f"agentmem:{agent_id}:{scope}:{subject}"
+
+
+async def fetch_memory_index(
+    session: AsyncSession,
+    *,
+    agent_id: UUID,
+    organization_id: UUID,
+    scope_ref,
+) -> dict[str, Any]:
+    """Stampede-protected cache-or-load of one scope's rendered memory index.
+
+    Payload: pinned entries carry full content (they inject verbatim);
+    index entries carry key/category/description only, capped at
+    MEMORY_INDEX_LIMIT with `total` preserving the real row count.
+    """
+    from sqlalchemy import func
+
+    from uniffy.core.models.agents.memory import AgentMemory
+    from uniffy.domains.agents.memories.scope import scope_filters
+
+    async def _load() -> dict[str, Any]:
+        filters = scope_filters(agent_id, organization_id, scope_ref)
+        pinned_rows = (
+            await session.execute(
+                select(
+                    AgentMemory.key, AgentMemory.category, AgentMemory.content
+                )
+                .where(*filters, AgentMemory.pinned.is_(True))  # type: ignore[union-attr]
+                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
+            )
+        ).all()
+        index_rows = (
+            await session.execute(
+                select(
+                    AgentMemory.key, AgentMemory.category, AgentMemory.description
+                )
+                .where(*filters, AgentMemory.pinned.is_(False))  # type: ignore[union-attr]
+                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
+                .limit(MEMORY_INDEX_LIMIT)
+            )
+        ).all()
+        total = (
+            await session.execute(
+                select(func.count()).select_from(AgentMemory).where(*filters)
+            )
+        ).scalar() or 0
+        return {
+            "pinned": [
+                {"key": k, "category": c, "content": body}
+                for k, c, body in pinned_rows
+            ],
+            "index": [
+                {"key": k, "category": c, "description": d}
+                for k, c, d in index_rows
+            ],
+            "total": int(total),
+        }
+
+    payload = await cache_get_or_set_locked(
+        _memory_index_key(agent_id, scope_ref.scope.value, scope_ref.cache_subject),
+        _load,
+        ttl=_MEMORY_INDEX_TTL_SECONDS,
+    )
+    if not isinstance(payload, dict):
+        return {"pinned": [], "index": [], "total": 0}
+    return payload
+
+
+async def invalidate_memory_index(
+    agent_id: UUID, scope: str, subject: str
+) -> None:
+    await cache_delete(_memory_index_key(agent_id, scope, subject))
+
+
 async def publish_provider_key_invalidation(key_id: UUID) -> None:
     """Publish the cross-pod signal that drops this key's cached client.
 

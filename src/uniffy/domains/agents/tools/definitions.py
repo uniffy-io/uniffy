@@ -2,9 +2,13 @@
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from uniffy.domains.agents.memories.scope import MemoryScopeRef
 
 
 @dataclass
@@ -32,6 +36,12 @@ class ToolContext:
     agent_id: UUID | None = None
     session_id: UUID | None = None
     user_timezone: str | None = None
+    # Audience scope the runtime resolved for this run; memory tools refuse
+    # to operate without it (no silent fallback to personal scope).
+    memory_scope: MemoryScopeRef | None = None
+    # Opted-in personal scope, READ-only widening for shared-space runs;
+    # write tools must never target it.
+    memory_bridge_scope: MemoryScopeRef | None = None
     # Side-channel for a write tool to surface runtime stream events (e.g. a
     # proposed skill draft) that the loop drains and forwards to the client.
     pending_events: list = field(default_factory=list)

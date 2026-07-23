@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Brain, Check } from '@phosphor-icons/react';
+import { Brain, Check, X } from '@phosphor-icons/react';
+import { MemoryScope } from '@uniffy/proto/agents/v1/memories_pb';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { Modal } from '@/components/ui/modal';
 import {
   selectAvailableModels,
   selectModelsForKey,
@@ -14,8 +16,19 @@ import {
   fetchModelsForKey,
   type SerializedModelInfo,
 } from '@/features/agents/store/agentProvidersThunks';
+import { selectMemoryScope } from '@/features/agents/store/agentMemoriesSlice';
+import { fetchMemories, memoryScopeKey } from '@/features/agents/store/agentMemoriesThunks';
+import {
+  MemoryList,
+  type MemoryScopeDescriptor,
+} from '@/features/agents/components/memory/MemoryList';
 import type { SerializedAgent } from '@/features/agents/store/agentsThunks';
 import { ModelParamsSection } from '@/features/agents/components/ModelParamsSection';
+import {
+  selectChannelById,
+  selectChannelMembers,
+} from '@/features/chat/store/chatChannelsSlice';
+import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
 import {
   parseModelParamsSchema,
   stripInvalidParams,
@@ -87,8 +100,42 @@ export function AgentModelPicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<PickerPosition | null>(null);
+  const [memoryOpen, setMemoryOpen] = useState(false);
 
   const { config, updating, update } = useChannelAgentConfig(channelId, agent.id);
+
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
+  const channel = useAppSelector((s) => selectChannelById(s, channelId));
+  const channelMembers = useAppSelector((s) => selectChannelMembers(s, channelId));
+  const { canManageChat } = useChatPermissions();
+  const channelMemoryKey = memoryScopeKey({ scope: MemoryScope.CHANNEL, subjectId: channelId });
+  const channelMemory = useAppSelector(selectMemoryScope(channelMemoryKey));
+
+  const memberRole = channelMembers.find(
+    (m) => m.subjectType === 'USER' && m.userId === currentUserId,
+  )?.role;
+  const isModerator = canManageChat || memberRole === 'OWNER' || memberRole === 'ADMIN';
+
+  const memoryDescriptor = useMemo<MemoryScopeDescriptor>(
+    () => ({
+      scope: MemoryScope.CHANNEL,
+      subjectId: channelId,
+      canCreate: false,
+      canPin: isModerator,
+      canEdit: (m) => m.createdByUserId === currentUserId || isModerator,
+      canDelete: (m) => m.createdByUserId === currentUserId || isModerator,
+    }),
+    [channelId, currentUserId, isModerator],
+  );
+  const channelLabel =
+    channel && (channel.channelType === 'PUBLIC' || channel.channelType === 'PRIVATE')
+      ? channel.name
+      : undefined;
+
+  useEffect(() => {
+    if (!open) return;
+    dispatch(fetchMemories({ agentId: agent.id, scope: MemoryScope.CHANNEL, subjectId: channelId }));
+  }, [dispatch, open, agent.id, channelId]);
 
   const keyId = agent.primaryProviderKeyId;
   const keyModels = useAppSelector(selectModelsForKey(keyId));
@@ -259,9 +306,53 @@ export function AgentModelPicker({
                 disabled={disabled}
               />
             </div>
+            <div className="mt-3 border-t border-border pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setMemoryOpen(true);
+                }}
+                className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
+                data-testid="chat-compose-agent-memory-button"
+              >
+                <Brain size={14} weight="duotone" className="text-muted-foreground shrink-0" />
+                <span>
+                  Memory{channelMemory.loaded ? ` (${channelMemory.totalCount})` : ''}
+                </span>
+              </button>
+            </div>
           </div>
         </div>,
         document.body,
+      )}
+      {memoryOpen && (
+        <Modal onClose={() => setMemoryOpen(false)} maxWidth="max-w-2xl">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2 min-w-0">
+              <Brain size={18} weight="duotone" className="text-muted-foreground shrink-0" />
+              <span className="font-medium text-foreground truncate">
+                Channel memory - {agent.name}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMemoryOpen(false)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-4 overflow-y-auto max-h-[70dvh]">
+            <MemoryList
+              agentId={agent.id}
+              agentName={agent.name}
+              descriptor={memoryDescriptor}
+              subjectLabel={channelLabel}
+            />
+          </div>
+        </Modal>
       )}
     </>
   );

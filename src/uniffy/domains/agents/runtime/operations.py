@@ -16,11 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
-from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.run_log import AgentRunLog
-from uniffy.core.models.chat.channel import ChatChannel
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import SenderType as ChatSenderType
 from uniffy.core.types import SubjectType
@@ -30,10 +30,13 @@ from uniffy.domains.agents.budget_alerts import check_and_fire_alerts
 from uniffy.domains.agents.cache import (
     fetch_agent_prompt,
     fetch_agent_skills,
+    fetch_memory_index,
 )
 from uniffy.domains.agents.content_policy import check_user_message
 from uniffy.domains.agents.currency import convert as convert_currency
 from uniffy.domains.agents.currency import get_display_currency
+from uniffy.domains.agents.memories.bridge import is_personal_bridge_enabled
+from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.pricing import PRICING_CURRENCY, compute_text_cost, get_pricing
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
@@ -52,12 +55,15 @@ from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.model_resolver import resolve_model
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
+    MemoryScopeBlock,
     SkillPromptEntry,
     build_chat_context_section,
+    build_memory_block,
     build_system_prompt,
     skill_passes_activation,
     to_skill_prompt_entry,
 )
+from uniffy.domains.agents.runtime.settings import get_runtime_settings
 from uniffy.domains.agents.runtime.writers import (
     ChatChannelMessageWriter,
     MessageWriter,
@@ -474,10 +480,22 @@ class RuntimeOperations:
             registry, enabled_tools, skill_entries, invoked_entry
         )
 
-        memory_context = await self._fetch_memory_context(
-            agent_id=agent_session.agent_id,
+        memory_scope = await self._resolve_memory_scope(
+            destination=SessionDestination(session_id=session_id),
             user_id=user_id,
             organization_id=organization_id,
+            session_kind=agent_session.kind,
+        )
+        memory_bridge = await self._resolve_memory_bridge(
+            scope_ref=memory_scope,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        memory_context = await self._build_memory_context(
+            agent_id=agent_session.agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            bridge_ref=memory_bridge,
         )
 
         prompt_content = await fetch_agent_prompt(
@@ -495,7 +513,7 @@ class RuntimeOperations:
             enabled_tools=enabled_tools,
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
-            memory_context=memory_context or None,
+            memory_context=memory_context,
             prompt_content=prompt_content,
             user_timezone=user_timezone,
         )
@@ -602,6 +620,8 @@ class RuntimeOperations:
                     agent_id=agent_session.agent_id,
                     session_id=session_id,
                     user_timezone=user_timezone,
+                    memory_scope=memory_scope,
+                    memory_bridge_scope=memory_bridge,
                 )
                 executor = ToolExecutor(registry, tool_ctx)
 
@@ -1207,10 +1227,22 @@ class RuntimeOperations:
             registry, enabled_tools, skill_entries, invoked_entry
         )
 
-        memory_context = await self._fetch_memory_context(
-            agent_id=agent_id,
+        memory_scope = await self._resolve_memory_scope(
+            destination=destination,
             user_id=user_id,
             organization_id=organization_id,
+            session_kind=agent_session.kind if agent_session else None,
+        )
+        memory_bridge = await self._resolve_memory_bridge(
+            scope_ref=memory_scope,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        memory_context = await self._build_memory_context(
+            agent_id=agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            bridge_ref=memory_bridge,
         )
 
         prompt_content = await fetch_agent_prompt(
@@ -1236,7 +1268,7 @@ class RuntimeOperations:
             enabled_tools=enabled_tools,
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
-            memory_context=memory_context or None,
+            memory_context=memory_context,
             prompt_content=prompt_content,
             user_timezone=user_timezone,
             chat_context=chat_context_block,
@@ -1423,6 +1455,8 @@ class RuntimeOperations:
                 agent_id=agent_id,
                 session_id=session_id,
                 user_timezone=user_timezone,
+                memory_scope=memory_scope,
+                memory_bridge_scope=memory_bridge,
             )
             executor = ToolExecutor(registry, tool_ctx)
 
@@ -1975,56 +2009,112 @@ class RuntimeOperations:
         )
         return to_skill_prompt_entry(match)
 
-    async def _fetch_memory_context(
+    async def _resolve_memory_scope(
+        self,
+        *,
+        destination: RuntimeDestination,
+        user_id: UUID,
+        organization_id: UUID,
+        session_kind: str | None = None,
+    ) -> MemoryScopeRef:
+        """Route the run to its audience scope; the whole memory model hangs on this.
+
+        Personal scope is granted only when the surface audience is exactly
+        the trigger user: direct/cron sessions and 1:1 agent DMs. Everything
+        else is shared space and gets the shared subject's scope.
+        """
+        if isinstance(destination, SessionDestination):
+            if session_kind in ("group", "global"):
+                return MemoryScopeRef(MemoryScope.SESSION, destination.session_id)
+            return MemoryScopeRef(MemoryScope.USER, user_id)
+
+        from uniffy.domains.chat.cache import get_or_load_channel
+
+        channel = await get_or_load_channel(
+            self._session, destination.channel_id, organization_id
+        )
+        if (
+            channel is not None
+            and channel.is_agent_dm
+            and channel.channel_type == ChannelType.DIRECT
+        ):
+            return MemoryScopeRef(MemoryScope.USER, user_id)
+        return MemoryScopeRef(MemoryScope.CHANNEL, destination.channel_id)
+
+    _MEMORY_SCOPE_LABELS = {
+        MemoryScope.USER: "Personal memory for this user (private to them)",
+        MemoryScope.CHANNEL: "Channel memory (shared with all members of this channel)",
+        MemoryScope.SESSION: "Session memory (shared with participants of this session)",
+        MemoryScope.ORG: (
+            "Organization memory (curated by agent managers; visible to all members)"
+        ),
+    }
+    _MEMORY_BRIDGE_LABEL = (
+        "Personal memory of the user who triggered this run (they opted in to "
+        "using it in shared spaces; replies here are visible to others and may "
+        "draw on it)"
+    )
+
+    async def _resolve_memory_bridge(
+        self,
+        *,
+        scope_ref: MemoryScopeRef,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> MemoryScopeRef | None:
+        """Read-only widening of a shared-space run with the trigger user's
+        personal memory; requires both the org gate and the user's opt-in."""
+        if scope_ref.scope not in (MemoryScope.CHANNEL, MemoryScope.SESSION):
+            return None
+        try:
+            settings = await get_runtime_settings(self._session, organization_id)
+            if not settings.personal_memory_bridge_enabled:
+                return None
+            if not await is_personal_bridge_enabled(
+                self._session, user_id=user_id, organization_id=organization_id
+            ):
+                return None
+        except Exception:
+            logger.opt(exception=True).warning("Memory bridge resolution failed")
+            return None
+        return MemoryScopeRef(MemoryScope.USER, user_id)
+
+    async def _build_memory_context(
         self,
         *,
         agent_id: UUID,
-        user_id: UUID,
         organization_id: UUID,
-        limit: int = 10,
-    ) -> list[str]:
-        """Fetch relevant memories to include in the system prompt.
-
-        Returns the most important memories for the given agent-user pair,
-        formatted as strings for inclusion in the prompt.
-
-        Parameters
-        ----------
-        agent_id : UUID
-            Agent ID to fetch memories for.
-        user_id : UUID
-            User ID to fetch memories for.
-        organization_id : UUID
-            Organization context.
-        limit : int
-            Maximum number of memories to include.
-
-        Returns
-        -------
-        list[str]
-            Formatted memory strings.
-
-        """
+        scope_ref: MemoryScopeRef,
+        bridge_ref: MemoryScopeRef | None = None,
+    ) -> str | None:
+        """Assemble the org + surface (+ opted-in personal) memory blocks."""
         try:
-            result = await self._session.execute(
-                select(AgentMemory)
-                .where(
-                    AgentMemory.agent_id == agent_id,
-                    AgentMemory.user_id == user_id,
-                    AgentMemory.organization_id == organization_id,
+            refs: list[tuple[MemoryScopeRef, str]] = [
+                (MemoryScopeRef(MemoryScope.ORG), self._MEMORY_SCOPE_LABELS[MemoryScope.ORG]),
+                (scope_ref, self._MEMORY_SCOPE_LABELS[scope_ref.scope]),
+            ]
+            if bridge_ref is not None:
+                refs.append((bridge_ref, self._MEMORY_BRIDGE_LABEL))
+            blocks: list[MemoryScopeBlock] = []
+            for ref, label in refs:
+                payload = await fetch_memory_index(
+                    self._session,
+                    agent_id=agent_id,
+                    organization_id=organization_id,
+                    scope_ref=ref,
                 )
-                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
-                .limit(limit)
-            )
-            memories = list(result.scalars().all())
-
-            if not memories:
-                return []
-
-            return [f"[{m.category}] {m.key}: {m.content}" for m in memories]
+                blocks.append(
+                    MemoryScopeBlock(
+                        label=label,
+                        pinned=payload.get("pinned") or [],
+                        index=payload.get("index") or [],
+                        total=int(payload.get("total") or 0),
+                    )
+                )
+            return build_memory_block(blocks)
         except Exception:
-            logger.opt(exception=True).warning("Failed to fetch memory context")
-            return []
+            logger.opt(exception=True).warning("Failed to build memory context")
+            return None
 
     async def _build_chat_context_for_destination(
         self,

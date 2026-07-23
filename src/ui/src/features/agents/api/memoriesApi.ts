@@ -6,6 +6,9 @@ import {
     CreateMemoryRequestSchema,
     UpdateMemoryRequestSchema,
     DeleteMemoryRequestSchema,
+    SetMemoryPinnedRequestSchema,
+    GetMemorySharingRequestSchema,
+    SetMemorySharingRequestSchema,
 } from '@uniffy/proto/agents/v1/memories_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -23,5 +26,14 @@ export const memoriesApi = {
     },
     deleteMemory: async (request: MessageInitShape<typeof DeleteMemoryRequestSchema>) => {
         return client.deleteMemory(request);
+    },
+    setMemoryPinned: async (request: MessageInitShape<typeof SetMemoryPinnedRequestSchema>) => {
+        return client.setMemoryPinned(request);
+    },
+    getMemorySharing: async (request: MessageInitShape<typeof GetMemorySharingRequestSchema>) => {
+        return client.getMemorySharing(request);
+    },
+    setMemorySharing: async (request: MessageInitShape<typeof SetMemorySharingRequestSchema>) => {
+        return client.setMemorySharing(request);
     },
 };

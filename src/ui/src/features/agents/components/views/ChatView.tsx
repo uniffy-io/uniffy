@@ -3,7 +3,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { PaperPlaneRight, Paperclip, FileText, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, PencilSimple, Stop, Trash, Lightning, ThumbsUp, ThumbsDown } from "@phosphor-icons/react";
+import { PaperPlaneRight, Paperclip, FileText, X, CircleNotch, GearSix, Warning, Check, Database, ArrowsClockwise, Code, PencilSimple, Stop, Trash, Lightning, ThumbsUp, ThumbsDown, Brain } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -17,6 +17,12 @@ import { MentionChipCompact } from "@/components/mention";
 import { getMentionUrl } from "@/components/mention/mentionStateEmitter";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { SessionKind } from "@uniffy/proto/agents/v1/sessions_pb";
+import { MemoryScope } from "@uniffy/proto/agents/v1/memories_pb";
+import { Modal } from "@/components/ui/modal";
+import {
+    MemoryList,
+    type MemoryScopeDescriptor,
+} from "@/features/agents/components/memory/MemoryList";
 import { parseUrn, urnToPath } from "@/shared/utils/urn";
 import { navigateTo, openInNewTab } from "@/shared/utils/navigation";
 import { useTextareaMention } from "@/features/agents/hooks/useTextareaMention";
@@ -849,6 +855,7 @@ function ChatPanel() {
     const contextStats = useAppSelector(selectContextStats(activeSessionId));
 
     const [showStats, setShowStats] = useState(false);
+    const [showSessionMemory, setShowSessionMemory] = useState(false);
     const [isCompacting, setIsCompacting] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<Array<{
         id: string;
@@ -1186,6 +1193,22 @@ function ChatPanel() {
 
     const agentName = activeAgent?.name ?? "Chat";
 
+    const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
+    const isSharedSession =
+        !!activeSession &&
+        (activeSession.kind === SessionKind.GROUP || activeSession.kind === SessionKind.GLOBAL);
+    const sessionMemoryDescriptor = useMemo<MemoryScopeDescriptor>(() => {
+        const isSessionOwner = !!activeSession && activeSession.userId === currentUserId;
+        return {
+            scope: MemoryScope.SESSION,
+            subjectId: activeSession?.id,
+            canCreate: false,
+            canPin: isSessionOwner,
+            canEdit: (m) => m.createdByUserId === currentUserId || isSessionOwner,
+            canDelete: (m) => m.createdByUserId === currentUserId || isSessionOwner,
+        };
+    }, [activeSession, currentUserId]);
+
     // Place each proposed-skill card inline, right after the assistant reply
     // that announced it, instead of stacking every draft at the bottom of the
     // thread. A draft is created mid-turn (when the propose tool runs), so its
@@ -1261,6 +1284,19 @@ function ChatPanel() {
                         </Button>
                     </>
                 )}
+                {isSharedSession && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSessionMemory(true)}
+                        className="gap-1.5 text-muted-foreground"
+                        title="Session memory"
+                        data-testid="agents-session-memory-button"
+                    >
+                        <Brain size={14} />
+                        <span className="text-xs hidden sm:inline">Session memory</span>
+                    </Button>
+                )}
                 {contextStats && (() => {
                     const pct = contextStats.tokenBudget > 0
                         ? Math.round((contextStats.activeTokens / contextStats.tokenBudget) * 100)
@@ -1285,6 +1321,34 @@ function ChatPanel() {
                     );
                 })()}
             </div>
+
+            {showSessionMemory && activeSession && (
+                <Modal onClose={() => setShowSessionMemory(false)} maxWidth="max-w-2xl">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Brain size={18} weight="duotone" className="text-muted-foreground shrink-0" />
+                            <span className="font-medium text-foreground truncate">
+                                Session memory - {agentName}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowSessionMemory(false)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            aria-label="Close"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                    <div className="p-4 overflow-y-auto max-h-[70dvh]">
+                        <MemoryList
+                            agentId={activeSession.agentId}
+                            agentName={agentName}
+                            descriptor={sessionMemoryDescriptor}
+                        />
+                    </div>
+                </Modal>
+            )}
 
             {/* Context stats panel */}
             {showStats && contextStats && (() => {
