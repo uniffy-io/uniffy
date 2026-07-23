@@ -71,6 +71,12 @@ interface GroupedMessage {
   showAvatar: boolean;
   showDateSeparator: boolean;
   dateLabel: string;
+  /** Present on a folded run of consecutive agent tool calls; rendered as one pane. */
+  toolRun?: ChatMessage[];
+}
+
+function isAgentToolCall(m: ChatMessage): boolean {
+  return m.senderType === 'AGENT' && m.metadata?.['kind'] === 'tool_call';
 }
 
 function groupMessages(messages: ChatMessage[]): GroupedMessage[] {
@@ -90,6 +96,18 @@ function groupMessages(messages: ChatMessage[]): GroupedMessage[] {
       if (sameUser && timeDiff < GROUPING_THRESHOLD_MS) {
         showAvatar = false;
       }
+    }
+
+    if (isAgentToolCall(msg)) {
+      const toolRun = [msg];
+      let j = i + 1;
+      while (j < messages.length && isAgentToolCall(messages[j]) && messages[j].senderId === msg.senderId) {
+        toolRun.push(messages[j]);
+        j++;
+      }
+      result.push({ message: msg, showAvatar, showDateSeparator, dateLabel, toolRun });
+      i = j - 1;
+      continue;
     }
 
     result.push({ message: msg, showAvatar, showDateSeparator, dateLabel });
@@ -443,6 +461,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
           isGrouped={!g.showAvatar}
           isFirstInGroup={g.showAvatar}
           isHighlighted={g.message.id === highlightedId}
+          toolRun={g.toolRun}
         />
       </div>
     ),
