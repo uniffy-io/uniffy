@@ -118,12 +118,14 @@ class UploadChunkResponse(_message.Message):
     def __init__(self, success: _Optional[bool] = ..., chunk_number: _Optional[int] = ..., chunks_received: _Optional[int] = ...) -> None: ...
 
 class CompleteUploadRequest(_message.Message):
-    __slots__ = ("upload_id", "tag_ids")
+    __slots__ = ("upload_id", "tag_ids", "version_of_file_id")
     UPLOAD_ID_FIELD_NUMBER: _ClassVar[int]
     TAG_IDS_FIELD_NUMBER: _ClassVar[int]
+    VERSION_OF_FILE_ID_FIELD_NUMBER: _ClassVar[int]
     upload_id: str
     tag_ids: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, upload_id: _Optional[str] = ..., tag_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+    version_of_file_id: str
+    def __init__(self, upload_id: _Optional[str] = ..., tag_ids: _Optional[_Iterable[str]] = ..., version_of_file_id: _Optional[str] = ...) -> None: ...
 
 class UploadChunksResponse(_message.Message):
     __slots__ = ("file",)
@@ -721,6 +723,40 @@ class RestoreFileVersionRequest(_message.Message):
     organization_id: str
     version_id: str
     def __init__(self, file_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., version_id: _Optional[str] = ...) -> None: ...
+
+class OrgFileVersionPolicy(_message.Message):
+    __slots__ = ("organization_id", "keep_versions")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    KEEP_VERSIONS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    keep_versions: int
+    def __init__(self, organization_id: _Optional[str] = ..., keep_versions: _Optional[int] = ...) -> None: ...
+
+class GetOrgFileVersionPolicyRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class GetOrgFileVersionPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: OrgFileVersionPolicy
+    def __init__(self, policy: _Optional[_Union[OrgFileVersionPolicy, _Mapping]] = ...) -> None: ...
+
+class UpdateOrgFileVersionPolicyRequest(_message.Message):
+    __slots__ = ("organization_id", "keep_versions")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    KEEP_VERSIONS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    keep_versions: int
+    def __init__(self, organization_id: _Optional[str] = ..., keep_versions: _Optional[int] = ...) -> None: ...
+
+class UpdateOrgFileVersionPolicyResponse(_message.Message):
+    __slots__ = ("policy",)
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    policy: OrgFileVersionPolicy
+    def __init__(self, policy: _Optional[_Union[OrgFileVersionPolicy, _Mapping]] = ...) -> None: ...
 
 class FilterCriteria(_message.Message):
     __slots__ = ("extensions", "mime_categories", "owner_ids", "access_mode", "size_min_bytes", "size_max_bytes", "created_after", "created_before", "tag_ids")

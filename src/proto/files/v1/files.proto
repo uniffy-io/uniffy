@@ -108,6 +108,12 @@ service FilesService {
   // Restore a previous version of a file.
   rpc RestoreFileVersion(RestoreFileVersionRequest) returns (RestoreFileVersionResponse);
 
+  // Get the org's file version retention policy (org admin).
+  rpc GetOrgFileVersionPolicy(GetOrgFileVersionPolicyRequest) returns (GetOrgFileVersionPolicyResponse);
+
+  // Update the org's file version retention policy (org admin).
+  rpc UpdateOrgFileVersionPolicy(UpdateOrgFileVersionPolicyRequest) returns (UpdateOrgFileVersionPolicyResponse);
+
   // === Storage Quotas ===
 
   // Get the organization storage quota configuration.
@@ -265,6 +271,9 @@ message CompleteUploadRequest {
   string upload_id = 1;
   // Optional unified-tag ids to assign on upload completion (manual source).
   repeated string tag_ids = 2;
+  // When set, the uploaded bytes become a new version of this existing file
+  // (requires EDIT on it and a matching MIME type) instead of a new File row.
+  optional string version_of_file_id = 3;
 }
 
 message UploadChunksResponse {
@@ -641,6 +650,30 @@ message RestoreFileVersionRequest {
   string file_id = 1;
   string organization_id = 2;
   string version_id = 3;
+}
+
+message OrgFileVersionPolicy {
+  string organization_id = 1;
+  // How many versions of a file are retained; older ones are pruned when a new
+  // version is written. The current version always survives.
+  int32 keep_versions = 2;
+}
+
+message GetOrgFileVersionPolicyRequest {
+  string organization_id = 1;
+}
+
+message GetOrgFileVersionPolicyResponse {
+  OrgFileVersionPolicy policy = 1;
+}
+
+message UpdateOrgFileVersionPolicyRequest {
+  string organization_id = 1;
+  int32 keep_versions = 2;
+}
+
+message UpdateOrgFileVersionPolicyResponse {
+  OrgFileVersionPolicy policy = 1;
 }
 
 // SAVED FILTER MESSAGES

@@ -102,6 +102,12 @@ const (
 	// FilesServiceRestoreFileVersionProcedure is the fully-qualified name of the FilesService's
 	// RestoreFileVersion RPC.
 	FilesServiceRestoreFileVersionProcedure = "/files.v1.FilesService/RestoreFileVersion"
+	// FilesServiceGetOrgFileVersionPolicyProcedure is the fully-qualified name of the FilesService's
+	// GetOrgFileVersionPolicy RPC.
+	FilesServiceGetOrgFileVersionPolicyProcedure = "/files.v1.FilesService/GetOrgFileVersionPolicy"
+	// FilesServiceUpdateOrgFileVersionPolicyProcedure is the fully-qualified name of the FilesService's
+	// UpdateOrgFileVersionPolicy RPC.
+	FilesServiceUpdateOrgFileVersionPolicyProcedure = "/files.v1.FilesService/UpdateOrgFileVersionPolicy"
 	// FilesServiceGetOrgStorageQuotaProcedure is the fully-qualified name of the FilesService's
 	// GetOrgStorageQuota RPC.
 	FilesServiceGetOrgStorageQuotaProcedure = "/files.v1.FilesService/GetOrgStorageQuota"
@@ -220,6 +226,10 @@ type FilesServiceClient interface {
 	ListFileVersions(context.Context, *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error)
+	// Get the org's file version retention policy (org admin).
+	GetOrgFileVersionPolicy(context.Context, *connect.Request[v1.GetOrgFileVersionPolicyRequest]) (*connect.Response[v1.GetOrgFileVersionPolicyResponse], error)
+	// Update the org's file version retention policy (org admin).
+	UpdateOrgFileVersionPolicy(context.Context, *connect.Request[v1.UpdateOrgFileVersionPolicyRequest]) (*connect.Response[v1.UpdateOrgFileVersionPolicyResponse], error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error)
 	// Set or update the organization storage quota configuration.
@@ -434,6 +444,18 @@ func NewFilesServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(filesServiceMethods.ByName("RestoreFileVersion")),
 			connect.WithClientOptions(opts...),
 		),
+		getOrgFileVersionPolicy: connect.NewClient[v1.GetOrgFileVersionPolicyRequest, v1.GetOrgFileVersionPolicyResponse](
+			httpClient,
+			baseURL+FilesServiceGetOrgFileVersionPolicyProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("GetOrgFileVersionPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrgFileVersionPolicy: connect.NewClient[v1.UpdateOrgFileVersionPolicyRequest, v1.UpdateOrgFileVersionPolicyResponse](
+			httpClient,
+			baseURL+FilesServiceUpdateOrgFileVersionPolicyProcedure,
+			connect.WithSchema(filesServiceMethods.ByName("UpdateOrgFileVersionPolicy")),
+			connect.WithClientOptions(opts...),
+		),
 		getOrgStorageQuota: connect.NewClient[v1.GetOrgStorageQuotaRequest, v1.GetOrgStorageQuotaResponse](
 			httpClient,
 			baseURL+FilesServiceGetOrgStorageQuotaProcedure,
@@ -585,6 +607,8 @@ type filesServiceClient struct {
 	restoreFolder                  *connect.Client[v1.RestoreFolderRequest, v1.RestoreFolderResponse]
 	listFileVersions               *connect.Client[v1.ListFileVersionsRequest, v1.ListFileVersionsResponse]
 	restoreFileVersion             *connect.Client[v1.RestoreFileVersionRequest, v1.RestoreFileVersionResponse]
+	getOrgFileVersionPolicy        *connect.Client[v1.GetOrgFileVersionPolicyRequest, v1.GetOrgFileVersionPolicyResponse]
+	updateOrgFileVersionPolicy     *connect.Client[v1.UpdateOrgFileVersionPolicyRequest, v1.UpdateOrgFileVersionPolicyResponse]
 	getOrgStorageQuota             *connect.Client[v1.GetOrgStorageQuotaRequest, v1.GetOrgStorageQuotaResponse]
 	setOrgStorageQuota             *connect.Client[v1.SetOrgStorageQuotaRequest, v1.SetOrgStorageQuotaResponse]
 	getUserStorageQuota            *connect.Client[v1.GetUserStorageQuotaRequest, v1.GetUserStorageQuotaResponse]
@@ -735,6 +759,16 @@ func (c *filesServiceClient) ListFileVersions(ctx context.Context, req *connect.
 // RestoreFileVersion calls files.v1.FilesService.RestoreFileVersion.
 func (c *filesServiceClient) RestoreFileVersion(ctx context.Context, req *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error) {
 	return c.restoreFileVersion.CallUnary(ctx, req)
+}
+
+// GetOrgFileVersionPolicy calls files.v1.FilesService.GetOrgFileVersionPolicy.
+func (c *filesServiceClient) GetOrgFileVersionPolicy(ctx context.Context, req *connect.Request[v1.GetOrgFileVersionPolicyRequest]) (*connect.Response[v1.GetOrgFileVersionPolicyResponse], error) {
+	return c.getOrgFileVersionPolicy.CallUnary(ctx, req)
+}
+
+// UpdateOrgFileVersionPolicy calls files.v1.FilesService.UpdateOrgFileVersionPolicy.
+func (c *filesServiceClient) UpdateOrgFileVersionPolicy(ctx context.Context, req *connect.Request[v1.UpdateOrgFileVersionPolicyRequest]) (*connect.Response[v1.UpdateOrgFileVersionPolicyResponse], error) {
+	return c.updateOrgFileVersionPolicy.CallUnary(ctx, req)
 }
 
 // GetOrgStorageQuota calls files.v1.FilesService.GetOrgStorageQuota.
@@ -895,6 +929,10 @@ type FilesServiceHandler interface {
 	ListFileVersions(context.Context, *connect.Request[v1.ListFileVersionsRequest]) (*connect.Response[v1.ListFileVersionsResponse], error)
 	// Restore a previous version of a file.
 	RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error)
+	// Get the org's file version retention policy (org admin).
+	GetOrgFileVersionPolicy(context.Context, *connect.Request[v1.GetOrgFileVersionPolicyRequest]) (*connect.Response[v1.GetOrgFileVersionPolicyResponse], error)
+	// Update the org's file version retention policy (org admin).
+	UpdateOrgFileVersionPolicy(context.Context, *connect.Request[v1.UpdateOrgFileVersionPolicyRequest]) (*connect.Response[v1.UpdateOrgFileVersionPolicyResponse], error)
 	// Get the organization storage quota configuration.
 	GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error)
 	// Set or update the organization storage quota configuration.
@@ -1105,6 +1143,18 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(filesServiceMethods.ByName("RestoreFileVersion")),
 		connect.WithHandlerOptions(opts...),
 	)
+	filesServiceGetOrgFileVersionPolicyHandler := connect.NewUnaryHandler(
+		FilesServiceGetOrgFileVersionPolicyProcedure,
+		svc.GetOrgFileVersionPolicy,
+		connect.WithSchema(filesServiceMethods.ByName("GetOrgFileVersionPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	filesServiceUpdateOrgFileVersionPolicyHandler := connect.NewUnaryHandler(
+		FilesServiceUpdateOrgFileVersionPolicyProcedure,
+		svc.UpdateOrgFileVersionPolicy,
+		connect.WithSchema(filesServiceMethods.ByName("UpdateOrgFileVersionPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
 	filesServiceGetOrgStorageQuotaHandler := connect.NewUnaryHandler(
 		FilesServiceGetOrgStorageQuotaProcedure,
 		svc.GetOrgStorageQuota,
@@ -1279,6 +1329,10 @@ func NewFilesServiceHandler(svc FilesServiceHandler, opts ...connect.HandlerOpti
 			filesServiceListFileVersionsHandler.ServeHTTP(w, r)
 		case FilesServiceRestoreFileVersionProcedure:
 			filesServiceRestoreFileVersionHandler.ServeHTTP(w, r)
+		case FilesServiceGetOrgFileVersionPolicyProcedure:
+			filesServiceGetOrgFileVersionPolicyHandler.ServeHTTP(w, r)
+		case FilesServiceUpdateOrgFileVersionPolicyProcedure:
+			filesServiceUpdateOrgFileVersionPolicyHandler.ServeHTTP(w, r)
 		case FilesServiceGetOrgStorageQuotaProcedure:
 			filesServiceGetOrgStorageQuotaHandler.ServeHTTP(w, r)
 		case FilesServiceSetOrgStorageQuotaProcedure:
@@ -1430,6 +1484,14 @@ func (UnimplementedFilesServiceHandler) ListFileVersions(context.Context, *conne
 
 func (UnimplementedFilesServiceHandler) RestoreFileVersion(context.Context, *connect.Request[v1.RestoreFileVersionRequest]) (*connect.Response[v1.RestoreFileVersionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.RestoreFileVersion is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) GetOrgFileVersionPolicy(context.Context, *connect.Request[v1.GetOrgFileVersionPolicyRequest]) (*connect.Response[v1.GetOrgFileVersionPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.GetOrgFileVersionPolicy is not implemented"))
+}
+
+func (UnimplementedFilesServiceHandler) UpdateOrgFileVersionPolicy(context.Context, *connect.Request[v1.UpdateOrgFileVersionPolicyRequest]) (*connect.Response[v1.UpdateOrgFileVersionPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FilesService.UpdateOrgFileVersionPolicy is not implemented"))
 }
 
 func (UnimplementedFilesServiceHandler) GetOrgStorageQuota(context.Context, *connect.Request[v1.GetOrgStorageQuotaRequest]) (*connect.Response[v1.GetOrgStorageQuotaResponse], error) {

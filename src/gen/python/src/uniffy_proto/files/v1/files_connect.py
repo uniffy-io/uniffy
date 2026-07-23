@@ -96,6 +96,12 @@ class FilesService(Protocol):
     async def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFileVersionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_org_file_version_policy(self, request: files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_org_file_version_policy(self, request: files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def get_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -421,6 +427,26 @@ class FilesServiceASGIApplication(ConnectASGIApplication[FilesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.restore_file_version,
+                ),
+                "/files.v1.FilesService/GetOrgFileVersionPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetOrgFileVersionPolicy",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest,
+                        output=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_org_file_version_policy,
+                ),
+                "/files.v1.FilesService/UpdateOrgFileVersionPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateOrgFileVersionPolicy",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest,
+                        output=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_org_file_version_policy,
                 ),
                 "/files.v1.FilesService/GetOrgStorageQuota": Endpoint.unary(
                     method=MethodInfo(
@@ -1156,6 +1182,46 @@ class FilesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_org_file_version_policy(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOrgFileVersionPolicy",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest,
+                output=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_org_file_version_policy(
+        self,
+        request: files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateOrgFileVersionPolicy",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest,
+                output=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_org_storage_quota(
         self,
         request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest,
@@ -1613,6 +1679,10 @@ class FilesServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def restore_file_version(self, request: files_dot_v1_dot_files__pb2.RestoreFileVersionRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.RestoreFileVersionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_org_file_version_policy(self, request: files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_org_file_version_policy(self, request: files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.GetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.GetOrgStorageQuotaResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def set_org_storage_quota(self, request: files_dot_v1_dot_files__pb2.SetOrgStorageQuotaRequest, ctx: RequestContext) -> files_dot_v1_dot_files__pb2.SetOrgStorageQuotaResponse:
@@ -1918,6 +1988,26 @@ class FilesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.restore_file_version,
+                ),
+                "/files.v1.FilesService/GetOrgFileVersionPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetOrgFileVersionPolicy",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest,
+                        output=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_org_file_version_policy,
+                ),
+                "/files.v1.FilesService/UpdateOrgFileVersionPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateOrgFileVersionPolicy",
+                        service_name="files.v1.FilesService",
+                        input=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest,
+                        output=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_org_file_version_policy,
                 ),
                 "/files.v1.FilesService/GetOrgStorageQuota": EndpointSync.unary(
                     method=MethodInfo(
@@ -2647,6 +2737,46 @@ class FilesServiceClientSync(ConnectClientSync):
                 service_name="files.v1.FilesService",
                 input=files_dot_v1_dot_files__pb2.RestoreFileVersionRequest,
                 output=files_dot_v1_dot_files__pb2.RestoreFileVersionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_org_file_version_policy(
+        self,
+        request: files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOrgFileVersionPolicy",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyRequest,
+                output=files_dot_v1_dot_files__pb2.GetOrgFileVersionPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_org_file_version_policy(
+        self,
+        request: files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateOrgFileVersionPolicy",
+                service_name="files.v1.FilesService",
+                input=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyRequest,
+                output=files_dot_v1_dot_files__pb2.UpdateOrgFileVersionPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
