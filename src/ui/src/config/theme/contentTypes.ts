@@ -10,7 +10,6 @@ import {
   Kanban,
   CheckSquare,
   Brain,
-  Notebook,
   Door,
   Question,
   Robot,
@@ -119,15 +118,6 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: 'agents',
     theme: getUrnTypeTheme(UrnType.AGENT),
     hexColor: getUrnTypeHexColor(UrnType.AGENT),
-  },
-  [UrnType.PROMPT]: {
-    type: UrnType.PROMPT,
-    icon: Notebook,
-    label: 'Prompt',
-    labelPlural: 'Prompts',
-    route: 'agents/prompts',
-    theme: getUrnTypeTheme(UrnType.PROMPT),
-    hexColor: getUrnTypeHexColor(UrnType.PROMPT),
   },
   [UrnType.AGENT_CHAT]: {
     type: UrnType.AGENT_CHAT,

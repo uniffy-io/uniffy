@@ -20,7 +20,6 @@ const timestampToPlain = (ts?: { seconds: bigint | number; nanos: bigint | numbe
 export const skillToPlain = (skill: SkillInfo) => ({
     id: skill.id,
     organizationId: skill.organizationId,
-    ownerId: skill.ownerId,
     name: skill.name,
     displayName: skill.displayName,
     description: skill.description,
@@ -73,7 +72,14 @@ export const createSkill = createAsyncThunk<
 
 export const updateSkill = createAsyncThunk<
     SerializedSkill,
-    { skillId: string; displayName?: string; description?: string; content?: string },
+    {
+        skillId: string;
+        displayName?: string;
+        description?: string;
+        content?: string;
+        whenToUse?: string;
+        alwaysActive?: boolean;
+    },
     { state: RootState; rejectValue: string }
 >('agentSkills/updateSkill', async (params, { getState, rejectWithValue }) => {
     try {

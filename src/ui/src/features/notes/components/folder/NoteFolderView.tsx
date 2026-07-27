@@ -38,7 +38,7 @@ export function NoteFolderView() {
     const [isCreating, setIsCreating] = useState(false);
 
     const currentNoteId = notesState?.currentNoteId;
-    const notes = notesState?.notes || {};
+    const notes = useMemo(() => notesState?.notes ?? {}, [notesState?.notes]);
     const note = currentNoteId ? notes[currentNoteId] : null;
 
     const role = useMyContentRole(ContentType.NOTE, currentNoteId ?? '', note?.userRole);

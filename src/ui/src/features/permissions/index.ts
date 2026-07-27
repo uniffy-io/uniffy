@@ -25,6 +25,7 @@ export {
     useAccessPolicyDialog,
 } from '@/features/permissions/components/AccessPolicyDialog';
 export { AccessPolicyPanel } from '@/features/permissions/components/AccessPolicyPanel';
+export { AccessModeIcon } from '@/features/permissions/components/AccessModeIcon';
 export { AccessModeSelector } from '@/features/permissions/components/AccessModeSelector';
 export { ContentRoleBadge } from '@/features/permissions/components/ContentRoleBadge';
 export { ContentRoleSelect } from '@/features/permissions/components/ContentRoleSelect';

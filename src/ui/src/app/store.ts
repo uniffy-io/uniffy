@@ -13,6 +13,7 @@ import { settingsReducer } from '@/features/settings/store/settingsSlice';
 import { permissionsReducer } from '@/features/permissions';
 import { adminReducer } from '@/features/admin/store/adminSlice';
 import { agentsGovernanceReducer } from '@/features/admin/store/agentsGovernanceSlice';
+import { agentRuntimeSettingsReducer } from '@/features/admin/store/agentRuntimeSettingsSlice';
 import { setStoreRef } from '@/app/storeRef';
 import { calendarReducer, calendarUiReducer } from '@/features/calendar/store';
 import { zenModeReducer } from '@/app/zenModeSlice';
@@ -30,11 +31,11 @@ import { agentsReducer } from '@/features/agents/store/agentsSlice';
 import { agentSessionsReducer } from '@/features/agents/store/agentSessionsSlice';
 import { agentMessagesReducer } from '@/features/agents/store/agentMessagesSlice';
 import { agentSkillsReducer } from '@/features/agents/store/agentSkillsSlice';
+import { agentTemplatesReducer } from '@/features/agents/store/agentTemplatesSlice';
 import { agentRunnableSkillsReducer } from '@/features/agents/store/agentRunnableSkillsSlice';
 import { agentSkillDraftsReducer } from '@/features/agents/store/agentSkillDraftsSlice';
 import { agentSkillVersionsReducer } from '@/features/agents/store/agentSkillVersionsSlice';
 import { agentSkillMetricsReducer } from '@/features/agents/store/agentSkillMetricsSlice';
-import { agentPromptsReducer } from '@/features/agents/store/agentPromptsSlice';
 import { agentProvidersReducer } from '@/features/agents/store/agentProvidersSlice';
 import { agentUsageReducer } from '@/features/agents/store/agentUsageSlice';
 import { agentCronReducer } from '@/features/agents/store/agentCronSlice';
@@ -135,17 +136,15 @@ const recordingTransform = createTransform(
   { whitelist: ['recording'] },
 );
 
-/** Preserve layout prefs; reset selections, messages, search on rehydrate. */
+/** Keep layout prefs and the last-visited section; drop search and any stale keys. */
 const agentsUiTransform = createTransform(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (inboundState: any) => inboundState,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (outboundState: any) => ({
-    ...outboundState,
-    selectedAgentId: null,
-    chatMessage: '',
-    sidebarContent: null,
-    skillSearch: '',
+    lastSection: outboundState.lastSection ?? 'agents',
+    sidebarCollapsed: outboundState.sidebarCollapsed ?? false,
+    sidebarSearch: '',
   }),
   { whitelist: ['agentsUi'] }
 );
@@ -161,6 +160,7 @@ const rootReducer = combineReducers({
   permissions: permissionsReducer,
   admin: adminReducer,
   agentsGovernance: agentsGovernanceReducer,
+  agentRuntimeSettings: agentRuntimeSettingsReducer,
   calendar: calendarReducer,
   calendarUi: calendarUiReducer,
   projects: projectsReducer,
@@ -170,11 +170,11 @@ const rootReducer = combineReducers({
   agentSessions: agentSessionsReducer,
   agentMessages: agentMessagesReducer,
   agentSkills: agentSkillsReducer,
+  agentTemplates: agentTemplatesReducer,
   agentRunnableSkills: agentRunnableSkillsReducer,
   agentSkillDrafts: agentSkillDraftsReducer,
   agentSkillVersions: agentSkillVersionsReducer,
   agentSkillMetrics: agentSkillMetricsReducer,
-  agentPrompts: agentPromptsReducer,
   agentProviders: agentProvidersReducer,
   agentUsage: agentUsageReducer,
   agentCron: agentCronReducer,

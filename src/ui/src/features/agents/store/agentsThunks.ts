@@ -38,7 +38,6 @@ export const agentToPlain = (agent: AgentInfo) => ({
     userRole: agent.userRole,
     imageModel: agent.imageModel,
     modelParams: agent.modelParams,
-    promptId: agent.promptId || "",
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
     imageProviderKeyId: agent.imageProviderKeyId || "",
     tagIds: agent.tags.map((t) => t.id),
@@ -57,7 +56,7 @@ export type SerializedAgent = ReturnType<typeof agentToPlain>;
 
 export const fetchAgents = createAsyncThunk<
     SerializedAgent[],
-    { accessMode?: number; personalOnly?: boolean; groupId?: string } | void,
+    { accessMode?: number; groupId?: string } | void,
     { state: RootState; rejectValue: string }
 >('agents/fetchAgents', async (params, { getState, dispatch, rejectWithValue }) => {
     try {
@@ -65,7 +64,6 @@ export const fetchAgents = createAsyncThunk<
         const response = await agentsApi.listAgents({
             organizationId,
             accessMode: params?.accessMode,
-            personalOnly: params?.personalOnly,
             groupId: params?.groupId,
         });
         hydrateAgentTags(dispatch, response.agents);
@@ -81,13 +79,14 @@ export const createAgent = createAsyncThunk<
         name: string;
         primaryModel?: string;
         soulPrompt?: string;
+        avatarEmoji?: string;
+        enabledSkills?: string[];
         accessMode?: number;
         baselineRole?: number;
         groupIds?: string[];
         imageModel?: string;
         primaryProviderKeyId?: string;
         imageProviderKeyId?: string;
-        promptId?: string;
         tagIds?: string[];
         modelParams?: string;
     },
@@ -100,13 +99,14 @@ export const createAgent = createAsyncThunk<
             name: params.name,
             primaryModel: params.primaryModel,
             soulPrompt: params.soulPrompt,
+            avatarEmoji: params.avatarEmoji,
+            enabledSkills: params.enabledSkills ?? [],
             accessMode: params.accessMode,
             baselineRole: params.baselineRole,
             groupIds: params.groupIds ?? [],
             imageModel: params.imageModel,
             primaryProviderKeyId: params.primaryProviderKeyId,
             imageProviderKeyId: params.imageProviderKeyId,
-            promptId: params.promptId,
             tagIds: params.tagIds ?? [],
             modelParams: params.modelParams,
         });
@@ -130,14 +130,9 @@ export const updateAgent = createAsyncThunk<
         soulPrompt?: string;
         avatarEmoji?: string;
         isDefault?: boolean;
-        accessMode?: number;
-        baselineRole?: number;
-        groupIds?: string[];
         imageModel?: string;
         primaryProviderKeyId?: string;
         imageProviderKeyId?: string;
-        promptId?: string;
-        clearPrompt?: boolean;
         // Replace the agent's manual tag set; empty array clears tags; omit to leave untouched.
         tagIds?: string[];
         // Replaces the stored params object wholesale; "{}" resets to provider defaults.

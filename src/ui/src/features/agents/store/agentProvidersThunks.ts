@@ -2,7 +2,6 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { providersApi } from '@/features/agents/api/providersApi';
 import type { RootState } from '@/app/store';
 import type { ProviderKeyInfo, ModelInfo } from '@uniffy/proto/agents/v1/providers_pb';
-import type { CredentialType } from '@uniffy/proto/agents/v1/providers_pb';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -21,7 +20,6 @@ const timestampToPlain = (ts?: { seconds: bigint | number; nanos: bigint | numbe
 export const providerKeyToPlain = (key: ProviderKeyInfo) => ({
     id: key.id,
     provider: key.provider,
-    credentialType: key.credentialType,
     label: key.label,
     keyHint: key.keyHint,
     isValid: key.isValid,
@@ -32,8 +30,6 @@ export const providerKeyToPlain = (key: ProviderKeyInfo) => ({
     createdAt: timestampToPlain(key.createdAt),
     updatedAt: timestampToPlain(key.updatedAt),
     createdBy: key.createdBy,
-    accessMode: key.accessMode,
-    baselineRole: key.baselineRole,
 });
 
 export type SerializedProviderKey = ReturnType<typeof providerKeyToPlain>;
@@ -69,7 +65,7 @@ export const fetchProviderKeys = createAsyncThunk<
 
 export const addProviderKey = createAsyncThunk<
     SerializedProviderKey,
-    { provider: string; credentialType: CredentialType; label: string; credential: string; accessMode?: number; baselineRole?: number },
+    { provider: string; label: string; credential: string },
     { state: RootState; rejectValue: string }
 >('agentProviders/addProviderKey', async (params, { getState, rejectWithValue }) => {
     try {

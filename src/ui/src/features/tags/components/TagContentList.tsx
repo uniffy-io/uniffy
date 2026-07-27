@@ -31,8 +31,7 @@ const URN_TYPE_FROM_CONTENT_TYPE: Record<number, UrnType> = {
     [ContentType.PROJECT]: UrnType.PROJECT,
     [ContentType.TASK]: UrnType.TASK,
     [ContentType.AGENT]: UrnType.AGENT,
-    [ContentType.PROMPT]: UrnType.PROMPT,
-    [ContentType.ROOM]: UrnType.ROOM,
+      [ContentType.ROOM]: UrnType.ROOM,
 };
 
 interface GroupedItems {

@@ -9,6 +9,8 @@ interface DrawerProps {
     side?: 'left' | 'right';
     /** Default `w-80` (320px). */
     className?: string;
+    /** Tailwind width class, e.g. `w-[440px]`; overrides the default width. */
+    width?: string;
     showClose?: boolean;
     ariaLabel?: string;
 }
@@ -19,6 +21,7 @@ export function Drawer({
     children,
     side = 'left',
     className,
+    width,
     showClose = true,
     ariaLabel,
 }: DrawerProps) {
@@ -78,7 +81,7 @@ export function Drawer({
                         : isLeft
                             ? '-translate-x-full'
                             : 'translate-x-full',
-                    !className?.includes('w-') && 'w-80',
+                    width ?? (!className?.includes('w-') && 'w-80'),
                     className
                 )}
             >

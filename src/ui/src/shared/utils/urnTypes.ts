@@ -12,7 +12,6 @@ export const UrnType = {
   PROJECT: 'project',
   TASK: 'task',
   AGENT: 'agent',
-  PROMPT: 'prompt',
   ROOM: 'room',
   TAG: 'tag',
   UNKNOWN: 'unknown',

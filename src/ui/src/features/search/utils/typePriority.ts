@@ -26,7 +26,6 @@ const ROUTE_TYPE_PRIORITY: Array<{ prefix: string; priority: SearchResultType[] 
             SearchResultType.AGENT,
             SearchResultType.AGENT_CHAT,
             SearchResultType.AGENT_FOLDER,
-            SearchResultType.PROMPT,
         ],
     },
 ];

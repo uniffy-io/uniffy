@@ -10,6 +10,7 @@ import {
     UploadAgentAvatarRequestSchema,
     DeleteAgentAvatarRequestSchema,
     PreviewSystemPromptRequestSchema,
+    ListAgentTemplatesRequestSchema,
 } from '@uniffy/proto/agents/v1/agents_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -39,5 +40,8 @@ export const agentsApi = {
     },
     previewSystemPrompt: async (request: MessageInitShape<typeof PreviewSystemPromptRequestSchema>) => {
         return client.previewSystemPrompt(request);
+    },
+    listAgentTemplates: async (request: MessageInitShape<typeof ListAgentTemplatesRequestSchema>) => {
+        return client.listAgentTemplates(request);
     },
 };

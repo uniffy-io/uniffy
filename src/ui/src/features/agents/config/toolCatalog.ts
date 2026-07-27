@@ -107,9 +107,7 @@ export const TOOL_SECTIONS: ToolCategorySection[] = [
                 group: "Memory",
                 tools: [
                     { name: "memory.save", displayName: "Save Memory", description: "Remember information across conversations; the audience follows the space where it is saved", destructive: false },
-                    { name: "memory.read", displayName: "Read Memory", description: "Read the full content of a stored memory", destructive: false },
-                    { name: "memory.recall", displayName: "Recall Memory", description: "Search stored memories", destructive: false },
-                    { name: "memory.list", displayName: "List Memories", description: "List all stored memories", destructive: false },
+                    { name: "memory.read", displayName: "Read Memory", description: "Read a stored memory by key, or search stored memories", destructive: false },
                     { name: "memory.forget", displayName: "Forget Memory", description: "Delete a stored memory", destructive: false },
                 ],
             },

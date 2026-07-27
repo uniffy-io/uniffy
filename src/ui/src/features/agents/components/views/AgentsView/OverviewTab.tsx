@@ -2,16 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-    Brain,
-    ImageSquare,
-    Lightning,
-    Wrench,
-    Star,
-    Textbox,
-    SmileySticker,
-    ArrowsDownUp,
-    Key,
     ArrowRight,
+    CaretDown,
+    CaretRight,
+    Key,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
@@ -19,11 +13,11 @@ import { selectProviderKeys, selectModelsForKey } from "@/features/agents/store/
 import { fetchModelsForKey } from "@/features/agents/store/agentProvidersThunks";
 import { updateAgent, uploadAgentAvatar, deleteAgentAvatar } from "@/features/agents/store/agentsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
-import { Tag as TagIcon } from "@phosphor-icons/react";
 import { TagPicker } from "@/features/tags";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ModelParamsSection } from "@/features/agents/components/ModelParamsSection";
 import {
     parseModelParamsSchema,
@@ -35,67 +29,11 @@ import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { roleCanEdit } from "@/shared/utils/contentRoles";
 
-function SectionHeader({
-    icon: Icon,
-    title,
-    subtitle,
-}: {
-    icon: React.ElementType;
-    title: string;
-    subtitle?: string;
-}) {
+function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <Icon size={18} weight="duotone" className="text-primary" />
-            </div>
-            <div>
-                <h3 className="text-sm font-semibold text-foreground tracking-tight">
-                    {title}
-                </h3>
-                {subtitle && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        {subtitle}
-                    </p>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function StatCard({
-    icon: Icon,
-    label,
-    value,
-    accentClass,
-}: {
-    icon: React.ElementType;
-    label: string;
-    value: string | number;
-    accentClass: string;
-}) {
-    return (
-        <div className="group relative bg-card border border-border rounded-xl p-4 overflow-hidden transition-colors hover:border-border/80">
-            <div className={cn(
-                "absolute top-0 left-0 w-full h-0.5",
-                accentClass,
-            )} />
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                    accentClass.replace("bg-", "bg-").replace("/80", "/10"),
-                    "bg-muted",
-                )}>
-                    <Icon size={16} weight="duotone" className="text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">{label}</p>
-                    <p className="text-lg font-semibold text-foreground tabular-nums leading-tight">
-                        {value}
-                    </p>
-                </div>
-            </div>
-        </div>
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+            {children}
+        </h3>
     );
 }
 
@@ -114,6 +52,8 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
 
     const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
     const canEdit = roleCanEdit(myRole);
+
+    const [modelSettingsOpen, setModelSettingsOpen] = useState(false);
 
     const primaryKeyId = agent.primaryProviderKeyId || "";
     const imageKeyId = agent.imageProviderKeyId || "";
@@ -141,13 +81,26 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     const allKeys = useMemo(() => Object.values(providerKeys), [providerKeys]);
     const hasAnyKeys = allKeys.length > 0;
 
-    const keyOptions: SelectOption<string>[] = useMemo(() => [
-        { value: "", label: "No key assigned" },
-        ...enabledKeys.map((k) => ({
-            value: k.id,
-            label: `${k.label} (${k.provider})`,
-        })),
-    ], [enabledKeys]);
+    const keyChoices = useMemo(
+        () =>
+            enabledKeys.map((k) => ({
+                value: k.id,
+                label: `${k.label} (${k.provider})`,
+            })),
+        [enabledKeys],
+    );
+
+    // An unset key/model means the backend resolves the org default at run
+    // time; members cannot read which model that is, so the label stays generic.
+    const chatKeyOptions: SelectOption<string>[] = useMemo(
+        () => [{ value: "", label: "Organization default" }, ...keyChoices],
+        [keyChoices],
+    );
+
+    const imageKeyOptions: SelectOption<string>[] = useMemo(
+        () => [{ value: "", label: "No key assigned" }, ...keyChoices],
+        [keyChoices],
+    );
 
     // Only curated catalog chat models are selectable - keeps live-API noise
     // (whisper, realtime, embeddings, image-only) out of the chat pickers.
@@ -164,6 +117,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         if (agent.primaryModel && !chatModels.some((m) => m.id === agent.primaryModel)) {
             opts.unshift({ value: agent.primaryModel, label: agent.primaryModel });
         }
+        opts.unshift({ value: "", label: "Organization default" });
         return opts;
     }, [chatModels, agent.primaryModel]);
 
@@ -250,151 +204,134 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
-            {/* --- Identity Hero --- */}
-            <div className="relative bg-card border border-border rounded-xl overflow-hidden">
-                {/* Decorative top gradient bar */}
-                <div className="h-1 bg-gradient-to-r from-primary/80 via-primary/40 to-transparent" />
+        <div className="max-w-4xl mx-auto divide-y divide-border animate-in fade-in duration-300">
+            <section className="pb-6 space-y-4">
+                <SectionLabel>Identity</SectionLabel>
+                <div className="flex items-start gap-6">
+                    <div className="shrink-0">
+                        <AvatarUpload
+                            imageUrl={agent.avatarKey || undefined}
+                            fallback={agent.avatarEmoji || agent.name.charAt(0)}
+                            size="lg"
+                            onUpload={handleAvatarUpload}
+                            onDelete={handleAvatarDelete}
+                            disabled={!canEdit}
+                        />
+                    </div>
 
-                <div className="p-6">
-                    <div className="flex items-start gap-6">
-                        {/* Avatar column */}
-                        <div className="shrink-0">
-                            <AvatarUpload
-                                imageUrl={agent.avatarKey || undefined}
-                                fallback={agent.avatarEmoji || agent.name.charAt(0)}
-                                size="lg"
-                                onUpload={handleAvatarUpload}
-                                onDelete={handleAvatarDelete}
+                    <div className="flex-1 min-w-0 space-y-4">
+                        <div>
+                            <FieldLabel>Name</FieldLabel>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    className={cn(
+                                        "flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground",
+                                        "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring",
+                                        "transition-all placeholder:text-muted-foreground",
+                                        !canEdit && "opacity-50 cursor-not-allowed",
+                                    )}
+                                    value={nameValue}
+                                    onChange={(e) => setNameState({ id: agent.id, value: e.target.value })}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && nameChanged) {
+                                            handleSaveName();
+                                        }
+                                    }}
+                                    placeholder="Agent name"
+                                    disabled={!canEdit}
+                                />
+                                {nameChanged && (
+                                    <Button size="md" onClick={handleSaveName}>
+                                        Save
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        <div>
+                            <FieldLabel>Tags</FieldLabel>
+                            <TagPicker
+                                selectedTagIds={agent.tagIds ?? []}
+                                onChange={(ids) => handleUpdate({ tagIds: ids })}
                                 disabled={!canEdit}
+                                placeholder="Add a tag"
                             />
                         </div>
-
-                        {/* Identity fields */}
-                        <div className="flex-1 min-w-0 space-y-4">
+                        <div className="flex items-end gap-4">
                             <div>
-                                <FieldLabel>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Textbox size={12} weight="bold" />
-                                        Name
-                                    </span>
-                                </FieldLabel>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        className={cn(
-                                            "flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground",
-                                            "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring",
-                                            "transition-all placeholder:text-muted-foreground",
-                                            !canEdit && "opacity-50 cursor-not-allowed",
-                                        )}
-                                        value={nameValue}
-                                        onChange={(e) => setNameState({ id: agent.id, value: e.target.value })}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" && nameChanged) {
-                                                handleSaveName();
-                                            }
-                                        }}
-                                        placeholder="Agent name"
-                                        disabled={!canEdit}
-                                    />
-                                    {nameChanged && (
-                                        <Button size="md" onClick={handleSaveName}>
-                                            Save
-                                        </Button>
+                                <FieldLabel>Fallback Emoji</FieldLabel>
+                                <input
+                                    type="text"
+                                    className={cn(
+                                        "w-16 bg-muted/50 border border-border rounded-lg px-3 py-2 text-center text-base text-foreground",
+                                        "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
+                                        !canEdit && "opacity-50 cursor-not-allowed",
                                     )}
-                                </div>
-                            </div>
-                            <div>
-                                <FieldLabel>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <TagIcon size={12} weight="bold" />
-                                        Tags
-                                    </span>
-                                </FieldLabel>
-                                <TagPicker
-                                    selectedTagIds={agent.tagIds ?? []}
-                                    onChange={(ids) => handleUpdate({ tagIds: ids })}
+                                    value={agent.avatarEmoji}
+                                    maxLength={2}
+                                    onChange={(e) => handleUpdate({ avatarEmoji: e.target.value })}
+                                    placeholder="AI"
                                     disabled={!canEdit}
-                                    placeholder="Add a tag"
                                 />
                             </div>
-                            <div className="flex items-end gap-4">
-                                <div>
-                                    <FieldLabel>
-                                        <span className="inline-flex items-center gap-1.5">
-                                            <SmileySticker size={12} weight="bold" />
-                                            Fallback Emoji
-                                        </span>
-                                    </FieldLabel>
-                                    <input
-                                        type="text"
-                                        className={cn(
-                                            "w-16 bg-muted/50 border border-border rounded-lg px-3 py-2 text-center text-base text-foreground",
-                                            "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
-                                            !canEdit && "opacity-50 cursor-not-allowed",
-                                        )}
-                                        value={agent.avatarEmoji}
-                                        maxLength={2}
-                                        onChange={(e) => handleUpdate({ avatarEmoji: e.target.value })}
-                                        placeholder="AI"
-                                        disabled={!canEdit}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground pb-2.5">
-                                    Displayed when no avatar image is uploaded
-                                </p>
-                            </div>
+                            <p className="text-xs text-muted-foreground pb-2.5">
+                                Displayed when no avatar image is uploaded
+                            </p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* --- Model Configuration (unified two-column) --- */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="p-6 pb-5">
-                    <SectionHeader
-                        icon={Brain}
-                        title="Model Configuration"
-                        subtitle="Configure the LLM providers and models this agent uses"
-                    />
-
+            {canEdit && (
+            <section className="py-6">
+                <button
+                    type="button"
+                    onClick={() => setModelSettingsOpen(!modelSettingsOpen)}
+                    className="w-full flex items-center justify-between gap-3 text-left cursor-pointer"
+                    data-testid="agent-model-settings-toggle"
+                    data-state={modelSettingsOpen ? "open" : "closed"}
+                >
+                    <div>
+                        <SectionLabel>Model settings</SectionLabel>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Configure the LLM providers and models this agent uses
+                        </p>
+                    </div>
+                    {modelSettingsOpen ? (
+                        <CaretDown size={16} className="text-muted-foreground shrink-0" />
+                    ) : (
+                        <CaretRight size={16} className="text-muted-foreground shrink-0" />
+                    )}
+                </button>
+                {modelSettingsOpen && (
+                <div className="mt-5">
                     {!hasAnyKeys ? (
-                        /* Empty state: no provider keys configured */
-                        <div className="relative border border-dashed border-border rounded-xl p-8 text-center overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3 pointer-events-none" />
-                            <div className="relative">
-                                <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
-                                    <Key size={28} weight="duotone" className="text-primary" />
-                                </div>
-                                <h4 className="text-sm font-semibold text-foreground mb-1.5">
-                                    No provider keys configured
-                                </h4>
-                                <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-5">
-                                    Add a provider API key to start using this agent.
-                                    Provider keys are managed in the Config tab.
-                                </p>
-                                <Button
-                                    size="md"
-                                    onClick={() => navigate("/agents/config")}
-                                >
-                                    <Key size={16} weight="bold" />
-                                    Add Provider Key
-                                    <ArrowRight size={14} />
-                                </Button>
+                        <div className="border border-dashed border-border rounded-lg p-8 text-center">
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                                <Key size={24} className="text-primary" />
                             </div>
+                            <h4 className="text-sm font-medium text-foreground mb-1.5">
+                                No provider keys configured
+                            </h4>
+                            <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-5">
+                                Add a provider API key to start using this agent.
+                                Organization keys and defaults are managed on the
+                                admin agents page.
+                            </p>
+                            <Button
+                                size="md"
+                                onClick={() => navigate("/admin/agents")}
+                            >
+                                <Key size={16} weight="bold" />
+                                Add Provider Key
+                                <ArrowRight size={14} />
+                            </Button>
                         </div>
                     ) : (
                         <>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {/* Primary Model column */}
-                                <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-4">
-                                    <div className="flex items-center gap-2 pb-2 border-b border-border">
-                                        <Brain size={16} weight="duotone" className="text-primary" />
-                                        <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                                            Chat Model
-                                        </span>
-                                    </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <SectionLabel>Chat Model</SectionLabel>
                                     <div>
                                         <FieldLabel>Provider Key</FieldLabel>
                                         <Select
@@ -402,7 +339,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             onChange={(value) => handleUpdate({
                                                 primaryProviderKeyId: value,
                                             })}
-                                            options={keyOptions}
+                                            options={chatKeyOptions}
                                             placeholder="Select provider key..."
                                             disabled={!canEdit}
                                             className="w-full"
@@ -427,14 +364,8 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                     />
                                 </div>
 
-                                {/* Image Generation column */}
-                                <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-4">
-                                    <div className="flex items-center gap-2 pb-2 border-b border-border">
-                                        <ImageSquare size={16} weight="duotone" className="text-primary" />
-                                        <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                                            Image Model
-                                        </span>
-                                    </div>
+                                <div className="space-y-4">
+                                    <SectionLabel>Image Model</SectionLabel>
                                     <div>
                                         <FieldLabel>Provider Key</FieldLabel>
                                         <Select
@@ -442,7 +373,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             onChange={(value) => handleUpdate({
                                                 imageProviderKeyId: value,
                                             })}
-                                            options={keyOptions}
+                                            options={imageKeyOptions}
                                             placeholder="Select provider key..."
                                             disabled={!canEdit}
                                             className="w-full"
@@ -465,14 +396,8 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                 </div>
                             </div>
 
-                            {/* Fallback models - full width below the grid */}
-                            <div className="mt-5 bg-muted/30 border border-border rounded-xl p-4">
-                                <div className="flex items-center gap-2 pb-2 mb-3 border-b border-border">
-                                    <ArrowsDownUp size={16} weight="duotone" className="text-muted-foreground" />
-                                    <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                                        Fallback Models
-                                    </span>
-                                </div>
+                            <div className="mt-8 space-y-3">
+                                <SectionLabel>Fallback Models</SectionLabel>
                                 <MultiSelect
                                     value={agent.fallbackModels}
                                     onChange={(models) => handleUpdate({ fallbackModels: models })}
@@ -480,75 +405,48 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                     placeholder={primaryKeyId ? "Select fallback models..." : "Select a primary key first"}
                                     disabled={!canEdit || !primaryKeyId}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1.5">
+                                <p className="text-xs text-muted-foreground">
                                     Used automatically when the primary chat model is unavailable
                                 </p>
                             </div>
                         </>
                     )}
                 </div>
-            </div>
+                )}
+            </section>
+            )}
 
-            {/* --- Agent Settings --- */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="p-6">
-                    <SectionHeader
-                        icon={Star}
-                        title="Agent Settings"
-                        subtitle="General configuration and capability overview"
+            <section className="py-6 space-y-3">
+                <SectionLabel>Agent Settings</SectionLabel>
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-border/60">
+                    <div className="min-w-0">
+                        <span className="text-sm font-medium text-foreground">
+                            Default Agent
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                            Used when creating new sessions without specifying an agent
+                        </p>
+                    </div>
+                    <ToggleSwitch
+                        size="sm"
+                        enabled={agent.isDefault}
+                        disabled={!canEdit}
+                        onChange={() => handleUpdate({ isDefault: !agent.isDefault })}
                     />
-
-                    {/* Default agent toggle */}
-                    <div className="flex items-center justify-between bg-muted/30 border border-border rounded-xl p-4 mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Star size={16} weight="duotone" className="text-primary" />
-                            </div>
-                            <div>
-                                <span className="text-sm font-medium text-foreground">
-                                    Default Agent
-                                </span>
-                                <p className="text-xs text-muted-foreground">
-                                    Used when creating new sessions without specifying an agent
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => handleUpdate({ isDefault: !agent.isDefault })}
-                            disabled={!canEdit}
-                            className={cn(
-                                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0",
-                                agent.isDefault ? "bg-primary" : "bg-muted border border-border",
-                                !canEdit && "opacity-50 cursor-not-allowed"
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                                    agent.isDefault ? "translate-x-6" : "translate-x-1"
-                                )}
-                            />
-                        </button>
-                    </div>
-
-                    {/* Stats grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatCard
-                            icon={Lightning}
-                            label="Skills Enabled"
-                            value={agent.enabledSkills.length}
-                            accentClass="bg-amber-500/80"
-                        />
-                        <StatCard
-                            icon={Wrench}
-                            label="Tools Enabled"
-                            value={agent.enabledTools.length}
-                            accentClass="bg-blue-500/80"
-                        />
-                    </div>
                 </div>
-            </div>
+                <div className="flex items-center justify-between py-2 border-b border-border/60 text-sm">
+                    <span className="text-foreground">Skills Enabled</span>
+                    <span className="text-muted-foreground tabular-nums">
+                        {agent.enabledSkills.length}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between py-2 text-sm">
+                    <span className="text-foreground">Tools Enabled</span>
+                    <span className="text-muted-foreground tabular-nums">
+                        {agent.enabledTools.length}
+                    </span>
+                </div>
+            </section>
         </div>
     );
 }

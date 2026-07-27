@@ -218,7 +218,9 @@ async function refreshAccessToken(): Promise<string | null> {
         response.organizationSlug,
         response.organizationRole,
         response.sessionId,
-        response.domainAdminDomains.length > 0 ? Array.from(response.domainAdminDomains) : undefined,
+        // Always pass the array (even empty) so a revoked domain-admin grant
+        // clears on the next refresh instead of sticking until logout.
+        Array.from(response.domainAdminDomains),
       );
 
       if (typeof window !== 'undefined') {

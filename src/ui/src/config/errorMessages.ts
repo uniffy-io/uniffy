@@ -41,6 +41,9 @@ const MESSAGE_PATTERNS: [RegExp, string][] = [
     [/encodingerror|encoder initialization failed/i, "Recording encoder failed. Try again, or restart your browser if it keeps happening."],
 ];
 
+/** Validation field the skill draft save rejects with when the name is already taken. */
+export const SKILL_NAME_CONFLICT_FIELD = 'skill_name_conflict';
+
 /** Translate a raw API/network error into user-facing copy. Returns `null` to suppress (e.g. aborts). */
 export function friendlyErrorMessage(raw: string): string | null {
     if (!raw) return null;
@@ -52,6 +55,10 @@ export function friendlyErrorMessage(raw: string): string | null {
     }
     // Notes autosave owns its own conflict UX; suppress the generic toast.
     if (raw === 'versionConflict') {
+        return null;
+    }
+    // The skill draft review surface asks for a replace confirmation instead.
+    if (raw.includes(SKILL_NAME_CONFLICT_FIELD)) {
         return null;
     }
 

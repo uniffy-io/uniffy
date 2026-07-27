@@ -1,47 +1,31 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 
-export type AgentsTab =
-  | "chat"
-  | "integrations"
-  | "conversations"
-  | "usage"
-  | "automations"
-  | "agents"
-  | "skills"
-  | "prompts"
-  | "config";
+export type AgentsSection = "agents" | "skills" | "automations";
 
-export type AgentsPanel = "overview" | "instructions" | "files" | "tools" | "skills" | "memories" | "integrations" | "automations";
+const SECTIONS: AgentsSection[] = ["agents", "skills", "automations"];
+
+export const AGENT_PANELS = ["overview", "instructions", "capabilities", "memory"] as const;
+export type AgentPanel = (typeof AGENT_PANELS)[number];
 
 export interface AgentsUiState {
-  activeTab: AgentsTab;
+  lastSection: AgentsSection;
   sidebarCollapsed: boolean;
-  agentsSidebarCollapsed: boolean;
-  selectedAgentId: string | null;
-  agentsPanel: AgentsPanel;
-  chatMessage: string;
-  sidebarContent: string | null;
-  skillSearch: string;
+  sidebarSearch: string;
 }
 
 const initialState: AgentsUiState = {
-  activeTab: "chat",
+  lastSection: "agents",
   sidebarCollapsed: false,
-  agentsSidebarCollapsed: false,
-  selectedAgentId: null,
-  agentsPanel: "overview",
-  chatMessage: "",
-  sidebarContent: null,
-  skillSearch: "",
+  sidebarSearch: "",
 };
 
 export const agentsUiSlice = createSlice({
   name: "agentsUi",
   initialState,
   reducers: {
-    setActiveTab: (state, action: PayloadAction<AgentsTab>) => {
-      state.activeTab = action.payload;
+    setLastSection: (state, action: PayloadAction<AgentsSection>) => {
+      state.lastSection = action.payload;
     },
     toggleSidebar: (state) => {
       state.sidebarCollapsed = !state.sidebarCollapsed;
@@ -49,52 +33,25 @@ export const agentsUiSlice = createSlice({
     setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
       state.sidebarCollapsed = action.payload;
     },
-    toggleAgentsSidebar: (state) => {
-      state.agentsSidebarCollapsed = !state.agentsSidebarCollapsed;
-    },
-    setAgentsSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
-      state.agentsSidebarCollapsed = action.payload;
-    },
-    setSelectedAgent: (state, action: PayloadAction<string | null>) => {
-      state.selectedAgentId = action.payload;
-    },
-    setAgentsPanel: (state, action: PayloadAction<AgentsPanel>) => {
-      state.agentsPanel = action.payload;
-    },
-    setChatMessage: (state, action: PayloadAction<string>) => {
-      state.chatMessage = action.payload;
-    },
-    setSidebarContent: (state, action: PayloadAction<string | null>) => {
-      state.sidebarContent = action.payload;
-    },
-    setSkillSearch: (state, action: PayloadAction<string>) => {
-      state.skillSearch = action.payload;
+    setSidebarSearch: (state, action: PayloadAction<string>) => {
+      state.sidebarSearch = action.payload;
     },
     resetState: () => initialState,
   },
 });
 
 export const {
-  setActiveTab,
+  setLastSection,
   toggleSidebar,
   setSidebarCollapsed,
-  toggleAgentsSidebar,
-  setAgentsSidebarCollapsed,
-  setSelectedAgent,
-  setAgentsPanel,
-  setChatMessage,
-  setSidebarContent,
-  setSkillSearch,
+  setSidebarSearch,
   resetState,
 } = agentsUiSlice.actions;
 
-export const selectActiveTab = (state: RootState) => state.agentsUi.activeTab;
+// A stale persisted value (removed section names, old tab ids) resolves to Agents.
+export const selectLastSection = (state: RootState): AgentsSection =>
+  SECTIONS.includes(state.agentsUi.lastSection) ? state.agentsUi.lastSection : "agents";
 export const selectSidebarCollapsed = (state: RootState) => state.agentsUi.sidebarCollapsed;
-export const selectAgentsSidebarCollapsed = (state: RootState) => state.agentsUi.agentsSidebarCollapsed;
-export const selectSelectedAgentId = (state: RootState) => state.agentsUi.selectedAgentId;
-export const selectAgentsPanel = (state: RootState) => state.agentsUi.agentsPanel;
-export const selectChatMessage = (state: RootState) => state.agentsUi.chatMessage;
-export const selectSidebarContent = (state: RootState) => state.agentsUi.sidebarContent;
-export const selectSkillSearch = (state: RootState) => state.agentsUi.skillSearch;
+export const selectSidebarSearch = (state: RootState) => state.agentsUi.sidebarSearch;
 
 export const agentsUiReducer = agentsUiSlice.reducer;

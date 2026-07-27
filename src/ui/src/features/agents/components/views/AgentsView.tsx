@@ -1,536 +1,312 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import { useEffect, useMemo, useState } from "react";
 import {
-    ArrowClockwise,
-    Copy,
-    File,
-    Wrench,
-    Lightning,
-    Plugs,
-    ClockCounterClockwise,
     CircleNotch,
+    Copy,
+    Flask,
     Plus,
-    Scroll,
-    LockSimple,
+    Robot,
     UsersThree,
-    Buildings,
-    CaretDown,
-    CaretRight,
 } from "@phosphor-icons/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Tabs } from "@/components/ui/tabs";
 import { useAccessPolicyDialog, useMyContentRole } from "@/features/permissions";
-import { ContentType, AccessMode } from "@uniffy/proto/common/v1/common_pb";
-import { bucketForContent, accessModeIcon, roleCanManage } from "@/shared/utils/contentRoles";
-import {
-    selectSelectedAgentId,
-    selectAgentsPanel,
-    setAgentsPanel,
-} from "@/features/agents/store/agentsUiSlice";
-import type { AgentsPanel } from "@/features/agents/store/agentsUiSlice";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { roleCanEdit, roleCanManage } from "@/shared/utils/contentRoles";
 import { selectAllAgents, selectAgentsLoading } from "@/features/agents/store/agentsSlice";
-import { fetchAgents, createAgent, cloneAgent, updateAgent } from "@/features/agents/store/agentsThunks";
-import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
+import { cloneAgent } from "@/features/agents/store/agentsThunks";
 import { fetchProviderKeys } from "@/features/agents/store/agentProvidersThunks";
+import { selectAllSkills } from "@/features/agents/store/agentSkillsSlice";
+import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import { selectAgentTemplates } from "@/features/agents/store/agentTemplatesSlice";
+import { fetchAgentTemplates } from "@/features/agents/store/agentTemplatesThunks";
 import { OverviewTab } from "@/features/agents/components/views/AgentsView/OverviewTab";
-import { ToolsTab } from "@/features/agents/components/views/AgentsView/ToolsTab";
 import { InstructionsTab } from "@/features/agents/components/views/AgentsView/InstructionsTab";
-import { SkillsTab } from "@/features/agents/components/views/AgentsView/SkillsTab";
-import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
-import { AutomationsView } from "@/features/agents/components/views/AutomationsView";
+import { CapabilitiesTab } from "@/features/agents/components/views/AgentsView/CapabilitiesTab";
 import { MemoriesTab } from "@/features/agents/components/views/AgentsView/MemoriesTab";
-import { TagChip } from "@/features/tags";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
+import { AgentTestDrawer } from "@/features/agents/components/AgentTestDrawer";
 
-const SIDEBAR_AGENT_TAG_LIMIT = 2;
+const headerButtonClass = cn(
+    "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
+    "border border-foreground/15 bg-transparent text-muted-foreground",
+    "transition-all duration-300 ease-out",
+    "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+);
 
-const PANEL_TABS: { key: AgentsPanel; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "instructions", label: "Instructions" },
-    { key: "tools", label: "Tools" },
-    { key: "skills", label: "Skills" },
-    { key: "memories", label: "Memories" },
-    { key: "files", label: "Files" },
-    { key: "integrations", label: "Integrations" },
-    { key: "automations", label: "Automations" },
-];
+const headerChipClass = cn(
+    "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
+    "border border-foreground/15 bg-transparent text-xs text-muted-foreground",
+    "transition-all duration-300 ease-out",
+    "hover:border-foreground/30 hover:bg-muted hover:text-primary",
+);
 
-const PANEL_ICONS: Record<string, React.ElementType> = {
-    instructions: Scroll,
-    files: File,
-    tools: Wrench,
-    skills: Lightning,
-    integrations: Plugs,
-    automations: ClockCounterClockwise,
-};
+function TemplateGallery({ onNewAgent }: { onNewAgent: (templateKey?: string) => void }) {
+    const dispatch = useAppDispatch();
+    const skillsMap = useAppSelector(selectAllSkills);
+    const templates = useAppSelector(selectAgentTemplates);
 
-interface AgentSectionConfig {
-    id: "personal" | "shared" | "organization";
-    name: string;
-    icon: React.ElementType;
-}
+    useEffect(() => {
+        dispatch(fetchAgentTemplates());
+        if (Object.keys(skillsMap).length === 0) {
+            dispatch(fetchSkills());
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-const SIDEBAR_SECTIONS: AgentSectionConfig[] = [
-    { id: "personal", name: "My Agents", icon: LockSimple },
-    { id: "shared", name: "Shared With Me", icon: UsersThree },
-    { id: "organization", name: "Organization", icon: Buildings },
-];
-
-
-function PlaceholderPanel({ panelKey }: { panelKey: string }) {
-    const Icon = PANEL_ICONS[panelKey];
+    const cardClass = cn(
+        "flex flex-col items-start gap-2 rounded-lg border border-border bg-card p-4",
+        "text-left transition-colors hover:border-primary/50 cursor-pointer",
+    );
 
     return (
-        <div className="bg-muted/30 border border-dashed border-border rounded-lg p-8 text-center">
-            {Icon && (
-                <Icon
-                    size={32}
-                    className="text-muted-foreground mx-auto mb-2"
-                />
-            )}
-            <p className="font-medium text-foreground capitalize">{panelKey}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-                Coming soon - agent {panelKey} configuration
-            </p>
+        <div className="flex-1 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-6">
+                <div className="w-full max-w-3xl">
+                    <div className="text-center mb-6">
+                        <h2 className="text-lg font-semibold text-foreground">
+                            Create your first agent
+                        </h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Start from a template or build one from scratch.
+                        </p>
+                    </div>
+                    <div
+                        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                        data-testid="agents-template-gallery"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => onNewAgent()}
+                            className={cardClass}
+                            data-testid="agents-template-card-blank"
+                        >
+                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Plus size={18} weight="bold" />
+                            </span>
+                            <span className="text-sm font-medium text-foreground">Blank</span>
+                            <span className="text-xs text-muted-foreground">
+                                Start from scratch with an empty agent
+                            </span>
+                        </button>
+                        {templates.map((template) => (
+                            <button
+                                key={template.key}
+                                type="button"
+                                onClick={() => onNewAgent(template.key)}
+                                className={cardClass}
+                                data-testid={`agents-template-card-${template.key}`}
+                            >
+                                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+                                    {template.emoji}
+                                </span>
+                                <span className="text-sm font-medium text-foreground">
+                                    {template.name}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {template.description}
+                                </span>
+                                {template.enabledSkillIds.length > 0 && (
+                                    <span className="flex flex-wrap items-center gap-1">
+                                        {template.enabledSkillIds.map((skillId) => (
+                                            <Badge
+                                                key={skillId}
+                                                variant="secondary"
+                                                className="text-[10px] font-medium"
+                                            >
+                                                {skillsMap[skillId]?.displayName ?? "Skill"}
+                                            </Badge>
+                                        ))}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
 
-export function AgentsView() {
+export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) => void }) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const selectedAgentId = useAppSelector(selectSelectedAgentId);
-    const agentsPanel = useAppSelector(selectAgentsPanel);
+    const { subId: agentId, panel } = useParams<{ subId?: string; panel?: string }>();
     const agentsMap = useAppSelector(selectAllAgents);
     const loading = useAppSelector(selectAgentsLoading);
-    const currentUserId = useAppSelector((state) => state.auth.user?.id);
-    const tagsById = useAppSelector((state) => state.tags.byId);
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [newAgentName, setNewAgentName] = useState("");
-    const [newAgentAccessMode, setNewAgentAccessMode] = useState<number>(AccessMode.OWNER_ONLY);
-    const [creating, setCreating] = useState(false);
-    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-
-    const agents = useMemo(() => Object.values(agentsMap), [agentsMap]);
-
-    const agentsBySection = useMemo(() => {
-        const result: Record<string, SerializedAgent[]> = {
-            personal: [],
-            shared: [],
-            organization: [],
-        };
-        for (const agent of agents) {
-            const bucket = bucketForContent({
-                ownerId: agent.ownerId,
-                accessMode: agent.accessMode,
-                currentUserId: currentUserId ?? "",
-            });
-            result[bucket].push(agent);
-        }
-        return result;
-    }, [agents, currentUserId]);
 
     useEffect(() => {
-        dispatch(fetchAgents());
         dispatch(fetchProviderKeys());
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const agents = useMemo(() => Object.values(agentsMap), [agentsMap]);
+
     const selectedAgent = useMemo(
-        () => (selectedAgentId ? agentsMap[selectedAgentId] ?? null : null),
-        [selectedAgentId, agentsMap]
+        () => (agentId ? agentsMap[agentId] ?? null : null),
+        [agentId, agentsMap],
     );
 
     const selectedAgentRole = useMyContentRole(
         ContentType.AGENT,
-        selectedAgentId ?? "",
+        agentId ?? "",
         selectedAgent?.userRole,
     );
     const canShareSelectedAgent = roleCanManage(selectedAgentRole);
     const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
 
-    const handleCreateAgent = async () => {
-        const name = newAgentName.trim();
-        if (!name || creating) return;
-        setCreating(true);
-        try {
-            const result = await dispatch(
-                createAgent({
-                    name,
-                    accessMode: newAgentAccessMode,
-                })
-            ).unwrap();
-            navigate(`/agents/agents/${result.id}`);
-            setNewAgentName("");
-            setNewAgentAccessMode(AccessMode.OWNER_ONLY);
-            setShowCreateForm(false);
-        } finally {
-            setCreating(false);
-        }
-    };
+    const [testDrawerOpen, setTestDrawerOpen] = useState(false);
 
     const handleCloneAgent = async () => {
-        if (!selectedAgentId) return;
-        const result = await dispatch(cloneAgent(selectedAgentId)).unwrap();
+        if (!agentId) return;
+        const result = await dispatch(cloneAgent(agentId)).unwrap();
         navigate(`/agents/agents/${result.id}`);
     };
 
-    const isPersonalAgent = selectedAgent?.ownerId === currentUserId
-        && selectedAgent?.accessMode !== AccessMode.OPEN_TO_ORG;
-    const canMoveToOrg = isPersonalAgent && roleCanManage(selectedAgentRole);
-
-    const [showMoveToOrgConfirm, setShowMoveToOrgConfirm] = useState(false);
-    const [movingToOrg, setMovingToOrg] = useState(false);
-
-    const handleMoveToOrgConfirm = async () => {
-        if (!selectedAgentId || movingToOrg) return;
-        setMovingToOrg(true);
-        try {
-            await dispatch(updateAgent({
-                agentId: selectedAgentId,
-                accessMode: AccessMode.OPEN_TO_ORG,
-            })).unwrap();
-            setShowMoveToOrgConfirm(false);
-        } finally {
-            setMovingToOrg(false);
-        }
-    };
-
-    const toggleSection = (sectionId: string) => {
-        setCollapsedSections((prev) => ({
-            ...prev,
-            [sectionId]: !prev[sectionId],
-        }));
-    };
-
-    const [defaultAgentsLayout] = useState(() => loadPanelLayout("agents-list"));
-
-    const handleAgentsLayoutChange = useCallback(
-        (layout: Record<string, number>) => {
-            savePanelLayout("agents-list", layout);
-        },
-        [],
-    );
-
     if (loading && agents.length === 0) {
         return (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex h-full items-center justify-center" data-testid="agents-view">
                 <CircleNotch size={32} className="animate-spin text-muted-foreground" />
             </div>
         );
     }
 
-    return (
-        <div className="flex h-full overflow-hidden" data-testid="agents-view">
-            <Group
-                orientation="horizontal"
-                className="h-full w-full flex"
-                defaultLayout={defaultAgentsLayout}
-                onLayoutChange={handleAgentsLayoutChange}
-            >
-            <Panel
-                id="agents-list"
-                defaultSize={260}
-                minSize={200}
-                maxSize={400}
-                className="border-r border-border bg-card overflow-hidden"
-            >
-            <div className="h-full flex flex-col" data-testid="agents-list-panel">
-                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                    <span className="font-semibold text-foreground">Agents</span>
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => dispatch(fetchAgents())}
-                            data-testid="agents-refresh-button"
-                        >
-                            <ArrowClockwise size={16} />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className={showCreateForm ? "text-primary bg-primary/10" : ""}
-                            onClick={() => setShowCreateForm(!showCreateForm)}
-                            data-testid="agents-create-button"
-                            data-state={showCreateForm ? 'open' : 'closed'}
-                        >
-                            <Plus size={16} />
-                        </Button>
-                    </div>
-                </div>
-
-                {showCreateForm && (
-                    <div className="px-3 py-3 border-b border-border space-y-2 bg-muted/30" data-testid="agents-create-form">
-                        <Input
-                            value={newAgentName}
-                            onChange={(e) => setNewAgentName(e.target.value)}
-                            placeholder="Agent name"
-                            className="h-8"
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") handleCreateAgent();
-                                if (e.key === "Escape") setShowCreateForm(false);
-                            }}
-                            autoFocus
-                            data-testid="agents-create-name-input"
-                        />
-                        <div className="space-y-1">
-                            {([
-                                { value: AccessMode.OWNER_ONLY, label: "Private", desc: "Only you can use this agent" },
-                                { value: AccessMode.OPEN_TO_ORG, label: "Organization", desc: "All members can use this agent" },
-                            ] as const).map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => setNewAgentAccessMode(opt.value)}
-                                    className={cn(
-                                        "w-full px-2.5 py-1.5 rounded-lg border text-left text-xs transition-colors",
-                                        newAgentAccessMode === opt.value
-                                            ? "bg-primary/10 border-primary text-foreground"
-                                            : "bg-muted border-border text-muted-foreground hover:text-foreground"
-                                    )}
-                                >
-                                    <span className="font-medium">{opt.label}</span>
-                                    <span className="block text-[10px] text-muted-foreground">{opt.desc}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <Button
-                            onClick={handleCreateAgent}
-                            disabled={!newAgentName.trim() || creating}
-                            className="w-full"
-                            size="sm"
-                            data-testid="agents-create-submit"
-                        >
-                            {creating ? "Creating..." : "Create Agent"}
-                        </Button>
-                    </div>
-                )}
-
-                <div className="flex-1 overflow-y-auto">
-                    {SIDEBAR_SECTIONS.map((section) => {
-                        const sectionAgents = agentsBySection[section.id] || [];
-                        const isCollapsed = collapsedSections[section.id];
-                        const SectionIcon = section.icon;
-
-                        return (
-                            <div key={section.id}>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleSection(section.id)}
-                                    className="w-full px-4 py-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    {isCollapsed ? <CaretRight size={12} /> : <CaretDown size={12} />}
-                                    <SectionIcon size={14} />
-                                    <span className="flex-1 text-left">{section.name}</span>
-                                    <span className="text-muted-foreground">{sectionAgents.length}</span>
-                                </button>
-                                {!isCollapsed && sectionAgents.map((agent) => {
-                                    const isSelected = agent.id === selectedAgentId;
-                                    const VisIcon = accessModeIcon(agent.accessMode);
-                                    const visibleTags = (agent.tagIds ?? [])
-                                        .map((id) => tagsById[id])
-                                        .filter((t): t is NonNullable<typeof t> => Boolean(t))
-                                        .slice(0, SIDEBAR_AGENT_TAG_LIMIT);
-                                    const tagOverflow = (agent.tagIds?.length ?? 0) - visibleTags.length;
-                                    return (
-                                        <button
-                                            key={agent.id}
-                                            type="button"
-                                            onClick={() => navigate(`/agents/agents/${agent.id}`)}
-                                            className={cn(
-                                                "w-full px-4 py-3 flex items-center gap-3 cursor-pointer transition-colors text-left",
-                                                isSelected
-                                                    ? "bg-primary/10 border-l-2 border-primary"
-                                                    : "hover:bg-muted border-l-2 border-transparent"
-                                            )}
-                                            data-testid={`agents-list-row-${agent.id}`}
-                                            data-section={section.id}
-                                            data-selected={isSelected ? 'true' : 'false'}
-                                        >
-                                            <AgentAvatar
-                                                avatarKey={agent.avatarKey}
-                                                avatarEmoji={agent.avatarEmoji}
-                                                agentName={agent.name}
-                                                size="md"
-                                            />
-                                            <div className="flex flex-col flex-1 min-w-0">
-                                                <span className="text-sm font-medium truncate text-foreground">
-                                                    {agent.name}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground font-mono truncate">
-                                                    {agent.primaryModel || "No model"}
-                                                </span>
-                                                {visibleTags.length > 0 && (
-                                                    <span
-                                                        className="mt-1 flex items-center gap-1 flex-wrap"
-                                                        data-testid={`agents-list-row-tags-${agent.id}`}
-                                                    >
-                                                        {visibleTags.map((tag) => (
-                                                            <TagChip
-                                                                key={tag.id}
-                                                                tag={tag}
-                                                                nonInteractive
-                                                                className="text-[10px] px-1.5 py-0 max-w-[100px] truncate"
-                                                            />
-                                                        ))}
-                                                        {tagOverflow > 0 && (
-                                                            <span className="text-[10px] text-muted-foreground tabular-nums">
-                                                                +{tagOverflow}
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                {agent.isDefault && (
-                                                    <Badge variant="default" className="shrink-0">default</Badge>
-                                                )}
-                                                <VisIcon size={14} className="text-muted-foreground" />
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-            </Panel>
-
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
-
-            <Panel id="agents-detail" minSize={400}>
-            <div
-                className="h-full flex flex-col overflow-hidden"
-                data-testid="agents-detail-panel"
-                data-agent-id={selectedAgentId ?? ''}
-                data-panel={agentsPanel}
-            >
-                {selectedAgent ? (
-                    <>
-                        <div className="px-6 py-4 border-b border-border">
-                            <div className="flex items-center gap-4">
-                                <AgentAvatar
-                                    avatarKey={selectedAgent.avatarKey}
-                                    avatarEmoji={selectedAgent.avatarEmoji}
-                                    agentName={selectedAgent.name}
-                                    size="xl"
-                                />
-                                <div className="flex-1 min-w-0">
-                                    <h2 className="text-xl font-semibold text-foreground" data-testid="agents-detail-name">
-                                        {selectedAgent.name}
-                                    </h2>
-                                    <p className="text-sm text-muted-foreground font-mono truncate">
-                                        {selectedAgent.primaryModel || "No model configured"}
-                                    </p>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={handleCloneAgent}
-                                    title="Clone agent"
-                                    data-testid="agents-clone-button"
-                                >
-                                    <Copy size={18} />
-                                </Button>
-                                {canMoveToOrg && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setShowMoveToOrgConfirm(true)}
-                                        title="Move to Organization"
-                                        data-testid="agents-move-to-org-button"
-                                    >
-                                        <Buildings size={18} />
-                                    </Button>
-                                )}
-                                {canShareSelectedAgent && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => openAccessPolicyDialog(
-                                            ContentType.AGENT,
-                                            selectedAgent.id,
-                                            selectedAgent.name,
-                                        )}
-                                        title="Share"
-                                        data-testid="agents-share-button"
-                                    >
-                                        <UsersThree size={18} />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="px-6 border-b border-border flex gap-0">
-                            {PANEL_TABS.map((tab) => (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    onClick={() => dispatch(setAgentsPanel(tab.key))}
-                                    className={cn(
-                                        "px-4 py-2 text-sm cursor-pointer transition-colors",
-                                        agentsPanel === tab.key
-                                            ? "text-primary border-b-2 border-primary font-medium"
-                                            : "text-muted-foreground hover:text-foreground"
-                                    )}
-                                    data-testid={`agents-detail-tab-${tab.key}`}
-                                    data-active={agentsPanel === tab.key ? 'true' : 'false'}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className={cn(
-                            "flex-1 p-6",
-                            agentsPanel === "instructions"
-                                ? "overflow-hidden"
-                                : "overflow-y-auto",
-                        )}>
-                            {agentsPanel === "overview" ? (
-                                <OverviewTab agent={selectedAgent} />
-                            ) : agentsPanel === "instructions" ? (
-                                <InstructionsTab agent={selectedAgent} />
-                            ) : agentsPanel === "tools" ? (
-                                <ToolsTab agent={selectedAgent} />
-                            ) : agentsPanel === "skills" ? (
-                                <SkillsTab agent={selectedAgent} />
-                            ) : agentsPanel === "memories" ? (
-                                <MemoriesTab agent={selectedAgent} />
-                            ) : agentsPanel === "automations" ? (
-                                <AutomationsView agentId={selectedAgent.id} />
-                            ) : (
-                                <PlaceholderPanel panelKey={agentsPanel} />
-                            )}
-                        </div>
-                    </>
+    if (!selectedAgent) {
+        return (
+            <div className="flex h-full flex-col overflow-hidden" data-testid="agents-view">
+                {agents.length === 0 ? (
+                    <TemplateGallery onNewAgent={onNewAgent} />
                 ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                        <p className="text-muted-foreground">
-                            Select an agent from the sidebar
-                        </p>
+                    <div className="flex flex-1 items-center justify-center px-4">
+                        <div className="flex flex-col items-center text-center max-w-md">
+                            <Robot size={48} weight="light" className="text-muted-foreground/30 mb-4" />
+                            <h2 className="text-lg font-semibold text-foreground">
+                                No agent selected
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Select an agent from the sidebar
+                            </p>
+                        </div>
                     </div>
                 )}
             </div>
-            </Panel>
-            </Group>
+        );
+    }
 
-            <ConfirmDialog
-                isOpen={showMoveToOrgConfirm}
-                onClose={() => setShowMoveToOrgConfirm(false)}
-                onConfirm={handleMoveToOrgConfirm}
-                title="Move to Organization"
-                message="Moving this agent to Organization will make it visible to all organization members. This action cannot be undone."
-                confirmLabel="Move to Organization"
-                cancelLabel="Cancel"
-                variant="warning"
-                loading={movingToOrg}
+    const activePanel = panel ?? "overview";
+    const tabItems = [
+        {
+            to: `/agents/agents/${selectedAgent.id}/overview`,
+            label: "Overview",
+            end: true,
+            testId: "agents-detail-tab-overview",
+        },
+        {
+            to: `/agents/agents/${selectedAgent.id}/instructions`,
+            label: "Instructions",
+            testId: "agents-detail-tab-instructions",
+        },
+        {
+            to: `/agents/agents/${selectedAgent.id}/capabilities`,
+            label: "Capabilities",
+            testId: "agents-detail-tab-capabilities",
+        },
+        {
+            to: `/agents/agents/${selectedAgent.id}/memory`,
+            label: "Memory",
+            testId: "agents-detail-tab-memory",
+        },
+    ];
+
+    return (
+        <div className="flex h-full flex-col overflow-hidden" data-testid="agents-view">
+            <div
+                className="flex flex-1 min-h-0 flex-col overflow-hidden"
+                data-testid="agents-detail-panel"
+                data-agent-id={selectedAgent.id}
+                data-panel={activePanel}
+            >
+            <div className="border-b border-border/60 bg-card">
+                <div className="flex items-center gap-3 px-4 py-2">
+                    <AgentAvatar
+                        avatarKey={selectedAgent.avatarKey}
+                        avatarEmoji={selectedAgent.avatarEmoji}
+                        agentName={selectedAgent.name}
+                        size="lg"
+                    />
+                    <h2
+                        className="text-xl font-semibold text-foreground truncate"
+                        data-testid="agents-detail-name"
+                    >
+                        {selectedAgent.name}
+                    </h2>
+                    <span className={cn(headerChipClass, "font-mono text-xs shrink-0")}>
+                        {selectedAgent.primaryModel || "No model configured"}
+                    </span>
+                    <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                        <button
+                            type="button"
+                            className={headerButtonClass}
+                            onClick={() => setTestDrawerOpen(true)}
+                            title="Test agent"
+                            data-testid="agents-test-button"
+                        >
+                            <Flask size={16} />
+                        </button>
+                        <button
+                            type="button"
+                            className={headerButtonClass}
+                            onClick={handleCloneAgent}
+                            title="Clone agent"
+                            data-testid="agents-clone-button"
+                        >
+                            <Copy size={16} />
+                        </button>
+                        {canShareSelectedAgent && (
+                            <button
+                                type="button"
+                                className={headerButtonClass}
+                                onClick={() => openAccessPolicyDialog(
+                                    ContentType.AGENT,
+                                    selectedAgent.id,
+                                    selectedAgent.name,
+                                )}
+                                title="Share"
+                                data-testid="agents-share-button"
+                            >
+                                <UsersThree size={16} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-4 border-b border-border">
+                <Tabs items={tabItems} />
+            </div>
+
+            <div className={cn(
+                "flex-1 p-6",
+                activePanel === "instructions" ? "overflow-hidden" : "overflow-y-auto",
+            )}>
+                {activePanel === "overview" ? (
+                    <OverviewTab agent={selectedAgent} />
+                ) : activePanel === "instructions" ? (
+                    <InstructionsTab agent={selectedAgent} />
+                ) : activePanel === "capabilities" ? (
+                    <CapabilitiesTab agent={selectedAgent} />
+                ) : (
+                    <MemoriesTab agent={selectedAgent} />
+                )}
+            </div>
+            </div>
+
+            <AgentTestDrawer
+                agent={selectedAgent}
+                mode="test"
+                canEdit={roleCanEdit(selectedAgentRole)}
+                open={testDrawerOpen}
+                onClose={() => setTestDrawerOpen(false)}
             />
         </div>
     );

@@ -36,7 +36,6 @@ function searchResultTypeToUrnType(type: SearchResultType): UrnType {
     case SearchResultType.PROJECT: return UrnType.PROJECT;
     case SearchResultType.TASK: return UrnType.TASK;
     case SearchResultType.AGENT: return UrnType.AGENT;
-    case SearchResultType.PROMPT: return UrnType.PROMPT;
     case SearchResultType.CHAT_MESSAGE: return UrnType.CHAT_MESSAGE;
     case SearchResultType.ROOM: return UrnType.ROOM;
     default: return UrnType.UNKNOWN;

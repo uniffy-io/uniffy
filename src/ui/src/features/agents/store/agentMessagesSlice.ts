@@ -2,11 +2,9 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import type { SerializedMessage } from '@/features/agents/store/agentMessagesThunks';
 import {
-    deleteAgentMessage,
     editAgentMessage,
     fetchMessages,
     retryAgentMessage,
-    submitMessageFeedback,
 } from '@/features/agents/store/agentMessagesThunks';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 import { persistedThinkingBlocks } from '@/features/agents/utils/thinkingBlocks';
@@ -339,23 +337,12 @@ export const agentMessagesSlice = createSlice({
                 }
                 invalidateAfter(list, anchorCreatedAt, false);
             })
-            .addCase(deleteAgentMessage.fulfilled, (state, action) => {
-                const { sessionId, anchorCreatedAt } = action.payload;
-                const list = state.messagesBySession[sessionId];
-                if (!list) return;
-                invalidateAfter(list, anchorCreatedAt, true);
-            })
             .addCase(retryAgentMessage.fulfilled, (state, action) => {
                 const { sessionId, anchorMessageId } = action.payload;
                 const list = state.messagesBySession[sessionId];
                 if (!list) return;
                 const anchor = list.find((m) => m.id === anchorMessageId);
                 invalidateAfter(list, anchor?.createdAt, false);
-            })
-            .addCase(submitMessageFeedback.fulfilled, (state, action) => {
-                const { sessionId, messageId, rating } = action.payload;
-                const msg = state.messagesBySession[sessionId]?.find((m) => m.id === messageId);
-                if (msg) msg.feedbackRating = rating;
             });
     },
 });

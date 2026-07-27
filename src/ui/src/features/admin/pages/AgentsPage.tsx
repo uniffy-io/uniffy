@@ -6,6 +6,7 @@ import {
     Gauge,
     Lightbulb,
     Robot,
+    Sliders,
     Sparkle,
     ThumbsDown,
     ThumbsUp,
@@ -19,6 +20,26 @@ import { Select } from '@/components/ui/select';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/shared/utils/cn';
+import {
+    fetchRuntimeSettings,
+    saveRuntimeSettings,
+    type RuntimeSettingsPlain,
+} from '@/features/admin/store/agentRuntimeSettingsThunks';
+import {
+    selectRuntimeSettings,
+    selectRuntimeSettingsLoading,
+    selectRuntimeSettingsSaving,
+} from '@/features/admin/store/agentRuntimeSettingsSlice';
+import {
+    fetchProviderKeys,
+    fetchAvailableModels,
+} from '@/features/agents/store/agentProvidersThunks';
+import {
+    selectProviderKeys,
+    selectAvailableModels,
+} from '@/features/agents/store/agentProvidersSlice';
+import { ConfigView } from '@/features/agents/components/views/ConfigView';
+import { UsageView } from '@/features/agents/components/views/UsageView';
 import { COMMON_CURRENCIES, currencySymbol, formatCurrency } from '@/shared/utils/currencyFormatting';
 import {
     fetchOrganizationSettings,
@@ -41,10 +62,21 @@ import type { RateLimitState } from '@/features/admin/store/agentsGovernanceSlic
 import { fetchSkillMetrics } from '@/features/agents/store/agentSkillMetricsThunks';
 import { selectSkillMetricsState } from '@/features/agents/store/agentSkillMetricsSlice';
 
-type TabId = 'general' | 'budget' | 'rate-limits' | 'currencies' | 'skills';
+type TabId =
+    | 'general'
+    | 'runtime'
+    | 'keys'
+    | 'usage'
+    | 'budget'
+    | 'rate-limits'
+    | 'currencies'
+    | 'skills';
 
 const TABS: { id: TabId; label: string }[] = [
     { id: 'general', label: 'General' },
+    { id: 'runtime', label: 'Runtime' },
+    { id: 'keys', label: 'Keys' },
+    { id: 'usage', label: 'Usage' },
     { id: 'budget', label: 'Budget' },
     { id: 'rate-limits', label: 'Rate limits' },
     { id: 'currencies', label: 'Currencies' },
@@ -117,6 +149,13 @@ export function AgentsPage() {
             </div>
 
             {activeTab === 'general' && <GeneralTab />}
+            {activeTab === 'runtime' && <RuntimeTab />}
+            {activeTab === 'keys' && (
+                <div className="h-[70vh] min-h-[480px] rounded-xl border border-border overflow-hidden">
+                    <ConfigView embedded />
+                </div>
+            )}
+            {activeTab === 'usage' && <UsageView />}
             {activeTab === 'budget' && <BudgetTab />}
             {activeTab === 'rate-limits' && <RateLimitsTab />}
             {activeTab === 'currencies' && <CurrenciesTab />}
@@ -290,6 +329,226 @@ function GeneralTab() {
                     onChange={handleToggleAgents}
                     disabled={loading || saving || !organizationId}
                 />
+            </div>
+        </section>
+    );
+}
+
+function RuntimeTab() {
+    const dispatch = useAppDispatch();
+    const orgId = useAppSelector((s) => s.auth.currentOrganizationId);
+    const settings = useAppSelector(selectRuntimeSettings);
+    const loading = useAppSelector(selectRuntimeSettingsLoading);
+    const saving = useAppSelector(selectRuntimeSettingsSaving);
+    const providerKeys = useAppSelector(selectProviderKeys);
+    const models = useAppSelector(selectAvailableModels);
+
+    const [form, setForm] = useState<RuntimeSettingsPlain | null>(null);
+
+    useEffect(() => {
+        if (!orgId) return;
+        dispatch(fetchRuntimeSettings());
+        dispatch(fetchProviderKeys());
+        dispatch(fetchAvailableModels());
+    }, [dispatch, orgId]);
+
+    useEffect(() => {
+        if (!settings) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- sync form fields when the fetched settings load
+        setForm(settings);
+    }, [settings]);
+
+    const eligibleKeys = useMemo(
+        () =>
+            Object.values(providerKeys).filter((k) => k.isEnabled && k.isValid),
+        [providerKeys],
+    );
+
+    const keyOptions = useMemo(
+        () => [
+            { value: '', label: 'None (each agent supplies its own key)' },
+            ...eligibleKeys.map((k) => ({ value: k.id, label: `${k.label} (${k.provider})` })),
+        ],
+        [eligibleKeys],
+    );
+
+    const defaultKey = eligibleKeys.find((k) => k.id === form?.defaultProviderKeyId);
+    const defaultKeyMissing =
+        !!form?.defaultProviderKeyId && Object.keys(providerKeys).length > 0 && !defaultKey;
+
+    const modelOptions = useMemo(
+        () => [
+            { value: '', label: 'None' },
+            ...models
+                .filter((m) => !defaultKey || m.provider === defaultKey.provider)
+                .map((m) => ({ value: m.id, label: m.displayName || m.id })),
+        ],
+        [models, defaultKey],
+    );
+
+    if (!form) {
+        return (
+            <section className="border border-border rounded-xl bg-card px-5 py-6 text-sm text-muted-foreground">
+                Loading...
+            </section>
+        );
+    }
+
+    const update = (patch: Partial<RuntimeSettingsPlain>) =>
+        setForm((f) => (f ? { ...f, ...patch } : f));
+
+    const busy = loading || saving;
+
+    return (
+        <section className="border border-border rounded-xl bg-card">
+            <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                <Sliders size={20} weight="duotone" className="text-violet-500" />
+                <div>
+                    <h2 className="text-base font-semibold">Runtime</h2>
+                    <p className="text-xs text-muted-foreground">
+                        Org defaults and execution knobs. The default provider key and chat model
+                        let members create agents with just a name; the run inherits these when the
+                        agent has none of its own.
+                    </p>
+                </div>
+            </header>
+
+            <div className="px-5 py-4 space-y-5">
+                <FieldRow
+                    label="Default provider key"
+                    description="Key used when an agent has no key of its own. Only enabled, valid organization keys appear here."
+                >
+                    <Select
+                        value={form.defaultProviderKeyId}
+                        onChange={(v) => {
+                            const nextKey = eligibleKeys.find((k) => k.id === v);
+                            const keepModel =
+                                !nextKey ||
+                                models.some(
+                                    (m) =>
+                                        m.id === form.defaultChatModel &&
+                                        m.provider === nextKey.provider,
+                                );
+                            update({
+                                defaultProviderKeyId: v,
+                                defaultChatModel: keepModel ? form.defaultChatModel : '',
+                            });
+                        }}
+                        options={keyOptions}
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                {defaultKeyMissing && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                        The saved default provider key is no longer available (deleted, disabled,
+                        or invalid). Name-only agents cannot run until you pick another key and
+                        save.
+                    </p>
+                )}
+
+                <FieldRow
+                    label="Default chat model"
+                    description="Model an agent runs on when it has no model configured. Limited to models served by the default key's provider."
+                >
+                    <Select
+                        value={form.defaultChatModel}
+                        onChange={(v) => update({ defaultChatModel: v })}
+                        options={modelOptions}
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Personal memory bridge"
+                    description="Allow opted-in members to widen shared-space agent runs with their own personal memory (read-only). When off, the bridge is disabled org-wide regardless of member opt-in."
+                >
+                    <ToggleSwitch
+                        enabled={form.personalMemoryBridgeEnabled}
+                        onChange={(v) => update({ personalMemoryBridgeEnabled: v })}
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Provider failover"
+                    description="On a provider error, retry the run against the agent's fallback models."
+                >
+                    <ToggleSwitch
+                        enabled={form.failoverEnabled}
+                        onChange={(v) => update({ failoverEnabled: v })}
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Resume interrupted runs"
+                    description="Let clients reconnect to an in-flight run after a reload."
+                >
+                    <ToggleSwitch
+                        enabled={form.resumeEnabled}
+                        onChange={(v) => update({ resumeEnabled: v })}
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Send deadline (seconds)"
+                    description="Wall-clock budget for a single agent run before it is abandoned."
+                >
+                    <Input
+                        type="number"
+                        min="1"
+                        value={form.sendDeadlineSeconds}
+                        onChange={(e) =>
+                            update({ sendDeadlineSeconds: parseInt(e.target.value, 10) || 0 })
+                        }
+                        className="w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Circuit breaker failure threshold"
+                    description="Consecutive provider failures before the breaker opens."
+                >
+                    <Input
+                        type="number"
+                        min="1"
+                        value={form.circuitBreakerFailureThreshold}
+                        onChange={(e) =>
+                            update({
+                                circuitBreakerFailureThreshold: parseInt(e.target.value, 10) || 0,
+                            })
+                        }
+                        className="w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Circuit breaker recovery (seconds)"
+                    description="How long the breaker stays open before probing the provider again."
+                >
+                    <Input
+                        type="number"
+                        min="1"
+                        value={form.circuitBreakerRecoverySeconds}
+                        onChange={(e) =>
+                            update({
+                                circuitBreakerRecoverySeconds: parseInt(e.target.value, 10) || 0,
+                            })
+                        }
+                        className="w-28 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <div className="flex justify-end pt-2">
+                    <Button onClick={() => dispatch(saveRuntimeSettings(form))} disabled={busy}>
+                        {saving ? 'Saving...' : 'Save'}
+                    </Button>
+                </div>
             </div>
         </section>
     );

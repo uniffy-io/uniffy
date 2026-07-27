@@ -1,8 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Lightning, Check, X, Trash } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
-import { SkillDraftEditorModal } from '@/features/agents/components/skills/SkillDraftEditorModal';
 import { discardSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
 import type { SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
 
@@ -11,7 +11,7 @@ import type { SerializedSkillDraft } from '@/features/agents/store/agentSkillDra
 // draft is never active until saved.
 export function ProposedSkillDraftCard({ draft }: { draft: SerializedSkillDraft }) {
     const dispatch = useAppDispatch();
-    const [editing, setEditing] = useState(false);
+    const navigate = useNavigate();
     const [discarding, setDiscarding] = useState(false);
 
     const title = draft.displayName || draft.name || 'Proposed skill';
@@ -50,7 +50,7 @@ export function ProposedSkillDraftCard({ draft }: { draft: SerializedSkillDraft 
                         <div className="mt-2 flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => setEditing(true)}
+                                onClick={() => navigate(`/agents/skills/drafts/${draft.id}`)}
                                 disabled={discarding}
                                 className="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                             >
@@ -79,10 +79,6 @@ export function ProposedSkillDraftCard({ draft }: { draft: SerializedSkillDraft 
                     )}
                 </div>
             </div>
-
-            {editing && (
-                <SkillDraftEditorModal draft={draft} onClose={() => setEditing(false)} />
-            )}
         </div>
     );
 }

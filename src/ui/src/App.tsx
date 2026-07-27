@@ -7,6 +7,7 @@ import { rehydrateAuth } from '@/config';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminRoute } from '@/features/admin/components/AdminRoute';
+import { AgentsBuilderRoute } from '@/features/agents/components/AgentsBuilderRoute';
 import { PlatformRoute } from '@/features/platform/components/PlatformRoute';
 import { MainLayout } from '@/shared/layouts/MainLayout';
 import { SpotlightSearch } from '@/features/search';
@@ -576,31 +577,40 @@ export function App() {
                             }
                         />
 
-                        {/* Agents routes */}
+                        {/* Agents builder routes (org admins + AGENTS domain admins) */}
                         <Route
                             path="/agents"
                             element={
-                                <ProtectedRoute>
+                                <AgentsBuilderRoute>
                                     <LazyRoute><AgentsPage /></LazyRoute>
-                                </ProtectedRoute>
+                                </AgentsBuilderRoute>
                             }
                         />
 
                         <Route
                             path="/agents/:tab"
                             element={
-                                <ProtectedRoute>
+                                <AgentsBuilderRoute>
                                     <LazyRoute><AgentsPage /></LazyRoute>
-                                </ProtectedRoute>
+                                </AgentsBuilderRoute>
                             }
                         />
 
                         <Route
                             path="/agents/:tab/:subId"
                             element={
-                                <ProtectedRoute>
+                                <AgentsBuilderRoute>
                                     <LazyRoute><AgentsPage /></LazyRoute>
-                                </ProtectedRoute>
+                                </AgentsBuilderRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/agents/:tab/:subId/:panel"
+                            element={
+                                <AgentsBuilderRoute>
+                                    <LazyRoute><AgentsPage /></LazyRoute>
+                                </AgentsBuilderRoute>
                             }
                         />
 

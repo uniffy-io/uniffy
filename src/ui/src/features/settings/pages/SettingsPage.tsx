@@ -7,6 +7,7 @@ import { KeyboardShortcutsSection } from '@/features/settings/components/Keyboar
 import { NotificationsSection } from '@/features/settings/components/NotificationsSection';
 import { AccountSection } from '@/features/settings/components/AccountSection';
 import { SecuritySection } from '@/features/settings/components/SecuritySection';
+import { AiSection } from '@/features/settings/components/AiSection';
 import { useSettings } from '@/features/settings/hooks/useSettings';
 
 export function SettingsPage() {
@@ -60,6 +61,8 @@ export function SettingsPage() {
                 return <AccountSection />;
             case 'security':
                 return <SecuritySection />;
+            case 'ai':
+                return <AiSection />;
             case 'general':
                 return (
                     <div className="space-y-4">
