@@ -324,7 +324,8 @@ Both flows need a real key for the provider under test. Run as an org
 admin; the same steps must pass on cloud-style and self-hosted deploys
 (`(both products)`).
 
-- [ ] OpenRouter: `/agents` -> Config tab -> Add Key with provider
+- [ ] OpenRouter: Settings -> AI -> Add Key (or `/admin/agents` -> Keys
+      for an org-visible key) with provider
       `OpenRouter` and a real `sk-or-...` key -> Validate succeeds and the
       key shows valid -> the curated OpenRouter models (slugs like
       `anthropic/claude-sonnet-5`) appear in the agent model pickers ->
@@ -334,21 +335,44 @@ admin; the same steps must pass on cloud-style and self-hosted deploys
       -> Grok models appear in the pickers -> send one message on a Grok
       model -> token usage and cost are logged.
 
+## Agents: provider key add path
+
+Run as an org admin at `/admin/agents` -> Keys (`(both products)`).
+
+- [ ] The add form has Provider, Label and API Key only - there is no
+      credential-type picker and no visibility picker anywhere - and the
+      API Key field carries the write-once note plus the "we probe the
+      provider on save" note.
+- [ ] The saved key's header has Enable, Validate and Remove only; there
+      is no Share control and no per-key visibility icon in the list.
+- [ ] As a plain org member, open a chat agent DM: the model picker lists
+      models from every enabled org key.
+- [ ] Paste a key with a deliberately odd shape (e.g. an OpenRouter key
+      under provider `Anthropic`, or a key with no known prefix): the save
+      is NOT blocked by a format check. The key lands, the detail panel
+      opens on it, Status reads "Rejected by provider" and the red banner
+      shows the upstream error text.
+- [ ] Paste a real key for the selected provider: Status reads Valid and
+      the Available Models list for that key populates.
+- [ ] Reopen the saved key: only the masked hint is shown, there is no
+      way to read the credential back, and the hint line says so.
+
 ## Agents: reasoning display + model parameters
 
 Needs one agent per provider under test on a reasoning-capable model
 (`(both products)`).
 
-- [ ] Agents tab -> Overview -> Model parameters: set Reasoning effort on
+- [ ] Agents tab -> Overview -> Model settings -> parameters: set
+      Reasoning effort on
       a reasoning model (e.g. Opus 4.8 at `xhigh`) -> ask a multi-step
-      question in the agent session view -> a "Thinking..." pane streams
+      question in the agent test drawer -> a "Thinking..." pane streams
       reasoning ABOVE the answer, never interleaved with it, then flips to
       "Thought for Ns" and auto-collapses when the answer starts.
 - [ ] Same agent mentioned in a chat channel: the pane streams on the
       chat message too; markdown in the reasoning (bold section headers)
       renders formatted, not as raw `**`.
 - [ ] Reload the page after the reply finishes: the collapsed "Thought
-      for Ns" pane is still there on the historical message (session view
+      for Ns" pane is still there on the historical message (test drawer
       AND chat channel) with the same duration.
 - [ ] Reload MID-stream: the live view reconnects via run replay and the
       thinking pane content survives.
@@ -391,12 +415,12 @@ Agent DM channel, agents-in-chat enabled (`(both products)`).
 Needs two users (A, B) in one org, one shared agent, agents-in-chat enabled,
 and a public channel with the agent bound (`(both products)`).
 
-- [ ] As A in a private agent session, ask the agent to remember a personal
+- [ ] As A in a 1:1 agent DM, ask the agent to remember a personal
       fact -> the tool card says the memory is private; the entry appears in
       the agent's Memories tab under "My memory" with description + provenance.
 - [ ] As A in the public channel, trigger the agent and inspect the run: the
-      personal fact is neither mentioned nor reachable (`memory.list` in the
-      channel shows channel + org entries only). This is the leak guard.
+      personal fact is neither mentioned nor reachable (`memory.read` in the
+      channel returns channel + org entries only). This is the leak guard.
 - [ ] As B in the channel, ask the agent to remember a team fact -> as A,
       trigger the agent and ask about it: the agent reads the channel entry
       (visible memory.read call in the activity pane) and answers.
@@ -427,6 +451,111 @@ and a public channel with the agent bound (`(both products)`).
       `agents/runtime` settings blob -> the toggle shows "Disabled by your
       organization", enabling it fails, and an already-opted-in user's channel
       runs stop seeing personal memory.
+
+## Agents: builder surface, org defaults, builder gating
+
+`/agents` is the builder page (3 tabs: Agents, Skills, Automations),
+restricted to builders (org admin or AGENTS domain admin); all
+conversation happens in `/chat`; org config lives on `/admin/agents`.
+Needs an org admin, an AGENTS domain admin who is NOT an org admin, and a
+plain member (`(both products)`).
+
+### Builder gating
+
+- [ ] As plain member: the Agents icon is absent from the header nav
+      (desktop AND the mobile drawer); typing `/agents` in the URL
+      redirects to `/`; direct create/update/delete RPCs are denied.
+- [ ] As AGENTS domain admin (granted via `/admin` -> Domain admins):
+      after re-login the Agents nav icon appears, `/agents` loads, and
+      full CRUD works - including editing and opening the Share dialog on
+      an agent another builder created.
+- [ ] Grant revocation: revoke the AGENTS grant -> after the next token
+      refresh the nav icon disappears and `/agents` redirects.
+- [ ] A FILES domain admin (no AGENTS grant) is treated as a plain member
+      here.
+- [ ] Chat usage unaffected: the plain member can still DM an org-visible
+      agent, use the model picker + params popover, slash-invoke skills,
+      and rate replies.
+
+### Org default model + name-only agents
+
+- [ ] As admin: `/admin/agents` -> Runtime -> set a default provider key
+      (org-visible, valid) and a default chat model -> Save.
+- [ ] As builder: `/agents` -> create an agent with ONLY a name (never open
+      Model settings) -> open its chat DM from `/chat` -> the agent answers
+      on the org default model; the run log shows that model.
+- [ ] Clear the org default (admin) with the agent still name-only -> the
+      next send fails with a friendly "no model configured" message, not a
+      crash or a silent fallback.
+
+### Default agent + templates
+
+- [ ] Fresh org: after creation the org has exactly one agent
+      ("Assistant", marked default, org-visible) with no model config;
+      it chats once the org default model is set.
+- [ ] Create flow: "start from template" gallery lists the templates;
+      picking one prefills name, emoji, instructions, and capabilities;
+      the created agent is an ordinary org-owned row (editable, sharable,
+      deletable).
+
+### Test drawer
+
+- [ ] Agent detail -> "Test agent" opens the drawer: send a message, the
+      reply streams with thinking + tool activity panes; Stop cancels a
+      running turn; Reset starts a fresh conversation.
+- [ ] Test isolation: the drawer conversation appears NOWHERE else (no
+      chat DM, no session list anywhere); asking the agent to remember
+      something yields a "memory writes are disabled in test sessions"
+      tool error; memory READS and the memory index still work; the run
+      appears in the admin run logs and spend counts against budgets.
+- [ ] AI Builder (Instructions tab) uses the same drawer in builder mode:
+      "Apply to Instructions" writes the soul prompt; builder sessions
+      are test sessions too (nothing leaks into listings or memory).
+
+### Admin surface (keys are admin-only)
+
+- [ ] `/admin/agents` Keys tab is the ONLY key surface: add a key (created
+      org-visible), validate, disable, delete; narrow one to explicit
+      members via Share and confirm a non-member's chat model picker stops
+      listing its models while a granted member's still does.
+- [ ] As member: key add/remove/toggle/validate RPCs are all denied;
+      listing keys/models (the picker path) still works.
+- [ ] `/admin/agents` Usage tab: org-wide spend renders; a member opening
+      the RPCs directly is denied.
+- [ ] `/admin/agents` Runtime tab: defaults, memory bridge gate,
+      failover/resume/deadline/circuit knobs round-trip; no creation
+      policy or governance toggles render.
+
+### Settings AI section (member self-service)
+
+- [ ] As member: Settings -> AI shows own usage numbers (org-wide absent),
+      no key management anywhere, and the "Agent memory" consent toggle
+      (the memory-bridge opt-in that used to live in the builder page)
+      works: opt in, verify a channel run reads a personal memory, opt
+      out, verify it stops.
+
+### Skill drafts (builder inbox)
+
+- [ ] Member thumbs-down in an agent chat produces a draft; the member
+      sees the draft card WITHOUT a Review button; a builder sees Review
+      and can open, edit, and save it - the saved skill is an organization
+      skill (no scope picker anywhere).
+- [ ] A builder can discard a draft raised by someone else; the card in
+      the original channel settles to its resolved state.
+
+### Chat ports (agent DMs)
+
+- [ ] In an agent DM, type `/` -> the skill popup lists the agent's
+      runnable skills; picking one shows a dismissible skill chip; send ->
+      the reply follows the skill and the sent message shows the skill
+      badge.
+- [ ] Thumbs on an agent chat reply: rate up, reload -> the thumb is
+      still filled; click again -> cleared; thumbs-down feeds the skill
+      analyzer (draft may appear later).
+- [ ] Proposed-skill draft card renders after an agent reply that
+      produced one; opening it lands in the draft editor.
+- [ ] Old links: `/agents/chat` (and `/agents/chat/<id>`) redirect to
+      `/chat`.
 
 ## Search
 
@@ -582,6 +711,64 @@ Use a text file so version bytes are easy to tell apart. `(both products)`.
 - [ ] Retention setting: non-admin org member gets denied on the update
       RPC; value floor 1 / ceiling 100 enforced; self-host env default
       `FILE_VERSION_RETENTION` applies when no org row exists.
+
+## Agents: builder redesign
+
+One sidebar, URL-first navigation, skills editor surface. Needs an org
+admin plus a plain member (`(both products)`).
+
+### Shell + navigation
+
+- [ ] `/agents` redirects to the last-visited section (default Agents);
+      the page has exactly ONE sidebar under the app header with Agents,
+      Skills, and Automations sections; no inner icon rail, no second
+      list panel inside the content pane.
+- [ ] Sidebar collapse leaves the icon rail (hover reveals the overlay
+      sidebar); Zen mode hides everything; both match chat's behavior.
+      Sidebar width persists across reloads; resizing works.
+- [ ] Mobile (<768px): the sidebar is a left drawer, content full-width.
+- [ ] Deep links: `/agents/agents/<id>` redirects to `.../overview`;
+      old `/agents/chat` still lands on `/chat`; an unknown section
+      lands on `/agents/agents`.
+- [ ] Agent detail tabs (Overview / Instructions / Capabilities /
+      Memory) are links: browser back/forward walks the tab history;
+      refresh lands on the same tab; the URL segment is `memory`.
+- [ ] Sidebar search filters agents, skills, and automations rows.
+
+### Skills surface
+
+- [ ] Selecting a skill in the sidebar opens a full-height markdown
+      editor; edits autosave (about 1s debounce) and survive reload;
+      NO agent picker anywhere on the page.
+- [ ] Bundled skills are read-only: no rename, no content edits, no
+      metadata edits, no delete.
+- [ ] Metadata (when to use, always active, required tools, version
+      history + restore) is reachable from the skill header; the
+      always-active toggle stays org/bundled-only.
+- [ ] Drafts: the sidebar Drafts row shows the pending count (org-wide,
+      any triggering user); the drafts list opens in the content pane;
+      reviewing a draft uses the same editor surface; save
+      creates/updates the organization skill, discard drops the draft.
+
+### Agents + automations surface
+
+- [ ] Agent detail header: Test / Clone / Share actions render as
+      chat-style header buttons; Share opens the access dialog even on
+      an agent another builder created (manage override).
+- [ ] Create agent: sidebar `+` opens the template modal (Blank card
+      first, emoji tiles, paired-skill badges); the same gallery shows
+      in the empty state when no agents exist; both flows land on the
+      created agent's Overview tab.
+- [ ] Overview keeps the collapsed Model settings disclosure; its
+      no-keys empty state points to `/admin/agents`; Capabilities and
+      the automation detail use the shared toggle (no bespoke green
+      switches).
+- [ ] Automations: sidebar rows show status dot + next run; `+` opens
+      the create modal; the cron prompt is a markdown editor with
+      working `@` mentions; Run Now, pause/resume, delete, and the
+      execution history (with pending polling) all still work.
+- [ ] Test drawer still opens from the detail header, streams with
+      thinking + tool panes, and keeps test-session isolation.
 
 ## Pre-release sweep
 

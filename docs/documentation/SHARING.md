@@ -175,7 +175,6 @@ The shipped defaults are:
 | Task | Inherits the parent project | - |
 | Agent | Open to organization | Viewer |
 | Provider key | Owner only | - |
-| Prompt | Open to organization | Viewer |
 | Cron task | Owner only | - |
 | Room | Open to organization | Viewer |
 

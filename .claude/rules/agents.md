@@ -9,9 +9,35 @@ paths:
 
 # Agents Domain
 
-LLM-powered assistants (Anthropic, OpenAI, Google) that act on other domains through a built-in tool system. Five sub-domains, each its own ConnectRPC service mounted in `factory.py`: `agents/` (CRUD), `providers/`, `runtime/`, `sessions/`, `skills/`, plus `tools/` (registry + builtin executors). Models in `core/models/agents/`, protos in `src/proto/agents/v1/`.
+LLM-powered assistants (Anthropic, OpenAI, Google, OpenRouter, xAI) that act on other domains through a built-in tool system. Sub-domains, each its own ConnectRPC service mounted in `factory.py`: `agents/` (CRUD), `providers/`, `runtime/` (also hosts `RuntimeSettingsService`), `sessions/`, `skills/`, `memories/`, `cron/`, `budgets/`, and `rate_limits/`; `chat_integration/` mounts its handlers on the chat service, and `tools/` (registry + builtin executors) has no service. Models in `core/models/agents/`, protos in `src/proto/agents/v1/`.
 
 This is one of the two performance-critical domains - the backend rules' "Performance-critical domains" section applies to every change here.
+
+## Surface split (three tiers, one domain model)
+
+Agents are plain content rows under the generic permission model; the tiers differ only in which page hosts which controls.
+
+| Tier | Surface | Contents |
+|---|---|---|
+| Chat | `/chat` | ALL conversation: 1:1 agent DMs, channel agents. Skill slash-invoke, feedback thumbs, proposed-skill draft cards, thinking/tool panes, context bar, per-DM model + params overrides. Average users never leave this tier. |
+| Builder | `/agents` | **Builder-gated**: org OWNER/ADMIN or AGENTS domain admin (`require_agents_builder`, `domains/agents/access.py`; UI `useAgentsBuilderAccess` + `AgentsBuilderRoute`, nav icon hidden for non-builders). One sidebar with Agents, Skills, and Automations sections; URL-first routes (`/agents/agents/:id/:panel`, `/agents/skills/:id`, `/agents/skills/drafts`, `/agents/automations/:id`). Agent detail has 4 route-driven panels: Overview (identity + collapsed Model settings), Instructions (soul prompt + AI Builder), Capabilities (tool groups + skills), Memory. Skills edit in a full-height markdown surface. Testing happens in the AgentTestDrawer on the detail page, not in a chat surface. |
+| Admin | `/admin/agents` | Org keys (the ONLY key-management surface), org usage, budgets, rate limits, currencies, skills metrics, Runtime tab (org default model, memory-bridge gate, failover/resume/deadline/circuit knobs). Members' Settings > AI holds only their own usage view and the personal memory-bridge consent toggle. |
+
+There is no personal tier: agents, skills, automations, and provider keys are org-level resources managed by builders (keys: org admins only). Builder management is a domain-level power, not content access - agent/cron mutations gate on `require_agents_builder`, and a `ContentMembersOperations` manage override lets builders run the sharing dialog on agents they don't own (see `permissions.md`). Provider keys are not shareable content at all: they have no access policy, and any org member can use any enabled key. Chat USAGE is unchanged: any member can use an agent whose access policy allows it (`OPEN_TO_ORG` default), and model pickers keep member-readable `ListKeys`/`GetAvailableModels`.
+
+**Cron execution identity is a security boundary.** A run executes with `execution_user_id`'s permissions, so whoever authors the prompt must own the identity it runs under: `update_cron_task` repoints `execution_user_id` + `owner_id` to the editor whenever a builder changes someone else's prompt, and `trigger_now` refuses anyone but the execution user. `AGENT_CRON_TASK` deliberately has NO manage override - handing builders member-management on a task they don't execute reopens the impersonation path. Cron tasks default to `OWNER_ONLY` and `list_cron_tasks` applies `build_accessible_filter` on the TASK even when scoped to an agent, so a per-agent listing (and the `cron.list` tool) shows only tasks the caller owns or was granted - an accessible agent does not expose its automations' prompts.
+
+Old `/agents/chat` links redirect to `/chat`. There is no user-facing session list anywhere.
+
+## Sessions are internal, not user content
+
+`agents_sessions` rows back the test drawer, the AI Builder, and cron runs - chat channels are THE user conversation system. `SessionsService` is trimmed to what those need: CreateSession, GetSession, ListMessages, EditMessage, RetryMessage, SubmitMessageFeedback. There is deliberately no list/rename/archive/stats/compact RPC; do not add user-facing session surfaces without revisiting the sessions-vs-chat consolidation plan. `RerunFromMessage` and run streaming live on `RuntimeService`.
+
+Test sessions: `agents_sessions.is_test` marks drawer + AI Builder sessions. Invariants:
+
+- The runtime sets `ToolContext.is_test_session` from the session row; `memory.save` / `memory.forget` return a structured "disabled in test sessions" error before touching scope. Reads and index injection are unchanged.
+- Run logs and spend are still recorded (test spend counts against budgets by design).
+- Session access: user owns the session or kind is `global`.
 
 ## The identity boundary (security, not preference)
 
@@ -24,6 +50,7 @@ class ToolContext:
     user_id: UUID               # the HUMAN user's ID from the JWT
     organization_id: UUID       # org scope
     agent_id: UUID | None       # used by memory tools
+    is_test_session: bool       # memory write tools refuse when True
 ```
 
 Tool executors call domain `*Operations` classes directly in-process (no RPC hop), on the same `AsyncSession`, so the canonical permission checks (`BaseContentOperations` -> `effective_role`, see `permissions.md`) run unchanged. An agent can never reach content its user cannot. Imports inside executor functions are lazy to break circular deps - the one permitted exception to the imports-at-top rule.
@@ -32,53 +59,64 @@ Tool executors call domain `*Operations` classes directly in-process (no RPC hop
 
 - `ToolExecutor.execute()` converts EVERY exception to `ToolResult(success=False, error=...)` - errors never crash the loop; the LLM sees them and recovers.
 - Max `MAX_TOOL_ITERATIONS = 10` per message; exceeding raises `ValidationError`.
-- Within one LLM turn, calls are partitioned by `ToolDefinition.read_only`: read-only tools fan out concurrently on fresh per-tool sessions from a small pool (each commits its own session); write tools run sequentially on the runtime session so transaction boundaries hold. New tools default `read_only=False`; flipping to True is a deliberate annotation meaning "no transaction-shared writes on the runtime session" (own-session side-effect writes like `memory.recall` bumping `access_count` are fine).
+- Within one LLM turn, calls are partitioned by `ToolDefinition.read_only`: read-only tools fan out concurrently on fresh per-tool sessions from a small pool (each commits its own session); write tools run sequentially on the runtime session so transaction boundaries hold. New tools default `read_only=False`; flipping to True is a deliberate annotation meaning "no transaction-shared writes on the runtime session" (own-session side-effect writes like `memory.read` bumping `access_count` are fine).
 - Every tool has `timeout_seconds` (default 15s; search/file reads 30s; image gen up to 300s) wrapped in `asyncio.wait_for`; timeout yields a structured error result, never a stuck event loop.
 - Tool results are stored in original tool-call order regardless of read-group concurrency.
 - Destructive tools (`destructive=True`: the four `*.delete_*` tools) require user approval in streaming mode via `ApprovalStore` - an in-process `asyncio.Event` store with TTL sweep. It does NOT survive restarts or span processes; durability is not part of the contract.
 
 Adding a tool: executor in `tools/builtin/{domain}.py` -> module-level `ToolDefinition` -> export in the module tool list -> register in `tools/builtin/__init__.py:register_all()` -> add to `src/ui/src/features/agents/config/toolCatalog.ts` for the builder UI.
 
+## Templates and the default agent
+
+The catalog is one markdown file per template in `uniffy/data/catalog/` - frontmatter carries `key`, `order`, `name`, `emoji`, `description`, and the `tools` / `skills` lists; the body is the soul prompt. `domains/agents/templates.py` reads that directory once at import into `AGENT_TEMPLATES` (sorted by `order`; `assistant` first). Adding or retuning a template is a markdown edit - no python change.
+
+Org bootstrap (`OrganizationOperations.create`) seeds one org-visible default agent from the assistant template: `is_default=true` (partial unique index), `OPEN_TO_ORG`, name-only - it runs once the admin sets the org default model. The create-flow gallery FETCHES the catalog over `ListAgentTemplates` (builder-gated, resolves `skills` names to bundled skill row ids server-side) into `agentTemplatesSlice`; there is no frontend copy of the catalog. Templates are prefill only - created agents are ordinary rows with no link back. `is_default` changes are org-admin-gated.
+
 ## Runtime performance rules
 
 | Rule | Why |
 |---|---|
 | LLM calls stay off the request thread. | Compaction / summarisation go to ARQ with a Valkey `SET NX` idempotency lock; the request enqueues and returns. |
-| Pre-flight reads go through the agent caches. | `fetch_agent_row` / `fetch_agent_skills` / `fetch_agent_prompt` / `get_provider_for_key` / `SenderResolver`. A new runtime read gets a cache helper alongside. |
-| Agent / skill / prompt mutations invalidate dependent caches in the same commit. | Reverse-index sets `tag:skill:{id}` / `tag:prompt:{id}` hold dependent agent ids; mutations SMEMBERS + bulk-wipe, deletes drop the set; `enabled_skills` / `prompt_id` changes diff old vs new and SREM/SADD. |
+| Pre-flight reads go through the agent caches. | `fetch_agent_row` / `fetch_agent_skills` / `get_provider_for_key` / `SenderResolver`. A new runtime read gets a cache helper alongside. |
+| Agent / skill mutations invalidate dependent caches in the same commit. | Reverse-index sets `tag:skill:{id}` hold dependent agent ids; mutations SMEMBERS + bulk-wipe, deletes drop the set; `enabled_skills` changes diff old vs new and SREM/SADD. |
 | Hot-row counters gate on prior value. | `WHERE current < new_value` (or `IS NULL`) so concurrent agents race deterministically. |
-| `agents_messages.token_estimate` is populated at INSERT, never at read time. | Every writer computes it via `_estimate_message_tokens`; the window-function context loader assumes it. |
+| Session context size is read from provider counts, never estimated per message. | The latest non-compacted assistant row's `input_tokens` + `output_tokens` is the ground truth for active context; there is no per-message token column. |
 | New runtime metrics get a label. | Without metrics a regression is invisible. |
 
 ## Caching (domains/agents/cache.py)
 
 | Key | Contents | TTL |
 |---|---|---|
-| `agent:{id}` / `agent:{id}:skills` / `agent:{id}:prompt` | Serialised row / resolved skills / resolved prompt | 900s |
+| `agent:{id}` / `agent:{id}:skills` | Serialised row / resolved skills | 900s |
 | `provider:key:{key_id}` | NON-SECRET routing metadata only | 3600s |
-| `tag:skill:{id}` / `tag:prompt:{id}` | Reverse-index sets of dependent agent ids | - |
+| `tag:skill:{id}` | Reverse-index sets of dependent agent ids | - |
+| `agentmem:{agent}:{scope}:{subject}` | Rendered memory index lines | see memories |
 
 - Soft-deleted agents are never seeded (read path filters `is_deleted=false`).
 - **Decrypted credentials MUST NOT enter Valkey.** The in-process `ProviderClientLRU` is the only place a decrypted credential lives. This is a security boundary.
 
 ## Providers
 
-Keys are Fernet-encrypted in `agents_provider_keys` (`provider`, `credential_type` api_key|setup_token, `key_hint`, `is_valid` + `is_enabled` both required). Resolution consults two tiers before PG:
+Keys are Fernet-encrypted in `agents_provider_keys` (`provider`, `key_hint`, `is_valid` + `is_enabled` both required). API keys are the only credential shape; there is no credential-type column and **no format validation** - key shapes change without notice, so the only trusted signal is the live probe (`LLMProvider.validate()`, a models-list call) run on add and on demand, whose failure lands on `is_valid` + `last_error`. A rejected key is still stored, with the error surfaced in the UI. Resolution consults two tiers before PG:
 
 1. `ProviderClientLRU` (`providers/client_cache.py`): process singleton, 1h TTL, 256 entries - holds decrypted credential + constructed SDK client (reuses the httpx pool).
 2. Valkey `provider:key:{key_id}`: non-secret routing metadata, so `get_provider_for_model` skips decrypt/construction for keys that don't own the model.
 
 Any key mutation publishes `provider_keys:invalidate:{key_id}` and deletes the Valkey entry; a `PSUBSCRIBE` listener in app lifespan + worker startup drops the LRU entry on every pod. One signal, both tiers drop.
 
-Model resolution priority: session `model_override` -> agent `primary_model` -> `fallback_models` -> first catalog model -> `ValidationError`.
+Key permissions: add/remove/toggle/validate = org admin only. Keys carry NO access policy - no `access_mode`, no `ContentMember` rows, no sharing dialog - so every enabled org key is usable by every org member; spend control lives in budgets and rate limits. List and model reads stay org-member so chat pickers work, but diagnostics are admin-only: `last_error` is unredacted provider/transport text, so `provider_key_to_proto` gates it behind `include_diagnostics` and the handler resolves `is_org_admin` once per RPC. A member sees `key_hint` + `is_valid` and nothing more.
+
+Model resolution priority: session `model_override` -> agent `primary_model` -> `fallback_models` -> org default (`default_provider_key_id` + `default_chat_model` in the `agents/runtime` settings blob) -> typed `ValidationError`. There is no silent catalog pick. Every resolve site (sends, compaction workers, background analysis) goes through `runtime/model_resolver.py::resolve_provider_and_model` - do not hand-roll provider/model resolution.
+
+The `agents/runtime` settings blob (`runtime/settings.py`) is cached in-process for 30s per org; `invalidate_runtime_settings_cache` drops only the local process's entry, so other web processes and ARQ workers converge via TTL - acceptable for these knobs, do not build pubsub invalidation for them. Writes go through `RuntimeSettingsService` (`require_org_admin` on both methods). The blob carries: org default model config, `personal_memory_bridge_enabled`, and the failover/resume/deadline/circuit knobs.
 
 ## Model parameters
 
 The tunable knob surface is catalog-driven end to end; there is no per-model control list anywhere else.
 
-- The catalog (`providers/catalog/catalog.json`) declares per-provider `params_base` (ParamSpec bounds for `temperature`/`top_p`/`max_tokens`), per-provider `provider_options` (escape-hatch keys like `top_k`, `parallel_tool_calls`), per-model `options` (default overrides), and per-model `unsupported_params` (knobs the model's API rejects, e.g. temperature on Claude 4.7+ and OpenAI reasoning models). The reasoning knob is DERIVED, never declared: `reasoning_levels` -> enum `["off", ...levels]`; `can_reason` without levels -> `["off", "on"]`; `"off"` always means "do not request reasoning explicitly".
+- The catalog (`uniffy/data/models/catalog.json`, loaded by `providers/catalog/loader.py`) declares per-provider `params_base` (ParamSpec bounds for `temperature`/`top_p`/`max_tokens`), per-provider `provider_options` (escape-hatch keys like `top_k`, `parallel_tool_calls`), per-model `options` (default overrides), and per-model `unsupported_params` (knobs the model's API rejects, e.g. temperature on Claude 4.7+ and OpenAI reasoning models). The reasoning knob is DERIVED, never declared: `reasoning_levels` -> enum `["off", ...levels]`; `can_reason` without levels -> `["off", "on"]`; `"off"` always means "do not request reasoning explicitly".
 - `get_parameter_schema(provider, model_id)` merges all of that into one bounded schema consumed by the frontend form (`ModelInfo.parameter_schema_json`), write-time validation (`AgentOperations.create/update` -> `validate_model_params`; switching `primary_model` auto-strips now-invalid knobs), and request building.
-- Values live on `Agent.model_params` (JSONB, `{}` = provider defaults; absent knob = provider default, schema defaults are never auto-injected) with a per-conversation override layer: `AgentSession.model_params_override` on the session destination, `AgentChannelBinding.model_override`/`model_params_override` on the chat destination (agent DMs; get/set via the chat service's `Get/UpdateChannelAgentConfig`, DM members mutate freely). `resolve_request_params` merges override-over-agent and strips anything the TARGET model rejects (warn log + `AGENT_MODEL_PARAM_DROPPED_TOTAL` metric) before every `chat_completion(params=...)` call.
+- Values live in TWO layers. Base: `Agent.model_params` (JSONB, `{}` = provider defaults; absent knob = provider default, schema defaults are never auto-injected). Chat override: `AgentChannelBinding.model_params_override` per (channel, agent), managed with `model_override` via the chat service's `Get/UpdateChannelAgentConfig`; writes validate against the binding's effective model (binding `model_override` else agent primary else org default, resolved through the shared resolver) and a binding model switch strips now-invalid knobs like the agent layer does. Sessions carry only a MODEL override (`AgentSession.model_override`), no params layer. `resolve_request_params(agent_params, override_params, provider, model_id)` merges binding-over-agent, then strips anything the TARGET model rejects (warn log + `AGENT_MODEL_PARAM_DROPPED_TOTAL` metric) before every `chat_completion(params=...)` call.
 - Per-provider request mapping: Anthropic adaptive thinking + `output_config.effort` on models with `reasoning_levels` (legacy `enabled`+`budget_tokens` otherwise; sampling params never ride alongside thinking); OpenAI uses the RESPONSES API (`providers/openai/responses.py`, `store:false` + encrypted reasoning-item re-feed in tool loops - chat completions rejects reasoning+tools on gpt-5.4+); OpenRouter sends `extra_body.reasoning`; xAI sends nothing (grok always reasons); Google maps `thinking_level` / `thinking_budget` with `include_thoughts=True`.
 - Adding a knob: declare it in `params_base` (or `provider_options`), map it in each affected provider's request builder, done - the form renders it from the schema.
 
@@ -93,31 +131,51 @@ One flat `StreamEvent` dataclass + `EventType` StrEnum (`providers/base.py`) tra
 - Display persistence is separate: `_stream_segment` folds thinking into `[{block_id, content, elapsed_ms}]`, stored on `agents_messages.thinking` (sessions) or chat `message_metadata.thinking`, surfaced as `MessageInfo.thinking_json` and rehydrated into the panes after reload.
 - Every new event variant must serialize through all three surfaces: proto converter, JSON replay codec (`SubscribeToRun` replay), and the chat translator - and chat event types must be added to `_CHANNEL_EVENT_TYPES` (see `chat-domain.md`).
 
+## Chat replies, feedback, skills-in-chat
+
+- A chat agent reply's row id is STABLE: the streaming placeholder row is inserted once and finalized in place (`runtime/writers.py`); chat has no regenerate flow and user edits never re-trigger a run. Anything keyed on a reply id (feedback, draft back-links) relies on this.
+- Feedback is dual-target: `agents_message_feedback` holds `(agents_message_id | chat_message_id)` with an exactly-one CHECK and per-target partial unique upserts. `SessionsService.SubmitMessageFeedback` takes exactly one of `message_id` / `chat_message_id`; the chat variant gates through `ChatAccessChecker` and only rates undeleted AGENT-sent rows. Thumbs-down enqueues skill analysis (session or channel destination). The caller's rating rides `MessageInfo.feedback_rating` (sessions) and `ChatMessage.feedback_rating` (chat, populated only on history reads, never on stream fanout).
+- Skill slash-invoke in chat: the composer writes `invoked_skill_id` (+ display name) into `SendMessageRequest.metadata`; `chat_integration` parses it off the trigger row's `message_metadata` and threads it into the run. Proposed-skill draft cards are chat rows with `metadata.kind="skill_draft"` written by `ChatStreamPublisher.write_skill_draft_card`.
+
 ## Sessions and compaction
 
-- Compaction never runs on the request path: a sub-millisecond `SUM(token_estimate)` probe enqueues ARQ `compact_session(session_id)` on overage; the worker takes a Valkey `SET NX compaction_lock:{session_id}` (5-min TTL, lock-loss is a no-op), summarises the oldest slice into a `role="summary"` row, marks originals `is_compacted=True` in one batched UPDATE.
-- Context loading is ONE window-function query returning the most recent rows whose cumulative `token_estimate` fits the budget (summaries first under a 20% cap, latest row guaranteed). No Python token estimation at read time.
+- Compaction never runs on the request path: a probe of the latest non-compacted assistant row's provider-reported `input_tokens + output_tokens` enqueues ARQ `compact_session(session_id)` on overage; the worker takes a Valkey `SET NX compaction_lock:{session_id}` (5-min TTL, lock-loss is a no-op), summarises the oldest slice into a `role="summary"` row, marks originals `is_compacted=True` in one batched UPDATE. There is no manual-compaction RPC.
+- Context loading returns the most recent summaries (capped at `MAX_CONTEXT_SUMMARIES`) then the most recent non-summary rows (capped at `MAX_CONTEXT_RECENT_MESSAGES`); sizing is row-count based since provider token counts exist only on assistant rows. The compaction worker keeps the active set bounded.
 - If the worker hasn't caught up, `apply_emergency_truncation` drops oldest `role="tool"` rows in-memory; `_build_llm_messages` synthesises an "interrupted" tool_result for any orphaned `tool_use` id.
 - Channel-scoped (chat) agent compaction is a separate path (`chat_integration/context.py`); the runtime writer is a no-op for chat destinations.
 
 ## Skills and memories
 
-- Skills are markdown snippets in `agents_skills`, injected into the system prompt. Scopes: `bundled` (read-only, shipped), `organization` (org admins manage), `personal` (owner manages). Enabled per agent via `enabled_skills` + `always_active`.
-- Memories (`agents_memories`) are audience-scoped (`scope` = user/channel/session/org) and the scope is resolved by the runtime from the surface (`_resolve_memory_scope`): personal scope ONLY for direct/cron sessions and 1:1 agent DMs; group/global sessions and channels get their shared subject's scope. This routing is a security boundary - a run must never read or write another audience's entries; tools error out when `ToolContext.memory_scope` is missing rather than falling back to personal. One consent exception: the personal-memory bridge (`memories/bridge.py`, per-user opt-in row + `personal_memory_bridge_enabled` org gate in the `agents/runtime` settings blob) widens the READ set of shared-space runs the opted-in user triggers with their own user scope (`ToolContext.memory_bridge_scope`); it never affects writes.
+- Skills are markdown snippets in `agents_skills`, injected into the system prompt. Sources: `bundled` (read-only, shipped) and `organization` (builders manage).
+- **Bundled skills are a projection of `uniffy/data/skills/*.md`, not seed data** - `db/bundled_skills.py::sync_bundled_skills()` follows the project-into-rows contract in `backend.md` (every boot, own lock, before `seed_initial_data`, fixed ids in the files, retire never delete). Agent-specific consequences: bundled rows are global (`organization_id IS NULL`), so a new org needs NO per-org seeding and `list_skills` / `get_skills_for_agent` reach them through `organization_id == org OR organization_id IS NULL`. A retired skill leaves `get_skills_for_agent` alone, so an agent that already enabled it keeps working. `SkillOperations.resolve_bundled_skill_id_map` is the name-to-id hop the template catalog and org bootstrap share. Enabled per agent via `enabled_skills` + `always_active`. Skill drafts are an org-wide builder review inbox: anyone's thumbs-down or an agent's `skills.propose_skill` raises a draft (`propose_skill_draft` is deliberately ungated), but list/save/discard are builder-only and drafts always publish as organization skills; the draft row's `owner_id` is provenance only. Because that write is ungated it carries its own bounds - field caps, `has_hard_injection`, and `MAX_PENDING_DRAFTS_PER_USER` - so a member cannot flood the inbox or park injection markers in front of a reviewer. Any new ungated write here needs the same treatment.
+- Memory tools are exactly `memory.save`, `memory.read`, `memory.forget`. `memory.read` takes `key` (exact) or `query` (search) and bumps `access_count` on returned rows (the sanctioned read_only exception).
+- Memories (`agents_memories`) are audience-scoped (`scope` = user/channel/session/org) and the scope is resolved by the runtime from the surface (`_resolve_memory_scope`): personal scope ONLY for direct/cron sessions and 1:1 agent DMs; group/global sessions and channels get their shared subject's scope. This routing is a security boundary - a run must never read or write another audience's entries; tools error out when `ToolContext.memory_scope` is missing rather than falling back to personal. One consent exception: the personal-memory bridge (`memories/bridge.py`, per-user opt-in row + `personal_memory_bridge_enabled` org gate) widens the READ set of shared-space runs the opted-in user triggers with their own user scope (`ToolContext.memory_bridge_scope`); it never affects writes.
 - Prompt injection is index-only: `_build_memory_context` renders org scope + surface scope as `key (category): description` lines via the `agentmem:{agent}:{scope}:{subject}` Valkey cache; full content enters context only through `memory.read` or the human-pinned tier (pin caps 5 entries / 2000 chars, pinning is UI-only, never tool-settable). Every memory mutation invalidates the index cache in the same operation.
-- Memory quotas: 200 entries per scope subject, 4000-char content, description required (it is the index hook). `memory.forget` refuses pinned rows; org scope is tool-read-only and mutable only with agent MANAGE.
-- Session access: user owns the session or kind is `global`. Provider key add/remove = org admin; list/validate = org member.
+- Memory quotas: 200 entries per scope subject, 4000-char content, description required (it is the index hook). `memory.forget` refuses pinned rows; org scope is tool-read-only and mutable only by builders (`require_agents_builder`).
+
+## System prompt
+
+`runtime/prompt.py::build_system_prompt` assembles: agent identity, `soul_prompt` (the single user-editable instruction layer), `runtime/workspace_prompt.py::WORKSPACE_PROMPT` (appended to EVERY prompt; the text is `uniffy/data/prompts/workspace.md`, read once at import), skills, invoked skill, memory index, tool notes, workspace context. There is no prompts domain and no prompt template rows.
 
 ## Key files
 
 | File | Purpose |
 |---|---|
+| `domains/agents/access.py` | `is_agents_builder` / `require_agents_builder` gate |
 | `domains/agents/runtime/operations.py` | Orchestration: `send_message` + `stream_send_message` |
-| `domains/agents/runtime/prompt.py` | System prompt assembly (soul, skills, memories, tools, workspace context) |
+| `domains/agents/runtime/prompt.py` | System prompt assembly |
+| `domains/agents/runtime/model_resolver.py` | Shared provider/model resolution (org default tier) |
+| `domains/agents/runtime/settings.py` + `settings_handlers.py` | Org runtime settings blob + admin write surface |
 | `domains/agents/runtime/approvals.py` | In-memory approval store |
+| `uniffy/data/` | ALL shipped content: `catalog/` (agent templates), `skills/`, `prompts/`, `models/catalog.json`, `assets/` |
+| `core/data_files.py` | `DATA_DIR` + the frontmatter reader every shipped-content loader uses |
+| `db/bundled_skills.py` | Boot-time sync of `data/skills/*.md` into `agents_skills` |
+| `domains/agents/templates.py` | Loads `data/catalog/` into `AGENT_TEMPLATES` |
 | `domains/agents/tools/{registry,executor,definitions}.py` | ToolRegistry / ToolExecutor / dataclasses |
 | `domains/agents/tools/builtin/` | Built-in executors grouped by domain |
 | `domains/agents/providers/operations.py` + `client_cache.py` | Key management, two-tier resolution |
-| `domains/agents/sessions/operations.py` | Session CRUD, context query, compaction |
+| `domains/agents/sessions/operations.py` | Session store, context query, compaction, feedback |
 | `domains/agents/cache.py` | Valkey helpers + reverse-index discipline |
+| `src/ui/src/features/agents/components/AgentTestDrawer.tsx` | Shared test / AI Builder drawer |
 | `src/ui/src/features/agents/config/toolCatalog.ts` | Frontend tool catalog |
+| `src/ui/src/features/agents/store/agentTemplatesSlice.ts` | Fetched template catalog for the create flow |
