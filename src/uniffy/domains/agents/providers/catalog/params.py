@@ -59,11 +59,11 @@ def resolve_request_params(
     provider: str,
     model_id: str,
 ) -> dict:
-    """Merge session overrides over agent values for one request.
+    """Merge channel-binding overrides over agent values for one request.
 
     The result is stripped to what the TARGET model accepts (the stored
-    values were validated against the agent's primary model, but a
-    session model_override or fallback can land the request elsewhere).
+    values were validated against their layer's effective model, but a
+    model override or fallback can land the request elsewhere).
     Dropping with a warning beats failing the whole run.
     """
     base = agent_params or {}

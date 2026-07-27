@@ -12,7 +12,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import cast, delete, func, select, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -102,6 +103,46 @@ class OrgSettingsOperations:
                     "value": plain,
                     "value_encrypted": ciphertext,
                     "is_secret": is_secret,
+                    "updated_by_user_id": updated_by_user_id,
+                },
+            )
+        )
+        await self._session.execute(stmt)
+
+    async def merge_json(
+        self,
+        *,
+        organization_id: UUID,
+        namespace: str,
+        key: str,
+        patch: dict[str, Any],
+        updated_by_user_id: UUID | None = None,
+    ) -> None:
+        """Atomically merge ``patch`` into a plaintext JSON-object row.
+
+        The merge (``value || patch``) happens in the database, so concurrent
+        writers owning disjoint keys of the same blob cannot clobber each
+        other the way a read-modify-write upsert can.
+        """
+        stmt = (
+            pg_insert(OrgSetting)
+            .values(
+                organization_id=organization_id,
+                namespace=namespace,
+                key=key,
+                value=patch,
+                value_encrypted=None,
+                is_secret=False,
+                updated_by_user_id=updated_by_user_id,
+            )
+            .on_conflict_do_update(
+                index_elements=["organization_id", "namespace", "key"],
+                set_={
+                    "value": func.coalesce(
+                        OrgSetting.__table__.c.value, text("'{}'::jsonb")
+                    ).op("||")(cast(patch, JSONB)),
+                    "value_encrypted": None,
+                    "is_secret": False,
                     "updated_by_user_id": updated_by_user_id,
                 },
             )

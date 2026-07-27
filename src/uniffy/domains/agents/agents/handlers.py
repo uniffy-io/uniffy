@@ -19,6 +19,8 @@ from uniffy_proto.agents.v1.agents_pb2 import (
     GetAgentResponse,
     ListAgentsRequest,
     ListAgentsResponse,
+    ListAgentTemplatesRequest,
+    ListAgentTemplatesResponse,
     PreviewSystemPromptRequest,
     PreviewSystemPromptResponse,
     UpdateAgentRequest,
@@ -40,7 +42,8 @@ from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
-from uniffy.domains.agents.agents.converters import agent_to_proto
+from uniffy.domains.agents.access import require_agents_builder
+from uniffy.domains.agents.agents.converters import agent_template_to_proto, agent_to_proto
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.cache import fetch_memory_index
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
@@ -52,6 +55,7 @@ from uniffy.domains.agents.runtime.prompt import (
     to_skill_prompt_entry,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.domains.agents.templates import AGENT_TEMPLATES
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.tags import Tag, TagOperations
@@ -160,8 +164,10 @@ class AgentsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else ""
+        # Empty when omitted so a name-only agent inherits the org default model
+        # at run time; a hardcoded fallback here would shadow that default.
         primary_model = (
-            request.primary_model if request.HasField("primary_model") else "claude-sonnet-4-6"
+            request.primary_model if request.HasField("primary_model") else ""
         )
         avatar_emoji = request.avatar_emoji if request.HasField("avatar_emoji") else ""
         theme_color = request.theme_color if request.HasField("theme_color") else ""
@@ -186,11 +192,6 @@ class AgentsHandlers:
         image_provider_key_id = (
             _parse_uuid(request.image_provider_key_id, "image_provider_key_id")
             if request.HasField("image_provider_key_id") and request.image_provider_key_id
-            else None
-        )
-        prompt_id = (
-            _parse_uuid(request.prompt_id, "prompt_id")
-            if request.HasField("prompt_id") and request.prompt_id
             else None
         )
         tag_ids = _parse_tag_ids(list(request.tag_ids))
@@ -220,7 +221,6 @@ class AgentsHandlers:
                     image_model=image_model,
                     primary_provider_key_id=primary_provider_key_id,
                     image_provider_key_id=image_provider_key_id,
-                    prompt_id=prompt_id,
                     tag_ids=tag_ids or None,
                     model_params=model_params,
                 )
@@ -286,7 +286,6 @@ class AgentsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
-        personal_only = request.personal_only if request.HasField("personal_only") else False
         group_id = (
             _parse_uuid(request.group_id, "group_id") if request.HasField("group_id") else None
         )
@@ -306,7 +305,6 @@ class AgentsHandlers:
                     user_id=user_id,
                     organization_id=org_id,
                     access_mode=access_mode,
-                    personal_only=personal_only,
                     group_id=group_id,
                     page=page,
                     page_size=page_size,
@@ -349,6 +347,43 @@ class AgentsHandlers:
         except Exception as exc:
             raise _map_domain_error("list_agents", exc) from exc
 
+    async def list_agent_templates(
+        self,
+        request: ListAgentTemplatesRequest,
+        ctx: RequestContext,
+    ) -> ListAgentTemplatesResponse:
+        """List the shipped templates with their bundled skills resolved to ids."""
+        user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+
+        try:
+            async with open_session() as session:
+                await require_agents_builder(session, user_id, org_id)
+
+                names = [
+                    name for t in AGENT_TEMPLATES for name in t.bundled_skill_names
+                ]
+                id_by_name = await SkillOperations(session).resolve_bundled_skill_id_map(
+                    names
+                )
+                return ListAgentTemplatesResponse(
+                    templates=[
+                        agent_template_to_proto(
+                            t,
+                            [
+                                id_by_name[name]
+                                for name in t.bundled_skill_names
+                                if name in id_by_name
+                            ],
+                        )
+                        for t in AGENT_TEMPLATES
+                    ]
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("list_agent_templates", exc) from exc
+
     async def update_agent(
         self,
         request: UpdateAgentRequest,
@@ -387,16 +422,6 @@ class AgentsHandlers:
             else:
                 clear_image_provider_key = True
 
-        prompt_id = None
-        clear_prompt = False
-        if request.HasField("prompt_id"):
-            if request.prompt_id:
-                prompt_id = _parse_uuid(request.prompt_id, "prompt_id")
-            else:
-                clear_prompt = True
-        if request.HasField("clear_prompt") and request.clear_prompt:
-            clear_prompt = True
-
         fallback_models = list(request.fallback_models)
         enabled_skills = list(request.enabled_skills)
         enabled_tools = list(request.enabled_tools)
@@ -432,8 +457,6 @@ class AgentsHandlers:
                     image_provider_key_id=image_provider_key_id,
                     clear_primary_provider_key=clear_primary_provider_key,
                     clear_image_provider_key=clear_image_provider_key,
-                    prompt_id=prompt_id,
-                    clear_prompt=clear_prompt,
                     tag_ids=tag_ids,
                     model_params=model_params,
                 )
@@ -608,11 +631,6 @@ class AgentsHandlers:
                     organization_id=org_id,
                 )
 
-                prompt_content = await self._resolve_prompt_for_preview(
-                    session=session,
-                    prompt_id=agent.prompt_id,
-                )
-
                 system_prompt = build_system_prompt(
                     agent_name=agent.name,
                     soul_prompt=agent.soul_prompt,
@@ -622,7 +640,6 @@ class AgentsHandlers:
                     enabled_tools=agent.enabled_tools or [],
                     skills=skill_entries or None,
                     memory_context=memory_context,
-                    prompt_content=prompt_content,
                 )
 
                 return PreviewSystemPromptResponse(system_prompt=system_prompt)
@@ -672,22 +689,3 @@ class AgentsHandlers:
             logger.opt(exception=True).warning("Failed to fetch memory context for preview")
             return None
 
-    @staticmethod
-    async def _resolve_prompt_for_preview(
-        *,
-        session: AsyncSession,
-        prompt_id: UUID | None,
-    ) -> str | None:
-        """Resolve prompt template content for preview."""
-        if not prompt_id:
-            return None
-        try:
-            from uniffy.domains.agents.prompts.operations import PromptOperations
-
-            prompt_ops = PromptOperations(session)
-            prompt = await prompt_ops.get_prompt_by_id(prompt_id)
-            if prompt and prompt.content:
-                return prompt.content
-        except Exception:
-            logger.opt(exception=True).warning("Failed to resolve prompt for preview")
-        return None

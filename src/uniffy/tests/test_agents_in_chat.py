@@ -22,7 +22,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
     UpdateChannelAgentConfigRequest,
 )
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import SenderType
@@ -45,6 +45,7 @@ from uniffy.domains.agents.chat_integration.mention_detector import (
 )
 from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
+from uniffy.domains.agents.runtime import model_resolver as model_resolver_mod
 from uniffy.domains.agents.runtime import operations as runtime_ops_mod
 from uniffy.domains.agents.runtime.approvals import ApprovalStore
 from uniffy.domains.agents.runtime.compactor import (
@@ -699,6 +700,8 @@ def _binding_row(
     model_params_override: dict | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
+        channel_id=uuid7(),
+        agent_id=uuid7(),
         model_override=model_override,
         model_params_override=model_params_override,
     )
@@ -708,6 +711,8 @@ def _config_ops(
     binding: SimpleNamespace,
     *,
     channel_type: ChannelType = ChannelType.DIRECT,
+    provider_name: str = "anthropic",
+    effective_model: str = "claude-fable-5",
 ):
     session = MagicMock()
     session.commit = AsyncMock()
@@ -717,6 +722,9 @@ def _config_ops(
     channel = SimpleNamespace(id=uuid7(), channel_type=channel_type)
     agent = SimpleNamespace(id=uuid7(), name="Helper")
     ops._load_triple = AsyncMock(return_value=(channel, agent, binding))
+    ops._resolve_provider_and_model = AsyncMock(
+        return_value=(SimpleNamespace(name=provider_name), effective_model)
+    )
     return ops, session, access
 
 
@@ -738,7 +746,7 @@ class TestChannelAgentConfigOps:
         assert out is binding
         access.check_access.assert_awaited_once()
 
-    def test_update_config_sets_both_overrides(self) -> None:
+    def test_update_config_sets_model_override(self) -> None:
         binding = _binding_row()
         ops, session, access = _config_ops(binding)
         access.get_membership = AsyncMock(return_value=SimpleNamespace())
@@ -747,43 +755,27 @@ class TestChannelAgentConfigOps:
             ops.update_config(
                 **self._ids(),
                 model_override="  gpt-5.4  ",
-                model_params_override={"temperature": 0.2},
             )
         )
         assert out is binding
         assert binding.model_override == "gpt-5.4"
-        assert binding.model_params_override == {"temperature": 0.2}
         session.commit.assert_awaited_once()
 
     def test_update_config_none_leaves_fields_unchanged(self) -> None:
-        binding = _binding_row(
-            model_override="keep-me", model_params_override={"top_p": 0.9}
-        )
+        binding = _binding_row(model_override="keep-me")
         ops, _session, access = _config_ops(binding)
         access.get_membership = AsyncMock(return_value=SimpleNamespace())
 
-        _run(
-            ops.update_config(
-                **self._ids(), model_override=None, model_params_override=None
-            )
-        )
+        _run(ops.update_config(**self._ids(), model_override=None))
         assert binding.model_override == "keep-me"
-        assert binding.model_params_override == {"top_p": 0.9}
 
     def test_update_config_empty_values_clear(self) -> None:
-        binding = _binding_row(
-            model_override="old-model", model_params_override={"top_p": 0.9}
-        )
+        binding = _binding_row(model_override="old-model")
         ops, _session, access = _config_ops(binding)
         access.get_membership = AsyncMock(return_value=SimpleNamespace())
 
-        _run(
-            ops.update_config(
-                **self._ids(), model_override="  ", model_params_override={}
-            )
-        )
+        _run(ops.update_config(**self._ids(), model_override="  "))
         assert binding.model_override is None
-        assert binding.model_params_override is None
 
     def test_update_config_denied_for_dm_non_member(self) -> None:
         binding = _binding_row(model_override="keep-me")
@@ -795,11 +787,89 @@ class TestChannelAgentConfigOps:
                 ops.update_config(
                     **self._ids(),
                     model_override="new-model",
-                    model_params_override={"temperature": 1.0},
                 )
             )
         assert binding.model_override == "keep-me"
         session.commit.assert_not_awaited()
+
+    def test_update_config_stores_params_valid_for_effective_model(self) -> None:
+        binding = _binding_row()
+        ops, session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        _run(
+            ops.update_config(
+                **self._ids(),
+                model_params_override={"reasoning_effort": "max"},
+            )
+        )
+        assert binding.model_params_override == {"reasoning_effort": "max"}
+        ops._resolve_provider_and_model.assert_awaited_once()
+        session.commit.assert_awaited_once()
+
+    def test_update_config_rejects_out_of_schema_params(self) -> None:
+        binding = _binding_row(model_params_override={"reasoning_effort": "max"})
+        ops, session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        # claude-fable-5 rejects the temperature knob.
+        with pytest.raises(ValidationError):
+            _run(
+                ops.update_config(
+                    **self._ids(),
+                    model_params_override={"temperature": 0.4},
+                )
+            )
+        assert binding.model_params_override == {"reasoning_effort": "max"}
+        session.commit.assert_not_awaited()
+
+    def test_update_config_empty_params_clear_without_resolution(self) -> None:
+        binding = _binding_row(model_params_override={"reasoning_effort": "max"})
+        ops, _session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        _run(ops.update_config(**self._ids(), model_params_override={}))
+        assert binding.model_params_override is None
+        ops._resolve_provider_and_model.assert_not_awaited()
+
+    def test_update_config_model_switch_strips_invalid_params(self) -> None:
+        binding = _binding_row(
+            model_override="gpt-4o",
+            model_params_override={"temperature": 0.4, "reasoning_effort": "max"},
+        )
+        ops, _session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        _run(ops.update_config(**self._ids(), model_override="claude-fable-5"))
+        assert binding.model_params_override == {"reasoning_effort": "max"}
+
+    def test_update_config_same_model_leaves_params_alone(self) -> None:
+        binding = _binding_row(
+            model_override="claude-fable-5",
+            model_params_override={"reasoning_effort": "max"},
+        )
+        ops, _session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+
+        _run(ops.update_config(**self._ids(), model_override="claude-fable-5"))
+        assert binding.model_params_override == {"reasoning_effort": "max"}
+        ops._resolve_provider_and_model.assert_not_awaited()
+
+    def test_update_config_strip_keeps_params_when_unresolvable(self) -> None:
+        binding = _binding_row(
+            model_override="old-model",
+            model_params_override={"reasoning_effort": "max"},
+        )
+        ops, _session, access = _config_ops(binding)
+        access.get_membership = AsyncMock(return_value=SimpleNamespace())
+        ops._resolve_provider_and_model = AsyncMock(
+            side_effect=ValidationError("model", "nothing configured")
+        )
+
+        _run(ops.update_config(**self._ids(), model_override="new-model"))
+        # The send path strips per-request; an unresolvable target must not
+        # wipe the stored overrides.
+        assert binding.model_params_override == {"reasoning_effort": "max"}
 
 
 class _FakeConfigOps:
@@ -856,7 +926,7 @@ class TestChannelAgentConfigHandlers:
     def test_get_config_happy_path(self, monkeypatch) -> None:
         binding = _binding_row(
             model_override="claude-sonnet-5",
-            model_params_override={"temperature": 0.5},
+            model_params_override={"reasoning_effort": "max"},
         )
         fake_ops = _install_config_handler_env(monkeypatch, binding=binding)
         handlers = context_handlers_mod.ChannelAgentContextHandlers()
@@ -867,8 +937,8 @@ class TestChannelAgentConfigHandlers:
             )
         )
         assert response.config.model_override == "claude-sonnet-5"
-        assert json.loads(response.config.model_params_override_json) == {
-            "temperature": 0.5
+        assert json.loads(response.config.model_params_override) == {
+            "reasoning_effort": "max"
         }
         assert len(fake_ops.get_calls) == 1
 
@@ -884,7 +954,7 @@ class TestChannelAgentConfigHandlers:
             )
         )
         assert response.config.model_override == ""
-        assert response.config.model_params_override_json == ""
+        assert response.config.model_params_override == ""
         assert len(fake_ops.get_calls) == 1
 
     def test_update_config_passes_set_values_to_ops(self, monkeypatch) -> None:
@@ -896,14 +966,14 @@ class TestChannelAgentConfigHandlers:
                 UpdateChannelAgentConfigRequest(
                     **self._request_ids(),
                     model_override="gpt-5.4",
-                    model_params_override_json='{"reasoning": "high"}',
+                    model_params_override='{"temperature": 0.4}',
                 ),
                 MagicMock(),
             )
         )
         call = fake_ops.update_calls[0]
         assert call["model_override"] == "gpt-5.4"
-        assert call["model_params_override"] == {"reasoning": "high"}
+        assert call["model_params_override"] == {"temperature": 0.4}
 
     def test_update_config_present_empty_clears(self, monkeypatch) -> None:
         fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
@@ -914,7 +984,7 @@ class TestChannelAgentConfigHandlers:
                 UpdateChannelAgentConfigRequest(
                     **self._request_ids(),
                     model_override="",
-                    model_params_override_json="",
+                    model_params_override="",
                 ),
                 MagicMock(),
             )
@@ -936,7 +1006,7 @@ class TestChannelAgentConfigHandlers:
         assert call["model_override"] is None
         assert call["model_params_override"] is None
 
-    def test_update_config_rejects_invalid_json(self, monkeypatch) -> None:
+    def test_update_config_rejects_malformed_params_json(self, monkeypatch) -> None:
         fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
         handlers = context_handlers_mod.ChannelAgentContextHandlers()
 
@@ -945,7 +1015,24 @@ class TestChannelAgentConfigHandlers:
                 handlers.update_channel_agent_config(
                     UpdateChannelAgentConfigRequest(
                         **self._request_ids(),
-                        model_params_override_json="{not json",
+                        model_params_override="not-json",
+                    ),
+                    MagicMock(),
+                )
+            )
+        assert exc.value.code == Code.INVALID_ARGUMENT
+        assert fake_ops.update_calls == []
+
+    def test_update_config_rejects_non_object_params_json(self, monkeypatch) -> None:
+        fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
+        handlers = context_handlers_mod.ChannelAgentContextHandlers()
+
+        with pytest.raises(ConnectError) as exc:
+            _run(
+                handlers.update_channel_agent_config(
+                    UpdateChannelAgentConfigRequest(
+                        **self._request_ids(),
+                        model_params_override="[1, 2]",
                     ),
                     MagicMock(),
                 )
@@ -997,7 +1084,6 @@ def _stream_agent(
         model_params={"temperature": 0.7},
         enabled_tools=[],
         enabled_skills=[],
-        prompt_id=None,
     )
 
 
@@ -1052,9 +1138,6 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
     async def fake_record_injections(_session, **_kwargs):
         return None
 
-    async def fake_fetch_prompt(_session, **_kwargs):
-        return None
-
     async def fake_resolve_model(**kwargs):
         captured["resolve_model"] = kwargs
         return "resolved-model"
@@ -1072,14 +1155,13 @@ def _stream_runtime_ops(monkeypatch, *, binding_row, agent):
     monkeypatch.setattr(
         runtime_ops_mod, "record_skill_injections", fake_record_injections
     )
-    monkeypatch.setattr(runtime_ops_mod, "fetch_agent_prompt", fake_fetch_prompt)
     monkeypatch.setattr(
         runtime_ops_mod, "build_system_prompt", lambda **_kwargs: "sys"
     )
     monkeypatch.setattr(
         runtime_ops_mod, "get_tool_registry", lambda: MagicMock()
     )
-    monkeypatch.setattr(runtime_ops_mod, "resolve_model", fake_resolve_model)
+    monkeypatch.setattr(model_resolver_mod, "resolve_model", fake_resolve_model)
     monkeypatch.setattr(
         runtime_ops_mod, "resolve_request_params", fake_resolve_request_params
     )
@@ -1108,7 +1190,7 @@ class TestChatStreamBindingOverrides:
     def test_binding_overrides_thread_into_resolution(self, monkeypatch) -> None:
         binding = _binding_row(
             model_override="channel-model",
-            model_params_override={"reasoning": "high"},
+            model_params_override={"temperature": 0.1},
         )
         agent = _stream_agent(primary_provider_key_id=uuid7())
         ops, session, captured = _stream_runtime_ops(
@@ -1119,11 +1201,21 @@ class TestChatStreamBindingOverrides:
 
         assert captured["resolve_model"]["session_model_override"] == "channel-model"
         assert captured["request_params"]["agent_params"] == {"temperature": 0.7}
-        assert captured["request_params"]["override_params"] == {"reasoning": "high"}
+        assert captured["request_params"]["override_params"] == {"temperature": 0.1}
         assert captured["request_params"]["provider"] == "anthropic"
         assert captured["request_params"]["model_id"] == "resolved-model"
         # One indexed SELECT for the binding, nothing else on the session.
         assert session.execute.await_count == 1
+
+    def test_binding_params_merge_over_agent_params(self) -> None:
+        # gpt-4o accepts both knobs; the binding value must win on collision.
+        merged = runtime_ops_mod.resolve_request_params(
+            {"temperature": 0.7, "top_p": 0.9},
+            {"temperature": 0.1},
+            "openai",
+            "gpt-4o",
+        )
+        assert merged == {"temperature": 0.1, "top_p": 0.9}
 
     def test_binding_override_drives_provider_lookup_without_pinned_key(
         self, monkeypatch
@@ -1148,5 +1240,5 @@ class TestChatStreamBindingOverrides:
         _run_chat_stream_until_params(ops)
 
         assert captured["resolve_model"]["session_model_override"] is None
-        assert captured["request_params"]["override_params"] is None
         assert captured["request_params"]["agent_params"] == {"temperature": 0.7}
+        assert captured["request_params"]["override_params"] is None

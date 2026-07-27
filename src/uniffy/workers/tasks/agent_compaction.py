@@ -15,7 +15,7 @@ from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.db.session import open_session
 from uniffy.domains.agents.providers.operations import ProviderOperations
-from uniffy.domains.agents.runtime.model_resolver import resolve_model
+from uniffy.domains.agents.runtime.model_resolver import resolve_provider_and_model
 from uniffy.domains.agents.sessions.operations import (
     FALLBACK_CONTEXT_WINDOW,
     SessionOperations,
@@ -101,23 +101,12 @@ async def compact_session(
                     "session_id": session_id,
                 }
 
-            target_model = agent_session.model_override or agent.primary_model
-            if agent.primary_provider_key_id:
-                provider, _pk = await provider_ops.get_provider_for_key(
-                    organization_id=agent_session.organization_id,
-                    key_id=agent.primary_provider_key_id,
-                )
-            else:
-                provider = await provider_ops.get_provider_for_model(
-                    organization_id=agent_session.organization_id,
-                    model_id=target_model,
-                )
-
-            model = await resolve_model(
-                session_model_override=agent_session.model_override,
-                agent_primary_model=agent.primary_model,
-                agent_fallback_models=agent.fallback_models or [],
-                provider=provider,
+            provider, _key_id, model = await resolve_provider_and_model(
+                session,
+                provider_ops,
+                organization_id=agent_session.organization_id,
+                agent=agent,
+                model_override=agent_session.model_override,
             )
 
             context_window = FALLBACK_CONTEXT_WINDOW

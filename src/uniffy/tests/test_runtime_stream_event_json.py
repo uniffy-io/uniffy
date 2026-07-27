@@ -198,7 +198,6 @@ class TestRuntimeStreamEventRoundTrip:
             name="weekly-report",
             display_name="Weekly Report",
             content="Steps to write the report",
-            suggested_scope="personal",
             status="pending",
         )
         decoded = _round_trip(StreamEvent(type=EventType.SKILL_DRAFT, draft=draft))

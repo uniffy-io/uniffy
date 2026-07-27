@@ -3,15 +3,10 @@
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo, ProviderDescriptor
 from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 from uniffy.domains.agents.providers.google.provider import GoogleProvider
-from uniffy.domains.agents.providers.google.validation import validate_google_credential
 
 
 class GoogleDescriptor(ProviderDescriptor):
-    """Provider descriptor for Google Gemini models.
-
-    Bundles the Google provider factory, model catalog, and credential
-    validation into a single registration unit.
-    """
+    """Bundles the Google provider factory and model catalog."""
 
     @property
     def name(self) -> str:
@@ -23,54 +18,10 @@ class GoogleDescriptor(ProviderDescriptor):
         """Return the human-readable provider name."""
         return "Google"
 
-    @property
-    def supported_credential_types(self) -> list[str]:
-        """Return credential types accepted by Google.
-
-        Returns
-        -------
-        list[str]
-            Supported credential types.
-
-        """
-        return ["api_key"]
-
-    def create(self, credential: str, credential_type: str) -> LLMProvider:
-        """Create a GoogleProvider instance.
-
-        Parameters
-        ----------
-        credential : str
-            Decrypted API key.
-        credential_type : str
-            Credential type.
-
-        Returns
-        -------
-        LLMProvider
-            Configured Google provider.
-
-        """
-        return GoogleProvider(credential, credential_type=credential_type)
+    def create(self, credential: str) -> LLMProvider:
+        """Create a GoogleProvider from a decrypted API key."""
+        return GoogleProvider(credential)
 
     def get_models(self) -> list[ModelInfo]:
         """Return the static Google catalog (used when no live key is set)."""
         return model_infos_for_provider("google")
-
-    def validate_credential(self, credential: str, credential_type: str) -> None:
-        """Validate a Google credential format.
-
-        Parameters
-        ----------
-        credential : str
-            Raw credential string.
-        credential_type : str
-            Credential type.
-
-        Raises
-        ------
-        ValidationError
-            If the credential format is invalid.
-
-        """
-        validate_google_credential(credential, credential_type)

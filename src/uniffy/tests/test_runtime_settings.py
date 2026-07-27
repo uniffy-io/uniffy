@@ -48,6 +48,8 @@ def test_missing_row_falls_back_to_module_defaults() -> None:
             == DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS
         )
         assert resolved.display_currency == DEFAULT_DISPLAY_CURRENCY
+        assert resolved.default_provider_key_id is None
+        assert resolved.default_chat_model is None
 
     asyncio.run(run())
 
@@ -102,5 +104,272 @@ def test_failed_db_call_returns_defaults_without_raising() -> None:
         resolved = await get_runtime_settings(session, org_id)
 
         assert resolved.send_deadline_seconds == DEFAULT_SEND_DEADLINE_SECONDS
+
+    asyncio.run(run())
+
+
+def _admin_ops(*, admin_raises=False, store: dict | None = None):
+    from types import SimpleNamespace as NS
+    from unittest.mock import patch
+
+    from uniffy.core.errors import PermissionDeniedError
+    from uniffy.domains.agents.runtime.settings import RuntimeSettingsOperations
+
+    ops = RuntimeSettingsOperations.__new__(RuntimeSettingsOperations)
+    ops._session = MagicMock()
+    ops._session.commit = AsyncMock()
+    ops._org_ops = NS(
+        require_org_admin=AsyncMock(
+            side_effect=PermissionDeniedError("admin") if admin_raises else None
+        ),
+        require_org_member=AsyncMock(),
+    )
+    ops._settings = MagicMock()
+
+    # Simulate the database-side JSONB merge with a plain dict store.
+    blob = store if store is not None else {}
+
+    async def fake_merge(**kwargs):
+        blob.update(kwargs["patch"])
+
+    async def fake_get_namespace(org_id, namespace):
+        if not blob:
+            return {}
+        return {"runtime": NS(key="runtime", value=dict(blob))}
+
+    ops._settings.merge_json = AsyncMock(side_effect=fake_merge)
+    ops._settings.get_namespace = AsyncMock(side_effect=fake_get_namespace)
+    return ops, patch
+
+
+def _update_kwargs(**overrides):
+    kwargs = dict(
+        user_id=uuid4(),
+        organization_id=uuid4(),
+        send_deadline_seconds=42,
+        failover_enabled=True,
+        resume_enabled=True,
+        circuit_breaker_failure_threshold=5,
+        circuit_breaker_recovery_seconds=60,
+        personal_memory_bridge_enabled=True,
+        default_provider_key_id="",
+        default_chat_model="",
+    )
+    kwargs.update(overrides)
+    return kwargs
+
+
+def test_admin_get_requires_org_admin() -> None:
+    from uniffy.core.errors import PermissionDeniedError
+
+    ops, _ = _admin_ops(admin_raises=True)
+
+    async def run() -> None:
+        try:
+            await ops.get(user_id=uuid4(), organization_id=uuid4())
+        except PermissionDeniedError:
+            return
+        raise AssertionError("expected PermissionDeniedError")
+
+    asyncio.run(run())
+
+
+def test_admin_update_round_trips_every_field() -> None:
+    ops, patch = _admin_ops()
+
+    async def run() -> None:
+        with patch(
+            "uniffy.domains.agents.runtime.settings.write_audit_event",
+            AsyncMock(),
+        ):
+            resolved, configured = await ops.update(
+                **_update_kwargs(
+                    failover_enabled=False,
+                    resume_enabled=False,
+                    circuit_breaker_failure_threshold=9,
+                    circuit_breaker_recovery_seconds=99,
+                    personal_memory_bridge_enabled=False,
+                    default_chat_model="claude-sonnet-4-6",
+                )
+            )
+        assert configured is True
+        assert resolved.send_deadline_seconds == 42
+        assert resolved.failover_enabled is False
+        assert resolved.resume_enabled is False
+        assert resolved.circuit_breaker_failure_threshold == 9
+        assert resolved.circuit_breaker_recovery_seconds == 99
+        assert resolved.personal_memory_bridge_enabled is False
+        assert resolved.default_chat_model == "claude-sonnet-4-6"
+
+    asyncio.run(run())
+
+
+def test_admin_update_preserves_unmanaged_keys() -> None:
+    store = {"display_currency": "EUR", "failover_enabled": True}
+    ops, patch = _admin_ops(store=store)
+
+    async def run() -> None:
+        with patch(
+            "uniffy.domains.agents.runtime.settings.write_audit_event",
+            AsyncMock(),
+        ):
+            resolved, _ = await ops.update(**_update_kwargs())
+        # display_currency is not managed by this surface; the patch must not
+        # carry it and the merged blob must still have it.
+        patch_arg = ops._settings.merge_json.await_args.kwargs["patch"]
+        assert "display_currency" not in patch_arg
+        assert store["display_currency"] == "EUR"
+        assert resolved.display_currency == "EUR"
+
+    asyncio.run(run())
+
+
+def _key_row(**overrides):
+    defaults = dict(
+        id=uuid4(),
+        provider="anthropic",
+        is_enabled=True,
+        is_valid=True,
+    )
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
+
+
+def _ops_with_key(key):
+    ops, patch = _admin_ops()
+    result = MagicMock()
+    result.scalar_one_or_none = MagicMock(return_value=key)
+    ops._session.execute = AsyncMock(return_value=result)
+    return ops, patch
+
+
+def _expect_update_rejected(ops, **overrides) -> None:
+    from uniffy.core.errors import ValidationError
+
+    async def run() -> None:
+        try:
+            await ops.update(**_update_kwargs(**overrides))
+        except ValidationError:
+            return
+        raise AssertionError("expected ValidationError")
+
+    asyncio.run(run())
+
+
+def test_default_key_must_be_enabled_and_valid() -> None:
+    key = _key_row(is_enabled=False)
+    ops, _ = _ops_with_key(key)
+    _expect_update_rejected(ops, default_provider_key_id=str(key.id))
+
+
+def test_default_model_must_match_key_provider() -> None:
+    from unittest.mock import patch
+
+    key = _key_row(provider="anthropic")
+    ops, _ = _ops_with_key(key)
+    with patch(
+        "uniffy.domains.agents.runtime.settings.provider_for_model",
+        MagicMock(return_value="openai"),
+    ):
+        _expect_update_rejected(
+            ops,
+            default_provider_key_id=str(key.id),
+            default_chat_model="gpt-5.4",
+        )
+
+
+def test_coherent_default_key_and_model_accepted() -> None:
+    from unittest.mock import patch
+
+    key = _key_row(provider="anthropic")
+    ops, _ = _ops_with_key(key)
+
+    async def run() -> None:
+        with (
+            patch(
+                "uniffy.domains.agents.runtime.settings.write_audit_event",
+                AsyncMock(),
+            ),
+            patch(
+                "uniffy.domains.agents.runtime.settings.provider_for_model",
+                MagicMock(return_value="anthropic"),
+            ),
+        ):
+            resolved, _ = await ops.update(
+                **_update_kwargs(
+                    default_provider_key_id=str(key.id),
+                    default_chat_model="claude-sonnet-4-6",
+                )
+            )
+        assert resolved.default_provider_key_id == key.id
+        assert resolved.default_chat_model == "claude-sonnet-4-6"
+
+    asyncio.run(run())
+
+
+def test_from_blob_survives_malformed_values() -> None:
+    from uniffy.domains.agents.runtime.settings import _from_blob
+
+    parsed = _from_blob(
+        {
+            "send_deadline_seconds": "not-a-number",
+            "circuit_breaker_failure_threshold": None,
+            "circuit_breaker_recovery_seconds": -5,
+        }
+    )
+    assert parsed.send_deadline_seconds == DEFAULT_SEND_DEADLINE_SECONDS
+    assert (
+        parsed.circuit_breaker_failure_threshold
+        == DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD
+    )
+    assert (
+        parsed.circuit_breaker_recovery_seconds
+        == DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS
+    )
+
+
+def test_from_blob_parses_key_id_and_model() -> None:
+    from uniffy.domains.agents.runtime.settings import _from_blob
+
+    key_id = uuid4()
+    parsed = _from_blob(
+        {
+            "default_provider_key_id": str(key_id),
+            "default_chat_model": "  claude-sonnet-4-6  ",
+        }
+    )
+    assert parsed.default_provider_key_id == key_id
+    assert parsed.default_chat_model == "claude-sonnet-4-6"
+
+
+def test_from_blob_bad_key_id_is_none() -> None:
+    from uniffy.domains.agents.runtime.settings import _from_blob
+
+    parsed = _from_blob({"default_provider_key_id": "not-a-uuid"})
+    assert parsed.default_provider_key_id is None
+
+
+def test_bridge_disabled_when_flag_false() -> None:
+    from types import SimpleNamespace as NS
+    from unittest.mock import patch
+
+    from uniffy.core.models.agents.memory import MemoryScope
+    from uniffy.domains.agents.memories.scope import MemoryScopeRef
+    from uniffy.domains.agents.runtime.operations import RuntimeOperations
+
+    ops = object.__new__(RuntimeOperations)
+    ops._session = MagicMock()
+
+    async def run() -> None:
+        with patch(
+            "uniffy.domains.agents.runtime.operations.get_runtime_settings",
+            AsyncMock(return_value=NS(personal_memory_bridge_enabled=False)),
+        ):
+            result = await ops._resolve_memory_bridge(
+                scope_ref=MemoryScopeRef(MemoryScope.CHANNEL, uuid4()),
+                user_id=uuid4(),
+                organization_id=uuid4(),
+            )
+        assert result is None
 
     asyncio.run(run())

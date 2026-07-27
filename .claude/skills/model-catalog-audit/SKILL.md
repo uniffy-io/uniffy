@@ -3,7 +3,7 @@ name: model-catalog-audit
 description: Audit the in-tree model catalog against each provider's live API (Anthropic, OpenAI, Google, OpenRouter, xAI) using the keys in .env. Surfaces new models the catalog is missing, catalog models a provider no longer returns, and price/context drift on the curated OpenRouter subset, so the catalog stays current. Works on both stacks (docker containers or host venv). Run periodically or when a provider ships new models / changes pricing.
 ---
 
-Keep `src/uniffy/domains/agents/providers/catalog/catalog.json` current by diffing
+Keep `src/uniffy/data/models/catalog.json` current by diffing
 it against what the providers actually serve. The catalog is the source of truth
 for the model list, pricing, capabilities, and image-gen support (see
 `.claude/rules/agents.md`), so it drifts as providers ship and retire models.

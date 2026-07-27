@@ -1,4 +1,5 @@
 ---
+id: 019fa4a1-b703-7496-aae4-144c762637a4
 name: code_reviewer
 display_name: Code Reviewer
 description: Review code for bugs, style issues, and security vulnerabilities. Provide actionable feedback with specific line references.

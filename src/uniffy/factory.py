@@ -16,10 +16,12 @@ from uniffy_proto.agents.v1.agents_connect import AgentsServiceASGIApplication
 from uniffy_proto.agents.v1.budgets_connect import BudgetsServiceASGIApplication
 from uniffy_proto.agents.v1.cron_connect import CronServiceASGIApplication
 from uniffy_proto.agents.v1.memories_connect import MemoriesServiceASGIApplication
-from uniffy_proto.agents.v1.prompts_connect import PromptsServiceASGIApplication
 from uniffy_proto.agents.v1.providers_connect import ProvidersServiceASGIApplication
 from uniffy_proto.agents.v1.rate_limits_connect import RateLimitsServiceASGIApplication
-from uniffy_proto.agents.v1.runtime_connect import RuntimeServiceASGIApplication
+from uniffy_proto.agents.v1.runtime_connect import (
+    RuntimeServiceASGIApplication,
+    RuntimeSettingsServiceASGIApplication,
+)
 from uniffy_proto.agents.v1.sessions_connect import SessionsServiceASGIApplication
 from uniffy_proto.agents.v1.skills_connect import SkillsServiceASGIApplication
 from uniffy_proto.audit.v1.audit_connect import AuditServiceASGIApplication
@@ -89,13 +91,18 @@ from uniffy.core.valkey import (
     signal_pubsub_shutdown,
 )
 from uniffy.core.webhooks import register_webhook_provider, webhooks_router
-from uniffy.db import close_db, init_db, open_session, seed_initial_data
+from uniffy.db import (
+    close_db,
+    init_db,
+    open_session,
+    seed_initial_data,
+    sync_bundled_skills,
+)
 from uniffy.domains.agents.agents.http_routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
 from uniffy.domains.agents.budgets.service import BudgetsServiceImpl
 from uniffy.domains.agents.cron.service import CronServiceImpl
 from uniffy.domains.agents.memories.service import MemoriesServiceImpl
-from uniffy.domains.agents.prompts.service import PromptsServiceImpl
 from uniffy.domains.agents.providers.client_cache import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
@@ -103,6 +110,9 @@ from uniffy.domains.agents.providers.client_cache import (
 from uniffy.domains.agents.providers.service import ProvidersServiceImpl
 from uniffy.domains.agents.rate_limits.service import RateLimitsServiceImpl
 from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
+from uniffy.domains.agents.runtime.settings_handlers import (
+    RuntimeSettingsServiceImpl,
+)
 from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.audit.service import AuditServiceImpl
@@ -371,6 +381,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Stream revoke coordinator not available: {e}")
 
+    # Ahead of the seed: the bootstrapped default agent resolves bundled skills
+    # by id, so the rows have to exist before the first organization is created.
+    try:
+        await sync_bundled_skills()
+    except Exception as e:
+        logger.exception(f"Failed to sync bundled skills: {e}")
+        raise
+
     try:
         await seed_initial_data()
         logger.info("Initial data seeded successfully")
@@ -620,10 +638,6 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         SkillsServiceASGIApplication(SkillsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
-        "/agents.v1.PromptsService",
-        PromptsServiceASGIApplication(PromptsServiceImpl(), interceptors=interceptors),
-    )
-    dispatcher.add_service(
         "/agents.v1.MemoriesService",
         MemoriesServiceASGIApplication(MemoriesServiceImpl(), interceptors=interceptors),
     )
@@ -645,6 +659,12 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
             StreamRevokeWatchMiddleware(
                 RuntimeServiceASGIApplication(RuntimeServiceImpl(), interceptors=interceptors)
             )
+        ),
+    )
+    dispatcher.add_service(
+        "/agents.v1.RuntimeSettingsService",
+        RuntimeSettingsServiceASGIApplication(
+            RuntimeSettingsServiceImpl(), interceptors=interceptors
         ),
     )
 

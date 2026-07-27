@@ -118,6 +118,7 @@ class Action:
     AGENT_RATE_LIMIT_CREATED = "agent.rate_limit_created"
     AGENT_RATE_LIMIT_UPDATED = "agent.rate_limit_updated"
     AGENT_RATE_LIMIT_DELETED = "agent.rate_limit_deleted"
+    AGENT_RUNTIME_SETTINGS_UPDATED = "agent.runtime_settings_updated"
 
     # Agents - provider key toggles (separate from add / rotate / delete)
     AGENT_PROVIDER_KEY_TOGGLED = "agent.provider_key_toggled"

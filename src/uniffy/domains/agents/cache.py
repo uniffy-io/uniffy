@@ -1,9 +1,9 @@
 """Agents-domain Valkey cache helpers.
 
-Caches the read-heavy runtime pre-flight rows (agent, skills, prompt,
-provider-key metadata). Reverse-index sets `tag:skill:{id}` and
-`tag:prompt:{id}` hold agent ids that depend on each shared row so a
-mutation can SMEMBERS + bulk-DEL the dependent agent caches.
+Caches the read-heavy runtime pre-flight rows (agent, skills,
+provider-key metadata). Reverse-index sets `tag:skill:{id}` hold agent
+ids that depend on each shared row so a mutation can SMEMBERS +
+bulk-DEL the dependent agent caches.
 
 Provider-key entries hold non-secret routing metadata only; decrypted
 credentials live in the in-process provider-client LRU. The pubsub
@@ -38,7 +38,6 @@ logger = logger.bind(component="cache")
 
 _AGENT_TTL_SECONDS = 900
 _SKILLS_TTL_SECONDS = 900
-_PROMPT_TTL_SECONDS = 900
 
 
 def _agent_key(agent_id: UUID) -> str:
@@ -49,16 +48,8 @@ def _agent_skills_key(agent_id: UUID) -> str:
     return f"agent:{agent_id}:skills"
 
 
-def _agent_prompt_key(agent_id: UUID) -> str:
-    return f"agent:{agent_id}:prompt"
-
-
 def _skill_tag_key(skill_id: UUID) -> str:
     return f"tag:skill:{skill_id}"
-
-
-def _prompt_tag_key(prompt_id: UUID) -> str:
-    return f"tag:prompt:{prompt_id}"
 
 
 def _org_skills_tag(organization_id: UUID) -> str:
@@ -91,7 +82,6 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
             if agent.image_provider_key_id
             else None
         ),
-        "prompt_id": str(agent.prompt_id) if agent.prompt_id else None,
         "enabled_tools": list(agent.enabled_tools or []),
         "enabled_skills": list(agent.enabled_skills or []),
         "avatar_emoji": agent.avatar_emoji,
@@ -138,9 +128,6 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
             UUID(payload["image_provider_key_id"])
             if payload.get("image_provider_key_id")
             else None
-        ),
-        prompt_id=(
-            UUID(payload["prompt_id"]) if payload.get("prompt_id") else None
         ),
         enabled_tools=payload.get("enabled_tools") or [],
         enabled_skills=payload.get("enabled_skills") or [],
@@ -330,68 +317,6 @@ async def fetch_agent_skills(
     return [_deserialize_skill(s) for s in raw]
 
 
-async def get_cached_agent_prompt(agent_id: UUID) -> str | None:
-    """Return cached resolved prompt content, or `None` on miss/no-prompt."""
-    cached = await cache_get(_agent_prompt_key(agent_id))
-    if cached is CACHE_MISS:
-        return None
-    if cached is None:
-        return None
-    content = cached.get("content")
-    return content if isinstance(content, str) else None
-
-
-async def set_cached_agent_prompt(
-    agent_id: UUID,
-    content: str | None,
-) -> None:
-    payload: dict[str, Any] | None
-    payload = {"content": content} if content is not None else None
-    await cache_set(
-        _agent_prompt_key(agent_id),
-        payload,
-        ttl=_PROMPT_TTL_SECONDS,
-    )
-
-
-async def invalidate_cached_agent_prompt(agent_id: UUID) -> None:
-    await cache_delete(_agent_prompt_key(agent_id))
-
-
-async def fetch_agent_prompt(
-    session: AsyncSession,
-    *,
-    agent_id: UUID,
-    prompt_id: UUID | None,
-) -> str | None:
-    """Stampede-protected cache-or-load for the resolved prompt."""
-    if prompt_id is None:
-        return None
-
-    async def _load() -> dict[str, Any] | None:
-        from uniffy.domains.agents.prompts.operations import PromptOperations
-
-        try:
-            prompt_ops = PromptOperations(session)
-            prompt = await prompt_ops.get_prompt_by_id(prompt_id)
-        except Exception:
-            logger.opt(exception=True).warning("Failed to resolve prompt template")
-            return None
-        if not prompt or not prompt.content:
-            return None
-        return {"content": prompt.content}
-
-    payload = await cache_get_or_set_locked(
-        _agent_prompt_key(agent_id),
-        _load,
-        ttl=_PROMPT_TTL_SECONDS,
-    )
-    if payload is None:
-        return None
-    content = payload.get("content") if isinstance(payload, dict) else None
-    return content if isinstance(content, str) else None
-
-
 async def _set_add(set_key: str, member: str, ttl: int) -> None:
     client = _get_ops_client()
     if client is None:
@@ -458,25 +383,6 @@ async def track_agent_skill_refs(
             await _set_remove(_skill_tag_key(sid), str(agent_id))
 
 
-async def track_agent_prompt_ref(
-    agent_id: UUID,
-    *,
-    old_prompt_id: UUID | None,
-    new_prompt_id: UUID | None,
-) -> None:
-    """Update the `tag:prompt:{pid}` reverse-index; idempotent on no-op."""
-    if old_prompt_id == new_prompt_id:
-        return
-    if old_prompt_id is not None:
-        await _set_remove(_prompt_tag_key(old_prompt_id), str(agent_id))
-    if new_prompt_id is not None:
-        await _set_add(
-            _prompt_tag_key(new_prompt_id),
-            str(agent_id),
-            _PROMPT_TTL_SECONDS,
-        )
-
-
 async def invalidate_agents_using_skill(
     skill_id: UUID,
     *,
@@ -513,32 +419,6 @@ async def invalidate_org_always_active_skills(organization_id: UUID) -> None:
     indices miss them; only the org tag covers all agents at once.
     """
     await cache_invalidate_by_tag(_org_skills_tag(organization_id))
-
-
-async def invalidate_agents_using_prompt(
-    prompt_id: UUID,
-    *,
-    drop_tag_set: bool = False,
-) -> None:
-    """Invalidate the prompt cache for every agent referencing `prompt_id`."""
-    set_key = _prompt_tag_key(prompt_id)
-    members = await _set_members(set_key)
-    if members:
-        keys = [
-            _agent_prompt_key(UUID(aid)) for aid in members if _is_uuid(aid)
-        ]
-        if keys:
-            await cache_invalidate_many(*keys)
-    if drop_tag_set:
-        client = _get_ops_client()
-        if client is not None:
-            try:
-                await client.delete(set_key)
-            except Exception:
-                logger.warning(
-                    f"Cache reverse-index DEL failed for {set_key}",
-                    component="cache",
-                )
 
 
 def _is_uuid(value: str) -> bool:

@@ -168,31 +168,26 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
         {
             "env_var": "CLAUDE_API_KEY",
             "provider": "anthropic",
-            "credential_type": "api_key",
             "label": "anthropic-dev",
         },
         {
             "env_var": "OPENAI_API_KEY",
             "provider": "openai",
-            "credential_type": "api_key",
             "label": "openai-gt-prod",
         },
         {
             "env_var": "GOOGLE_GENAI_API_KEY",
             "provider": "google",
-            "credential_type": "api_key",
             "label": "google-g-prod",
         },
         {
             "env_var": "OPENROUTER_API_KEY",
             "provider": "openrouter",
-            "credential_type": "api_key",
             "label": "Dev OpenRouter Key",
         },
         {
             "env_var": "XAI_API_KEY",
             "provider": "xai",
-            "credential_type": "api_key",
             "label": "Dev xAI Key",
         },
     ]
@@ -209,7 +204,6 @@ async def _seed_provider_keys(session, default_org, admin_user) -> list:
         key = ProviderKey(
             organization_id=default_org.id,
             provider=config["provider"],
-            credential_type=config["credential_type"],
             label=config["label"],
             encrypted_credential=encrypted,
             key_hint=build_key_hint(credential),
@@ -261,8 +255,7 @@ ALL_TOOL_NAMES: list[str] = [
     "search.query",
     "people.list_members",
     "memory.save",
-    "memory.recall",
-    "memory.list",
+    "memory.read",
     "memory.forget",
     "images.generate_image",
     "cron.create",
@@ -459,30 +452,13 @@ async def _seed_dev_rooms(session, default_org, admin_user) -> None:
 
 async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list) -> None:
     """Seed one agent per provider key with all tools enabled."""
-    from sqlalchemy import select
-
     from uniffy.core.models.agents.agent import Agent
-    from uniffy.core.models.agents.prompt import AgentPrompt
     from uniffy.core.types import AccessMode, ContentRole
 
     if not provider_keys:
         logger.info("No provider keys seeded, skipping dev agent creation")
         return
 
-    result = await session.execute(
-        select(AgentPrompt).where(
-            AgentPrompt.organization_id.is_(None),
-            AgentPrompt.name == "uniffy_default",
-        )
-    )
-    default_prompt = result.scalar_one_or_none()
-    prompt_id = default_prompt.id if default_prompt else None
-    if default_prompt:
-        logger.info(f"Attaching bundled prompt '{default_prompt.name}' to dev agents")
-    else:
-        logger.warning("Bundled prompt 'uniffy_default' not found, agents will have no prompt")
-
-    is_first = True
     for provider_name, provider_key in provider_keys:
         config = PROVIDER_AGENT_CONFIGS.get(provider_name)
         if not config:
@@ -501,17 +477,17 @@ async def _seed_dev_agents(session, default_org, admin_user, provider_keys: list
             primary_model=config["primary_model"],
             fallback_models=[],
             primary_provider_key_id=provider_key.id,
-            prompt_id=prompt_id,
             enabled_tools=ALL_TOOL_NAMES,
             enabled_skills=[],
             avatar_emoji=config["avatar_emoji"],
             theme_color=config["theme_color"],
-            is_default=is_first,
+            # Org bootstrap already seeds the one is_default agent per org;
+            # a second claim trips uq_agents_agents_default_per_org.
+            is_default=False,
             access_mode=AccessMode.OPEN_TO_ORG,
             baseline_role=ContentRole.VIEWER,
         )
         session.add(agent)
-        is_first = False
         logger.info(f"Seeded dev agent: {config['name']}")
 
     await session.flush()

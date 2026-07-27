@@ -1,4 +1,5 @@
 ---
+id: 019fa4a1-b703-7496-aae4-144eade2fc28
 name: project_manager
 display_name: Project Manager
 description: Help manage tasks, priorities, deadlines. Break down work into actionable items with clear ownership.

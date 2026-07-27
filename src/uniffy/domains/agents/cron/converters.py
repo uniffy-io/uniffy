@@ -1,5 +1,7 @@
 """Proto <-> domain converters for cron tasks."""
 
+from datetime import timedelta
+
 from uniffy_proto.agents.v1.cron_pb2 import CronRunLogInfo, CronTaskInfo
 
 from uniffy.core.converters import datetime_to_timestamp, optional_timestamp
@@ -7,8 +9,8 @@ from uniffy.core.converters.common_proto import (
     access_mode_to_proto,
     content_role_to_proto,
 )
-from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
+from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.types import AccessMode, ContentRole
 
 
@@ -18,21 +20,6 @@ def cron_task_to_proto(
     effective_access_mode: AccessMode | None = None,
     effective_baseline_role: ContentRole | None = None,
 ) -> CronTaskInfo:
-    """Convert AgentCronTask model to proto CronTaskInfo.
-
-    Parameters
-    ----------
-    task : AgentCronTask
-        Database model instance.
-    agent_name : str | None
-        Optional agent display name.
-
-    Returns
-    -------
-    CronTaskInfo
-        Proto message.
-
-    """
     resolved_mode = (
         effective_access_mode if effective_access_mode is not None else task.access_mode
     )
@@ -91,41 +78,33 @@ def cron_task_to_proto(
     return info
 
 
-def cron_run_log_to_proto(log: AgentCronRunLog) -> CronRunLogInfo:
-    """Convert AgentCronRunLog model to proto CronRunLogInfo.
+def cron_run_log_to_proto(log: AgentRunLog) -> CronRunLogInfo:
+    """Convert a cron-stamped AgentRunLog row to proto CronRunLogInfo.
 
-    Parameters
-    ----------
-    log : AgentCronRunLog
-        Database model instance.
-
-    Returns
-    -------
-    CronRunLogInfo
-        Proto message.
-
+    The run log row is written when the execution settles, so ``created_at``
+    is the completion time; the start is derived from ``duration_ms``.
+    Pending placeholder rows have no completion yet.
     """
+    completed = log.created_at if log.status != "pending" else None
+    started = log.created_at
+    if completed is not None and log.duration_ms:
+        started = completed - timedelta(milliseconds=log.duration_ms)
+
     info = CronRunLogInfo(
         id=str(log.id),
-        cron_task_id=str(log.cron_task_id),
+        cron_task_id=str(log.cron_task_id) if log.cron_task_id else "",
         organization_id=str(log.organization_id),
-        session_id=str(log.session_id),
+        session_id=str(log.session_id) if log.session_id else "",
         status=log.status,
         input_tokens=log.input_tokens or 0,
         output_tokens=log.output_tokens or 0,
-        started_at=datetime_to_timestamp(log.started_at),
+        started_at=datetime_to_timestamp(started),
     )
-
-    if log.agent_run_log_id is not None:
-        info.agent_run_log_id = str(log.agent_run_log_id)
 
     if log.error:
         info.error = log.error
 
-    if log.result_summary:
-        info.result_summary = log.result_summary
-
-    completed_ts = optional_timestamp(log.completed_at)
+    completed_ts = optional_timestamp(completed)
     if completed_ts:
         info.completed_at.CopyFrom(completed_ts)
 

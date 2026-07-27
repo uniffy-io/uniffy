@@ -38,6 +38,7 @@ from uniffy.domains.agents.runtime.prompt import (
 )
 from uniffy.domains.agents.tools.builtin.memory import (
     _execute_memory_forget,
+    _execute_memory_read,
     _execute_memory_save,
     _read_filters,
     _scope_or_error,
@@ -289,6 +290,28 @@ class TestTools:
         ref, err = _scope_or_error(ctx)
         assert ref is None
         assert err is not None and not err.success
+
+    def test_read_requires_key_or_query(self):
+        ctx = self._ctx(memory_scope=MemoryScopeRef(MemoryScope.USER, USER_ID))
+        result = _run(_execute_memory_read(ctx, {}))
+        assert not result.success
+        assert "key or query" in result.error
+
+    def test_read_query_mode_searches_and_bumps_counters(self):
+        ctx = self._ctx(memory_scope=MemoryScopeRef(MemoryScope.USER, USER_ID))
+        rows = [_memory(MemoryScope.USER, key="deploy_steps", content="use blue-green")]
+        search_result = MagicMock()
+        search_result.scalars.return_value.all.return_value = rows
+        update_result = MagicMock()
+        ctx.session.execute = AsyncMock(side_effect=[search_result, update_result])
+
+        result = _run(_execute_memory_read(ctx, {"query": "deploy"}))
+
+        assert result.success
+        assert "deploy_steps" in result.data
+        # Second execute is the access_count bump for the matched rows.
+        assert ctx.session.execute.await_count == 2
+        ctx.session.commit.assert_awaited_once()
 
     def test_save_never_writes_user_scope_from_channel_run(self):
         """Poisoning guard: the executor passes the resolved ref through unchanged."""

@@ -111,6 +111,7 @@ async def _resolve_recipients(
     members = await session.execute(
         select(OrganizationMember.user_id).where(
             OrganizationMember.organization_id == organization_id,
+            OrganizationMember.is_active.is_(True),
             OrganizationMember.role.in_(
                 (OrganizationRole.ADMIN, OrganizationRole.OWNER)
             ),
@@ -119,7 +120,14 @@ async def _resolve_recipients(
     recipients: set[UUID] = set(members.scalars().all())
 
     domain_admins = await session.execute(
-        select(DomainAdmin.user_id).where(
+        select(DomainAdmin.user_id)
+        .join(
+            OrganizationMember,
+            OrganizationMember.user_id == DomainAdmin.user_id,
+        )
+        .where(
+            OrganizationMember.organization_id == organization_id,
+            OrganizationMember.is_active.is_(True),
             DomainAdmin.organization_id == organization_id,
             DomainAdmin.domain == DomainType.AGENTS,
         )

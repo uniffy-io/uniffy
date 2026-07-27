@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from uniffy.domains.agents.runtime.workspace_prompt import WORKSPACE_PROMPT
 from uniffy.domains.agents.tools.registry import get_tool_registry
 
 SKILL_VIEW_TOOL = "skills.view_skill"
@@ -55,7 +56,7 @@ def build_memory_block(blocks: list[MemoryScopeBlock]) -> str | None:
             )
         more = block.total - len(block.pinned) - len(block.index)
         if more > 0:
-            lines.append(f"({more} more entries not listed; use memory.list.)")
+            lines.append(f"({more} more entries not listed; search with memory.read.)")
         scope_parts.append("\n".join(lines))
 
     if not scope_parts:
@@ -108,51 +109,10 @@ def build_system_prompt(
     skills: list[SkillPromptEntry] | None = None,
     invoked_skill: SkillPromptEntry | None = None,
     memory_context: str | None = None,
-    prompt_content: str | None = None,
     user_timezone: str | None = None,
     chat_context: str | None = None,
 ) -> str:
-    """Assemble the system prompt from modular sections.
-
-    Combines agent personality, metadata, temporal context,
-    user identity, skill instructions, tool descriptions,
-    memory context, and organization context into a single
-    system prompt string.
-
-    Parameters
-    ----------
-    agent_name : str
-        Display name of the agent.
-    soul_prompt : str
-        Free-form personality, tone, and instruction text.
-    org_name : str
-        Organization name for context.
-    user_name : str | None
-        Name of the user talking to the agent.
-    user_role : str | None
-        User's role in the organization (e.g. "member", "admin", "owner").
-    enabled_tools : list[str] | None
-        Tool names enabled for this agent. When provided, tool
-        descriptions are included in the prompt.
-    skills : list[SkillPromptEntry] | None
-        Skills resolved for this turn (already activation-filtered).
-        ``always_active`` skills inject their full content; the rest are
-        advertised as a metadata index the agent expands via ``view_skill``.
-    invoked_skill : SkillPromptEntry | None
-        A skill the user invoked on-demand (slash command). Force-injected
-        in full with an "execute now" directive, deduped against ``skills``.
-    memory_context : str | None
-        Pre-rendered memory section from ``build_memory_block``.
-    prompt_content : str | None
-        When provided, replaces the default workspace section with
-        the content from a prompt template.
-
-    Returns
-    -------
-    str
-        Assembled system prompt.
-
-    """
+    """Assemble the system prompt from modular sections."""
     sections: list[str] = []
 
     # Section 1: Soul prompt (personality, instructions)
@@ -194,9 +154,9 @@ def build_system_prompt(
     if memory_context:
         sections.append(memory_context)
 
-    # Section 7: Prompt template content (if selected)
-    if prompt_content:
-        sections.append(prompt_content)
+    # Section 7: Platform workspace conventions (URN mentions, tool and
+    # memory guidance). Fixed infrastructure text, identical for every agent.
+    sections.append(WORKSPACE_PROMPT)
 
     # Section 7b: Chat-channel context (only set on chat-triggered turns).
     # Placed just before the tools section so the agent has a fresh picture

@@ -16,19 +16,19 @@ from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.members import (
     ContentMembersOperations,
     register_content_loader,
+    register_manage_override,
 )
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.users.cache import invalidate_agent_profile
+from uniffy.domains.agents.access import is_agents_builder, require_agents_builder
 from uniffy.domains.agents.cache import (
     fetch_agent_row,
     invalidate_cached_agent,
-    invalidate_cached_agent_prompt,
     invalidate_cached_agent_skills,
     set_cached_agent,
-    track_agent_prompt_ref,
     track_agent_skill_refs,
 )
 from uniffy.domains.agents.content_policy import check_admin_content
@@ -36,6 +36,7 @@ from uniffy.domains.agents.providers.catalog import (
     provider_for_model,
     validate_model_params,
 )
+from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="agents.agents.operations")
@@ -212,11 +213,16 @@ class AgentOperations(BaseContentOperations[Agent]):
         image_model: str = "",
         primary_provider_key_id: UUID | None = None,
         image_provider_key_id: UUID | None = None,
-        prompt_id: UUID | None = None,
         tag_ids: list[UUID] | None = None,
         model_params: dict | None = None,
     ) -> Agent:
         """Create a new agent configuration."""
+        await require_agents_builder(self.session, user_id, organization_id)
+
+        if is_default:
+            org_ops = OrganizationOperations(self.session)
+            await org_ops.require_org_admin(user_id, organization_id)
+
         if not name or not name.strip():
             raise ValidationError("name", "Agent name cannot be empty")
 
@@ -232,9 +238,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         if is_default:
             await self._clear_existing_default(organization_id)
 
-        if prompt_id is None:
-            prompt_id = await self._get_default_bundled_prompt_id()
-
         agent = Agent(
             organization_id=organization_id,
             owner_id=user_id,
@@ -244,8 +247,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             fallback_models=fallback_models or [],
             enabled_tools=[
                 "memory.save",
-                "memory.recall",
-                "memory.list",
+                "memory.read",
                 "memory.forget",
             ],
             enabled_skills=enabled_skills or [],
@@ -257,7 +259,6 @@ class AgentOperations(BaseContentOperations[Agent]):
             image_model=image_model,
             primary_provider_key_id=primary_provider_key_id,
             image_provider_key_id=image_provider_key_id,
-            prompt_id=prompt_id,
             model_params=model_params or {},
         )
         self.session.add(agent)
@@ -303,10 +304,6 @@ class AgentOperations(BaseContentOperations[Agent]):
             await track_agent_skill_refs(
                 agent.id, added_skill_ids=added_skill_uuids
             )
-        if agent.prompt_id is not None:
-            await track_agent_prompt_ref(
-                agent.id, old_prompt_id=None, new_prompt_id=agent.prompt_id
-            )
 
         return agent
 
@@ -315,7 +312,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         user_id: UUID,
         organization_id: UUID,
         access_mode: AccessMode | None = None,
-        personal_only: bool = False,
         group_id: UUID | None = None,
         page: int = 1,
         page_size: int = 50,
@@ -324,7 +320,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         """List agents the user can access."""
         from sqlalchemy import or_
 
-        from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_member import ContentMember
 
         query = select(Agent).where(
@@ -332,9 +327,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             Agent.is_deleted == False,  # noqa: E712
         )
 
-        if personal_only:
-            query = query.where(Agent.owner_id == user_id)
-        elif group_id:
+        if group_id:
             now = datetime.now(UTC)
             group_subq = select(ContentMember.content_id).where(
                 ContentMember.organization_id == organization_id,
@@ -349,7 +342,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             )
             query = query.where(Agent.id.in_(group_subq))
         else:
-            access_filter = self.access_query.build_accessible_filter(
+            access_filter = await self.access_query.build_accessible_filter(
                 user_id=user_id,
                 organization_id=organization_id,
                 content_type=self.content_type,
@@ -359,9 +352,6 @@ class AgentOperations(BaseContentOperations[Agent]):
                 baseline_role_column=Agent.baseline_role,
             )
             query = query.where(access_filter)
-
-        # Avoid the unused import warning if personal_only / group_id aren't taken.
-        _ = GroupMember
 
         if access_mode is not None:
             query = query.where(Agent.access_mode == access_mode)
@@ -400,7 +390,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             Agent.is_deleted == False,  # noqa: E712
         )
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
@@ -434,8 +424,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         image_provider_key_id: UUID | None = None,
         clear_primary_provider_key: bool = False,
         clear_image_provider_key: bool = False,
-        prompt_id: UUID | None = None,
-        clear_prompt: bool = False,
         tag_ids: list[UUID] | None = None,
         model_params: dict | None = None,
     ) -> Agent:
@@ -451,13 +439,17 @@ class AgentOperations(BaseContentOperations[Agent]):
         if agent is None:
             raise NotFoundError("Agent", agent_id)
 
-        await self._require_edit(user_id, organization_id, agent)
+        await require_agents_builder(self.session, user_id, organization_id)
+
+        if is_default is not None and is_default != agent.is_default:
+            await OrganizationOperations(self.session).require_org_admin(
+                user_id, organization_id
+            )
 
         if is_default is not None and is_default and not agent.is_default:
             await self._clear_existing_default(organization_id)
 
         old_skill_ids = _coerce_uuid_list(agent.enabled_skills)
-        old_prompt_id = agent.prompt_id
 
         updates: dict[str, Any] = {}
         if name is not None:
@@ -497,9 +489,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         if image_provider_key_id is not None:
             updates["image_provider_key_id"] = image_provider_key_id
             agent.image_provider_key_id = image_provider_key_id
-        if prompt_id is not None:
-            updates["prompt_id"] = prompt_id
-            agent.prompt_id = prompt_id
         if model_params is not None:
             _check_model_params(
                 primary_model if primary_model is not None else agent.primary_model,
@@ -526,9 +515,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         if clear_image_provider_key:
             agent.image_provider_key_id = None
             updates["image_provider_key_id"] = None
-        if clear_prompt:
-            agent.prompt_id = None
-            updates["prompt_id"] = None
 
         agent.updated_at = datetime.now(UTC)
 
@@ -547,7 +533,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         await invalidate_agent_profile(agent_id)
         await set_cached_agent(agent)
         await invalidate_cached_agent_skills(agent_id)
-        await invalidate_cached_agent_prompt(agent_id)
 
         new_skill_ids = _coerce_uuid_list(agent.enabled_skills)
         added_skill_ids = [s for s in new_skill_ids if s not in old_skill_ids]
@@ -582,13 +567,6 @@ class AgentOperations(BaseContentOperations[Agent]):
         if added_skill_ids or removed_skill_ids:
             await self.session.commit()
 
-        if agent.prompt_id != old_prompt_id:
-            await track_agent_prompt_ref(
-                agent_id,
-                old_prompt_id=old_prompt_id,
-                new_prompt_id=agent.prompt_id,
-            )
-
         audit_fields = {
             k: v
             for k, v in updates.items()
@@ -601,7 +579,6 @@ class AgentOperations(BaseContentOperations[Agent]):
                 "enabled_skills",
                 "primary_provider_key_id",
                 "image_provider_key_id",
-                "prompt_id",
             }
         }
         if audit_fields:
@@ -637,7 +614,7 @@ class AgentOperations(BaseContentOperations[Agent]):
     ) -> Agent:
         """Upload and set an agent avatar."""
         agent = await self.get_by_id(user_id, organization_id, agent_id)
-        await self._require_edit(user_id, organization_id, agent)
+        await require_agents_builder(self.session, user_id, organization_id)
 
         if agent.avatar_key:
             await s3_delete_avatar(agent.avatar_key)
@@ -667,7 +644,7 @@ class AgentOperations(BaseContentOperations[Agent]):
     ) -> Agent:
         """Delete an agent avatar."""
         agent = await self.get_by_id(user_id, organization_id, agent_id)
-        await self._require_edit(user_id, organization_id, agent)
+        await require_agents_builder(self.session, user_id, organization_id)
 
         if agent.avatar_key:
             await s3_delete_avatar(agent.avatar_key)
@@ -691,10 +668,9 @@ class AgentOperations(BaseContentOperations[Agent]):
         if agent is None:
             raise NotFoundError("Agent", agent_id)
 
-        await self._require_delete(user_id, organization_id, agent)
+        await require_agents_builder(self.session, user_id, organization_id)
 
         old_skill_ids = _coerce_uuid_list(agent.enabled_skills)
-        old_prompt_id = agent.prompt_id
 
         agent.is_deleted = True
         agent.deleted_at = datetime.now(UTC)
@@ -710,14 +686,9 @@ class AgentOperations(BaseContentOperations[Agent]):
         await invalidate_agent_profile(agent_id)
         await invalidate_cached_agent(agent_id)
         await invalidate_cached_agent_skills(agent_id)
-        await invalidate_cached_agent_prompt(agent_id)
         if old_skill_ids:
             await track_agent_skill_refs(
                 agent_id, removed_skill_ids=old_skill_ids
-            )
-        if old_prompt_id is not None:
-            await track_agent_prompt_ref(
-                agent_id, old_prompt_id=old_prompt_id, new_prompt_id=None
             )
 
     async def get_default_agent(
@@ -732,20 +703,6 @@ class AgentOperations(BaseContentOperations[Agent]):
                 Agent.is_default == True,  # noqa: E712
                 Agent.is_deleted == False,  # noqa: E712
             )
-        )
-        return result.scalar_one_or_none()
-
-    async def _get_default_bundled_prompt_id(self) -> UUID | None:
-        """Return the id of the first bundled prompt template, if any."""
-        from uniffy.core.models.agents.prompt import AgentPrompt
-
-        result = await self.session.execute(
-            select(AgentPrompt.id)
-            .where(
-                AgentPrompt.organization_id.is_(None),
-                AgentPrompt.source == "bundled",
-            )
-            .limit(1)
         )
         return result.scalar_one_or_none()
 
@@ -782,3 +739,4 @@ async def _load_agent(
 
 
 register_content_loader(ContentType.AGENT, _load_agent)
+register_manage_override(ContentType.AGENT, is_agents_builder)

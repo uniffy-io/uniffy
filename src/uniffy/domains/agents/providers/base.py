@@ -177,22 +177,13 @@ class ProviderDescriptor(ABC):
     def display_name(self) -> str:
         """Human-readable provider name."""
 
-    @property
     @abstractmethod
-    def supported_credential_types(self) -> list[str]:
-        """Credential types accepted by this provider."""
-
-    @abstractmethod
-    def create(self, credential: str, credential_type: str) -> LLMProvider:
+    def create(self, credential: str) -> LLMProvider:
         """Create an `LLMProvider` instance from a decrypted credential."""
 
     @abstractmethod
     def get_models(self) -> list[ModelInfo]:
         """Return the static model catalog."""
-
-    @abstractmethod
-    def validate_credential(self, credential: str, credential_type: str) -> None:
-        """Validate credential format (not API validity)."""
 
 
 class LLMProvider(ABC):

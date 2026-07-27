@@ -1,4 +1,5 @@
 ---
+id: 019fa4a1-b703-7496-aae4-144f443a441f
 name: technical_writer
 display_name: Technical Writer
 description: Write clear, well-structured technical documentation. Use appropriate formatting, examples, and diagrams.

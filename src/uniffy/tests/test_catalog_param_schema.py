@@ -159,3 +159,26 @@ def test_resolve_strip_counts_dropped_provider_option() -> None:
     )
     assert kept == {"temperature": 0.4}
     assert _dropped_count("top_k", provider="openai") == before + 1
+
+
+def test_resolve_merges_overrides_over_agent_params() -> None:
+    kept = resolve_request_params(
+        {"temperature": 0.7, "top_p": 0.9},
+        {"temperature": 0.1},
+        "openai",
+        "gpt-4o",
+    )
+    assert kept == {"temperature": 0.1, "top_p": 0.9}
+
+
+def test_resolve_merges_nested_provider_options() -> None:
+    kept = resolve_request_params(
+        {"provider_options": {"parallel_tool_calls": True}, "temperature": 0.4},
+        {"provider_options": {"parallel_tool_calls": False}},
+        "openai",
+        "gpt-4o",
+    )
+    assert kept == {
+        "provider_options": {"parallel_tool_calls": False},
+        "temperature": 0.4,
+    }

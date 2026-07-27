@@ -41,24 +41,14 @@ def map_finish_reason(finish_reason: str | None) -> str:
 
 
 class OpenAIProvider(LLMProvider):
-    """OpenAI provider using the official Python SDK.
-
-    Parameters
-    ----------
-    credential : str
-        OpenAI API key.
-    credential_type : str
-        Must be "api_key".
-
-    """
+    """OpenAI provider using the official Python SDK."""
 
     # openai.com serves reasoning + function tools only on /v1/responses
     # (gpt-5.4+ 400s the combo on chat completions). OpenAI-compatible
     # subclasses (OpenRouter, xAI) stay on chat completions.
     _use_responses_api = True
 
-    def __init__(self, credential: str, credential_type: str = "api_key") -> None:
-        self._credential_type = credential_type
+    def __init__(self, credential: str) -> None:
         self._client = openai.AsyncOpenAI(api_key=credential)
 
     @property

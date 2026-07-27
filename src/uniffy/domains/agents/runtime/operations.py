@@ -14,7 +14,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.agents.message import AgentMessage
@@ -28,7 +28,6 @@ from uniffy.db.session import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.budget_alerts import check_and_fire_alerts
 from uniffy.domains.agents.cache import (
-    fetch_agent_prompt,
     fetch_agent_skills,
     fetch_memory_index,
 )
@@ -52,7 +51,7 @@ from uniffy.domains.agents.runtime.destinations import (
     SessionDestination,
 )
 from uniffy.domains.agents.runtime.file_loader import FileContext
-from uniffy.domains.agents.runtime.model_resolver import resolve_model
+from uniffy.domains.agents.runtime.model_resolver import resolve_provider_and_model
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
     MemoryScopeBlock,
@@ -423,27 +422,13 @@ class RuntimeOperations:
         role = membership.role
         user_role = role.value if hasattr(role, "value") else str(role)
 
-        target_model = agent_session.model_override or agent.primary_model
-        provider_key_id: UUID | None = None
-
-        if agent.primary_provider_key_id:
-            provider, pk = await self._provider_ops.get_provider_for_key(
-                organization_id=organization_id,
-                key_id=agent.primary_provider_key_id,
-            )
-            provider_key_id = pk.id
-        else:
-            resolved = await self._provider_ops.get_key_and_provider_for_model(
-                organization_id=organization_id,
-                model_id=target_model,
-            )
-            if resolved is None:
-                raise NotFoundError(
-                    "ProviderKey",
-                    f"No configured provider has model '{target_model}' available",
-                )
-            provider, pk = resolved
-            provider_key_id = pk.id
+        provider, provider_key_id, model = await resolve_provider_and_model(
+            self._session,
+            self._provider_ops,
+            organization_id=organization_id,
+            agent=agent,
+            model_override=agent_session.model_override,
+        )
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
@@ -498,12 +483,6 @@ class RuntimeOperations:
             bridge_ref=memory_bridge,
         )
 
-        prompt_content = await fetch_agent_prompt(
-            self._session,
-            agent_id=agent.id,
-            prompt_id=agent.prompt_id,
-        )
-
         system_prompt = build_system_prompt(
             agent_name=agent.name,
             soul_prompt=agent.soul_prompt,
@@ -514,20 +493,12 @@ class RuntimeOperations:
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
             memory_context=memory_context,
-            prompt_content=prompt_content,
             user_timezone=user_timezone,
         )
 
-        # 8. Resolve model (needed for compaction)
-        model = await resolve_model(
-            session_model_override=agent_session.model_override,
-            agent_primary_model=agent.primary_model,
-            agent_fallback_models=agent.fallback_models or [],
-            provider=provider,
-        )
         request_params = resolve_request_params(
             agent.model_params,
-            agent_session.model_params_override,
+            None,
             provider.name,
             model,
         )
@@ -622,6 +593,7 @@ class RuntimeOperations:
                     user_timezone=user_timezone,
                     memory_scope=memory_scope,
                     memory_bridge_scope=memory_bridge,
+                    is_test_session=agent_session.is_test,
                 )
                 executor = ToolExecutor(registry, tool_ctx)
 
@@ -1143,7 +1115,6 @@ class RuntimeOperations:
             )
             agent_id = agent_session.agent_id
             model_override = agent_session.model_override
-            params_override = agent_session.model_params_override
         else:
             agent_id = destination.agent_id
             binding = (
@@ -1169,27 +1140,13 @@ class RuntimeOperations:
         role = membership.role
         user_role = role.value if hasattr(role, "value") else str(role)
 
-        target_model = model_override or agent.primary_model
-        provider_key_id: UUID | None = None
-
-        if agent.primary_provider_key_id:
-            provider, pk = await self._provider_ops.get_provider_for_key(
-                organization_id=organization_id,
-                key_id=agent.primary_provider_key_id,
-            )
-            provider_key_id = pk.id
-        else:
-            resolved = await self._provider_ops.get_key_and_provider_for_model(
-                organization_id=organization_id,
-                model_id=target_model,
-            )
-            if resolved is None:
-                raise NotFoundError(
-                    "ProviderKey",
-                    f"No configured provider has model '{target_model}' available",
-                )
-            provider, pk = resolved
-            provider_key_id = pk.id
+        provider, provider_key_id, model = await resolve_provider_and_model(
+            self._session,
+            self._provider_ops,
+            organization_id=organization_id,
+            agent=agent,
+            model_override=model_override,
+        )
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
@@ -1245,12 +1202,6 @@ class RuntimeOperations:
             bridge_ref=memory_bridge,
         )
 
-        prompt_content = await fetch_agent_prompt(
-            self._session,
-            agent_id=agent.id,
-            prompt_id=agent.prompt_id,
-        )
-
         chat_context_block: str | None = None
         if isinstance(destination, ChatDestination):
             chat_context_block = await self._build_chat_context_for_destination(
@@ -1269,17 +1220,10 @@ class RuntimeOperations:
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
             memory_context=memory_context,
-            prompt_content=prompt_content,
             user_timezone=user_timezone,
             chat_context=chat_context_block,
         )
 
-        model = await resolve_model(
-            session_model_override=model_override,
-            agent_primary_model=agent.primary_model,
-            agent_fallback_models=agent.fallback_models or [],
-            provider=provider,
-        )
         request_params = resolve_request_params(
             agent.model_params,
             params_override,
@@ -1457,6 +1401,7 @@ class RuntimeOperations:
                 user_timezone=user_timezone,
                 memory_scope=memory_scope,
                 memory_bridge_scope=memory_bridge,
+                is_test_session=agent_session.is_test if agent_session else False,
             )
             executor = ToolExecutor(registry, tool_ctx)
 

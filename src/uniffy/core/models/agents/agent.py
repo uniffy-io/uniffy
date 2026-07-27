@@ -65,14 +65,6 @@ class Agent(SQLModel, table=True):
             index=True,
         ),
     )
-    prompt_id: UUID | None = Field(
-        default=None,
-        sa_column=Column(
-            ForeignKey("agents_prompts.id", ondelete="SET NULL"),
-            nullable=True,
-            index=True,
-        ),
-    )
     enabled_tools: list = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     enabled_skills: list = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     avatar_emoji: str = Field(

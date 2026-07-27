@@ -101,11 +101,10 @@ class MemoryOperations:
     async def _require_agent_manage(
         self, user_id: UUID, organization_id: UUID, agent_id: UUID
     ) -> None:
-        from uniffy.domains.agents.agents.operations import AgentOperations
+        from uniffy.domains.agents.access import require_agents_builder
 
-        agent_ops = AgentOperations(self._session)
-        agent = await self._get_agent(agent_id, organization_id)
-        await agent_ops._require_manage(user_id, organization_id, agent)
+        await self._get_agent(agent_id, organization_id)
+        await require_agents_builder(self._session, user_id, organization_id)
 
     async def _require_view(
         self,

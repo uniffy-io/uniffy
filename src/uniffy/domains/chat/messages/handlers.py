@@ -384,6 +384,22 @@ class MessageHandlers:
         reaction_ops = ChatReactionOperations(session)
         reactions_map = await reaction_ops.get_reactions_for_messages(message_ids, user_id)
 
+        from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
+        from uniffy.core.models.chat.message import SenderType
+
+        feedback_map: dict[UUID, str] = {}
+        agent_message_ids = [m.id for m in messages if m.sender_type == SenderType.AGENT]
+        if agent_message_ids:
+            fb_result = await session.execute(
+                select(
+                    AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating
+                ).where(
+                    AgentMessageFeedback.user_id == user_id,
+                    AgentMessageFeedback.chat_message_id.in_(agent_message_ids),
+                )
+            )
+            feedback_map = {mid: rating for mid, rating in fb_result.all()}
+
         thread_unread_map: dict[UUID, bool] = {}
         if thread_stats_map:
             from uniffy.domains.chat.read_state.operations import ChatReadStateOperations
@@ -423,19 +439,21 @@ class MessageHandlers:
 
             rc = reply_context_map.get(msg.reply_to_id) if msg.reply_to_id else None
 
-            proto_messages.append(
-                message_to_proto(
-                    msg,
-                    thread_stats=ts,
-                    thread_participant_ids=participants,
-                    thread_has_unread=thread_unread_map.get(msg.id, False),
-                    sender_name=sender[0],
-                    sender_avatar_url=sender[1],
-                    reactions=proto_reactions,
-                    reply_context_id=rc[0] if rc else None,
-                    reply_context_sender_name=rc[1] if rc else None,
-                    reply_context_content_preview=rc[2] if rc else None,
-                )
+            proto_msg = message_to_proto(
+                msg,
+                thread_stats=ts,
+                thread_participant_ids=participants,
+                thread_has_unread=thread_unread_map.get(msg.id, False),
+                sender_name=sender[0],
+                sender_avatar_url=sender[1],
+                reactions=proto_reactions,
+                reply_context_id=rc[0] if rc else None,
+                reply_context_sender_name=rc[1] if rc else None,
+                reply_context_content_preview=rc[2] if rc else None,
             )
+            rating = feedback_map.get(msg.id)
+            if rating:
+                proto_msg.feedback_rating = rating
+            proto_messages.append(proto_msg)
 
         return proto_messages

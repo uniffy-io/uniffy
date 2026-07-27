@@ -22,7 +22,7 @@ from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.valkey.ops import _get_ops_client
 from uniffy.db.session import open_session
 from uniffy.domains.agents.providers.operations import ProviderOperations
-from uniffy.domains.agents.runtime.model_resolver import resolve_model
+from uniffy.domains.agents.runtime.model_resolver import resolve_provider_and_model
 from uniffy.domains.agents.sessions.operations import SKILL_ANALYSIS_DEBOUNCE_SECONDS
 from uniffy.domains.agents.skills.analysis import (
     SkillEvolutionAnalyzer,
@@ -143,28 +143,16 @@ async def analyze_session_for_skills(
             if agent is None:
                 return {"status": "error", "error": "agent_not_found"}
 
-            provider_ops = ProviderOperations(session)
             try:
-                if agent.primary_provider_key_id:
-                    provider, _pk = await provider_ops.get_provider_for_key(
-                        organization_id=org_id,
-                        key_id=agent.primary_provider_key_id,
-                    )
-                else:
-                    provider = await provider_ops.get_provider_for_model(
-                        organization_id=org_id,
-                        model_id=agent.primary_model,
-                    )
+                provider, _key_id, model = await resolve_provider_and_model(
+                    session,
+                    ProviderOperations(session),
+                    organization_id=org_id,
+                    agent=agent,
+                )
             except Exception:
                 logger.opt(exception=True).warning("skill analysis: no usable provider")
                 return {"status": "skipped", "reason": "no_provider"}
-
-            model = await resolve_model(
-                session_model_override=None,
-                agent_primary_model=agent.primary_model,
-                agent_fallback_models=agent.fallback_models or [],
-                provider=provider,
-            )
 
             proposals = await analyzer.run_analysis(
                 signals=signals, provider=provider, model=model

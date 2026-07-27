@@ -11,6 +11,8 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.data_files import DATA_DIR
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
     from uniffy.core.search.indexer import SearchIndexer
 
 DOCS_DIR = Path(__file__).parent.parent.parent.parent / "docs"
-SEED_DATA_DIR = Path(__file__).parent / "seed_data"
 
 FILE_PATH_TO_SLUG: dict[str, str] = {
     "ABOUT.md": "about",
@@ -484,9 +485,6 @@ async def _seed_initial_data_locked() -> None:
                 tag_slugs=seed_tag_slugs,
             )
 
-            await _seed_bundled_skills(session)
-            await _seed_bundled_prompts(session)
-
             environment = os.getenv("ENVIRONMENT", "production")
             if environment == "development":
                 from uniffy.db.seed_dev import seed_development_data
@@ -510,110 +508,6 @@ async def _seed_initial_data_locked() -> None:
             await session.rollback()
             logger.error(f"Failed to seed initial data: {e}")
             raise
-
-
-def _parse_simple_yaml(text: str) -> dict[str, str]:
-    """Parse `key: value` lines; avoids a PyYAML dep for trivial frontmatter."""
-    result: dict[str, str] = {}
-    for line in text.strip().splitlines():
-        line = line.strip()
-        if not line or ":" not in line:
-            continue
-        key, _, value = line.partition(":")
-        result[key.strip()] = value.strip()
-    return result
-
-
-def _load_seed_markdown(directory: Path) -> list[dict[str, Any]]:
-    """Load `*.md` files whose frontmatter holds name/display_name/description."""
-    items: list[dict[str, Any]] = []
-    if not directory.is_dir():
-        return items
-
-    for md_file in sorted(directory.glob("*.md")):
-        raw = md_file.read_text()
-
-        if not raw.startswith("---"):
-            logger.warning(f"Seed file {md_file.name} missing YAML frontmatter, skipping")
-            continue
-
-        parts = raw.split("---", 2)
-        if len(parts) < 3:
-            logger.warning(f"Seed file {md_file.name} has malformed frontmatter, skipping")
-            continue
-
-        frontmatter = _parse_simple_yaml(parts[1])
-        content = parts[2].strip()
-
-        items.append({
-            "name": frontmatter["name"],
-            "display_name": frontmatter["display_name"],
-            "description": frontmatter["description"],
-            "content": content,
-        })
-
-    return items
-
-
-async def _seed_bundled_skills(session: AsyncSession) -> None:
-    """Seed bundled agent skills from `seed_data/skills/`."""
-    from uniffy.core.models.agents.skill import AgentSkill
-
-    skills = _load_seed_markdown(SEED_DATA_DIR / "skills")
-
-    for skill_data in skills:
-        existing = await session.execute(
-            select(AgentSkill).where(
-                AgentSkill.organization_id.is_(None),
-                AgentSkill.name == skill_data["name"],
-            )
-        )
-        if existing.scalar_one_or_none():
-            continue
-
-        skill = AgentSkill(
-            organization_id=None,
-            name=skill_data["name"],
-            display_name=skill_data["display_name"],
-            description=skill_data["description"],
-            content=skill_data["content"],
-            source="bundled",
-            always_active=False,
-        )
-        session.add(skill)
-
-    await session.flush()
-    logger.info(f"Seeded {len(skills)} bundled agent skills")
-
-
-async def _seed_bundled_prompts(session: AsyncSession) -> None:
-    """Seed bundled agent prompts from `seed_data/prompts/`."""
-    from uniffy.core.models.agents.prompt import AgentPrompt
-
-    prompts = _load_seed_markdown(SEED_DATA_DIR / "prompts")
-
-    for prompt_data in prompts:
-        existing = await session.execute(
-            select(AgentPrompt).where(
-                AgentPrompt.organization_id.is_(None),
-                AgentPrompt.name == prompt_data["name"],
-            )
-        )
-        if existing.scalar_one_or_none():
-            continue
-
-        prompt = AgentPrompt(
-            organization_id=None,
-            name=prompt_data["name"],
-            display_name=prompt_data["display_name"],
-            description=prompt_data["description"],
-            content=prompt_data["content"],
-            source="bundled",
-        )
-        session.add(prompt)
-
-    await session.flush()
-    logger.info(f"Seeded {len(prompts)} bundled agent prompts")
 
 
 async def _seed_welcome_canvas(
@@ -641,7 +535,7 @@ async def _seed_welcome_canvas(
     from uniffy.core.storage import get_s3_client
     from uniffy.core.types import AccessMode, ContentRole, ContentType, NodeType
 
-    logo_source = SEED_DATA_DIR / "assets" / "logo-512.png"
+    logo_source = DATA_DIR / "assets" / "logo-512.png"
     logo_file: File | None = None
 
     if logo_source.is_file():

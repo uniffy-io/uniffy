@@ -68,7 +68,7 @@ def _stats_to_proto(stats: ContextStats) -> ProtoChannelAgentContextStats:
 def _config_to_proto(binding: AgentChannelBinding) -> ProtoChannelAgentConfig:
     return ProtoChannelAgentConfig(
         model_override=binding.model_override or "",
-        model_params_override_json=(
+        model_params_override=(
             json.dumps(binding.model_params_override)
             if binding.model_params_override
             else ""
@@ -84,11 +84,11 @@ def _parse_params_json(raw: str) -> dict:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise ConnectError(
-            Code.INVALID_ARGUMENT, "model_params_override_json is not valid JSON"
+            Code.INVALID_ARGUMENT, "model_params_override is not valid JSON"
         ) from exc
     if not isinstance(parsed, dict):
         raise ConnectError(
-            Code.INVALID_ARGUMENT, "model_params_override_json must be a JSON object"
+            Code.INVALID_ARGUMENT, "model_params_override must be a JSON object"
         )
     return parsed
 
@@ -300,8 +300,8 @@ class ChannelAgentContextHandlers:
             request.model_override if request.HasField("model_override") else None
         )
         model_params_override = (
-            _parse_params_json(request.model_params_override_json)
-            if request.HasField("model_params_override_json")
+            _parse_params_json(request.model_params_override)
+            if request.HasField("model_params_override")
             else None
         )
 

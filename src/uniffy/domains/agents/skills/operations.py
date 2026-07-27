@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,19 +19,34 @@ from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
+from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.cache import (
     invalidate_agents_using_skill,
     invalidate_org_always_active_skills,
 )
 from uniffy.domains.agents.content_policy import check_admin_content
 from uniffy.domains.agents.skills.validation import (
+    SKILL_CONTENT_MAX,
+    SKILL_DESCRIPTION_MAX,
     SKILL_DISPLAY_NAME_MAX,
     SKILL_NAME_MAX,
+    SKILL_RATIONALE_MAX,
+    SKILL_WHEN_TO_USE_MAX,
+    cap_preserving_mentions,
     clean_skill_update,
     clean_skill_write,
+    has_hard_injection,
     sanitize_skill_text,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
+
+# The proposal path is reachable by any org member through an agent tool loop,
+# so a single user cannot hold more than this many open drafts in the org-wide
+# builder review inbox.
+MAX_PENDING_DRAFTS_PER_USER = 25
+
+# Validation field the draft review surface keys its replace-confirmation on.
+SKILL_NAME_CONFLICT_FIELD = "skill_name_conflict"
 
 
 def _overlay_skill_copy(skill: AgentSkill, version: AgentSkillVersion) -> AgentSkill:
@@ -52,14 +67,7 @@ def _overlay_skill_copy(skill: AgentSkill, version: AgentSkillVersion) -> AgentS
 
 
 class SkillOperations:
-    """Operations for managing skill definitions.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Operations for managing skill definitions."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -75,45 +83,8 @@ class SkillOperations:
         description: str = "",
         content: str = "",
         always_active: bool = False,
-        owner_id: UUID | None = None,
     ) -> AgentSkill:
-        """Create a new organization skill.
-
-        Only org admins can create skills.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The user creating the skill.
-        organization_id : UUID
-            Organization context.
-        name : str
-            Machine name (unique within org).
-        display_name : str
-            Human-readable name.
-        description : str
-            Short description.
-        content : str
-            Markdown instructions for the system prompt.
-        always_active : bool
-            Whether to always inject this skill.
-        owner_id : UUID | None
-            Owner user ID for personal skills.
-
-        Returns
-        -------
-        AgentSkill
-            The created skill.
-
-        Raises
-        ------
-        PermissionDeniedError
-            If user is not an org admin.
-        ValidationError
-            If name is empty or already taken.
-
-        """
-        await self._org_ops.require_org_admin(user_id, organization_id)
+        await require_agents_builder(self._session, user_id, organization_id)
 
         clean = clean_skill_write(
             name=name,
@@ -138,16 +109,14 @@ class SkillOperations:
         if clean.content:
             check_admin_content(clean.content, "skill_content")
 
-        source = "personal" if owner_id else "organization"
         skill = AgentSkill(
             organization_id=organization_id,
             name=clean.name,
             display_name=clean.display_name,
             description=clean.description,
             content=clean.content,
-            source=source,
+            source="organization",
             always_active=always_active,
-            owner_id=owner_id,
         )
         self._session.add(skill)
         await self._session.flush()
@@ -179,32 +148,7 @@ class SkillOperations:
         organization_id: UUID,
         skill_id: UUID,
     ) -> AgentSkill:
-        """Fetch a skill by ID.
-
-        Returns bundled skills or org-specific skills.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        skill_id : UUID
-            Skill to fetch.
-
-        Returns
-        -------
-        AgentSkill
-            The skill.
-
-        Raises
-        ------
-        NotFoundError
-            If the skill does not exist or is not accessible.
-        PermissionDeniedError
-            If user is not an org member.
-
-        """
+        """Fetch a bundled or org-specific skill by ID."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         result = await self._session.execute(
@@ -230,37 +174,17 @@ class SkillOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[AgentSkill], int]:
-        """List skills visible to the organization.
-
-        Returns both bundled skills and organization-specific skills.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        page : int
-            Page number (1-based).
-        page_size : int
-            Results per page.
-
-        Returns
-        -------
-        tuple[list[AgentSkill], int]
-            (skills, total_count).
-
-        Raises
-        ------
-        PermissionDeniedError
-            If user is not an org member.
-
-        """
+        """List bundled and org-specific skills visible to the organization."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        base_filter = or_(
-            AgentSkill.organization_id == organization_id,
-            AgentSkill.organization_id.is_(None),
+        # Retired bundled skills stay injectable for agents that already enabled
+        # them, but they are gone from the pickers.
+        base_filter = and_(
+            or_(
+                AgentSkill.organization_id == organization_id,
+                AgentSkill.organization_id.is_(None),
+            ),
+            AgentSkill.status != "retired",
         )
 
         count_result = await self._session.execute(
@@ -289,48 +213,10 @@ class SkillOperations:
         display_name: str | None = None,
         description: str | None = None,
         content: str | None = None,
+        when_to_use: str | None = None,
         always_active: bool | None = None,
     ) -> AgentSkill:
-        """Update an organization skill.
-
-        Cannot update bundled skills.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        skill_id : UUID
-            Skill to update.
-        name : str | None
-            New machine name (None = no change).
-        display_name : str | None
-            New display name (None = no change).
-        description : str | None
-            New description (None = no change).
-        content : str | None
-            New content (None = no change).
-        always_active : bool | None
-            New always_active flag (None = no change).
-
-        Returns
-        -------
-        AgentSkill
-            The updated skill.
-
-        Raises
-        ------
-        NotFoundError
-            If the skill does not exist.
-        PermissionDeniedError
-            If user is not an org admin or skill is bundled.
-        ValidationError
-            If name is empty or already taken.
-
-        """
-        await self._org_ops.require_org_admin(user_id, organization_id)
-
+        """Update an organization skill; bundled skills are read-only."""
         result = await self._session.execute(
             select(AgentSkill).where(
                 AgentSkill.id == skill_id,
@@ -350,6 +236,8 @@ class SkillOperations:
                 raise PermissionDeniedError("update", "Cannot update bundled skills")
             raise NotFoundError("AgentSkill", str(skill_id))
 
+        await require_agents_builder(self._session, user_id, organization_id)
+
         # Partial updates are held to the same caps and hard-injection guard as a
         # full write, so a raw UpdateSkill cannot land content a CreateSkill would
         # reject. The softer warn-only content policy still runs below.
@@ -358,26 +246,16 @@ class SkillOperations:
             display_name=display_name,
             description=description,
             content=content,
+            when_to_use=when_to_use,
         )
 
         was_always_active = skill.always_active
         versioned_changes: list[str] = []
 
-        if clean.name is not None:
-            if clean.name != skill.name:
-                existing = await self._session.execute(
-                    select(AgentSkill).where(
-                        AgentSkill.organization_id == organization_id,
-                        AgentSkill.name == clean.name,
-                        AgentSkill.id != skill_id,
-                    )
-                )
-                if existing.scalar_one_or_none():
-                    raise ValidationError(
-                        "name", f"Skill name '{clean.name}' already exists in this organization"
-                    )
-                versioned_changes.append("name")
-            skill.name = clean.name
+        # The slug is the stable identifier agents and enrollments resolve
+        # against, so it is fixed at creation; the display name carries renames.
+        if clean.name is not None and clean.name != skill.name:
+            raise ValidationError("name", "Skill name cannot be changed after creation")
 
         if clean.display_name is not None:
             if clean.display_name != skill.display_name:
@@ -396,6 +274,11 @@ class SkillOperations:
                 versioned_changes.append("content")
             skill.content = clean.content
 
+        if clean.when_to_use is not None:
+            if clean.when_to_use != (skill.when_to_use or ""):
+                versioned_changes.append("when to use")
+            skill.when_to_use = clean.when_to_use
+
         if always_active is not None:
             skill.always_active = always_active
 
@@ -410,10 +293,10 @@ class SkillOperations:
             )
 
         audit_changes: dict = {}
-        if clean.name is not None:
-            audit_changes["name"] = clean.name
         if clean.display_name is not None:
             audit_changes["display_name"] = clean.display_name
+        if clean.when_to_use is not None:
+            audit_changes["when_to_use"] = clean.when_to_use
         if clean.content is not None:
             audit_changes["content_updated"] = True
         if always_active is not None:
@@ -449,30 +332,8 @@ class SkillOperations:
         organization_id: UUID,
         skill_id: UUID,
     ) -> None:
-        """Delete an organization skill.
-
-        Cannot delete bundled skills. Removes the skill ID from all
-        agents' enabled_skills lists.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        skill_id : UUID
-            Skill to delete.
-
-        Raises
-        ------
-        NotFoundError
-            If the skill does not exist.
-        PermissionDeniedError
-            If user is not an org admin or skill is bundled.
-
-        """
-        await self._org_ops.require_org_admin(user_id, organization_id)
-
+        """Delete an organization skill and strip its ID from every agent's
+        enabled_skills; bundled skills are read-only."""
         result = await self._session.execute(
             select(AgentSkill).where(
                 AgentSkill.id == skill_id,
@@ -491,6 +352,8 @@ class SkillOperations:
             if bundled.scalar_one_or_none():
                 raise PermissionDeniedError("delete", "Cannot delete bundled skills")
             raise NotFoundError("AgentSkill", str(skill_id))
+
+        await require_agents_builder(self._session, user_id, organization_id)
 
         # Remove skill ID from agents' enabled_skills lists
         skill_id_str = str(skill_id)
@@ -536,16 +399,13 @@ class SkillOperations:
         when_to_use: str = "",
         requires_tools: list[str] | None = None,
         requires_context: list[str] | None = None,
-        suggested_scope: str = "personal",
         suggested_always_active: bool = False,
         rationale: str = "",
     ) -> AgentSkillDraft:
         """Persist a user-authored draft awaiting review; activates nothing."""
-        await self._org_ops.require_org_member(user_id, organization_id)
+        await require_agents_builder(self._session, user_id, organization_id)
         if kind not in ("create", "edit", "evolve"):
             raise ValidationError("kind", f"Unknown draft kind '{kind}'")
-        if suggested_scope not in ("personal", "organization"):
-            raise ValidationError("suggested_scope", f"Unknown scope '{suggested_scope}'")
         if kind in ("edit", "evolve"):
             if target_skill_id is None:
                 raise ValidationError("target_skill_id", "Edit drafts require a target skill")
@@ -567,7 +427,6 @@ class SkillOperations:
             when_to_use=sanitize_skill_text(when_to_use),
             requires_tools=list(requires_tools or []),
             requires_context=list(requires_context or []),
-            suggested_scope=suggested_scope,
             suggested_always_active=suggested_always_active,
             status="pending",
         )
@@ -592,7 +451,6 @@ class SkillOperations:
         when_to_use: str = "",
         requires_tools: list[str] | None = None,
         requires_context: list[str] | None = None,
-        suggested_scope: str = "personal",
         suggested_always_active: bool | None = None,
         rationale: str = "",
     ) -> AgentSkillDraft:
@@ -600,7 +458,27 @@ class SkillOperations:
 
         Called from the ``skills.propose_skill`` tool inside a run that has
         already gated the acting user, so it does no permission check of its own.
+        Being the one ungated write, it carries its own bounds: every free-text
+        field is capped, hard delimiter-injection markers are rejected before the
+        text can render for a reviewer, and one user's open drafts are quota'd so
+        a looped agent cannot flood the org-wide inbox.
         """
+        clean_content = cap_preserving_mentions(sanitize_skill_text(content), SKILL_CONTENT_MAX)
+        clean_when = cap_preserving_mentions(
+            sanitize_skill_text(when_to_use), SKILL_WHEN_TO_USE_MAX
+        )
+        clean_description = cap_preserving_mentions(
+            sanitize_skill_text(description), SKILL_DESCRIPTION_MAX
+        )
+        clean_rationale = cap_preserving_mentions(
+            sanitize_skill_text(rationale), SKILL_RATIONALE_MAX
+        )
+        if has_hard_injection(clean_content, clean_when, clean_description, clean_rationale):
+            raise ValidationError(
+                "content", "Skill content contains a disallowed system-prompt delimiter"
+            )
+        await self._require_pending_draft_quota(user_id, organization_id)
+
         seed_tools = requires_tools
         seed_context = requires_context
         seed_always = suggested_always_active
@@ -629,15 +507,14 @@ class SkillOperations:
             kind=kind,
             proposed_by_agent_id=agent_id,
             session_id=session_id,
-            rationale=sanitize_skill_text(rationale),
+            rationale=clean_rationale,
             name=(name or "").strip()[:SKILL_NAME_MAX] or None,
             display_name=(display_name or "").strip()[:SKILL_DISPLAY_NAME_MAX] or None,
-            description=sanitize_skill_text(description),
-            content=sanitize_skill_text(content),
-            when_to_use=sanitize_skill_text(when_to_use),
+            description=clean_description,
+            content=clean_content,
+            when_to_use=clean_when,
             requires_tools=list(seed_tools or []),
             requires_context=list(seed_context or []),
-            suggested_scope=suggested_scope,
             suggested_always_active=bool(seed_always),
             status="pending",
         )
@@ -653,11 +530,9 @@ class SkillOperations:
         organization_id: UUID,
         draft_id: UUID,
     ) -> AgentSkillDraft:
-        """Fetch a draft the user owns."""
-        await self._org_ops.require_org_member(user_id, organization_id)
-        return await self._get_owned_draft(
-            user_id=user_id, organization_id=organization_id, draft_id=draft_id
-        )
+        """Fetch a draft from the builder review inbox."""
+        await require_agents_builder(self._session, user_id, organization_id)
+        return await self._get_draft(organization_id=organization_id, draft_id=draft_id)
 
     async def list_skill_drafts(
         self,
@@ -668,11 +543,10 @@ class SkillOperations:
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[AgentSkillDraft], int]:
-        """List the user's own drafts (the review inbox), newest first."""
-        await self._org_ops.require_org_member(user_id, organization_id)
+        """List the org's drafts (the builder review inbox), newest first."""
+        await require_agents_builder(self._session, user_id, organization_id)
         filters = [
             AgentSkillDraft.organization_id == organization_id,
-            AgentSkillDraft.owner_id == user_id,
             AgentSkillDraft.is_deleted == False,  # noqa: E712
         ]
         if status:
@@ -706,20 +580,17 @@ class SkillOperations:
         when_to_use: str = "",
         requires_tools: list[str] | None = None,
         requires_context: list[str] | None = None,
-        suggested_scope: str = "personal",
         suggested_always_active: bool = False,
         change_summary: str = "",
+        allow_replace: bool = False,
     ) -> tuple[AgentSkill, AgentSkillVersion]:
         """Commit a pending draft to a skill version using the reviewer's edits.
 
         A create draft becomes a new skill at version 1; an edit/evolve draft
-        appends a new version to its target. The acting user must own the draft,
-        and the resulting skill's scope gate (org admin for org, owner for
-        personal) still applies.
+        appends a new version to its target.
         """
-        await self._org_ops.require_org_member(user_id, organization_id)
-        draft = await self._get_owned_draft(
-            user_id=user_id,
+        await require_agents_builder(self._session, user_id, organization_id)
+        draft = await self._get_draft(
             organization_id=organization_id,
             draft_id=draft_id,
             require_pending=True,
@@ -739,29 +610,26 @@ class SkillOperations:
         author_id = None if author_kind == "agent" else user_id
         was_always_active = False
 
-        # A create draft whose name already belongs to a skill the reviewer can
-        # edit is reconciled into an edit of that skill: two skills can never
-        # share a machine name in an org, so saving it versions the existing
-        # skill instead of failing with a duplicate-name error.
+        # Two skills can never share a machine name in an org, so a create draft
+        # whose name already belongs to one can only be saved by versioning that
+        # skill. Any org member can raise a create draft with an arbitrary name,
+        # so the reviewer must acknowledge the replacement: without
+        # allow_replace the save is refused rather than quietly rewriting the
+        # content of a skill the inbox presented as new.
         reconcile_id = draft.target_skill_id
         if draft.kind == "create" and reconcile_id is None:
             collision = await self._find_skill_by_name(organization_id, clean.name)
             if collision is not None:
+                if not allow_replace:
+                    raise ValidationError(
+                        SKILL_NAME_CONFLICT_FIELD,
+                        f"A skill named '{collision.display_name}' already uses the identifier "
+                        f"'{clean.name}'. Saving this draft replaces its content with a new "
+                        "version.",
+                    )
                 reconcile_id = collision.id
 
         if draft.kind == "create" and reconcile_id is None:
-            scope = (
-                suggested_scope
-                if suggested_scope in ("personal", "organization")
-                else draft.suggested_scope
-            )
-            if scope == "organization":
-                await self._org_ops.require_org_admin(user_id, organization_id)
-                source = "organization"
-                owner_id: UUID | None = None
-            else:
-                source = "personal"
-                owner_id = user_id
             await self._require_unique_name(organization_id, clean.name)
             origin = "agent_proposed" if draft.proposed_by_agent_id else "user"
             skill = AgentSkill(
@@ -770,8 +638,7 @@ class SkillOperations:
                 display_name=clean.display_name,
                 description=clean.description,
                 content=clean.content,
-                source=source,
-                owner_id=owner_id,
+                source="organization",
                 always_active=bool(suggested_always_active),
                 when_to_use=clean.when_to_use,
                 requires_tools=list(requires_tools or []),
@@ -867,9 +734,8 @@ class SkillOperations:
         draft_id: UUID,
     ) -> None:
         """Soft-discard a pending draft. Activates nothing."""
-        await self._org_ops.require_org_member(user_id, organization_id)
-        draft = await self._get_owned_draft(
-            user_id=user_id,
+        await require_agents_builder(self._session, user_id, organization_id)
+        draft = await self._get_draft(
             organization_id=organization_id,
             draft_id=draft_id,
             require_pending=True,
@@ -1087,7 +953,7 @@ class SkillOperations:
                     func.count().label("count"),
                 )
                 .select_from(AgentMessageFeedback)
-                .join(AgentMessage, AgentMessage.id == AgentMessageFeedback.message_id)
+                .join(AgentMessage, AgentMessage.id == AgentMessageFeedback.agents_message_id)
                 .join(AgentSession, AgentSession.id == AgentMessage.session_id)
                 .where(AgentSession.organization_id == organization_id)
                 .group_by(AgentMessageFeedback.rating)
@@ -1177,20 +1043,12 @@ class SkillOperations:
     async def _load_skill_for_edit(
         self, *, user_id: UUID, organization_id: UUID, skill_id: UUID | None
     ) -> AgentSkill:
-        """Load an editable skill and gate it: owner for personal, admin for org."""
-        await self._org_ops.require_org_member(user_id, organization_id)
-        skill = await self._load_editable_skill(organization_id, skill_id)
-        if skill.owner_id is not None:
-            if skill.owner_id != user_id:
-                raise PermissionDeniedError("update", "Only the owner can edit this skill")
-        else:
-            await self._org_ops.require_org_admin(user_id, organization_id)
-        return skill
+        await require_agents_builder(self._session, user_id, organization_id)
+        return await self._load_editable_skill(organization_id, skill_id)
 
-    async def _get_owned_draft(
+    async def _get_draft(
         self,
         *,
-        user_id: UUID,
         organization_id: UUID,
         draft_id: UUID,
         require_pending: bool = False,
@@ -1203,11 +1061,33 @@ class SkillOperations:
             )
         )
         draft = result.scalar_one_or_none()
-        if draft is None or draft.owner_id != user_id:
+        if draft is None:
             raise NotFoundError("AgentSkillDraft", str(draft_id))
         if require_pending and draft.status != "pending":
             raise ValidationError("status", "This draft has already been resolved")
         return draft
+
+    async def _require_pending_draft_quota(
+        self, user_id: UUID, organization_id: UUID
+    ) -> None:
+        count = (
+            await self._session.execute(
+                select(func.count())
+                .select_from(AgentSkillDraft)
+                .where(
+                    AgentSkillDraft.organization_id == organization_id,
+                    AgentSkillDraft.owner_id == user_id,
+                    AgentSkillDraft.status == "pending",
+                    AgentSkillDraft.is_deleted == False,  # noqa: E712
+                )
+            )
+        ).scalar() or 0
+        if count >= MAX_PENDING_DRAFTS_PER_USER:
+            raise ValidationError(
+                "drafts",
+                f"You already have {MAX_PENDING_DRAFTS_PER_USER} skill drafts awaiting "
+                "review. Ask a builder to review them before proposing more.",
+            )
 
     async def _require_unique_name(
         self, organization_id: UUID, name: str, *, exclude_id: UUID | None = None
@@ -1310,24 +1190,7 @@ class SkillOperations:
         organization_id: UUID,
         enabled_skill_ids: list[str],
     ) -> list[AgentSkill]:
-        """Fetch skills for an agent runtime session.
-
-        Returns the union of explicitly enabled skills and all
-        always_active skills (bundled + org), deduplicated.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization context.
-        enabled_skill_ids : list[str]
-            Skill IDs explicitly enabled on the agent.
-
-        Returns
-        -------
-        list[AgentSkill]
-            Deduplicated list of skills to inject.
-
-        """
+        """Union of explicitly enabled skills and bundled/org always_active skills."""
         seen_ids: set[UUID] = set()
         skills: list[AgentSkill] = []
 
@@ -1354,7 +1217,6 @@ class SkillOperations:
                     seen_ids.add(skill.id)
                     skills.append(skill)
 
-        # Fetch always_active skills (bundled + org)
         always_result = await self._session.execute(
             select(AgentSkill).where(
                 AgentSkill.always_active == True,  # noqa: E712
@@ -1370,6 +1232,24 @@ class SkillOperations:
                 skills.append(skill)
 
         return await self._overlay_active_versions(skills)
+
+    async def resolve_bundled_skill_id_map(self, names: list[str]) -> dict[str, str]:
+        """Map bundled skill names to row ids; unseeded names are absent."""
+        if not names:
+            return {}
+
+        result = await self._session.execute(
+            select(AgentSkill.id, AgentSkill.name).where(
+                AgentSkill.organization_id.is_(None),
+                AgentSkill.source == "bundled",
+                AgentSkill.name.in_(names),
+            )
+        )
+        return {row[1]: str(row[0]) for row in result.all()}
+
+    async def resolve_bundled_skill_ids(self, names: list[str]) -> list[str]:
+        id_by_name = await self.resolve_bundled_skill_id_map(names)
+        return [id_by_name[name] for name in names if name in id_by_name]
 
     async def _snapshot_version(
         self,

@@ -42,14 +42,6 @@ ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {
         "default_access_mode": AccessMode.OPEN_TO_ORG,
         "default_baseline_role": ContentRole.VIEWER,
     },
-    ContentType.PROVIDER_KEY: {
-        "default_access_mode": AccessMode.OWNER_ONLY,
-        "default_baseline_role": None,
-    },
-    ContentType.PROMPT: {
-        "default_access_mode": AccessMode.OPEN_TO_ORG,
-        "default_baseline_role": ContentRole.VIEWER,
-    },
     ContentType.AGENT_CRON_TASK: {
         "default_access_mode": AccessMode.OWNER_ONLY,
         "default_baseline_role": None,

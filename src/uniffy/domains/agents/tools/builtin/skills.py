@@ -107,10 +107,6 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
                 target_skill_id = match.id
                 kind = "edit"
 
-    scope = args.get("suggested_scope") or "personal"
-    if scope not in ("personal", "organization"):
-        scope = "personal"
-
     draft = await ops.propose_skill_draft(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -123,7 +119,6 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
         description=(args.get("description") or "").strip(),
         content=content,
         when_to_use=(args.get("when_to_use") or "").strip(),
-        suggested_scope=scope,
         rationale=(args.get("rationale") or "").strip(),
     )
 
@@ -176,11 +171,6 @@ propose_skill = ToolDefinition(
             "target_skill_name": {
                 "type": "string",
                 "description": "Machine name of an existing skill to propose editing instead.",
-            },
-            "suggested_scope": {
-                "type": "string",
-                "enum": ["personal", "organization"],
-                "description": "Whether the skill is personal or shared with the organization.",
             },
             "rationale": {
                 "type": "string",

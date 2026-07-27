@@ -26,7 +26,7 @@ def _make_agent() -> Agent:
         name="Helper",
         soul_prompt="",
         primary_model="claude-sonnet-4-6",
-        access_mode=AccessMode.OWNER_ONLY,
+        access_mode=AccessMode.OPEN_TO_ORG,
     )
 
 

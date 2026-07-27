@@ -8,7 +8,6 @@ from sqlalchemy import Integer, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.run_log import AgentRunLog
@@ -26,14 +25,7 @@ INTERVAL_TO_SECONDS: dict[str, int] = {
 
 
 class UsageOperations:
-    """Aggregate usage statistics from agent run logs.
-
-    Parameters
-    ----------
-    session : AsyncSession
-        Database session.
-
-    """
+    """Aggregate usage statistics from agent run logs."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -45,29 +37,11 @@ class UsageOperations:
         interval: str = "1d",
         user_id: UUID | None = None,
     ) -> dict:
-        """Get aggregated usage statistics for an organization.
+        """Aggregate usage for an organization.
 
         When ``user_id`` is provided the results are scoped to that single
-        user's runs. Otherwise all runs in the organization are returned
+        user's runs; otherwise all runs in the organization are returned
         (admin view).
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization to query stats for.
-        days : int
-            Number of days to look back (default 30).
-        interval : str
-            Aggregation interval: "30m", "1h", "2h", "4h", "1d" (default "1d").
-        user_id : UUID | None
-            When set, restrict results to this user's runs only.
-
-        Returns
-        -------
-        dict
-            Usage statistics including totals, time series breakdown, model usage,
-            agent usage, and tool frequency.
-
         """
         days = max(1, min(days, 365))
         if interval not in VALID_INTERVALS:
@@ -102,19 +76,6 @@ class UsageOperations:
         }
 
     async def _get_totals(self, base_filter: list) -> dict:
-        """Get summary totals for the period.
-
-        Parameters
-        ----------
-        base_filter : list
-            SQLAlchemy filter conditions.
-
-        Returns
-        -------
-        dict
-            Total runs, tokens, sessions, and average duration.
-
-        """
         result = await self.session.execute(
             select(
                 func.count(AgentRunLog.id).label("total_runs"),
@@ -160,21 +121,6 @@ class UsageOperations:
         base_filter: list,
         interval: str,
     ) -> list[dict]:
-        """Get time series breakdown of runs and tokens.
-
-        Parameters
-        ----------
-        base_filter : list
-            SQLAlchemy filter conditions.
-        interval : str
-            Aggregation interval ("30m", "1h", "2h", "4h", "1d").
-
-        Returns
-        -------
-        list[dict]
-            Time-bucketed usage entries sorted by timestamp ascending.
-
-        """
         if interval == "1d":
             bucket = func.date(AgentRunLog.created_at)
         elif interval == "1h":
@@ -231,19 +177,6 @@ class UsageOperations:
         ]
 
     async def _get_model_usage(self, base_filter: list) -> list[dict]:
-        """Get token usage grouped by model.
-
-        Parameters
-        ----------
-        base_filter : list
-            SQLAlchemy filter conditions.
-
-        Returns
-        -------
-        list[dict]
-            Per-model usage entries sorted by total tokens descending.
-
-        """
         result = await self.session.execute(
             select(
                 AgentRunLog.model,
@@ -276,21 +209,6 @@ class UsageOperations:
         base_filter: list,
         organization_id: UUID,
     ) -> list[dict]:
-        """Get usage grouped by agent with agent names.
-
-        Parameters
-        ----------
-        base_filter : list
-            SQLAlchemy filter conditions.
-        organization_id : UUID
-            Organization ID for agent name lookup.
-
-        Returns
-        -------
-        list[dict]
-            Per-agent usage entries sorted by total tokens descending.
-
-        """
         result = await self.session.execute(
             select(
                 AgentRunLog.agent_id,
@@ -318,19 +236,6 @@ class UsageOperations:
         ]
 
     async def _get_tool_usage(self, base_filter: list) -> list[dict]:
-        """Get tool call frequency from JSONB tool_calls column.
-
-        Parameters
-        ----------
-        base_filter : list
-            SQLAlchemy filter conditions.
-
-        Returns
-        -------
-        list[dict]
-            Tool names sorted by call count descending.
-
-        """
         # Fetch raw tool_calls JSONB data and aggregate in Python
         # since JSONB array element extraction varies across PostgreSQL versions
         result = await self.session.execute(
@@ -355,19 +260,6 @@ class UsageOperations:
         ]
 
     async def _get_provider_key_usage(self, base_filter: list) -> list[dict]:
-        """Get usage grouped by provider key.
-
-        Parameters
-        ----------
-        base_filter : list
-            SQLAlchemy filter conditions.
-
-        Returns
-        -------
-        list[dict]
-            Per-key usage entries sorted by total tokens descending.
-
-        """
         result = await self.session.execute(
             select(
                 AgentRunLog.provider_key_id,
@@ -405,52 +297,33 @@ class UsageOperations:
         since: datetime,
         user_id: UUID | None = None,
     ) -> dict:
-        """Get usage statistics for cron (scheduled) tasks.
-
-        Queries the cron run logs table for per-task breakdowns
-        and summary totals including success/failure counts.
-
-        Parameters
-        ----------
-        organization_id : UUID
-            Organization to query.
-        since : datetime
-            Start of the reporting period.
-        user_id : UUID | None
-            When set, restrict to cron tasks owned by this user.
-
-        Returns
-        -------
-        dict
-            Cron usage with "totals" and "per_task" breakdowns.
-
-        """
+        """Cron usage totals and per-task breakdown from cron-stamped run logs."""
         cron_filter = [
-            AgentCronRunLog.organization_id == organization_id,
-            AgentCronRunLog.started_at >= since,
+            AgentRunLog.organization_id == organization_id,
+            AgentRunLog.cron_task_id.is_not(None),
+            AgentRunLog.created_at >= since,
         ]
 
         if user_id is not None:
             cron_filter.append(AgentCronTask.owner_id == user_id)
 
-        # Summary totals
         totals_query = (
             select(
-                func.count(AgentCronRunLog.id).label("total_runs"),
+                func.count(AgentRunLog.id).label("total_runs"),
                 func
-                .count(AgentCronRunLog.id)
-                .filter(AgentCronRunLog.status == "success")
+                .count(AgentRunLog.id)
+                .filter(AgentRunLog.status == "success")
                 .label("successes"),
                 func
-                .count(AgentCronRunLog.id)
-                .filter(AgentCronRunLog.status == "error")
+                .count(AgentRunLog.id)
+                .filter(AgentRunLog.status == "error")
                 .label("failures"),
-                func.coalesce(func.sum(AgentCronRunLog.input_tokens), 0).label("input_tokens"),
-                func.coalesce(func.sum(AgentCronRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
             )
             .join(
                 AgentCronTask,
-                AgentCronTask.id == AgentCronRunLog.cron_task_id,
+                AgentCronTask.id == AgentRunLog.cron_task_id,
                 isouter=True,
             )
             .where(*cron_filter)
@@ -458,27 +331,26 @@ class UsageOperations:
         totals_result = await self.session.execute(totals_query)
         totals_row = totals_result.one()
 
-        # Per-task breakdown with task name and agent name
         per_task_result = await self.session.execute(
             select(
-                AgentCronRunLog.cron_task_id,
+                AgentRunLog.cron_task_id,
                 AgentCronTask.name.label("task_name"),
                 Agent.name.label("agent_name"),
-                func.count(AgentCronRunLog.id).label("total_runs"),
+                func.count(AgentRunLog.id).label("total_runs"),
                 func
-                .count(AgentCronRunLog.id)
-                .filter(AgentCronRunLog.status == "success")
+                .count(AgentRunLog.id)
+                .filter(AgentRunLog.status == "success")
                 .label("successes"),
                 func
-                .count(AgentCronRunLog.id)
-                .filter(AgentCronRunLog.status == "error")
+                .count(AgentRunLog.id)
+                .filter(AgentRunLog.status == "error")
                 .label("failures"),
-                func.coalesce(func.sum(AgentCronRunLog.input_tokens), 0).label("input_tokens"),
-                func.coalesce(func.sum(AgentCronRunLog.output_tokens), 0).label("output_tokens"),
+                func.coalesce(func.sum(AgentRunLog.input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(AgentRunLog.output_tokens), 0).label("output_tokens"),
             )
             .join(
                 AgentCronTask,
-                AgentCronTask.id == AgentCronRunLog.cron_task_id,
+                AgentCronTask.id == AgentRunLog.cron_task_id,
                 isouter=True,
             )
             .join(
@@ -488,11 +360,11 @@ class UsageOperations:
             )
             .where(*cron_filter)
             .group_by(
-                AgentCronRunLog.cron_task_id,
+                AgentRunLog.cron_task_id,
                 AgentCronTask.name,
                 Agent.name,
             )
-            .order_by(func.count(AgentCronRunLog.id).desc())
+            .order_by(func.count(AgentRunLog.id).desc())
         )
 
         per_task = [

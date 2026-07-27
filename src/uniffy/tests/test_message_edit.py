@@ -213,38 +213,6 @@ class TestEditMessage:
             )
 
 
-class TestDeleteMessage:
-    def test_invalidates_only_the_target_row(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        user = uuid4()
-        msg = _make_user_message()
-        sess = _make_session(user_id=user)
-        downstream_b = AgentMessage(
-            id=uuid4(),
-            session_id=sess.id,
-            role="assistant",
-            content="b",
-            created_at=msg.created_at + timedelta(seconds=1),
-        )
-        rows = [msg, downstream_b]
-        ops = _make_ops_with_message(
-            msg, sess, downstream=rows, monkeypatch=monkeypatch
-        )
-
-        count = asyncio.run(
-            ops.delete_message(
-                user_id=user,
-                organization_id=sess.organization_id,
-                message_id=msg.id,
-            )
-        )
-
-        assert count == 1
-        assert msg.is_invalidated is True
-        assert downstream_b.is_invalidated is False
-
-
 class TestRetryMessage:
     def test_user_message_returns_content_and_invalidates_downstream(
         self, monkeypatch: pytest.MonkeyPatch

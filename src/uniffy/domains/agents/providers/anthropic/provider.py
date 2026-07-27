@@ -62,48 +62,18 @@ class _OpenBlock:
 
 
 class AnthropicProvider(LLMProvider):
-    """Anthropic Claude provider using the official Python SDK.
-
-    Works with both API keys and setup tokens (Claude Max subscriptions).
-    API keys (``sk-ant-api03-``) are passed via ``api_key``, while setup/OAuth
-    tokens (``sk-ant-oat01-``) are passed via ``auth_token`` so the SDK uses
-    the correct authorization header.
-
-    Parameters
-    ----------
-    credential : str
-        API key or setup token.
-    credential_type : str
-        Either "api_key" or "setup_token".
-
-    """
-
-    # Beta headers required for OAuth setup token authentication
-    OAUTH_BETA_HEADERS = {
-        "anthropic-beta": "oauth-2025-04-20",
-    }
+    """Anthropic Claude provider using the official Python SDK."""
 
     @property
     def name(self) -> str:
         """Catalog provider key, used for pricing lookups."""
         return "anthropic"
 
-    def __init__(self, credential: str, credential_type: str = "api_key") -> None:
-        self._credential_type = credential_type
-        if credential_type == "setup_token":
-            self._client = anthropic.AsyncAnthropic(
-                auth_token=credential,
-                default_headers=self.OAUTH_BETA_HEADERS,
-            )
-        else:
-            self._client = anthropic.AsyncAnthropic(api_key=credential)
+    def __init__(self, credential: str) -> None:
+        self._client = anthropic.AsyncAnthropic(api_key=credential)
 
     async def validate(self) -> tuple[bool, str | None]:
-        """Validate the credential against the Anthropic API.
-
-        For API keys, uses the models.list endpoint. For setup tokens
-        (OAuth), uses a minimal messages.create call with count_tokens
-        since the models endpoint does not accept OAuth authentication.
+        """Probe the models endpoint to confirm the key works.
 
         Returns
         -------
@@ -112,13 +82,7 @@ class AnthropicProvider(LLMProvider):
 
         """
         try:
-            if self._credential_type == "setup_token":
-                await self._client.messages.count_tokens(
-                    model="claude-sonnet-4-20250514",
-                    messages=[{"role": "user", "content": "hi"}],
-                )
-            else:
-                await self._client.models.list(limit=1)
+            await self._client.models.list(limit=1)
             return True, None
         except anthropic.AuthenticationError as e:
             return False, f"Authentication failed: {e}"

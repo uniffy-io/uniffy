@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,9 +13,14 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.agents.session import AgentSession
+from uniffy.core.models.chat.channel import ChatChannel
+from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.types import generate_id
 from uniffy.core.valkey.queue import get_queue_safe
 from uniffy.core.valkey.streams import session_has_active_run
+from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
+from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="agents.sessions.operations")
@@ -164,13 +169,17 @@ class SessionOperations:
         kind: str,
         display_name: str | None = None,
         model_override: str | None = None,
-        model_params_override: dict | None = None,
+        is_test: bool = False,
     ) -> AgentSession:
         """Create a new conversation session."""
         await self._org_ops.require_org_member(user_id, organization_id)
 
         if kind not in VALID_SESSION_KINDS:
             raise ValidationError("kind", f"Must be one of: {', '.join(VALID_SESSION_KINDS)}")
+
+        await AgentOperations(self._session).get_by_id(
+            user_id, organization_id, agent_id
+        )
 
         agent_session = AgentSession(
             organization_id=organization_id,
@@ -179,7 +188,7 @@ class SessionOperations:
             kind=kind,
             display_name=display_name.strip() if display_name else None,
             model_override=model_override.strip() if model_override else None,
-            model_params_override=model_params_override or None,
+            is_test=is_test,
         )
         self._session.add(agent_session)
         await self._session.commit()
@@ -208,118 +217,6 @@ class SessionOperations:
 
         self._verify_session_access(agent_session, user_id)
         return agent_session
-
-    async def list_sessions(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        page: int = 1,
-        page_size: int = 50,
-        agent_id: UUID | None = None,
-        kind: str | None = None,
-        is_archived: bool | None = None,
-    ) -> tuple[list[AgentSession], int]:
-        """User's own sessions plus global sessions, with optional filters."""
-        await self._org_ops.require_org_member(user_id, organization_id)
-
-        base_filter = and_(
-            AgentSession.organization_id == organization_id,
-            or_(
-                AgentSession.user_id == user_id,
-                AgentSession.kind == "global",
-            ),
-        )
-
-        stmt = select(AgentSession).where(base_filter)
-        count_stmt = select(func.count()).select_from(AgentSession).where(base_filter)
-
-        if agent_id is not None:
-            stmt = stmt.where(AgentSession.agent_id == agent_id)
-            count_stmt = count_stmt.where(AgentSession.agent_id == agent_id)
-
-        if kind is not None:
-            stmt = stmt.where(AgentSession.kind == kind)
-            count_stmt = count_stmt.where(AgentSession.kind == kind)
-
-        if is_archived is not None:
-            stmt = stmt.where(AgentSession.is_archived == is_archived)
-            count_stmt = count_stmt.where(AgentSession.is_archived == is_archived)
-
-        total_result = await self._session.execute(count_stmt)
-        total = total_result.scalar() or 0
-
-        offset = (page - 1) * page_size
-        stmt = stmt.order_by(AgentSession.updated_at.desc()).offset(offset).limit(page_size)
-
-        result = await self._session.execute(stmt)
-        sessions = list(result.scalars().all())
-        return sessions, total
-
-    async def update_session(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        session_id: UUID,
-        display_name: str | None = None,
-        model_override: str | None = None,
-        model_params_override: dict | None = None,
-    ) -> AgentSession:
-        """Update session settings; `None` arguments leave the field unchanged."""
-        await self._org_ops.require_org_member(user_id, organization_id)
-
-        result = await self._session.execute(
-            select(AgentSession).where(
-                AgentSession.id == session_id,
-                AgentSession.organization_id == organization_id,
-            )
-        )
-        agent_session = result.scalar_one_or_none()
-        if not agent_session:
-            raise NotFoundError("AgentSession", str(session_id))
-
-        self._verify_session_owner_or_admin(agent_session, user_id, organization_id)
-
-        if display_name is not None:
-            agent_session.display_name = display_name.strip() or None
-
-        if model_override is not None:
-            agent_session.model_override = model_override.strip() or None
-
-        if model_params_override is not None:
-            agent_session.model_params_override = model_params_override or None
-
-        agent_session.updated_at = datetime.now(UTC)
-        await self._session.commit()
-        await self._session.refresh(agent_session)
-        return agent_session
-
-    async def archive_session(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        session_id: UUID,
-    ) -> None:
-        """Archive a session (soft delete)."""
-        await self._org_ops.require_org_member(user_id, organization_id)
-
-        result = await self._session.execute(
-            select(AgentSession).where(
-                AgentSession.id == session_id,
-                AgentSession.organization_id == organization_id,
-            )
-        )
-        agent_session = result.scalar_one_or_none()
-        if not agent_session:
-            raise NotFoundError("AgentSession", str(session_id))
-
-        self._verify_session_owner_or_admin(agent_session, user_id, organization_id)
-
-        agent_session.is_archived = True
-        agent_session.updated_at = datetime.now(UTC)
-        await self._session.commit()
 
     async def add_message(
         self,
@@ -461,106 +358,6 @@ class SessionOperations:
         messages = list(result.scalars().all())
         return messages, total
 
-    async def get_context_stats(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        session_id: UUID,
-        context_window_tokens: int = FALLBACK_CONTEXT_WINDOW,
-    ) -> dict:
-        """Get context window statistics for a session.
-
-        ``active_tokens`` is the provider-reported prompt size of the
-        most recent assistant turn (its ``input_tokens`` plus
-        ``output_tokens``). That value is exactly what the model just
-        ingested + just produced, which is the floor of the next
-        prompt. Returns 0 before the first assistant reply.
-
-        Parameters
-        ----------
-        user_id : UUID
-            The requesting user.
-        organization_id : UUID
-            Organization context.
-        session_id : UUID
-            Session to get stats for.
-        context_window_tokens : int
-            Model context window size in tokens.
-
-        Returns
-        -------
-        dict
-            Token statistics about context usage and compaction state.
-
-        Raises
-        ------
-        NotFoundError
-            If the session does not exist.
-        PermissionDeniedError
-            If the user cannot access this session.
-
-        """
-        await self._org_ops.require_org_member(user_id, organization_id)
-
-        session_result = await self._session.execute(
-            select(AgentSession).where(
-                AgentSession.id == session_id,
-                AgentSession.organization_id == organization_id,
-            )
-        )
-        agent_session = session_result.scalar_one_or_none()
-        if not agent_session:
-            raise NotFoundError("AgentSession", str(session_id))
-        self._verify_session_access(agent_session, user_id)
-
-        counts_result = await self._session.execute(
-            select(
-                func.count().label("total"),
-                func.count()
-                .filter(AgentMessage.is_compacted == True)  # noqa: E712
-                .label("compacted"),
-                func.count()
-                .filter(
-                    and_(
-                        AgentMessage.is_compacted == False,  # noqa: E712
-                        AgentMessage.role == "summary",
-                    )
-                )
-                .label("summary"),
-                func.count()
-                .filter(AgentMessage.is_compacted == False)  # noqa: E712
-                .label("active"),
-            ).where(AgentMessage.session_id == session_id)
-        )
-        counts = counts_result.one()
-        total_messages = int(counts.total or 0)
-        compacted_messages = int(counts.compacted or 0)
-        summary_count = int(counts.summary or 0)
-        active_messages = int(counts.active or 0)
-
-        last_input, last_output, last_cache_read = (
-            await self._latest_active_prompt_tokens(session_id)
-        )
-        active_tokens = last_input + last_output
-
-        token_budget = int(context_window_tokens * DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO)
-        tokens_until_compaction = max(0, token_budget - active_tokens)
-
-        return {
-            "total_messages": total_messages,
-            "active_messages": active_messages,
-            "compacted_messages": compacted_messages,
-            "summary_count": summary_count,
-            "active_tokens": active_tokens,
-            "last_input_tokens": last_input,
-            "last_output_tokens": last_output,
-            "last_cache_read_tokens": last_cache_read,
-            "token_budget": token_budget,
-            "tokens_until_compaction": tokens_until_compaction,
-            "context_window_tokens": context_window_tokens,
-        }
-
     async def _latest_active_prompt_tokens(
         self, session_id: UUID
     ) -> tuple[int, int, int]:
@@ -670,15 +467,6 @@ class SessionOperations:
         if agent_session.user_id != user_id and agent_session.kind != "global":
             raise PermissionDeniedError("access", "AgentSession")
 
-    def _verify_session_owner_or_admin(
-        self,
-        agent_session: AgentSession,
-        user_id: UUID,
-        organization_id: UUID,
-    ) -> None:
-        if agent_session.user_id != user_id:
-            raise PermissionDeniedError("modify", "AgentSession")
-
     async def edit_message(
         self,
         *,
@@ -734,36 +522,6 @@ class SessionOperations:
         await self._session.commit()
         await self._session.refresh(msg)
         return msg
-
-    async def delete_message(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        message_id: UUID,
-    ) -> int:
-        """Soft-delete a message; returns 1 if newly invalidated, 0 if not."""
-        await self._org_ops.require_org_member(user_id, organization_id)
-
-        msg, agent_session = await self._load_message(
-            user_id=user_id,
-            organization_id=organization_id,
-            message_id=message_id,
-        )
-        if agent_session.user_id != user_id:
-            raise PermissionDeniedError("delete", "AgentMessage")
-        if msg.is_invalidated:
-            return 0
-
-        await self._ensure_no_inflight_run(agent_session.id)
-
-        now = datetime.now(UTC)
-        msg.is_invalidated = True
-        msg.invalidated_at = now
-        msg.invalidated_by = user_id
-        agent_session.updated_at = now
-        await self._session.commit()
-        return 1
 
     async def retry_message(
         self,
@@ -1008,10 +766,97 @@ class SessionOperations:
         if msg.role != "assistant":
             raise ValidationError("role", "feedback is only supported on agent messages")
 
-        if not clean:
+        feedback = await self._upsert_feedback(
+            target_column="agents_message_id",
+            target_id=message_id,
+            user_id=user_id,
+            rating=clean,
+            comment=comment,
+        )
+
+        if clean == "down":
+            await self.enqueue_skill_analysis(
+                destination_kind="session",
+                destination_id=agent_session.id,
+                user_id=user_id,
+                agent_id=agent_session.agent_id,
+                organization_id=organization_id,
+            )
+        return feedback
+
+    async def submit_chat_message_feedback(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        chat_message_id: UUID,
+        rating: str,
+        comment: str = "",
+    ) -> AgentMessageFeedback | None:
+        """Upsert (or clear) the caller's thumbs rating on an agent chat reply.
+
+        The caller must be able to view the channel; only AGENT-sent, undeleted
+        messages are ratable. A thumbs-down queues a skill-evolution pass for
+        the channel.
+        """
+        await self._org_ops.require_org_member(user_id, organization_id)
+        clean = (rating or "").strip().lower()
+        if clean not in ("", "up", "down"):
+            raise ValidationError("rating", "rating must be 'up', 'down', or empty")
+
+        result = await self._session.execute(
+            select(ChatMessage, ChatChannel)
+            .join(ChatChannel, ChatChannel.id == ChatMessage.channel_id)
+            .where(
+                ChatMessage.id == chat_message_id,
+                ChatChannel.organization_id == organization_id,
+            )
+        )
+        row = result.first()
+        if row is None:
+            raise NotFoundError("ChatMessage", str(chat_message_id))
+        msg, channel = row
+        if msg.is_deleted:
+            raise NotFoundError("ChatMessage", str(chat_message_id))
+        if msg.sender_type != SenderType.AGENT:
+            raise ValidationError("sender", "feedback is only supported on agent messages")
+
+        await ChatAccessChecker(self._session).check_access(
+            user_id, organization_id, channel
+        )
+
+        feedback = await self._upsert_feedback(
+            target_column="chat_message_id",
+            target_id=chat_message_id,
+            user_id=user_id,
+            rating=clean,
+            comment=comment,
+        )
+
+        if clean == "down":
+            await self.enqueue_skill_analysis(
+                destination_kind="channel",
+                destination_id=msg.channel_id,
+                user_id=user_id,
+                agent_id=msg.sender_id,
+                organization_id=organization_id,
+            )
+        return feedback
+
+    async def _upsert_feedback(
+        self,
+        *,
+        target_column: str,
+        target_id: UUID,
+        user_id: UUID,
+        rating: str,
+        comment: str,
+    ) -> AgentMessageFeedback | None:
+        column = getattr(AgentMessageFeedback, target_column)
+        if not rating:
             await self._session.execute(
                 delete(AgentMessageFeedback).where(
-                    AgentMessageFeedback.message_id == message_id,
+                    column == target_id,
                     AgentMessageFeedback.user_id == user_id,
                 )
             )
@@ -1023,32 +868,25 @@ class SessionOperations:
         stmt = (
             pg_insert(AgentMessageFeedback)
             .values(
-                message_id=message_id,
+                id=generate_id(),
                 user_id=user_id,
-                rating=clean,
+                rating=rating,
                 comment=comment_clean,
                 created_at=now,
+                **{target_column: target_id},
             )
             .on_conflict_do_update(
-                index_elements=["message_id", "user_id"],
-                set_={"rating": clean, "comment": comment_clean, "created_at": now},
+                index_elements=[target_column, "user_id"],
+                index_where=text(f"{target_column} IS NOT NULL"),
+                set_={"rating": rating, "comment": comment_clean, "created_at": now},
             )
         )
         await self._session.execute(stmt)
         await self._session.commit()
 
-        if clean == "down":
-            await self.enqueue_skill_analysis(
-                destination_kind="session",
-                destination_id=agent_session.id,
-                user_id=user_id,
-                agent_id=agent_session.agent_id,
-                organization_id=organization_id,
-            )
-
         result = await self._session.execute(
             select(AgentMessageFeedback).where(
-                AgentMessageFeedback.message_id == message_id,
+                column == target_id,
                 AgentMessageFeedback.user_id == user_id,
             )
         )
@@ -1057,13 +895,31 @@ class SessionOperations:
     async def get_user_feedback_for_messages(
         self, *, user_id: UUID, message_ids: list[UUID]
     ) -> dict[UUID, str]:
-        """Map message_id -> the caller's rating for a page of messages."""
+        """Map agents_message_id -> the caller's rating for a page of messages."""
         if not message_ids:
             return {}
         result = await self._session.execute(
-            select(AgentMessageFeedback.message_id, AgentMessageFeedback.rating).where(
+            select(
+                AgentMessageFeedback.agents_message_id, AgentMessageFeedback.rating
+            ).where(
                 AgentMessageFeedback.user_id == user_id,
-                AgentMessageFeedback.message_id.in_(message_ids),
+                AgentMessageFeedback.agents_message_id.in_(message_ids),
+            )
+        )
+        return {mid: rating for mid, rating in result.all()}
+
+    async def get_user_feedback_for_chat_messages(
+        self, *, user_id: UUID, chat_message_ids: list[UUID]
+    ) -> dict[UUID, str]:
+        """Map chat_message_id -> the caller's rating for a page of chat messages."""
+        if not chat_message_ids:
+            return {}
+        result = await self._session.execute(
+            select(
+                AgentMessageFeedback.chat_message_id, AgentMessageFeedback.rating
+            ).where(
+                AgentMessageFeedback.user_id == user_id,
+                AgentMessageFeedback.chat_message_id.in_(chat_message_ids),
             )
         )
         return {mid: rating for mid, rating in result.all()}

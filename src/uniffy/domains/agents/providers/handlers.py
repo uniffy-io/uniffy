@@ -6,7 +6,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.providers_pb2 import (
     AddProviderKeyRequest,
     AddProviderKeyResponse,
@@ -24,18 +23,10 @@ from uniffy_proto.agents.v1.providers_pb2 import (
     ValidateProviderKeyResponse,
 )
 
-from uniffy.core.auth.permissions import resolve_effective_policy
-from uniffy.core.auth.permissions.checker import PermissionChecker
-from uniffy.core.converters.common_proto import (
-    access_mode_from_proto,
-    content_role_from_proto,
-)
 from uniffy.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.agents.provider_key import ProviderKey
-from uniffy.core.types import ContentType
 from uniffy.db import open_session
+from uniffy.domains.agents.access import is_org_admin
 from uniffy.domains.agents.providers.converters import (
-    credential_type_from_proto,
     model_info_to_proto,
     provider_key_to_proto,
 )
@@ -43,22 +34,6 @@ from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.auth.context import get_user_id_from_context
 
 logger = logger.bind(component="agents.providers.handlers")
-
-
-async def _resolve_effective_policy(
-    session: AsyncSession,
-    organization_id: UUID,
-    key: ProviderKey,
-    checker: PermissionChecker | None = None,
-):
-    """Return the provider key's effective ``(access_mode, baseline_role)`` for proto emission."""
-    permission_checker = checker or PermissionChecker(session)
-    default_mode, default_baseline = await permission_checker.get_org_defaults(
-        organization_id, ContentType.PROVIDER_KEY,
-    )
-    return resolve_effective_policy(
-        key.access_mode, key.baseline_role, default_mode, default_baseline,
-    )
 
 
 def _parse_uuid(value: str, field: str) -> UUID:
@@ -95,12 +70,6 @@ class ProvidersHandlers:
         user_id = get_user_id_from_context(ctx)
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
-        credential_type = credential_type_from_proto(request.credential_type)
-        access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
-        baseline_role = (
-            content_role_from_proto(request.baseline_role) if request.baseline_role else None
-        )
-
         try:
             async with open_session() as session:
                 ops = ProviderOperations(session)
@@ -108,21 +77,12 @@ class ProvidersHandlers:
                     user_id=user_id,
                     organization_id=org_id,
                     provider=request.provider,
-                    credential_type=credential_type,
                     label=request.label,
                     credential=request.credential,
-                    access_mode=access_mode,
-                    baseline_role=baseline_role,
                 )
-                eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, key,
-                )
+                # add_key is org-admin gated, so the caller may see diagnostics.
                 return AddProviderKeyResponse(
-                    key=provider_key_to_proto(
-                        key,
-                        effective_access_mode=eff_mode,
-                        effective_baseline_role=eff_baseline,
-                    )
+                    key=provider_key_to_proto(key, include_diagnostics=True),
                 )
         except ConnectError:
             raise
@@ -148,23 +108,14 @@ class ProvidersHandlers:
                     organization_id=org_id,
                     provider=provider,
                 )
-                checker = PermissionChecker(session)
-                default_mode, default_baseline = await checker.get_org_defaults(
-                    org_id, ContentType.PROVIDER_KEY,
+                # One cached role read per RPC, not per key.
+                diagnostics = await is_org_admin(session, user_id, org_id)
+                return ListProviderKeysResponse(
+                    keys=[
+                        provider_key_to_proto(k, include_diagnostics=diagnostics)
+                        for k in keys
+                    ],
                 )
-                proto_keys = []
-                for k in keys:
-                    eff_mode, eff_baseline = resolve_effective_policy(
-                        k.access_mode, k.baseline_role, default_mode, default_baseline,
-                    )
-                    proto_keys.append(
-                        provider_key_to_proto(
-                            k,
-                            effective_access_mode=eff_mode,
-                            effective_baseline_role=eff_baseline,
-                        )
-                    )
-                return ListProviderKeysResponse(keys=proto_keys)
         except ConnectError:
             raise
         except Exception as exc:
@@ -268,15 +219,9 @@ class ProvidersHandlers:
                     key_id=key_id,
                     enabled=request.enabled,
                 )
-                eff_mode, eff_baseline = await _resolve_effective_policy(
-                    session, org_id, key,
-                )
+                # toggle_key is org-admin gated, so the caller may see diagnostics.
                 return ToggleProviderKeyResponse(
-                    key=provider_key_to_proto(
-                        key,
-                        effective_access_mode=eff_mode,
-                        effective_baseline_role=eff_baseline,
-                    )
+                    key=provider_key_to_proto(key, include_diagnostics=True),
                 )
         except ConnectError:
             raise

@@ -4,24 +4,14 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.auth.permissions import resolve_access_policy
-from uniffy.core.content.members import register_content_loader
 from uniffy.core.crypto import OrgCipher, ReEncryptingConsumer, register_consumer
 from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
 from uniffy.core.models.agents.provider_key import ProviderKey
-from uniffy.core.models.login.group_member import GroupMember
-from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.types import (
-    AccessMode,
-    ContentRole,
-    ContentType,
-    SubjectType,
-)
 from uniffy.domains.agents.cache import publish_provider_key_invalidation
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo
 from uniffy.domains.agents.providers.catalog import provider_for_model
@@ -52,32 +42,25 @@ class ProviderOperations:
         user_id: UUID,
         organization_id: UUID,
         provider: str,
-        credential_type: str,
         label: str,
         credential: str,
-        access_mode: AccessMode | None = None,
-        baseline_role: ContentRole | None = None,
     ) -> ProviderKey:
-        """Add a new provider key (encrypted at rest)."""
-        access_mode, baseline_role = await resolve_access_policy(
-            self._session,
-            organization_id,
-            ContentType.PROVIDER_KEY,
-            access_mode,
-            baseline_role,
-        )
+        """Add a new provider key (encrypted at rest).
 
-        if access_mode == AccessMode.OWNER_ONLY:
-            await self._org_ops.require_org_member(user_id, organization_id)
-        else:
-            await self._org_ops.require_org_admin(user_id, organization_id)
+        The pasted credential is never format-checked: the only signal we
+        trust is the live probe below, which asks the provider for its
+        model list and records the failure on the row.
+        """
+        await self._org_ops.require_org_admin(user_id, organization_id)
 
         if not label or not label.strip():
             raise ValidationError("label", "Label cannot be empty")
         label = label.strip()
 
         credential = credential.strip()
-        get_provider_registry().validate_credential(provider, credential, credential_type)
+        if not credential:
+            raise ValidationError("credential", "Credential cannot be empty")
+        get_provider_registry().require_known(provider)
 
         existing = await self._session.execute(
             select(ProviderKey).where(
@@ -98,19 +81,16 @@ class ProviderOperations:
         key = ProviderKey(
             organization_id=organization_id,
             provider=provider,
-            credential_type=credential_type,
             label=label,
             encrypted_credential=encrypted,
             key_hint=hint,
             is_valid=True,
-            access_mode=access_mode,
-            baseline_role=baseline_role,
             created_by=user_id,
         )
         self._session.add(key)
 
         try:
-            llm = get_provider_registry().create_provider(provider, credential, credential_type)
+            llm = get_provider_registry().create_provider(provider, credential)
             is_valid, error = await llm.validate()
             key.is_valid = is_valid
             key.last_validated_at = datetime.now(UTC)
@@ -133,7 +113,6 @@ class ProviderOperations:
             resource_id=key.id,
             details={
                 "provider": provider,
-                "credential_type": credential_type,
                 "label": label,
                 "key_hint": key.key_hint,
             },
@@ -151,49 +130,14 @@ class ProviderOperations:
         organization_id: UUID,
         provider: str | None = None,
     ) -> list[ProviderKey]:
-        """List provider keys visible to the user.
+        """List the org's provider keys.
 
-        A user can see a key when any of the following holds:
-        - The key is ``OPEN_TO_ORG`` (visible to every org member).
-        - The user created the key (``created_by == user_id``).
-        - The user has an explicit non-blocked ``ContentMember`` row on
-          the key (directly, or via a group membership).
+        Keys are org-wide and admin-managed; every member can read the list
+        because the chat model pickers need it.
         """
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        now = datetime.now(UTC)
-        user_groups_subq = select(GroupMember.group_id).where(
-            GroupMember.user_id == user_id,
-            GroupMember.is_active == True,  # noqa: E712
-        )
-        shared_key_ids_subq = select(ContentMember.content_id).where(
-            ContentMember.organization_id == organization_id,
-            ContentMember.content_type == ContentType.PROVIDER_KEY,
-            ContentMember.role != ContentRole.BLOCKED,
-            or_(
-                ContentMember.expires_at.is_(None),
-                ContentMember.expires_at > now,
-            ),
-            or_(
-                and_(
-                    ContentMember.subject_type == SubjectType.USER,
-                    ContentMember.subject_id == user_id,
-                ),
-                and_(
-                    ContentMember.subject_type == SubjectType.GROUP,
-                    ContentMember.subject_id.in_(user_groups_subq),
-                ),
-            ),
-        )
-
-        stmt = select(ProviderKey).where(
-            ProviderKey.organization_id == organization_id,
-            or_(
-                ProviderKey.access_mode == AccessMode.OPEN_TO_ORG,
-                ProviderKey.created_by == user_id,
-                ProviderKey.id.in_(shared_key_ids_subq),
-            ),
-        )
+        stmt = select(ProviderKey).where(ProviderKey.organization_id == organization_id)
         if provider:
             stmt = stmt.where(ProviderKey.provider == provider)
         stmt = stmt.order_by(ProviderKey.created_at)
@@ -219,8 +163,7 @@ class ProviderOperations:
         if not key:
             raise NotFoundError("ProviderKey", str(key_id))
 
-        if key.created_by != user_id:
-            await self._org_ops.require_org_admin(user_id, organization_id)
+        await self._org_ops.require_org_admin(user_id, organization_id)
 
         key_label = key.label
         key_provider = key.provider
@@ -246,7 +189,7 @@ class ProviderOperations:
         key_id: UUID,
     ) -> tuple[bool, str | None]:
         """Validate a stored provider key against the provider API."""
-        await self._org_ops.require_org_member(user_id, organization_id)
+        await self._org_ops.require_org_admin(user_id, organization_id)
 
         result = await self._session.execute(
             select(ProviderKey).where(
@@ -259,7 +202,7 @@ class ProviderOperations:
             raise NotFoundError("ProviderKey", str(key_id))
 
         credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
-        llm = get_provider_registry().create_provider(key.provider, credential, key.credential_type)
+        llm = get_provider_registry().create_provider(key.provider, credential)
         is_valid, error = await llm.validate()
 
         key.is_valid = is_valid
@@ -307,11 +250,7 @@ class ProviderOperations:
             credential = await self._org_cipher.decrypt(
                 key.organization_id, key.encrypted_credential
             )
-            llm = registry.create_provider(
-                key.provider,
-                credential,
-                key.credential_type,
-            )
+            llm = registry.create_provider(key.provider, credential)
             models.extend(
                 await llm.get_available_models(
                     force_refresh=force_refresh,
@@ -349,7 +288,7 @@ class ProviderOperations:
         key.last_used_at = datetime.now(UTC)
         await self._session.commit()
 
-        return get_provider_registry().create_provider(provider, credential, key.credential_type)
+        return get_provider_registry().create_provider(provider, credential)
 
     async def _get_key_for_model(
         self,
@@ -423,9 +362,7 @@ class ProviderOperations:
 
         record_lru_miss()
         credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
-        provider = registry.create_provider(
-            key.provider, credential, key.credential_type
-        )
+        provider = registry.create_provider(key.provider, credential)
         await lru.set(key.id, credential, provider)
         return provider
 
@@ -525,11 +462,7 @@ class ProviderOperations:
             raise NotFoundError("ProviderKey", str(key_id))
 
         credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
-        llm = get_provider_registry().create_provider(
-            key.provider,
-            credential,
-            key.credential_type,
-        )
+        llm = get_provider_registry().create_provider(key.provider, credential)
         return await llm.get_available_models(force_refresh=force_refresh)
 
     async def toggle_key(
@@ -550,8 +483,7 @@ class ProviderOperations:
         if not key:
             raise NotFoundError("ProviderKey", str(key_id))
 
-        if key.created_by != user_id:
-            await self._org_ops.require_org_admin(user_id, organization_id)
+        await self._org_ops.require_org_admin(user_id, organization_id)
 
         key.is_enabled = enabled
         key.updated_at = datetime.now(UTC)
@@ -568,27 +500,6 @@ class ProviderOperations:
         await self._session.refresh(key)
         await publish_provider_key_invalidation(key_id)
         return key
-
-
-# Content loader registration
-
-
-async def _load_provider_key(
-    session: AsyncSession,
-    organization_id: UUID,
-    content_id: UUID,
-) -> ProviderKey | None:
-    """Loader used by ``ContentMembersOperations`` to fetch a provider key."""
-    result = await session.execute(
-        select(ProviderKey).where(
-            ProviderKey.id == content_id,
-            ProviderKey.organization_id == organization_id,
-        )
-    )
-    return result.scalar_one_or_none()
-
-
-register_content_loader(ContentType.PROVIDER_KEY, _load_provider_key)
 
 
 async def _list_provider_keys_for_org(

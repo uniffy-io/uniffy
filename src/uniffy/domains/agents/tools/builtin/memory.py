@@ -1,4 +1,4 @@
-"""Built-in memory tools: audience-scoped save/read/recall/list/forget."""
+"""Built-in memory tools: audience-scoped save/read/forget."""
 
 from sqlalchemy import or_, select, update
 
@@ -6,6 +6,17 @@ from uniffy.core.models.agents.memory import AgentMemory, MemoryScope
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
 VALID_CATEGORIES = {"preferences", "facts", "context", "instructions"}
+
+TEST_SESSION_WRITE_ERROR = (
+    "Memory writes are disabled in test sessions; nothing was saved. "
+    "Reads and the memory index keep working."
+)
+
+
+def _test_write_guard(ctx: ToolContext) -> ToolResult | None:
+    if ctx.is_test_session:
+        return ToolResult(success=False, data="", error=TEST_SESSION_WRITE_ERROR)
+    return None
 
 
 def _scope_or_error(ctx: ToolContext) -> tuple:
@@ -55,6 +66,10 @@ async def _execute_memory_save(ctx: ToolContext, args: dict) -> ToolResult:
     from uniffy.core.errors import ValidationError
     from uniffy.domains.agents.memories.operations import MemoryOperations
 
+    guard = _test_write_guard(ctx)
+    if guard:
+        return guard
+
     ref, err = _scope_or_error(ctx)
     if err:
         return err
@@ -96,108 +111,71 @@ async def _execute_memory_save(ctx: ToolContext, args: dict) -> ToolResult:
 
 async def _execute_memory_read(ctx: ToolContext, args: dict) -> ToolResult:
     key = args.get("key", "").strip()
-    if not key:
-        return ToolResult(success=False, data="", error="key is required")
+    query = args.get("query", "").strip()
+    if not key and not query:
+        return ToolResult(success=False, data="", error="key or query is required")
 
     ref, err = _scope_or_error(ctx)
     if err:
         return err
 
-    result = await ctx.session.execute(
-        select(AgentMemory)
-        .where(*_read_filters(ctx, ref), AgentMemory.key == key)
-        .order_by(
-            (AgentMemory.scope == MemoryScope.ORG.value).asc(),
-            (AgentMemory.scope == MemoryScope.USER.value).asc(),
+    if key:
+        result = await ctx.session.execute(
+            select(AgentMemory)
+            .where(*_read_filters(ctx, ref), AgentMemory.key == key)
+            .order_by(
+                (AgentMemory.scope == MemoryScope.ORG.value).asc(),
+                (AgentMemory.scope == MemoryScope.USER.value).asc(),
+            )
         )
-    )
-    memory = result.scalars().first()
-    if not memory:
-        return ToolResult(success=False, data="", error=f"No memory found with key: {key}")
+        memories = [m for m in (result.scalars().first(),) if m is not None]
+        if not memories:
+            return ToolResult(
+                success=False, data="", error=f"No memory found with key: {key}"
+            )
+    else:
+        pattern = f"%{query}%"
+        result = await ctx.session.execute(
+            select(AgentMemory)
+            .where(
+                *_read_filters(ctx, ref),
+                (AgentMemory.key.ilike(pattern))  # type: ignore[union-attr]
+                | (AgentMemory.description.ilike(pattern))  # type: ignore[union-attr]
+                | (AgentMemory.content.ilike(pattern)),  # type: ignore[union-attr]
+            )
+            .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
+            .limit(min(args.get("limit", 10), 20))
+        )
+        memories = list(result.scalars().all())
+        if not memories:
+            return ToolResult(success=True, data="No matching memories found.")
 
+    # Own-session access counter bump: the sanctioned read_only exception.
     await ctx.session.execute(
         update(AgentMemory)
-        .where(AgentMemory.id == memory.id)
+        .where(AgentMemory.id.in_([m.id for m in memories]))  # type: ignore[attr-defined]
         .values(access_count=AgentMemory.access_count + 1)
     )
     await ctx.session.commit()
 
     from uniffy.domains.agents.memories.scope import scope_ref_for_memory
 
-    audience = _audience(scope_ref_for_memory(memory))
-    saved = memory.updated_at.strftime("%Y-%m-%d") if memory.updated_at else "unknown"
-    return ToolResult(
-        success=True,
-        data=(
-            f"{memory.key} [{memory.category}] ({audience}; last updated {saved}):\n"
-            f"{memory.content}"
-        ),
-    )
-
-
-async def _execute_memory_recall(ctx: ToolContext, args: dict) -> ToolResult:
-    query = args.get("query", "").strip()
-    if not query:
-        return ToolResult(success=False, data="", error="query is required")
-
-    ref, err = _scope_or_error(ctx)
-    if err:
-        return err
-
-    limit = min(args.get("limit", 10), 20)
-    pattern = f"%{query}%"
-    result = await ctx.session.execute(
-        select(AgentMemory)
-        .where(
-            *_read_filters(ctx, ref),
-            (AgentMemory.key.ilike(pattern))  # type: ignore[union-attr]
-            | (AgentMemory.description.ilike(pattern))  # type: ignore[union-attr]
-            | (AgentMemory.content.ilike(pattern)),  # type: ignore[union-attr]
+    if key:
+        memory = memories[0]
+        audience = _audience(scope_ref_for_memory(memory))
+        saved = (
+            memory.updated_at.strftime("%Y-%m-%d") if memory.updated_at else "unknown"
         )
-        .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
-        .limit(limit)
-    )
-    memories = list(result.scalars().all())
-    if not memories:
-        return ToolResult(success=True, data="No matching memories found.")
-
-    memory_ids = [m.id for m in memories]
-    await ctx.session.execute(
-        update(AgentMemory)
-        .where(AgentMemory.id.in_(memory_ids))  # type: ignore[attr-defined]
-        .values(access_count=AgentMemory.access_count + 1)
-    )
-    await ctx.session.commit()
+        return ToolResult(
+            success=True,
+            data=(
+                f"{memory.key} [{memory.category}] ({audience}; last updated {saved}):\n"
+                f"{memory.content}"
+            ),
+        )
 
     lines = [f"Found {len(memories)} memories:"]
     lines.extend(f"- [{m.category}] {m.key}: {m.content}" for m in memories)
-    return ToolResult(success=True, data="\n".join(lines))
-
-
-async def _execute_memory_list(ctx: ToolContext, args: dict) -> ToolResult:
-    ref, err = _scope_or_error(ctx)
-    if err:
-        return err
-
-    category = args.get("category")
-    limit = min(args.get("limit", 20), 50)
-
-    stmt = select(AgentMemory).where(*_read_filters(ctx, ref))
-    if category and category in VALID_CATEGORIES:
-        stmt = stmt.where(AgentMemory.category == category)
-    stmt = stmt.order_by(
-        AgentMemory.importance.desc(), AgentMemory.updated_at.desc()
-    ).limit(limit)
-
-    result = await ctx.session.execute(stmt)
-    memories = list(result.scalars().all())
-    if not memories:
-        return ToolResult(success=True, data="No memories found.")
-
-    lines = [f"Found {len(memories)} memories (use memory.read for full content):"]
-    for m in memories:
-        pin = " [pinned]" if m.pinned else ""
-        lines.append(f"- [{m.category}]{pin} {m.key}: {m.description}")
     return ToolResult(success=True, data="\n".join(lines))
 
 
@@ -207,6 +185,10 @@ async def _execute_memory_forget(ctx: ToolContext, args: dict) -> ToolResult:
     key = args.get("key", "").strip()
     if not key:
         return ToolResult(success=False, data="", error="key is required")
+
+    guard = _test_write_guard(ctx)
+    if guard:
+        return guard
 
     ref, err = _scope_or_error(ctx)
     if err:
@@ -291,9 +273,10 @@ memory_save = ToolDefinition(
 memory_read = ToolDefinition(
     name="memory.read",
     description=(
-        "Read the full content of one memory entry by key. Your system prompt "
-        "lists the index (key + description) of entries available here; use "
-        "this to load the content before relying on it."
+        "Read memories available in this space. Pass a key to load one "
+        "entry's full content (your system prompt lists the index of keys "
+        "and descriptions), or a query to search keys, descriptions, and "
+        "content when the index is not enough."
     ),
     parameter_schema={
         "type": "object",
@@ -302,60 +285,20 @@ memory_read = ToolDefinition(
                 "type": "string",
                 "description": "The key of the memory to read.",
             },
-        },
-        "required": ["key"],
-    },
-    executor=_execute_memory_read,
-    read_only=True,
-)
-
-memory_recall = ToolDefinition(
-    name="memory.recall",
-    description=(
-        "Search memories available in this space when the index in your "
-        "system prompt is not enough. Matches keys, descriptions, and content."
-    ),
-    parameter_schema={
-        "type": "object",
-        "properties": {
             "query": {
                 "type": "string",
-                "description": "Search query to find relevant memories.",
-            },
-            "limit": {
-                "type": "integer",
-                "description": "Maximum results (default 10, max 20).",
-            },
-        },
-        "required": ["query"],
-    },
-    executor=_execute_memory_recall,
-    read_only=True,
-)
-
-memory_list = ToolDefinition(
-    name="memory.list",
-    description=(
-        "List memories available in this space (index view: key, category, "
-        "description), optionally filtered by category."
-    ),
-    parameter_schema={
-        "type": "object",
-        "properties": {
-            "category": {
-                "type": "string",
                 "description": (
-                    "Filter by category: 'preferences', 'facts', 'context', or 'instructions'."
+                    "Search query to find relevant memories when the exact "
+                    "key is unknown."
                 ),
-                "enum": ["preferences", "facts", "context", "instructions"],
             },
             "limit": {
                 "type": "integer",
-                "description": "Maximum results (default 20, max 50).",
+                "description": "Maximum search results (default 10, max 20).",
             },
         },
     },
-    executor=_execute_memory_list,
+    executor=_execute_memory_read,
     read_only=True,
 )
 
@@ -381,7 +324,5 @@ memory_forget = ToolDefinition(
 MEMORY_TOOLS: list[ToolDefinition] = [
     memory_save,
     memory_read,
-    memory_recall,
-    memory_list,
     memory_forget,
 ]

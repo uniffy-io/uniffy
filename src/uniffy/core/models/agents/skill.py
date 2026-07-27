@@ -54,10 +54,6 @@ class AgentSkill(SQLModel, table=True):
     source: str = Field(
         sa_column=Column(String(20), nullable=False),
     )
-    owner_id: UUID | None = Field(
-        default=None,
-        sa_column=Column(Uuid(), nullable=True),
-    )
     always_active: bool = Field(default=False, nullable=False)
     when_to_use: str = Field(
         default="",

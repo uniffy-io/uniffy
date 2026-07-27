@@ -21,8 +21,7 @@ class OpenRouterProvider(OpenAIProvider):
 
     _use_responses_api = False
 
-    def __init__(self, credential: str, credential_type: str = "api_key") -> None:
-        self._credential_type = credential_type
+    def __init__(self, credential: str) -> None:
         self._client = openai.AsyncOpenAI(
             api_key=credential,
             base_url="https://openrouter.ai/api/v1",

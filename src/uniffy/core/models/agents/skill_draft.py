@@ -29,8 +29,8 @@ class AgentSkillDraft(SQLModel, table=True):
         foreign_key="login_organizations.id",
         nullable=False,
     )
-    # The reviewer/author who can save or discard this draft. For an
-    # agent-proposed draft in a channel, this is the triggering user.
+    # Provenance only: the user whose feedback or authorship raised the draft.
+    # Any agents builder can save or discard it.
     owner_id: UUID = Field(foreign_key="login_users.id", nullable=False)
     # Null target = a create draft; set = an edit/evolve of that skill.
     target_skill_id: UUID | None = Field(default=None, sa_column=Column(Uuid(), nullable=True))
@@ -74,10 +74,6 @@ class AgentSkillDraft(SQLModel, table=True):
     requires_context: list = Field(
         default_factory=list,
         sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
-    )
-    suggested_scope: str = Field(
-        default="personal",
-        sa_column=Column(String(16), nullable=False, server_default=text("'personal'")),
     )
     suggested_always_active: bool = Field(
         default=False,

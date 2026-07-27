@@ -1,4 +1,5 @@
 ---
+id: 019fa4a1-b703-7496-aae4-144d20461fc9
 name: meeting_summarizer
 display_name: Meeting Summarizer
 description: Summarize meeting notes into structured output with attendees, key decisions, action items, and follow-ups.

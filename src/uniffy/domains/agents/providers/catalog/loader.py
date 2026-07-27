@@ -8,10 +8,10 @@ and worker lifespans to surface a bad edit at boot.
 
 import re
 from decimal import Decimal
-from pathlib import Path
 
 from loguru import logger
 
+from uniffy.core.data_files import DATA_DIR
 from uniffy.domains.agents.providers.base import ModelInfo
 from uniffy.domains.agents.providers.catalog.schema import (
     REASONING_KNOB,
@@ -23,7 +23,7 @@ from uniffy.domains.agents.providers.catalog.schema import (
 
 logger = logger.bind(component="agents.providers.catalog")
 
-_CATALOG_PATH = Path(__file__).parent / "catalog.json"
+_CATALOG_PATH = DATA_DIR / "models" / "catalog.json"
 
 # Provider model ids often carry a trailing date snapshot
 # (``gpt-4o-2024-08-06``, ``claude-3-5-sonnet-20241022``). When no exact or

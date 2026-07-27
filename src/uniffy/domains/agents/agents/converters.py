@@ -3,6 +3,7 @@
 import json
 
 from uniffy_proto.agents.v1.agents_pb2 import AgentInfo
+from uniffy_proto.agents.v1.agents_pb2 import AgentTemplate as AgentTemplateProto
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp
@@ -12,6 +13,7 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import AccessMode, ContentRole
+from uniffy.domains.agents.templates import AgentTemplate
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
@@ -74,7 +76,6 @@ def agent_to_proto(
         image_provider_key_id=(
             str(agent.image_provider_key_id) if agent.image_provider_key_id else ""
         ),
-        prompt_id=str(agent.prompt_id) if agent.prompt_id else "",
         model_params=json.dumps(agent.model_params or {}),
     )
 
@@ -87,3 +88,18 @@ def agent_to_proto(
         proto.tags.extend(tag_to_proto(t) for t in tags)
 
     return proto
+
+
+def agent_template_to_proto(
+    template: AgentTemplate,
+    enabled_skill_ids: list[str],
+) -> AgentTemplateProto:
+    return AgentTemplateProto(
+        key=template.key,
+        name=template.name,
+        emoji=template.emoji,
+        description=template.description,
+        soul_prompt=template.soul_prompt,
+        enabled_tools=list(template.enabled_tools),
+        enabled_skill_ids=enabled_skill_ids,
+    )

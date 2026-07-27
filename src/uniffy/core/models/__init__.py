@@ -3,7 +3,6 @@
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
-from uniffy.core.models.agents.prompt import AgentPrompt
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.core.models.agents.skill import AgentSkill
@@ -154,7 +153,6 @@ __all__ = [
     "AgentMessage",
     "AgentMessageFeedback",
     "AgentSession",
-    "AgentPrompt",
     "AgentSkill",
     "AgentSkillDraft",
     "AgentSkillUsage",

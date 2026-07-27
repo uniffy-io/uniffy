@@ -1,6 +1,7 @@
 """Built-in cron scheduling tools for agents."""
 
 import json
+from datetime import timedelta
 
 from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
@@ -185,20 +186,20 @@ async def _execute_cron_get_runs(ctx: ToolContext, args: dict) -> ToolResult:
 
     lines = [f"Showing {len(logs)} of {total} executions:"]
     for log in logs:
-        started = log.started_at.strftime("%Y-%m-%d %H:%M UTC")
+        # The run log row is written when the execution settles, so created_at
+        # is the completion time; the start is derived from duration_ms.
+        started = log.created_at
+        if log.status != "pending" and log.duration_ms:
+            started = log.created_at - timedelta(milliseconds=log.duration_ms)
+        started_str = started.strftime("%Y-%m-%d %H:%M UTC")
         tokens = f"{log.input_tokens} in / {log.output_tokens} out"
-        summary = ""
-        if log.result_summary:
-            summary = f"\n  Summary: {log.result_summary[:200]}"
         error = ""
         if log.error:
             error = f"\n  Error: {log.error[:200]}"
-        lines.append(f"- [{log.status}] {started} ({tokens}){summary}{error}")
+        lines.append(f"- [{log.status}] {started_str} ({tokens}){error}")
 
     return ToolResult(success=True, data="\n".join(lines))
 
-
-# -- Tool definitions --------------------------------------------------------
 
 cron_create = ToolDefinition(
     name="cron.create",
@@ -325,7 +326,8 @@ cron_get_runs = ToolDefinition(
     name="cron.get_runs",
     description=(
         "View the execution history of a scheduled task. "
-        "Shows status, timestamps, token usage, and result summaries."
+        "Shows status, timestamps, and token usage; the run output itself "
+        "lives in the task's session transcript."
     ),
     parameter_schema={
         "type": "object",

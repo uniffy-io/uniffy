@@ -3,11 +3,10 @@
 from uniffy.domains.agents.providers.base import LLMProvider, ModelInfo, ProviderDescriptor
 from uniffy.domains.agents.providers.catalog import model_infos_for_provider
 from uniffy.domains.agents.providers.xai.provider import XAIProvider
-from uniffy.domains.agents.providers.xai.validation import validate_xai_credential
 
 
 class XAIDescriptor(ProviderDescriptor):
-    """Bundles the xAI provider factory, model catalog, and credential validation."""
+    """Bundles the xAI provider factory and model catalog."""
 
     @property
     def name(self) -> str:
@@ -17,15 +16,8 @@ class XAIDescriptor(ProviderDescriptor):
     def display_name(self) -> str:
         return "xAI"
 
-    @property
-    def supported_credential_types(self) -> list[str]:
-        return ["api_key"]
-
-    def create(self, credential: str, credential_type: str) -> LLMProvider:
-        return XAIProvider(credential, credential_type=credential_type)
+    def create(self, credential: str) -> LLMProvider:
+        return XAIProvider(credential)
 
     def get_models(self) -> list[ModelInfo]:
         return model_infos_for_provider("xai")
-
-    def validate_credential(self, credential: str, credential_type: str) -> None:
-        validate_xai_credential(credential, credential_type)

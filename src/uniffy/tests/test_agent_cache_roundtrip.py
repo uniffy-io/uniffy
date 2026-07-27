@@ -20,7 +20,6 @@ def test_agent_cache_roundtrip_preserves_all_runtime_fields() -> None:
         image_model="gpt-image-1",
         primary_provider_key_id=generate_id(),
         image_provider_key_id=generate_id(),
-        prompt_id=generate_id(),
         enabled_tools=["memory.save"],
         enabled_skills=["s1"],
         avatar_emoji="",

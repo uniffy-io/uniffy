@@ -29,19 +29,9 @@ logger = logger.bind(component="agents.providers.google.provider")
 
 
 class GoogleProvider(LLMProvider):
-    """Google Gemini provider using the google-genai Python SDK.
+    """Google Gemini provider using the google-genai Python SDK."""
 
-    Parameters
-    ----------
-    credential : str
-        Google AI API key.
-    credential_type : str
-        Must be "api_key".
-
-    """
-
-    def __init__(self, credential: str, credential_type: str = "api_key") -> None:
-        self._credential_type = credential_type
+    def __init__(self, credential: str) -> None:
         self._client = genai.Client(api_key=credential)
 
     @property

@@ -42,6 +42,11 @@ class AgentRunLog(SQLModel, table=True):
             "created_at",
             "kind",
         ),
+        Index(
+            "ix_agents_run_logs_cron_task_created",
+            "cron_task_id",
+            "created_at",
+        ),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
@@ -63,6 +68,15 @@ class AgentRunLog(SQLModel, table=True):
     )
     kind: str = Field(
         sa_column=Column(String(16), nullable=False, default="chat"),
+    )
+    # Set on rows produced by a scheduled/on-demand cron execution; SET NULL on
+    # task delete so token and cost history survives.
+    cron_task_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            ForeignKey("agents_cron_tasks.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
     )
     image_count: int = Field(default=0, nullable=False)
     cost: Decimal | None = Field(

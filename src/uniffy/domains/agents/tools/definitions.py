@@ -13,22 +13,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class ToolContext:
-    """Execution context passed to every tool executor.
-
-    Attributes
-    ----------
-    session : AsyncSession
-        Database session for queries and mutations.
-    user_id : UUID
-        The user on whose behalf the tool executes.
-    organization_id : UUID
-        Organization scope for multi-tenancy.
-    agent_id : UUID | None
-        The agent executing this tool (used by memory tools).
-    session_id : UUID | None
-        The session this tool execution belongs to (used for run logging).
-
-    """
+    """Execution context passed to every tool executor."""
 
     session: AsyncSession
     user_id: UUID
@@ -36,6 +21,9 @@ class ToolContext:
     agent_id: UUID | None = None
     session_id: UUID | None = None
     user_timezone: str | None = None
+    # True when the run belongs to a test-drawer session: memory write tools
+    # return a structured error instead of persisting anything.
+    is_test_session: bool = False
     # Audience scope the runtime resolved for this run; memory tools refuse
     # to operate without it (no silent fallback to personal scope).
     memory_scope: MemoryScopeRef | None = None
