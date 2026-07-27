@@ -393,3 +393,150 @@ var RuntimeService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "agents/v1/runtime.proto",
 }
+
+const (
+	RuntimeSettingsService_GetRuntimeSettings_FullMethodName    = "/agents.v1.RuntimeSettingsService/GetRuntimeSettings"
+	RuntimeSettingsService_UpdateRuntimeSettings_FullMethodName = "/agents.v1.RuntimeSettingsService/UpdateRuntimeSettings"
+)
+
+// RuntimeSettingsServiceClient is the client API for RuntimeSettingsService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// RuntimeSettingsService manages the per-org agent runtime settings blob.
+// Both methods require org admin.
+type RuntimeSettingsServiceClient interface {
+	GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error)
+	UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error)
+}
+
+type runtimeSettingsServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewRuntimeSettingsServiceClient(cc grpc.ClientConnInterface) RuntimeSettingsServiceClient {
+	return &runtimeSettingsServiceClient{cc}
+}
+
+func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RuntimeSettingsResponse)
+	err := c.cc.Invoke(ctx, RuntimeSettingsService_GetRuntimeSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RuntimeSettingsResponse)
+	err := c.cc.Invoke(ctx, RuntimeSettingsService_UpdateRuntimeSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RuntimeSettingsServiceServer is the server API for RuntimeSettingsService service.
+// All implementations must embed UnimplementedRuntimeSettingsServiceServer
+// for forward compatibility.
+//
+// RuntimeSettingsService manages the per-org agent runtime settings blob.
+// Both methods require org admin.
+type RuntimeSettingsServiceServer interface {
+	GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*RuntimeSettingsResponse, error)
+	UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*RuntimeSettingsResponse, error)
+	mustEmbedUnimplementedRuntimeSettingsServiceServer()
+}
+
+// UnimplementedRuntimeSettingsServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedRuntimeSettingsServiceServer struct{}
+
+func (UnimplementedRuntimeSettingsServiceServer) GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*RuntimeSettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRuntimeSettings not implemented")
+}
+func (UnimplementedRuntimeSettingsServiceServer) UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*RuntimeSettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateRuntimeSettings not implemented")
+}
+func (UnimplementedRuntimeSettingsServiceServer) mustEmbedUnimplementedRuntimeSettingsServiceServer() {
+}
+func (UnimplementedRuntimeSettingsServiceServer) testEmbeddedByValue() {}
+
+// UnsafeRuntimeSettingsServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to RuntimeSettingsServiceServer will
+// result in compilation errors.
+type UnsafeRuntimeSettingsServiceServer interface {
+	mustEmbedUnimplementedRuntimeSettingsServiceServer()
+}
+
+func RegisterRuntimeSettingsServiceServer(s grpc.ServiceRegistrar, srv RuntimeSettingsServiceServer) {
+	// If the following call panics, it indicates UnimplementedRuntimeSettingsServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&RuntimeSettingsService_ServiceDesc, srv)
+}
+
+func _RuntimeSettingsService_GetRuntimeSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRuntimeSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeSettingsServiceServer).GetRuntimeSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeSettingsService_GetRuntimeSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeSettingsServiceServer).GetRuntimeSettings(ctx, req.(*GetRuntimeSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RuntimeSettingsService_UpdateRuntimeSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRuntimeSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeSettingsServiceServer).UpdateRuntimeSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeSettingsService_UpdateRuntimeSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeSettingsServiceServer).UpdateRuntimeSettings(ctx, req.(*UpdateRuntimeSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// RuntimeSettingsService_ServiceDesc is the grpc.ServiceDesc for RuntimeSettingsService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var RuntimeSettingsService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "agents.v1.RuntimeSettingsService",
+	HandlerType: (*RuntimeSettingsServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetRuntimeSettings",
+			Handler:    _RuntimeSettingsService_GetRuntimeSettings_Handler,
+		},
+		{
+			MethodName: "UpdateRuntimeSettings",
+			Handler:    _RuntimeSettingsService_UpdateRuntimeSettings_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "agents/v1/runtime.proto",
+}

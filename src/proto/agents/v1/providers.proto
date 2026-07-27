@@ -2,14 +2,13 @@ syntax = "proto3";
 
 package agents.v1;
 
-import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
 // ProvidersService manages LLM provider credentials for an organization.
 service ProvidersService {
-  // Add a new provider API key or setup token
+  // Add a new provider API key
   rpc AddProviderKey(AddProviderKeyRequest) returns (AddProviderKeyResponse) {}
 
   // List all provider keys for the organization (credentials are masked)
@@ -31,45 +30,32 @@ service ProvidersService {
   rpc ListModelsForKey(ListModelsForKeyRequest) returns (ListModelsForKeyResponse) {}
 }
 
-// Type of credential stored for a provider
-enum CredentialType {
-  CREDENTIAL_TYPE_UNSPECIFIED = 0;
-  CREDENTIAL_TYPE_API_KEY = 1;
-  CREDENTIAL_TYPE_SETUP_TOKEN = 2;
-}
-
 // Provider key info (never includes the actual credential)
 message ProviderKeyInfo {
   // Unique key ID
   string id = 1;
   // Provider name (e.g. "anthropic")
   string provider = 2;
-  // Type of credential
-  CredentialType credential_type = 3;
   // User-friendly label
-  string label = 4;
-  // Masked hint of the credential (e.g. "sk-ant-oat01-...xyz")
-  string key_hint = 5;
+  string label = 3;
+  // Masked hint of the credential (e.g. "sk-ant-api03-...xyz")
+  string key_hint = 4;
   // Whether the key passed its last validation
-  bool is_valid = 6;
+  bool is_valid = 5;
   // When the key was last validated
-  optional google.protobuf.Timestamp last_validated_at = 7;
+  optional google.protobuf.Timestamp last_validated_at = 6;
   // When the key was last used for an API call
-  optional google.protobuf.Timestamp last_used_at = 8;
+  optional google.protobuf.Timestamp last_used_at = 7;
   // Last error message if validation failed
-  optional string last_error = 9;
+  optional string last_error = 8;
   // When the key was created
-  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp created_at = 9;
   // When the key was last updated
-  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp updated_at = 10;
   // Whether the key is enabled for use
-  bool is_enabled = 12;
+  bool is_enabled = 11;
   // User who created this key
-  string created_by = 13;
-  // Access mode
-  common.v1.AccessMode access_mode = 14;
-  // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 15;
+  string created_by = 12;
 }
 
 // Model capabilities and metadata
@@ -120,16 +106,10 @@ message AddProviderKeyRequest {
   string organization_id = 1;
   // Provider name (e.g. "anthropic")
   string provider = 2;
-  // Type of credential
-  CredentialType credential_type = 3;
   // User-friendly label
-  string label = 4;
-  // The actual credential (API key or setup token)
-  string credential = 5;
-  // Access mode for the key
-  optional common.v1.AccessMode access_mode = 6;
-  // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 7;
+  string label = 3;
+  // The actual credential (API key); write-only, never returned
+  string credential = 4;
 }
 
 // Response containing a single provider key (Add)

@@ -34,6 +34,41 @@ service RuntimeService {
   rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse) {}
 }
 
+// RuntimeSettingsService manages the per-org agent runtime settings blob.
+// Both methods require org admin.
+service RuntimeSettingsService {
+  rpc GetRuntimeSettings(GetRuntimeSettingsRequest) returns (RuntimeSettingsResponse) {}
+  rpc UpdateRuntimeSettings(UpdateRuntimeSettingsRequest) returns (RuntimeSettingsResponse) {}
+}
+
+message RuntimeSettings {
+  int32 send_deadline_seconds = 1;
+  bool failover_enabled = 2;
+  bool resume_enabled = 3;
+  int32 circuit_breaker_failure_threshold = 4;
+  int32 circuit_breaker_recovery_seconds = 5;
+  bool personal_memory_bridge_enabled = 6;
+  // Org default provider key id (empty string = none)
+  string default_provider_key_id = 7;
+  // Org default chat model (empty string = none)
+  string default_chat_model = 8;
+}
+
+message GetRuntimeSettingsRequest {
+  string organization_id = 1;
+}
+
+message UpdateRuntimeSettingsRequest {
+  string organization_id = 1;
+  RuntimeSettings settings = 2;
+}
+
+message RuntimeSettingsResponse {
+  RuntimeSettings settings = 1;
+  // Whether an org-level settings row exists (vs pure code defaults).
+  bool configured = 2;
+}
+
 message GetUsageStatsRequest {
   string organization_id = 1;
   // Number of days to look back (default 30)

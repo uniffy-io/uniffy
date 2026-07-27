@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// RuntimeServiceName is the fully-qualified name of the RuntimeService service.
 	RuntimeServiceName = "agents.v1.RuntimeService"
+	// RuntimeSettingsServiceName is the fully-qualified name of the RuntimeSettingsService service.
+	RuntimeSettingsServiceName = "agents.v1.RuntimeSettingsService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -54,6 +56,12 @@ const (
 	// RuntimeServiceGetUsageStatsProcedure is the fully-qualified name of the RuntimeService's
 	// GetUsageStats RPC.
 	RuntimeServiceGetUsageStatsProcedure = "/agents.v1.RuntimeService/GetUsageStats"
+	// RuntimeSettingsServiceGetRuntimeSettingsProcedure is the fully-qualified name of the
+	// RuntimeSettingsService's GetRuntimeSettings RPC.
+	RuntimeSettingsServiceGetRuntimeSettingsProcedure = "/agents.v1.RuntimeSettingsService/GetRuntimeSettings"
+	// RuntimeSettingsServiceUpdateRuntimeSettingsProcedure is the fully-qualified name of the
+	// RuntimeSettingsService's UpdateRuntimeSettings RPC.
+	RuntimeSettingsServiceUpdateRuntimeSettingsProcedure = "/agents.v1.RuntimeSettingsService/UpdateRuntimeSettings"
 )
 
 // RuntimeServiceClient is a client for the agents.v1.RuntimeService service.
@@ -312,4 +320,101 @@ func (UnimplementedRuntimeServiceHandler) RespondToConfirmation(context.Context,
 
 func (UnimplementedRuntimeServiceHandler) GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.GetUsageStats is not implemented"))
+}
+
+// RuntimeSettingsServiceClient is a client for the agents.v1.RuntimeSettingsService service.
+type RuntimeSettingsServiceClient interface {
+	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
+	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
+}
+
+// NewRuntimeSettingsServiceClient constructs a client for the agents.v1.RuntimeSettingsService
+// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
+// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
+// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewRuntimeSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) RuntimeSettingsServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	runtimeSettingsServiceMethods := v1.File_agents_v1_runtime_proto.Services().ByName("RuntimeSettingsService").Methods()
+	return &runtimeSettingsServiceClient{
+		getRuntimeSettings: connect.NewClient[v1.GetRuntimeSettingsRequest, v1.RuntimeSettingsResponse](
+			httpClient,
+			baseURL+RuntimeSettingsServiceGetRuntimeSettingsProcedure,
+			connect.WithSchema(runtimeSettingsServiceMethods.ByName("GetRuntimeSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateRuntimeSettings: connect.NewClient[v1.UpdateRuntimeSettingsRequest, v1.RuntimeSettingsResponse](
+			httpClient,
+			baseURL+RuntimeSettingsServiceUpdateRuntimeSettingsProcedure,
+			connect.WithSchema(runtimeSettingsServiceMethods.ByName("UpdateRuntimeSettings")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// runtimeSettingsServiceClient implements RuntimeSettingsServiceClient.
+type runtimeSettingsServiceClient struct {
+	getRuntimeSettings    *connect.Client[v1.GetRuntimeSettingsRequest, v1.RuntimeSettingsResponse]
+	updateRuntimeSettings *connect.Client[v1.UpdateRuntimeSettingsRequest, v1.RuntimeSettingsResponse]
+}
+
+// GetRuntimeSettings calls agents.v1.RuntimeSettingsService.GetRuntimeSettings.
+func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, req *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+	return c.getRuntimeSettings.CallUnary(ctx, req)
+}
+
+// UpdateRuntimeSettings calls agents.v1.RuntimeSettingsService.UpdateRuntimeSettings.
+func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, req *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+	return c.updateRuntimeSettings.CallUnary(ctx, req)
+}
+
+// RuntimeSettingsServiceHandler is an implementation of the agents.v1.RuntimeSettingsService
+// service.
+type RuntimeSettingsServiceHandler interface {
+	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
+	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
+}
+
+// NewRuntimeSettingsServiceHandler builds an HTTP handler from the service implementation. It
+// returns the path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewRuntimeSettingsServiceHandler(svc RuntimeSettingsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	runtimeSettingsServiceMethods := v1.File_agents_v1_runtime_proto.Services().ByName("RuntimeSettingsService").Methods()
+	runtimeSettingsServiceGetRuntimeSettingsHandler := connect.NewUnaryHandler(
+		RuntimeSettingsServiceGetRuntimeSettingsProcedure,
+		svc.GetRuntimeSettings,
+		connect.WithSchema(runtimeSettingsServiceMethods.ByName("GetRuntimeSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	runtimeSettingsServiceUpdateRuntimeSettingsHandler := connect.NewUnaryHandler(
+		RuntimeSettingsServiceUpdateRuntimeSettingsProcedure,
+		svc.UpdateRuntimeSettings,
+		connect.WithSchema(runtimeSettingsServiceMethods.ByName("UpdateRuntimeSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/agents.v1.RuntimeSettingsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case RuntimeSettingsServiceGetRuntimeSettingsProcedure:
+			runtimeSettingsServiceGetRuntimeSettingsHandler.ServeHTTP(w, r)
+		case RuntimeSettingsServiceUpdateRuntimeSettingsProcedure:
+			runtimeSettingsServiceUpdateRuntimeSettingsHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedRuntimeSettingsServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedRuntimeSettingsServiceHandler struct{}
+
+func (UnimplementedRuntimeSettingsServiceHandler) GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeSettingsService.GetRuntimeSettings is not implemented"))
+}
+
+func (UnimplementedRuntimeSettingsServiceHandler) UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeSettingsService.UpdateRuntimeSettings is not implemented"))
 }

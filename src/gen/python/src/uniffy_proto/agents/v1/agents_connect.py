@@ -42,6 +42,9 @@ class AgentsService(Protocol):
     async def preview_system_prompt(self, request: agents_dot_v1_dot_agents__pb2.PreviewSystemPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.PreviewSystemPromptResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_agent_templates(self, request: agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
     def __init__(self, service: AgentsService | AsyncGenerator[AgentsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -127,6 +130,16 @@ class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.preview_system_prompt,
+                ),
+                "/agents.v1.AgentsService/ListAgentTemplates": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListAgentTemplates",
+                        service_name="agents.v1.AgentsService",
+                        input=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest,
+                        output=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_agent_templates,
                 ),
             },
             interceptors=interceptors,
@@ -302,6 +315,26 @@ class AgentsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_agent_templates(
+        self,
+        request: agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAgentTemplates",
+                service_name="agents.v1.AgentsService",
+                input=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest,
+                output=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -322,6 +355,8 @@ class AgentsServiceSync(Protocol):
     def delete_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def preview_system_prompt(self, request: agents_dot_v1_dot_agents__pb2.PreviewSystemPromptRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.PreviewSystemPromptResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_agent_templates(self, request: agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -408,6 +443,16 @@ class AgentsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.preview_system_prompt,
+                ),
+                "/agents.v1.AgentsService/ListAgentTemplates": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListAgentTemplates",
+                        service_name="agents.v1.AgentsService",
+                        input=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest,
+                        output=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_agent_templates,
                 ),
             },
             interceptors=interceptors,
@@ -577,6 +622,26 @@ class AgentsServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.PreviewSystemPromptRequest,
                 output=agents_dot_v1_dot_agents__pb2.PreviewSystemPromptResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_agent_templates(
+        self,
+        request: agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListAgentTemplates",
+                service_name="agents.v1.AgentsService",
+                input=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesRequest,
+                output=agents_dot_v1_dot_agents__pb2.ListAgentTemplatesResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

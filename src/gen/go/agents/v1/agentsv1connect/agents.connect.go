@@ -56,6 +56,9 @@ const (
 	// AgentsServicePreviewSystemPromptProcedure is the fully-qualified name of the AgentsService's
 	// PreviewSystemPrompt RPC.
 	AgentsServicePreviewSystemPromptProcedure = "/agents.v1.AgentsService/PreviewSystemPrompt"
+	// AgentsServiceListAgentTemplatesProcedure is the fully-qualified name of the AgentsService's
+	// ListAgentTemplates RPC.
+	AgentsServiceListAgentTemplatesProcedure = "/agents.v1.AgentsService/ListAgentTemplates"
 )
 
 // AgentsServiceClient is a client for the agents.v1.AgentsService service.
@@ -76,6 +79,8 @@ type AgentsServiceClient interface {
 	DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.DeleteAgentAvatarResponse], error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(context.Context, *connect.Request[v1.PreviewSystemPromptRequest]) (*connect.Response[v1.PreviewSystemPromptResponse], error)
+	// List the shipped agent templates that prefill the create flow
+	ListAgentTemplates(context.Context, *connect.Request[v1.ListAgentTemplatesRequest]) (*connect.Response[v1.ListAgentTemplatesResponse], error)
 }
 
 // NewAgentsServiceClient constructs a client for the agents.v1.AgentsService service. By default,
@@ -137,6 +142,12 @@ func NewAgentsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(agentsServiceMethods.ByName("PreviewSystemPrompt")),
 			connect.WithClientOptions(opts...),
 		),
+		listAgentTemplates: connect.NewClient[v1.ListAgentTemplatesRequest, v1.ListAgentTemplatesResponse](
+			httpClient,
+			baseURL+AgentsServiceListAgentTemplatesProcedure,
+			connect.WithSchema(agentsServiceMethods.ByName("ListAgentTemplates")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -150,6 +161,7 @@ type agentsServiceClient struct {
 	uploadAgentAvatar   *connect.Client[v1.UploadAgentAvatarRequest, v1.UploadAgentAvatarResponse]
 	deleteAgentAvatar   *connect.Client[v1.DeleteAgentAvatarRequest, v1.DeleteAgentAvatarResponse]
 	previewSystemPrompt *connect.Client[v1.PreviewSystemPromptRequest, v1.PreviewSystemPromptResponse]
+	listAgentTemplates  *connect.Client[v1.ListAgentTemplatesRequest, v1.ListAgentTemplatesResponse]
 }
 
 // CreateAgent calls agents.v1.AgentsService.CreateAgent.
@@ -192,6 +204,11 @@ func (c *agentsServiceClient) PreviewSystemPrompt(ctx context.Context, req *conn
 	return c.previewSystemPrompt.CallUnary(ctx, req)
 }
 
+// ListAgentTemplates calls agents.v1.AgentsService.ListAgentTemplates.
+func (c *agentsServiceClient) ListAgentTemplates(ctx context.Context, req *connect.Request[v1.ListAgentTemplatesRequest]) (*connect.Response[v1.ListAgentTemplatesResponse], error) {
+	return c.listAgentTemplates.CallUnary(ctx, req)
+}
+
 // AgentsServiceHandler is an implementation of the agents.v1.AgentsService service.
 type AgentsServiceHandler interface {
 	// Create a new agent configuration
@@ -210,6 +227,8 @@ type AgentsServiceHandler interface {
 	DeleteAgentAvatar(context.Context, *connect.Request[v1.DeleteAgentAvatarRequest]) (*connect.Response[v1.DeleteAgentAvatarResponse], error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(context.Context, *connect.Request[v1.PreviewSystemPromptRequest]) (*connect.Response[v1.PreviewSystemPromptResponse], error)
+	// List the shipped agent templates that prefill the create flow
+	ListAgentTemplates(context.Context, *connect.Request[v1.ListAgentTemplatesRequest]) (*connect.Response[v1.ListAgentTemplatesResponse], error)
 }
 
 // NewAgentsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -267,6 +286,12 @@ func NewAgentsServiceHandler(svc AgentsServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(agentsServiceMethods.ByName("PreviewSystemPrompt")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentsServiceListAgentTemplatesHandler := connect.NewUnaryHandler(
+		AgentsServiceListAgentTemplatesProcedure,
+		svc.ListAgentTemplates,
+		connect.WithSchema(agentsServiceMethods.ByName("ListAgentTemplates")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.AgentsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentsServiceCreateAgentProcedure:
@@ -285,6 +310,8 @@ func NewAgentsServiceHandler(svc AgentsServiceHandler, opts ...connect.HandlerOp
 			agentsServiceDeleteAgentAvatarHandler.ServeHTTP(w, r)
 		case AgentsServicePreviewSystemPromptProcedure:
 			agentsServicePreviewSystemPromptHandler.ServeHTTP(w, r)
+		case AgentsServiceListAgentTemplatesProcedure:
+			agentsServiceListAgentTemplatesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -324,4 +351,8 @@ func (UnimplementedAgentsServiceHandler) DeleteAgentAvatar(context.Context, *con
 
 func (UnimplementedAgentsServiceHandler) PreviewSystemPrompt(context.Context, *connect.Request[v1.PreviewSystemPromptRequest]) (*connect.Response[v1.PreviewSystemPromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.PreviewSystemPrompt is not implemented"))
+}
+
+func (UnimplementedAgentsServiceHandler) ListAgentTemplates(context.Context, *connect.Request[v1.ListAgentTemplatesRequest]) (*connect.Response[v1.ListAgentTemplatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.ListAgentTemplates is not implemented"))
 }

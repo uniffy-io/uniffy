@@ -19,65 +19,41 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SessionsService_CreateSession_FullMethodName          = "/agents.v1.SessionsService/CreateSession"
-	SessionsService_GetSession_FullMethodName             = "/agents.v1.SessionsService/GetSession"
-	SessionsService_ListSessions_FullMethodName           = "/agents.v1.SessionsService/ListSessions"
-	SessionsService_UpdateSession_FullMethodName          = "/agents.v1.SessionsService/UpdateSession"
-	SessionsService_ArchiveSession_FullMethodName         = "/agents.v1.SessionsService/ArchiveSession"
-	SessionsService_AddMessage_FullMethodName             = "/agents.v1.SessionsService/AddMessage"
-	SessionsService_ListMessages_FullMethodName           = "/agents.v1.SessionsService/ListMessages"
-	SessionsService_GetSessionContext_FullMethodName      = "/agents.v1.SessionsService/GetSessionContext"
-	SessionsService_GetSessionContextStats_FullMethodName = "/agents.v1.SessionsService/GetSessionContextStats"
-	SessionsService_CompactSession_FullMethodName         = "/agents.v1.SessionsService/CompactSession"
-	SessionsService_EditMessage_FullMethodName            = "/agents.v1.SessionsService/EditMessage"
-	SessionsService_DeleteMessage_FullMethodName          = "/agents.v1.SessionsService/DeleteMessage"
-	SessionsService_RetryMessage_FullMethodName           = "/agents.v1.SessionsService/RetryMessage"
-	SessionsService_SubmitMessageFeedback_FullMethodName  = "/agents.v1.SessionsService/SubmitMessageFeedback"
+	SessionsService_CreateSession_FullMethodName         = "/agents.v1.SessionsService/CreateSession"
+	SessionsService_GetSession_FullMethodName            = "/agents.v1.SessionsService/GetSession"
+	SessionsService_ListMessages_FullMethodName          = "/agents.v1.SessionsService/ListMessages"
+	SessionsService_EditMessage_FullMethodName           = "/agents.v1.SessionsService/EditMessage"
+	SessionsService_RetryMessage_FullMethodName          = "/agents.v1.SessionsService/RetryMessage"
+	SessionsService_SubmitMessageFeedback_FullMethodName = "/agents.v1.SessionsService/SubmitMessageFeedback"
 )
 
 // SessionsServiceClient is the client API for SessionsService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// SessionsService manages conversation sessions between users and agents.
+// SessionsService manages agent sessions: test-drawer conversations plus the
+// internal session store the runtime, AI Builder, and cron runs write into.
 type SessionsServiceClient interface {
 	// Create a new session (find-or-create for DIRECT kind)
 	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error)
 	// Get a session by ID
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error)
-	// List sessions for the user in an organization
-	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
-	// Update session settings (display name, model override)
-	UpdateSession(ctx context.Context, in *UpdateSessionRequest, opts ...grpc.CallOption) (*UpdateSessionResponse, error)
-	// Archive a session (soft delete)
-	ArchiveSession(ctx context.Context, in *ArchiveSessionRequest, opts ...grpc.CallOption) (*ArchiveSessionResponse, error)
-	// Add a message to a session
-	AddMessage(ctx context.Context, in *AddMessageRequest, opts ...grpc.CallOption) (*AddMessageResponse, error)
 	// List messages in a session
 	ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error)
-	// Get recent messages for LLM context assembly
-	GetSessionContext(ctx context.Context, in *GetSessionContextRequest, opts ...grpc.CallOption) (*GetSessionContextResponse, error)
-	// Get session context statistics (message counts, compaction info)
-	GetSessionContextStats(ctx context.Context, in *GetSessionContextStatsRequest, opts ...grpc.CallOption) (*GetSessionContextStatsResponse, error)
-	// Manually trigger session compaction
-	CompactSession(ctx context.Context, in *CompactSessionRequest, opts ...grpc.CallOption) (*CompactSessionResponse, error)
 	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
 	// and `edited_at`, then soft-invalidates every later message in the
 	// session so the client can re-run the conversation from the edit
 	// point. Refused if a run is currently in flight on this session.
 	EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error)
-	// Soft-delete a user message. The message itself and every later
-	// message in the session are marked `is_invalidated=true` so the
-	// context loader skips them. Refused if a run is currently in flight.
-	DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error)
 	// Retry from a message. For a user message, returns its content +
 	// file_ids and invalidates every later message so the caller can
 	// re-send. For an assistant message, walks back to the most recent
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(ctx context.Context, in *RetryMessageRequest, opts ...grpc.CallOption) (*RetryMessageResponse, error)
-	// Record (or clear) the caller's thumbs up/down on an agent message. The
-	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	// Record (or clear) the caller's thumbs up/down on an agent reply, by
+	// session message id or by chat message id. The signal feeds the
+	// skill-evolution analyzer; an empty rating clears it.
 	SubmitMessageFeedback(ctx context.Context, in *SubmitMessageFeedbackRequest, opts ...grpc.CallOption) (*SubmitMessageFeedbackResponse, error)
 }
 
@@ -109,46 +85,6 @@ func (c *sessionsServiceClient) GetSession(ctx context.Context, in *GetSessionRe
 	return out, nil
 }
 
-func (c *sessionsServiceClient) ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListSessionsResponse)
-	err := c.cc.Invoke(ctx, SessionsService_ListSessions_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sessionsServiceClient) UpdateSession(ctx context.Context, in *UpdateSessionRequest, opts ...grpc.CallOption) (*UpdateSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateSessionResponse)
-	err := c.cc.Invoke(ctx, SessionsService_UpdateSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sessionsServiceClient) ArchiveSession(ctx context.Context, in *ArchiveSessionRequest, opts ...grpc.CallOption) (*ArchiveSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ArchiveSessionResponse)
-	err := c.cc.Invoke(ctx, SessionsService_ArchiveSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sessionsServiceClient) AddMessage(ctx context.Context, in *AddMessageRequest, opts ...grpc.CallOption) (*AddMessageResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AddMessageResponse)
-	err := c.cc.Invoke(ctx, SessionsService_AddMessage_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *sessionsServiceClient) ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListMessagesResponse)
@@ -159,50 +95,10 @@ func (c *sessionsServiceClient) ListMessages(ctx context.Context, in *ListMessag
 	return out, nil
 }
 
-func (c *sessionsServiceClient) GetSessionContext(ctx context.Context, in *GetSessionContextRequest, opts ...grpc.CallOption) (*GetSessionContextResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetSessionContextResponse)
-	err := c.cc.Invoke(ctx, SessionsService_GetSessionContext_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sessionsServiceClient) GetSessionContextStats(ctx context.Context, in *GetSessionContextStatsRequest, opts ...grpc.CallOption) (*GetSessionContextStatsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetSessionContextStatsResponse)
-	err := c.cc.Invoke(ctx, SessionsService_GetSessionContextStats_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sessionsServiceClient) CompactSession(ctx context.Context, in *CompactSessionRequest, opts ...grpc.CallOption) (*CompactSessionResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CompactSessionResponse)
-	err := c.cc.Invoke(ctx, SessionsService_CompactSession_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *sessionsServiceClient) EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EditMessageResponse)
 	err := c.cc.Invoke(ctx, SessionsService_EditMessage_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sessionsServiceClient) DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteMessageResponse)
-	err := c.cc.Invoke(ctx, SessionsService_DeleteMessage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -233,45 +129,29 @@ func (c *sessionsServiceClient) SubmitMessageFeedback(ctx context.Context, in *S
 // All implementations must embed UnimplementedSessionsServiceServer
 // for forward compatibility.
 //
-// SessionsService manages conversation sessions between users and agents.
+// SessionsService manages agent sessions: test-drawer conversations plus the
+// internal session store the runtime, AI Builder, and cron runs write into.
 type SessionsServiceServer interface {
 	// Create a new session (find-or-create for DIRECT kind)
 	CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error)
 	// Get a session by ID
 	GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error)
-	// List sessions for the user in an organization
-	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
-	// Update session settings (display name, model override)
-	UpdateSession(context.Context, *UpdateSessionRequest) (*UpdateSessionResponse, error)
-	// Archive a session (soft delete)
-	ArchiveSession(context.Context, *ArchiveSessionRequest) (*ArchiveSessionResponse, error)
-	// Add a message to a session
-	AddMessage(context.Context, *AddMessageRequest) (*AddMessageResponse, error)
 	// List messages in a session
 	ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error)
-	// Get recent messages for LLM context assembly
-	GetSessionContext(context.Context, *GetSessionContextRequest) (*GetSessionContextResponse, error)
-	// Get session context statistics (message counts, compaction info)
-	GetSessionContextStats(context.Context, *GetSessionContextStatsRequest) (*GetSessionContextStatsResponse, error)
-	// Manually trigger session compaction
-	CompactSession(context.Context, *CompactSessionRequest) (*CompactSessionResponse, error)
 	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
 	// and `edited_at`, then soft-invalidates every later message in the
 	// session so the client can re-run the conversation from the edit
 	// point. Refused if a run is currently in flight on this session.
 	EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error)
-	// Soft-delete a user message. The message itself and every later
-	// message in the session are marked `is_invalidated=true` so the
-	// context loader skips them. Refused if a run is currently in flight.
-	DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error)
 	// Retry from a message. For a user message, returns its content +
 	// file_ids and invalidates every later message so the caller can
 	// re-send. For an assistant message, walks back to the most recent
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(context.Context, *RetryMessageRequest) (*RetryMessageResponse, error)
-	// Record (or clear) the caller's thumbs up/down on an agent message. The
-	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	// Record (or clear) the caller's thumbs up/down on an agent reply, by
+	// session message id or by chat message id. The signal feeds the
+	// skill-evolution analyzer; an empty rating clears it.
 	SubmitMessageFeedback(context.Context, *SubmitMessageFeedbackRequest) (*SubmitMessageFeedbackResponse, error)
 	mustEmbedUnimplementedSessionsServiceServer()
 }
@@ -289,35 +169,11 @@ func (UnimplementedSessionsServiceServer) CreateSession(context.Context, *Create
 func (UnimplementedSessionsServiceServer) GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSession not implemented")
 }
-func (UnimplementedSessionsServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListSessions not implemented")
-}
-func (UnimplementedSessionsServiceServer) UpdateSession(context.Context, *UpdateSessionRequest) (*UpdateSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateSession not implemented")
-}
-func (UnimplementedSessionsServiceServer) ArchiveSession(context.Context, *ArchiveSessionRequest) (*ArchiveSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ArchiveSession not implemented")
-}
-func (UnimplementedSessionsServiceServer) AddMessage(context.Context, *AddMessageRequest) (*AddMessageResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AddMessage not implemented")
-}
 func (UnimplementedSessionsServiceServer) ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMessages not implemented")
 }
-func (UnimplementedSessionsServiceServer) GetSessionContext(context.Context, *GetSessionContextRequest) (*GetSessionContextResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetSessionContext not implemented")
-}
-func (UnimplementedSessionsServiceServer) GetSessionContextStats(context.Context, *GetSessionContextStatsRequest) (*GetSessionContextStatsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetSessionContextStats not implemented")
-}
-func (UnimplementedSessionsServiceServer) CompactSession(context.Context, *CompactSessionRequest) (*CompactSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CompactSession not implemented")
-}
 func (UnimplementedSessionsServiceServer) EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method EditMessage not implemented")
-}
-func (UnimplementedSessionsServiceServer) DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteMessage not implemented")
 }
 func (UnimplementedSessionsServiceServer) RetryMessage(context.Context, *RetryMessageRequest) (*RetryMessageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RetryMessage not implemented")
@@ -382,78 +238,6 @@ func _SessionsService_GetSession_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SessionsService_ListSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListSessionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).ListSessions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_ListSessions_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).ListSessions(ctx, req.(*ListSessionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SessionsService_UpdateSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).UpdateSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_UpdateSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).UpdateSession(ctx, req.(*UpdateSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SessionsService_ArchiveSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ArchiveSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).ArchiveSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_ArchiveSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).ArchiveSession(ctx, req.(*ArchiveSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SessionsService_AddMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddMessageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).AddMessage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_AddMessage_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).AddMessage(ctx, req.(*AddMessageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _SessionsService_ListMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListMessagesRequest)
 	if err := dec(in); err != nil {
@@ -472,60 +256,6 @@ func _SessionsService_ListMessages_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SessionsService_GetSessionContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSessionContextRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).GetSessionContext(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_GetSessionContext_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).GetSessionContext(ctx, req.(*GetSessionContextRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SessionsService_GetSessionContextStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSessionContextStatsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).GetSessionContextStats(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_GetSessionContextStats_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).GetSessionContextStats(ctx, req.(*GetSessionContextStatsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SessionsService_CompactSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CompactSessionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).CompactSession(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_CompactSession_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).CompactSession(ctx, req.(*CompactSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _SessionsService_EditMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EditMessageRequest)
 	if err := dec(in); err != nil {
@@ -540,24 +270,6 @@ func _SessionsService_EditMessage_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SessionsServiceServer).EditMessage(ctx, req.(*EditMessageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SessionsService_DeleteMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteMessageRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SessionsServiceServer).DeleteMessage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SessionsService_DeleteMessage_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SessionsServiceServer).DeleteMessage(ctx, req.(*DeleteMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -614,44 +326,12 @@ var SessionsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SessionsService_GetSession_Handler,
 		},
 		{
-			MethodName: "ListSessions",
-			Handler:    _SessionsService_ListSessions_Handler,
-		},
-		{
-			MethodName: "UpdateSession",
-			Handler:    _SessionsService_UpdateSession_Handler,
-		},
-		{
-			MethodName: "ArchiveSession",
-			Handler:    _SessionsService_ArchiveSession_Handler,
-		},
-		{
-			MethodName: "AddMessage",
-			Handler:    _SessionsService_AddMessage_Handler,
-		},
-		{
 			MethodName: "ListMessages",
 			Handler:    _SessionsService_ListMessages_Handler,
 		},
 		{
-			MethodName: "GetSessionContext",
-			Handler:    _SessionsService_GetSessionContext_Handler,
-		},
-		{
-			MethodName: "GetSessionContextStats",
-			Handler:    _SessionsService_GetSessionContextStats_Handler,
-		},
-		{
-			MethodName: "CompactSession",
-			Handler:    _SessionsService_CompactSession_Handler,
-		},
-		{
 			MethodName: "EditMessage",
 			Handler:    _SessionsService_EditMessage_Handler,
-		},
-		{
-			MethodName: "DeleteMessage",
-			Handler:    _SessionsService_DeleteMessage_Handler,
 		},
 		{
 			MethodName: "RetryMessage",

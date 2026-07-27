@@ -27,6 +27,7 @@ const (
 	AgentsService_UploadAgentAvatar_FullMethodName   = "/agents.v1.AgentsService/UploadAgentAvatar"
 	AgentsService_DeleteAgentAvatar_FullMethodName   = "/agents.v1.AgentsService/DeleteAgentAvatar"
 	AgentsService_PreviewSystemPrompt_FullMethodName = "/agents.v1.AgentsService/PreviewSystemPrompt"
+	AgentsService_ListAgentTemplates_FullMethodName  = "/agents.v1.AgentsService/ListAgentTemplates"
 )
 
 // AgentsServiceClient is the client API for AgentsService service.
@@ -51,6 +52,8 @@ type AgentsServiceClient interface {
 	DeleteAgentAvatar(ctx context.Context, in *DeleteAgentAvatarRequest, opts ...grpc.CallOption) (*DeleteAgentAvatarResponse, error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(ctx context.Context, in *PreviewSystemPromptRequest, opts ...grpc.CallOption) (*PreviewSystemPromptResponse, error)
+	// List the shipped agent templates that prefill the create flow
+	ListAgentTemplates(ctx context.Context, in *ListAgentTemplatesRequest, opts ...grpc.CallOption) (*ListAgentTemplatesResponse, error)
 }
 
 type agentsServiceClient struct {
@@ -141,6 +144,16 @@ func (c *agentsServiceClient) PreviewSystemPrompt(ctx context.Context, in *Previ
 	return out, nil
 }
 
+func (c *agentsServiceClient) ListAgentTemplates(ctx context.Context, in *ListAgentTemplatesRequest, opts ...grpc.CallOption) (*ListAgentTemplatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAgentTemplatesResponse)
+	err := c.cc.Invoke(ctx, AgentsService_ListAgentTemplates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentsServiceServer is the server API for AgentsService service.
 // All implementations must embed UnimplementedAgentsServiceServer
 // for forward compatibility.
@@ -163,6 +176,8 @@ type AgentsServiceServer interface {
 	DeleteAgentAvatar(context.Context, *DeleteAgentAvatarRequest) (*DeleteAgentAvatarResponse, error)
 	// Preview the fully assembled system prompt for an agent
 	PreviewSystemPrompt(context.Context, *PreviewSystemPromptRequest) (*PreviewSystemPromptResponse, error)
+	// List the shipped agent templates that prefill the create flow
+	ListAgentTemplates(context.Context, *ListAgentTemplatesRequest) (*ListAgentTemplatesResponse, error)
 	mustEmbedUnimplementedAgentsServiceServer()
 }
 
@@ -196,6 +211,9 @@ func (UnimplementedAgentsServiceServer) DeleteAgentAvatar(context.Context, *Dele
 }
 func (UnimplementedAgentsServiceServer) PreviewSystemPrompt(context.Context, *PreviewSystemPromptRequest) (*PreviewSystemPromptResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PreviewSystemPrompt not implemented")
+}
+func (UnimplementedAgentsServiceServer) ListAgentTemplates(context.Context, *ListAgentTemplatesRequest) (*ListAgentTemplatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAgentTemplates not implemented")
 }
 func (UnimplementedAgentsServiceServer) mustEmbedUnimplementedAgentsServiceServer() {}
 func (UnimplementedAgentsServiceServer) testEmbeddedByValue()                       {}
@@ -362,6 +380,24 @@ func _AgentsService_PreviewSystemPrompt_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentsService_ListAgentTemplates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAgentTemplatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsServiceServer).ListAgentTemplates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsService_ListAgentTemplates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsServiceServer).ListAgentTemplates(ctx, req.(*ListAgentTemplatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentsService_ServiceDesc is the grpc.ServiceDesc for AgentsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -400,6 +436,10 @@ var AgentsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PreviewSystemPrompt",
 			Handler:    _AgentsService_PreviewSystemPrompt_Handler,
+		},
+		{
+			MethodName: "ListAgentTemplates",
+			Handler:    _AgentsService_ListAgentTemplates_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

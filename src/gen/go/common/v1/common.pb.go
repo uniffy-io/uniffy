@@ -31,20 +31,19 @@ const (
 	ContentType_CONTENT_TYPE_NOTE            ContentType = 1
 	ContentType_CONTENT_TYPE_FILE            ContentType = 2
 	ContentType_CONTENT_TYPE_CALENDAR_EVENT  ContentType = 3
-	ContentType_CONTENT_TYPE_CHAT_MESSAGE    ContentType = 7
-	ContentType_CONTENT_TYPE_USER            ContentType = 9
-	ContentType_CONTENT_TYPE_FOLDER          ContentType = 10
-	ContentType_CONTENT_TYPE_PROJECT         ContentType = 11
-	ContentType_CONTENT_TYPE_TASK            ContentType = 12
-	ContentType_CONTENT_TYPE_AGENT           ContentType = 13
-	ContentType_CONTENT_TYPE_PROVIDER_KEY    ContentType = 14
-	ContentType_CONTENT_TYPE_PROMPT          ContentType = 15
-	ContentType_CONTENT_TYPE_CHAT            ContentType = 16
-	ContentType_CONTENT_TYPE_ROOM            ContentType = 17
-	ContentType_CONTENT_TYPE_AGENT_CRON_TASK ContentType = 18
-	ContentType_CONTENT_TYPE_AGENT_CHAT      ContentType = 19
-	ContentType_CONTENT_TYPE_TAG             ContentType = 20
-	ContentType_CONTENT_TYPE_AGENT_FOLDER    ContentType = 21
+	ContentType_CONTENT_TYPE_CHAT_MESSAGE    ContentType = 4
+	ContentType_CONTENT_TYPE_USER            ContentType = 5
+	ContentType_CONTENT_TYPE_FOLDER          ContentType = 6
+	ContentType_CONTENT_TYPE_PROJECT         ContentType = 7
+	ContentType_CONTENT_TYPE_TASK            ContentType = 8
+	ContentType_CONTENT_TYPE_AGENT           ContentType = 9
+	ContentType_CONTENT_TYPE_PROVIDER_KEY    ContentType = 10
+	ContentType_CONTENT_TYPE_CHAT            ContentType = 11
+	ContentType_CONTENT_TYPE_ROOM            ContentType = 12
+	ContentType_CONTENT_TYPE_AGENT_CRON_TASK ContentType = 13
+	ContentType_CONTENT_TYPE_AGENT_CHAT      ContentType = 14
+	ContentType_CONTENT_TYPE_TAG             ContentType = 15
+	ContentType_CONTENT_TYPE_AGENT_FOLDER    ContentType = 16
 )
 
 // Enum value maps for ContentType.
@@ -54,40 +53,38 @@ var (
 		1:  "CONTENT_TYPE_NOTE",
 		2:  "CONTENT_TYPE_FILE",
 		3:  "CONTENT_TYPE_CALENDAR_EVENT",
-		7:  "CONTENT_TYPE_CHAT_MESSAGE",
-		9:  "CONTENT_TYPE_USER",
-		10: "CONTENT_TYPE_FOLDER",
-		11: "CONTENT_TYPE_PROJECT",
-		12: "CONTENT_TYPE_TASK",
-		13: "CONTENT_TYPE_AGENT",
-		14: "CONTENT_TYPE_PROVIDER_KEY",
-		15: "CONTENT_TYPE_PROMPT",
-		16: "CONTENT_TYPE_CHAT",
-		17: "CONTENT_TYPE_ROOM",
-		18: "CONTENT_TYPE_AGENT_CRON_TASK",
-		19: "CONTENT_TYPE_AGENT_CHAT",
-		20: "CONTENT_TYPE_TAG",
-		21: "CONTENT_TYPE_AGENT_FOLDER",
+		4:  "CONTENT_TYPE_CHAT_MESSAGE",
+		5:  "CONTENT_TYPE_USER",
+		6:  "CONTENT_TYPE_FOLDER",
+		7:  "CONTENT_TYPE_PROJECT",
+		8:  "CONTENT_TYPE_TASK",
+		9:  "CONTENT_TYPE_AGENT",
+		10: "CONTENT_TYPE_PROVIDER_KEY",
+		11: "CONTENT_TYPE_CHAT",
+		12: "CONTENT_TYPE_ROOM",
+		13: "CONTENT_TYPE_AGENT_CRON_TASK",
+		14: "CONTENT_TYPE_AGENT_CHAT",
+		15: "CONTENT_TYPE_TAG",
+		16: "CONTENT_TYPE_AGENT_FOLDER",
 	}
 	ContentType_value = map[string]int32{
 		"CONTENT_TYPE_UNSPECIFIED":     0,
 		"CONTENT_TYPE_NOTE":            1,
 		"CONTENT_TYPE_FILE":            2,
 		"CONTENT_TYPE_CALENDAR_EVENT":  3,
-		"CONTENT_TYPE_CHAT_MESSAGE":    7,
-		"CONTENT_TYPE_USER":            9,
-		"CONTENT_TYPE_FOLDER":          10,
-		"CONTENT_TYPE_PROJECT":         11,
-		"CONTENT_TYPE_TASK":            12,
-		"CONTENT_TYPE_AGENT":           13,
-		"CONTENT_TYPE_PROVIDER_KEY":    14,
-		"CONTENT_TYPE_PROMPT":          15,
-		"CONTENT_TYPE_CHAT":            16,
-		"CONTENT_TYPE_ROOM":            17,
-		"CONTENT_TYPE_AGENT_CRON_TASK": 18,
-		"CONTENT_TYPE_AGENT_CHAT":      19,
-		"CONTENT_TYPE_TAG":             20,
-		"CONTENT_TYPE_AGENT_FOLDER":    21,
+		"CONTENT_TYPE_CHAT_MESSAGE":    4,
+		"CONTENT_TYPE_USER":            5,
+		"CONTENT_TYPE_FOLDER":          6,
+		"CONTENT_TYPE_PROJECT":         7,
+		"CONTENT_TYPE_TASK":            8,
+		"CONTENT_TYPE_AGENT":           9,
+		"CONTENT_TYPE_PROVIDER_KEY":    10,
+		"CONTENT_TYPE_CHAT":            11,
+		"CONTENT_TYPE_ROOM":            12,
+		"CONTENT_TYPE_AGENT_CRON_TASK": 13,
+		"CONTENT_TYPE_AGENT_CHAT":      14,
+		"CONTENT_TYPE_TAG":             15,
+		"CONTENT_TYPE_AGENT_FOLDER":    16,
 	}
 )
 
@@ -1378,27 +1375,26 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\vtotal_count\x18\x03 \x01(\x05R\n" +
 	"totalCount\x12\x1f\n" +
 	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
-	"totalPages*\xec\x03\n" +
+	"totalPages*\xd3\x03\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CONTENT_TYPE_NOTE\x10\x01\x12\x15\n" +
 	"\x11CONTENT_TYPE_FILE\x10\x02\x12\x1f\n" +
 	"\x1bCONTENT_TYPE_CALENDAR_EVENT\x10\x03\x12\x1d\n" +
-	"\x19CONTENT_TYPE_CHAT_MESSAGE\x10\a\x12\x15\n" +
-	"\x11CONTENT_TYPE_USER\x10\t\x12\x17\n" +
-	"\x13CONTENT_TYPE_FOLDER\x10\n" +
-	"\x12\x18\n" +
-	"\x14CONTENT_TYPE_PROJECT\x10\v\x12\x15\n" +
-	"\x11CONTENT_TYPE_TASK\x10\f\x12\x16\n" +
-	"\x12CONTENT_TYPE_AGENT\x10\r\x12\x1d\n" +
-	"\x19CONTENT_TYPE_PROVIDER_KEY\x10\x0e\x12\x17\n" +
-	"\x13CONTENT_TYPE_PROMPT\x10\x0f\x12\x15\n" +
-	"\x11CONTENT_TYPE_CHAT\x10\x10\x12\x15\n" +
-	"\x11CONTENT_TYPE_ROOM\x10\x11\x12 \n" +
-	"\x1cCONTENT_TYPE_AGENT_CRON_TASK\x10\x12\x12\x1b\n" +
-	"\x17CONTENT_TYPE_AGENT_CHAT\x10\x13\x12\x14\n" +
-	"\x10CONTENT_TYPE_TAG\x10\x14\x12\x1d\n" +
-	"\x19CONTENT_TYPE_AGENT_FOLDER\x10\x15*\x91\x01\n" +
+	"\x19CONTENT_TYPE_CHAT_MESSAGE\x10\x04\x12\x15\n" +
+	"\x11CONTENT_TYPE_USER\x10\x05\x12\x17\n" +
+	"\x13CONTENT_TYPE_FOLDER\x10\x06\x12\x18\n" +
+	"\x14CONTENT_TYPE_PROJECT\x10\a\x12\x15\n" +
+	"\x11CONTENT_TYPE_TASK\x10\b\x12\x16\n" +
+	"\x12CONTENT_TYPE_AGENT\x10\t\x12\x1d\n" +
+	"\x19CONTENT_TYPE_PROVIDER_KEY\x10\n" +
+	"\x12\x15\n" +
+	"\x11CONTENT_TYPE_CHAT\x10\v\x12\x15\n" +
+	"\x11CONTENT_TYPE_ROOM\x10\f\x12 \n" +
+	"\x1cCONTENT_TYPE_AGENT_CRON_TASK\x10\r\x12\x1b\n" +
+	"\x17CONTENT_TYPE_AGENT_CHAT\x10\x0e\x12\x14\n" +
+	"\x10CONTENT_TYPE_TAG\x10\x0f\x12\x1d\n" +
+	"\x19CONTENT_TYPE_AGENT_FOLDER\x10\x10*\x91\x01\n" +
 	"\vSubjectType\x12\x1c\n" +
 	"\x18SUBJECT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_TYPE_USER\x10\x01\x12\x16\n" +

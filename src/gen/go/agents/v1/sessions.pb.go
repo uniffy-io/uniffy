@@ -152,11 +152,11 @@ type SessionInfo struct {
 	IsArchived        bool                   `protobuf:"varint,12,opt,name=is_archived,json=isArchived,proto3" json:"is_archived,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// JSON object of model-parameter overrides for this session only;
-	// resolved over the agent's stored model_params
-	ModelParamsOverride *string `protobuf:"bytes,15,opt,name=model_params_override,json=modelParamsOverride,proto3,oneof" json:"model_params_override,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// True for test-drawer sessions: hidden from every session listing and
+	// memory writes are disabled during their runs.
+	IsTest        bool `protobuf:"varint,15,opt,name=is_test,json=isTest,proto3" json:"is_test,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SessionInfo) Reset() {
@@ -287,11 +287,11 @@ func (x *SessionInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *SessionInfo) GetModelParamsOverride() string {
-	if x != nil && x.ModelParamsOverride != nil {
-		return *x.ModelParamsOverride
+func (x *SessionInfo) GetIsTest() bool {
+	if x != nil {
+		return x.IsTest
 	}
-	return ""
+	return false
 }
 
 // Message info returned to clients
@@ -528,10 +528,10 @@ type CreateSessionRequest struct {
 	Kind           SessionKind            `protobuf:"varint,3,opt,name=kind,proto3,enum=agents.v1.SessionKind" json:"kind,omitempty"`
 	DisplayName    *string                `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	ModelOverride  *string                `protobuf:"bytes,5,opt,name=model_override,json=modelOverride,proto3,oneof" json:"model_override,omitempty"`
-	// JSON object of model-parameter overrides for this session only
-	ModelParamsOverride *string `protobuf:"bytes,6,opt,name=model_params_override,json=modelParamsOverride,proto3,oneof" json:"model_params_override,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Create as a test session (hidden from listings, memory writes disabled).
+	IsTest        bool `protobuf:"varint,6,opt,name=is_test,json=isTest,proto3" json:"is_test,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateSessionRequest) Reset() {
@@ -599,11 +599,11 @@ func (x *CreateSessionRequest) GetModelOverride() string {
 	return ""
 }
 
-func (x *CreateSessionRequest) GetModelParamsOverride() string {
-	if x != nil && x.ModelParamsOverride != nil {
-		return *x.ModelParamsOverride
+func (x *CreateSessionRequest) GetIsTest() bool {
+	if x != nil {
+		return x.IsTest
 	}
-	return ""
+	return false
 }
 
 type CreateSessionResponse struct {
@@ -694,50 +694,6 @@ func (x *GetSessionResponse) GetSession() *SessionInfo {
 	return nil
 }
 
-type UpdateSessionResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Session       *SessionInfo           `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateSessionResponse) Reset() {
-	*x = UpdateSessionResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateSessionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateSessionResponse) ProtoMessage() {}
-
-func (x *UpdateSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateSessionResponse.ProtoReflect.Descriptor instead.
-func (*UpdateSessionResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *UpdateSessionResponse) GetSession() *SessionInfo {
-	if x != nil {
-		return x.Session
-	}
-	return nil
-}
-
 type GetSessionRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -748,7 +704,7 @@ type GetSessionRequest struct {
 
 func (x *GetSessionRequest) Reset() {
 	*x = GetSessionRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[6]
+	mi := &file_agents_v1_sessions_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -760,7 +716,7 @@ func (x *GetSessionRequest) String() string {
 func (*GetSessionRequest) ProtoMessage() {}
 
 func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[6]
+	mi := &file_agents_v1_sessions_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -773,7 +729,7 @@ func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetSessionRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{6}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetSessionRequest) GetOrganizationId() string {
@@ -790,483 +746,6 @@ func (x *GetSessionRequest) GetSessionId() string {
 	return ""
 }
 
-type ListSessionsRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	Pagination     *v1.PaginationRequest  `protobuf:"bytes,2,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
-	AgentId        *string                `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
-	Kind           *SessionKind           `protobuf:"varint,4,opt,name=kind,proto3,enum=agents.v1.SessionKind,oneof" json:"kind,omitempty"`
-	IsArchived     *bool                  `protobuf:"varint,5,opt,name=is_archived,json=isArchived,proto3,oneof" json:"is_archived,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ListSessionsRequest) Reset() {
-	*x = ListSessionsRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListSessionsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListSessionsRequest) ProtoMessage() {}
-
-func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListSessionsRequest.ProtoReflect.Descriptor instead.
-func (*ListSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *ListSessionsRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *ListSessionsRequest) GetPagination() *v1.PaginationRequest {
-	if x != nil {
-		return x.Pagination
-	}
-	return nil
-}
-
-func (x *ListSessionsRequest) GetAgentId() string {
-	if x != nil && x.AgentId != nil {
-		return *x.AgentId
-	}
-	return ""
-}
-
-func (x *ListSessionsRequest) GetKind() SessionKind {
-	if x != nil && x.Kind != nil {
-		return *x.Kind
-	}
-	return SessionKind_SESSION_KIND_UNSPECIFIED
-}
-
-func (x *ListSessionsRequest) GetIsArchived() bool {
-	if x != nil && x.IsArchived != nil {
-		return *x.IsArchived
-	}
-	return false
-}
-
-type ListSessionsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sessions      []*SessionInfo         `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
-	Pagination    *v1.PaginationResponse `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListSessionsResponse) Reset() {
-	*x = ListSessionsResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListSessionsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListSessionsResponse) ProtoMessage() {}
-
-func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListSessionsResponse.ProtoReflect.Descriptor instead.
-func (*ListSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ListSessionsResponse) GetSessions() []*SessionInfo {
-	if x != nil {
-		return x.Sessions
-	}
-	return nil
-}
-
-func (x *ListSessionsResponse) GetPagination() *v1.PaginationResponse {
-	if x != nil {
-		return x.Pagination
-	}
-	return nil
-}
-
-type UpdateSessionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	DisplayName    *string                `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
-	ModelOverride  *string                `protobuf:"bytes,4,opt,name=model_override,json=modelOverride,proto3,oneof" json:"model_override,omitempty"`
-	// JSON object of model-parameter overrides; "{}" clears them
-	ModelParamsOverride *string `protobuf:"bytes,5,opt,name=model_params_override,json=modelParamsOverride,proto3,oneof" json:"model_params_override,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
-}
-
-func (x *UpdateSessionRequest) Reset() {
-	*x = UpdateSessionRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateSessionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateSessionRequest) ProtoMessage() {}
-
-func (x *UpdateSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateSessionRequest.ProtoReflect.Descriptor instead.
-func (*UpdateSessionRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *UpdateSessionRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *UpdateSessionRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *UpdateSessionRequest) GetDisplayName() string {
-	if x != nil && x.DisplayName != nil {
-		return *x.DisplayName
-	}
-	return ""
-}
-
-func (x *UpdateSessionRequest) GetModelOverride() string {
-	if x != nil && x.ModelOverride != nil {
-		return *x.ModelOverride
-	}
-	return ""
-}
-
-func (x *UpdateSessionRequest) GetModelParamsOverride() string {
-	if x != nil && x.ModelParamsOverride != nil {
-		return *x.ModelParamsOverride
-	}
-	return ""
-}
-
-type ArchiveSessionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ArchiveSessionRequest) Reset() {
-	*x = ArchiveSessionRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ArchiveSessionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ArchiveSessionRequest) ProtoMessage() {}
-
-func (x *ArchiveSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ArchiveSessionRequest.ProtoReflect.Descriptor instead.
-func (*ArchiveSessionRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *ArchiveSessionRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *ArchiveSessionRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-type ArchiveSessionResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ArchiveSessionResponse) Reset() {
-	*x = ArchiveSessionResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ArchiveSessionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ArchiveSessionResponse) ProtoMessage() {}
-
-func (x *ArchiveSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ArchiveSessionResponse.ProtoReflect.Descriptor instead.
-func (*ArchiveSessionResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *ArchiveSessionResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-type AddMessageRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Role           MessageRole            `protobuf:"varint,3,opt,name=role,proto3,enum=agents.v1.MessageRole" json:"role,omitempty"`
-	Content        *string                `protobuf:"bytes,4,opt,name=content,proto3,oneof" json:"content,omitempty"`
-	InputTokens    int32                  `protobuf:"varint,5,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens   int32                  `protobuf:"varint,6,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	Model          *string                `protobuf:"bytes,7,opt,name=model,proto3,oneof" json:"model,omitempty"`
-	ToolName       *string                `protobuf:"bytes,8,opt,name=tool_name,json=toolName,proto3,oneof" json:"tool_name,omitempty"`
-	ToolCallId     *string                `protobuf:"bytes,9,opt,name=tool_call_id,json=toolCallId,proto3,oneof" json:"tool_call_id,omitempty"`
-	ToolArgsJson   *string                `protobuf:"bytes,10,opt,name=tool_args_json,json=toolArgsJson,proto3,oneof" json:"tool_args_json,omitempty"`
-	ToolResult     *string                `protobuf:"bytes,11,opt,name=tool_result,json=toolResult,proto3,oneof" json:"tool_result,omitempty"`
-	IsThinking     bool                   `protobuf:"varint,12,opt,name=is_thinking,json=isThinking,proto3" json:"is_thinking,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *AddMessageRequest) Reset() {
-	*x = AddMessageRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AddMessageRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AddMessageRequest) ProtoMessage() {}
-
-func (x *AddMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AddMessageRequest.ProtoReflect.Descriptor instead.
-func (*AddMessageRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *AddMessageRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetRole() MessageRole {
-	if x != nil {
-		return x.Role
-	}
-	return MessageRole_MESSAGE_ROLE_UNSPECIFIED
-}
-
-func (x *AddMessageRequest) GetContent() string {
-	if x != nil && x.Content != nil {
-		return *x.Content
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetInputTokens() int32 {
-	if x != nil {
-		return x.InputTokens
-	}
-	return 0
-}
-
-func (x *AddMessageRequest) GetOutputTokens() int32 {
-	if x != nil {
-		return x.OutputTokens
-	}
-	return 0
-}
-
-func (x *AddMessageRequest) GetModel() string {
-	if x != nil && x.Model != nil {
-		return *x.Model
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetToolName() string {
-	if x != nil && x.ToolName != nil {
-		return *x.ToolName
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetToolCallId() string {
-	if x != nil && x.ToolCallId != nil {
-		return *x.ToolCallId
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetToolArgsJson() string {
-	if x != nil && x.ToolArgsJson != nil {
-		return *x.ToolArgsJson
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetToolResult() string {
-	if x != nil && x.ToolResult != nil {
-		return *x.ToolResult
-	}
-	return ""
-}
-
-func (x *AddMessageRequest) GetIsThinking() bool {
-	if x != nil {
-		return x.IsThinking
-	}
-	return false
-}
-
-type AddMessageResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       *MessageInfo           `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AddMessageResponse) Reset() {
-	*x = AddMessageResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AddMessageResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AddMessageResponse) ProtoMessage() {}
-
-func (x *AddMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AddMessageResponse.ProtoReflect.Descriptor instead.
-func (*AddMessageResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *AddMessageResponse) GetMessage() *MessageInfo {
-	if x != nil {
-		return x.Message
-	}
-	return nil
-}
-
 type ListMessagesRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId   string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -1279,7 +758,7 @@ type ListMessagesRequest struct {
 
 func (x *ListMessagesRequest) Reset() {
 	*x = ListMessagesRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[14]
+	mi := &file_agents_v1_sessions_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1291,7 +770,7 @@ func (x *ListMessagesRequest) String() string {
 func (*ListMessagesRequest) ProtoMessage() {}
 
 func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[14]
+	mi := &file_agents_v1_sessions_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1304,7 +783,7 @@ func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{14}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListMessagesRequest) GetOrganizationId() string {
@@ -1345,7 +824,7 @@ type ListMessagesResponse struct {
 
 func (x *ListMessagesResponse) Reset() {
 	*x = ListMessagesResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[15]
+	mi := &file_agents_v1_sessions_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1357,7 +836,7 @@ func (x *ListMessagesResponse) String() string {
 func (*ListMessagesResponse) ProtoMessage() {}
 
 func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[15]
+	mi := &file_agents_v1_sessions_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1370,7 +849,7 @@ func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{15}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListMessagesResponse) GetMessages() []*MessageInfo {
@@ -1387,449 +866,6 @@ func (x *ListMessagesResponse) GetPagination() *v1.PaginationResponse {
 	return nil
 }
 
-type GetSessionContextRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *GetSessionContextRequest) Reset() {
-	*x = GetSessionContextRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetSessionContextRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetSessionContextRequest) ProtoMessage() {}
-
-func (x *GetSessionContextRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetSessionContextRequest.ProtoReflect.Descriptor instead.
-func (*GetSessionContextRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *GetSessionContextRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *GetSessionContextRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-type GetSessionContextResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Messages      []*MessageInfo         `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
-	TotalMessages int32                  `protobuf:"varint,2,opt,name=total_messages,json=totalMessages,proto3" json:"total_messages,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetSessionContextResponse) Reset() {
-	*x = GetSessionContextResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[17]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetSessionContextResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetSessionContextResponse) ProtoMessage() {}
-
-func (x *GetSessionContextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[17]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetSessionContextResponse.ProtoReflect.Descriptor instead.
-func (*GetSessionContextResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{17}
-}
-
-func (x *GetSessionContextResponse) GetMessages() []*MessageInfo {
-	if x != nil {
-		return x.Messages
-	}
-	return nil
-}
-
-func (x *GetSessionContextResponse) GetTotalMessages() int32 {
-	if x != nil {
-		return x.TotalMessages
-	}
-	return 0
-}
-
-type GetSessionContextStatsRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *GetSessionContextStatsRequest) Reset() {
-	*x = GetSessionContextStatsRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[18]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetSessionContextStatsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetSessionContextStatsRequest) ProtoMessage() {}
-
-func (x *GetSessionContextStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[18]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetSessionContextStatsRequest.ProtoReflect.Descriptor instead.
-func (*GetSessionContextStatsRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{18}
-}
-
-func (x *GetSessionContextStatsRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *GetSessionContextStatsRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-type GetSessionContextStatsResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Total messages ever created in this session (including compacted)
-	TotalMessages int32 `protobuf:"varint,1,opt,name=total_messages,json=totalMessages,proto3" json:"total_messages,omitempty"`
-	// Messages currently active (not compacted)
-	ActiveMessages int32 `protobuf:"varint,2,opt,name=active_messages,json=activeMessages,proto3" json:"active_messages,omitempty"`
-	// Messages that have been compacted
-	CompactedMessages int32 `protobuf:"varint,3,opt,name=compacted_messages,json=compactedMessages,proto3" json:"compacted_messages,omitempty"`
-	// Number of summary messages currently in the context window
-	SummaryCount int32 `protobuf:"varint,4,opt,name=summary_count,json=summaryCount,proto3" json:"summary_count,omitempty"`
-	// Provider-reported prompt + completion size of the most recent
-	// assistant turn (last_input_tokens + last_output_tokens). Zero
-	// before the first reply.
-	ActiveTokens int32 `protobuf:"varint,5,opt,name=active_tokens,json=activeTokens,proto3" json:"active_tokens,omitempty"`
-	// Token budget for conversation history (65% of context window)
-	TokenBudget int32 `protobuf:"varint,6,opt,name=token_budget,json=tokenBudget,proto3" json:"token_budget,omitempty"`
-	// Tokens remaining before compaction triggers
-	TokensUntilCompaction int32 `protobuf:"varint,7,opt,name=tokens_until_compaction,json=tokensUntilCompaction,proto3" json:"tokens_until_compaction,omitempty"`
-	// Model context window size in tokens
-	ContextWindowTokens int32 `protobuf:"varint,8,opt,name=context_window_tokens,json=contextWindowTokens,proto3" json:"context_window_tokens,omitempty"`
-	// Full prompt size of the most recent assistant turn -- uncached
-	// input plus tokens served from the prompt cache. Zero pre-first-turn.
-	LastInputTokens int32 `protobuf:"varint,9,opt,name=last_input_tokens,json=lastInputTokens,proto3" json:"last_input_tokens,omitempty"`
-	// Provider-reported output_tokens of the most recent assistant turn
-	// (the assistant's reply). Zero pre-first-turn.
-	LastOutputTokens int32 `protobuf:"varint,10,opt,name=last_output_tokens,json=lastOutputTokens,proto3" json:"last_output_tokens,omitempty"`
-	// Tokens served from Anthropic's prompt cache on the last turn
-	// (`cache_read_input_tokens`). Counted toward last_input_tokens but
-	// billed at ~10% of the base input price -- the savings signal.
-	LastCacheReadTokens int32 `protobuf:"varint,11,opt,name=last_cache_read_tokens,json=lastCacheReadTokens,proto3" json:"last_cache_read_tokens,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
-}
-
-func (x *GetSessionContextStatsResponse) Reset() {
-	*x = GetSessionContextStatsResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[19]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetSessionContextStatsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetSessionContextStatsResponse) ProtoMessage() {}
-
-func (x *GetSessionContextStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[19]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetSessionContextStatsResponse.ProtoReflect.Descriptor instead.
-func (*GetSessionContextStatsResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{19}
-}
-
-func (x *GetSessionContextStatsResponse) GetTotalMessages() int32 {
-	if x != nil {
-		return x.TotalMessages
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetActiveMessages() int32 {
-	if x != nil {
-		return x.ActiveMessages
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetCompactedMessages() int32 {
-	if x != nil {
-		return x.CompactedMessages
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetSummaryCount() int32 {
-	if x != nil {
-		return x.SummaryCount
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetActiveTokens() int32 {
-	if x != nil {
-		return x.ActiveTokens
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetTokenBudget() int32 {
-	if x != nil {
-		return x.TokenBudget
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetTokensUntilCompaction() int32 {
-	if x != nil {
-		return x.TokensUntilCompaction
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetContextWindowTokens() int32 {
-	if x != nil {
-		return x.ContextWindowTokens
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetLastInputTokens() int32 {
-	if x != nil {
-		return x.LastInputTokens
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetLastOutputTokens() int32 {
-	if x != nil {
-		return x.LastOutputTokens
-	}
-	return 0
-}
-
-func (x *GetSessionContextStatsResponse) GetLastCacheReadTokens() int32 {
-	if x != nil {
-		return x.LastCacheReadTokens
-	}
-	return 0
-}
-
-type CompactSessionRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	SessionId      string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *CompactSessionRequest) Reset() {
-	*x = CompactSessionRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[20]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CompactSessionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CompactSessionRequest) ProtoMessage() {}
-
-func (x *CompactSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[20]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CompactSessionRequest.ProtoReflect.Descriptor instead.
-func (*CompactSessionRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{20}
-}
-
-func (x *CompactSessionRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *CompactSessionRequest) GetSessionId() string {
-	if x != nil {
-		return x.SessionId
-	}
-	return ""
-}
-
-type CompactSessionResponse struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Compacted bool                   `protobuf:"varint,1,opt,name=compacted,proto3" json:"compacted,omitempty"`
-	// Updated stats after compaction
-	Stats *GetSessionContextStatsResponse `protobuf:"bytes,2,opt,name=stats,proto3" json:"stats,omitempty"`
-	// Compaction-specific results
-	MessagesCompacted int32 `protobuf:"varint,3,opt,name=messages_compacted,json=messagesCompacted,proto3" json:"messages_compacted,omitempty"`
-	TokensBefore      int32 `protobuf:"varint,4,opt,name=tokens_before,json=tokensBefore,proto3" json:"tokens_before,omitempty"`
-	TokensAfter       int32 `protobuf:"varint,5,opt,name=tokens_after,json=tokensAfter,proto3" json:"tokens_after,omitempty"`
-	TokensSaved       int32 `protobuf:"varint,6,opt,name=tokens_saved,json=tokensSaved,proto3" json:"tokens_saved,omitempty"`
-	SummaryTokens     int32 `protobuf:"varint,7,opt,name=summary_tokens,json=summaryTokens,proto3" json:"summary_tokens,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *CompactSessionResponse) Reset() {
-	*x = CompactSessionResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CompactSessionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CompactSessionResponse) ProtoMessage() {}
-
-func (x *CompactSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CompactSessionResponse.ProtoReflect.Descriptor instead.
-func (*CompactSessionResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{21}
-}
-
-func (x *CompactSessionResponse) GetCompacted() bool {
-	if x != nil {
-		return x.Compacted
-	}
-	return false
-}
-
-func (x *CompactSessionResponse) GetStats() *GetSessionContextStatsResponse {
-	if x != nil {
-		return x.Stats
-	}
-	return nil
-}
-
-func (x *CompactSessionResponse) GetMessagesCompacted() int32 {
-	if x != nil {
-		return x.MessagesCompacted
-	}
-	return 0
-}
-
-func (x *CompactSessionResponse) GetTokensBefore() int32 {
-	if x != nil {
-		return x.TokensBefore
-	}
-	return 0
-}
-
-func (x *CompactSessionResponse) GetTokensAfter() int32 {
-	if x != nil {
-		return x.TokensAfter
-	}
-	return 0
-}
-
-func (x *CompactSessionResponse) GetTokensSaved() int32 {
-	if x != nil {
-		return x.TokensSaved
-	}
-	return 0
-}
-
-func (x *CompactSessionResponse) GetSummaryTokens() int32 {
-	if x != nil {
-		return x.SummaryTokens
-	}
-	return 0
-}
-
 type EditMessageRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -1841,7 +877,7 @@ type EditMessageRequest struct {
 
 func (x *EditMessageRequest) Reset() {
 	*x = EditMessageRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[22]
+	mi := &file_agents_v1_sessions_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1853,7 +889,7 @@ func (x *EditMessageRequest) String() string {
 func (*EditMessageRequest) ProtoMessage() {}
 
 func (x *EditMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[22]
+	mi := &file_agents_v1_sessions_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1866,7 +902,7 @@ func (x *EditMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EditMessageRequest.ProtoReflect.Descriptor instead.
 func (*EditMessageRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{22}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EditMessageRequest) GetOrganizationId() string {
@@ -1901,7 +937,7 @@ type EditMessageResponse struct {
 
 func (x *EditMessageResponse) Reset() {
 	*x = EditMessageResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[23]
+	mi := &file_agents_v1_sessions_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1913,7 +949,7 @@ func (x *EditMessageResponse) String() string {
 func (*EditMessageResponse) ProtoMessage() {}
 
 func (x *EditMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[23]
+	mi := &file_agents_v1_sessions_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1926,7 +962,7 @@ func (x *EditMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EditMessageResponse.ProtoReflect.Descriptor instead.
 func (*EditMessageResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{23}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *EditMessageResponse) GetMessage() *MessageInfo {
@@ -1943,104 +979,6 @@ func (x *EditMessageResponse) GetDownstreamInvalidated() int32 {
 	return 0
 }
 
-type DeleteMessageRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	MessageId      string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *DeleteMessageRequest) Reset() {
-	*x = DeleteMessageRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[24]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteMessageRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteMessageRequest) ProtoMessage() {}
-
-func (x *DeleteMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[24]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteMessageRequest.ProtoReflect.Descriptor instead.
-func (*DeleteMessageRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{24}
-}
-
-func (x *DeleteMessageRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
-func (x *DeleteMessageRequest) GetMessageId() string {
-	if x != nil {
-		return x.MessageId
-	}
-	return ""
-}
-
-type DeleteMessageResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Total rows marked invalidated (the deleted message + every later
-	// message in the session).
-	InvalidatedCount int32 `protobuf:"varint,1,opt,name=invalidated_count,json=invalidatedCount,proto3" json:"invalidated_count,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *DeleteMessageResponse) Reset() {
-	*x = DeleteMessageResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[25]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteMessageResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteMessageResponse) ProtoMessage() {}
-
-func (x *DeleteMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[25]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteMessageResponse.ProtoReflect.Descriptor instead.
-func (*DeleteMessageResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{25}
-}
-
-func (x *DeleteMessageResponse) GetInvalidatedCount() int32 {
-	if x != nil {
-		return x.InvalidatedCount
-	}
-	return 0
-}
-
 type RetryMessageRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -2051,7 +989,7 @@ type RetryMessageRequest struct {
 
 func (x *RetryMessageRequest) Reset() {
 	*x = RetryMessageRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[26]
+	mi := &file_agents_v1_sessions_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2063,7 +1001,7 @@ func (x *RetryMessageRequest) String() string {
 func (*RetryMessageRequest) ProtoMessage() {}
 
 func (x *RetryMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[26]
+	mi := &file_agents_v1_sessions_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2076,7 +1014,7 @@ func (x *RetryMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryMessageRequest.ProtoReflect.Descriptor instead.
 func (*RetryMessageRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{26}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RetryMessageRequest) GetOrganizationId() string {
@@ -2105,7 +1043,7 @@ type RetryMessageResponse struct {
 
 func (x *RetryMessageResponse) Reset() {
 	*x = RetryMessageResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[27]
+	mi := &file_agents_v1_sessions_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2117,7 +1055,7 @@ func (x *RetryMessageResponse) String() string {
 func (*RetryMessageResponse) ProtoMessage() {}
 
 func (x *RetryMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[27]
+	mi := &file_agents_v1_sessions_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2130,7 +1068,7 @@ func (x *RetryMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryMessageResponse.ProtoReflect.Descriptor instead.
 func (*RetryMessageResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{27}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RetryMessageResponse) GetContent() string {
@@ -2160,7 +1098,7 @@ type MessageFeedback struct {
 
 func (x *MessageFeedback) Reset() {
 	*x = MessageFeedback{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[28]
+	mi := &file_agents_v1_sessions_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2172,7 +1110,7 @@ func (x *MessageFeedback) String() string {
 func (*MessageFeedback) ProtoMessage() {}
 
 func (x *MessageFeedback) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[28]
+	mi := &file_agents_v1_sessions_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2185,7 +1123,7 @@ func (x *MessageFeedback) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageFeedback.ProtoReflect.Descriptor instead.
 func (*MessageFeedback) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{28}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MessageFeedback) GetMessageId() string {
@@ -2219,16 +1157,20 @@ func (x *MessageFeedback) GetCreatedAt() *timestamppb.Timestamp {
 type SubmitMessageFeedbackRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	MessageId      string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	Rating         string                 `protobuf:"bytes,3,opt,name=rating,proto3" json:"rating,omitempty"` // up | down, or "" to clear
-	Comment        *string                `protobuf:"bytes,4,opt,name=comment,proto3,oneof" json:"comment,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Session-message target (agents_messages id). Exactly one of message_id
+	// and chat_message_id must be set.
+	MessageId string  `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Rating    string  `protobuf:"bytes,3,opt,name=rating,proto3" json:"rating,omitempty"` // up | down, or "" to clear
+	Comment   *string `protobuf:"bytes,4,opt,name=comment,proto3,oneof" json:"comment,omitempty"`
+	// Chat target: an agent reply's chat_messages id.
+	ChatMessageId string `protobuf:"bytes,5,opt,name=chat_message_id,json=chatMessageId,proto3" json:"chat_message_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubmitMessageFeedbackRequest) Reset() {
 	*x = SubmitMessageFeedbackRequest{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[29]
+	mi := &file_agents_v1_sessions_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2240,7 +1182,7 @@ func (x *SubmitMessageFeedbackRequest) String() string {
 func (*SubmitMessageFeedbackRequest) ProtoMessage() {}
 
 func (x *SubmitMessageFeedbackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[29]
+	mi := &file_agents_v1_sessions_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2253,7 +1195,7 @@ func (x *SubmitMessageFeedbackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitMessageFeedbackRequest.ProtoReflect.Descriptor instead.
 func (*SubmitMessageFeedbackRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{29}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SubmitMessageFeedbackRequest) GetOrganizationId() string {
@@ -2284,6 +1226,13 @@ func (x *SubmitMessageFeedbackRequest) GetComment() string {
 	return ""
 }
 
+func (x *SubmitMessageFeedbackRequest) GetChatMessageId() string {
+	if x != nil {
+		return x.ChatMessageId
+	}
+	return ""
+}
+
 type SubmitMessageFeedbackResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Unset when the rating was cleared.
@@ -2294,7 +1243,7 @@ type SubmitMessageFeedbackResponse struct {
 
 func (x *SubmitMessageFeedbackResponse) Reset() {
 	*x = SubmitMessageFeedbackResponse{}
-	mi := &file_agents_v1_sessions_proto_msgTypes[30]
+	mi := &file_agents_v1_sessions_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2306,7 +1255,7 @@ func (x *SubmitMessageFeedbackResponse) String() string {
 func (*SubmitMessageFeedbackResponse) ProtoMessage() {}
 
 func (x *SubmitMessageFeedbackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_sessions_proto_msgTypes[30]
+	mi := &file_agents_v1_sessions_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2319,7 +1268,7 @@ func (x *SubmitMessageFeedbackResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitMessageFeedbackResponse.ProtoReflect.Descriptor instead.
 func (*SubmitMessageFeedbackResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{30}
+	return file_agents_v1_sessions_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SubmitMessageFeedbackResponse) GetFeedback() *MessageFeedback {
@@ -2333,7 +1282,7 @@ var File_agents_v1_sessions_proto protoreflect.FileDescriptor
 
 const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\n" +
-	"\x18agents/v1/sessions.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x05\n" +
+	"\x18agents/v1/sessions.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x92\x05\n" +
 	"\vSessionInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -2352,12 +1301,11 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x127\n" +
-	"\x15model_params_override\x18\x0f \x01(\tH\x03R\x13modelParamsOverride\x88\x01\x01B\x0f\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x17\n" +
+	"\ais_test\x18\x0f \x01(\bR\x06isTestB\x0f\n" +
 	"\r_display_nameB\x11\n" +
 	"\x0f_model_overrideB\x12\n" +
-	"\x10_last_model_usedB\x18\n" +
-	"\x16_model_params_override\"\xcf\a\n" +
+	"\x10_last_model_used\"\xcf\a\n" +
 	"\vMessageInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2397,89 +1345,24 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\f_tool_resultB\f\n" +
 	"\n" +
 	"_edited_atB\x13\n" +
-	"\x11_previous_content\"\xd1\x02\n" +
+	"\x11_previous_content\"\x97\x02\n" +
 	"\x14CreateSessionRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12*\n" +
 	"\x04kind\x18\x03 \x01(\x0e2\x16.agents.v1.SessionKindR\x04kind\x12&\n" +
 	"\fdisplay_name\x18\x04 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12*\n" +
-	"\x0emodel_override\x18\x05 \x01(\tH\x01R\rmodelOverride\x88\x01\x01\x127\n" +
-	"\x15model_params_override\x18\x06 \x01(\tH\x02R\x13modelParamsOverride\x88\x01\x01B\x0f\n" +
+	"\x0emodel_override\x18\x05 \x01(\tH\x01R\rmodelOverride\x88\x01\x01\x12\x17\n" +
+	"\ais_test\x18\x06 \x01(\bR\x06isTestB\x0f\n" +
 	"\r_display_nameB\x11\n" +
-	"\x0f_model_overrideB\x18\n" +
-	"\x16_model_params_override\"I\n" +
+	"\x0f_model_override\"I\n" +
 	"\x15CreateSessionResponse\x120\n" +
 	"\asession\x18\x01 \x01(\v2\x16.agents.v1.SessionInfoR\asession\"F\n" +
 	"\x12GetSessionResponse\x120\n" +
-	"\asession\x18\x01 \x01(\v2\x16.agents.v1.SessionInfoR\asession\"I\n" +
-	"\x15UpdateSessionResponse\x120\n" +
 	"\asession\x18\x01 \x01(\v2\x16.agents.v1.SessionInfoR\asession\"[\n" +
 	"\x11GetSessionRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"\xad\x02\n" +
-	"\x13ListSessionsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n" +
-	"\n" +
-	"pagination\x18\x02 \x01(\v2\x1c.common.v1.PaginationRequestH\x00R\n" +
-	"pagination\x88\x01\x01\x12\x1e\n" +
-	"\bagent_id\x18\x03 \x01(\tH\x01R\aagentId\x88\x01\x01\x12/\n" +
-	"\x04kind\x18\x04 \x01(\x0e2\x16.agents.v1.SessionKindH\x02R\x04kind\x88\x01\x01\x12$\n" +
-	"\vis_archived\x18\x05 \x01(\bH\x03R\n" +
-	"isArchived\x88\x01\x01B\r\n" +
-	"\v_paginationB\v\n" +
-	"\t_agent_idB\a\n" +
-	"\x05_kindB\x0e\n" +
-	"\f_is_archived\"\x89\x01\n" +
-	"\x14ListSessionsResponse\x122\n" +
-	"\bsessions\x18\x01 \x03(\v2\x16.agents.v1.SessionInfoR\bsessions\x12=\n" +
-	"\n" +
-	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xa9\x02\n" +
-	"\x14UpdateSessionRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\x12&\n" +
-	"\fdisplay_name\x18\x03 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12*\n" +
-	"\x0emodel_override\x18\x04 \x01(\tH\x01R\rmodelOverride\x88\x01\x01\x127\n" +
-	"\x15model_params_override\x18\x05 \x01(\tH\x02R\x13modelParamsOverride\x88\x01\x01B\x0f\n" +
-	"\r_display_nameB\x11\n" +
-	"\x0f_model_overrideB\x18\n" +
-	"\x16_model_params_override\"_\n" +
-	"\x15ArchiveSessionRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"2\n" +
-	"\x16ArchiveSessionResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x9c\x04\n" +
-	"\x11AddMessageRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\x12*\n" +
-	"\x04role\x18\x03 \x01(\x0e2\x16.agents.v1.MessageRoleR\x04role\x12\x1d\n" +
-	"\acontent\x18\x04 \x01(\tH\x00R\acontent\x88\x01\x01\x12!\n" +
-	"\finput_tokens\x18\x05 \x01(\x05R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\x06 \x01(\x05R\foutputTokens\x12\x19\n" +
-	"\x05model\x18\a \x01(\tH\x01R\x05model\x88\x01\x01\x12 \n" +
-	"\ttool_name\x18\b \x01(\tH\x02R\btoolName\x88\x01\x01\x12%\n" +
-	"\ftool_call_id\x18\t \x01(\tH\x03R\n" +
-	"toolCallId\x88\x01\x01\x12)\n" +
-	"\x0etool_args_json\x18\n" +
-	" \x01(\tH\x04R\ftoolArgsJson\x88\x01\x01\x12$\n" +
-	"\vtool_result\x18\v \x01(\tH\x05R\n" +
-	"toolResult\x88\x01\x01\x12\x1f\n" +
-	"\vis_thinking\x18\f \x01(\bR\n" +
-	"isThinkingB\n" +
-	"\n" +
-	"\b_contentB\b\n" +
-	"\x06_modelB\f\n" +
-	"\n" +
-	"_tool_nameB\x0f\n" +
-	"\r_tool_call_idB\x11\n" +
-	"\x0f_tool_args_jsonB\x0e\n" +
-	"\f_tool_result\"F\n" +
-	"\x12AddMessageResponse\x120\n" +
-	"\amessage\x18\x01 \x01(\v2\x16.agents.v1.MessageInfoR\amessage\"\xf7\x01\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\"\xf7\x01\n" +
 	"\x13ListMessagesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -2494,43 +1377,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\bmessages\x18\x01 \x03(\v2\x16.agents.v1.MessageInfoR\bmessages\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"b\n" +
-	"\x18GetSessionContextRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"v\n" +
-	"\x19GetSessionContextResponse\x122\n" +
-	"\bmessages\x18\x01 \x03(\v2\x16.agents.v1.MessageInfoR\bmessages\x12%\n" +
-	"\x0etotal_messages\x18\x02 \x01(\x05R\rtotalMessages\"g\n" +
-	"\x1dGetSessionContextStatsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"\x87\x04\n" +
-	"\x1eGetSessionContextStatsResponse\x12%\n" +
-	"\x0etotal_messages\x18\x01 \x01(\x05R\rtotalMessages\x12'\n" +
-	"\x0factive_messages\x18\x02 \x01(\x05R\x0eactiveMessages\x12-\n" +
-	"\x12compacted_messages\x18\x03 \x01(\x05R\x11compactedMessages\x12#\n" +
-	"\rsummary_count\x18\x04 \x01(\x05R\fsummaryCount\x12#\n" +
-	"\ractive_tokens\x18\x05 \x01(\x05R\factiveTokens\x12!\n" +
-	"\ftoken_budget\x18\x06 \x01(\x05R\vtokenBudget\x126\n" +
-	"\x17tokens_until_compaction\x18\a \x01(\x05R\x15tokensUntilCompaction\x122\n" +
-	"\x15context_window_tokens\x18\b \x01(\x05R\x13contextWindowTokens\x12*\n" +
-	"\x11last_input_tokens\x18\t \x01(\x05R\x0flastInputTokens\x12,\n" +
-	"\x12last_output_tokens\x18\n" +
-	" \x01(\x05R\x10lastOutputTokens\x123\n" +
-	"\x16last_cache_read_tokens\x18\v \x01(\x05R\x13lastCacheReadTokens\"_\n" +
-	"\x15CompactSessionRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
-	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"\xb8\x02\n" +
-	"\x16CompactSessionResponse\x12\x1c\n" +
-	"\tcompacted\x18\x01 \x01(\bR\tcompacted\x12?\n" +
-	"\x05stats\x18\x02 \x01(\v2).agents.v1.GetSessionContextStatsResponseR\x05stats\x12-\n" +
-	"\x12messages_compacted\x18\x03 \x01(\x05R\x11messagesCompacted\x12#\n" +
-	"\rtokens_before\x18\x04 \x01(\x05R\ftokensBefore\x12!\n" +
-	"\ftokens_after\x18\x05 \x01(\x05R\vtokensAfter\x12!\n" +
-	"\ftokens_saved\x18\x06 \x01(\x05R\vtokensSaved\x12%\n" +
-	"\x0esummary_tokens\x18\a \x01(\x05R\rsummaryTokens\"}\n" +
+	"pagination\"}\n" +
 	"\x12EditMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -2539,13 +1386,7 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"newContent\"~\n" +
 	"\x13EditMessageResponse\x120\n" +
 	"\amessage\x18\x01 \x01(\v2\x16.agents.v1.MessageInfoR\amessage\x125\n" +
-	"\x16downstream_invalidated\x18\x02 \x01(\x05R\x15downstreamInvalidated\"^\n" +
-	"\x14DeleteMessageRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
-	"\n" +
-	"message_id\x18\x02 \x01(\tR\tmessageId\"D\n" +
-	"\x15DeleteMessageResponse\x12+\n" +
-	"\x11invalidated_count\x18\x01 \x01(\x05R\x10invalidatedCount\"]\n" +
+	"\x16downstream_invalidated\x18\x02 \x01(\x05R\x15downstreamInvalidated\"]\n" +
 	"\x13RetryMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -2559,13 +1400,14 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x06rating\x18\x02 \x01(\tR\x06rating\x12\x18\n" +
 	"\acomment\x18\x03 \x01(\tR\acomment\x129\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xa9\x01\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xd1\x01\n" +
 	"\x1cSubmitMessageFeedbackRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x16\n" +
 	"\x06rating\x18\x03 \x01(\tR\x06rating\x12\x1d\n" +
-	"\acomment\x18\x04 \x01(\tH\x00R\acomment\x88\x01\x01B\n" +
+	"\acomment\x18\x04 \x01(\tH\x00R\acomment\x88\x01\x01\x12&\n" +
+	"\x0fchat_message_id\x18\x05 \x01(\tR\rchatMessageIdB\n" +
 	"\n" +
 	"\b_comment\"i\n" +
 	"\x1dSubmitMessageFeedbackResponse\x12;\n" +
@@ -2582,22 +1424,13 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"\x16MESSAGE_ROLE_ASSISTANT\x10\x02\x12\x15\n" +
 	"\x11MESSAGE_ROLE_TOOL\x10\x03\x12\x17\n" +
 	"\x13MESSAGE_ROLE_SYSTEM\x10\x04\x12\x18\n" +
-	"\x14MESSAGE_ROLE_SUMMARY\x10\x052\xe9\t\n" +
+	"\x14MESSAGE_ROLE_SUMMARY\x10\x052\x98\x04\n" +
 	"\x0fSessionsService\x12T\n" +
 	"\rCreateSession\x12\x1f.agents.v1.CreateSessionRequest\x1a .agents.v1.CreateSessionResponse\"\x00\x12K\n" +
 	"\n" +
 	"GetSession\x12\x1c.agents.v1.GetSessionRequest\x1a\x1d.agents.v1.GetSessionResponse\"\x00\x12Q\n" +
-	"\fListSessions\x12\x1e.agents.v1.ListSessionsRequest\x1a\x1f.agents.v1.ListSessionsResponse\"\x00\x12T\n" +
-	"\rUpdateSession\x12\x1f.agents.v1.UpdateSessionRequest\x1a .agents.v1.UpdateSessionResponse\"\x00\x12W\n" +
-	"\x0eArchiveSession\x12 .agents.v1.ArchiveSessionRequest\x1a!.agents.v1.ArchiveSessionResponse\"\x00\x12K\n" +
-	"\n" +
-	"AddMessage\x12\x1c.agents.v1.AddMessageRequest\x1a\x1d.agents.v1.AddMessageResponse\"\x00\x12Q\n" +
-	"\fListMessages\x12\x1e.agents.v1.ListMessagesRequest\x1a\x1f.agents.v1.ListMessagesResponse\"\x00\x12`\n" +
-	"\x11GetSessionContext\x12#.agents.v1.GetSessionContextRequest\x1a$.agents.v1.GetSessionContextResponse\"\x00\x12o\n" +
-	"\x16GetSessionContextStats\x12(.agents.v1.GetSessionContextStatsRequest\x1a).agents.v1.GetSessionContextStatsResponse\"\x00\x12W\n" +
-	"\x0eCompactSession\x12 .agents.v1.CompactSessionRequest\x1a!.agents.v1.CompactSessionResponse\"\x00\x12N\n" +
-	"\vEditMessage\x12\x1d.agents.v1.EditMessageRequest\x1a\x1e.agents.v1.EditMessageResponse\"\x00\x12T\n" +
-	"\rDeleteMessage\x12\x1f.agents.v1.DeleteMessageRequest\x1a .agents.v1.DeleteMessageResponse\"\x00\x12Q\n" +
+	"\fListMessages\x12\x1e.agents.v1.ListMessagesRequest\x1a\x1f.agents.v1.ListMessagesResponse\"\x00\x12N\n" +
+	"\vEditMessage\x12\x1d.agents.v1.EditMessageRequest\x1a\x1e.agents.v1.EditMessageResponse\"\x00\x12Q\n" +
 	"\fRetryMessage\x12\x1e.agents.v1.RetryMessageRequest\x1a\x1f.agents.v1.RetryMessageResponse\"\x00\x12l\n" +
 	"\x15SubmitMessageFeedback\x12'.agents.v1.SubmitMessageFeedbackRequest\x1a(.agents.v1.SubmitMessageFeedbackResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
@@ -2614,103 +1447,62 @@ func file_agents_v1_sessions_proto_rawDescGZIP() []byte {
 }
 
 var file_agents_v1_sessions_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agents_v1_sessions_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_agents_v1_sessions_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_agents_v1_sessions_proto_goTypes = []any{
-	(SessionKind)(0),                       // 0: agents.v1.SessionKind
-	(MessageRole)(0),                       // 1: agents.v1.MessageRole
-	(*SessionInfo)(nil),                    // 2: agents.v1.SessionInfo
-	(*MessageInfo)(nil),                    // 3: agents.v1.MessageInfo
-	(*CreateSessionRequest)(nil),           // 4: agents.v1.CreateSessionRequest
-	(*CreateSessionResponse)(nil),          // 5: agents.v1.CreateSessionResponse
-	(*GetSessionResponse)(nil),             // 6: agents.v1.GetSessionResponse
-	(*UpdateSessionResponse)(nil),          // 7: agents.v1.UpdateSessionResponse
-	(*GetSessionRequest)(nil),              // 8: agents.v1.GetSessionRequest
-	(*ListSessionsRequest)(nil),            // 9: agents.v1.ListSessionsRequest
-	(*ListSessionsResponse)(nil),           // 10: agents.v1.ListSessionsResponse
-	(*UpdateSessionRequest)(nil),           // 11: agents.v1.UpdateSessionRequest
-	(*ArchiveSessionRequest)(nil),          // 12: agents.v1.ArchiveSessionRequest
-	(*ArchiveSessionResponse)(nil),         // 13: agents.v1.ArchiveSessionResponse
-	(*AddMessageRequest)(nil),              // 14: agents.v1.AddMessageRequest
-	(*AddMessageResponse)(nil),             // 15: agents.v1.AddMessageResponse
-	(*ListMessagesRequest)(nil),            // 16: agents.v1.ListMessagesRequest
-	(*ListMessagesResponse)(nil),           // 17: agents.v1.ListMessagesResponse
-	(*GetSessionContextRequest)(nil),       // 18: agents.v1.GetSessionContextRequest
-	(*GetSessionContextResponse)(nil),      // 19: agents.v1.GetSessionContextResponse
-	(*GetSessionContextStatsRequest)(nil),  // 20: agents.v1.GetSessionContextStatsRequest
-	(*GetSessionContextStatsResponse)(nil), // 21: agents.v1.GetSessionContextStatsResponse
-	(*CompactSessionRequest)(nil),          // 22: agents.v1.CompactSessionRequest
-	(*CompactSessionResponse)(nil),         // 23: agents.v1.CompactSessionResponse
-	(*EditMessageRequest)(nil),             // 24: agents.v1.EditMessageRequest
-	(*EditMessageResponse)(nil),            // 25: agents.v1.EditMessageResponse
-	(*DeleteMessageRequest)(nil),           // 26: agents.v1.DeleteMessageRequest
-	(*DeleteMessageResponse)(nil),          // 27: agents.v1.DeleteMessageResponse
-	(*RetryMessageRequest)(nil),            // 28: agents.v1.RetryMessageRequest
-	(*RetryMessageResponse)(nil),           // 29: agents.v1.RetryMessageResponse
-	(*MessageFeedback)(nil),                // 30: agents.v1.MessageFeedback
-	(*SubmitMessageFeedbackRequest)(nil),   // 31: agents.v1.SubmitMessageFeedbackRequest
-	(*SubmitMessageFeedbackResponse)(nil),  // 32: agents.v1.SubmitMessageFeedbackResponse
-	(*timestamppb.Timestamp)(nil),          // 33: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),           // 34: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),          // 35: common.v1.PaginationResponse
+	(SessionKind)(0),                      // 0: agents.v1.SessionKind
+	(MessageRole)(0),                      // 1: agents.v1.MessageRole
+	(*SessionInfo)(nil),                   // 2: agents.v1.SessionInfo
+	(*MessageInfo)(nil),                   // 3: agents.v1.MessageInfo
+	(*CreateSessionRequest)(nil),          // 4: agents.v1.CreateSessionRequest
+	(*CreateSessionResponse)(nil),         // 5: agents.v1.CreateSessionResponse
+	(*GetSessionResponse)(nil),            // 6: agents.v1.GetSessionResponse
+	(*GetSessionRequest)(nil),             // 7: agents.v1.GetSessionRequest
+	(*ListMessagesRequest)(nil),           // 8: agents.v1.ListMessagesRequest
+	(*ListMessagesResponse)(nil),          // 9: agents.v1.ListMessagesResponse
+	(*EditMessageRequest)(nil),            // 10: agents.v1.EditMessageRequest
+	(*EditMessageResponse)(nil),           // 11: agents.v1.EditMessageResponse
+	(*RetryMessageRequest)(nil),           // 12: agents.v1.RetryMessageRequest
+	(*RetryMessageResponse)(nil),          // 13: agents.v1.RetryMessageResponse
+	(*MessageFeedback)(nil),               // 14: agents.v1.MessageFeedback
+	(*SubmitMessageFeedbackRequest)(nil),  // 15: agents.v1.SubmitMessageFeedbackRequest
+	(*SubmitMessageFeedbackResponse)(nil), // 16: agents.v1.SubmitMessageFeedbackResponse
+	(*timestamppb.Timestamp)(nil),         // 17: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),          // 18: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),         // 19: common.v1.PaginationResponse
 }
 var file_agents_v1_sessions_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.SessionInfo.kind:type_name -> agents.v1.SessionKind
-	33, // 1: agents.v1.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	33, // 2: agents.v1.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 1: agents.v1.SessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	17, // 2: agents.v1.SessionInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: agents.v1.MessageInfo.role:type_name -> agents.v1.MessageRole
-	33, // 4: agents.v1.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
-	33, // 5: agents.v1.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
+	17, // 4: agents.v1.MessageInfo.created_at:type_name -> google.protobuf.Timestamp
+	17, // 5: agents.v1.MessageInfo.edited_at:type_name -> google.protobuf.Timestamp
 	0,  // 6: agents.v1.CreateSessionRequest.kind:type_name -> agents.v1.SessionKind
 	2,  // 7: agents.v1.CreateSessionResponse.session:type_name -> agents.v1.SessionInfo
 	2,  // 8: agents.v1.GetSessionResponse.session:type_name -> agents.v1.SessionInfo
-	2,  // 9: agents.v1.UpdateSessionResponse.session:type_name -> agents.v1.SessionInfo
-	34, // 10: agents.v1.ListSessionsRequest.pagination:type_name -> common.v1.PaginationRequest
-	0,  // 11: agents.v1.ListSessionsRequest.kind:type_name -> agents.v1.SessionKind
-	2,  // 12: agents.v1.ListSessionsResponse.sessions:type_name -> agents.v1.SessionInfo
-	35, // 13: agents.v1.ListSessionsResponse.pagination:type_name -> common.v1.PaginationResponse
-	1,  // 14: agents.v1.AddMessageRequest.role:type_name -> agents.v1.MessageRole
-	3,  // 15: agents.v1.AddMessageResponse.message:type_name -> agents.v1.MessageInfo
-	34, // 16: agents.v1.ListMessagesRequest.pagination:type_name -> common.v1.PaginationRequest
-	3,  // 17: agents.v1.ListMessagesResponse.messages:type_name -> agents.v1.MessageInfo
-	35, // 18: agents.v1.ListMessagesResponse.pagination:type_name -> common.v1.PaginationResponse
-	3,  // 19: agents.v1.GetSessionContextResponse.messages:type_name -> agents.v1.MessageInfo
-	21, // 20: agents.v1.CompactSessionResponse.stats:type_name -> agents.v1.GetSessionContextStatsResponse
-	3,  // 21: agents.v1.EditMessageResponse.message:type_name -> agents.v1.MessageInfo
-	33, // 22: agents.v1.MessageFeedback.created_at:type_name -> google.protobuf.Timestamp
-	30, // 23: agents.v1.SubmitMessageFeedbackResponse.feedback:type_name -> agents.v1.MessageFeedback
-	4,  // 24: agents.v1.SessionsService.CreateSession:input_type -> agents.v1.CreateSessionRequest
-	8,  // 25: agents.v1.SessionsService.GetSession:input_type -> agents.v1.GetSessionRequest
-	9,  // 26: agents.v1.SessionsService.ListSessions:input_type -> agents.v1.ListSessionsRequest
-	11, // 27: agents.v1.SessionsService.UpdateSession:input_type -> agents.v1.UpdateSessionRequest
-	12, // 28: agents.v1.SessionsService.ArchiveSession:input_type -> agents.v1.ArchiveSessionRequest
-	14, // 29: agents.v1.SessionsService.AddMessage:input_type -> agents.v1.AddMessageRequest
-	16, // 30: agents.v1.SessionsService.ListMessages:input_type -> agents.v1.ListMessagesRequest
-	18, // 31: agents.v1.SessionsService.GetSessionContext:input_type -> agents.v1.GetSessionContextRequest
-	20, // 32: agents.v1.SessionsService.GetSessionContextStats:input_type -> agents.v1.GetSessionContextStatsRequest
-	22, // 33: agents.v1.SessionsService.CompactSession:input_type -> agents.v1.CompactSessionRequest
-	24, // 34: agents.v1.SessionsService.EditMessage:input_type -> agents.v1.EditMessageRequest
-	26, // 35: agents.v1.SessionsService.DeleteMessage:input_type -> agents.v1.DeleteMessageRequest
-	28, // 36: agents.v1.SessionsService.RetryMessage:input_type -> agents.v1.RetryMessageRequest
-	31, // 37: agents.v1.SessionsService.SubmitMessageFeedback:input_type -> agents.v1.SubmitMessageFeedbackRequest
-	5,  // 38: agents.v1.SessionsService.CreateSession:output_type -> agents.v1.CreateSessionResponse
-	6,  // 39: agents.v1.SessionsService.GetSession:output_type -> agents.v1.GetSessionResponse
-	10, // 40: agents.v1.SessionsService.ListSessions:output_type -> agents.v1.ListSessionsResponse
-	7,  // 41: agents.v1.SessionsService.UpdateSession:output_type -> agents.v1.UpdateSessionResponse
-	13, // 42: agents.v1.SessionsService.ArchiveSession:output_type -> agents.v1.ArchiveSessionResponse
-	15, // 43: agents.v1.SessionsService.AddMessage:output_type -> agents.v1.AddMessageResponse
-	17, // 44: agents.v1.SessionsService.ListMessages:output_type -> agents.v1.ListMessagesResponse
-	19, // 45: agents.v1.SessionsService.GetSessionContext:output_type -> agents.v1.GetSessionContextResponse
-	21, // 46: agents.v1.SessionsService.GetSessionContextStats:output_type -> agents.v1.GetSessionContextStatsResponse
-	23, // 47: agents.v1.SessionsService.CompactSession:output_type -> agents.v1.CompactSessionResponse
-	25, // 48: agents.v1.SessionsService.EditMessage:output_type -> agents.v1.EditMessageResponse
-	27, // 49: agents.v1.SessionsService.DeleteMessage:output_type -> agents.v1.DeleteMessageResponse
-	29, // 50: agents.v1.SessionsService.RetryMessage:output_type -> agents.v1.RetryMessageResponse
-	32, // 51: agents.v1.SessionsService.SubmitMessageFeedback:output_type -> agents.v1.SubmitMessageFeedbackResponse
-	38, // [38:52] is the sub-list for method output_type
-	24, // [24:38] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	18, // 9: agents.v1.ListMessagesRequest.pagination:type_name -> common.v1.PaginationRequest
+	3,  // 10: agents.v1.ListMessagesResponse.messages:type_name -> agents.v1.MessageInfo
+	19, // 11: agents.v1.ListMessagesResponse.pagination:type_name -> common.v1.PaginationResponse
+	3,  // 12: agents.v1.EditMessageResponse.message:type_name -> agents.v1.MessageInfo
+	17, // 13: agents.v1.MessageFeedback.created_at:type_name -> google.protobuf.Timestamp
+	14, // 14: agents.v1.SubmitMessageFeedbackResponse.feedback:type_name -> agents.v1.MessageFeedback
+	4,  // 15: agents.v1.SessionsService.CreateSession:input_type -> agents.v1.CreateSessionRequest
+	7,  // 16: agents.v1.SessionsService.GetSession:input_type -> agents.v1.GetSessionRequest
+	8,  // 17: agents.v1.SessionsService.ListMessages:input_type -> agents.v1.ListMessagesRequest
+	10, // 18: agents.v1.SessionsService.EditMessage:input_type -> agents.v1.EditMessageRequest
+	12, // 19: agents.v1.SessionsService.RetryMessage:input_type -> agents.v1.RetryMessageRequest
+	15, // 20: agents.v1.SessionsService.SubmitMessageFeedback:input_type -> agents.v1.SubmitMessageFeedbackRequest
+	5,  // 21: agents.v1.SessionsService.CreateSession:output_type -> agents.v1.CreateSessionResponse
+	6,  // 22: agents.v1.SessionsService.GetSession:output_type -> agents.v1.GetSessionResponse
+	9,  // 23: agents.v1.SessionsService.ListMessages:output_type -> agents.v1.ListMessagesResponse
+	11, // 24: agents.v1.SessionsService.EditMessage:output_type -> agents.v1.EditMessageResponse
+	13, // 25: agents.v1.SessionsService.RetryMessage:output_type -> agents.v1.RetryMessageResponse
+	16, // 26: agents.v1.SessionsService.SubmitMessageFeedback:output_type -> agents.v1.SubmitMessageFeedbackResponse
+	21, // [21:27] is the sub-list for method output_type
+	15, // [15:21] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_sessions_proto_init() }
@@ -2721,19 +1513,16 @@ func file_agents_v1_sessions_proto_init() {
 	file_agents_v1_sessions_proto_msgTypes[0].OneofWrappers = []any{}
 	file_agents_v1_sessions_proto_msgTypes[1].OneofWrappers = []any{}
 	file_agents_v1_sessions_proto_msgTypes[2].OneofWrappers = []any{}
-	file_agents_v1_sessions_proto_msgTypes[7].OneofWrappers = []any{}
-	file_agents_v1_sessions_proto_msgTypes[9].OneofWrappers = []any{}
-	file_agents_v1_sessions_proto_msgTypes[12].OneofWrappers = []any{}
+	file_agents_v1_sessions_proto_msgTypes[6].OneofWrappers = []any{}
+	file_agents_v1_sessions_proto_msgTypes[13].OneofWrappers = []any{}
 	file_agents_v1_sessions_proto_msgTypes[14].OneofWrappers = []any{}
-	file_agents_v1_sessions_proto_msgTypes[29].OneofWrappers = []any{}
-	file_agents_v1_sessions_proto_msgTypes[30].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_sessions_proto_rawDesc), len(file_agents_v1_sessions_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   31,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

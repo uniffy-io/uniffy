@@ -71,8 +71,7 @@ service SkillsService {
 enum SkillSource {
   SKILL_SOURCE_UNSPECIFIED = 0;
   SKILL_SOURCE_BUNDLED = 1; // shipped with the app, org_id is null
-  SKILL_SOURCE_ORGANIZATION = 2; // created by an org admin
-  SKILL_SOURCE_PERSONAL = 3; // created by a user for personal use
+  SKILL_SOURCE_ORGANIZATION = 2; // created by a builder
 }
 
 // Skill definition returned to clients
@@ -87,21 +86,19 @@ message SkillInfo {
   bool always_active = 8; // injected regardless of agent config
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
-  // Owner user ID for personal skills (null for org/bundled skills)
-  optional string owner_id = 11;
   // Short trigger guidance shown in the progressive-disclosure metadata index.
-  string when_to_use = 12;
+  string when_to_use = 11;
   // Tool names that must be enabled for the skill to appear (conditional activation).
-  repeated string requires_tools = 13;
+  repeated string requires_tools = 12;
   // Optional surface/content-type gates for conditional activation.
-  repeated string requires_context = 14;
-  string status = 15; // active | archived
-  string origin = 16; // user | agent_proposed | agent_evolved | bundled
-  int32 latest_version_number = 17;
+  repeated string requires_context = 13;
+  string status = 14; // active | archived
+  string origin = 15; // user | agent_proposed | agent_evolved | bundled
+  int32 latest_version_number = 16;
   // The version the agent actually uses (the main version). Defaults to the
   // latest until the user pins one.
-  int32 active_version_number = 18;
-  bool active_version_pinned = 19;
+  int32 active_version_number = 17;
+  bool active_version_pinned = 18;
 }
 
 // One immutable version snapshot of a skill.
@@ -144,11 +141,10 @@ message SkillDraft {
   string when_to_use = 16;
   repeated string requires_tools = 17;
   repeated string requires_context = 18;
-  string suggested_scope = 19; // personal | organization
-  bool suggested_always_active = 20;
-  string status = 21; // pending | saved | discarded
-  google.protobuf.Timestamp created_at = 22;
-  google.protobuf.Timestamp updated_at = 23;
+  bool suggested_always_active = 19;
+  string status = 20; // pending | saved | discarded
+  google.protobuf.Timestamp created_at = 21;
+  google.protobuf.Timestamp updated_at = 22;
 }
 
 // --- Requests and Responses ---
@@ -160,8 +156,6 @@ message CreateSkillRequest {
   string description = 4;
   string content = 5;
   optional bool always_active = 6;
-  // Owner user ID for personal skills
-  optional string owner_id = 7;
 }
 
 message CreateSkillResponse {
@@ -194,11 +188,14 @@ message ListSkillsResponse {
 message UpdateSkillRequest {
   string organization_id = 1;
   string skill_id = 2;
+  // The slug is the stable identifier: it is set at creation and rejected on
+  // update. The field stays so a caller resending the current value is a no-op.
   optional string name = 3;
   optional string display_name = 4;
   optional string description = 5;
   optional string content = 6;
   optional bool always_active = 7;
+  optional string when_to_use = 8;
 }
 
 message DeleteSkillRequest {
@@ -240,9 +237,8 @@ message CreateSkillDraftRequest {
   string when_to_use = 8;
   repeated string requires_tools = 9;
   repeated string requires_context = 10;
-  string suggested_scope = 11; // personal | organization
-  bool suggested_always_active = 12;
-  string rationale = 13;
+  bool suggested_always_active = 11;
+  string rationale = 12;
 }
 
 message CreateSkillDraftResponse {
@@ -281,9 +277,10 @@ message SaveSkillDraftRequest {
   string when_to_use = 7;
   repeated string requires_tools = 8;
   repeated string requires_context = 9;
-  string suggested_scope = 10; // personal | organization
-  bool suggested_always_active = 11;
-  string change_summary = 12;
+  bool suggested_always_active = 10;
+  string change_summary = 11;
+  // Acknowledges that saving replaces an existing skill of the same name.
+  bool allow_replace = 12;
 }
 
 message SaveSkillDraftResponse {

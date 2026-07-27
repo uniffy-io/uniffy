@@ -16,14 +16,12 @@ class SkillSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SKILL_SOURCE_UNSPECIFIED: _ClassVar[SkillSource]
     SKILL_SOURCE_BUNDLED: _ClassVar[SkillSource]
     SKILL_SOURCE_ORGANIZATION: _ClassVar[SkillSource]
-    SKILL_SOURCE_PERSONAL: _ClassVar[SkillSource]
 SKILL_SOURCE_UNSPECIFIED: SkillSource
 SKILL_SOURCE_BUNDLED: SkillSource
 SKILL_SOURCE_ORGANIZATION: SkillSource
-SKILL_SOURCE_PERSONAL: SkillSource
 
 class SkillInfo(_message.Message):
-    __slots__ = ("id", "organization_id", "name", "display_name", "description", "content", "source", "always_active", "created_at", "updated_at", "owner_id", "when_to_use", "requires_tools", "requires_context", "status", "origin", "latest_version_number", "active_version_number", "active_version_pinned")
+    __slots__ = ("id", "organization_id", "name", "display_name", "description", "content", "source", "always_active", "created_at", "updated_at", "when_to_use", "requires_tools", "requires_context", "status", "origin", "latest_version_number", "active_version_number", "active_version_pinned")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -34,7 +32,6 @@ class SkillInfo(_message.Message):
     ALWAYS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
-    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     WHEN_TO_USE_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_TOOLS_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_CONTEXT_FIELD_NUMBER: _ClassVar[int]
@@ -53,7 +50,6 @@ class SkillInfo(_message.Message):
     always_active: bool
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    owner_id: str
     when_to_use: str
     requires_tools: _containers.RepeatedScalarFieldContainer[str]
     requires_context: _containers.RepeatedScalarFieldContainer[str]
@@ -62,7 +58,7 @@ class SkillInfo(_message.Message):
     latest_version_number: int
     active_version_number: int
     active_version_pinned: bool
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., source: _Optional[_Union[SkillSource, str]] = ..., always_active: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., owner_id: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., status: _Optional[str] = ..., origin: _Optional[str] = ..., latest_version_number: _Optional[int] = ..., active_version_number: _Optional[int] = ..., active_version_pinned: _Optional[bool] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., source: _Optional[_Union[SkillSource, str]] = ..., always_active: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., status: _Optional[str] = ..., origin: _Optional[str] = ..., latest_version_number: _Optional[int] = ..., active_version_number: _Optional[int] = ..., active_version_pinned: _Optional[bool] = ...) -> None: ...
 
 class SkillVersion(_message.Message):
     __slots__ = ("id", "skill_id", "version_number", "name", "display_name", "description", "content", "when_to_use", "requires_tools", "requires_context", "author_id", "author_kind", "change_summary", "parent_version_id", "created_at")
@@ -99,7 +95,7 @@ class SkillVersion(_message.Message):
     def __init__(self, id: _Optional[str] = ..., skill_id: _Optional[str] = ..., version_number: _Optional[int] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., author_id: _Optional[str] = ..., author_kind: _Optional[str] = ..., change_summary: _Optional[str] = ..., parent_version_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class SkillDraft(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "target_skill_id", "kind", "proposed_by_agent_id", "session_id", "channel_id", "origin_chat_message_id", "evidence_message_ids", "rationale", "name", "display_name", "description", "content", "when_to_use", "requires_tools", "requires_context", "suggested_scope", "suggested_always_active", "status", "created_at", "updated_at")
+    __slots__ = ("id", "organization_id", "owner_id", "target_skill_id", "kind", "proposed_by_agent_id", "session_id", "channel_id", "origin_chat_message_id", "evidence_message_ids", "rationale", "name", "display_name", "description", "content", "when_to_use", "requires_tools", "requires_context", "suggested_always_active", "status", "created_at", "updated_at")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -118,7 +114,6 @@ class SkillDraft(_message.Message):
     WHEN_TO_USE_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_TOOLS_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_CONTEXT_FIELD_NUMBER: _ClassVar[int]
-    SUGGESTED_SCOPE_FIELD_NUMBER: _ClassVar[int]
     SUGGESTED_ALWAYS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
@@ -141,30 +136,27 @@ class SkillDraft(_message.Message):
     when_to_use: str
     requires_tools: _containers.RepeatedScalarFieldContainer[str]
     requires_context: _containers.RepeatedScalarFieldContainer[str]
-    suggested_scope: str
     suggested_always_active: bool
     status: str
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., target_skill_id: _Optional[str] = ..., kind: _Optional[str] = ..., proposed_by_agent_id: _Optional[str] = ..., session_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., origin_chat_message_id: _Optional[str] = ..., evidence_message_ids: _Optional[_Iterable[str]] = ..., rationale: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., suggested_scope: _Optional[str] = ..., suggested_always_active: _Optional[bool] = ..., status: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., target_skill_id: _Optional[str] = ..., kind: _Optional[str] = ..., proposed_by_agent_id: _Optional[str] = ..., session_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., origin_chat_message_id: _Optional[str] = ..., evidence_message_ids: _Optional[_Iterable[str]] = ..., rationale: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., suggested_always_active: _Optional[bool] = ..., status: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class CreateSkillRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "display_name", "description", "content", "always_active", "owner_id")
+    __slots__ = ("organization_id", "name", "display_name", "description", "content", "always_active")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     ALWAYS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
-    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     display_name: str
     description: str
     content: str
     always_active: bool
-    owner_id: str
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., always_active: _Optional[bool] = ..., owner_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., always_active: _Optional[bool] = ...) -> None: ...
 
 class CreateSkillResponse(_message.Message):
     __slots__ = ("skill",)
@@ -209,7 +201,7 @@ class ListSkillsResponse(_message.Message):
     def __init__(self, skills: _Optional[_Iterable[_Union[SkillInfo, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class UpdateSkillRequest(_message.Message):
-    __slots__ = ("organization_id", "skill_id", "name", "display_name", "description", "content", "always_active")
+    __slots__ = ("organization_id", "skill_id", "name", "display_name", "description", "content", "always_active", "when_to_use")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     SKILL_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -217,6 +209,7 @@ class UpdateSkillRequest(_message.Message):
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     ALWAYS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    WHEN_TO_USE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     skill_id: str
     name: str
@@ -224,7 +217,8 @@ class UpdateSkillRequest(_message.Message):
     description: str
     content: str
     always_active: bool
-    def __init__(self, organization_id: _Optional[str] = ..., skill_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., always_active: _Optional[bool] = ...) -> None: ...
+    when_to_use: str
+    def __init__(self, organization_id: _Optional[str] = ..., skill_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., always_active: _Optional[bool] = ..., when_to_use: _Optional[str] = ...) -> None: ...
 
 class DeleteSkillRequest(_message.Message):
     __slots__ = ("organization_id", "skill_id")
@@ -269,7 +263,7 @@ class ListRunnableSkillsResponse(_message.Message):
     def __init__(self, skills: _Optional[_Iterable[_Union[RunnableSkill, _Mapping]]] = ...) -> None: ...
 
 class CreateSkillDraftRequest(_message.Message):
-    __slots__ = ("organization_id", "kind", "target_skill_id", "name", "display_name", "description", "content", "when_to_use", "requires_tools", "requires_context", "suggested_scope", "suggested_always_active", "rationale")
+    __slots__ = ("organization_id", "kind", "target_skill_id", "name", "display_name", "description", "content", "when_to_use", "requires_tools", "requires_context", "suggested_always_active", "rationale")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     TARGET_SKILL_ID_FIELD_NUMBER: _ClassVar[int]
@@ -280,7 +274,6 @@ class CreateSkillDraftRequest(_message.Message):
     WHEN_TO_USE_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_TOOLS_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_CONTEXT_FIELD_NUMBER: _ClassVar[int]
-    SUGGESTED_SCOPE_FIELD_NUMBER: _ClassVar[int]
     SUGGESTED_ALWAYS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
     RATIONALE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
@@ -293,10 +286,9 @@ class CreateSkillDraftRequest(_message.Message):
     when_to_use: str
     requires_tools: _containers.RepeatedScalarFieldContainer[str]
     requires_context: _containers.RepeatedScalarFieldContainer[str]
-    suggested_scope: str
     suggested_always_active: bool
     rationale: str
-    def __init__(self, organization_id: _Optional[str] = ..., kind: _Optional[str] = ..., target_skill_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., suggested_scope: _Optional[str] = ..., suggested_always_active: _Optional[bool] = ..., rationale: _Optional[str] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., kind: _Optional[str] = ..., target_skill_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., suggested_always_active: _Optional[bool] = ..., rationale: _Optional[str] = ...) -> None: ...
 
 class CreateSkillDraftResponse(_message.Message):
     __slots__ = ("draft",)
@@ -337,7 +329,7 @@ class ListSkillDraftsResponse(_message.Message):
     def __init__(self, drafts: _Optional[_Iterable[_Union[SkillDraft, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class SaveSkillDraftRequest(_message.Message):
-    __slots__ = ("organization_id", "draft_id", "name", "display_name", "description", "content", "when_to_use", "requires_tools", "requires_context", "suggested_scope", "suggested_always_active", "change_summary")
+    __slots__ = ("organization_id", "draft_id", "name", "display_name", "description", "content", "when_to_use", "requires_tools", "requires_context", "suggested_always_active", "change_summary", "allow_replace")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     DRAFT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -347,9 +339,9 @@ class SaveSkillDraftRequest(_message.Message):
     WHEN_TO_USE_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_TOOLS_FIELD_NUMBER: _ClassVar[int]
     REQUIRES_CONTEXT_FIELD_NUMBER: _ClassVar[int]
-    SUGGESTED_SCOPE_FIELD_NUMBER: _ClassVar[int]
     SUGGESTED_ALWAYS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
     CHANGE_SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    ALLOW_REPLACE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     draft_id: str
     name: str
@@ -359,10 +351,10 @@ class SaveSkillDraftRequest(_message.Message):
     when_to_use: str
     requires_tools: _containers.RepeatedScalarFieldContainer[str]
     requires_context: _containers.RepeatedScalarFieldContainer[str]
-    suggested_scope: str
     suggested_always_active: bool
     change_summary: str
-    def __init__(self, organization_id: _Optional[str] = ..., draft_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., suggested_scope: _Optional[str] = ..., suggested_always_active: _Optional[bool] = ..., change_summary: _Optional[str] = ...) -> None: ...
+    allow_replace: bool
+    def __init__(self, organization_id: _Optional[str] = ..., draft_id: _Optional[str] = ..., name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., content: _Optional[str] = ..., when_to_use: _Optional[str] = ..., requires_tools: _Optional[_Iterable[str]] = ..., requires_context: _Optional[_Iterable[str]] = ..., suggested_always_active: _Optional[bool] = ..., change_summary: _Optional[str] = ..., allow_replace: _Optional[bool] = ...) -> None: ...
 
 class SaveSkillDraftResponse(_message.Message):
     __slots__ = ("skill", "version")

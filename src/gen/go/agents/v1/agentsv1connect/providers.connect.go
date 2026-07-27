@@ -58,7 +58,7 @@ const (
 
 // ProvidersServiceClient is a client for the agents.v1.ProvidersService service.
 type ProvidersServiceClient interface {
-	// Add a new provider API key or setup token
+	// Add a new provider API key
 	AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.AddProviderKeyResponse], error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(context.Context, *connect.Request[v1.ListProviderKeysRequest]) (*connect.Response[v1.ListProviderKeysResponse], error)
@@ -178,7 +178,7 @@ func (c *providersServiceClient) ListModelsForKey(ctx context.Context, req *conn
 
 // ProvidersServiceHandler is an implementation of the agents.v1.ProvidersService service.
 type ProvidersServiceHandler interface {
-	// Add a new provider API key or setup token
+	// Add a new provider API key
 	AddProviderKey(context.Context, *connect.Request[v1.AddProviderKeyRequest]) (*connect.Response[v1.AddProviderKeyResponse], error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(context.Context, *connect.Request[v1.ListProviderKeysRequest]) (*connect.Response[v1.ListProviderKeysResponse], error)

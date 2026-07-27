@@ -8,6 +8,48 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class RuntimeSettings(_message.Message):
+    __slots__ = ("send_deadline_seconds", "failover_enabled", "resume_enabled", "circuit_breaker_failure_threshold", "circuit_breaker_recovery_seconds", "personal_memory_bridge_enabled", "default_provider_key_id", "default_chat_model")
+    SEND_DEADLINE_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    FAILOVER_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    RESUME_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    CIRCUIT_BREAKER_FAILURE_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    CIRCUIT_BREAKER_RECOVERY_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    PERSONAL_MEMORY_BRIDGE_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_PROVIDER_KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_CHAT_MODEL_FIELD_NUMBER: _ClassVar[int]
+    send_deadline_seconds: int
+    failover_enabled: bool
+    resume_enabled: bool
+    circuit_breaker_failure_threshold: int
+    circuit_breaker_recovery_seconds: int
+    personal_memory_bridge_enabled: bool
+    default_provider_key_id: str
+    default_chat_model: str
+    def __init__(self, send_deadline_seconds: _Optional[int] = ..., failover_enabled: _Optional[bool] = ..., resume_enabled: _Optional[bool] = ..., circuit_breaker_failure_threshold: _Optional[int] = ..., circuit_breaker_recovery_seconds: _Optional[int] = ..., personal_memory_bridge_enabled: _Optional[bool] = ..., default_provider_key_id: _Optional[str] = ..., default_chat_model: _Optional[str] = ...) -> None: ...
+
+class GetRuntimeSettingsRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class UpdateRuntimeSettingsRequest(_message.Message):
+    __slots__ = ("organization_id", "settings")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    settings: RuntimeSettings
+    def __init__(self, organization_id: _Optional[str] = ..., settings: _Optional[_Union[RuntimeSettings, _Mapping]] = ...) -> None: ...
+
+class RuntimeSettingsResponse(_message.Message):
+    __slots__ = ("settings", "configured")
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    CONFIGURED_FIELD_NUMBER: _ClassVar[int]
+    settings: RuntimeSettings
+    configured: bool
+    def __init__(self, settings: _Optional[_Union[RuntimeSettings, _Mapping]] = ..., configured: _Optional[bool] = ...) -> None: ...
+
 class GetUsageStatsRequest(_message.Message):
     __slots__ = ("organization_id", "days", "interval")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]

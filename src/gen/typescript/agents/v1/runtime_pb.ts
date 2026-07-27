@@ -14,7 +14,126 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/runtime.proto.
  */
 export const file_agents_v1_runtime: GenFile = /*@__PURE__*/
-  fileDesc("ChdhZ2VudHMvdjEvcnVudGltZS5wcm90bxIJYWdlbnRzLnYxIk8KFEdldFVzYWdlU3RhdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRkYXlzGAIgASgFEhAKCGludGVydmFsGAMgASgJIqUGChVHZXRVc2FnZVN0YXRzUmVzcG9uc2USEgoKdG90YWxfcnVucxgBIAEoAxIaChJ0b3RhbF9pbnB1dF90b2tlbnMYAiABKAMSGwoTdG90YWxfb3V0cHV0X3Rva2VucxgDIAEoAxIWCg50b3RhbF9zZXNzaW9ucxgEIAEoAxIXCg9hdmdfZHVyYXRpb25fbXMYBSABKAUSKgoLZGFpbHlfdXNhZ2UYBiADKAsyFS5hZ2VudHMudjEuRGFpbHlVc2FnZRIqCgttb2RlbF91c2FnZRgHIAMoCzIVLmFnZW50cy52MS5Nb2RlbFVzYWdlEi4KC2FnZW50X3VzYWdlGAggAygLMhkuYWdlbnRzLnYxLkFnZW50VXNhZ2VJbmZvEigKCnRvb2xfdXNhZ2UYCSADKAsyFC5hZ2VudHMudjEuVG9vbFVzYWdlEjcKEnByb3ZpZGVyX2tleV91c2FnZRgKIAMoCzIbLmFnZW50cy52MS5Qcm92aWRlcktleVVzYWdlEiwKCmNyb25fdXNhZ2UYCyADKAsyGC5hZ2VudHMudjEuQ3JvblRhc2tVc2FnZRIXCg9jcm9uX3RvdGFsX3J1bnMYDCABKAMSHAoUY3Jvbl90b3RhbF9zdWNjZXNzZXMYDSABKAMSGwoTY3Jvbl90b3RhbF9mYWlsdXJlcxgOIAEoAxIfChdjcm9uX3RvdGFsX2lucHV0X3Rva2VucxgPIAEoAxIgChhjcm9uX3RvdGFsX291dHB1dF90b2tlbnMYECABKAMSJQoddG90YWxfY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYESABKAMSEgoKdG90YWxfY29zdBgSIAEoCRIdChV0b3RhbF90aGlua2luZ190b2tlbnMYEyABKAMSGQoRdG90YWxfaW1hZ2VfY291bnQYFCABKAMSFQoNdG90YWxfcmV0cmllcxgVIAEoAxIXCg90b3RhbF9jYW5jZWxsZWQYFiABKAMSHwoXdG90YWxfZGVhZGxpbmVfZXhjZWVkZWQYFyABKAMSGAoQZGlzcGxheV9jdXJyZW5jeRgYIAEoCSKZAQoKRGFpbHlVc2FnZRIMCgRkYXRlGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBSABKAMSDAoEY29zdBgGIAEoCRITCgtpbWFnZV9jb3VudBgHIAEoAyJ5CgpNb2RlbFVzYWdlEg0KBW1vZGVsGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSDAoEY29zdBgFIAEoCRITCgtpbWFnZV9jb3VudBgGIAEoAyJxCg5BZ2VudFVzYWdlSW5mbxIQCghhZ2VudF9pZBgBIAEoCRISCgphZ2VudF9uYW1lGAIgASgJEgwKBHJ1bnMYAyABKAMSFAoMaW5wdXRfdG9rZW5zGAQgASgDEhUKDW91dHB1dF90b2tlbnMYBSABKAMiMgoJVG9vbFVzYWdlEhEKCXRvb2xfbmFtZRgBIAEoCRISCgpjYWxsX2NvdW50GAIgASgDIosBChBQcm92aWRlcktleVVzYWdlEhcKD3Byb3ZpZGVyX2tleV9pZBgBIAEoCRIRCglrZXlfbGFiZWwYAiABKAkSEAoIcHJvdmlkZXIYAyABKAkSDAoEcnVucxgEIAEoAxIUCgxpbnB1dF90b2tlbnMYBSABKAMSFQoNb3V0cHV0X3Rva2VucxgGIAEoAyKyAQoNQ3JvblRhc2tVc2FnZRIUCgxjcm9uX3Rhc2tfaWQYASABKAkSEQoJdGFza19uYW1lGAIgASgJEhIKCmFnZW50X25hbWUYAyABKAkSEgoKdG90YWxfcnVucxgEIAEoAxIRCglzdWNjZXNzZXMYBSABKAMSEAoIZmFpbHVyZXMYBiABKAMSFAoMaW5wdXRfdG9rZW5zGAcgASgDEhUKDW91dHB1dF90b2tlbnMYCCABKAMi+gEKElNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIl0KF1JlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhUKDXVzZXJfdGltZXpvbmUYAyABKAkigAIKGFN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIoABChJDaGF0Q2hhbm5lbENvbnRleHQSEgoKY2hhbm5lbF9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIaChJ0cmlnZ2VyX21lc3NhZ2VfaWQYAyABKAkSGAoLY29udGV4dF91cm4YBCABKAlIAIgBAUIOCgxfY29udGV4dF91cm4iigEKE1NlbmRNZXNzYWdlUmVzcG9uc2USLAoMdXNlcl9tZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEjEKEWFzc2lzdGFudF9tZXNzYWdlGAIgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEhIKCm1vZGVsX3VzZWQYAyABKAkicwocUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIUCgx0b29sX2NhbGxfaWQYAyABKAkSEAoIYXBwcm92ZWQYBCABKAgiQAoVU3Vic2NyaWJlVG9SdW5SZXF1ZXN0Eg4KBnJ1bl9pZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkiPgoTQ2FuY2VsU3RyZWFtUmVxdWVzdBIOCgZydW5faWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIikKFENhbmNlbFN0cmVhbVJlc3BvbnNlEhEKCWNhbmNlbGxlZBgBIAEoCCIxCh1SZXNwb25kVG9Db25maXJtYXRpb25SZXNwb25zZRIQCghhY2NlcHRlZBgBIAEoCCKZCwoQQWdlbnRTdHJlYW1FdmVudBI3CgtyZXBseV9zdGFydBgBIAEoCzIgLmFnZW50cy52MS5TdHJlYW1SZXBseVN0YXJ0RXZlbnRIABJAChBtb2RlbF9jYWxsX3N0YXJ0GAIgASgLMiQuYWdlbnRzLnYxLlN0cmVhbU1vZGVsQ2FsbFN0YXJ0RXZlbnRIABI8Cg5tb2RlbF9jYWxsX2VuZBgDIAEoCzIiLmFnZW50cy52MS5TdHJlYW1Nb2RlbENhbGxFbmRFdmVudEgAEkAKEHRleHRfYmxvY2tfc3RhcnQYBCABKAsyJC5hZ2VudHMudjEuU3RyZWFtVGV4dEJsb2NrU3RhcnRFdmVudEgAEkAKEHRleHRfYmxvY2tfZGVsdGEYBSABKAsyJC5hZ2VudHMudjEuU3RyZWFtVGV4dEJsb2NrRGVsdGFFdmVudEgAEjwKDnRleHRfYmxvY2tfZW5kGAYgASgLMiIuYWdlbnRzLnYxLlN0cmVhbVRleHRCbG9ja0VuZEV2ZW50SAASSAoUdGhpbmtpbmdfYmxvY2tfc3RhcnQYByABKAsyKC5hZ2VudHMudjEuU3RyZWFtVGhpbmtpbmdCbG9ja1N0YXJ0RXZlbnRIABJIChR0aGlua2luZ19ibG9ja19kZWx0YRgIIAEoCzIoLmFnZW50cy52MS5TdHJlYW1UaGlua2luZ0Jsb2NrRGVsdGFFdmVudEgAEkQKEnRoaW5raW5nX2Jsb2NrX2VuZBgJIAEoCzImLmFnZW50cy52MS5TdHJlYW1UaGlua2luZ0Jsb2NrRW5kRXZlbnRIABI+Cg90b29sX2NhbGxfc3RhcnQYCiABKAsyIy5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxTdGFydEV2ZW50SAASPgoPdG9vbF9jYWxsX2RlbHRhGAsgASgLMiMuYWdlbnRzLnYxLlN0cmVhbVRvb2xDYWxsRGVsdGFFdmVudEgAEjoKDXRvb2xfY2FsbF9lbmQYDCABKAsyIS5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxFbmRFdmVudEgAEkIKEXRvb2xfcmVzdWx0X3N0YXJ0GA0gASgLMiUuYWdlbnRzLnYxLlN0cmVhbVRvb2xSZXN1bHRTdGFydEV2ZW50SAASQgoRdG9vbF9yZXN1bHRfZGVsdGEYDiABKAsyJS5hZ2VudHMudjEuU3RyZWFtVG9vbFJlc3VsdERlbHRhRXZlbnRIABI+Cg90b29sX3Jlc3VsdF9lbmQYDyABKAsyIy5hZ2VudHMudjEuU3RyZWFtVG9vbFJlc3VsdEVuZEV2ZW50SAASSwoVY29uZmlybWF0aW9uX3JlcXVpcmVkGBAgASgLMiouYWdlbnRzLnYxLlN0cmVhbUNvbmZpcm1hdGlvblJlcXVpcmVkRXZlbnRIABIyCghmYWlsb3ZlchgRIAEoCzIeLmFnZW50cy52MS5TdHJlYW1GYWlsb3ZlckV2ZW50SAASNwoLc2tpbGxfZHJhZnQYEiABKAsyIC5hZ2VudHMudjEuU3RyZWFtU2tpbGxEcmFmdEV2ZW50SAASQAoQZXhjZWVkX21heF9pdGVycxgTIAEoCzIkLmFnZW50cy52MS5TdHJlYW1FeGNlZWRNYXhJdGVyc0V2ZW50SAASPQoObWVzc2FnZV9zdG9yZWQYFCABKAsyIy5hZ2VudHMudjEuU3RyZWFtTWVzc2FnZVN0b3JlZEV2ZW50SAASKgoEZG9uZRgVIAEoCzIaLmFnZW50cy52MS5TdHJlYW1Eb25lRXZlbnRIABIsCgVlcnJvchgWIAEoCzIbLmFnZW50cy52MS5TdHJlYW1FcnJvckV2ZW50SAASDgoGcnVuX2lkGB4gASgJQgcKBWV2ZW50IkcKGVN0cmVhbVNlbmRNZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJGChhSZXJ1bkZyb21NZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJEChZTdWJzY3JpYmVUb1J1blJlc3BvbnNlEioKBWV2ZW50GAEgASgLMhsuYWdlbnRzLnYxLkFnZW50U3RyZWFtRXZlbnQiJQoVU3RyZWFtUmVwbHlTdGFydEV2ZW50EgwKBHJvbGUYASABKAkiKgoZU3RyZWFtTW9kZWxDYWxsU3RhcnRFdmVudBINCgVtb2RlbBgBIAEoCSKPAQoXU3RyZWFtTW9kZWxDYWxsRW5kRXZlbnQSDQoFbW9kZWwYASABKAkSFAoMaW5wdXRfdG9rZW5zGAIgASgDEhUKDW91dHB1dF90b2tlbnMYAyABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBCABKAMSFwoPdGhpbmtpbmdfdG9rZW5zGAUgASgDIlMKGVN0cmVhbVRleHRCbG9ja1N0YXJ0RXZlbnQSEAoIYmxvY2tfaWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRIQCghzZXF1ZW5jZRgDIAEoBSJiChlTdHJlYW1UZXh0QmxvY2tEZWx0YUV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkSEAoIc2VxdWVuY2UYBCABKAUiUQoXU3RyZWFtVGV4dEJsb2NrRW5kRXZlbnQSEAoIYmxvY2tfaWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRIQCghzZXF1ZW5jZRgDIAEoBSJXCh1TdHJlYW1UaGlua2luZ0Jsb2NrU3RhcnRFdmVudBIQCghibG9ja19pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhAKCHNlcXVlbmNlGAMgASgFImYKHVN0cmVhbVRoaW5raW5nQmxvY2tEZWx0YUV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkSEAoIc2VxdWVuY2UYBCABKAUiaQobU3RyZWFtVGhpbmtpbmdCbG9ja0VuZEV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSEAoIc2VxdWVuY2UYAyABKAUSEgoKZWxhcHNlZF9tcxgEIAEoBSJ7ChhTdHJlYW1Ub29sQ2FsbFN0YXJ0RXZlbnQSEAoIYmxvY2tfaWQYASABKAkSFAoMdG9vbF9jYWxsX2lkGAIgASgJEhEKCXRvb2xfbmFtZRgDIAEoCRISCgptZXNzYWdlX2lkGAQgASgJEhAKCHNlcXVlbmNlGAUgASgFIooBChhTdHJlYW1Ub29sQ2FsbERlbHRhRXZlbnQSEAoIYmxvY2tfaWQYASABKAkSFAoMdG9vbF9jYWxsX2lkGAIgASgJEhEKCXRvb2xfbmFtZRgDIAEoCRINCgVkZWx0YRgEIAEoCRISCgptZXNzYWdlX2lkGAUgASgJEhAKCHNlcXVlbmNlGAYgASgFIpEBChZTdHJlYW1Ub29sQ2FsbEVuZEV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEhQKDHRvb2xfY2FsbF9pZBgCIAEoCRIRCgl0b29sX25hbWUYAyABKAkSFgoOdG9vbF9hcmdzX2pzb24YBCABKAkSEgoKbWVzc2FnZV9pZBgFIAEoCRIQCghzZXF1ZW5jZRgGIAEoBSJxChpTdHJlYW1Ub29sUmVzdWx0U3RhcnRFdmVudBIUCgx0b29sX2NhbGxfaWQYASABKAkSEQoJdG9vbF9uYW1lGAIgASgJEhYKDnRvb2xfYXJnc19qc29uGAMgASgJEhIKCm1lc3NhZ2VfaWQYBCABKAkiVQoaU3RyZWFtVG9vbFJlc3VsdERlbHRhRXZlbnQSFAoMdG9vbF9jYWxsX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkieAoYU3RyZWFtVG9vbFJlc3VsdEVuZEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZyZXN1bHQYBCABKAkSEgoKbWVzc2FnZV9pZBgFIAEoCSIbChlTdHJlYW1FeGNlZWRNYXhJdGVyc0V2ZW50IkMKGFN0cmVhbU1lc3NhZ2VTdG9yZWRFdmVudBInCgdtZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvIlgKD1N0cmVhbURvbmVFdmVudBIxChFhc3Npc3RhbnRfbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxISCgptb2RlbF91c2VkGAIgASgJIiMKEFN0cmVhbUVycm9yRXZlbnQSDwoHbWVzc2FnZRgBIAEoCSJ3Ch9TdHJlYW1Db25maXJtYXRpb25SZXF1aXJlZEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSFgoOdG9vbF9hcmdzX2pzb24YAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkiggEKE1N0cmVhbUZhaWxvdmVyRXZlbnQSHAoUZnJvbV9wcm92aWRlcl9rZXlfaWQYASABKAkSGgoSdG9fcHJvdmlkZXJfa2V5X2lkGAIgASgJEhAKCHRvX21vZGVsGAMgASgJEg4KBnJlYXNvbhgEIAEoCRIPCgdhdHRlbXB0GAUgASgFIj0KFVN0cmVhbVNraWxsRHJhZnRFdmVudBIkCgVkcmFmdBgBIAEoCzIVLmFnZW50cy52MS5Ta2lsbERyYWZ0MpcFCg5SdW50aW1lU2VydmljZRJOCgtTZW5kTWVzc2FnZRIdLmFnZW50cy52MS5TZW5kTWVzc2FnZVJlcXVlc3QaHi5hZ2VudHMudjEuU2VuZE1lc3NhZ2VSZXNwb25zZSIAEmIKEVN0cmVhbVNlbmRNZXNzYWdlEiMuYWdlbnRzLnYxLlN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBokLmFnZW50cy52MS5TdHJlYW1TZW5kTWVzc2FnZVJlc3BvbnNlIgAwARJfChBSZXJ1bkZyb21NZXNzYWdlEiIuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0GiMuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXNwb25zZSIAMAESWQoOU3Vic2NyaWJlVG9SdW4SIC5hZ2VudHMudjEuU3Vic2NyaWJlVG9SdW5SZXF1ZXN0GiEuYWdlbnRzLnYxLlN1YnNjcmliZVRvUnVuUmVzcG9uc2UiADABElEKDENhbmNlbFN0cmVhbRIeLmFnZW50cy52MS5DYW5jZWxTdHJlYW1SZXF1ZXN0Gh8uYWdlbnRzLnYxLkNhbmNlbFN0cmVhbVJlc3BvbnNlIgASbAoVUmVzcG9uZFRvQ29uZmlybWF0aW9uEicuYWdlbnRzLnYxLlJlc3BvbmRUb0NvbmZpcm1hdGlvblJlcXVlc3QaKC5hZ2VudHMudjEuUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVzcG9uc2UiABJUCg1HZXRVc2FnZVN0YXRzEh8uYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXF1ZXN0GiAuYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXNwb25zZSIAQjlaN2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_agents_v1_sessions, file_agents_v1_skills]);
+  fileDesc("ChdhZ2VudHMvdjEvcnVudGltZS5wcm90bxIJYWdlbnRzLnYxIpwCCg9SdW50aW1lU2V0dGluZ3MSHQoVc2VuZF9kZWFkbGluZV9zZWNvbmRzGAEgASgFEhgKEGZhaWxvdmVyX2VuYWJsZWQYAiABKAgSFgoOcmVzdW1lX2VuYWJsZWQYAyABKAgSKQohY2lyY3VpdF9icmVha2VyX2ZhaWx1cmVfdGhyZXNob2xkGAQgASgFEigKIGNpcmN1aXRfYnJlYWtlcl9yZWNvdmVyeV9zZWNvbmRzGAUgASgFEiYKHnBlcnNvbmFsX21lbW9yeV9icmlkZ2VfZW5hYmxlZBgGIAEoCBIfChdkZWZhdWx0X3Byb3ZpZGVyX2tleV9pZBgHIAEoCRIaChJkZWZhdWx0X2NoYXRfbW9kZWwYCCABKAkiNAoZR2V0UnVudGltZVNldHRpbmdzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkiZQocVXBkYXRlUnVudGltZVNldHRpbmdzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSLAoIc2V0dGluZ3MYAiABKAsyGi5hZ2VudHMudjEuUnVudGltZVNldHRpbmdzIlsKF1J1bnRpbWVTZXR0aW5nc1Jlc3BvbnNlEiwKCHNldHRpbmdzGAEgASgLMhouYWdlbnRzLnYxLlJ1bnRpbWVTZXR0aW5ncxISCgpjb25maWd1cmVkGAIgASgIIk8KFEdldFVzYWdlU3RhdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRkYXlzGAIgASgFEhAKCGludGVydmFsGAMgASgJIqUGChVHZXRVc2FnZVN0YXRzUmVzcG9uc2USEgoKdG90YWxfcnVucxgBIAEoAxIaChJ0b3RhbF9pbnB1dF90b2tlbnMYAiABKAMSGwoTdG90YWxfb3V0cHV0X3Rva2VucxgDIAEoAxIWCg50b3RhbF9zZXNzaW9ucxgEIAEoAxIXCg9hdmdfZHVyYXRpb25fbXMYBSABKAUSKgoLZGFpbHlfdXNhZ2UYBiADKAsyFS5hZ2VudHMudjEuRGFpbHlVc2FnZRIqCgttb2RlbF91c2FnZRgHIAMoCzIVLmFnZW50cy52MS5Nb2RlbFVzYWdlEi4KC2FnZW50X3VzYWdlGAggAygLMhkuYWdlbnRzLnYxLkFnZW50VXNhZ2VJbmZvEigKCnRvb2xfdXNhZ2UYCSADKAsyFC5hZ2VudHMudjEuVG9vbFVzYWdlEjcKEnByb3ZpZGVyX2tleV91c2FnZRgKIAMoCzIbLmFnZW50cy52MS5Qcm92aWRlcktleVVzYWdlEiwKCmNyb25fdXNhZ2UYCyADKAsyGC5hZ2VudHMudjEuQ3JvblRhc2tVc2FnZRIXCg9jcm9uX3RvdGFsX3J1bnMYDCABKAMSHAoUY3Jvbl90b3RhbF9zdWNjZXNzZXMYDSABKAMSGwoTY3Jvbl90b3RhbF9mYWlsdXJlcxgOIAEoAxIfChdjcm9uX3RvdGFsX2lucHV0X3Rva2VucxgPIAEoAxIgChhjcm9uX3RvdGFsX291dHB1dF90b2tlbnMYECABKAMSJQoddG90YWxfY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYESABKAMSEgoKdG90YWxfY29zdBgSIAEoCRIdChV0b3RhbF90aGlua2luZ190b2tlbnMYEyABKAMSGQoRdG90YWxfaW1hZ2VfY291bnQYFCABKAMSFQoNdG90YWxfcmV0cmllcxgVIAEoAxIXCg90b3RhbF9jYW5jZWxsZWQYFiABKAMSHwoXdG90YWxfZGVhZGxpbmVfZXhjZWVkZWQYFyABKAMSGAoQZGlzcGxheV9jdXJyZW5jeRgYIAEoCSKZAQoKRGFpbHlVc2FnZRIMCgRkYXRlGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBSABKAMSDAoEY29zdBgGIAEoCRITCgtpbWFnZV9jb3VudBgHIAEoAyJ5CgpNb2RlbFVzYWdlEg0KBW1vZGVsGAEgASgJEgwKBHJ1bnMYAiABKAMSFAoMaW5wdXRfdG9rZW5zGAMgASgDEhUKDW91dHB1dF90b2tlbnMYBCABKAMSDAoEY29zdBgFIAEoCRITCgtpbWFnZV9jb3VudBgGIAEoAyJxCg5BZ2VudFVzYWdlSW5mbxIQCghhZ2VudF9pZBgBIAEoCRISCgphZ2VudF9uYW1lGAIgASgJEgwKBHJ1bnMYAyABKAMSFAoMaW5wdXRfdG9rZW5zGAQgASgDEhUKDW91dHB1dF90b2tlbnMYBSABKAMiMgoJVG9vbFVzYWdlEhEKCXRvb2xfbmFtZRgBIAEoCRISCgpjYWxsX2NvdW50GAIgASgDIosBChBQcm92aWRlcktleVVzYWdlEhcKD3Byb3ZpZGVyX2tleV9pZBgBIAEoCRIRCglrZXlfbGFiZWwYAiABKAkSEAoIcHJvdmlkZXIYAyABKAkSDAoEcnVucxgEIAEoAxIUCgxpbnB1dF90b2tlbnMYBSABKAMSFQoNb3V0cHV0X3Rva2VucxgGIAEoAyKyAQoNQ3JvblRhc2tVc2FnZRIUCgxjcm9uX3Rhc2tfaWQYASABKAkSEQoJdGFza19uYW1lGAIgASgJEhIKCmFnZW50X25hbWUYAyABKAkSEgoKdG90YWxfcnVucxgEIAEoAxIRCglzdWNjZXNzZXMYBSABKAMSEAoIZmFpbHVyZXMYBiABKAMSFAoMaW5wdXRfdG9rZW5zGAcgASgDEhUKDW91dHB1dF90b2tlbnMYCCABKAMi+gEKElNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIl0KF1JlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhUKDXVzZXJfdGltZXpvbmUYAyABKAkigAIKGFN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIPCgdjb250ZW50GAMgASgJEhAKCGZpbGVfaWRzGAQgAygJEhUKDXVzZXJfdGltZXpvbmUYBSABKAkSOAoMY2hhdF9jb250ZXh0GAYgASgLMh0uYWdlbnRzLnYxLkNoYXRDaGFubmVsQ29udGV4dEgAiAEBEh0KEGludm9rZWRfc2tpbGxfaWQYByABKAlIAYgBAUIPCg1fY2hhdF9jb250ZXh0QhMKEV9pbnZva2VkX3NraWxsX2lkIoABChJDaGF0Q2hhbm5lbENvbnRleHQSEgoKY2hhbm5lbF9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIaChJ0cmlnZ2VyX21lc3NhZ2VfaWQYAyABKAkSGAoLY29udGV4dF91cm4YBCABKAlIAIgBAUIOCgxfY29udGV4dF91cm4iigEKE1NlbmRNZXNzYWdlUmVzcG9uc2USLAoMdXNlcl9tZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEjEKEWFzc2lzdGFudF9tZXNzYWdlGAIgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEhIKCm1vZGVsX3VzZWQYAyABKAkicwocUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIUCgx0b29sX2NhbGxfaWQYAyABKAkSEAoIYXBwcm92ZWQYBCABKAgiQAoVU3Vic2NyaWJlVG9SdW5SZXF1ZXN0Eg4KBnJ1bl9pZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkiPgoTQ2FuY2VsU3RyZWFtUmVxdWVzdBIOCgZydW5faWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJIikKFENhbmNlbFN0cmVhbVJlc3BvbnNlEhEKCWNhbmNlbGxlZBgBIAEoCCIxCh1SZXNwb25kVG9Db25maXJtYXRpb25SZXNwb25zZRIQCghhY2NlcHRlZBgBIAEoCCKZCwoQQWdlbnRTdHJlYW1FdmVudBI3CgtyZXBseV9zdGFydBgBIAEoCzIgLmFnZW50cy52MS5TdHJlYW1SZXBseVN0YXJ0RXZlbnRIABJAChBtb2RlbF9jYWxsX3N0YXJ0GAIgASgLMiQuYWdlbnRzLnYxLlN0cmVhbU1vZGVsQ2FsbFN0YXJ0RXZlbnRIABI8Cg5tb2RlbF9jYWxsX2VuZBgDIAEoCzIiLmFnZW50cy52MS5TdHJlYW1Nb2RlbENhbGxFbmRFdmVudEgAEkAKEHRleHRfYmxvY2tfc3RhcnQYBCABKAsyJC5hZ2VudHMudjEuU3RyZWFtVGV4dEJsb2NrU3RhcnRFdmVudEgAEkAKEHRleHRfYmxvY2tfZGVsdGEYBSABKAsyJC5hZ2VudHMudjEuU3RyZWFtVGV4dEJsb2NrRGVsdGFFdmVudEgAEjwKDnRleHRfYmxvY2tfZW5kGAYgASgLMiIuYWdlbnRzLnYxLlN0cmVhbVRleHRCbG9ja0VuZEV2ZW50SAASSAoUdGhpbmtpbmdfYmxvY2tfc3RhcnQYByABKAsyKC5hZ2VudHMudjEuU3RyZWFtVGhpbmtpbmdCbG9ja1N0YXJ0RXZlbnRIABJIChR0aGlua2luZ19ibG9ja19kZWx0YRgIIAEoCzIoLmFnZW50cy52MS5TdHJlYW1UaGlua2luZ0Jsb2NrRGVsdGFFdmVudEgAEkQKEnRoaW5raW5nX2Jsb2NrX2VuZBgJIAEoCzImLmFnZW50cy52MS5TdHJlYW1UaGlua2luZ0Jsb2NrRW5kRXZlbnRIABI+Cg90b29sX2NhbGxfc3RhcnQYCiABKAsyIy5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxTdGFydEV2ZW50SAASPgoPdG9vbF9jYWxsX2RlbHRhGAsgASgLMiMuYWdlbnRzLnYxLlN0cmVhbVRvb2xDYWxsRGVsdGFFdmVudEgAEjoKDXRvb2xfY2FsbF9lbmQYDCABKAsyIS5hZ2VudHMudjEuU3RyZWFtVG9vbENhbGxFbmRFdmVudEgAEkIKEXRvb2xfcmVzdWx0X3N0YXJ0GA0gASgLMiUuYWdlbnRzLnYxLlN0cmVhbVRvb2xSZXN1bHRTdGFydEV2ZW50SAASQgoRdG9vbF9yZXN1bHRfZGVsdGEYDiABKAsyJS5hZ2VudHMudjEuU3RyZWFtVG9vbFJlc3VsdERlbHRhRXZlbnRIABI+Cg90b29sX3Jlc3VsdF9lbmQYDyABKAsyIy5hZ2VudHMudjEuU3RyZWFtVG9vbFJlc3VsdEVuZEV2ZW50SAASSwoVY29uZmlybWF0aW9uX3JlcXVpcmVkGBAgASgLMiouYWdlbnRzLnYxLlN0cmVhbUNvbmZpcm1hdGlvblJlcXVpcmVkRXZlbnRIABIyCghmYWlsb3ZlchgRIAEoCzIeLmFnZW50cy52MS5TdHJlYW1GYWlsb3ZlckV2ZW50SAASNwoLc2tpbGxfZHJhZnQYEiABKAsyIC5hZ2VudHMudjEuU3RyZWFtU2tpbGxEcmFmdEV2ZW50SAASQAoQZXhjZWVkX21heF9pdGVycxgTIAEoCzIkLmFnZW50cy52MS5TdHJlYW1FeGNlZWRNYXhJdGVyc0V2ZW50SAASPQoObWVzc2FnZV9zdG9yZWQYFCABKAsyIy5hZ2VudHMudjEuU3RyZWFtTWVzc2FnZVN0b3JlZEV2ZW50SAASKgoEZG9uZRgVIAEoCzIaLmFnZW50cy52MS5TdHJlYW1Eb25lRXZlbnRIABIsCgVlcnJvchgWIAEoCzIbLmFnZW50cy52MS5TdHJlYW1FcnJvckV2ZW50SAASDgoGcnVuX2lkGB4gASgJQgcKBWV2ZW50IkcKGVN0cmVhbVNlbmRNZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJGChhSZXJ1bkZyb21NZXNzYWdlUmVzcG9uc2USKgoFZXZlbnQYASABKAsyGy5hZ2VudHMudjEuQWdlbnRTdHJlYW1FdmVudCJEChZTdWJzY3JpYmVUb1J1blJlc3BvbnNlEioKBWV2ZW50GAEgASgLMhsuYWdlbnRzLnYxLkFnZW50U3RyZWFtRXZlbnQiJQoVU3RyZWFtUmVwbHlTdGFydEV2ZW50EgwKBHJvbGUYASABKAkiKgoZU3RyZWFtTW9kZWxDYWxsU3RhcnRFdmVudBINCgVtb2RlbBgBIAEoCSKPAQoXU3RyZWFtTW9kZWxDYWxsRW5kRXZlbnQSDQoFbW9kZWwYASABKAkSFAoMaW5wdXRfdG9rZW5zGAIgASgDEhUKDW91dHB1dF90b2tlbnMYAyABKAMSHwoXY2FjaGVfcmVhZF9pbnB1dF90b2tlbnMYBCABKAMSFwoPdGhpbmtpbmdfdG9rZW5zGAUgASgDIlMKGVN0cmVhbVRleHRCbG9ja1N0YXJ0RXZlbnQSEAoIYmxvY2tfaWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRIQCghzZXF1ZW5jZRgDIAEoBSJiChlTdHJlYW1UZXh0QmxvY2tEZWx0YUV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkSEAoIc2VxdWVuY2UYBCABKAUiUQoXU3RyZWFtVGV4dEJsb2NrRW5kRXZlbnQSEAoIYmxvY2tfaWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRIQCghzZXF1ZW5jZRgDIAEoBSJXCh1TdHJlYW1UaGlua2luZ0Jsb2NrU3RhcnRFdmVudBIQCghibG9ja19pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEhAKCHNlcXVlbmNlGAMgASgFImYKHVN0cmVhbVRoaW5raW5nQmxvY2tEZWx0YUV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkSEAoIc2VxdWVuY2UYBCABKAUiaQobU3RyZWFtVGhpbmtpbmdCbG9ja0VuZEV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSEAoIc2VxdWVuY2UYAyABKAUSEgoKZWxhcHNlZF9tcxgEIAEoBSJ7ChhTdHJlYW1Ub29sQ2FsbFN0YXJ0RXZlbnQSEAoIYmxvY2tfaWQYASABKAkSFAoMdG9vbF9jYWxsX2lkGAIgASgJEhEKCXRvb2xfbmFtZRgDIAEoCRISCgptZXNzYWdlX2lkGAQgASgJEhAKCHNlcXVlbmNlGAUgASgFIooBChhTdHJlYW1Ub29sQ2FsbERlbHRhRXZlbnQSEAoIYmxvY2tfaWQYASABKAkSFAoMdG9vbF9jYWxsX2lkGAIgASgJEhEKCXRvb2xfbmFtZRgDIAEoCRINCgVkZWx0YRgEIAEoCRISCgptZXNzYWdlX2lkGAUgASgJEhAKCHNlcXVlbmNlGAYgASgFIpEBChZTdHJlYW1Ub29sQ2FsbEVuZEV2ZW50EhAKCGJsb2NrX2lkGAEgASgJEhQKDHRvb2xfY2FsbF9pZBgCIAEoCRIRCgl0b29sX25hbWUYAyABKAkSFgoOdG9vbF9hcmdzX2pzb24YBCABKAkSEgoKbWVzc2FnZV9pZBgFIAEoCRIQCghzZXF1ZW5jZRgGIAEoBSJxChpTdHJlYW1Ub29sUmVzdWx0U3RhcnRFdmVudBIUCgx0b29sX2NhbGxfaWQYASABKAkSEQoJdG9vbF9uYW1lGAIgASgJEhYKDnRvb2xfYXJnc19qc29uGAMgASgJEhIKCm1lc3NhZ2VfaWQYBCABKAkiVQoaU3RyZWFtVG9vbFJlc3VsdERlbHRhRXZlbnQSFAoMdG9vbF9jYWxsX2lkGAEgASgJEg0KBWRlbHRhGAIgASgJEhIKCm1lc3NhZ2VfaWQYAyABKAkieAoYU3RyZWFtVG9vbFJlc3VsdEVuZEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZyZXN1bHQYBCABKAkSEgoKbWVzc2FnZV9pZBgFIAEoCSIbChlTdHJlYW1FeGNlZWRNYXhJdGVyc0V2ZW50IkMKGFN0cmVhbU1lc3NhZ2VTdG9yZWRFdmVudBInCgdtZXNzYWdlGAEgASgLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvIlgKD1N0cmVhbURvbmVFdmVudBIxChFhc3Npc3RhbnRfbWVzc2FnZRgBIAEoCzIWLmFnZW50cy52MS5NZXNzYWdlSW5mbxISCgptb2RlbF91c2VkGAIgASgJIiMKEFN0cmVhbUVycm9yRXZlbnQSDwoHbWVzc2FnZRgBIAEoCSJ3Ch9TdHJlYW1Db25maXJtYXRpb25SZXF1aXJlZEV2ZW50EhQKDHRvb2xfY2FsbF9pZBgBIAEoCRIRCgl0b29sX25hbWUYAiABKAkSFgoOdG9vbF9hcmdzX2pzb24YAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkiggEKE1N0cmVhbUZhaWxvdmVyRXZlbnQSHAoUZnJvbV9wcm92aWRlcl9rZXlfaWQYASABKAkSGgoSdG9fcHJvdmlkZXJfa2V5X2lkGAIgASgJEhAKCHRvX21vZGVsGAMgASgJEg4KBnJlYXNvbhgEIAEoCRIPCgdhdHRlbXB0GAUgASgFIj0KFVN0cmVhbVNraWxsRHJhZnRFdmVudBIkCgVkcmFmdBgBIAEoCzIVLmFnZW50cy52MS5Ta2lsbERyYWZ0MpcFCg5SdW50aW1lU2VydmljZRJOCgtTZW5kTWVzc2FnZRIdLmFnZW50cy52MS5TZW5kTWVzc2FnZVJlcXVlc3QaHi5hZ2VudHMudjEuU2VuZE1lc3NhZ2VSZXNwb25zZSIAEmIKEVN0cmVhbVNlbmRNZXNzYWdlEiMuYWdlbnRzLnYxLlN0cmVhbVNlbmRNZXNzYWdlUmVxdWVzdBokLmFnZW50cy52MS5TdHJlYW1TZW5kTWVzc2FnZVJlc3BvbnNlIgAwARJfChBSZXJ1bkZyb21NZXNzYWdlEiIuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXF1ZXN0GiMuYWdlbnRzLnYxLlJlcnVuRnJvbU1lc3NhZ2VSZXNwb25zZSIAMAESWQoOU3Vic2NyaWJlVG9SdW4SIC5hZ2VudHMudjEuU3Vic2NyaWJlVG9SdW5SZXF1ZXN0GiEuYWdlbnRzLnYxLlN1YnNjcmliZVRvUnVuUmVzcG9uc2UiADABElEKDENhbmNlbFN0cmVhbRIeLmFnZW50cy52MS5DYW5jZWxTdHJlYW1SZXF1ZXN0Gh8uYWdlbnRzLnYxLkNhbmNlbFN0cmVhbVJlc3BvbnNlIgASbAoVUmVzcG9uZFRvQ29uZmlybWF0aW9uEicuYWdlbnRzLnYxLlJlc3BvbmRUb0NvbmZpcm1hdGlvblJlcXVlc3QaKC5hZ2VudHMudjEuUmVzcG9uZFRvQ29uZmlybWF0aW9uUmVzcG9uc2UiABJUCg1HZXRVc2FnZVN0YXRzEh8uYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXF1ZXN0GiAuYWdlbnRzLnYxLkdldFVzYWdlU3RhdHNSZXNwb25zZSIAMuIBChZSdW50aW1lU2V0dGluZ3NTZXJ2aWNlEmAKEkdldFJ1bnRpbWVTZXR0aW5ncxIkLmFnZW50cy52MS5HZXRSdW50aW1lU2V0dGluZ3NSZXF1ZXN0GiIuYWdlbnRzLnYxLlJ1bnRpbWVTZXR0aW5nc1Jlc3BvbnNlIgASZgoVVXBkYXRlUnVudGltZVNldHRpbmdzEicuYWdlbnRzLnYxLlVwZGF0ZVJ1bnRpbWVTZXR0aW5nc1JlcXVlc3QaIi5hZ2VudHMudjEuUnVudGltZVNldHRpbmdzUmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_agents_v1_sessions, file_agents_v1_skills]);
+
+/**
+ * @generated from message agents.v1.RuntimeSettings
+ */
+export type RuntimeSettings = Message<"agents.v1.RuntimeSettings"> & {
+  /**
+   * @generated from field: int32 send_deadline_seconds = 1;
+   */
+  sendDeadlineSeconds: number;
+
+  /**
+   * @generated from field: bool failover_enabled = 2;
+   */
+  failoverEnabled: boolean;
+
+  /**
+   * @generated from field: bool resume_enabled = 3;
+   */
+  resumeEnabled: boolean;
+
+  /**
+   * @generated from field: int32 circuit_breaker_failure_threshold = 4;
+   */
+  circuitBreakerFailureThreshold: number;
+
+  /**
+   * @generated from field: int32 circuit_breaker_recovery_seconds = 5;
+   */
+  circuitBreakerRecoverySeconds: number;
+
+  /**
+   * @generated from field: bool personal_memory_bridge_enabled = 6;
+   */
+  personalMemoryBridgeEnabled: boolean;
+
+  /**
+   * Org default provider key id (empty string = none)
+   *
+   * @generated from field: string default_provider_key_id = 7;
+   */
+  defaultProviderKeyId: string;
+
+  /**
+   * Org default chat model (empty string = none)
+   *
+   * @generated from field: string default_chat_model = 8;
+   */
+  defaultChatModel: string;
+};
+
+/**
+ * Describes the message agents.v1.RuntimeSettings.
+ * Use `create(RuntimeSettingsSchema)` to create a new message.
+ */
+export const RuntimeSettingsSchema: GenMessage<RuntimeSettings> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 0);
+
+/**
+ * @generated from message agents.v1.GetRuntimeSettingsRequest
+ */
+export type GetRuntimeSettingsRequest = Message<"agents.v1.GetRuntimeSettingsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * Describes the message agents.v1.GetRuntimeSettingsRequest.
+ * Use `create(GetRuntimeSettingsRequestSchema)` to create a new message.
+ */
+export const GetRuntimeSettingsRequestSchema: GenMessage<GetRuntimeSettingsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 1);
+
+/**
+ * @generated from message agents.v1.UpdateRuntimeSettingsRequest
+ */
+export type UpdateRuntimeSettingsRequest = Message<"agents.v1.UpdateRuntimeSettingsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: agents.v1.RuntimeSettings settings = 2;
+   */
+  settings?: RuntimeSettings | undefined;
+};
+
+/**
+ * Describes the message agents.v1.UpdateRuntimeSettingsRequest.
+ * Use `create(UpdateRuntimeSettingsRequestSchema)` to create a new message.
+ */
+export const UpdateRuntimeSettingsRequestSchema: GenMessage<UpdateRuntimeSettingsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 2);
+
+/**
+ * @generated from message agents.v1.RuntimeSettingsResponse
+ */
+export type RuntimeSettingsResponse = Message<"agents.v1.RuntimeSettingsResponse"> & {
+  /**
+   * @generated from field: agents.v1.RuntimeSettings settings = 1;
+   */
+  settings?: RuntimeSettings | undefined;
+
+  /**
+   * Whether an org-level settings row exists (vs pure code defaults).
+   *
+   * @generated from field: bool configured = 2;
+   */
+  configured: boolean;
+};
+
+/**
+ * Describes the message agents.v1.RuntimeSettingsResponse.
+ * Use `create(RuntimeSettingsResponseSchema)` to create a new message.
+ */
+export const RuntimeSettingsResponseSchema: GenMessage<RuntimeSettingsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_runtime, 3);
 
 /**
  * @generated from message agents.v1.GetUsageStatsRequest
@@ -45,7 +164,7 @@ export type GetUsageStatsRequest = Message<"agents.v1.GetUsageStatsRequest"> & {
  * Use `create(GetUsageStatsRequestSchema)` to create a new message.
  */
 export const GetUsageStatsRequestSchema: GenMessage<GetUsageStatsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 0);
+  messageDesc(file_agents_v1_runtime, 4);
 
 /**
  * @generated from message agents.v1.GetUsageStatsResponse
@@ -205,7 +324,7 @@ export type GetUsageStatsResponse = Message<"agents.v1.GetUsageStatsResponse"> &
  * Use `create(GetUsageStatsResponseSchema)` to create a new message.
  */
 export const GetUsageStatsResponseSchema: GenMessage<GetUsageStatsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 1);
+  messageDesc(file_agents_v1_runtime, 5);
 
 /**
  * @generated from message agents.v1.DailyUsage
@@ -256,7 +375,7 @@ export type DailyUsage = Message<"agents.v1.DailyUsage"> & {
  * Use `create(DailyUsageSchema)` to create a new message.
  */
 export const DailyUsageSchema: GenMessage<DailyUsage> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 2);
+  messageDesc(file_agents_v1_runtime, 6);
 
 /**
  * @generated from message agents.v1.ModelUsage
@@ -298,7 +417,7 @@ export type ModelUsage = Message<"agents.v1.ModelUsage"> & {
  * Use `create(ModelUsageSchema)` to create a new message.
  */
 export const ModelUsageSchema: GenMessage<ModelUsage> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 3);
+  messageDesc(file_agents_v1_runtime, 7);
 
 /**
  * @generated from message agents.v1.AgentUsageInfo
@@ -335,7 +454,7 @@ export type AgentUsageInfo = Message<"agents.v1.AgentUsageInfo"> & {
  * Use `create(AgentUsageInfoSchema)` to create a new message.
  */
 export const AgentUsageInfoSchema: GenMessage<AgentUsageInfo> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 4);
+  messageDesc(file_agents_v1_runtime, 8);
 
 /**
  * @generated from message agents.v1.ToolUsage
@@ -357,7 +476,7 @@ export type ToolUsage = Message<"agents.v1.ToolUsage"> & {
  * Use `create(ToolUsageSchema)` to create a new message.
  */
 export const ToolUsageSchema: GenMessage<ToolUsage> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 5);
+  messageDesc(file_agents_v1_runtime, 9);
 
 /**
  * @generated from message agents.v1.ProviderKeyUsage
@@ -399,7 +518,7 @@ export type ProviderKeyUsage = Message<"agents.v1.ProviderKeyUsage"> & {
  * Use `create(ProviderKeyUsageSchema)` to create a new message.
  */
 export const ProviderKeyUsageSchema: GenMessage<ProviderKeyUsage> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 6);
+  messageDesc(file_agents_v1_runtime, 10);
 
 /**
  * @generated from message agents.v1.CronTaskUsage
@@ -451,7 +570,7 @@ export type CronTaskUsage = Message<"agents.v1.CronTaskUsage"> & {
  * Use `create(CronTaskUsageSchema)` to create a new message.
  */
 export const CronTaskUsageSchema: GenMessage<CronTaskUsage> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 7);
+  messageDesc(file_agents_v1_runtime, 11);
 
 /**
  * @generated from message agents.v1.SendMessageRequest
@@ -514,7 +633,7 @@ export type SendMessageRequest = Message<"agents.v1.SendMessageRequest"> & {
  * Use `create(SendMessageRequestSchema)` to create a new message.
  */
 export const SendMessageRequestSchema: GenMessage<SendMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 8);
+  messageDesc(file_agents_v1_runtime, 12);
 
 /**
  * @generated from message agents.v1.RerunFromMessageRequest
@@ -547,7 +666,7 @@ export type RerunFromMessageRequest = Message<"agents.v1.RerunFromMessageRequest
  * Use `create(RerunFromMessageRequestSchema)` to create a new message.
  */
 export const RerunFromMessageRequestSchema: GenMessage<RerunFromMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 9);
+  messageDesc(file_agents_v1_runtime, 13);
 
 /**
  * @generated from message agents.v1.StreamSendMessageRequest
@@ -610,7 +729,7 @@ export type StreamSendMessageRequest = Message<"agents.v1.StreamSendMessageReque
  * Use `create(StreamSendMessageRequestSchema)` to create a new message.
  */
 export const StreamSendMessageRequestSchema: GenMessage<StreamSendMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 10);
+  messageDesc(file_agents_v1_runtime, 14);
 
 /**
  * ChatChannelContext binds an agent invocation to a chat channel and
@@ -654,7 +773,7 @@ export type ChatChannelContext = Message<"agents.v1.ChatChannelContext"> & {
  * Use `create(ChatChannelContextSchema)` to create a new message.
  */
 export const ChatChannelContextSchema: GenMessage<ChatChannelContext> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 11);
+  messageDesc(file_agents_v1_runtime, 15);
 
 /**
  * @generated from message agents.v1.SendMessageResponse
@@ -681,7 +800,7 @@ export type SendMessageResponse = Message<"agents.v1.SendMessageResponse"> & {
  * Use `create(SendMessageResponseSchema)` to create a new message.
  */
 export const SendMessageResponseSchema: GenMessage<SendMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 12);
+  messageDesc(file_agents_v1_runtime, 16);
 
 /**
  * @generated from message agents.v1.RespondToConfirmationRequest
@@ -713,7 +832,7 @@ export type RespondToConfirmationRequest = Message<"agents.v1.RespondToConfirmat
  * Use `create(RespondToConfirmationRequestSchema)` to create a new message.
  */
 export const RespondToConfirmationRequestSchema: GenMessage<RespondToConfirmationRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 13);
+  messageDesc(file_agents_v1_runtime, 17);
 
 /**
  * @generated from message agents.v1.SubscribeToRunRequest
@@ -735,7 +854,7 @@ export type SubscribeToRunRequest = Message<"agents.v1.SubscribeToRunRequest"> &
  * Use `create(SubscribeToRunRequestSchema)` to create a new message.
  */
 export const SubscribeToRunRequestSchema: GenMessage<SubscribeToRunRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 14);
+  messageDesc(file_agents_v1_runtime, 18);
 
 /**
  * @generated from message agents.v1.CancelStreamRequest
@@ -757,7 +876,7 @@ export type CancelStreamRequest = Message<"agents.v1.CancelStreamRequest"> & {
  * Use `create(CancelStreamRequestSchema)` to create a new message.
  */
 export const CancelStreamRequestSchema: GenMessage<CancelStreamRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 15);
+  messageDesc(file_agents_v1_runtime, 19);
 
 /**
  * @generated from message agents.v1.CancelStreamResponse
@@ -777,7 +896,7 @@ export type CancelStreamResponse = Message<"agents.v1.CancelStreamResponse"> & {
  * Use `create(CancelStreamResponseSchema)` to create a new message.
  */
 export const CancelStreamResponseSchema: GenMessage<CancelStreamResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 16);
+  messageDesc(file_agents_v1_runtime, 20);
 
 /**
  * @generated from message agents.v1.RespondToConfirmationResponse
@@ -794,7 +913,7 @@ export type RespondToConfirmationResponse = Message<"agents.v1.RespondToConfirma
  * Use `create(RespondToConfirmationResponseSchema)` to create a new message.
  */
 export const RespondToConfirmationResponseSchema: GenMessage<RespondToConfirmationResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 17);
+  messageDesc(file_agents_v1_runtime, 21);
 
 /**
  * AgentStreamEvent carries one event in the agent-runtime stream. The
@@ -958,7 +1077,7 @@ export type AgentStreamEvent = Message<"agents.v1.AgentStreamEvent"> & {
  * Use `create(AgentStreamEventSchema)` to create a new message.
  */
 export const AgentStreamEventSchema: GenMessage<AgentStreamEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 18);
+  messageDesc(file_agents_v1_runtime, 22);
 
 /**
  * @generated from message agents.v1.StreamSendMessageResponse
@@ -975,7 +1094,7 @@ export type StreamSendMessageResponse = Message<"agents.v1.StreamSendMessageResp
  * Use `create(StreamSendMessageResponseSchema)` to create a new message.
  */
 export const StreamSendMessageResponseSchema: GenMessage<StreamSendMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 19);
+  messageDesc(file_agents_v1_runtime, 23);
 
 /**
  * @generated from message agents.v1.RerunFromMessageResponse
@@ -992,7 +1111,7 @@ export type RerunFromMessageResponse = Message<"agents.v1.RerunFromMessageRespon
  * Use `create(RerunFromMessageResponseSchema)` to create a new message.
  */
 export const RerunFromMessageResponseSchema: GenMessage<RerunFromMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 20);
+  messageDesc(file_agents_v1_runtime, 24);
 
 /**
  * @generated from message agents.v1.SubscribeToRunResponse
@@ -1009,7 +1128,7 @@ export type SubscribeToRunResponse = Message<"agents.v1.SubscribeToRunResponse">
  * Use `create(SubscribeToRunResponseSchema)` to create a new message.
  */
 export const SubscribeToRunResponseSchema: GenMessage<SubscribeToRunResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 21);
+  messageDesc(file_agents_v1_runtime, 25);
 
 /**
  * Opens the assistant turn. Purely a framing hook for clients.
@@ -1028,7 +1147,7 @@ export type StreamReplyStartEvent = Message<"agents.v1.StreamReplyStartEvent"> &
  * Use `create(StreamReplyStartEventSchema)` to create a new message.
  */
 export const StreamReplyStartEventSchema: GenMessage<StreamReplyStartEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 22);
+  messageDesc(file_agents_v1_runtime, 26);
 
 /**
  * A model invocation begins; repeats after a failover swap.
@@ -1047,7 +1166,7 @@ export type StreamModelCallStartEvent = Message<"agents.v1.StreamModelCallStartE
  * Use `create(StreamModelCallStartEventSchema)` to create a new message.
  */
 export const StreamModelCallStartEventSchema: GenMessage<StreamModelCallStartEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 23);
+  messageDesc(file_agents_v1_runtime, 27);
 
 /**
  * Per-model-call token accounting, driving live token/cost counters.
@@ -1086,7 +1205,7 @@ export type StreamModelCallEndEvent = Message<"agents.v1.StreamModelCallEndEvent
  * Use `create(StreamModelCallEndEventSchema)` to create a new message.
  */
 export const StreamModelCallEndEventSchema: GenMessage<StreamModelCallEndEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 24);
+  messageDesc(file_agents_v1_runtime, 28);
 
 /**
  * Block events carry the placeholder row id (message_id, chat
@@ -1118,7 +1237,7 @@ export type StreamTextBlockStartEvent = Message<"agents.v1.StreamTextBlockStartE
  * Use `create(StreamTextBlockStartEventSchema)` to create a new message.
  */
 export const StreamTextBlockStartEventSchema: GenMessage<StreamTextBlockStartEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 25);
+  messageDesc(file_agents_v1_runtime, 29);
 
 /**
  * @generated from message agents.v1.StreamTextBlockDeltaEvent
@@ -1150,7 +1269,7 @@ export type StreamTextBlockDeltaEvent = Message<"agents.v1.StreamTextBlockDeltaE
  * Use `create(StreamTextBlockDeltaEventSchema)` to create a new message.
  */
 export const StreamTextBlockDeltaEventSchema: GenMessage<StreamTextBlockDeltaEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 26);
+  messageDesc(file_agents_v1_runtime, 30);
 
 /**
  * @generated from message agents.v1.StreamTextBlockEndEvent
@@ -1177,7 +1296,7 @@ export type StreamTextBlockEndEvent = Message<"agents.v1.StreamTextBlockEndEvent
  * Use `create(StreamTextBlockEndEventSchema)` to create a new message.
  */
 export const StreamTextBlockEndEventSchema: GenMessage<StreamTextBlockEndEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 27);
+  messageDesc(file_agents_v1_runtime, 31);
 
 /**
  * @generated from message agents.v1.StreamThinkingBlockStartEvent
@@ -1204,7 +1323,7 @@ export type StreamThinkingBlockStartEvent = Message<"agents.v1.StreamThinkingBlo
  * Use `create(StreamThinkingBlockStartEventSchema)` to create a new message.
  */
 export const StreamThinkingBlockStartEventSchema: GenMessage<StreamThinkingBlockStartEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 28);
+  messageDesc(file_agents_v1_runtime, 32);
 
 /**
  * @generated from message agents.v1.StreamThinkingBlockDeltaEvent
@@ -1236,7 +1355,7 @@ export type StreamThinkingBlockDeltaEvent = Message<"agents.v1.StreamThinkingBlo
  * Use `create(StreamThinkingBlockDeltaEventSchema)` to create a new message.
  */
 export const StreamThinkingBlockDeltaEventSchema: GenMessage<StreamThinkingBlockDeltaEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 29);
+  messageDesc(file_agents_v1_runtime, 33);
 
 /**
  * elapsed_ms is stamped by the runtime (time between the matching
@@ -1272,7 +1391,7 @@ export type StreamThinkingBlockEndEvent = Message<"agents.v1.StreamThinkingBlock
  * Use `create(StreamThinkingBlockEndEventSchema)` to create a new message.
  */
 export const StreamThinkingBlockEndEventSchema: GenMessage<StreamThinkingBlockEndEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 30);
+  messageDesc(file_agents_v1_runtime, 34);
 
 /**
  * @generated from message agents.v1.StreamToolCallStartEvent
@@ -1309,7 +1428,7 @@ export type StreamToolCallStartEvent = Message<"agents.v1.StreamToolCallStartEve
  * Use `create(StreamToolCallStartEventSchema)` to create a new message.
  */
 export const StreamToolCallStartEventSchema: GenMessage<StreamToolCallStartEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 31);
+  messageDesc(file_agents_v1_runtime, 35);
 
 /**
  * delta is an incremental fragment of the tool-args JSON.
@@ -1353,7 +1472,7 @@ export type StreamToolCallDeltaEvent = Message<"agents.v1.StreamToolCallDeltaEve
  * Use `create(StreamToolCallDeltaEventSchema)` to create a new message.
  */
 export const StreamToolCallDeltaEventSchema: GenMessage<StreamToolCallDeltaEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 32);
+  messageDesc(file_agents_v1_runtime, 36);
 
 /**
  * @generated from message agents.v1.StreamToolCallEndEvent
@@ -1395,7 +1514,7 @@ export type StreamToolCallEndEvent = Message<"agents.v1.StreamToolCallEndEvent">
  * Use `create(StreamToolCallEndEventSchema)` to create a new message.
  */
 export const StreamToolCallEndEventSchema: GenMessage<StreamToolCallEndEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 33);
+  messageDesc(file_agents_v1_runtime, 37);
 
 /**
  * Tool execution started; message_id is the persisted tool-call row.
@@ -1429,7 +1548,7 @@ export type StreamToolResultStartEvent = Message<"agents.v1.StreamToolResultStar
  * Use `create(StreamToolResultStartEventSchema)` to create a new message.
  */
 export const StreamToolResultStartEventSchema: GenMessage<StreamToolResultStartEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 34);
+  messageDesc(file_agents_v1_runtime, 38);
 
 /**
  * @generated from message agents.v1.StreamToolResultDeltaEvent
@@ -1456,7 +1575,7 @@ export type StreamToolResultDeltaEvent = Message<"agents.v1.StreamToolResultDelt
  * Use `create(StreamToolResultDeltaEventSchema)` to create a new message.
  */
 export const StreamToolResultDeltaEventSchema: GenMessage<StreamToolResultDeltaEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 35);
+  messageDesc(file_agents_v1_runtime, 39);
 
 /**
  * @generated from message agents.v1.StreamToolResultEndEvent
@@ -1493,7 +1612,7 @@ export type StreamToolResultEndEvent = Message<"agents.v1.StreamToolResultEndEve
  * Use `create(StreamToolResultEndEventSchema)` to create a new message.
  */
 export const StreamToolResultEndEventSchema: GenMessage<StreamToolResultEndEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 36);
+  messageDesc(file_agents_v1_runtime, 40);
 
 /**
  * The run hit the tool-iteration cap; a terminal error event follows.
@@ -1508,7 +1627,7 @@ export type StreamExceedMaxItersEvent = Message<"agents.v1.StreamExceedMaxItersE
  * Use `create(StreamExceedMaxItersEventSchema)` to create a new message.
  */
 export const StreamExceedMaxItersEventSchema: GenMessage<StreamExceedMaxItersEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 37);
+  messageDesc(file_agents_v1_runtime, 41);
 
 /**
  * @generated from message agents.v1.StreamMessageStoredEvent
@@ -1525,7 +1644,7 @@ export type StreamMessageStoredEvent = Message<"agents.v1.StreamMessageStoredEve
  * Use `create(StreamMessageStoredEventSchema)` to create a new message.
  */
 export const StreamMessageStoredEventSchema: GenMessage<StreamMessageStoredEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 38);
+  messageDesc(file_agents_v1_runtime, 42);
 
 /**
  * @generated from message agents.v1.StreamDoneEvent
@@ -1547,7 +1666,7 @@ export type StreamDoneEvent = Message<"agents.v1.StreamDoneEvent"> & {
  * Use `create(StreamDoneEventSchema)` to create a new message.
  */
 export const StreamDoneEventSchema: GenMessage<StreamDoneEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 39);
+  messageDesc(file_agents_v1_runtime, 43);
 
 /**
  * @generated from message agents.v1.StreamErrorEvent
@@ -1564,7 +1683,7 @@ export type StreamErrorEvent = Message<"agents.v1.StreamErrorEvent"> & {
  * Use `create(StreamErrorEventSchema)` to create a new message.
  */
 export const StreamErrorEventSchema: GenMessage<StreamErrorEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 40);
+  messageDesc(file_agents_v1_runtime, 44);
 
 /**
  * @generated from message agents.v1.StreamConfirmationRequiredEvent
@@ -1596,7 +1715,7 @@ export type StreamConfirmationRequiredEvent = Message<"agents.v1.StreamConfirmat
  * Use `create(StreamConfirmationRequiredEventSchema)` to create a new message.
  */
 export const StreamConfirmationRequiredEventSchema: GenMessage<StreamConfirmationRequiredEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 41);
+  messageDesc(file_agents_v1_runtime, 45);
 
 /**
  * Emitted once when the runtime swaps to a different provider key or
@@ -1648,7 +1767,7 @@ export type StreamFailoverEvent = Message<"agents.v1.StreamFailoverEvent"> & {
  * Use `create(StreamFailoverEventSchema)` to create a new message.
  */
 export const StreamFailoverEventSchema: GenMessage<StreamFailoverEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 42);
+  messageDesc(file_agents_v1_runtime, 46);
 
 /**
  * Emitted when the agent proposes a skill draft for the user to review. The
@@ -1669,7 +1788,7 @@ export type StreamSkillDraftEvent = Message<"agents.v1.StreamSkillDraftEvent"> &
  * Use `create(StreamSkillDraftEventSchema)` to create a new message.
  */
 export const StreamSkillDraftEventSchema: GenMessage<StreamSkillDraftEvent> = /*@__PURE__*/
-  messageDesc(file_agents_v1_runtime, 43);
+  messageDesc(file_agents_v1_runtime, 47);
 
 /**
  * RuntimeService handles message execution (send to LLM and store response).
@@ -1758,4 +1877,30 @@ export const RuntimeService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_runtime, 0);
+
+/**
+ * RuntimeSettingsService manages the per-org agent runtime settings blob.
+ * Both methods require org admin.
+ *
+ * @generated from service agents.v1.RuntimeSettingsService
+ */
+export const RuntimeSettingsService: GenService<{
+  /**
+   * @generated from rpc agents.v1.RuntimeSettingsService.GetRuntimeSettings
+   */
+  getRuntimeSettings: {
+    methodKind: "unary";
+    input: typeof GetRuntimeSettingsRequestSchema;
+    output: typeof RuntimeSettingsResponseSchema;
+  },
+  /**
+   * @generated from rpc agents.v1.RuntimeSettingsService.UpdateRuntimeSettings
+   */
+  updateRuntimeSettings: {
+    methodKind: "unary";
+    input: typeof UpdateRuntimeSettingsRequestSchema;
+    output: typeof RuntimeSettingsResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_agents_v1_runtime, 1);
 

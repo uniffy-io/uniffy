@@ -34,7 +34,7 @@ const (
 //
 // ProvidersService manages LLM provider credentials for an organization.
 type ProvidersServiceClient interface {
-	// Add a new provider API key or setup token
+	// Add a new provider API key
 	AddProviderKey(ctx context.Context, in *AddProviderKeyRequest, opts ...grpc.CallOption) (*AddProviderKeyResponse, error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(ctx context.Context, in *ListProviderKeysRequest, opts ...grpc.CallOption) (*ListProviderKeysResponse, error)
@@ -134,7 +134,7 @@ func (c *providersServiceClient) ListModelsForKey(ctx context.Context, in *ListM
 //
 // ProvidersService manages LLM provider credentials for an organization.
 type ProvidersServiceServer interface {
-	// Add a new provider API key or setup token
+	// Add a new provider API key
 	AddProviderKey(context.Context, *AddProviderKeyRequest) (*AddProviderKeyResponse, error)
 	// List all provider keys for the organization (credentials are masked)
 	ListProviderKeys(context.Context, *ListProviderKeysRequest) (*ListProviderKeysResponse, error)

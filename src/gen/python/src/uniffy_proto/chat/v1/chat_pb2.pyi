@@ -158,7 +158,7 @@ class ReplyContext(_message.Message):
     def __init__(self, id: _Optional[str] = ..., sender_name: _Optional[str] = ..., content_preview: _Optional[str] = ...) -> None: ...
 
 class ChatMessage(_message.Message):
-    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "reply_to_id", "thread", "reactions", "sender_name", "sender_avatar_url", "reply_context")
+    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "reply_to_id", "feedback_rating", "thread", "reactions", "sender_name", "sender_avatar_url", "reply_context")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -178,6 +178,7 @@ class ChatMessage(_message.Message):
     METADATA_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     REPLY_TO_ID_FIELD_NUMBER: _ClassVar[int]
+    FEEDBACK_RATING_FIELD_NUMBER: _ClassVar[int]
     THREAD_FIELD_NUMBER: _ClassVar[int]
     REACTIONS_FIELD_NUMBER: _ClassVar[int]
     SENDER_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -195,12 +196,13 @@ class ChatMessage(_message.Message):
     metadata: _containers.ScalarMap[str, str]
     created_at: _timestamp_pb2.Timestamp
     reply_to_id: str
+    feedback_rating: str
     thread: ThreadInfo
     reactions: _containers.RepeatedCompositeFieldContainer[ReactionGroup]
     sender_name: str
     sender_avatar_url: str
     reply_context: ReplyContext
-    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reply_to_id: _Optional[str] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ..., reply_context: _Optional[_Union[ReplyContext, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reply_to_id: _Optional[str] = ..., feedback_rating: _Optional[str] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ..., reply_context: _Optional[_Union[ReplyContext, _Mapping]] = ...) -> None: ...
 
 class ReactionGroup(_message.Message):
     __slots__ = ("emoji", "count", "user_ids", "current_user_reacted")
@@ -1409,12 +1411,12 @@ class ResetChannelAgentContextResponse(_message.Message):
     def __init__(self, divider_message_id: _Optional[str] = ..., reset_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., stats: _Optional[_Union[ChannelAgentContextStats, _Mapping]] = ...) -> None: ...
 
 class ChannelAgentConfig(_message.Message):
-    __slots__ = ("model_override", "model_params_override_json")
+    __slots__ = ("model_override", "model_params_override")
     MODEL_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
-    MODEL_PARAMS_OVERRIDE_JSON_FIELD_NUMBER: _ClassVar[int]
+    MODEL_PARAMS_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
     model_override: str
-    model_params_override_json: str
-    def __init__(self, model_override: _Optional[str] = ..., model_params_override_json: _Optional[str] = ...) -> None: ...
+    model_params_override: str
+    def __init__(self, model_override: _Optional[str] = ..., model_params_override: _Optional[str] = ...) -> None: ...
 
 class GetChannelAgentConfigRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id", "agent_id")
@@ -1433,18 +1435,18 @@ class GetChannelAgentConfigResponse(_message.Message):
     def __init__(self, config: _Optional[_Union[ChannelAgentConfig, _Mapping]] = ...) -> None: ...
 
 class UpdateChannelAgentConfigRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "agent_id", "model_override", "model_params_override_json")
+    __slots__ = ("organization_id", "channel_id", "agent_id", "model_override", "model_params_override")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     MODEL_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
-    MODEL_PARAMS_OVERRIDE_JSON_FIELD_NUMBER: _ClassVar[int]
+    MODEL_PARAMS_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     agent_id: str
     model_override: str
-    model_params_override_json: str
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., model_override: _Optional[str] = ..., model_params_override_json: _Optional[str] = ...) -> None: ...
+    model_params_override: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., model_override: _Optional[str] = ..., model_params_override: _Optional[str] = ...) -> None: ...
 
 class UpdateChannelAgentConfigResponse(_message.Message):
     __slots__ = ("config",)

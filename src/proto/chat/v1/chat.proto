@@ -255,6 +255,9 @@ message ChatMessage {
   google.protobuf.Timestamp created_at = 11;
   // Inline quote reply reference
   optional string reply_to_id = 12;
+  // The caller's own thumbs rating on an agent reply ("up" | "down" | "").
+  // Populated only on history reads; empty on stream fanout.
+  string feedback_rating = 13;
   // Populated for root messages that have replies
   optional ThreadInfo thread = 20;
   // Reactions on this message
@@ -1126,8 +1129,9 @@ message ResetChannelAgentContextResponse {
 message ChannelAgentConfig {
   // Model override for this (channel, agent); "" = none (agent default).
   string model_override = 1;
-  // JSON object of model-parameter overrides; "" = none.
-  string model_params_override_json = 2;
+  // JSON object of tuned parameter overrides for this (channel, agent),
+  // merged over the agent's own model_params; "" = none.
+  string model_params_override = 2;
 }
 
 message GetChannelAgentConfigRequest {
@@ -1145,8 +1149,8 @@ message UpdateChannelAgentConfigRequest {
   string channel_id = 2;
   string agent_id = 3;
   optional string model_override = 4;
-  // JSON object of model-parameter overrides; "" or "{}" clears them
-  optional string model_params_override_json = 5;
+  // Absent = unchanged, "" = clear, otherwise a JSON object.
+  optional string model_params_override = 5;
 }
 
 message UpdateChannelAgentConfigResponse {

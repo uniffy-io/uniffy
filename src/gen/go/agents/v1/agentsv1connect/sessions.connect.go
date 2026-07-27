@@ -39,36 +39,12 @@ const (
 	// SessionsServiceGetSessionProcedure is the fully-qualified name of the SessionsService's
 	// GetSession RPC.
 	SessionsServiceGetSessionProcedure = "/agents.v1.SessionsService/GetSession"
-	// SessionsServiceListSessionsProcedure is the fully-qualified name of the SessionsService's
-	// ListSessions RPC.
-	SessionsServiceListSessionsProcedure = "/agents.v1.SessionsService/ListSessions"
-	// SessionsServiceUpdateSessionProcedure is the fully-qualified name of the SessionsService's
-	// UpdateSession RPC.
-	SessionsServiceUpdateSessionProcedure = "/agents.v1.SessionsService/UpdateSession"
-	// SessionsServiceArchiveSessionProcedure is the fully-qualified name of the SessionsService's
-	// ArchiveSession RPC.
-	SessionsServiceArchiveSessionProcedure = "/agents.v1.SessionsService/ArchiveSession"
-	// SessionsServiceAddMessageProcedure is the fully-qualified name of the SessionsService's
-	// AddMessage RPC.
-	SessionsServiceAddMessageProcedure = "/agents.v1.SessionsService/AddMessage"
 	// SessionsServiceListMessagesProcedure is the fully-qualified name of the SessionsService's
 	// ListMessages RPC.
 	SessionsServiceListMessagesProcedure = "/agents.v1.SessionsService/ListMessages"
-	// SessionsServiceGetSessionContextProcedure is the fully-qualified name of the SessionsService's
-	// GetSessionContext RPC.
-	SessionsServiceGetSessionContextProcedure = "/agents.v1.SessionsService/GetSessionContext"
-	// SessionsServiceGetSessionContextStatsProcedure is the fully-qualified name of the
-	// SessionsService's GetSessionContextStats RPC.
-	SessionsServiceGetSessionContextStatsProcedure = "/agents.v1.SessionsService/GetSessionContextStats"
-	// SessionsServiceCompactSessionProcedure is the fully-qualified name of the SessionsService's
-	// CompactSession RPC.
-	SessionsServiceCompactSessionProcedure = "/agents.v1.SessionsService/CompactSession"
 	// SessionsServiceEditMessageProcedure is the fully-qualified name of the SessionsService's
 	// EditMessage RPC.
 	SessionsServiceEditMessageProcedure = "/agents.v1.SessionsService/EditMessage"
-	// SessionsServiceDeleteMessageProcedure is the fully-qualified name of the SessionsService's
-	// DeleteMessage RPC.
-	SessionsServiceDeleteMessageProcedure = "/agents.v1.SessionsService/DeleteMessage"
 	// SessionsServiceRetryMessageProcedure is the fully-qualified name of the SessionsService's
 	// RetryMessage RPC.
 	SessionsServiceRetryMessageProcedure = "/agents.v1.SessionsService/RetryMessage"
@@ -83,39 +59,22 @@ type SessionsServiceClient interface {
 	CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.CreateSessionResponse], error)
 	// Get a session by ID
 	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
-	// List sessions for the user in an organization
-	ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error)
-	// Update session settings (display name, model override)
-	UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error)
-	// Archive a session (soft delete)
-	ArchiveSession(context.Context, *connect.Request[v1.ArchiveSessionRequest]) (*connect.Response[v1.ArchiveSessionResponse], error)
-	// Add a message to a session
-	AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error)
 	// List messages in a session
 	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
-	// Get recent messages for LLM context assembly
-	GetSessionContext(context.Context, *connect.Request[v1.GetSessionContextRequest]) (*connect.Response[v1.GetSessionContextResponse], error)
-	// Get session context statistics (message counts, compaction info)
-	GetSessionContextStats(context.Context, *connect.Request[v1.GetSessionContextStatsRequest]) (*connect.Response[v1.GetSessionContextStatsResponse], error)
-	// Manually trigger session compaction
-	CompactSession(context.Context, *connect.Request[v1.CompactSessionRequest]) (*connect.Response[v1.CompactSessionResponse], error)
 	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
 	// and `edited_at`, then soft-invalidates every later message in the
 	// session so the client can re-run the conversation from the edit
 	// point. Refused if a run is currently in flight on this session.
 	EditMessage(context.Context, *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error)
-	// Soft-delete a user message. The message itself and every later
-	// message in the session are marked `is_invalidated=true` so the
-	// context loader skips them. Refused if a run is currently in flight.
-	DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error)
 	// Retry from a message. For a user message, returns its content +
 	// file_ids and invalidates every later message so the caller can
 	// re-send. For an assistant message, walks back to the most recent
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error)
-	// Record (or clear) the caller's thumbs up/down on an agent message. The
-	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	// Record (or clear) the caller's thumbs up/down on an agent reply, by
+	// session message id or by chat message id. The signal feeds the
+	// skill-evolution analyzer; an empty rating clears it.
 	SubmitMessageFeedback(context.Context, *connect.Request[v1.SubmitMessageFeedbackRequest]) (*connect.Response[v1.SubmitMessageFeedbackResponse], error)
 }
 
@@ -142,64 +101,16 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(sessionsServiceMethods.ByName("GetSession")),
 			connect.WithClientOptions(opts...),
 		),
-		listSessions: connect.NewClient[v1.ListSessionsRequest, v1.ListSessionsResponse](
-			httpClient,
-			baseURL+SessionsServiceListSessionsProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("ListSessions")),
-			connect.WithClientOptions(opts...),
-		),
-		updateSession: connect.NewClient[v1.UpdateSessionRequest, v1.UpdateSessionResponse](
-			httpClient,
-			baseURL+SessionsServiceUpdateSessionProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("UpdateSession")),
-			connect.WithClientOptions(opts...),
-		),
-		archiveSession: connect.NewClient[v1.ArchiveSessionRequest, v1.ArchiveSessionResponse](
-			httpClient,
-			baseURL+SessionsServiceArchiveSessionProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("ArchiveSession")),
-			connect.WithClientOptions(opts...),
-		),
-		addMessage: connect.NewClient[v1.AddMessageRequest, v1.AddMessageResponse](
-			httpClient,
-			baseURL+SessionsServiceAddMessageProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("AddMessage")),
-			connect.WithClientOptions(opts...),
-		),
 		listMessages: connect.NewClient[v1.ListMessagesRequest, v1.ListMessagesResponse](
 			httpClient,
 			baseURL+SessionsServiceListMessagesProcedure,
 			connect.WithSchema(sessionsServiceMethods.ByName("ListMessages")),
 			connect.WithClientOptions(opts...),
 		),
-		getSessionContext: connect.NewClient[v1.GetSessionContextRequest, v1.GetSessionContextResponse](
-			httpClient,
-			baseURL+SessionsServiceGetSessionContextProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("GetSessionContext")),
-			connect.WithClientOptions(opts...),
-		),
-		getSessionContextStats: connect.NewClient[v1.GetSessionContextStatsRequest, v1.GetSessionContextStatsResponse](
-			httpClient,
-			baseURL+SessionsServiceGetSessionContextStatsProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("GetSessionContextStats")),
-			connect.WithClientOptions(opts...),
-		),
-		compactSession: connect.NewClient[v1.CompactSessionRequest, v1.CompactSessionResponse](
-			httpClient,
-			baseURL+SessionsServiceCompactSessionProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("CompactSession")),
-			connect.WithClientOptions(opts...),
-		),
 		editMessage: connect.NewClient[v1.EditMessageRequest, v1.EditMessageResponse](
 			httpClient,
 			baseURL+SessionsServiceEditMessageProcedure,
 			connect.WithSchema(sessionsServiceMethods.ByName("EditMessage")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteMessage: connect.NewClient[v1.DeleteMessageRequest, v1.DeleteMessageResponse](
-			httpClient,
-			baseURL+SessionsServiceDeleteMessageProcedure,
-			connect.WithSchema(sessionsServiceMethods.ByName("DeleteMessage")),
 			connect.WithClientOptions(opts...),
 		),
 		retryMessage: connect.NewClient[v1.RetryMessageRequest, v1.RetryMessageResponse](
@@ -219,20 +130,12 @@ func NewSessionsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // sessionsServiceClient implements SessionsServiceClient.
 type sessionsServiceClient struct {
-	createSession          *connect.Client[v1.CreateSessionRequest, v1.CreateSessionResponse]
-	getSession             *connect.Client[v1.GetSessionRequest, v1.GetSessionResponse]
-	listSessions           *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
-	updateSession          *connect.Client[v1.UpdateSessionRequest, v1.UpdateSessionResponse]
-	archiveSession         *connect.Client[v1.ArchiveSessionRequest, v1.ArchiveSessionResponse]
-	addMessage             *connect.Client[v1.AddMessageRequest, v1.AddMessageResponse]
-	listMessages           *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
-	getSessionContext      *connect.Client[v1.GetSessionContextRequest, v1.GetSessionContextResponse]
-	getSessionContextStats *connect.Client[v1.GetSessionContextStatsRequest, v1.GetSessionContextStatsResponse]
-	compactSession         *connect.Client[v1.CompactSessionRequest, v1.CompactSessionResponse]
-	editMessage            *connect.Client[v1.EditMessageRequest, v1.EditMessageResponse]
-	deleteMessage          *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
-	retryMessage           *connect.Client[v1.RetryMessageRequest, v1.RetryMessageResponse]
-	submitMessageFeedback  *connect.Client[v1.SubmitMessageFeedbackRequest, v1.SubmitMessageFeedbackResponse]
+	createSession         *connect.Client[v1.CreateSessionRequest, v1.CreateSessionResponse]
+	getSession            *connect.Client[v1.GetSessionRequest, v1.GetSessionResponse]
+	listMessages          *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
+	editMessage           *connect.Client[v1.EditMessageRequest, v1.EditMessageResponse]
+	retryMessage          *connect.Client[v1.RetryMessageRequest, v1.RetryMessageResponse]
+	submitMessageFeedback *connect.Client[v1.SubmitMessageFeedbackRequest, v1.SubmitMessageFeedbackResponse]
 }
 
 // CreateSession calls agents.v1.SessionsService.CreateSession.
@@ -245,54 +148,14 @@ func (c *sessionsServiceClient) GetSession(ctx context.Context, req *connect.Req
 	return c.getSession.CallUnary(ctx, req)
 }
 
-// ListSessions calls agents.v1.SessionsService.ListSessions.
-func (c *sessionsServiceClient) ListSessions(ctx context.Context, req *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error) {
-	return c.listSessions.CallUnary(ctx, req)
-}
-
-// UpdateSession calls agents.v1.SessionsService.UpdateSession.
-func (c *sessionsServiceClient) UpdateSession(ctx context.Context, req *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error) {
-	return c.updateSession.CallUnary(ctx, req)
-}
-
-// ArchiveSession calls agents.v1.SessionsService.ArchiveSession.
-func (c *sessionsServiceClient) ArchiveSession(ctx context.Context, req *connect.Request[v1.ArchiveSessionRequest]) (*connect.Response[v1.ArchiveSessionResponse], error) {
-	return c.archiveSession.CallUnary(ctx, req)
-}
-
-// AddMessage calls agents.v1.SessionsService.AddMessage.
-func (c *sessionsServiceClient) AddMessage(ctx context.Context, req *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error) {
-	return c.addMessage.CallUnary(ctx, req)
-}
-
 // ListMessages calls agents.v1.SessionsService.ListMessages.
 func (c *sessionsServiceClient) ListMessages(ctx context.Context, req *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error) {
 	return c.listMessages.CallUnary(ctx, req)
 }
 
-// GetSessionContext calls agents.v1.SessionsService.GetSessionContext.
-func (c *sessionsServiceClient) GetSessionContext(ctx context.Context, req *connect.Request[v1.GetSessionContextRequest]) (*connect.Response[v1.GetSessionContextResponse], error) {
-	return c.getSessionContext.CallUnary(ctx, req)
-}
-
-// GetSessionContextStats calls agents.v1.SessionsService.GetSessionContextStats.
-func (c *sessionsServiceClient) GetSessionContextStats(ctx context.Context, req *connect.Request[v1.GetSessionContextStatsRequest]) (*connect.Response[v1.GetSessionContextStatsResponse], error) {
-	return c.getSessionContextStats.CallUnary(ctx, req)
-}
-
-// CompactSession calls agents.v1.SessionsService.CompactSession.
-func (c *sessionsServiceClient) CompactSession(ctx context.Context, req *connect.Request[v1.CompactSessionRequest]) (*connect.Response[v1.CompactSessionResponse], error) {
-	return c.compactSession.CallUnary(ctx, req)
-}
-
 // EditMessage calls agents.v1.SessionsService.EditMessage.
 func (c *sessionsServiceClient) EditMessage(ctx context.Context, req *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error) {
 	return c.editMessage.CallUnary(ctx, req)
-}
-
-// DeleteMessage calls agents.v1.SessionsService.DeleteMessage.
-func (c *sessionsServiceClient) DeleteMessage(ctx context.Context, req *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error) {
-	return c.deleteMessage.CallUnary(ctx, req)
 }
 
 // RetryMessage calls agents.v1.SessionsService.RetryMessage.
@@ -311,39 +174,22 @@ type SessionsServiceHandler interface {
 	CreateSession(context.Context, *connect.Request[v1.CreateSessionRequest]) (*connect.Response[v1.CreateSessionResponse], error)
 	// Get a session by ID
 	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
-	// List sessions for the user in an organization
-	ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error)
-	// Update session settings (display name, model override)
-	UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error)
-	// Archive a session (soft delete)
-	ArchiveSession(context.Context, *connect.Request[v1.ArchiveSessionRequest]) (*connect.Response[v1.ArchiveSessionResponse], error)
-	// Add a message to a session
-	AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error)
 	// List messages in a session
 	ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error)
-	// Get recent messages for LLM context assembly
-	GetSessionContext(context.Context, *connect.Request[v1.GetSessionContextRequest]) (*connect.Response[v1.GetSessionContextResponse], error)
-	// Get session context statistics (message counts, compaction info)
-	GetSessionContextStats(context.Context, *connect.Request[v1.GetSessionContextStatsRequest]) (*connect.Response[v1.GetSessionContextStatsResponse], error)
-	// Manually trigger session compaction
-	CompactSession(context.Context, *connect.Request[v1.CompactSessionRequest]) (*connect.Response[v1.CompactSessionResponse], error)
 	// Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
 	// and `edited_at`, then soft-invalidates every later message in the
 	// session so the client can re-run the conversation from the edit
 	// point. Refused if a run is currently in flight on this session.
 	EditMessage(context.Context, *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error)
-	// Soft-delete a user message. The message itself and every later
-	// message in the session are marked `is_invalidated=true` so the
-	// context loader skips them. Refused if a run is currently in flight.
-	DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error)
 	// Retry from a message. For a user message, returns its content +
 	// file_ids and invalidates every later message so the caller can
 	// re-send. For an assistant message, walks back to the most recent
 	// preceding user message and returns that. Refused if a run is
 	// currently in flight on this session.
 	RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error)
-	// Record (or clear) the caller's thumbs up/down on an agent message. The
-	// signal feeds the skill-evolution analyzer; an empty rating clears it.
+	// Record (or clear) the caller's thumbs up/down on an agent reply, by
+	// session message id or by chat message id. The signal feeds the
+	// skill-evolution analyzer; an empty rating clears it.
 	SubmitMessageFeedback(context.Context, *connect.Request[v1.SubmitMessageFeedbackRequest]) (*connect.Response[v1.SubmitMessageFeedbackResponse], error)
 }
 
@@ -366,64 +212,16 @@ func NewSessionsServiceHandler(svc SessionsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(sessionsServiceMethods.ByName("GetSession")),
 		connect.WithHandlerOptions(opts...),
 	)
-	sessionsServiceListSessionsHandler := connect.NewUnaryHandler(
-		SessionsServiceListSessionsProcedure,
-		svc.ListSessions,
-		connect.WithSchema(sessionsServiceMethods.ByName("ListSessions")),
-		connect.WithHandlerOptions(opts...),
-	)
-	sessionsServiceUpdateSessionHandler := connect.NewUnaryHandler(
-		SessionsServiceUpdateSessionProcedure,
-		svc.UpdateSession,
-		connect.WithSchema(sessionsServiceMethods.ByName("UpdateSession")),
-		connect.WithHandlerOptions(opts...),
-	)
-	sessionsServiceArchiveSessionHandler := connect.NewUnaryHandler(
-		SessionsServiceArchiveSessionProcedure,
-		svc.ArchiveSession,
-		connect.WithSchema(sessionsServiceMethods.ByName("ArchiveSession")),
-		connect.WithHandlerOptions(opts...),
-	)
-	sessionsServiceAddMessageHandler := connect.NewUnaryHandler(
-		SessionsServiceAddMessageProcedure,
-		svc.AddMessage,
-		connect.WithSchema(sessionsServiceMethods.ByName("AddMessage")),
-		connect.WithHandlerOptions(opts...),
-	)
 	sessionsServiceListMessagesHandler := connect.NewUnaryHandler(
 		SessionsServiceListMessagesProcedure,
 		svc.ListMessages,
 		connect.WithSchema(sessionsServiceMethods.ByName("ListMessages")),
 		connect.WithHandlerOptions(opts...),
 	)
-	sessionsServiceGetSessionContextHandler := connect.NewUnaryHandler(
-		SessionsServiceGetSessionContextProcedure,
-		svc.GetSessionContext,
-		connect.WithSchema(sessionsServiceMethods.ByName("GetSessionContext")),
-		connect.WithHandlerOptions(opts...),
-	)
-	sessionsServiceGetSessionContextStatsHandler := connect.NewUnaryHandler(
-		SessionsServiceGetSessionContextStatsProcedure,
-		svc.GetSessionContextStats,
-		connect.WithSchema(sessionsServiceMethods.ByName("GetSessionContextStats")),
-		connect.WithHandlerOptions(opts...),
-	)
-	sessionsServiceCompactSessionHandler := connect.NewUnaryHandler(
-		SessionsServiceCompactSessionProcedure,
-		svc.CompactSession,
-		connect.WithSchema(sessionsServiceMethods.ByName("CompactSession")),
-		connect.WithHandlerOptions(opts...),
-	)
 	sessionsServiceEditMessageHandler := connect.NewUnaryHandler(
 		SessionsServiceEditMessageProcedure,
 		svc.EditMessage,
 		connect.WithSchema(sessionsServiceMethods.ByName("EditMessage")),
-		connect.WithHandlerOptions(opts...),
-	)
-	sessionsServiceDeleteMessageHandler := connect.NewUnaryHandler(
-		SessionsServiceDeleteMessageProcedure,
-		svc.DeleteMessage,
-		connect.WithSchema(sessionsServiceMethods.ByName("DeleteMessage")),
 		connect.WithHandlerOptions(opts...),
 	)
 	sessionsServiceRetryMessageHandler := connect.NewUnaryHandler(
@@ -444,26 +242,10 @@ func NewSessionsServiceHandler(svc SessionsServiceHandler, opts ...connect.Handl
 			sessionsServiceCreateSessionHandler.ServeHTTP(w, r)
 		case SessionsServiceGetSessionProcedure:
 			sessionsServiceGetSessionHandler.ServeHTTP(w, r)
-		case SessionsServiceListSessionsProcedure:
-			sessionsServiceListSessionsHandler.ServeHTTP(w, r)
-		case SessionsServiceUpdateSessionProcedure:
-			sessionsServiceUpdateSessionHandler.ServeHTTP(w, r)
-		case SessionsServiceArchiveSessionProcedure:
-			sessionsServiceArchiveSessionHandler.ServeHTTP(w, r)
-		case SessionsServiceAddMessageProcedure:
-			sessionsServiceAddMessageHandler.ServeHTTP(w, r)
 		case SessionsServiceListMessagesProcedure:
 			sessionsServiceListMessagesHandler.ServeHTTP(w, r)
-		case SessionsServiceGetSessionContextProcedure:
-			sessionsServiceGetSessionContextHandler.ServeHTTP(w, r)
-		case SessionsServiceGetSessionContextStatsProcedure:
-			sessionsServiceGetSessionContextStatsHandler.ServeHTTP(w, r)
-		case SessionsServiceCompactSessionProcedure:
-			sessionsServiceCompactSessionHandler.ServeHTTP(w, r)
 		case SessionsServiceEditMessageProcedure:
 			sessionsServiceEditMessageHandler.ServeHTTP(w, r)
-		case SessionsServiceDeleteMessageProcedure:
-			sessionsServiceDeleteMessageHandler.ServeHTTP(w, r)
 		case SessionsServiceRetryMessageProcedure:
 			sessionsServiceRetryMessageHandler.ServeHTTP(w, r)
 		case SessionsServiceSubmitMessageFeedbackProcedure:
@@ -485,44 +267,12 @@ func (UnimplementedSessionsServiceHandler) GetSession(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.GetSession is not implemented"))
 }
 
-func (UnimplementedSessionsServiceHandler) ListSessions(context.Context, *connect.Request[v1.ListSessionsRequest]) (*connect.Response[v1.ListSessionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.ListSessions is not implemented"))
-}
-
-func (UnimplementedSessionsServiceHandler) UpdateSession(context.Context, *connect.Request[v1.UpdateSessionRequest]) (*connect.Response[v1.UpdateSessionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.UpdateSession is not implemented"))
-}
-
-func (UnimplementedSessionsServiceHandler) ArchiveSession(context.Context, *connect.Request[v1.ArchiveSessionRequest]) (*connect.Response[v1.ArchiveSessionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.ArchiveSession is not implemented"))
-}
-
-func (UnimplementedSessionsServiceHandler) AddMessage(context.Context, *connect.Request[v1.AddMessageRequest]) (*connect.Response[v1.AddMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.AddMessage is not implemented"))
-}
-
 func (UnimplementedSessionsServiceHandler) ListMessages(context.Context, *connect.Request[v1.ListMessagesRequest]) (*connect.Response[v1.ListMessagesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.ListMessages is not implemented"))
 }
 
-func (UnimplementedSessionsServiceHandler) GetSessionContext(context.Context, *connect.Request[v1.GetSessionContextRequest]) (*connect.Response[v1.GetSessionContextResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.GetSessionContext is not implemented"))
-}
-
-func (UnimplementedSessionsServiceHandler) GetSessionContextStats(context.Context, *connect.Request[v1.GetSessionContextStatsRequest]) (*connect.Response[v1.GetSessionContextStatsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.GetSessionContextStats is not implemented"))
-}
-
-func (UnimplementedSessionsServiceHandler) CompactSession(context.Context, *connect.Request[v1.CompactSessionRequest]) (*connect.Response[v1.CompactSessionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.CompactSession is not implemented"))
-}
-
 func (UnimplementedSessionsServiceHandler) EditMessage(context.Context, *connect.Request[v1.EditMessageRequest]) (*connect.Response[v1.EditMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.EditMessage is not implemented"))
-}
-
-func (UnimplementedSessionsServiceHandler) DeleteMessage(context.Context, *connect.Request[v1.DeleteMessageRequest]) (*connect.Response[v1.DeleteMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.SessionsService.DeleteMessage is not implemented"))
 }
 
 func (UnimplementedSessionsServiceHandler) RetryMessage(context.Context, *connect.Request[v1.RetryMessageRequest]) (*connect.Response[v1.RetryMessageResponse], error) {

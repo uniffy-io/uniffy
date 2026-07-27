@@ -7,7 +7,6 @@
 package agentsv1
 
 import (
-	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -23,56 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Type of credential stored for a provider
-type CredentialType int32
-
-const (
-	CredentialType_CREDENTIAL_TYPE_UNSPECIFIED CredentialType = 0
-	CredentialType_CREDENTIAL_TYPE_API_KEY     CredentialType = 1
-	CredentialType_CREDENTIAL_TYPE_SETUP_TOKEN CredentialType = 2
-)
-
-// Enum value maps for CredentialType.
-var (
-	CredentialType_name = map[int32]string{
-		0: "CREDENTIAL_TYPE_UNSPECIFIED",
-		1: "CREDENTIAL_TYPE_API_KEY",
-		2: "CREDENTIAL_TYPE_SETUP_TOKEN",
-	}
-	CredentialType_value = map[string]int32{
-		"CREDENTIAL_TYPE_UNSPECIFIED": 0,
-		"CREDENTIAL_TYPE_API_KEY":     1,
-		"CREDENTIAL_TYPE_SETUP_TOKEN": 2,
-	}
-)
-
-func (x CredentialType) Enum() *CredentialType {
-	p := new(CredentialType)
-	*p = x
-	return p
-}
-
-func (x CredentialType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CredentialType) Descriptor() protoreflect.EnumDescriptor {
-	return file_agents_v1_providers_proto_enumTypes[0].Descriptor()
-}
-
-func (CredentialType) Type() protoreflect.EnumType {
-	return &file_agents_v1_providers_proto_enumTypes[0]
-}
-
-func (x CredentialType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CredentialType.Descriptor instead.
-func (CredentialType) EnumDescriptor() ([]byte, []int) {
-	return file_agents_v1_providers_proto_rawDescGZIP(), []int{0}
-}
-
 // Provider key info (never includes the actual credential)
 type ProviderKeyInfo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -80,32 +29,26 @@ type ProviderKeyInfo struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Provider name (e.g. "anthropic")
 	Provider string `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
-	// Type of credential
-	CredentialType CredentialType `protobuf:"varint,3,opt,name=credential_type,json=credentialType,proto3,enum=agents.v1.CredentialType" json:"credential_type,omitempty"`
 	// User-friendly label
-	Label string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
-	// Masked hint of the credential (e.g. "sk-ant-oat01-...xyz")
-	KeyHint string `protobuf:"bytes,5,opt,name=key_hint,json=keyHint,proto3" json:"key_hint,omitempty"`
+	Label string `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	// Masked hint of the credential (e.g. "sk-ant-api03-...xyz")
+	KeyHint string `protobuf:"bytes,4,opt,name=key_hint,json=keyHint,proto3" json:"key_hint,omitempty"`
 	// Whether the key passed its last validation
-	IsValid bool `protobuf:"varint,6,opt,name=is_valid,json=isValid,proto3" json:"is_valid,omitempty"`
+	IsValid bool `protobuf:"varint,5,opt,name=is_valid,json=isValid,proto3" json:"is_valid,omitempty"`
 	// When the key was last validated
-	LastValidatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_validated_at,json=lastValidatedAt,proto3,oneof" json:"last_validated_at,omitempty"`
+	LastValidatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=last_validated_at,json=lastValidatedAt,proto3,oneof" json:"last_validated_at,omitempty"`
 	// When the key was last used for an API call
-	LastUsedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
+	LastUsedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
 	// Last error message if validation failed
-	LastError *string `protobuf:"bytes,9,opt,name=last_error,json=lastError,proto3,oneof" json:"last_error,omitempty"`
+	LastError *string `protobuf:"bytes,8,opt,name=last_error,json=lastError,proto3,oneof" json:"last_error,omitempty"`
 	// When the key was created
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// When the key was last updated
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Whether the key is enabled for use
-	IsEnabled bool `protobuf:"varint,12,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
+	IsEnabled bool `protobuf:"varint,11,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
 	// User who created this key
-	CreatedBy string `protobuf:"bytes,13,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	// Access mode
-	AccessMode v1.AccessMode `protobuf:"varint,14,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
-	// Baseline role granted by access mode (when applicable)
-	BaselineRole  *v1.ContentRole `protobuf:"varint,15,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	CreatedBy     string `protobuf:"bytes,12,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -152,13 +95,6 @@ func (x *ProviderKeyInfo) GetProvider() string {
 		return x.Provider
 	}
 	return ""
-}
-
-func (x *ProviderKeyInfo) GetCredentialType() CredentialType {
-	if x != nil {
-		return x.CredentialType
-	}
-	return CredentialType_CREDENTIAL_TYPE_UNSPECIFIED
 }
 
 func (x *ProviderKeyInfo) GetLabel() string {
@@ -229,20 +165,6 @@ func (x *ProviderKeyInfo) GetCreatedBy() string {
 		return x.CreatedBy
 	}
 	return ""
-}
-
-func (x *ProviderKeyInfo) GetAccessMode() v1.AccessMode {
-	if x != nil {
-		return x.AccessMode
-	}
-	return v1.AccessMode(0)
-}
-
-func (x *ProviderKeyInfo) GetBaselineRole() v1.ContentRole {
-	if x != nil && x.BaselineRole != nil {
-		return *x.BaselineRole
-	}
-	return v1.ContentRole(0)
 }
 
 // Model capabilities and metadata
@@ -460,16 +382,10 @@ type AddProviderKeyRequest struct {
 	OrganizationId string `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// Provider name (e.g. "anthropic")
 	Provider string `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
-	// Type of credential
-	CredentialType CredentialType `protobuf:"varint,3,opt,name=credential_type,json=credentialType,proto3,enum=agents.v1.CredentialType" json:"credential_type,omitempty"`
 	// User-friendly label
-	Label string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
-	// The actual credential (API key or setup token)
-	Credential string `protobuf:"bytes,5,opt,name=credential,proto3" json:"credential,omitempty"`
-	// Access mode for the key
-	AccessMode *v1.AccessMode `protobuf:"varint,6,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
-	// Baseline role granted by access mode (when applicable)
-	BaselineRole  *v1.ContentRole `protobuf:"varint,7,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	Label string `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	// The actual credential (API key); write-only, never returned
+	Credential    string `protobuf:"bytes,4,opt,name=credential,proto3" json:"credential,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -518,13 +434,6 @@ func (x *AddProviderKeyRequest) GetProvider() string {
 	return ""
 }
 
-func (x *AddProviderKeyRequest) GetCredentialType() CredentialType {
-	if x != nil {
-		return x.CredentialType
-	}
-	return CredentialType_CREDENTIAL_TYPE_UNSPECIFIED
-}
-
 func (x *AddProviderKeyRequest) GetLabel() string {
 	if x != nil {
 		return x.Label
@@ -537,20 +446,6 @@ func (x *AddProviderKeyRequest) GetCredential() string {
 		return x.Credential
 	}
 	return ""
-}
-
-func (x *AddProviderKeyRequest) GetAccessMode() v1.AccessMode {
-	if x != nil && x.AccessMode != nil {
-		return *x.AccessMode
-	}
-	return v1.AccessMode(0)
-}
-
-func (x *AddProviderKeyRequest) GetBaselineRole() v1.ContentRole {
-	if x != nil && x.BaselineRole != nil {
-		return *x.BaselineRole
-	}
-	return v1.ContentRole(0)
 }
 
 // Response containing a single provider key (Add)
@@ -1244,35 +1139,30 @@ var File_agents_v1_providers_proto protoreflect.FileDescriptor
 
 const file_agents_v1_providers_proto_rawDesc = "" +
 	"\n" +
-	"\x19agents/v1/providers.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf7\x05\n" +
+	"\x19agents/v1/providers.proto\x12\tagents.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\x04\n" +
 	"\x0fProviderKeyInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\bprovider\x18\x02 \x01(\tR\bprovider\x12B\n" +
-	"\x0fcredential_type\x18\x03 \x01(\x0e2\x19.agents.v1.CredentialTypeR\x0ecredentialType\x12\x14\n" +
-	"\x05label\x18\x04 \x01(\tR\x05label\x12\x19\n" +
-	"\bkey_hint\x18\x05 \x01(\tR\akeyHint\x12\x19\n" +
-	"\bis_valid\x18\x06 \x01(\bR\aisValid\x12K\n" +
-	"\x11last_validated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x0flastValidatedAt\x88\x01\x01\x12A\n" +
-	"\flast_used_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
+	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12\x19\n" +
+	"\bkey_hint\x18\x04 \x01(\tR\akeyHint\x12\x19\n" +
+	"\bis_valid\x18\x05 \x01(\bR\aisValid\x12K\n" +
+	"\x11last_validated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x0flastValidatedAt\x88\x01\x01\x12A\n" +
+	"\flast_used_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\n" +
 	"lastUsedAt\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"last_error\x18\t \x01(\tH\x02R\tlastError\x88\x01\x01\x129\n" +
+	"last_error\x18\b \x01(\tH\x02R\tlastError\x88\x01\x01\x129\n" +
 	"\n" +
-	"created_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
+	"updated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"is_enabled\x18\f \x01(\bR\tisEnabled\x12\x1d\n" +
+	"is_enabled\x18\v \x01(\bR\tisEnabled\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\r \x01(\tR\tcreatedBy\x126\n" +
-	"\vaccess_mode\x18\x0e \x01(\x0e2\x15.common.v1.AccessModeR\n" +
-	"accessMode\x12@\n" +
-	"\rbaseline_role\x18\x0f \x01(\x0e2\x16.common.v1.ContentRoleH\x03R\fbaselineRole\x88\x01\x01B\x14\n" +
+	"created_by\x18\f \x01(\tR\tcreatedByB\x14\n" +
 	"\x12_last_validated_atB\x0f\n" +
 	"\r_last_used_atB\r\n" +
-	"\v_last_errorB\x10\n" +
-	"\x0e_baseline_role\"\x98\x06\n" +
+	"\v_last_error\"\x98\x06\n" +
 	"\tModelInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
@@ -1296,20 +1186,14 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x12cache_write_per_1m\x18\x10 \x01(\tR\x0fcacheWritePer1m\x12:\n" +
 	"\x19supports_image_generation\x18\x11 \x01(\bR\x17supportsImageGeneration\x12#\n" +
 	"\rcatalog_known\x18\x12 \x01(\bR\fcatalogKnown\x122\n" +
-	"\x15parameter_schema_json\x18\x13 \x01(\tR\x13parameterSchemaJson\"\xf7\x02\n" +
+	"\x15parameter_schema_json\x18\x13 \x01(\tR\x13parameterSchemaJson\"\x92\x01\n" +
 	"\x15AddProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1a\n" +
-	"\bprovider\x18\x02 \x01(\tR\bprovider\x12B\n" +
-	"\x0fcredential_type\x18\x03 \x01(\x0e2\x19.agents.v1.CredentialTypeR\x0ecredentialType\x12\x14\n" +
-	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1e\n" +
+	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12\x1e\n" +
 	"\n" +
-	"credential\x18\x05 \x01(\tR\n" +
-	"credential\x12;\n" +
-	"\vaccess_mode\x18\x06 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\n" +
-	"accessMode\x88\x01\x01\x12@\n" +
-	"\rbaseline_role\x18\a \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\fbaselineRole\x88\x01\x01B\x0e\n" +
-	"\f_access_modeB\x10\n" +
-	"\x0e_baseline_role\"F\n" +
+	"credential\x18\x04 \x01(\tR\n" +
+	"credential\"F\n" +
 	"\x16AddProviderKeyResponse\x12,\n" +
 	"\x03key\x18\x01 \x01(\v2\x1a.agents.v1.ProviderKeyInfoR\x03key\"I\n" +
 	"\x19ToggleProviderKeyResponse\x12,\n" +
@@ -1348,11 +1232,7 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x18ToggleProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x15\n" +
 	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x18\n" +
-	"\aenabled\x18\x03 \x01(\bR\aenabled*o\n" +
-	"\x0eCredentialType\x12\x1f\n" +
-	"\x1bCREDENTIAL_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
-	"\x17CREDENTIAL_TYPE_API_KEY\x10\x01\x12\x1f\n" +
-	"\x1bCREDENTIAL_TYPE_SETUP_TOKEN\x10\x022\xbd\x05\n" +
+	"\aenabled\x18\x03 \x01(\bR\aenabled2\xbd\x05\n" +
 	"\x10ProvidersService\x12W\n" +
 	"\x0eAddProviderKey\x12 .agents.v1.AddProviderKeyRequest\x1a!.agents.v1.AddProviderKeyResponse\"\x00\x12]\n" +
 	"\x10ListProviderKeys\x12\".agents.v1.ListProviderKeysRequest\x1a#.agents.v1.ListProviderKeysResponse\"\x00\x12`\n" +
@@ -1374,65 +1254,55 @@ func file_agents_v1_providers_proto_rawDescGZIP() []byte {
 	return file_agents_v1_providers_proto_rawDescData
 }
 
-var file_agents_v1_providers_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_agents_v1_providers_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agents_v1_providers_proto_goTypes = []any{
-	(CredentialType)(0),                 // 0: agents.v1.CredentialType
-	(*ProviderKeyInfo)(nil),             // 1: agents.v1.ProviderKeyInfo
-	(*ModelInfo)(nil),                   // 2: agents.v1.ModelInfo
-	(*AddProviderKeyRequest)(nil),       // 3: agents.v1.AddProviderKeyRequest
-	(*AddProviderKeyResponse)(nil),      // 4: agents.v1.AddProviderKeyResponse
-	(*ToggleProviderKeyResponse)(nil),   // 5: agents.v1.ToggleProviderKeyResponse
-	(*ListProviderKeysRequest)(nil),     // 6: agents.v1.ListProviderKeysRequest
-	(*ListProviderKeysResponse)(nil),    // 7: agents.v1.ListProviderKeysResponse
-	(*RemoveProviderKeyRequest)(nil),    // 8: agents.v1.RemoveProviderKeyRequest
-	(*RemoveProviderKeyResponse)(nil),   // 9: agents.v1.RemoveProviderKeyResponse
-	(*ValidateProviderKeyRequest)(nil),  // 10: agents.v1.ValidateProviderKeyRequest
-	(*ValidateProviderKeyResponse)(nil), // 11: agents.v1.ValidateProviderKeyResponse
-	(*ListAvailableModelsRequest)(nil),  // 12: agents.v1.ListAvailableModelsRequest
-	(*ListAvailableModelsResponse)(nil), // 13: agents.v1.ListAvailableModelsResponse
-	(*ListModelsForKeyResponse)(nil),    // 14: agents.v1.ListModelsForKeyResponse
-	(*ListModelsForKeyRequest)(nil),     // 15: agents.v1.ListModelsForKeyRequest
-	(*ToggleProviderKeyRequest)(nil),    // 16: agents.v1.ToggleProviderKeyRequest
-	(*timestamppb.Timestamp)(nil),       // 17: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                  // 18: common.v1.AccessMode
-	(v1.ContentRole)(0),                 // 19: common.v1.ContentRole
+	(*ProviderKeyInfo)(nil),             // 0: agents.v1.ProviderKeyInfo
+	(*ModelInfo)(nil),                   // 1: agents.v1.ModelInfo
+	(*AddProviderKeyRequest)(nil),       // 2: agents.v1.AddProviderKeyRequest
+	(*AddProviderKeyResponse)(nil),      // 3: agents.v1.AddProviderKeyResponse
+	(*ToggleProviderKeyResponse)(nil),   // 4: agents.v1.ToggleProviderKeyResponse
+	(*ListProviderKeysRequest)(nil),     // 5: agents.v1.ListProviderKeysRequest
+	(*ListProviderKeysResponse)(nil),    // 6: agents.v1.ListProviderKeysResponse
+	(*RemoveProviderKeyRequest)(nil),    // 7: agents.v1.RemoveProviderKeyRequest
+	(*RemoveProviderKeyResponse)(nil),   // 8: agents.v1.RemoveProviderKeyResponse
+	(*ValidateProviderKeyRequest)(nil),  // 9: agents.v1.ValidateProviderKeyRequest
+	(*ValidateProviderKeyResponse)(nil), // 10: agents.v1.ValidateProviderKeyResponse
+	(*ListAvailableModelsRequest)(nil),  // 11: agents.v1.ListAvailableModelsRequest
+	(*ListAvailableModelsResponse)(nil), // 12: agents.v1.ListAvailableModelsResponse
+	(*ListModelsForKeyResponse)(nil),    // 13: agents.v1.ListModelsForKeyResponse
+	(*ListModelsForKeyRequest)(nil),     // 14: agents.v1.ListModelsForKeyRequest
+	(*ToggleProviderKeyRequest)(nil),    // 15: agents.v1.ToggleProviderKeyRequest
+	(*timestamppb.Timestamp)(nil),       // 16: google.protobuf.Timestamp
 }
 var file_agents_v1_providers_proto_depIdxs = []int32{
-	0,  // 0: agents.v1.ProviderKeyInfo.credential_type:type_name -> agents.v1.CredentialType
-	17, // 1: agents.v1.ProviderKeyInfo.last_validated_at:type_name -> google.protobuf.Timestamp
-	17, // 2: agents.v1.ProviderKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
-	17, // 3: agents.v1.ProviderKeyInfo.created_at:type_name -> google.protobuf.Timestamp
-	17, // 4: agents.v1.ProviderKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	18, // 5: agents.v1.ProviderKeyInfo.access_mode:type_name -> common.v1.AccessMode
-	19, // 6: agents.v1.ProviderKeyInfo.baseline_role:type_name -> common.v1.ContentRole
-	0,  // 7: agents.v1.AddProviderKeyRequest.credential_type:type_name -> agents.v1.CredentialType
-	18, // 8: agents.v1.AddProviderKeyRequest.access_mode:type_name -> common.v1.AccessMode
-	19, // 9: agents.v1.AddProviderKeyRequest.baseline_role:type_name -> common.v1.ContentRole
-	1,  // 10: agents.v1.AddProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
-	1,  // 11: agents.v1.ToggleProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
-	1,  // 12: agents.v1.ListProviderKeysResponse.keys:type_name -> agents.v1.ProviderKeyInfo
-	2,  // 13: agents.v1.ListAvailableModelsResponse.models:type_name -> agents.v1.ModelInfo
-	2,  // 14: agents.v1.ListModelsForKeyResponse.models:type_name -> agents.v1.ModelInfo
-	3,  // 15: agents.v1.ProvidersService.AddProviderKey:input_type -> agents.v1.AddProviderKeyRequest
-	6,  // 16: agents.v1.ProvidersService.ListProviderKeys:input_type -> agents.v1.ListProviderKeysRequest
-	8,  // 17: agents.v1.ProvidersService.RemoveProviderKey:input_type -> agents.v1.RemoveProviderKeyRequest
-	10, // 18: agents.v1.ProvidersService.ValidateProviderKey:input_type -> agents.v1.ValidateProviderKeyRequest
-	12, // 19: agents.v1.ProvidersService.ListAvailableModels:input_type -> agents.v1.ListAvailableModelsRequest
-	16, // 20: agents.v1.ProvidersService.ToggleProviderKey:input_type -> agents.v1.ToggleProviderKeyRequest
-	15, // 21: agents.v1.ProvidersService.ListModelsForKey:input_type -> agents.v1.ListModelsForKeyRequest
-	4,  // 22: agents.v1.ProvidersService.AddProviderKey:output_type -> agents.v1.AddProviderKeyResponse
-	7,  // 23: agents.v1.ProvidersService.ListProviderKeys:output_type -> agents.v1.ListProviderKeysResponse
-	9,  // 24: agents.v1.ProvidersService.RemoveProviderKey:output_type -> agents.v1.RemoveProviderKeyResponse
-	11, // 25: agents.v1.ProvidersService.ValidateProviderKey:output_type -> agents.v1.ValidateProviderKeyResponse
-	13, // 26: agents.v1.ProvidersService.ListAvailableModels:output_type -> agents.v1.ListAvailableModelsResponse
-	5,  // 27: agents.v1.ProvidersService.ToggleProviderKey:output_type -> agents.v1.ToggleProviderKeyResponse
-	14, // 28: agents.v1.ProvidersService.ListModelsForKey:output_type -> agents.v1.ListModelsForKeyResponse
-	22, // [22:29] is the sub-list for method output_type
-	15, // [15:22] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	16, // 0: agents.v1.ProviderKeyInfo.last_validated_at:type_name -> google.protobuf.Timestamp
+	16, // 1: agents.v1.ProviderKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
+	16, // 2: agents.v1.ProviderKeyInfo.created_at:type_name -> google.protobuf.Timestamp
+	16, // 3: agents.v1.ProviderKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 4: agents.v1.AddProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
+	0,  // 5: agents.v1.ToggleProviderKeyResponse.key:type_name -> agents.v1.ProviderKeyInfo
+	0,  // 6: agents.v1.ListProviderKeysResponse.keys:type_name -> agents.v1.ProviderKeyInfo
+	1,  // 7: agents.v1.ListAvailableModelsResponse.models:type_name -> agents.v1.ModelInfo
+	1,  // 8: agents.v1.ListModelsForKeyResponse.models:type_name -> agents.v1.ModelInfo
+	2,  // 9: agents.v1.ProvidersService.AddProviderKey:input_type -> agents.v1.AddProviderKeyRequest
+	5,  // 10: agents.v1.ProvidersService.ListProviderKeys:input_type -> agents.v1.ListProviderKeysRequest
+	7,  // 11: agents.v1.ProvidersService.RemoveProviderKey:input_type -> agents.v1.RemoveProviderKeyRequest
+	9,  // 12: agents.v1.ProvidersService.ValidateProviderKey:input_type -> agents.v1.ValidateProviderKeyRequest
+	11, // 13: agents.v1.ProvidersService.ListAvailableModels:input_type -> agents.v1.ListAvailableModelsRequest
+	15, // 14: agents.v1.ProvidersService.ToggleProviderKey:input_type -> agents.v1.ToggleProviderKeyRequest
+	14, // 15: agents.v1.ProvidersService.ListModelsForKey:input_type -> agents.v1.ListModelsForKeyRequest
+	3,  // 16: agents.v1.ProvidersService.AddProviderKey:output_type -> agents.v1.AddProviderKeyResponse
+	6,  // 17: agents.v1.ProvidersService.ListProviderKeys:output_type -> agents.v1.ListProviderKeysResponse
+	8,  // 18: agents.v1.ProvidersService.RemoveProviderKey:output_type -> agents.v1.RemoveProviderKeyResponse
+	10, // 19: agents.v1.ProvidersService.ValidateProviderKey:output_type -> agents.v1.ValidateProviderKeyResponse
+	12, // 20: agents.v1.ProvidersService.ListAvailableModels:output_type -> agents.v1.ListAvailableModelsResponse
+	4,  // 21: agents.v1.ProvidersService.ToggleProviderKey:output_type -> agents.v1.ToggleProviderKeyResponse
+	13, // 22: agents.v1.ProvidersService.ListModelsForKey:output_type -> agents.v1.ListModelsForKeyResponse
+	16, // [16:23] is the sub-list for method output_type
+	9,  // [9:16] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_providers_proto_init() }
@@ -1441,7 +1311,6 @@ func file_agents_v1_providers_proto_init() {
 		return
 	}
 	file_agents_v1_providers_proto_msgTypes[0].OneofWrappers = []any{}
-	file_agents_v1_providers_proto_msgTypes[2].OneofWrappers = []any{}
 	file_agents_v1_providers_proto_msgTypes[5].OneofWrappers = []any{}
 	file_agents_v1_providers_proto_msgTypes[10].OneofWrappers = []any{}
 	file_agents_v1_providers_proto_msgTypes[11].OneofWrappers = []any{}
@@ -1450,14 +1319,13 @@ func file_agents_v1_providers_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_providers_proto_rawDesc), len(file_agents_v1_providers_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_agents_v1_providers_proto_goTypes,
 		DependencyIndexes: file_agents_v1_providers_proto_depIdxs,
-		EnumInfos:         file_agents_v1_providers_proto_enumTypes,
 		MessageInfos:      file_agents_v1_providers_proto_msgTypes,
 	}.Build()
 	File_agents_v1_providers_proto = out.File
