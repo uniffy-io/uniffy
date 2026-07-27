@@ -38,8 +38,6 @@ _CONTENT_TYPE_TO_DOMAIN: dict[ContentType, DomainType] = {
     ContentType.PROJECT: DomainType.PROJECTS,
     ContentType.TASK: DomainType.PROJECTS,
     ContentType.AGENT: DomainType.AGENTS,
-    ContentType.PROVIDER_KEY: DomainType.AGENTS,
-    ContentType.PROMPT: DomainType.AGENTS,
     ContentType.AGENT_CRON_TASK: DomainType.AGENTS,
 }
 
@@ -101,6 +99,13 @@ class PermissionChecker:
                         user_id, organization_id
                     )
 
+            # Active org membership is a precondition for every tenant-content
+            # decision, ownership included. Removed members keep ContentMember
+            # rows and owner_id references in the DB; this gate is what makes
+            # those confer nothing until the membership is (re)activated.
+            if not await self._is_user_in_organization(user_id, organization_id):
+                return None
+
             if owner_id == user_id:
                 return ContentRole.OWNER
 
@@ -122,10 +127,6 @@ class PermissionChecker:
                 return None
             if effective_mode == AccessMode.OPEN_TO_ORG:
                 if effective_baseline is None:
-                    return None
-                if not await self._is_user_in_organization(
-                    user_id, organization_id
-                ):
                     return None
                 return effective_baseline
 

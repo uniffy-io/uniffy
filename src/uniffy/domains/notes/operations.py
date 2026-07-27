@@ -1016,7 +1016,7 @@ class NoteOperations(BaseContentOperations[Note]):
         if personal_only:
             return query.where(Note.owner_id == user_id)
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,

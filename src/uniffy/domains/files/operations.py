@@ -1099,7 +1099,7 @@ class FileOperations(BaseContentOperations[File]):
             )
             query = query.where(File.owner_id != user_id, File.id.in_(shared_subq))
         else:
-            access_filter = self.access_query.build_accessible_filter(
+            access_filter = await self.access_query.build_accessible_filter(
                 user_id=user_id,
                 organization_id=organization_id,
                 content_type=self.content_type,
@@ -1131,7 +1131,7 @@ class FileOperations(BaseContentOperations[File]):
         elif folder_id != "all":
             query = query.where(File.folder_id == folder_id)
         else:
-            folder_access_filter = self.access_query.build_accessible_filter(
+            folder_access_filter = await self.access_query.build_accessible_filter(
                 user_id=user_id,
                 organization_id=organization_id,
                 content_type=ContentType.FOLDER,
@@ -1958,7 +1958,7 @@ class FolderOperations:
         if personal_only:
             query = query.where(Folder.owner_id == user_id)
         else:
-            access_filter = self.access_query.build_accessible_filter(
+            access_filter = await self.access_query.build_accessible_filter(
                 user_id=user_id,
                 organization_id=organization_id,
                 content_type=self.content_type,

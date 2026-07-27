@@ -289,7 +289,7 @@ class RoomOperations(BaseContentOperations[Room]):
             Room.is_deleted == False,  # noqa: E712
         )
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
@@ -452,7 +452,7 @@ class BookingOperations:
         booker = aliased(User)
 
         room_ops = RoomOperations(self.session)
-        access_filter = room_ops.access_query.build_accessible_filter(
+        access_filter = await room_ops.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.ROOM,

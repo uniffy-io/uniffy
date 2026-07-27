@@ -1,4 +1,4 @@
-"""Audit emissions for DomainAdmin grant / revoke.
+"""Audit emissions and permission-cache drops for DomainAdmin grant / revoke.
 
 Wires the writer through ``OrganizationOperations.grant_domain_admin``
 and ``revoke_domain_admin``. DB calls are mocked. The test asserts:
@@ -10,6 +10,7 @@ and ``revoke_domain_admin``. DB calls are mocked. The test asserts:
   rolls the audit row back together with the mutation.
 - The existing ``require_org_admin`` permission check blocks non-admins
   before any audit write runs.
+- Both paths drop the Valkey entry the ``is_domain_admin`` gate reads.
 """
 
 import asyncio
@@ -77,6 +78,21 @@ def _patch_helpers() -> tuple:
     return require_admin, require_member, invalidate, publish
 
 
+def _build_session_for_revoke(existing: DomainAdmin) -> MagicMock:
+    session = MagicMock()
+
+    domain_lookup = MagicMock()
+    domain_lookup.scalar_one_or_none.return_value = existing
+    role_lookup = MagicMock()
+    role_lookup.scalar_one_or_none.return_value = OrganizationRole.ADMIN
+
+    session.execute = AsyncMock(side_effect=[domain_lookup, role_lookup])
+    session.add = MagicMock()
+    session.delete = AsyncMock()
+    session.commit = AsyncMock()
+    return session
+
+
 def test_grant_emits_one_audit_row_with_correct_shape() -> None:
     session = _build_session_for_grant(existing=None)
     ops = OrganizationOperations(session)
@@ -133,7 +149,6 @@ def test_grant_writes_audit_before_commit() -> None:
 
 
 def test_revoke_emits_one_audit_row_with_previous_state() -> None:
-    session = MagicMock()
     existing = DomainAdmin(
         user_id=uuid4(),
         organization_id=uuid4(),
@@ -141,16 +156,7 @@ def test_revoke_emits_one_audit_row_with_previous_state() -> None:
         granted_by=uuid4(),
         granted_at=datetime(2026, 5, 19, 11, 30, 0, tzinfo=UTC),
     )
-
-    domain_lookup = MagicMock()
-    domain_lookup.scalar_one_or_none.return_value = existing
-    role_lookup = MagicMock()
-    role_lookup.scalar_one_or_none.return_value = OrganizationRole.ADMIN
-
-    session.execute = AsyncMock(side_effect=[domain_lookup, role_lookup])
-    session.add = MagicMock()
-    session.delete = AsyncMock()
-    session.commit = AsyncMock()
+    session = _build_session_for_revoke(existing)
 
     ops = OrganizationOperations(session)
     admin_id = uuid4()
@@ -204,3 +210,60 @@ def test_non_admin_blocked_before_audit_runs() -> None:
     added = [c.args[0] for c in session.add.call_args_list]
     audit_rows = [obj for obj in added if obj.__class__.__name__ == "AuditEvent"]
     assert audit_rows == []
+
+
+def _capture_cache_drops():
+    """Patch the Valkey layer under ``invalidate_domain_admin`` and collect the
+    keys it drops, so the assertion is about the real gate key."""
+    dropped: list[str] = []
+
+    async def _drop(*keys):
+        dropped.extend(keys)
+
+    return dropped, patch(
+        "uniffy.core.auth.cache.cache_invalidate_many",
+        AsyncMock(side_effect=_drop),
+    )
+
+
+def test_grant_drops_the_domain_admin_gate_cache_entry() -> None:
+    from uniffy.core.auth.cache import _domain_admin_key
+
+    session = _build_session_for_grant(existing=None)
+    ops = OrganizationOperations(session)
+    org_id = uuid4()
+    target_id = uuid4()
+
+    dropped, cache_patch = _capture_cache_drops()
+    rqa, rqm, inv, pub = _patch_helpers()
+    with rqa, rqm, inv, pub, cache_patch:
+        asyncio.run(
+            ops.grant_domain_admin(uuid4(), org_id, target_id, DomainType.AGENTS)
+        )
+
+    assert _domain_admin_key(org_id, target_id, DomainType.AGENTS) in dropped
+
+
+def test_revoke_drops_the_domain_admin_gate_cache_entry() -> None:
+    from uniffy.core.auth.cache import _domain_admin_key
+
+    org_id = uuid4()
+    target_id = uuid4()
+    existing = DomainAdmin(
+        user_id=target_id,
+        organization_id=org_id,
+        domain=DomainType.AGENTS,
+        granted_by=uuid4(),
+        granted_at=datetime(2026, 5, 19, 11, 30, 0, tzinfo=UTC),
+    )
+    session = _build_session_for_revoke(existing)
+    ops = OrganizationOperations(session)
+
+    dropped, cache_patch = _capture_cache_drops()
+    rqa, rqm, inv, pub = _patch_helpers()
+    with rqa, rqm, inv, pub, cache_patch:
+        asyncio.run(
+            ops.revoke_domain_admin(uuid4(), org_id, target_id, DomainType.AGENTS)
+        )
+
+    assert _domain_admin_key(org_id, target_id, DomainType.AGENTS) in dropped

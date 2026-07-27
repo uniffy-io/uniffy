@@ -336,3 +336,312 @@ class TestTransferOwnershipRejections:
                     new_owner_user_id=new_owner,
                 )
             )
+
+    def test_registered_hook_runs_before_the_transfer_commit(self) -> None:
+        """Domain state tied to the owner must move in the same transaction."""
+        from uniffy.core.content import members as members_module
+
+        ops = _make_ops()
+        content = _fake_content()
+        new_owner = uuid7()
+        order: list[str] = []
+
+        async def hook(session, org_id, content_id, new_owner_id):
+            order.append("hook")
+
+        async def commit():
+            order.append("commit")
+
+        ops.session.commit = AsyncMock(side_effect=commit)
+        p1, p2 = self._patch_prereqs(ops, content)
+        members_module.register_ownership_transfer_hook(ContentType.NOTE, hook)
+        try:
+            with (
+                p1,
+                p2,
+                patch.object(ops, "_is_active_org_member", AsyncMock(return_value=True)),
+                patch.object(ops, "_get_existing_member", AsyncMock(return_value=None)),
+                patch.object(ops, "_sync_search_access_policy", AsyncMock()),
+                patch.object(ops, "_sync_search_sharing", AsyncMock()),
+                patch.object(ops, "_emit_granted_notification", AsyncMock()),
+                patch.object(members_module, "record_ownership_transferred", AsyncMock()),
+                patch.object(members_module, "record_member_added", AsyncMock()),
+                patch.object(members_module, "invalidate_perm_role", AsyncMock()),
+                patch.object(
+                    members_module, "invalidate_visible_sets_for_user", AsyncMock()
+                ),
+                patch.object(members_module, "publish_perm_change", AsyncMock()),
+            ):
+                asyncio.run(
+                    ops.transfer_ownership(
+                        actor_user_id=uuid7(),
+                        organization_id=uuid7(),
+                        content_type=ContentType.NOTE,
+                        content_id=content.id,
+                        new_owner_user_id=new_owner,
+                    )
+                )
+        finally:
+            members_module._ownership_transfer_hooks.pop(ContentType.NOTE, None)
+
+        assert order[:2] == ["hook", "commit"]
+
+
+class _Reached(Exception):
+    """Sentinel raised by the first collaborator after a passed gate."""
+
+
+def _cache_passthrough():
+    """Route the perm-cache wrappers straight to their loaders (no Valkey)."""
+
+    async def _pass(key, loader, ttl=None, *, tags=None):
+        return await loader()
+
+    return patch(
+        "uniffy.core.auth.cache.cache_get_or_set_locked",
+        AsyncMock(side_effect=_pass),
+    )
+
+
+def _dispatch_session(*, org_role=None, admin_domains: frozenset = frozenset()):
+    """Fake session answering the org-role and domain-admin lookups the
+    registered manage overrides issue."""
+    from uniffy.core.models.login.organization_member import OrganizationMember
+    from uniffy.core.models.permissions.domain_admin import DomainAdmin
+    from uniffy.core.types import DomainType
+
+    def _queried_domain(stmt):
+        for value in stmt.compile().params.values():
+            if isinstance(value, DomainType):
+                return value
+        return None
+
+    async def execute(stmt):
+        result = MagicMock()
+        entity = stmt.column_descriptions[0].get("entity")
+        if entity is OrganizationMember:
+            result.scalar_one_or_none = MagicMock(return_value=org_role)
+        elif entity is DomainAdmin:
+            domain = _queried_domain(stmt)
+            hit = uuid7() if domain in admin_domains else None
+            result.scalar_one_or_none = MagicMock(return_value=hit)
+        else:
+            result.scalar_one_or_none = MagicMock(return_value=None)
+        return result
+
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=execute)
+    session.add = MagicMock()
+    session.delete = AsyncMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    return session
+
+
+class TestManageOverrides:
+    """Domain-level manage overrides grant MANAGE on specific content types
+    without touching effective_role (no read/list/search widening)."""
+
+    def _make_override_ops(
+        self,
+        *,
+        org_role=None,
+        admin_domains: frozenset = frozenset(),
+        effective_role=ContentRole.VIEWER,
+    ) -> ContentMembersOperations:
+        # Importing the agents ops modules registers the AGENT loader and
+        # its manage override.
+        import uniffy.domains.agents.agents.operations  # noqa: F401
+
+        session = _dispatch_session(org_role=org_role, admin_domains=admin_domains)
+        ops = ContentMembersOperations(session)
+        ops.permission_checker = MagicMock()
+        ops.permission_checker.effective_role = AsyncMock(return_value=effective_role)
+        return ops
+
+    def _agent_content(self):
+        return _fake_content(
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
+        )
+
+    def test_overrides_registered_per_content_type(self) -> None:
+        import uniffy.domains.agents.agents.operations  # noqa: F401
+        import uniffy.domains.agents.cron.operations  # noqa: F401
+        import uniffy.domains.agents.providers.operations  # noqa: F401
+        from uniffy.core.content.members import _manage_overrides
+        from uniffy.domains.agents.access import is_agents_builder
+
+        assert _manage_overrides[ContentType.AGENT] is is_agents_builder
+        # Cron tasks stay ownership-bound: a run carries its owner's identity.
+        assert ContentType.AGENT_CRON_TASK not in _manage_overrides
+        # Provider keys have no access policy at all; nothing to override.
+        assert ContentType.PROVIDER_KEY not in _manage_overrides
+
+    def test_agents_builder_cannot_manage_unowned_cron_task(self) -> None:
+        import uniffy.domains.agents.cron.operations  # noqa: F401
+        from uniffy.core.errors import PermissionDeniedError
+        from uniffy.core.types import DomainType
+
+        ops = self._make_override_ops(
+            org_role=OrganizationRole.MEMBER,
+            admin_domains=frozenset({DomainType.AGENTS}),
+        )
+        content = self._agent_content()
+        with (
+            patch.object(ops, "_load_content", AsyncMock(return_value=content)),
+            _cache_passthrough(),
+            pytest.raises(PermissionDeniedError),
+        ):
+            asyncio.run(
+                ops.set_access_mode(
+                    actor_user_id=uuid7(),
+                    organization_id=uuid7(),
+                    content_type=ContentType.AGENT_CRON_TASK,
+                    content_id=content.id,
+                    new_access_mode=AccessMode.OPEN_TO_ORG,
+                )
+            )
+
+    def test_org_admin_can_add_member_on_unowned_agent(self) -> None:
+        ops = self._make_override_ops(org_role=OrganizationRole.ADMIN)
+        content = self._agent_content()
+        with (
+            patch.object(ops, "_load_content", AsyncMock(return_value=content)),
+            patch.object(ops, "_get_existing_member", AsyncMock(side_effect=_Reached())),
+            _cache_passthrough(),
+            pytest.raises(_Reached),
+        ):
+            asyncio.run(
+                ops.add_member(
+                    actor_user_id=uuid7(),
+                    organization_id=uuid7(),
+                    content_type=ContentType.AGENT,
+                    content_id=content.id,
+                    subject_type=SubjectType.USER,
+                    subject_id=uuid7(),
+                    role=ContentRole.EDITOR,
+                )
+            )
+
+    def test_agents_domain_admin_can_set_access_mode_on_agent(self) -> None:
+        from uniffy.core.types import DomainType
+
+        ops = self._make_override_ops(
+            org_role=OrganizationRole.MEMBER,
+            admin_domains=frozenset({DomainType.AGENTS}),
+        )
+        content = self._agent_content()
+        with (
+            patch.object(ops, "_load_content", AsyncMock(return_value=content)),
+            patch.object(
+                ops, "_resolve_effective_mode", AsyncMock(side_effect=_Reached())
+            ),
+            _cache_passthrough(),
+            pytest.raises(_Reached),
+        ):
+            asyncio.run(
+                ops.set_access_mode(
+                    actor_user_id=uuid7(),
+                    organization_id=uuid7(),
+                    content_type=ContentType.AGENT,
+                    content_id=content.id,
+                    new_access_mode=AccessMode.EXPLICIT_MEMBERS,
+                )
+            )
+
+    def test_plain_member_cannot_manage_agent(self) -> None:
+        from uniffy.core.errors import PermissionDeniedError
+
+        ops = self._make_override_ops(org_role=OrganizationRole.MEMBER)
+        content = self._agent_content()
+        with (
+            patch.object(ops, "_load_content", AsyncMock(return_value=content)),
+            _cache_passthrough(),
+            pytest.raises(PermissionDeniedError),
+        ):
+            asyncio.run(
+                ops.add_member(
+                    actor_user_id=uuid7(),
+                    organization_id=uuid7(),
+                    content_type=ContentType.AGENT,
+                    content_id=content.id,
+                    subject_type=SubjectType.USER,
+                    subject_id=uuid7(),
+                    role=ContentRole.EDITOR,
+                )
+            )
+        ops.session.add.assert_not_called()
+
+    def test_other_domain_admin_gets_no_manage_on_agent(self) -> None:
+        from uniffy.core.errors import PermissionDeniedError
+        from uniffy.core.types import DomainType
+
+        ops = self._make_override_ops(
+            org_role=OrganizationRole.MEMBER,
+            admin_domains=frozenset({DomainType.FILES}),
+        )
+        content = self._agent_content()
+        with (
+            patch.object(ops, "_load_content", AsyncMock(return_value=content)),
+            _cache_passthrough(),
+            pytest.raises(PermissionDeniedError),
+        ):
+            asyncio.run(
+                ops.add_member(
+                    actor_user_id=uuid7(),
+                    organization_id=uuid7(),
+                    content_type=ContentType.AGENT,
+                    content_id=content.id,
+                    subject_type=SubjectType.USER,
+                    subject_id=uuid7(),
+                    role=ContentRole.EDITOR,
+                )
+            )
+
+    def test_override_does_not_grant_view(self) -> None:
+        """The view path stays pure effective_role: an org admin with no access
+        to the row cannot list its members."""
+        from uniffy.core.errors import PermissionDeniedError
+
+        ops = self._make_override_ops(
+            org_role=OrganizationRole.ADMIN, effective_role=None
+        )
+        content = self._agent_content()
+        with (
+            patch.object(ops, "_load_content", AsyncMock(return_value=content)),
+            _cache_passthrough(),
+            pytest.raises(PermissionDeniedError),
+        ):
+            asyncio.run(
+                ops.list_members(
+                    actor_user_id=uuid7(),
+                    organization_id=uuid7(),
+                    content_type=ContentType.AGENT,
+                    content_id=content.id,
+                )
+            )
+
+    def test_override_does_not_grant_transfer(self) -> None:
+        """MANAGE via override never becomes OWNER: transfer still requires the
+        real effective_role to be OWNER."""
+        from uniffy.core.errors import PermissionDeniedError
+
+        ops = self._make_override_ops(
+            org_role=OrganizationRole.ADMIN, effective_role=ContentRole.ADMIN
+        )
+        content = self._agent_content()
+        with (
+            patch.object(ops, "_load_content", AsyncMock(return_value=content)),
+            _cache_passthrough(),
+            pytest.raises(PermissionDeniedError),
+        ):
+            asyncio.run(
+                ops.transfer_ownership(
+                    actor_user_id=uuid7(),
+                    organization_id=uuid7(),
+                    content_type=ContentType.AGENT,
+                    content_id=content.id,
+                    new_owner_user_id=uuid7(),
+                )
+            )

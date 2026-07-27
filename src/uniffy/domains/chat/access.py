@@ -76,6 +76,7 @@ class ChatAccessChecker:
                 select(OrganizationMember.role).where(
                     OrganizationMember.user_id == user_id,
                     OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.is_active == True,  # noqa: E712
                 )
             )
             role = result.scalar_one_or_none()

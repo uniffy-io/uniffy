@@ -19,14 +19,14 @@ from uniffy.core.types import generate_id as uuid7
 
 @pytest.fixture(autouse=True)
 def _no_support_session():
-    """Skip support-session and sysadmin entry points so these tests
-    exercise the pure tenant-member branching logic.
+    """Pin the sysadmin/support-session entry points off and default the
+    actor to an active org member, so each test exercises one tenant branch.
 
-    ``_ensure_support_session_context`` and ``_support_session_role``
-    both run inside ``effective_role`` and would otherwise hit the
-    MagicMock session. ``_is_system_admin`` now runs first as well -
-    pinning it to ``False`` keeps these tests focused on the tenant
-    paths; the sysadmin-bypass branch is covered separately.
+    ``_ensure_support_session_context`` and ``_support_session_role`` both
+    run inside ``effective_role`` and would otherwise hit the MagicMock
+    session. Membership-gate tests override ``_is_user_in_organization``
+    (and ``_is_system_admin``) per checker instance, which shadows these
+    class-level patches.
     """
     with (
         patch.object(
@@ -39,6 +39,11 @@ def _no_support_session():
         ),
         patch.object(
             PermissionChecker, "_is_system_admin", AsyncMock(return_value=False)
+        ),
+        patch.object(
+            PermissionChecker,
+            "_is_user_in_organization",
+            AsyncMock(return_value=True),
         ),
     ):
         yield
@@ -136,6 +141,69 @@ class TestNoAdminBypass:
             role = _call(
                 checker, owner_id=uuid7(), user_id=uuid7(),
                 access_mode=AccessMode.OWNER_ONLY,
+            )
+        assert role is None
+
+
+class TestMembershipGate:
+    """Active org membership precedes every tenant branch - ownership and
+    explicit ContentMember grants confer nothing without it."""
+
+    def test_non_member_with_explicit_grant_denied(self) -> None:
+        checker = _make_checker()
+        with (
+            patch.object(
+                checker, "_is_user_in_organization", AsyncMock(return_value=False)
+            ),
+            patch.object(
+                checker, "_get_member_role", AsyncMock(return_value=ContentRole.EDITOR)
+            ),
+        ):
+            role = _call(checker, access_mode=AccessMode.EXPLICIT_MEMBERS)
+        assert role is None
+
+    def test_non_member_owner_denied(self) -> None:
+        user_id = uuid7()
+        checker = _make_checker()
+        with patch.object(
+            checker, "_is_user_in_organization", AsyncMock(return_value=False)
+        ):
+            role = _call(
+                checker, owner_id=user_id, user_id=user_id,
+                access_mode=AccessMode.OWNER_ONLY,
+            )
+        assert role is None
+
+    def test_system_admin_non_member_reaches_support_session_path(self) -> None:
+        checker = _make_checker()
+        with (
+            patch.object(checker, "_is_system_admin", AsyncMock(return_value=True)),
+            patch.object(
+                checker, "_is_user_in_organization", AsyncMock(return_value=False)
+            ),
+            patch.object(
+                checker,
+                "_support_session_role",
+                AsyncMock(return_value=ContentRole.VIEWER),
+            ),
+        ):
+            role = _call(checker, access_mode=AccessMode.OWNER_ONLY)
+        assert role == ContentRole.VIEWER
+
+    def test_system_admin_non_member_without_session_denied(self) -> None:
+        checker = _make_checker()
+        with (
+            patch.object(checker, "_is_system_admin", AsyncMock(return_value=True)),
+            patch.object(
+                checker, "_is_user_in_organization", AsyncMock(return_value=False)
+            ),
+            patch.object(
+                checker, "_support_session_role", AsyncMock(return_value=None)
+            ),
+        ):
+            role = _call(
+                checker, access_mode=AccessMode.OPEN_TO_ORG,
+                baseline_role=ContentRole.VIEWER,
             )
         assert role is None
 

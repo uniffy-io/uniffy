@@ -837,7 +837,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         Combines the canonical accessible-filter with an attendee bypass
         so invitees always see events they are on.
         """
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
@@ -1223,7 +1223,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         """List events the user can access with filters/pagination."""
         query = select(CalendarEvent).where(CalendarEvent.organization_id == organization_id)
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
@@ -1951,7 +1951,7 @@ class EventTemplateOperations:
         """List templates visible to the user."""
         await self._verify_org_membership(user_id, organization_id)
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.CALENDAR_EVENT,

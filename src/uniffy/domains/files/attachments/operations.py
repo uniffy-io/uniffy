@@ -485,7 +485,7 @@ class AttachmentOperations:
         if not file:
             return None
 
-        access_filter = self._access_query.build_accessible_filter(
+        access_filter = await self._access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.FILE,

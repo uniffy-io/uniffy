@@ -459,6 +459,7 @@ class MfaOperations:
                 select(OrganizationMember).where(
                     OrganizationMember.user_id == actor_user_id,
                     OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.is_active.is_(True),
                 )
             )
         ).scalar_one_or_none()
