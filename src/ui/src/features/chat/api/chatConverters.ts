@@ -128,6 +128,7 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
     reactions: proto.reactions.map(reactionGroupToPlain),
     senderName: proto.senderName || undefined,
     senderAvatarUrl: proto.senderAvatarUrl || undefined,
+    feedbackRating: proto.feedbackRating || undefined,
   };
 }
 

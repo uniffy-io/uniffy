@@ -42,7 +42,7 @@ beforeEach(() => {
 
 describe('configFromProto', () => {
     it('maps empty wire strings to no-override state', () => {
-        expect(configFromProto({ modelOverride: '', modelParamsOverrideJson: '' })).toEqual({
+        expect(configFromProto({ modelOverride: '', modelParamsOverride: '' })).toEqual({
             modelOverride: null,
             modelParams: {},
         });
@@ -52,7 +52,7 @@ describe('configFromProto', () => {
         expect(
             configFromProto({
                 modelOverride: 'gpt-x',
-                modelParamsOverrideJson: '{"temperature":0.2}',
+                modelParamsOverride: '{"temperature":0.2}',
             }),
         ).toEqual({ modelOverride: 'gpt-x', modelParams: { temperature: 0.2 } });
     });
@@ -63,7 +63,7 @@ describe('configFromProto', () => {
 
     it('ignores malformed params JSON', () => {
         expect(
-            configFromProto({ modelOverride: '', modelParamsOverrideJson: 'not-json' }).modelParams,
+            configFromProto({ modelOverride: '', modelParamsOverride: 'not-json' }).modelParams,
         ).toEqual({});
     });
 });
@@ -73,7 +73,7 @@ describe('buildUpdatePayload', () => {
         expect(buildUpdatePayload({})).toEqual({});
         const payload = buildUpdatePayload({ modelOverride: 'claude-x' });
         expect(payload).toEqual({ modelOverride: 'claude-x' });
-        expect('modelParamsOverrideJson' in payload).toBe(false);
+        expect('modelParamsOverride' in payload).toBe(false);
     });
 
     it('maps a null model override to the empty-string clear', () => {
@@ -82,9 +82,9 @@ describe('buildUpdatePayload', () => {
 
     it('serializes params and clears them with the empty string', () => {
         expect(buildUpdatePayload({ modelParams: { temperature: 1 } })).toEqual({
-            modelParamsOverrideJson: '{"temperature":1}',
+            modelParamsOverride: '{"temperature":1}',
         });
-        expect(buildUpdatePayload({ modelParams: {} })).toEqual({ modelParamsOverrideJson: '' });
+        expect(buildUpdatePayload({ modelParams: {} })).toEqual({ modelParamsOverride: '' });
     });
 
     it('carries both fields when both change', () => {
@@ -92,7 +92,7 @@ describe('buildUpdatePayload', () => {
             buildUpdatePayload({ modelOverride: 'm-1', modelParams: { reasoning_effort: 'high' } }),
         ).toEqual({
             modelOverride: 'm-1',
-            modelParamsOverrideJson: '{"reasoning_effort":"high"}',
+            modelParamsOverride: '{"reasoning_effort":"high"}',
         });
     });
 });
@@ -114,7 +114,7 @@ describe('applyConfigChanges', () => {
 describe('fetchChannelAgentConfig', () => {
     it('fetches by ids and maps the proto config', async () => {
         mocks.getChannelAgentConfig.mockResolvedValue({
-            config: { modelOverride: 'm-2', modelParamsOverrideJson: '{"top_p":0.9}' },
+            config: { modelOverride: 'm-2', modelParamsOverride: '{"top_p":0.9}' },
         });
         const state = await fetchChannelAgentConfig(ids);
         expect(mocks.getChannelAgentConfig).toHaveBeenCalledWith(ids);
@@ -125,7 +125,7 @@ describe('fetchChannelAgentConfig', () => {
 describe('runConfigUpdate', () => {
     it('applies optimistically then reconciles with the server row', async () => {
         mocks.updateChannelAgentConfig.mockResolvedValue({
-            config: { modelOverride: 'served-model', modelParamsOverrideJson: '' },
+            config: { modelOverride: 'served-model', modelParamsOverride: '' },
         });
         const setConfig = vi.fn();
         const current = config({ modelParams: { temperature: 0.5 } });
@@ -148,7 +148,7 @@ describe('runConfigUpdate', () => {
 
         expect(mocks.updateChannelAgentConfig).toHaveBeenCalledTimes(1);
         const request = mocks.updateChannelAgentConfig.mock.calls[0][0];
-        expect(request).toEqual({ ...ids, modelParamsOverrideJson: '{"temperature":1}' });
+        expect(request).toEqual({ ...ids, modelParamsOverride: '{"temperature":1}' });
         expect('modelOverride' in request).toBe(false);
     });
 

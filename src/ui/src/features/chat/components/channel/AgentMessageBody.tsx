@@ -1,22 +1,22 @@
 /** Renders an agent-authored ChatMessage by dispatching on `metadata.kind`. */
 
 import { useMemo, useState } from 'react';
-import { CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, Lightning } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, Lightning, ThumbsUp, ThumbsDown } from '@phosphor-icons/react';
 import { StreamingMessage } from '@/features/chat/components/channel/StreamingMessage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { respondToAgentConfirmation, stopAgentRun } from '@/features/chat/store/chatThunks';
+import { respondToAgentConfirmation, stopAgentRun, submitAgentReplyFeedback } from '@/features/chat/store/chatThunks';
 import {
     selectAgentThinkingForMessage,
     selectMessagesForChannel,
     selectTypingUsers,
 } from '@/features/chat/store/chatMessagesSlice';
+import { useAgentsBuilderAccess } from '@/features/agents/hooks/useAgentsBuilderAccess';
 import { ThinkingPane } from '@/features/agents/components/ThinkingPane';
 import { ToolActivityPane, type ToolStep } from '@/features/agents/components/ToolActivityPane';
 import { persistedThinkingBlocks } from '@/features/agents/utils/thinkingBlocks';
-import { fetchSkillDraft, type SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
-import { SkillDraftEditorModal } from '@/features/agents/components/skills/SkillDraftEditorModal';
 import type { ChatMessage } from '@/features/chat/types';
 
 interface AgentMessageBodyProps {
@@ -101,6 +101,63 @@ function FinalMessageWithThinking({ message, streaming }: { message: ChatMessage
                 />
             )}
             {showStreamingBody && <StreamingMessage content={message.content} streaming={streaming} />}
+            {!streaming && !!message.content && <ReplyFeedbackRow message={message} />}
+        </div>
+    );
+}
+
+/** Thumbs on a settled agent reply; clicking the active thumb clears the rating. */
+function ReplyFeedbackRow({ message }: { message: ChatMessage }) {
+    const dispatch = useAppDispatch();
+    const rating = message.feedbackRating ?? '';
+
+    const rate = (value: 'up' | 'down') => {
+        dispatch(
+            submitAgentReplyFeedback({
+                channelId: message.channelId,
+                messageId: message.id,
+                rating: rating === value ? '' : value,
+            }),
+        );
+    };
+
+    return (
+        <div
+            className={cn(
+                'mt-1 flex items-center gap-0.5 transition-opacity',
+                rating ? 'opacity-100' : 'md:opacity-0 md:group-hover:opacity-100',
+            )}
+            data-testid={`chat-agent-feedback-${message.id}`}
+            data-rating={rating || 'none'}
+        >
+            <button
+                type="button"
+                onClick={() => rate('up')}
+                className={cn(
+                    'p-1 rounded-md hover:bg-muted transition-colors',
+                    rating === 'up'
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-muted-foreground hover:text-foreground',
+                )}
+                title="Good response"
+                data-testid={`chat-agent-feedback-up-${message.id}`}
+            >
+                <ThumbsUp size={14} weight={rating === 'up' ? 'fill' : 'regular'} />
+            </button>
+            <button
+                type="button"
+                onClick={() => rate('down')}
+                className={cn(
+                    'p-1 rounded-md hover:bg-muted transition-colors',
+                    rating === 'down'
+                        ? 'text-red-500'
+                        : 'text-muted-foreground hover:text-foreground',
+                )}
+                title="Bad response"
+                data-testid={`chat-agent-feedback-down-${message.id}`}
+            >
+                <ThumbsDown size={14} weight={rating === 'down' ? 'fill' : 'regular'} />
+            </button>
         </div>
     );
 }
@@ -427,9 +484,9 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
 }
 
 function SkillDraftCard({ message }: { message: ChatMessage }) {
-    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
-    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId ?? '');
+    const { isBuilder } = useAgentsBuilderAccess();
 
     const draftId = readString(message.metadata, 'draft_id') ?? '';
     const title = readString(message.metadata, 'draft_display_name')
@@ -441,20 +498,10 @@ function SkillDraftCard({ message }: { message: ChatMessage }) {
     const actorUserId = readString(message.metadata, 'actor_user_id') ?? '';
 
     const isActor = !!currentUserId && currentUserId === actorUserId;
-    const [loading, setLoading] = useState(false);
-    const [editingDraft, setEditingDraft] = useState<SerializedSkillDraft | null>(null);
 
-    const openReview = async () => {
-        if (!draftId || !organizationId || loading) return;
-        setLoading(true);
-        try {
-            const draft = await dispatch(fetchSkillDraft(draftId)).unwrap();
-            setEditingDraft(draft);
-        } catch {
-            // errorToastMiddleware surfaces the failure; leave the modal closed.
-        } finally {
-            setLoading(false);
-        }
+    const openReview = () => {
+        if (!draftId) return;
+        navigate(`/agents/skills/drafts/${draftId}`);
     };
 
     return (
@@ -480,18 +527,17 @@ function SkillDraftCard({ message }: { message: ChatMessage }) {
                     </div>
 
                     {status === 'pending' ? (
-                        isActor ? (
+                        isBuilder ? (
                             <Button
                                 onClick={openReview}
                                 size="sm"
-                                disabled={loading}
                                 data-testid={`chat-skill-draft-review-${message.id}`}
                             >
-                                {loading ? 'Opening...' : 'Review & save'}
+                                Review &amp; save
                             </Button>
                         ) : (
                             <p className="text-[11px] text-muted-foreground italic">
-                                Waiting for the requester to review...
+                                Waiting for a builder to review...
                             </p>
                         )
                     ) : (
@@ -507,10 +553,6 @@ function SkillDraftCard({ message }: { message: ChatMessage }) {
                     )}
                 </div>
             </div>
-
-            {editingDraft && (
-                <SkillDraftEditorModal draft={editingDraft} onClose={() => setEditingDraft(null)} />
-            )}
         </div>
     );
 }

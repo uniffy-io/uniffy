@@ -79,7 +79,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   );
 
   const handleSend = useCallback(
-    async (content: string, fileIds: string[]) => {
+    async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
       if (!activeChannel || !effectiveChannelId) return;
       flushOnSend();
       const result = await dispatch(sendMessage({
@@ -87,6 +87,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
         content: content || '',
         replyToId: replyToMessage?.id,
         attachmentFileIds: fileIds,
+        metadata,
       })).unwrap();
       dispatch(clearReplyToMessage());
 

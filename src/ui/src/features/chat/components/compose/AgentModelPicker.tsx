@@ -17,27 +17,29 @@ import {
   type SerializedModelInfo,
 } from '@/features/agents/store/agentProvidersThunks';
 import { selectMemoryScope } from '@/features/agents/store/agentMemoriesSlice';
-import { fetchMemories, memoryScopeKey } from '@/features/agents/store/agentMemoriesThunks';
+import {
+  fetchMemories,
+  memoryScopeKey,
+  type MemoryScopeSubject,
+} from '@/features/agents/store/agentMemoriesThunks';
 import {
   MemoryList,
   type MemoryScopeDescriptor,
 } from '@/features/agents/components/memory/MemoryList';
 import type { SerializedAgent } from '@/features/agents/store/agentsThunks';
-import { ModelParamsSection } from '@/features/agents/components/ModelParamsSection';
-import {
-  selectChannelById,
-  selectChannelMembers,
-} from '@/features/chat/store/chatChannelsSlice';
-import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
 import {
   parseModelParamsSchema,
   stripInvalidParams,
   type ModelParamValues,
 } from '@/features/agents/utils/modelParamsSchema';
 import {
-  useChannelAgentConfig,
-  type ChannelAgentConfigChanges,
-  type ChannelAgentConfigState,
+  selectChannelById,
+  selectChannelMembers,
+} from '@/features/chat/store/chatChannelsSlice';
+import { useChatPermissions } from '@/features/chat/hooks/useChatPermissions';
+import type {
+  ChannelAgentConfigChanges,
+  ChannelAgentConfigState,
 } from '@/features/chat/hooks/useChannelAgentConfig';
 
 // Curated catalog chat models only - keeps live-API noise (whisper, realtime,
@@ -79,6 +81,39 @@ export const paramsForModelSwitch = (
   current: ModelParamValues,
 ): ModelParamValues => stripInvalidParams(parseModelParamsSchema(nextSchemaJson), current);
 
+/**
+ * Params to send alongside a model switch, mirroring the backend: stored
+ * params are stripped per the next effective model, but when that model has no
+ * client-visible schema (name-only agent on the org default, stale list) they
+ * are left untouched and the backend strips per the real effective model.
+ * `undefined` = omit the field from the update.
+ */
+export const paramsChangesForModelSwitch = (
+  models: SerializedModelInfo[],
+  nextModelId: string | null,
+  primaryModel: string,
+  current: ModelParamValues,
+): ModelParamValues | undefined => {
+  if (Object.keys(current).length === 0) return undefined;
+  const nextId = nextModelId ?? primaryModel;
+  const nextSchemaJson = models.find((m) => m.id === nextId)?.parameterSchemaJson ?? '';
+  if (!nextSchemaJson) return undefined;
+  return paramsForModelSwitch(nextSchemaJson, current);
+};
+
+/**
+ * Mirrors the backend's memory scope routing: a 1:1 agent DM is a personal
+ * surface (the caller's own memories with this agent); everything else is
+ * channel-shared.
+ */
+export const memoryScopeForChannel = (
+  channel: { isAgentDm?: boolean; channelType?: string } | undefined,
+  channelId: string,
+): MemoryScopeSubject =>
+  channel?.isAgentDm && channel.channelType === 'DIRECT'
+    ? { scope: MemoryScope.USER }
+    : { scope: MemoryScope.CHANNEL, subjectId: channelId };
+
 const POPOVER_WIDTH = 320;
 const POPOVER_MAX_HEIGHT = 480;
 
@@ -91,9 +126,15 @@ interface PickerPosition {
 export function AgentModelPicker({
   channelId,
   agent,
+  config,
+  updating,
+  update,
 }: {
   channelId: string;
   agent: SerializedAgent;
+  config: ChannelAgentConfigState | null;
+  updating: boolean;
+  update: (changes: ChannelAgentConfigChanges) => Promise<void>;
 }) {
   const dispatch = useAppDispatch();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -102,14 +143,18 @@ export function AgentModelPicker({
   const [position, setPosition] = useState<PickerPosition | null>(null);
   const [memoryOpen, setMemoryOpen] = useState(false);
 
-  const { config, updating, update } = useChannelAgentConfig(channelId, agent.id);
-
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? '');
   const channel = useAppSelector((s) => selectChannelById(s, channelId));
   const channelMembers = useAppSelector((s) => selectChannelMembers(s, channelId));
   const { canManageChat } = useChatPermissions();
-  const channelMemoryKey = memoryScopeKey({ scope: MemoryScope.CHANNEL, subjectId: channelId });
-  const channelMemory = useAppSelector(selectMemoryScope(channelMemoryKey));
+  const isAgentDm = channel?.isAgentDm ?? false;
+  const channelType = channel?.channelType;
+  const memorySubject = useMemo(
+    () => memoryScopeForChannel({ isAgentDm, channelType }, channelId),
+    [isAgentDm, channelType, channelId],
+  );
+  const isPersonalMemory = memorySubject.scope === MemoryScope.USER;
+  const memoryState = useAppSelector(selectMemoryScope(memoryScopeKey(memorySubject)));
 
   const memberRole = channelMembers.find(
     (m) => m.subjectType === 'USER' && m.userId === currentUserId,
@@ -117,15 +162,24 @@ export function AgentModelPicker({
   const isModerator = canManageChat || memberRole === 'OWNER' || memberRole === 'ADMIN';
 
   const memoryDescriptor = useMemo<MemoryScopeDescriptor>(
-    () => ({
-      scope: MemoryScope.CHANNEL,
-      subjectId: channelId,
-      canCreate: false,
-      canPin: isModerator,
-      canEdit: (m) => m.createdByUserId === currentUserId || isModerator,
-      canDelete: (m) => m.createdByUserId === currentUserId || isModerator,
-    }),
-    [channelId, currentUserId, isModerator],
+    () =>
+      isPersonalMemory
+        ? {
+            scope: MemoryScope.USER,
+            canCreate: true,
+            canPin: true,
+            canEdit: () => true,
+            canDelete: () => true,
+          }
+        : {
+            scope: MemoryScope.CHANNEL,
+            subjectId: channelId,
+            canCreate: false,
+            canPin: isModerator,
+            canEdit: (m) => m.createdByUserId === currentUserId || isModerator,
+            canDelete: (m) => m.createdByUserId === currentUserId || isModerator,
+          },
+    [isPersonalMemory, channelId, currentUserId, isModerator],
   );
   const channelLabel =
     channel && (channel.channelType === 'PUBLIC' || channel.channelType === 'PRIVATE')
@@ -134,8 +188,8 @@ export function AgentModelPicker({
 
   useEffect(() => {
     if (!open) return;
-    dispatch(fetchMemories({ agentId: agent.id, scope: MemoryScope.CHANNEL, subjectId: channelId }));
-  }, [dispatch, open, agent.id, channelId]);
+    dispatch(fetchMemories({ agentId: agent.id, ...memorySubject }));
+  }, [dispatch, open, agent.id, memorySubject]);
 
   const keyId = agent.primaryProviderKeyId;
   const keyModels = useAppSelector(selectModelsForKey(keyId));
@@ -153,11 +207,6 @@ export function AgentModelPicker({
   const chatModels = useMemo(() => filterChatModels(models), [models]);
   const overrideId = config?.modelOverride ?? null;
   const options = useMemo(() => buildModelOptions(chatModels, overrideId), [chatModels, overrideId]);
-  const effectiveId = resolveEffectiveModelId(config, agent.primaryModel);
-  const effectiveSchemaJson = useMemo(
-    () => models.find((m) => m.id === effectiveId)?.parameterSchemaJson ?? '',
-    [models, effectiveId],
-  );
   const label = pickerButtonLabel(config, agent.primaryModel, models);
 
   useEffect(() => {
@@ -167,9 +216,6 @@ export function AgentModelPicker({
       if (!target) return;
       if (containerRef.current?.contains(target)) return;
       if (buttonRef.current?.contains(target)) return;
-      // Enum params render their dropdown in a body portal; a click there
-      // must not count as outside the popover.
-      if (target.closest?.('[data-select-portal]')) return;
       setOpen(false);
     };
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -210,16 +256,14 @@ export function AgentModelPicker({
     if (!config || updating) return;
     if (modelId === overrideId) return;
     const changes: ChannelAgentConfigChanges = { modelOverride: modelId };
-    if (Object.keys(config.modelParams).length > 0) {
-      const nextId = modelId ?? agent.primaryModel;
-      const nextSchemaJson = models.find((m) => m.id === nextId)?.parameterSchemaJson ?? '';
-      changes.modelParams = paramsForModelSwitch(nextSchemaJson, config.modelParams);
-    }
+    const nextParams = paramsChangesForModelSwitch(
+      models,
+      modelId,
+      agent.primaryModel,
+      config.modelParams,
+    );
+    if (nextParams !== undefined) changes.modelParams = nextParams;
     void update(changes);
-  };
-
-  const handleParamsChange = (next: ModelParamValues) => {
-    void update({ modelParams: next });
   };
 
   const rowClass = (selected: boolean) =>
@@ -298,14 +342,6 @@ export function AgentModelPicker({
                 <p className="px-2 py-1.5 text-xs text-muted-foreground">No models available</p>
               )}
             </div>
-            <div className="mt-3">
-              <ModelParamsSection
-                schemaJson={effectiveSchemaJson}
-                values={config?.modelParams ?? {}}
-                onChange={handleParamsChange}
-                disabled={disabled}
-              />
-            </div>
             <div className="mt-3 border-t border-border pt-2">
               <button
                 type="button"
@@ -318,7 +354,7 @@ export function AgentModelPicker({
               >
                 <Brain size={14} weight="duotone" className="text-muted-foreground shrink-0" />
                 <span>
-                  Memory{channelMemory.loaded ? ` (${channelMemory.totalCount})` : ''}
+                  Memory{memoryState.loaded ? ` (${memoryState.totalCount})` : ''}
                 </span>
               </button>
             </div>
@@ -326,13 +362,15 @@ export function AgentModelPicker({
         </div>,
         document.body,
       )}
-      {memoryOpen && (
+      {/* Portaled: the composer's glass card is a `backdrop-filter` containing
+          block, so an in-place fixed modal would anchor to it and clip. */}
+      {memoryOpen && createPortal(
         <Modal onClose={() => setMemoryOpen(false)} maxWidth="max-w-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2 min-w-0">
               <Brain size={18} weight="duotone" className="text-muted-foreground shrink-0" />
               <span className="font-medium text-foreground truncate">
-                Channel memory - {agent.name}
+                {isPersonalMemory ? `My memory - ${agent.name}` : `Channel memory - ${agent.name}`}
               </span>
             </div>
             <button
@@ -349,10 +387,11 @@ export function AgentModelPicker({
               agentId={agent.id}
               agentName={agent.name}
               descriptor={memoryDescriptor}
-              subjectLabel={channelLabel}
+              subjectLabel={isPersonalMemory ? undefined : channelLabel}
             />
           </div>
-        </Modal>
+        </Modal>,
+        document.body,
       )}
     </>
   );

@@ -393,6 +393,14 @@ export const chatMessagesSlice = createSlice({
         msg.reactions = msg.reactions.filter(r => r.emoji !== emoji);
       }
     },
+    setMessageFeedback: (
+      state,
+      action: PayloadAction<{ messageId: string; rating: string }>,
+    ) => {
+      const msg = state.byId[action.payload.messageId];
+      if (!msg) return;
+      msg.feedbackRating = action.payload.rating || undefined;
+    },
     appendDelta: (
       state,
       action: PayloadAction<{
@@ -474,6 +482,7 @@ export const {
   evictExpiredTyping,
   addReactionToMessage,
   removeReactionFromMessage,
+  setMessageFeedback,
   appendDelta,
   appendAgentThinking,
   clearChatMessages,

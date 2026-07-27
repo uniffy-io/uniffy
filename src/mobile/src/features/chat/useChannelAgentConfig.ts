@@ -4,14 +4,13 @@ import { chatApi } from "@features/chat/chatApi";
 
 export interface SerializedChannelAgentConfig {
   modelOverride: string;
-  modelParamsOverrideJson: string;
 }
 
 export function channelAgentConfigKey(orgId: string | null, channelId: string, agentId: string) {
   return ["chat", "agentConfig", orgId, channelId, agentId];
 }
 
-/** Per-(channel, agent) model + parameter overrides; "" on either field = agent default. */
+/** Per-(channel, agent) model override; "" = agent default. */
 export function useChannelAgentConfig(channelId: string, agentId: string, enabled = true) {
   const { organizationId } = useAuth();
 
@@ -26,15 +25,14 @@ export function useChannelAgentConfig(channelId: string, agentId: string, enable
       });
       return {
         modelOverride: res.config?.modelOverride ?? "",
-        modelParamsOverrideJson: res.config?.modelParamsOverrideJson ?? "",
       };
     },
   });
 }
 
 /**
- * Optimistic per-field update with revert on error. An absent field leaves
- * the server value unchanged; "" clears that override.
+ * Optimistic update with revert on error. An absent field leaves the server
+ * value unchanged; "" clears the override.
  */
 export function useUpdateChannelAgentConfig(channelId: string, agentId: string) {
   const { organizationId } = useAuth();
@@ -42,21 +40,18 @@ export function useUpdateChannelAgentConfig(channelId: string, agentId: string) 
   const key = channelAgentConfigKey(organizationId, channelId, agentId);
 
   return useMutation({
-    mutationFn: (patch: { modelOverride?: string; modelParamsOverrideJson?: string }) =>
+    mutationFn: (patch: { modelOverride?: string }) =>
       chatApi.updateChannelAgentConfig({
         organizationId: organizationId!,
         channelId,
         agentId,
         modelOverride: patch.modelOverride,
-        modelParamsOverrideJson: patch.modelParamsOverrideJson,
       }),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<SerializedChannelAgentConfig>(key);
       queryClient.setQueryData<SerializedChannelAgentConfig>(key, (old) => ({
         modelOverride: patch.modelOverride ?? old?.modelOverride ?? "",
-        modelParamsOverrideJson:
-          patch.modelParamsOverrideJson ?? old?.modelParamsOverrideJson ?? "",
       }));
       return { previous };
     },
@@ -70,7 +65,6 @@ export function useUpdateChannelAgentConfig(channelId: string, agentId: string) 
     onSuccess: (res) => {
       queryClient.setQueryData<SerializedChannelAgentConfig>(key, {
         modelOverride: res.config?.modelOverride ?? "",
-        modelParamsOverrideJson: res.config?.modelParamsOverrideJson ?? "",
       });
     },
   });

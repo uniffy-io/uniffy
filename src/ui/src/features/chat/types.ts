@@ -97,6 +97,8 @@ export interface ChatMessage {
   senderName?: string;
   senderAvatarUrl?: string;
   attachments?: MessageAttachment[];
+  /** The caller's own thumbs rating on an agent reply ('up' | 'down'); absent when unrated. */
+  feedbackRating?: string;
 }
 
 export interface ChatChannelMember {

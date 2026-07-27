@@ -27,7 +27,7 @@ export interface ChannelAgentConfigIds {
     agentId: string;
 }
 
-interface UseChannelAgentConfigResult {
+export interface UseChannelAgentConfigResult {
     config: ChannelAgentConfigState | null;
     loading: boolean;
     updating: boolean;
@@ -35,10 +35,10 @@ interface UseChannelAgentConfigResult {
 }
 
 export const configFromProto = (
-    proto: { modelOverride: string; modelParamsOverrideJson: string } | undefined,
+    proto: { modelOverride: string; modelParamsOverride: string } | undefined,
 ): ChannelAgentConfigState => ({
     modelOverride: proto?.modelOverride ? proto.modelOverride : null,
-    modelParams: parseModelParamValues(proto?.modelParamsOverrideJson ?? ''),
+    modelParams: parseModelParamValues(proto?.modelParamsOverride ?? ''),
 });
 
 export const applyConfigChanges = (
@@ -53,13 +53,13 @@ export const applyConfigChanges = (
 /** Wire contract on the optional update fields: absent = unchanged, "" = clear. */
 export const buildUpdatePayload = (
     changes: ChannelAgentConfigChanges,
-): { modelOverride?: string; modelParamsOverrideJson?: string } => {
-    const payload: { modelOverride?: string; modelParamsOverrideJson?: string } = {};
+): { modelOverride?: string; modelParamsOverride?: string } => {
+    const payload: { modelOverride?: string; modelParamsOverride?: string } = {};
     if (changes.modelOverride !== undefined) {
         payload.modelOverride = changes.modelOverride ?? '';
     }
     if (changes.modelParams !== undefined) {
-        payload.modelParamsOverrideJson =
+        payload.modelParamsOverride =
             Object.keys(changes.modelParams).length > 0 ? JSON.stringify(changes.modelParams) : '';
     }
     return payload;

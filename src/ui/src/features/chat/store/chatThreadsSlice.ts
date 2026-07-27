@@ -119,6 +119,17 @@ export const chatThreadsSlice = createSlice({
         return;
       }
     },
+    setThreadMessageFeedback: (
+      state,
+      action: PayloadAction<{ messageId: string; rating: string }>,
+    ) => {
+      for (const messages of Object.values(state.threadMessages)) {
+        const msg = messages.find((m) => m.id === action.payload.messageId);
+        if (!msg) continue;
+        msg.feedbackRating = action.payload.rating || undefined;
+        return;
+      }
+    },
     appendDeltaToThreadMessage: (
       state,
       action: PayloadAction<{
@@ -168,6 +179,7 @@ export const {
   clearThreadMessages,
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
+  setThreadMessageFeedback,
   appendDeltaToThreadMessage,
   clearChatThreads,
 } = chatThreadsSlice.actions;

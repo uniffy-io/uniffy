@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useRef, useMemo } from 'react';
-import { ArrowBendUpLeft, PushPin, Robot, Stop } from '@phosphor-icons/react';
+import { ArrowBendUpLeft, Lightning, PushPin, Robot, Stop } from '@phosphor-icons/react';
 
 import { type ChatMessage } from '@/features/chat/types';
 import { HoverActionsToolbar } from '@/features/chat/components/channel/HoverActionsToolbar';
@@ -72,7 +72,7 @@ function messageRev(m: ChatMessage): string {
   const threadRev = m.thread
     ? `${m.thread.replyCount}:${m.thread.lastReplyAt ?? ''}:${m.thread.hasUnread ? 1 : 0}`
     : '';
-  return `${m.id}|${m.updatedAt ?? ''}|${m.editedAt ?? ''}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}`;
+  return `${m.id}|${m.updatedAt ?? ''}|${m.editedAt ?? ''}|${m.isDeleted ? 1 : 0}|${m.isPinned ? 1 : 0}|${contentLen}|${seq}|${stopped}|${reactionsHash}|${attachmentCount}|${threadRev}|${m.feedbackRating ?? ''}`;
 }
 
 function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps): boolean {
@@ -112,6 +112,10 @@ function MessageItemInner({
   // Set on the trigger message when the user stops the agent's reply mid-run.
   const agentRunStopped =
     message.metadata?.['agent_run_stopped'] === 'true' || message.metadata?.['agent_run_stopped'] === true;
+  const invokedSkillName =
+    !isAgent && typeof message.metadata?.['invoked_skill_name'] === 'string' && message.metadata['invoked_skill_name']
+      ? (message.metadata['invoked_skill_name'] as string)
+      : null;
   // DMs and agent chats (DIRECT, incl. is_agent_dm) thread every turn off the
   // previous message; a reply quote on each one is noise there, so suppress it.
   const isDmChannel = useAppSelector((state) => {
@@ -405,6 +409,15 @@ function MessageItemInner({
             </button>
           )}
 
+          {invokedSkillName && (
+            <span
+              className="mb-1 inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/30 px-1.5 py-0.5 text-[11px]"
+              data-testid={`chat-message-skill-${message.id}`}
+            >
+              <Lightning size={11} weight="fill" className="text-primary" />
+              <span className="font-mono text-foreground">/{invokedSkillName}</span>
+            </span>
+          )}
           <div data-testid={`chat-message-body-${message.id}`}>
             {isAgent ? (
               <AgentMessageBody message={message} />
