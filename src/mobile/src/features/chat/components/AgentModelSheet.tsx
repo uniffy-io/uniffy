@@ -34,9 +34,11 @@ export function AgentModelSheet({
   agentProviderKeyId: string;
   onClose: () => void;
 }) {
-  const configQuery = useChannelAgentConfig(channelId, agentId, visible);
+  // Loaded as soon as the agent DM opens, not on sheet open: the sheet is
+  // mounted for the whole chat, so waiting for `visible` shows an empty list first.
+  const configQuery = useChannelAgentConfig(channelId, agentId);
   const update = useUpdateChannelAgentConfig(channelId, agentId);
-  const modelsQuery = useAgentModels(agentProviderKeyId, visible);
+  const modelsQuery = useAgentModels(agentProviderKeyId, true);
 
   const models = modelsQuery.data ?? [];
   const modelOverride = configQuery.data?.modelOverride ?? "";

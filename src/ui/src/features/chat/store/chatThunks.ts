@@ -64,6 +64,10 @@ import {
   setThreadMessageFeedback,
 } from '@/features/chat/store/chatThreadsSlice';
 import { fetchAgents } from '@/features/agents/store/agentsThunks';
+import {
+  fetchAvailableModels,
+  fetchProviderKeys,
+} from '@/features/agents/store/agentProvidersThunks';
 import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import { markNotificationsReadBySource } from '@/features/notifications/store/notificationsSlice';
 import type { RootState } from '@/app/store';
@@ -1411,6 +1415,8 @@ export const initializeChat = createAsyncThunk<
 >('chat/initialize', async ({ channelId: initialChannelId, messageId }, { getState, dispatch, rejectWithValue }) => {
   try {
     // Load channels, categories, unread counts, and agents in parallel; agents power DM avatars and pickers.
+    // Provider keys and the model catalog ride along so the DM model picker is
+    // populated before the user opens it, not after.
     await Promise.all([
       dispatch(fetchChannels()).unwrap(),
       dispatch(fetchCategories()).unwrap(),
@@ -1419,6 +1425,8 @@ export const initializeChat = createAsyncThunk<
       dispatch(fetchThreadsInbox()).unwrap(),
       dispatch(fetchDrafts()).unwrap().catch(() => {}),
       dispatch(fetchAgents()).unwrap().catch(() => {}),
+      dispatch(fetchProviderKeys()).unwrap().catch(() => {}),
+      dispatch(fetchAvailableModels()).unwrap().catch(() => {}),
     ]);
 
     const state = getState();

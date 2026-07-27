@@ -25,14 +25,25 @@ export const fetchAgentTemplates = createAsyncThunk<
     SerializedAgentTemplate[],
     void,
     { state: RootState; rejectValue: string }
->('agentTemplates/fetch', async (_, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await agentsApi.listAgentTemplates({ organizationId });
-        return response.templates.map(templateToPlain);
-    } catch (error) {
-        return rejectWithValue(
-            error instanceof Error ? error.message : 'Failed to fetch agent templates',
-        );
-    }
-});
+>(
+    'agentTemplates/fetch',
+    async (_, { getState, rejectWithValue }) => {
+        try {
+            const organizationId = getOrganizationId(getState());
+            const response = await agentsApi.listAgentTemplates({ organizationId });
+            return response.templates.map(templateToPlain);
+        } catch (error) {
+            return rejectWithValue(
+                error instanceof Error ? error.message : 'Failed to fetch agent templates',
+            );
+        }
+    },
+    {
+        // Shipped catalog, identical for every org: fetch it once so the create
+        // gallery renders filled instead of empty-then-populated.
+        condition: (_, { getState }) => {
+            const state = getState().agentTemplates;
+            return !state.loaded && !state.loading;
+        },
+    },
+);

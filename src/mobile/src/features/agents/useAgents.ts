@@ -43,11 +43,9 @@ export function useAgentModels(providerKeyId: string, enabled: boolean) {
         ? await providersApi.listModelsForKey({
             organizationId: organizationId!,
             keyId: providerKeyId,
-            forceRefresh: false,
           })
         : await providersApi.listAvailableModels({
             organizationId: organizationId!,
-            forceRefresh: false,
           });
       return res.models
         .filter((m) => m.catalogKnown && !m.supportsImageGeneration)

@@ -857,9 +857,7 @@ type ListAvailableModelsRequest struct {
 	// Organization ID
 	OrganizationId string `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// Optional provider filter
-	Provider *string `protobuf:"bytes,2,opt,name=provider,proto3,oneof" json:"provider,omitempty"`
-	// When true, bypasses the cached model list and fetches fresh from the provider API
-	ForceRefresh  bool `protobuf:"varint,3,opt,name=force_refresh,json=forceRefresh,proto3" json:"force_refresh,omitempty"`
+	Provider      *string `protobuf:"bytes,2,opt,name=provider,proto3,oneof" json:"provider,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -906,13 +904,6 @@ func (x *ListAvailableModelsRequest) GetProvider() string {
 		return *x.Provider
 	}
 	return ""
-}
-
-func (x *ListAvailableModelsRequest) GetForceRefresh() bool {
-	if x != nil {
-		return x.ForceRefresh
-	}
-	return false
 }
 
 // Response with available models
@@ -1013,9 +1004,7 @@ type ListModelsForKeyRequest struct {
 	// Organization ID
 	OrganizationId string `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// Provider key ID
-	KeyId string `protobuf:"bytes,2,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
-	// When true, bypass cache and fetch fresh from provider API
-	ForceRefresh  bool `protobuf:"varint,3,opt,name=force_refresh,json=forceRefresh,proto3" json:"force_refresh,omitempty"`
+	KeyId         string `protobuf:"bytes,2,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1062,13 +1051,6 @@ func (x *ListModelsForKeyRequest) GetKeyId() string {
 		return x.KeyId
 	}
 	return ""
-}
-
-func (x *ListModelsForKeyRequest) GetForceRefresh() bool {
-	if x != nil {
-		return x.ForceRefresh
-	}
-	return false
 }
 
 // Request to toggle a provider key on or off
@@ -1215,20 +1197,18 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x1bValidateProviderKeyResponse\x12\x19\n" +
 	"\bis_valid\x18\x01 \x01(\bR\aisValid\x12\x19\n" +
 	"\x05error\x18\x02 \x01(\tH\x00R\x05error\x88\x01\x01B\b\n" +
-	"\x06_error\"\x98\x01\n" +
+	"\x06_error\"s\n" +
 	"\x1aListAvailableModelsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n" +
-	"\bprovider\x18\x02 \x01(\tH\x00R\bprovider\x88\x01\x01\x12#\n" +
-	"\rforce_refresh\x18\x03 \x01(\bR\fforceRefreshB\v\n" +
+	"\bprovider\x18\x02 \x01(\tH\x00R\bprovider\x88\x01\x01B\v\n" +
 	"\t_provider\"K\n" +
 	"\x1bListAvailableModelsResponse\x12,\n" +
 	"\x06models\x18\x01 \x03(\v2\x14.agents.v1.ModelInfoR\x06models\"H\n" +
 	"\x18ListModelsForKeyResponse\x12,\n" +
-	"\x06models\x18\x01 \x03(\v2\x14.agents.v1.ModelInfoR\x06models\"~\n" +
+	"\x06models\x18\x01 \x03(\v2\x14.agents.v1.ModelInfoR\x06models\"Y\n" +
 	"\x17ListModelsForKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x15\n" +
-	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12#\n" +
-	"\rforce_refresh\x18\x03 \x01(\bR\fforceRefresh\"t\n" +
+	"\x06key_id\x18\x02 \x01(\tR\x05keyId\"t\n" +
 	"\x18ToggleProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x15\n" +
 	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x18\n" +

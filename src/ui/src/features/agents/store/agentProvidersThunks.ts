@@ -9,6 +9,11 @@ const getOrganizationId = (state: RootState): string => {
     return orgId;
 };
 
+/** A fetch is redundant only when the cached data belongs to the current org. */
+const isCachedForCurrentOrg = (state: RootState): boolean =>
+    state.agentProviders.organizationId !== null
+    && state.agentProviders.organizationId === state.auth.currentOrganizationId;
+
 const timestampToPlain = (ts?: { seconds: bigint | number; nanos: bigint | number }) => {
     if (!ts) return undefined;
     return {
@@ -50,18 +55,31 @@ export const modelInfoToPlain = (model: ModelInfo) => ({
 export type SerializedModelInfo = ReturnType<typeof modelInfoToPlain>;
 
 export const fetchProviderKeys = createAsyncThunk<
-    SerializedProviderKey[],
-    void,
+    { organizationId: string; keys: SerializedProviderKey[] },
+    { force?: boolean } | void,
     { state: RootState; rejectValue: string }
->('agentProviders/fetchProviderKeys', async (_, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await providersApi.listProviderKeys({ organizationId });
-        return response.keys.map(providerKeyToPlain);
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch provider keys');
-    }
-});
+>(
+    'agentProviders/fetchProviderKeys',
+    async (_, { getState, rejectWithValue }) => {
+        try {
+            const organizationId = getOrganizationId(getState());
+            const response = await providersApi.listProviderKeys({ organizationId });
+            return { organizationId, keys: response.keys.map(providerKeyToPlain) };
+        } catch (error) {
+            return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch provider keys');
+        }
+    },
+    {
+        // Every agent surface prefetches these; without the guard each mount
+        // refires the same RPC and the pickers stay empty until the last one lands.
+        condition: (params, { getState }) => {
+            if (params?.force) return true;
+            const state = getState();
+            if (!isCachedForCurrentOrg(state)) return true;
+            return state.agentProviders.keysStatus === 'idle';
+        },
+    },
+);
 
 export const addProviderKey = createAsyncThunk<
     SerializedProviderKey,
@@ -110,40 +128,62 @@ export const validateProviderKey = createAsyncThunk<
 });
 
 export const fetchAvailableModels = createAsyncThunk<
-    SerializedModelInfo[],
-    { provider?: string; forceRefresh?: boolean } | void,
+    { organizationId: string; models: SerializedModelInfo[] },
+    { provider?: string; force?: boolean } | void,
     { state: RootState; rejectValue: string }
->('agentProviders/fetchAvailableModels', async (params, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await providersApi.listAvailableModels({
-            organizationId,
-            provider: params?.provider,
-            forceRefresh: params?.forceRefresh ?? false,
-        });
-        return response.models.map(modelInfoToPlain);
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch available models');
-    }
-});
+>(
+    'agentProviders/fetchAvailableModels',
+    async (params, { getState, rejectWithValue }) => {
+        try {
+            const organizationId = getOrganizationId(getState());
+            const response = await providersApi.listAvailableModels({
+                organizationId,
+                provider: params?.provider,
+            });
+            return { organizationId, models: response.models.map(modelInfoToPlain) };
+        } catch (error) {
+            return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch available models');
+        }
+    },
+    {
+        condition: (params, { getState }) => {
+            if (params?.force || params?.provider) return true;
+            const state = getState();
+            if (!isCachedForCurrentOrg(state)) return true;
+            return state.agentProviders.modelsStatus === 'idle';
+        },
+    },
+);
 
 export const fetchModelsForKey = createAsyncThunk<
-    { keyId: string; models: SerializedModelInfo[] },
-    { keyId: string; forceRefresh?: boolean },
+    { organizationId: string; keyId: string; models: SerializedModelInfo[] },
+    { keyId: string; force?: boolean },
     { state: RootState; rejectValue: string }
->('agentProviders/fetchModelsForKey', async ({ keyId, forceRefresh }, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await providersApi.listModelsForKey({
-            organizationId,
-            keyId,
-            forceRefresh: forceRefresh ?? false,
-        });
-        return { keyId, models: response.models.map(modelInfoToPlain) };
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch models for key');
-    }
-});
+>(
+    'agentProviders/fetchModelsForKey',
+    async ({ keyId }, { getState, rejectWithValue }) => {
+        try {
+            const organizationId = getOrganizationId(getState());
+            const response = await providersApi.listModelsForKey({ organizationId, keyId });
+            return { organizationId, keyId, models: response.models.map(modelInfoToPlain) };
+        } catch (error) {
+            return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch models for key');
+        }
+    },
+    {
+        // The list is a per-provider catalog, so the org-wide fetch already
+        // covers every enabled key; only an invalid or disabled key needs its own call.
+        condition: ({ keyId, force }, { getState }) => {
+            if (force) return true;
+            const state = getState();
+            if (!isCachedForCurrentOrg(state)) return true;
+            const providers = state.agentProviders;
+            if (providers.pendingKeyIds.includes(keyId)) return false;
+            const provider = providers.providerByKeyId[keyId];
+            return !provider || providers.modelsByProvider[provider] === undefined;
+        },
+    },
+);
 
 export const toggleProviderKey = createAsyncThunk<
     SerializedProviderKey,

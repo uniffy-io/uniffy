@@ -148,14 +148,12 @@ class ValidateProviderKeyResponse(_message.Message):
     def __init__(self, is_valid: _Optional[bool] = ..., error: _Optional[str] = ...) -> None: ...
 
 class ListAvailableModelsRequest(_message.Message):
-    __slots__ = ("organization_id", "provider", "force_refresh")
+    __slots__ = ("organization_id", "provider")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
-    FORCE_REFRESH_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     provider: str
-    force_refresh: bool
-    def __init__(self, organization_id: _Optional[str] = ..., provider: _Optional[str] = ..., force_refresh: _Optional[bool] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., provider: _Optional[str] = ...) -> None: ...
 
 class ListAvailableModelsResponse(_message.Message):
     __slots__ = ("models",)
@@ -170,14 +168,12 @@ class ListModelsForKeyResponse(_message.Message):
     def __init__(self, models: _Optional[_Iterable[_Union[ModelInfo, _Mapping]]] = ...) -> None: ...
 
 class ListModelsForKeyRequest(_message.Message):
-    __slots__ = ("organization_id", "key_id", "force_refresh")
+    __slots__ = ("organization_id", "key_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     KEY_ID_FIELD_NUMBER: _ClassVar[int]
-    FORCE_REFRESH_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     key_id: str
-    force_refresh: bool
-    def __init__(self, organization_id: _Optional[str] = ..., key_id: _Optional[str] = ..., force_refresh: _Optional[bool] = ...) -> None: ...
+    def __init__(self, organization_id: _Optional[str] = ..., key_id: _Optional[str] = ...) -> None: ...
 
 class ToggleProviderKeyRequest(_message.Message):
     __slots__ = ("organization_id", "key_id", "enabled")

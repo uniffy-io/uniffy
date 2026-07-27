@@ -190,7 +190,6 @@ class ProvidersHandlers:
                     user_id=user_id,
                     organization_id=org_id,
                     provider=provider,
-                    force_refresh=request.force_refresh,
                 )
                 return ListAvailableModelsResponse(
                     models=[model_info_to_proto(m) for m in models],
@@ -245,7 +244,6 @@ class ProvidersHandlers:
                     user_id=user_id,
                     organization_id=org_id,
                     key_id=key_id,
-                    force_refresh=request.force_refresh,
                 )
                 return ListModelsForKeyResponse(
                     models=[model_info_to_proto(m) for m in models],

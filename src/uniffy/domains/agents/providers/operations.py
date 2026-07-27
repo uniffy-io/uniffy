@@ -220,42 +220,34 @@ class ProviderOperations:
         user_id: UUID,
         organization_id: UUID,
         provider: str | None = None,
-        force_refresh: bool = False,
     ) -> list[ModelInfo]:
-        """List models exposed by all valid, enabled keys in the org."""
+        """List models exposed by all valid, enabled keys in the org.
+
+        The model list is a projection of the local catalog keyed by PROVIDER,
+        so this path reads the provider column only: no credential decrypt, no
+        SDK client, no provider round trip. Model pickers hit it on every chat
+        and builder surface, so it stays a single indexed SELECT.
+        """
         await self._org_ops.require_org_member(user_id, organization_id)
 
         stmt = (
-            select(ProviderKey)
+            select(ProviderKey.provider)
             .where(
                 ProviderKey.organization_id == organization_id,
                 ProviderKey.is_valid == True,  # noqa: E712
                 ProviderKey.is_enabled == True,  # noqa: E712
             )
-            .order_by(ProviderKey.created_at)
+            .distinct()
+            .order_by(ProviderKey.provider)
         )
         if provider:
             stmt = stmt.where(ProviderKey.provider == provider)
 
         result = await self._session.execute(stmt)
-        keys = result.scalars().all()
-
-        seen_providers: set[str] = set()
-        models: list[ModelInfo] = []
         registry = get_provider_registry()
-        for key in keys:
-            if key.provider in seen_providers:
-                continue
-            seen_providers.add(key.provider)
-            credential = await self._org_cipher.decrypt(
-                key.organization_id, key.encrypted_credential
-            )
-            llm = registry.create_provider(key.provider, credential)
-            models.extend(
-                await llm.get_available_models(
-                    force_refresh=force_refresh,
-                ),
-            )
+        models: list[ModelInfo] = []
+        for provider_name in result.scalars().all():
+            models.extend(registry.get_models_for_provider(provider_name))
 
         return models
 
@@ -446,24 +438,25 @@ class ProviderOperations:
         user_id: UUID,
         organization_id: UUID,
         key_id: UUID,
-        force_refresh: bool = False,
     ) -> list[ModelInfo]:
-        """List models exposed by a specific provider key."""
+        """List models exposed by a specific provider key.
+
+        Catalog-driven like ``list_available_models``: only the key's provider
+        column decides the list, so the credential stays encrypted at rest.
+        """
         await self._org_ops.require_org_member(user_id, organization_id)
 
         result = await self._session.execute(
-            select(ProviderKey).where(
+            select(ProviderKey.provider).where(
                 ProviderKey.id == key_id,
                 ProviderKey.organization_id == organization_id,
             )
         )
-        key = result.scalar_one_or_none()
-        if not key:
+        provider = result.scalar_one_or_none()
+        if not provider:
             raise NotFoundError("ProviderKey", str(key_id))
 
-        credential = await self._org_cipher.decrypt(key.organization_id, key.encrypted_credential)
-        llm = get_provider_registry().create_provider(key.provider, credential)
-        return await llm.get_available_models(force_refresh=force_refresh)
+        return get_provider_registry().get_models_for_provider(provider)
 
     async def toggle_key(
         self,

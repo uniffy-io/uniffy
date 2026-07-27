@@ -229,9 +229,5 @@ class LLMProvider(ABC):
         raise NotImplementedError("This provider does not support image generation")
 
     @abstractmethod
-    async def get_available_models(
-        self,
-        *,
-        force_refresh: bool = False,
-    ) -> list[ModelInfo]:
-        """List models; `force_refresh=True` bypasses any cached list."""
+    async def get_available_models(self) -> list[ModelInfo]:
+        """List the models this provider serves, from the local catalog."""

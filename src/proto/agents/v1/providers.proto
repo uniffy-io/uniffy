@@ -173,8 +173,6 @@ message ListAvailableModelsRequest {
   string organization_id = 1;
   // Optional provider filter
   optional string provider = 2;
-  // When true, bypasses the cached model list and fetches fresh from the provider API
-  bool force_refresh = 3;
 }
 
 // Response with available models
@@ -195,8 +193,6 @@ message ListModelsForKeyRequest {
   string organization_id = 1;
   // Provider key ID
   string key_id = 2;
-  // When true, bypass cache and fetch fresh from provider API
-  bool force_refresh = 3;
 }
 
 // Request to toggle a provider key on or off

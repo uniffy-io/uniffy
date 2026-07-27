@@ -169,16 +169,8 @@ class OpenAIProvider(LLMProvider):
 
         return await self._sync_completion(**kwargs)
 
-    async def get_available_models(
-        self,
-        *,
-        force_refresh: bool = False,
-    ) -> list[ModelInfo]:
-        """Return OpenAI models from the catalog (the source of truth).
-
-        ``force_refresh`` is accepted for interface compatibility and ignored
-        - the catalog is local and re-read on change.
-        """
+    async def get_available_models(self) -> list[ModelInfo]:
+        """Return OpenAI models from the catalog (the source of truth)."""
         return model_infos_for_provider("openai")
 
     def _build_request_kwargs(

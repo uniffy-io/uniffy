@@ -26,11 +26,7 @@ class XAIProvider(OpenAIProvider):
         """Catalog provider key, used for pricing lookups."""
         return "xai"
 
-    async def get_available_models(
-        self,
-        *,
-        force_refresh: bool = False,
-    ) -> list[ModelInfo]:
+    async def get_available_models(self) -> list[ModelInfo]:
         return model_infos_for_provider("xai")
 
     def _apply_reasoning(self, kwargs: dict, effort: str) -> None:

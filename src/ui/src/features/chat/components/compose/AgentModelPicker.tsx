@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import {
   selectAvailableModels,
   selectModelsForKey,
+  selectModelsLoadingForKey,
 } from '@/features/agents/store/agentProvidersSlice';
 import {
   fetchAvailableModels,
@@ -194,8 +195,11 @@ export function AgentModelPicker({
   const keyId = agent.primaryProviderKeyId;
   const keyModels = useAppSelector(selectModelsForKey(keyId));
   const orgModels = useAppSelector(selectAvailableModels);
+  const modelsLoading = useAppSelector(selectModelsLoadingForKey(keyId));
   const models = keyId ? keyModels : orgModels;
 
+  // Chat init prefetches both lists, so this usually resolves to a no-op; it
+  // still covers an agent pointing at a disabled or invalid key.
   useEffect(() => {
     if (keyId) {
       dispatch(fetchModelsForKey({ keyId }));
@@ -339,7 +343,9 @@ export function AgentModelPicker({
                 </button>
               ))}
               {options.length === 0 && (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground">No models available</p>
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                  {modelsLoading ? 'Loading models...' : 'No models available'}
+                </p>
               )}
             </div>
             <div className="mt-3 border-t border-border pt-2">

@@ -3,5 +3,13 @@ export { agentsReducer, selectAllAgents, selectAgentById, selectAgentsLoading } 
 export { agentSessionsReducer, selectAllSessions } from "./agentSessionsSlice";
 export { agentMessagesReducer, selectMessagesForSession, selectStreamingContent, selectStreamingToolCalls, selectIsStreaming, selectMessagesLoading } from "./agentMessagesSlice";
 export { agentSkillsReducer, selectAllSkills, selectSkillById, selectSkillsLoading } from "./agentSkillsSlice";
-export { agentProvidersReducer, selectProviderKeys, selectAvailableModels, selectProvidersLoading } from "./agentProvidersSlice";
+export {
+    agentProvidersReducer,
+    clearAgentProviders,
+    selectProviderKeys,
+    selectAvailableModels,
+    selectModelsForKey,
+    selectModelsLoadingForKey,
+    selectProvidersLoading,
+} from "./agentProvidersSlice";
 export { agentMemoriesReducer, selectMemoryScope } from "./agentMemoriesSlice";

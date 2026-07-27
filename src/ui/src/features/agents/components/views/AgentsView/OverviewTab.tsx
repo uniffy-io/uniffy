@@ -9,7 +9,11 @@ import {
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { selectProviderKeys, selectModelsForKey } from "@/features/agents/store/agentProvidersSlice";
+import {
+    selectProviderKeys,
+    selectModelsForKey,
+    selectModelsLoadingForKey,
+} from "@/features/agents/store/agentProvidersSlice";
 import { fetchModelsForKey } from "@/features/agents/store/agentProvidersThunks";
 import { updateAgent, uploadAgentAvatar, deleteAgentAvatar } from "@/features/agents/store/agentsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
@@ -60,6 +64,8 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
 
     const primaryKeyModels = useAppSelector(selectModelsForKey(primaryKeyId));
     const imageKeyModels = useAppSelector(selectModelsForKey(imageKeyId));
+    const primaryModelsLoading = useAppSelector(selectModelsLoadingForKey(primaryKeyId));
+    const imageModelsLoading = useAppSelector(selectModelsLoadingForKey(imageKeyId));
 
     useEffect(() => {
         if (primaryKeyId) {
@@ -351,7 +357,13 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             value={agent.primaryModel}
                                             onChange={handlePrimaryModelChange}
                                             options={primaryModelOptions}
-                                            placeholder={primaryKeyId ? "Select model..." : "Select a provider key first"}
+                                            placeholder={
+                                                !primaryKeyId
+                                                    ? "Select a provider key first"
+                                                    : primaryModelsLoading
+                                                        ? "Loading models..."
+                                                        : "Select model..."
+                                            }
                                             disabled={!canEdit || !primaryKeyId}
                                             className="w-full"
                                         />
@@ -385,7 +397,13 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             value={agent.imageModel}
                                             onChange={(value) => handleUpdate({ imageModel: value })}
                                             options={imageModelOptions}
-                                            placeholder={imageKeyId ? "Select model..." : "Select a provider key first"}
+                                            placeholder={
+                                                !imageKeyId
+                                                    ? "Select a provider key first"
+                                                    : imageModelsLoading
+                                                        ? "Loading models..."
+                                                        : "Select model..."
+                                            }
                                             disabled={!canEdit || !imageKeyId}
                                             className="w-full"
                                         />

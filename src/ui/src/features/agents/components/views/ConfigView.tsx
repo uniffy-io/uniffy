@@ -375,7 +375,7 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => dispatch(fetchProviderKeys())}
+                            onClick={() => dispatch(fetchProviderKeys({ force: true }))}
                         >
                             <ArrowClockwise size={16} />
                         </Button>
@@ -550,12 +550,12 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                                             size="icon"
                                             onClick={() => {
                                                 if (modelsTab === "all") {
-                                                    dispatch(fetchAvailableModels({ forceRefresh: true }));
+                                                    dispatch(fetchAvailableModels({ force: true }));
                                                 } else {
                                                     dispatch(
                                                         fetchModelsForKey({
                                                             keyId: selectedKey.id,
-                                                            forceRefresh: true,
+                                                            force: true,
                                                         }),
                                                     );
                                                 }

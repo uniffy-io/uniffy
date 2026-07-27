@@ -26,6 +26,11 @@ import { fetchAgents } from "@/features/agents/store/agentsThunks";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
 import { createSkillDraft, fetchSkillDrafts } from "@/features/agents/store/agentSkillDraftsThunks";
 import { fetchCronTasks } from "@/features/agents/store/agentCronThunks";
+import {
+  fetchAvailableModels,
+  fetchProviderKeys,
+} from "@/features/agents/store/agentProvidersThunks";
+import { fetchAgentTemplates } from "@/features/agents/store/agentTemplatesThunks";
 import { AgentsModuleSidebar } from "@/features/agents/components/layout/AgentsModuleSidebar";
 import { AgentsView } from "@/features/agents/components/views/AgentsView";
 import { SkillsView } from "@/features/agents/components/views/SkillsView";
@@ -54,12 +59,16 @@ export function AgentsLayout() {
   const [creatingSkill, setCreatingSkill] = useState(false);
 
   // Fetched here, not in the sidebar: Zen mode and the mobile drawer unmount
-  // the sidebar, and the content views still need this data.
+  // the sidebar, and the content views still need this data. Keys and models
+  // load up front so every model dropdown in the builder opens populated.
   useEffect(() => {
     dispatch(fetchAgents());
     dispatch(fetchSkills());
     dispatch(fetchSkillDrafts({ status: "pending" }));
     dispatch(fetchCronTasks());
+    dispatch(fetchProviderKeys());
+    dispatch(fetchAvailableModels());
+    dispatch(fetchAgentTemplates());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLayoutChange = useCallback((layout: Record<string, number>) => {
