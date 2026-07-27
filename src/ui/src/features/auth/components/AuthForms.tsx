@@ -390,7 +390,25 @@ export function AuthForms() {
                 className="mt-8 text-center text-xs text-muted-foreground/60 opacity-0"
                 style={{ animation: 'auth-slide-up 0.5s ease-out 0.5s forwards' }}
             >
-                By continuing, you agree to the uniffy terms of service.
+                By continuing, you agree to the Uniffy{' '}
+                <a
+                    href="https://uniffy.io/terms/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground underline"
+                >
+                    Terms of Service
+                </a>{' '}
+                and{' '}
+                <a
+                    href="https://uniffy.io/privacy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground underline"
+                >
+                    Privacy Policy
+                </a>
+                .
             </p>
         </AuthShell>
     );
