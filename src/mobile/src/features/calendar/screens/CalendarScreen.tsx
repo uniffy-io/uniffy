@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
+import Svg, { Line } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import {
   Plus,
@@ -111,6 +112,12 @@ function formatHourLabel(hour: number): string {
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
+}
+
+function formatClockLabel(date: Date): string {
+  const hour = date.getHours() % 12 === 0 ? 12 : date.getHours() % 12;
+  const meridiem = date.getHours() < 12 ? "AM" : "PM";
+  return `${hour}:${pad2(date.getMinutes())} ${meridiem}`;
 }
 
 function minutesToHHMM(min: number): string {
@@ -343,6 +350,7 @@ function WeekGrid({
   weekDates,
   selectedDate,
   today,
+  now,
   events,
   categoriesMap,
   bottomPad,
@@ -355,6 +363,7 @@ function WeekGrid({
   weekDates: Date[];
   selectedDate: Date;
   today: Date;
+  now: Date;
   events: SerializedEvent[];
   categoriesMap: Map<string, SerializedCategory>;
   bottomPad: number;
@@ -430,8 +439,9 @@ function WeekGrid({
     return out;
   }, [events, weekDates, dayWidth]);
 
-  const now = new Date();
   const currentTimeTop = ((now.getHours() * 60 + now.getMinutes()) / 60) * HOUR_HEIGHT;
+  const pastWidth = todayIdx * dayWidth;
+  const futureWidth = (weekDates.length - 1 - todayIdx) * dayWidth;
 
   return (
     <View style={{ flex: 1 }}>
@@ -482,11 +492,16 @@ function WeekGrid({
           {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => {
             const hour = HOUR_START + i;
             const top = i * HOUR_HEIGHT;
+            // Around the turn of the hour the two labels would print on top of
+            // each other; the live one wins.
+            const eclipsedByNow = todayIdx >= 0 && Math.abs(top - currentTimeTop) < HOUR_HEIGHT / 4;
             return (
               <React.Fragment key={hour}>
-                <Text style={[styles.hourLabel, { top: top - 7, color: T.textDim }]}>
-                  {formatHourLabel(hour)}
-                </Text>
+                {eclipsedByNow ? null : (
+                  <Text style={[styles.hourLabel, { top: top - 7, color: T.textDim }]}>
+                    {formatHourLabel(hour)}
+                  </Text>
+                )}
                 <View style={[styles.hourLine, { top, backgroundColor: T.border }]} />
               </React.Fragment>
             );
@@ -502,18 +517,67 @@ function WeekGrid({
             />
           ))}
 
+          {/* The current instant read across the whole week: muted behind it on
+              days already spent, accent on today, dashed accent ahead of it.
+              Only meaningful on the week that contains today. */}
           {todayIdx >= 0 && (
-            <View
-              style={[
-                styles.weekNowLine,
-                {
-                  top: currentTimeTop,
-                  left: TIME_COL_WIDTH + todayIdx * dayWidth,
-                  width: dayWidth,
-                  backgroundColor: T.accent,
-                },
-              ]}
-            />
+            <>
+              <Text
+                style={[styles.currentTimeLabel, { top: currentTimeTop - 7, color: T.accent }]}
+                numberOfLines={1}
+              >
+                {formatClockLabel(now)}
+              </Text>
+
+              {pastWidth > 0 && (
+                <View
+                  style={[
+                    styles.weekNowLine,
+                    {
+                      top: currentTimeTop,
+                      left: TIME_COL_WIDTH,
+                      width: pastWidth,
+                      backgroundColor: T.textDim,
+                    },
+                  ]}
+                />
+              )}
+
+              <View
+                style={[
+                  styles.weekNowLine,
+                  {
+                    top: currentTimeTop,
+                    left: TIME_COL_WIDTH + todayIdx * dayWidth,
+                    width: dayWidth,
+                    backgroundColor: T.accent,
+                  },
+                ]}
+              />
+
+              {/* SVG rather than a dashed border: a border dashed on one side
+                  only renders solid on Android. */}
+              {futureWidth > 0 && (
+                <Svg
+                  style={[
+                    styles.weekNowLine,
+                    { top: currentTimeTop, left: TIME_COL_WIDTH + (todayIdx + 1) * dayWidth },
+                  ]}
+                  width={futureWidth}
+                  height={2}
+                >
+                  <Line
+                    x1={0}
+                    y1={1}
+                    x2={futureWidth}
+                    y2={1}
+                    stroke={T.accent}
+                    strokeWidth={2}
+                    strokeDasharray="5,4"
+                  />
+                </Svg>
+              )}
+            </>
           )}
 
           {blocks.map((b) => {
@@ -828,8 +892,13 @@ export function CalendarScreen() {
 
   const selectedDayIndex = weekDates.findIndex((d) => isSameDay(d, selectedDate));
 
-  // Current time position for the indicator line
-  const now = new Date();
+  // The indicator carries a readable clock, so it has to tick: a stale line is
+  // a pixel off and invisible, a stale label is a wrong time.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   const currentTimeTop = ((now.getHours() * 60 + now.getMinutes()) / 60) * HOUR_HEIGHT;
   const isSelectedToday = isSameDay(selectedDate, today);
 
@@ -984,11 +1053,17 @@ export function CalendarScreen() {
                     const hour = HOUR_START + i;
                     if (hour > HOUR_END) return null;
                     const top = i * HOUR_HEIGHT;
+                    // Around the turn of the hour the two labels would print on
+                    // top of each other; the live one wins.
+                    const eclipsedByNow =
+                      isSelectedToday && Math.abs(top - currentTimeTop) < HOUR_HEIGHT / 4;
                     return (
                       <React.Fragment key={hour}>
-                        <Text style={[styles.hourLabel, { top: top - 7, color: T.textDim }]}>
-                          {formatHourLabel(hour)}
-                        </Text>
+                        {eclipsedByNow ? null : (
+                          <Text style={[styles.hourLabel, { top: top - 7, color: T.textDim }]}>
+                            {formatHourLabel(hour)}
+                          </Text>
+                        )}
                         <View style={[styles.hourLine, { top, backgroundColor: T.border }]} />
                       </React.Fragment>
                     );
@@ -996,10 +1071,21 @@ export function CalendarScreen() {
 
                   {/* Current time indicator */}
                   {isSelectedToday && (
-                    <View style={[styles.currentTimeRow, { top: currentTimeTop - 5 }]}>
-                      <View style={[styles.currentTimeDot, { backgroundColor: T.accent }]} />
-                      <View style={[styles.currentTimeLine, { backgroundColor: T.accent }]} />
-                    </View>
+                    <>
+                      <Text
+                        style={[
+                          styles.currentTimeLabel,
+                          { top: currentTimeTop - 7, color: T.accent },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {formatClockLabel(now)}
+                      </Text>
+                      <View style={[styles.currentTimeRow, { top: currentTimeTop - 5 }]}>
+                        <View style={[styles.currentTimeDot, { backgroundColor: T.accent }]} />
+                        <View style={[styles.currentTimeLine, { backgroundColor: T.accent }]} />
+                      </View>
+                    </>
                   )}
 
                   {/* Events positioned on the grid */}
@@ -1121,6 +1207,7 @@ export function CalendarScreen() {
             weekDates={weekDates}
             selectedDate={selectedDate}
             today={today}
+            now={now}
             events={rangeEvents}
             categoriesMap={categoriesMap}
             bottomPad={bottomPad}
@@ -1356,6 +1443,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 20,
     height: 10,
+  },
+  // A point smaller than the hour labels it sits between: the widest reading
+  // ("12:47 PM") has to clear the 56px time gutter without truncating.
+  currentTimeLabel: {
+    position: "absolute",
+    left: 0,
+    width: TIME_COL_WIDTH,
+    fontSize: 10,
+    fontFamily: FONT.semibold,
+    textAlign: "right",
+    paddingRight: 8,
+    lineHeight: 14,
+    zIndex: 21,
   },
   currentTimeDot: {
     width: 10,
