@@ -1,15 +1,8 @@
 import React from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Platform,
-} from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from "react-native";
 import { CaretRight } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import type { Domain } from "@core/types";
@@ -110,13 +103,8 @@ export function ActionSheet({
   const HeaderIcon = isDomain ? DOMAIN_ICON[icon as Domain] : icon ? getPhosphorIcon(icon) : null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose}>
-        <View />
-      </TouchableOpacity>
-      <View style={[styles.sheet, { backgroundColor: T.surface, paddingBottom: bottomPad + 8 }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-
+    <BottomSheet visible={visible} onClose={onClose} padBottom={false}>
+      <View style={{ paddingBottom: bottomPad + 8 }}>
         {(title || icon) && (
           <View style={[styles.header, { borderBottomColor: T.border }]}>
             {HeaderIcon && iconColor && (
@@ -191,28 +179,11 @@ export function ActionSheet({
           })}
         </ScrollView>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "80%",
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 4,
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",
