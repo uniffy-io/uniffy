@@ -19,10 +19,9 @@ x-healthcheck-defaults: &hc-defaults
   retries: 5
 
 services:
-
   rustfs:
     <<: *defaults
-    image: rustfs/rustfs:1.0.0-alpha.82
+    image: rustfs/rustfs:1.0.0-beta.11
     container_name: uniffy-rustfs
     environment:
       RUSTFS_ROOT_USER: rustfsadmin
