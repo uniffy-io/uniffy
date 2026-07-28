@@ -7,6 +7,7 @@ import {
   channelTypeToProto,
   notificationLevelToProto,
   draftKey,
+  messageToPlain,
   type ChannelType,
   type NotificationLevel,
   type SerializedMessage,
@@ -102,13 +103,18 @@ export function useSendMessage(channelId: string) {
         ),
       );
     },
-    onSuccess: (_res, _args, ctx) => {
-      if (ctx) {
-        queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
-          (old ?? []).filter((m) => m.id !== ctx.optimisticId),
-        );
-      }
-      queryClient.invalidateQueries({ queryKey: key });
+    // Swap the optimistic row for the server message in place. Removing it and
+    // refetching the whole list makes the just-sent bubble blink out and the
+    // list reflow; replacing by position keeps the row stable. The live stream
+    // echoes the same message and backfills attachments, so no refetch here.
+    onSuccess: (res, _args, ctx) => {
+      const real = res.message ? messageToPlain(res.message) : null;
+      queryClient.setQueryData<SerializedMessage[]>(key, (old) => {
+        if (!old) return real ? [real] : old;
+        if (!real) return ctx ? old.filter((m) => m.id !== ctx.optimisticId) : old;
+        const rest = old.filter((m) => m.id !== ctx?.optimisticId && m.id !== real.id);
+        return [real, ...rest];
+      });
     },
   });
 }

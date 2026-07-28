@@ -48,6 +48,11 @@ const CANCEL_DRAG_Y = 80;
 const HOLD_OPEN_MS = 320;
 const ITEM_COUNT = HUB_ITEMS.length;
 const HINT_KEY = "@uniffy/hub_hint_seen";
+// A tap unfolds the wheel out of the logo and folds it back; the logo turns a
+// full circle each way over the same span, so the spin reads as the source of
+// the motion.
+const HUB_OPEN_MS = 440;
+const HUB_CLOSE_MS = 380;
 
 // The wheel is bounded: one position per item, rotation stops at both ends.
 function clampIndex(v: number): number {
@@ -106,6 +111,13 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
   // returns to its resting orientation as the selection settles.
   const spinOrigin = useSharedValue(0);
   const hubNudge = useSharedValue(0);
+  // Tap open/close choreography: openProgress unfolds the wheel out of the
+  // logo (0 -> 1) and folds it back (1 -> 0); tapSpin turns the logo a full
+  // turn clockwise on open and back anticlockwise on close. Both stay off the
+  // glass nodes (layout + a transform on the logo image), safe under
+  // expo/expo#41024.
+  const openProgress = useSharedValue(0);
+  const tapSpin = useSharedValue(0);
 
   const prevDomainPath = useRef<string | null>(null);
   const currentDomainPath = useRef<string | null>(null);
@@ -160,18 +172,40 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
     spinOrigin.value = HUB_CENTER_INDEX;
     setFocusedIndex(HUB_CENTER_INDEX);
     setOpen(true);
-  }, [offset, spinOrigin, startOffset]);
+    openProgress.value = 0;
+    if (reducedMotion) {
+      openProgress.value = 1;
+    } else {
+      openProgress.value = withTiming(1, { duration: HUB_OPEN_MS });
+      tapSpin.value = withTiming(tapSpin.value + 360, { duration: HUB_OPEN_MS });
+    }
+  }, [offset, spinOrigin, startOffset, openProgress, tapSpin, reducedMotion]);
 
-  const openHubFromDrag = useCallback((start: number) => {
-    Keyboard.dismiss();
-    setFocusedIndex(start);
-    setOpen(true);
-  }, []);
+  const openHubFromDrag = useCallback(
+    (start: number) => {
+      Keyboard.dismiss();
+      setFocusedIndex(start);
+      setOpen(true);
+      openProgress.value = 0;
+      openProgress.value = reducedMotion ? 1 : withTiming(1, { duration: HUB_OPEN_MS });
+    },
+    [openProgress, reducedMotion],
+  );
 
   const closeHub = useCallback(() => {
-    setOpen(false);
     dragging.value = false;
-  }, [dragging]);
+    if (reducedMotion) {
+      openProgress.value = 0;
+      setOpen(false);
+      return;
+    }
+    // Fold back into the logo, then unmount once the retract lands so the
+    // wheel is never cut off mid-collapse.
+    tapSpin.value = withTiming(tapSpin.value - 360, { duration: HUB_CLOSE_MS });
+    openProgress.value = withTiming(0, { duration: HUB_CLOSE_MS }, (finished) => {
+      if (finished) runOnJS(setOpen)(false);
+    });
+  }, [dragging, openProgress, tapSpin, reducedMotion]);
 
   const markHintSeen = useCallback(() => {
     setShowHint(false);
@@ -303,7 +337,7 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
   const logoStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: hubNudge.value },
-      { rotate: `${-(offset.value - spinOrigin.value) * 8}deg` },
+      { rotate: `${-(offset.value - spinOrigin.value) * 8 + tapSpin.value}deg` },
     ],
   }));
 
@@ -319,23 +353,26 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
     return { height: (1 - p) * blockHeight };
   });
 
-  // Rendered as a flow block, not an absolute overlay: on iOS 26 Fabric an
-  // inset-positioned shell overlay stays in flow layout anyway (it steals
-  // Stack height), so the bar reserves its space honestly and the shell's
-  // KeyboardSpacer lifts content above the keyboard.
-  return (
-    <>
-      <HubCarousel
-        open={open}
-        offset={offset}
-        focusedIndex={focusedIndex}
-        centerBottom={centerBottom}
-        gesture={backdropGesture}
-        showHint={showHint}
-        onItemPress={selectIndex}
-        onRequestClose={closeHub}
-      />
-
+  // The shell copy stays mounted always and owns the hub gesture; the modal
+  // copy (withGesture=false) is a non-interactive twin drawn on top of the dim.
+  // Keeping the shell copy mounted is what kills the open blink - the bar is
+  // never unmounted/remounted, only overlaid. Attaching hubGesture to both
+  // would double-register it, so only the shell copy carries it.
+  const renderBar = (withGesture: boolean) => {
+    const logo = (
+      <Animated.View
+        style={styles.hubButton}
+        accessibilityRole="button"
+        accessibilityLabel="Switch domain"
+      >
+        <Animated.Image
+          source={require("../../../assets/images/uniffy-logo.png")}
+          style={[styles.hubLogo, logoStyle]}
+          resizeMode="contain"
+        />
+      </Animated.View>
+    );
+    return (
       <Animated.View style={[styles.barClip, collapseStyle]}>
         <View
           style={[
@@ -352,7 +389,7 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
             interactive
             isDark={T.isDark}
             blurIntensity={48}
-            solidColor={T.bg}
+            solidColor={T.isDark ? "rgba(22,24,36,0.78)" : "rgba(248,249,252,0.82)"}
           />
           <View style={styles.bar}>
             <Pressable
@@ -364,19 +401,7 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
               <At size={27} color={atOpen ? T.accent : T.textDim} weight="bold" />
             </Pressable>
 
-            <GestureDetector gesture={hubGesture}>
-              <Animated.View
-                style={styles.hubButton}
-                accessibilityRole="button"
-                accessibilityLabel="Switch domain"
-              >
-                <Animated.Image
-                  source={require("../../../assets/images/uniffy-logo.png")}
-                  style={[styles.hubLogo, logoStyle]}
-                  resizeMode="contain"
-                />
-              </Animated.View>
-            </GestureDetector>
+            {withGesture ? <GestureDetector gesture={hubGesture}>{logo}</GestureDetector> : logo}
 
             <Pressable
               style={styles.sideButton}
@@ -406,6 +431,32 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
           </View>
         </View>
       </Animated.View>
+    );
+  };
+
+  // Rendered as a flow block, not an absolute overlay: on iOS 26 Fabric an
+  // inset-positioned shell overlay stays in flow layout anyway (it steals
+  // Stack height), so the bar reserves its space honestly and the shell's
+  // KeyboardSpacer lifts content above the keyboard. The shell bar stays
+  // mounted while the wheel is open (behind the dim); the modal draws a twin on
+  // top via barSlot, so the bar never remounts and never blinks.
+  return (
+    <>
+      <HubCarousel
+        open={open}
+        offset={offset}
+        openProgress={openProgress}
+        focusedIndex={focusedIndex}
+        centerBottom={centerBottom}
+        iconBottom={barMargin + (BOTTOM_BAR_CONTENT_HEIGHT + 8) / 2}
+        barSlot={() => renderBar(false)}
+        gesture={backdropGesture}
+        showHint={showHint}
+        onItemPress={selectIndex}
+        onRequestClose={closeHub}
+      />
+
+      {renderBar(true)}
     </>
   );
 }

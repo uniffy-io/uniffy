@@ -1,13 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Alert,
-  useWindowDimensions,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MicrophoneSlash } from "phosphor-react-native";
 import type { Participant } from "livekit-client";
@@ -20,6 +12,7 @@ import { useChannels } from "@features/chat/useChat";
 import { callsApi } from "@features/calls/callsApi";
 import { formatCallDuration } from "@features/calls/callsSerializer";
 import { ParticipantTile, participantLabel } from "@features/calls/components/ParticipantTile";
+import { DraggablePip } from "@features/calls/components/DraggablePip";
 import { CallControls } from "@features/calls/components/CallControls";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { GlassSurface } from "@shared/components/GlassSurface";
@@ -27,6 +20,8 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 
 const SOLO_HINT_AFTER_MS = 60 * 1000;
+const PIP_WIDTH = 108;
+const PIP_HEIGHT = 150;
 
 const livekit = loadLivekitClient();
 
@@ -40,7 +35,8 @@ export function CallScreen() {
   "use no memo";
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const [stageHeight, setStageHeight] = useState(0);
+  const [pipStage, setPipStage] = useState({ width: 0, height: 0 });
   const { user, organizationId } = useAuth();
   const { session, room, setMinimized } = useCall();
   const activeCall = useActiveCall(session.channelId ?? undefined);
@@ -113,7 +109,19 @@ export function CallScreen() {
     session.status === "connected" &&
     session.connectedAtMs > 0 &&
     nowMs - session.connectedAtMs > SOLO_HINT_AFTER_MS;
-  const gridHeight = windowHeight - insets.top - insets.bottom - 220;
+  // Tile heights derive from the stage's own measured height, not a
+  // windowHeight-minus-fixed-chrome estimate that assumed a constant
+  // header/control size and mis-sized tiles on phones with different insets.
+  // Square (aspectRatio) until the first layout pass reports the real height.
+  const gridTileHeight =
+    stageHeight > 0 ? (participants.length <= 4 ? stageHeight / 2 - 6 : stageHeight / 3) : null;
+
+  // 1:1 uses a picture-in-picture stage: the other person fills the frame, the
+  // self-view floats in a corner. Solo (nobody else yet) shows just the local
+  // participant full-frame.
+  const localParticipant = participants.find((p) => p.isLocal);
+  const remoteParticipant = participants.find((p) => !p.isLocal);
+  const heroParticipant = remoteParticipant ?? localParticipant;
 
   return (
     <View style={[styles.root, { backgroundColor: T.pageBg }]}>
@@ -141,7 +149,7 @@ export function CallScreen() {
         </View>
       ) : null}
 
-      <View style={styles.stage}>
+      <View style={styles.stage} onLayout={(e) => setStageHeight(e.nativeEvent.layout.height)}>
         {screenSharer ? (
           <View style={styles.screenShareLayout}>
             <ParticipantTile
@@ -163,16 +171,38 @@ export function CallScreen() {
             </ScrollView>
           </View>
         ) : participants.length <= 2 ? (
-          <View style={styles.stackLayout}>
-            {participants.map((p) => (
+          <View
+            style={styles.pipLayout}
+            onLayout={(e) =>
+              setPipStage({
+                width: e.nativeEvent.layout.width,
+                height: e.nativeEvent.layout.height,
+              })
+            }
+          >
+            {heroParticipant ? (
               <Pressable
-                key={p.identity}
-                style={styles.stackTile}
-                onLongPress={() => hostActionsFor(p)}
+                style={styles.fillTile}
+                onLongPress={() => hostActionsFor(heroParticipant)}
               >
-                <ParticipantTile participant={p} T={T} style={styles.fillTile} />
+                <ParticipantTile participant={heroParticipant} T={T} style={styles.fillTile} />
               </Pressable>
-            ))}
+            ) : null}
+            {remoteParticipant && localParticipant ? (
+              <DraggablePip
+                containerWidth={pipStage.width}
+                containerHeight={pipStage.height}
+                width={PIP_WIDTH}
+                height={PIP_HEIGHT}
+              >
+                <ParticipantTile
+                  participant={localParticipant}
+                  T={T}
+                  compact
+                  style={styles.fillTile}
+                />
+              </DraggablePip>
+            ) : null}
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.gridLayout}>
@@ -181,7 +211,7 @@ export function CallScreen() {
                 key={p.identity}
                 style={[
                   styles.gridTile,
-                  { height: participants.length <= 4 ? gridHeight / 2 - 6 : gridHeight / 3 },
+                  gridTileHeight ? { height: gridTileHeight } : styles.gridTileSquare,
                 ]}
                 onLongPress={() => hostActionsFor(p)}
               >
@@ -231,11 +261,11 @@ const styles = StyleSheet.create({
   },
   bannerText: { fontSize: 12, fontFamily: FONT.medium },
   stage: { flex: 1, paddingHorizontal: 10, paddingTop: 10 },
-  stackLayout: { flex: 1, gap: 10 },
-  stackTile: { flex: 1 },
   fillTile: { flex: 1 },
+  pipLayout: { flex: 1 },
   gridLayout: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   gridTile: { width: "48.5%" },
+  gridTileSquare: { aspectRatio: 1 },
   screenShareLayout: { flex: 1, gap: 10 },
   screenStage: { flex: 1 },
   filmstrip: { gap: 8, paddingVertical: 2 },
