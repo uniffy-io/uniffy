@@ -55,7 +55,7 @@ export function DomainHeader({
       : "rgba(248,249,252,0.82)"
     : T.surface;
 
-  // Each action gets its own glass circle. Screens pass their actions as a
+  // Each action gets its own glass segment. Screens pass their actions as a
   // fragment or array; unwrap so every individual button is wrapped, not the
   // whole group.
   const rawActions =
@@ -178,10 +178,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
+  // Grows with its content instead of forcing a fixed circle: text actions
+  // ("Save", "Read all") and grouped controls would otherwise be clipped by
+  // overflow hidden. The padding is tuned so a bare 20px icon lands exactly on
+  // ACTION and still reads as a circle, while wider content becomes a pill.
   actionCircle: {
-    width: ACTION,
+    minWidth: ACTION,
     height: ACTION,
     borderRadius: ACTION / 2,
+    paddingHorizontal: 6,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
