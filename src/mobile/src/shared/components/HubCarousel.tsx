@@ -80,7 +80,7 @@ function HubItemView({
     // folding back into it.
     const fullSize =
       ITEM_SIZE * interpolate(dist, [0, 1, 2.5, 4], [1.28, 1, 0.85, 0.45], Extrapolation.CLAMP);
-    const size = fullSize * interpolate(p, [0, 1], [0.28, 1], Extrapolation.CLAMP);
+    const size = fullSize * interpolate(p, [0, 1], [0, 1], Extrapolation.CLAMP);
     const fullLeft = centerX + HUB_RADIUS * Math.cos(angle) - size / 2;
     const fullBottom = centerBottom + HUB_RADIUS * Math.sin(angle) - size / 2;
     return {
@@ -188,6 +188,19 @@ export function HubCarousel({
           />
         </GestureDetector>
 
+        {/* A non-interactive twin of the shell bar, above the dim so it stays
+          crisp, below the wheel so the bubbles pass over the logo rather than
+          behind it - they have to read as unfolding out of the icon and folding
+          back into it. pointerEvents none so every tap (including on the logo)
+          falls through to the backdrop and closes; the shell copy behind the
+          dim still owns the hub gesture and stays mounted, so nothing
+          remounts. */}
+        {barSlot ? (
+          <View style={styles.barLayer} pointerEvents="none">
+            {barSlot()}
+          </View>
+        ) : null}
+
         <Text
           style={[
             styles.label,
@@ -221,16 +234,6 @@ export function HubCarousel({
             onPress={() => onItemPress(i)}
           />
         ))}
-
-        {/* A non-interactive twin of the shell bar, drawn crisp on top of the
-          dim. pointerEvents none so every tap (including on the logo) falls
-          through to the backdrop and closes; the shell copy behind the dim
-          still owns the hub gesture and stays mounted, so nothing remounts. */}
-        {barSlot ? (
-          <View style={styles.barLayer} pointerEvents="none">
-            {barSlot()}
-          </View>
-        ) : null}
       </GestureHandlerRootView>
     </Modal>
   );
