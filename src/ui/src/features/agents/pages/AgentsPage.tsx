@@ -6,13 +6,12 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { AgentsLayout } from "@/features/agents/components/layout/AgentsLayout";
 import {
   AGENT_PANELS,
+  AGENTS_SECTIONS,
   setLastSection,
   selectLastSection,
   type AgentPanel,
   type AgentsSection,
 } from "@/features/agents/store/agentsUiSlice";
-
-const SECTIONS: AgentsSection[] = ["agents", "skills", "automations"];
 
 const PANEL_ALIASES: Record<string, AgentPanel> = {
   memories: "memory",
@@ -38,7 +37,7 @@ export function AgentsPage() {
       navigate("/chat", { replace: true });
       return;
     }
-    if (!SECTIONS.includes(tab as AgentsSection)) {
+    if (!AGENTS_SECTIONS.includes(tab as AgentsSection)) {
       navigate("/agents/agents", { replace: true });
       return;
     }

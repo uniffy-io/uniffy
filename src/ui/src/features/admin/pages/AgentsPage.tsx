@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     ChatCircleText,
     Coins,
@@ -115,7 +116,23 @@ const RATE_LIMIT_LABELS: Record<number, { name: string; description: string }> =
 
 export function AgentsPage() {
     useDocumentTitle('Agents');
-    const [activeTab, setActiveTab] = useState<TabId>('general');
+    // The tab lives in the URL so other surfaces can deep-link a tab, e.g. the
+    // builder's missing-key notice pointing straight at Keys.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabParam = searchParams.get('tab');
+    const activeTab: TabId = TABS.some((t) => t.id === tabParam)
+        ? (tabParam as TabId)
+        : 'general';
+
+    const setActiveTab = (id: TabId) => {
+        const next = new URLSearchParams(searchParams);
+        if (id === 'general') {
+            next.delete('tab');
+        } else {
+            next.set('tab', id);
+        }
+        setSearchParams(next, { replace: true });
+    };
 
     return (
         <div className="space-y-6">

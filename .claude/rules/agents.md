@@ -20,8 +20,8 @@ Agents are plain content rows under the generic permission model; the tiers diff
 | Tier | Surface | Contents |
 |---|---|---|
 | Chat | `/chat` | ALL conversation: 1:1 agent DMs, channel agents. Skill slash-invoke, feedback thumbs, proposed-skill draft cards, thinking/tool panes, context bar, per-DM model + params overrides. Average users never leave this tier. |
-| Builder | `/agents` | **Builder-gated**: org OWNER/ADMIN or AGENTS domain admin (`require_agents_builder`, `domains/agents/access.py`; UI `useAgentsBuilderAccess` + `AgentsBuilderRoute`, nav icon hidden for non-builders). One sidebar with Agents, Skills, and Automations sections; URL-first routes (`/agents/agents/:id/:panel`, `/agents/skills/:id`, `/agents/skills/drafts`, `/agents/automations/:id`). Agent detail has 4 route-driven panels: Overview (identity + collapsed Model settings), Instructions (soul prompt + AI Builder), Capabilities (tool groups + skills), Memory. Skills edit in a full-height markdown surface. Testing happens in the AgentTestDrawer on the detail page, not in a chat surface. |
-| Admin | `/admin/agents` | Org keys (the ONLY key-management surface), org usage, budgets, rate limits, currencies, skills metrics, Runtime tab (org default model, memory-bridge gate, failover/resume/deadline/circuit knobs). Members' Settings > AI holds only their own usage view and the personal memory-bridge consent toggle. |
+| Builder | `/agents` | **Builder-gated**: org OWNER/ADMIN or AGENTS domain admin (`require_agents_builder`, `domains/agents/access.py`; UI `useAgentsBuilderAccess` + `AgentsBuilderRoute`, nav icon hidden for non-builders). The sidebar is a flat list of destinations (Agents, Catalog, Skills, Skill drafts, Automations) - it never lists a section's contents nor how many a section holds, so nothing is duplicated between it and the main panel. The one number it carries is the skill-drafts badge, which is an actionable review count, not an inventory. Every section browses like the catalog: a `BrowseHeader` with its own search plus a `BrowseGrid` of `BrowseCard`s (`components/browse/BrowseSurface.tsx` is the shared shell), and a detail opens in place with a back link. URL-first routes (`/agents/agents/:id/:panel`, `/agents/catalog`, `/agents/catalog/:templateKey`, `/agents/skills/:id`, `/agents/skills/drafts`, `/agents/automations/:id`). Agent detail has 4 route-driven panels: Overview (identity + collapsed Model settings), Instructions (soul prompt + AI Builder), Capabilities (tool groups + skills), Memory - which shows ORG scope only, in its two tiers (all agents / this agent), since personal entries belong to the member and are managed in Settings > AI. Skills edit in a full-height markdown surface. Testing happens in the AgentTestDrawer on the detail page, not in a chat surface. `ProviderKeyNotice` sits above every section while the org has no enabled+valid key, since nothing here can answer a message without one; it links org admins to `/admin/agents?tab=keys` and tells other builders to ask one. |
+| Admin | `/admin/agents` | Tab lives in the URL (`?tab=keys`), so other surfaces deep-link into it. Org keys (the ONLY key-management surface), org usage, budgets, rate limits, currencies, skills metrics, Runtime tab (org default model, memory-bridge gate, image resolution/quality ceilings, failover/resume/deadline/circuit knobs). Members' Settings > AI holds their own usage view, the personal memory-bridge consent toggle, and their one PERSONAL memory store, shared by every agent they talk to. |
 
 There is no personal tier: agents, skills, automations, and provider keys are org-level resources managed by builders (keys: org admins only). Builder management is a domain-level power, not content access - agent/cron mutations gate on `require_agents_builder`, and a `ContentMembersOperations` manage override lets builders run the sharing dialog on agents they don't own (see `permissions.md`). Provider keys are not shareable content at all: they have no access policy, and any org member can use any enabled key. Chat USAGE is unchanged: any member can use an agent whose access policy allows it (`OPEN_TO_ORG` default), and model pickers keep member-readable `ListKeys`/`GetAvailableModels`.
 
@@ -80,9 +80,11 @@ Adding a tool: executor in `tools/builtin/{domain}.py` -> module-level `ToolDefi
 
 ## Templates and the default agent
 
-The catalog is one markdown file per template in `uniffy/data/catalog/` - frontmatter carries `key`, `order`, `name`, `emoji`, `description`, and the `tools` / `skills` lists; the body is the soul prompt. `domains/agents/templates.py` reads that directory once at import into `AGENT_TEMPLATES` (sorted by `order`; `assistant` first). Adding or retuning a template is a markdown edit - no python change.
+The catalog is one markdown file per template in `uniffy/data/catalog/` - frontmatter carries `key`, `order`, `name`, `emoji`, `description`, the `tools` / `skills` lists, and optional `recommended_model` / `recommended_image_model` ids and a `default: true` flag; the body is the soul prompt. `domains/agents/templates.py` reads that directory once at import into `AGENT_TEMPLATES` (sorted by `order`). Adding or retuning a template is a markdown edit - no python change. Recommendations are prefill only: `CreateAgentModal` applies them as `primary_model` / `image_model` ONLY when an enabled org key's provider serves the id (lookup against the cached available models); otherwise creation falls back to the org default and the Overview model walkthrough still runs.
 
-Org bootstrap (`OrganizationOperations.create`) seeds one org-visible default agent from the assistant template: `is_default=true` (partial unique index), `OPEN_TO_ORG`, name-only - it runs once the admin sets the org default model. The create-flow gallery FETCHES the catalog over `ListAgentTemplates` (builder-gated, resolves `skills` names to bundled skill row ids server-side) into `agentTemplatesSlice`; there is no frontend copy of the catalog. Templates are prefill only - created agents are ordinary rows with no link back. `is_default` changes are org-admin-gated.
+Org bootstrap (`OrganizationOperations.create`) seeds one org-visible default agent from `get_default_template()` (the template flagged `default: true`, falling back to the lowest `order` - no key is hardcoded): `is_default=true` (partial unique index), `OPEN_TO_ORG`, name-only - it runs once the admin sets the org default model. `is_default` changes are org-admin-gated.
+
+The catalog is a standing browse surface, not a creation-time popup. It is reached from a `CompactNavItem` icon in the sidebar header (the shared `components/layout/CompactNavItem.tsx` primitive the notes and files sidebars use), NOT a collapsible sidebar section - templates are shipped content, so they do not belong in the same list as the org's own agents, skills, and automations. `CatalogView` owns it at `/agents/catalog`: a searchable card grid plus a per-template detail pane (`/agents/catalog/:templateKey`) showing the soul prompt, skills, and tools grouped by `toolCatalog.ts`, with destructive tools flagged. `CreateAgentModal` collects only name and access and renders the chosen template as a summary - it does NOT re-list the catalog, so there is one browse surface to keep current. Templates are prefill only: created agents are ordinary rows with no link back, and a `:templateKey` that no longer ships falls through to the grid. Everything fetches over `ListAgentTemplates` (builder-gated, resolves `skills` names to bundled skill row ids server-side) into `agentTemplatesSlice`; there is no frontend copy of the catalog.
 
 ## Runtime performance rules
 
@@ -123,6 +125,23 @@ Model listing is catalog-only: `ListAvailableModels` / `ListModelsForKey` read t
 Model resolution priority: session `model_override` -> agent `primary_model` -> `fallback_models` -> org default (`default_provider_key_id` + `default_chat_model` in the `agents/runtime` settings blob) -> typed `ValidationError`. There is no silent catalog pick. Every resolve site (sends, compaction workers, background analysis) goes through `runtime/model_resolver.py::resolve_provider_and_model` - do not hand-roll provider/model resolution.
 
 The `agents/runtime` settings blob (`runtime/settings.py`) is cached in-process for 30s per org; `invalidate_runtime_settings_cache` drops only the local process's entry, so other web processes and ARQ workers converge via TTL - acceptable for these knobs, do not build pubsub invalidation for them. Writes go through `RuntimeSettingsService` (`require_org_admin` on both methods). The blob carries: org default model config, `personal_memory_bridge_enabled`, and the failover/resume/deadline/circuit knobs.
+
+### Adding a provider
+
+A provider is not done when the backend can call it. Half of these live in the frontend and none of them fail loudly - a missed step ships a provider that works but renders as a bare id with no logo, or a key form with no placeholder. Work the list:
+
+| # | Where | What |
+|---|---|---|
+| 1 | `providers/{name}/` | Implement `ProviderDescriptor` + `LLMProvider` (`validate()` is a live models-list probe). |
+| 2 | `providers/registry.py::get_provider_registry` | Import the descriptor and register it - the imports are lazy at the bottom of that function. |
+| 3 | `uniffy/data/models/catalog.json` | Provider entry: `params_base`, `provider_options`, and its models. Model listing is catalog-only, so an absent entry means empty pickers. |
+| 4 | That provider's request builder | Map the reasoning / sampling knobs (see "Model parameters"). |
+| 5 | `ConfigView.tsx` `PROVIDER_OPTIONS` | The add-key form dropdown. Not derived from the backend - an unlisted provider cannot have a key added at all. |
+| 6 | `ConfigView.tsx` `CREDENTIAL_PLACEHOLDERS` | Key-shape hint (`sk-...`). Falls back to "API key". |
+| 7 | `src/ui/src/features/agents/config/providerBrands.ts` | Logo + display label. Add the icon file to the `@lobehub/icons-static-svg` imports and map it under the same provider id the catalog uses. |
+| 8 | `docs/TRADEMARKS.md` | A row for the new mark: owner and brand-guideline URL. |
+
+Provider marks are trademarks, so the rules in `docs/TRADEMARKS.md` bind: never restyle or recolor a mark into the Uniffy palette, and never use one as the identity of a Uniffy feature (no agent avatars, no section icons). Marks appear only where they identify that provider's own service - provider keys, model pickers, usage breakdowns, and the "runs on" badge. Everything renders through `ProviderLogo`, which draws monochrome marks as a `currentColor` mask so they invert with the theme (an `<img>` cannot inherit `currentColor` and would go invisible on dark) and renders nothing for an unmapped provider. That fallback is why a missed step 7 degrades to plain text instead of breaking, and it is also the removal path if a provider ever objects.
 
 ## Model parameters
 
@@ -206,8 +225,12 @@ One flat `StreamEvent` dataclass + `EventType` StrEnum (`providers/base.py`) tra
 | `domains/agents/tools/{registry,executor,definitions}.py` | ToolRegistry / ToolExecutor / dataclasses |
 | `domains/agents/tools/builtin/` | Built-in executors grouped by domain |
 | `domains/agents/providers/operations.py` + `client_cache.py` | Key management, two-tier resolution |
+| `src/ui/src/features/agents/config/providerBrands.ts` | Provider id -> logo + label; the only place a mark is declared |
+| `src/ui/src/features/agents/components/ProviderLogo.tsx` | Renders a mark; nothing for an unmapped provider |
+| `docs/TRADEMARKS.md` | Trademark notice + per-provider brand-guideline links |
 | `domains/agents/sessions/operations.py` | Session store, context query, compaction, feedback |
 | `domains/agents/cache.py` | Valkey helpers + reverse-index discipline |
 | `src/ui/src/features/agents/components/AgentTestDrawer.tsx` | Shared test / AI Builder drawer |
 | `src/ui/src/features/agents/config/toolCatalog.ts` | Frontend tool catalog |
-| `src/ui/src/features/agents/store/agentTemplatesSlice.ts` | Fetched template catalog for the create flow |
+| `src/ui/src/features/agents/components/views/CatalogView.tsx` | Template browse grid + detail pane |
+| `src/ui/src/features/agents/store/agentTemplatesSlice.ts` | Fetched template catalog |

@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import type { SerializedProviderKey, SerializedModelInfo } from '@/features/agents/store/agentProvidersThunks';
 import {
@@ -150,6 +150,18 @@ export const { clearAgentProviders } = agentProvidersSlice.actions;
 
 export const selectProviderKeys = (state: RootState) => state.agentProviders.providerKeys;
 export const selectAvailableModels = (state: RootState) => state.agentProviders.availableModels;
+
+/** True once ListKeys answered, so callers can tell "no keys" from "not asked yet". */
+export const selectProviderKeysLoaded = (state: RootState) =>
+    state.agentProviders.keysStatus === 'loaded';
+
+/** Keys an agent can actually run on: enabled and passing the last live probe. */
+export const selectUsableProviderKeys = createSelector(
+    [selectProviderKeys],
+    (keys) => Object.values(keys).filter((key) => key.isValid && key.isEnabled),
+);
+
+export const selectModelsByProvider = (state: RootState) => state.agentProviders.modelsByProvider;
 
 const EMPTY_MODELS: SerializedModelInfo[] = [];
 

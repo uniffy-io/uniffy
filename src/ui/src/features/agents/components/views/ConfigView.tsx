@@ -40,6 +40,8 @@ import {
     toggleProviderKey,
 } from "@/features/agents/store/agentProvidersThunks";
 import type { SerializedProviderKey } from "@/features/agents/store/agentProvidersThunks";
+import { ProviderLogo } from "@/features/agents/components/ProviderLogo";
+import { providerBrand, providerLabel } from "@/features/agents/config/providerBrands";
 
 const PROVIDER_OPTIONS = [
     { value: "anthropic", label: "Anthropic" },
@@ -84,8 +86,9 @@ function KeyDetailPanel({
             <div className="space-y-3">
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Provider</span>
-                    <span className="text-sm font-medium text-foreground capitalize">
-                        {providerKey.provider}
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                        <ProviderLogo provider={providerKey.provider} size="sm" />
+                        {providerLabel(providerKey.provider)}
                     </span>
                 </div>
                 <div className="flex items-start justify-between gap-4">
@@ -408,7 +411,11 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                                         : "hover:bg-muted border-l-2 border-transparent",
                                 )}
                             >
-                                <Key size={18} className="text-muted-foreground shrink-0" />
+                                {providerBrand(key.provider) ? (
+                                    <ProviderLogo provider={key.provider} size="lg" />
+                                ) : (
+                                    <Key size={18} className="text-muted-foreground shrink-0" />
+                                )}
                                 <div className="flex flex-col flex-1 min-w-0">
                                     <span className="text-sm font-medium truncate text-foreground">
                                         {key.label}

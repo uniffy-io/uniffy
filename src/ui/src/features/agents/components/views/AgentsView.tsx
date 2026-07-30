@@ -1,33 +1,53 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+    ArrowCounterClockwise,
+    ArrowLeft,
+    Books,
     CircleNotch,
     Copy,
     Flask,
+    Lightning,
     Plus,
     Robot,
+    Trash,
     UsersThree,
+    Wrench,
 } from "@phosphor-icons/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
-import { useAccessPolicyDialog, useMyContentRole } from "@/features/permissions";
+import { AccessModeIcon, useAccessPolicyDialog, useMyContentRole } from "@/features/permissions";
+import {
+    BrowseBody,
+    BrowseCard,
+    BrowseEmpty,
+    BrowseGrid,
+    BrowseGroupLabel,
+    BrowseHeader,
+} from "@/features/agents/components/browse/BrowseSurface";
+import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { roleCanEdit, roleCanManage } from "@/shared/utils/contentRoles";
-import { selectAllAgents, selectAgentsLoading } from "@/features/agents/store/agentsSlice";
-import { cloneAgent } from "@/features/agents/store/agentsThunks";
+import {
+    selectAllAgents,
+    selectAgentsLoading,
+    selectDeletedAgents,
+} from "@/features/agents/store/agentsSlice";
+import { cloneAgent, deleteAgent, restoreAgent } from "@/features/agents/store/agentsThunks";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
 import { fetchProviderKeys } from "@/features/agents/store/agentProvidersThunks";
-import { selectAllSkills } from "@/features/agents/store/agentSkillsSlice";
-import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
-import { selectAgentTemplates } from "@/features/agents/store/agentTemplatesSlice";
-import { fetchAgentTemplates } from "@/features/agents/store/agentTemplatesThunks";
 import { OverviewTab } from "@/features/agents/components/views/AgentsView/OverviewTab";
 import { InstructionsTab } from "@/features/agents/components/views/AgentsView/InstructionsTab";
 import { CapabilitiesTab } from "@/features/agents/components/views/AgentsView/CapabilitiesTab";
 import { MemoriesTab } from "@/features/agents/components/views/AgentsView/MemoriesTab";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { AgentTestDrawer } from "@/features/agents/components/AgentTestDrawer";
+import { ProviderLogo } from "@/features/agents/components/ProviderLogo";
+import { selectProviderKeys } from "@/features/agents/store/agentProvidersSlice";
 
 const headerButtonClass = cn(
     "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
@@ -43,89 +63,189 @@ const headerChipClass = cn(
     "hover:border-foreground/30 hover:bg-muted hover:text-primary",
 );
 
-function TemplateGallery({ onNewAgent }: { onNewAgent: (templateKey?: string) => void }) {
-    const dispatch = useAppDispatch();
-    const skillsMap = useAppSelector(selectAllSkills);
-    const templates = useAppSelector(selectAgentTemplates);
-
-    useEffect(() => {
-        dispatch(fetchAgentTemplates());
-        if (Object.keys(skillsMap).length === 0) {
-            dispatch(fetchSkills());
-        }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    const cardClass = cn(
-        "flex flex-col items-start gap-2 rounded-lg border border-border bg-card p-4",
-        "text-left transition-colors hover:border-primary/50 cursor-pointer",
-    );
+function AgentCard({
+    agent,
+    providerKeys,
+    onOpen,
+}: {
+    agent: SerializedAgent;
+    providerKeys: Record<string, { provider: string }>;
+    onOpen: () => void;
+}) {
+    const provider = providerKeys[agent.primaryProviderKeyId]?.provider;
+    const toolCount = agent.enabledTools.length;
+    const skillCount = agent.enabledSkills.length;
 
     return (
-        <div className="flex-1 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-6">
-                <div className="w-full max-w-3xl">
-                    <div className="text-center mb-6">
-                        <h2 className="text-lg font-semibold text-foreground">
-                            Create your first agent
-                        </h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Start from a template or build one from scratch.
-                        </p>
-                    </div>
-                    <div
-                        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                        data-testid="agents-template-gallery"
-                    >
-                        <button
-                            type="button"
-                            onClick={() => onNewAgent()}
-                            className={cardClass}
-                            data-testid="agents-template-card-blank"
-                        >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Plus size={18} weight="bold" />
-                            </span>
-                            <span className="text-sm font-medium text-foreground">Blank</span>
-                            <span className="text-xs text-muted-foreground">
-                                Start from scratch with an empty agent
-                            </span>
-                        </button>
-                        {templates.map((template) => (
-                            <button
-                                key={template.key}
-                                type="button"
-                                onClick={() => onNewAgent(template.key)}
-                                className={cardClass}
-                                data-testid={`agents-template-card-${template.key}`}
-                            >
-                                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
-                                    {template.emoji}
-                                </span>
-                                <span className="text-sm font-medium text-foreground">
-                                    {template.name}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                    {template.description}
-                                </span>
-                                {template.enabledSkillIds.length > 0 && (
-                                    <span className="flex flex-wrap items-center gap-1">
-                                        {template.enabledSkillIds.map((skillId) => (
-                                            <Badge
-                                                key={skillId}
-                                                variant="secondary"
-                                                className="text-[10px] font-medium"
-                                            >
-                                                {skillsMap[skillId]?.displayName ?? "Skill"}
-                                            </Badge>
-                                        ))}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
-                    </div>
+        <BrowseCard
+            onOpen={onOpen}
+            dimmed={agent.isDeleted}
+            testId={`agents-card-${agent.id}`}
+            leading={
+                <AgentAvatar
+                    avatarKey={agent.avatarKey}
+                    avatarEmoji={agent.avatarEmoji}
+                    agentName={agent.name}
+                    size="lg"
+                />
+            }
+            title={agent.name}
+            subtitle={agent.soulPrompt || "No instructions yet"}
+            badges={
+                <div className="flex shrink-0 items-center gap-1">
+                    {agent.isDefault && (
+                        <Badge variant="default" className="px-1.5 py-0 text-[10px]">
+                            default
+                        </Badge>
+                    )}
+                    {agent.isDeleted ? (
+                        <Trash size={13} className="text-muted-foreground" />
+                    ) : (
+                        <AccessModeIcon
+                            mode={agent.accessMode}
+                            size={13}
+                            className="text-muted-foreground"
+                        />
+                    )}
                 </div>
-            </div>
-        </div>
+            }
+            chips={
+                <>
+                    <Badge variant="secondary" className="gap-1 font-mono text-[10px] font-medium">
+                        <ProviderLogo provider={provider} size="sm" />
+                        {agent.primaryModel || "No model"}
+                    </Badge>
+                    {toolCount > 0 && (
+                        <Badge variant="secondary" className="gap-1 text-[10px] font-medium">
+                            <Wrench size={10} />
+                            {toolCount} tools
+                        </Badge>
+                    )}
+                    {skillCount > 0 && (
+                        <Badge variant="secondary" className="gap-1 text-[10px] font-medium">
+                            <Lightning size={10} />
+                            {skillCount} skills
+                        </Badge>
+                    )}
+                </>
+            }
+        />
+    );
+}
+
+function AgentsBrowse({
+    agents,
+    deletedAgents,
+    providerKeys,
+    onNewAgent,
+    onOpen,
+    onBrowseCatalog,
+}: {
+    agents: SerializedAgent[];
+    deletedAgents: SerializedAgent[];
+    providerKeys: Record<string, { provider: string }>;
+    onNewAgent: () => void;
+    onOpen: (agentId: string) => void;
+    onBrowseCatalog: () => void;
+}) {
+    const [search, setSearch] = useState("");
+    const query = search.trim().toLowerCase();
+    const match = (agent: SerializedAgent) =>
+        !query || agent.name.toLowerCase().includes(query);
+
+    const live = agents.filter(match);
+    const retired = deletedAgents.filter(match);
+    const nothingAtAll = agents.length === 0 && deletedAgents.length === 0;
+
+    return (
+        <>
+            <BrowseHeader
+                title="Agents"
+                subtitle="Every agent in this organization. Members reach them from chat."
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search agents..."
+                testId="agents-browse-header"
+                action={
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={onBrowseCatalog}
+                            data-testid="agents-browse-catalog-button"
+                        >
+                            <Books size={16} />
+                            Catalog
+                        </Button>
+                        <Button onClick={onNewAgent} data-testid="agents-new-agent-button">
+                            <Plus size={16} />
+                            New agent
+                        </Button>
+                    </div>
+                }
+            />
+            <BrowseBody testId="agents-browse-body">
+                {nothingAtAll ? (
+                    <BrowseEmpty
+                        icon={Robot}
+                        title="No agents yet"
+                        description="Start from a catalog template, or build one from scratch."
+                        testId="agents-browse-empty"
+                        action={
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                <Button onClick={onBrowseCatalog}>
+                                    <Books size={16} />
+                                    Browse the catalog
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    onClick={onNewAgent}
+                                    data-testid="agents-blank-agent-button"
+                                >
+                                    <Plus size={16} />
+                                    Blank agent
+                                </Button>
+                            </div>
+                        }
+                    />
+                ) : live.length === 0 && retired.length === 0 ? (
+                    <BrowseEmpty
+                        icon={Robot}
+                        title="No match"
+                        description={`No agent matches "${search.trim()}".`}
+                    />
+                ) : (
+                    <>
+                        {live.length > 0 && (
+                            <BrowseGrid>
+                                {live.map((agent) => (
+                                    <AgentCard
+                                        key={agent.id}
+                                        agent={agent}
+                                        providerKeys={providerKeys}
+                                        onOpen={() => onOpen(agent.id)}
+                                    />
+                                ))}
+                            </BrowseGrid>
+                        )}
+                        {retired.length > 0 && (
+                            <>
+                                <BrowseGroupLabel>Deleted</BrowseGroupLabel>
+                                <BrowseGrid>
+                                    {retired.map((agent) => (
+                                        <AgentCard
+                                            key={agent.id}
+                                            agent={agent}
+                                            providerKeys={providerKeys}
+                                            onOpen={() => onOpen(agent.id)}
+                                        />
+                                    ))}
+                                </BrowseGrid>
+                            </>
+                        )}
+                    </>
+                )}
+            </BrowseBody>
+        </>
     );
 }
 
@@ -134,18 +254,25 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
     const navigate = useNavigate();
     const { subId: agentId, panel } = useParams<{ subId?: string; panel?: string }>();
     const agentsMap = useAppSelector(selectAllAgents);
+    const deletedAgentsMap = useAppSelector(selectDeletedAgents);
     const loading = useAppSelector(selectAgentsLoading);
+    const providerKeys = useAppSelector(selectProviderKeys);
+    const { isBuilder } = useAgentsBuilderAccess();
 
     useEffect(() => {
         dispatch(fetchProviderKeys());
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const agents = useMemo(() => Object.values(agentsMap), [agentsMap]);
+    const deletedAgents = useMemo(() => Object.values(deletedAgentsMap), [deletedAgentsMap]);
 
+    // A retired agent is still reachable by URL from the deleted group, so the
+    // detail page resolves against both sets and renders read-only for one.
     const selectedAgent = useMemo(
-        () => (agentId ? agentsMap[agentId] ?? null : null),
-        [agentId, agentsMap],
+        () => (agentId ? agentsMap[agentId] ?? deletedAgentsMap[agentId] ?? null : null),
+        [agentId, agentsMap, deletedAgentsMap],
     );
+    const isRetired = selectedAgent?.isDeleted === true;
 
     const selectedAgentRole = useMyContentRole(
         ContentType.AGENT,
@@ -156,11 +283,30 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
     const { openFor: openAccessPolicyDialog } = useAccessPolicyDialog();
 
     const [testDrawerOpen, setTestDrawerOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const handleCloneAgent = async () => {
         if (!agentId) return;
         const result = await dispatch(cloneAgent(agentId)).unwrap();
         navigate(`/agents/agents/${result.id}`);
+    };
+
+    const handleDeleteAgent = async () => {
+        if (!agentId) return;
+        setDeleting(true);
+        try {
+            await dispatch(deleteAgent(agentId)).unwrap();
+            setDeleteOpen(false);
+            navigate("/agents/agents");
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleRestoreAgent = async () => {
+        if (!agentId) return;
+        await dispatch(restoreAgent(agentId)).unwrap();
     };
 
     if (loading && agents.length === 0) {
@@ -174,21 +320,14 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
     if (!selectedAgent) {
         return (
             <div className="flex h-full flex-col overflow-hidden" data-testid="agents-view">
-                {agents.length === 0 ? (
-                    <TemplateGallery onNewAgent={onNewAgent} />
-                ) : (
-                    <div className="flex flex-1 items-center justify-center px-4">
-                        <div className="flex flex-col items-center text-center max-w-md">
-                            <Robot size={48} weight="light" className="text-muted-foreground/30 mb-4" />
-                            <h2 className="text-lg font-semibold text-foreground">
-                                No agent selected
-                            </h2>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Select an agent from the sidebar
-                            </p>
-                        </div>
-                    </div>
-                )}
+                <AgentsBrowse
+                    agents={agents}
+                    deletedAgents={deletedAgents}
+                    providerKeys={providerKeys}
+                    onNewAgent={() => onNewAgent()}
+                    onOpen={(id) => navigate(`/agents/agents/${id}/overview`)}
+                    onBrowseCatalog={() => navigate("/agents/catalog")}
+                />
             </div>
         );
     }
@@ -227,6 +366,17 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
                 data-panel={activePanel}
             >
             <div className="border-b border-border/60 bg-card">
+                <div className="flex items-center gap-3 px-4 pt-3">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/agents/agents")}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                        data-testid="agents-detail-back"
+                    >
+                        <ArrowLeft size={14} />
+                        All agents
+                    </button>
+                </div>
                 <div className="flex items-center gap-3 px-4 py-2">
                     <AgentAvatar
                         avatarKey={selectedAgent.avatarKey}
@@ -240,10 +390,41 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
                     >
                         {selectedAgent.name}
                     </h2>
-                    <span className={cn(headerChipClass, "font-mono text-xs shrink-0")}>
+                    <span
+                        className={cn(headerChipClass, "font-mono text-xs shrink-0")}
+                        data-testid="agents-detail-model-chip"
+                    >
+                        <ProviderLogo
+                            provider={
+                                providerKeys[selectedAgent.primaryProviderKeyId]?.provider
+                            }
+                            size="sm"
+                        />
                         {selectedAgent.primaryModel || "No model configured"}
                     </span>
+                    {isRetired && (
+                        <span
+                            className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+                            data-testid="agents-detail-deleted-badge"
+                        >
+                            Deleted
+                        </span>
+                    )}
                     <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                        {isRetired ? (
+                            isBuilder && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleRestoreAgent}
+                                    data-testid="agents-restore-button"
+                                >
+                                    <ArrowCounterClockwise size={14} />
+                                    Restore
+                                </Button>
+                            )
+                        ) : (
+                            <>
                         <button
                             type="button"
                             className={headerButtonClass}
@@ -262,6 +443,17 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
                         >
                             <Copy size={16} />
                         </button>
+                        {isBuilder && (
+                            <button
+                                type="button"
+                                className={headerButtonClass}
+                                onClick={() => setDeleteOpen(true)}
+                                title="Delete agent"
+                                data-testid="agents-delete-button"
+                            >
+                                <Trash size={16} />
+                            </button>
+                        )}
                         {canShareSelectedAgent && (
                             <button
                                 type="button"
@@ -277,9 +469,24 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
                                 <UsersThree size={16} />
                             </button>
                         )}
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {isRetired && (
+                <div
+                    className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground"
+                    data-testid="agents-detail-deleted-notice"
+                >
+                    <Trash size={14} />
+                    <span>
+                        This agent is deleted. It cannot answer in chat and its automations are
+                        paused. Past conversations keep its name and replies.
+                    </span>
+                </div>
+            )}
 
             <div className="px-4 border-b border-border">
                 <Tabs items={tabItems} />
@@ -307,6 +514,25 @@ export function AgentsView({ onNewAgent }: { onNewAgent: (templateKey?: string) 
                 canEdit={roleCanEdit(selectedAgentRole)}
                 open={testDrawerOpen}
                 onClose={() => setTestDrawerOpen(false)}
+            />
+
+            <ConfirmDialog
+                isOpen={deleteOpen}
+                onClose={() => setDeleteOpen(false)}
+                onConfirm={handleDeleteAgent}
+                title={`Delete ${selectedAgent.name}?`}
+                confirmLabel="Delete agent"
+                loading={deleting}
+                message={
+                    <div className="space-y-2">
+                        <p>It stops answering everywhere and its automations are paused.</p>
+                        <p>
+                            Existing chats stay readable and its past replies keep this name and
+                            avatar. The chats become read-only.
+                        </p>
+                        <p>You can restore it later from the Deleted group.</p>
+                    </div>
+                }
             />
         </div>
     );

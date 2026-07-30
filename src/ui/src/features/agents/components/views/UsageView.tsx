@@ -45,6 +45,9 @@ import {
 } from "@/features/agents/store/agentUsageSlice";
 import { fetchUsageStats } from "@/features/agents/store/agentUsageThunks";
 import type { UsageStats } from "@/features/agents/store/agentUsageThunks";
+import { selectAvailableModels } from "@/features/agents/store/agentProvidersSlice";
+import { fetchAvailableModels } from "@/features/agents/store/agentProvidersThunks";
+import { ProviderLogo } from "@/features/agents/components/ProviderLogo";
 
 
 const TIME_RANGES = [
@@ -662,7 +665,10 @@ interface TableColumn {
     key: string;
     label: string;
     align?: "left" | "right";
-    format?: (value: number | string) => string;
+    // Gets the whole row so a cell can decorate itself from a sibling field
+    // (the provider logo next to a key or model name). Sorting still runs on
+    // the raw value, so a decorated cell orders the same as a plain one.
+    format?: (value: number | string, row: TableRow) => React.ReactNode;
     mono?: boolean;
 }
 
@@ -778,7 +784,7 @@ function SortableTable({
                                     {columns.map((col) => {
                                         const raw = row[col.key];
                                         const display = col.format
-                                            ? col.format(raw)
+                                            ? col.format(raw, row)
                                             : typeof raw === "number"
                                               ? raw.toLocaleString()
                                               : String(raw);
@@ -837,9 +843,26 @@ export function UsageView() {
     const { isOrgAdmin, isSystemAdmin } = useAdminAccess();
     const isAdmin = isOrgAdmin || isSystemAdmin;
 
+    const availableModels = useAppSelector(selectAvailableModels);
+
     useEffect(() => {
         dispatch(fetchUsageStats({ days: selectedDays, interval: selectedInterval }));
     }, [dispatch, selectedDays, selectedInterval]);
+
+    useEffect(() => {
+        // Settings > AI renders this outside the agents layout, where the catalog
+        // is normally prefetched. The thunk no-ops when it is already loaded.
+        dispatch(fetchAvailableModels());
+    }, [dispatch]);
+
+    // Usage rows carry a model id but no provider, so the catalog supplies it.
+    const providerByModel = useMemo(() => {
+        const byModel: Record<string, string> = {};
+        for (const model of availableModels) {
+            byModel[model.id] = model.provider;
+        }
+        return byModel;
+    }, [availableModels]);
 
     if (loading && !stats) {
         return (
@@ -880,6 +903,7 @@ export function UsageView() {
 
     const modelRows: TableRow[] = stats.modelUsage.map((m) => ({
         model: m.model,
+        provider: providerByModel[m.model] ?? "",
         runs: m.runs,
         inputTokens: m.inputTokens,
         outputTokens: m.outputTokens,
@@ -902,6 +926,7 @@ export function UsageView() {
 
     const providerKeyRows: TableRow[] = stats.providerKeyUsage.map((p) => ({
         key: `${p.keyLabel} (${p.provider})`,
+        provider: p.provider,
         runs: p.runs,
         inputTokens: p.inputTokens,
         outputTokens: p.outputTokens,
@@ -1216,7 +1241,20 @@ export function UsageView() {
                         icon={Cube}
                         defaultSortKey="totalTokens"
                         columns={[
-                            { key: "model", label: "Model", mono: true },
+                            {
+                                key: "model",
+                                label: "Model",
+                                mono: true,
+                                format: (value, row) => (
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <ProviderLogo
+                                            provider={String(row.provider)}
+                                            size="sm"
+                                        />
+                                        {String(value)}
+                                    </span>
+                                ),
+                            },
                             {
                                 key: "runs",
                                 label: "Runs",
@@ -1309,7 +1347,19 @@ export function UsageView() {
                         icon={Key}
                         defaultSortKey="totalTokens"
                         columns={[
-                            { key: "key", label: "Key" },
+                            {
+                                key: "key",
+                                label: "Key",
+                                format: (value, row) => (
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <ProviderLogo
+                                            provider={String(row.provider)}
+                                            size="sm"
+                                        />
+                                        {String(value)}
+                                    </span>
+                                ),
+                            },
                             {
                                 key: "runs",
                                 label: "Runs",

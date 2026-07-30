@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  Books,
   ClockCounterClockwise,
   Robot,
   Lightning,
@@ -22,7 +23,7 @@ import {
   toggleSidebar,
   type AgentsSection,
 } from "@/features/agents/store/agentsUiSlice";
-import { fetchAgents } from "@/features/agents/store/agentsThunks";
+import { fetchAgents, fetchDeletedAgents } from "@/features/agents/store/agentsThunks";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
 import { createSkillDraft, fetchSkillDrafts } from "@/features/agents/store/agentSkillDraftsThunks";
 import { fetchCronTasks } from "@/features/agents/store/agentCronThunks";
@@ -30,13 +31,19 @@ import {
   fetchAvailableModels,
   fetchProviderKeys,
 } from "@/features/agents/store/agentProvidersThunks";
+import {
+  fetchConnections,
+  fetchIntegrationProviders,
+} from "@/features/integrations/store/integrationsThunks";
 import { fetchAgentTemplates } from "@/features/agents/store/agentTemplatesThunks";
 import { AgentsModuleSidebar } from "@/features/agents/components/layout/AgentsModuleSidebar";
 import { AgentsView } from "@/features/agents/components/views/AgentsView";
+import { CatalogView } from "@/features/agents/components/views/CatalogView";
 import { SkillsView } from "@/features/agents/components/views/SkillsView";
 import { AutomationsView } from "@/features/agents/components/views/AutomationsView";
 import { CreateAgentModal } from "@/features/agents/components/CreateAgentModal";
 import { CreateTaskModal } from "@/features/agents/components/CreateTaskModal";
+import { ProviderKeyNotice } from "@/features/agents/components/ProviderKeyNotice";
 
 export function AgentsLayout() {
   const dispatch = useAppDispatch();
@@ -63,12 +70,15 @@ export function AgentsLayout() {
   // load up front so every model dropdown in the builder opens populated.
   useEffect(() => {
     dispatch(fetchAgents());
+    dispatch(fetchDeletedAgents());
     dispatch(fetchSkills());
     dispatch(fetchSkillDrafts({ status: "pending" }));
     dispatch(fetchCronTasks());
     dispatch(fetchProviderKeys());
     dispatch(fetchAvailableModels());
     dispatch(fetchAgentTemplates());
+    dispatch(fetchIntegrationProviders());
+    dispatch(fetchConnections());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLayoutChange = useCallback((layout: Record<string, number>) => {
@@ -105,17 +115,12 @@ export function AgentsLayout() {
 
   const railSections: SidebarSection[] = [
     { id: "agents", icon: Robot, label: "Agents", isActive: section === "agents", onClick: () => navigate("/agents/agents") },
+    { id: "catalog", icon: Books, label: "Catalog", isActive: section === "catalog", onClick: () => navigate("/agents/catalog") },
     { id: "skills", icon: Lightning, label: "Skills", isActive: section === "skills", onClick: () => navigate("/agents/skills") },
     { id: "automations", icon: ClockCounterClockwise, label: "Automations", isActive: section === "automations", onClick: () => navigate("/agents/automations") },
   ];
 
-  const sidebar = (
-    <AgentsModuleSidebar
-      onNewAgent={handleNewAgent}
-      onNewSkill={handleNewSkill}
-      onNewAutomation={handleNewAutomation}
-    />
-  );
+  const sidebar = <AgentsModuleSidebar />;
 
   const sidebarAsDrawer = isMobile;
   const showSidebar = !isZenMode && !sidebarCollapsed;
@@ -166,13 +171,20 @@ export function AgentsLayout() {
               showCollapsedRail && "ml-12",
             )}
           >
-            {section === "skills" ? (
-              <SkillsView onNewSkill={handleNewSkill} creatingSkill={creatingSkill} />
-            ) : section === "automations" ? (
-              <AutomationsView onNewAutomation={handleNewAutomation} />
-            ) : (
-              <AgentsView onNewAgent={handleNewAgent} />
-            )}
+            <ProviderKeyNotice />
+            {/* min-h-0 so the notice takes its band out of the section's height
+                instead of pushing its bottom past the clipped container. */}
+            <div className="min-h-0 flex-1">
+              {section === "catalog" ? (
+                <CatalogView onUseTemplate={handleNewAgent} />
+              ) : section === "skills" ? (
+                <SkillsView onNewSkill={handleNewSkill} creatingSkill={creatingSkill} />
+              ) : section === "automations" ? (
+                <AutomationsView onNewAutomation={handleNewAutomation} />
+              ) : (
+                <AgentsView onNewAgent={handleNewAgent} />
+              )}
+            </div>
           </div>
         </Panel>
       </Group>

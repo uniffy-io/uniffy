@@ -1,6 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CircleNotch, Plus, Robot } from "@phosphor-icons/react";
+import {
+    Books,
+    CircleNotch,
+    Cpu,
+    Image,
+    Lightning,
+    Plus,
+    Robot,
+    Wrench,
+    X,
+} from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
@@ -8,11 +18,11 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { createAgent, updateAgent } from "@/features/agents/store/agentsThunks";
 import { selectAllSkills } from "@/features/agents/store/agentSkillsSlice";
-import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
 import { selectAgentTemplates } from "@/features/agents/store/agentTemplatesSlice";
-import { fetchAgentTemplates } from "@/features/agents/store/agentTemplatesThunks";
+import { selectAvailableModels } from "@/features/agents/store/agentProvidersSlice";
 
 function CreateAgentModalContent({
     initialTemplateKey,
@@ -34,20 +44,31 @@ function CreateAgentModalContent({
     const [accessMode, setAccessMode] = useState<AccessMode>(AccessMode.OWNER_ONLY);
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        dispatch(fetchAgentTemplates());
-        if (Object.keys(skillsMap).length === 0) {
-            dispatch(fetchSkills());
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- one fetch per modal open; refetching on skillsMap updates would loop when the org has no skills
-    }, []);
-
     const selectedTemplate = templates.find((t) => t.key === selectedTemplateKey) ?? null;
     const name = nameOverride ?? selectedTemplate?.name ?? "";
 
-    const selectTemplate = (key: string | null) => {
-        setSelectedTemplateKey(key);
-        setNameOverride(key ? null : name);
+    // A template's recommended models apply only when an enabled org key
+    // actually serves them; otherwise creation falls back to the org default.
+    const availableModels = useAppSelector(selectAvailableModels);
+    const recommendedModel = selectedTemplate?.recommendedModel
+        ? (availableModels.find((m) => m.id === selectedTemplate.recommendedModel) ?? null)
+        : null;
+    const recommendedImageModel = selectedTemplate?.recommendedImageModel
+        ? (availableModels.find(
+              (m) =>
+                  m.id === selectedTemplate.recommendedImageModel &&
+                  m.supportsImageGeneration,
+          ) ?? null)
+        : null;
+
+    const clearTemplate = () => {
+        setNameOverride(name);
+        setSelectedTemplateKey(null);
+    };
+
+    const browseCatalog = () => {
+        navigate("/agents/catalog");
+        onClose();
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -65,6 +86,12 @@ function CreateAgentModalContent({
                               soulPrompt: template.soulPrompt,
                               avatarEmoji: template.emoji,
                               enabledSkills: template.enabledSkillIds,
+                              ...(recommendedModel
+                                  ? { primaryModel: recommendedModel.id }
+                                  : {}),
+                              ...(recommendedImageModel
+                                  ? { imageModel: recommendedImageModel.id }
+                                  : {}),
                           }
                         : {}),
                 }),
@@ -73,7 +100,13 @@ function CreateAgentModalContent({
                 // CreateAgentRequest carries no tools field; enable them right after creation, clone-style, without blocking navigation.
                 dispatch(updateAgent({ agentId: result.id, enabledTools: template.enabledTools }));
             }
-            navigate(`/agents/agents/${result.id}/overview`);
+            // Overview reads this once to walk the user through picking a model;
+            // it clears the history entry so a reload does not re-trigger. The
+            // walkthrough is skipped when the template's recommended model was
+            // already applied.
+            navigate(`/agents/agents/${result.id}/overview`, {
+                state: { needsModelSetup: !recommendedModel },
+            });
             onClose();
         } finally {
             setSubmitting(false);
@@ -85,85 +118,106 @@ function CreateAgentModalContent({
             <div className="px-6 py-4 border-b border-border">
                 <h2 className="text-xl font-semibold text-foreground">New agent</h2>
                 <p className="text-sm text-muted-foreground">
-                    Start from a template or a blank agent.
+                    Name it and pick who can use it. Everything else is editable after.
                 </p>
             </div>
 
             <div className="max-h-[65dvh] overflow-y-auto px-6 py-5 space-y-5">
-                <div
-                    className="grid grid-cols-1 sm:grid-cols-2 gap-2"
-                    data-testid="agents-template-gallery"
-                >
-                    <button
-                        type="button"
-                        onClick={() => selectTemplate(null)}
-                        data-testid="agents-template-card-blank"
-                        data-selected={selectedTemplateKey === null}
-                        className={cn(
-                            "rounded-lg border p-3 text-left transition-colors",
-                            selectedTemplateKey === null
-                                ? "bg-primary/10 border-primary"
-                                : "border-border hover:bg-muted",
-                        )}
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <Robot size={18} className="text-primary" />
+                <div>
+                    <label className="block text-sm text-muted-foreground mb-1">Starting from</label>
+                    {selectedTemplate ? (
+                        <div
+                            className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3"
+                            data-testid="agents-create-template-summary"
+                            data-template-key={selectedTemplate.key}
+                        >
+                            <AgentAvatar
+                                avatarEmoji={selectedTemplate.emoji}
+                                agentName={selectedTemplate.name}
+                                size="md"
+                            />
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-foreground">
+                                    {selectedTemplate.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {selectedTemplate.description}
+                                </p>
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                    <Badge variant="secondary" className="gap-1 text-[10px]">
+                                        <Wrench size={10} />
+                                        {selectedTemplate.enabledTools.length} tools
+                                    </Badge>
+                                    {recommendedModel && (
+                                        <Badge
+                                            variant="secondary"
+                                            className="gap-1 text-[10px]"
+                                            data-testid="agents-create-recommended-model"
+                                        >
+                                            <Cpu size={10} />
+                                            {recommendedModel.displayName || recommendedModel.id}
+                                        </Badge>
+                                    )}
+                                    {recommendedImageModel && (
+                                        <Badge
+                                            variant="secondary"
+                                            className="gap-1 text-[10px]"
+                                            data-testid="agents-create-recommended-image-model"
+                                        >
+                                            <Image size={10} />
+                                            {recommendedImageModel.displayName ||
+                                                recommendedImageModel.id}
+                                        </Badge>
+                                    )}
+                                    {selectedTemplate.enabledSkillIds.map((skillId) => (
+                                        <Badge
+                                            key={skillId}
+                                            variant="secondary"
+                                            className="gap-1 text-[10px]"
+                                        >
+                                            <Lightning size={10} />
+                                            {skillsMap[skillId]?.displayName ?? "Skill"}
+                                        </Badge>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-medium text-foreground">Blank</p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                    Configure everything yourself.
+                            <button
+                                type="button"
+                                onClick={clearTemplate}
+                                title="Start blank instead"
+                                aria-label="Start blank instead"
+                                className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                                data-testid="agents-create-clear-template"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div
+                            className="flex items-center gap-3 rounded-lg border border-border p-3"
+                            data-testid="agents-create-template-blank"
+                        >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                <Robot size={16} />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-foreground">Blank agent</p>
+                                <p className="text-xs text-muted-foreground">
+                                    No instructions, no tools.
                                 </p>
                             </div>
-                        </div>
-                    </button>
-
-                    {templates.map((template) => {
-                        const isSelected = selectedTemplateKey === template.key;
-                        return (
-                            <button
-                                key={template.key}
+                            <Button
                                 type="button"
-                                onClick={() => selectTemplate(template.key)}
-                                data-testid={`agents-template-card-${template.key}`}
-                                data-selected={isSelected}
-                                className={cn(
-                                    "rounded-lg border p-3 text-left transition-colors",
-                                    isSelected
-                                        ? "bg-primary/10 border-primary"
-                                        : "border-border hover:bg-muted",
-                                )}
+                                size="sm"
+                                variant="ghost"
+                                onClick={browseCatalog}
+                                data-testid="agents-create-browse-catalog"
                             >
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-base">
-                                        {template.emoji}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-medium text-foreground">
-                                            {template.name}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground truncate">
-                                            {template.description}
-                                        </p>
-                                    </div>
-                                </div>
-                                {template.enabledSkillIds.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                        {template.enabledSkillIds.map((skillId) => (
-                                            <Badge
-                                                key={skillId}
-                                                variant="secondary"
-                                                className="text-xs"
-                                            >
-                                                {skillsMap[skillId]?.displayName ?? "Skill"}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                )}
-                            </button>
-                        );
-                    })}
+                                <Books size={14} />
+                                Browse catalog
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 <div>
@@ -245,7 +299,7 @@ export function CreateAgentModal({
 }) {
     if (!open) return null;
     return (
-        <Modal onClose={onClose} maxWidth="max-w-2xl">
+        <Modal onClose={onClose} maxWidth="max-w-lg">
             <CreateAgentModalContent initialTemplateKey={initialTemplateKey} onClose={onClose} />
         </Modal>
     );

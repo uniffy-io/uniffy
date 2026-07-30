@@ -27,6 +27,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useBookmarks } from '@/features/bookmarks';
 import { cn } from '@/shared/utils/cn';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
+import { CompactNavItem } from '@/components/layout/CompactNavItem';
 import {
     toggleNodeExpanded,
     setSelectedFolder,
@@ -79,51 +80,6 @@ const filesNavItems: FilesNavItem[] = [
     { name: 'Tags', path: '/tags?domain=file', icon: Tag },
     { name: 'Filters', path: '/files/filters', icon: Funnel },
 ];
-
-function CompactNavItem({ item, isActive }: { item: FilesNavItem; isActive: boolean }) {
-    const IconComponent = item.icon;
-
-    return (
-        <Link
-            to={item.path}
-            className={cn(
-                "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
-                "hover:px-2.5",
-                isActive && "text-foreground"
-            )}
-        >
-            {/* Active indicator */}
-            <span
-                className={cn(
-                    "absolute inset-0 rounded-lg transition-all duration-500",
-                    isActive ? "bg-primary/10" : "bg-transparent"
-                )}
-            />
-
-            {/* Hover underline effect */}
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-primary transition-all duration-700 ease-out w-0 opacity-0 group-hover:w-1/2 group-hover:opacity-70" />
-
-            {/* Icon */}
-            <span className={cn(
-                "relative z-10 flex items-center justify-center w-7 h-7 rounded-md transition-all duration-500 ease-out",
-                isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground group-hover:text-primary"
-            )}>
-                <IconComponent size={18} weight={isActive ? "fill" : "duotone"} />
-            </span>
-
-            {/* Label - hidden by default, shows on hover */}
-            <span className={cn(
-                "relative z-10 ml-0 max-w-0 overflow-hidden whitespace-nowrap transition-all duration-700 ease-out",
-                "group-hover:ml-1.5 group-hover:max-w-24",
-                isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
-            )}>
-                {item.name}
-            </span>
-        </Link>
-    );
-}
 
 function FolderNode({
     node,
@@ -701,7 +657,13 @@ export function FilesSidebar({ onToggleSidebar, onUpload, onUploadFolder }: File
                         ? location.pathname === '/files' && !location.search.includes('folder=')
                         : location.pathname === item.path;
                     return (
-                        <CompactNavItem key={item.path} item={item} isActive={isActive} />
+                        <CompactNavItem
+                            key={item.path}
+                            to={item.path}
+                            label={item.name}
+                            icon={item.icon}
+                            isActive={isActive}
+                        />
                     );
                 })}
                 <div className="flex-1" />

@@ -17,6 +17,8 @@ export const templateToPlain = (template: AgentTemplate) => ({
     soulPrompt: template.soulPrompt,
     enabledTools: [...template.enabledTools],
     enabledSkillIds: [...template.enabledSkillIds],
+    recommendedModel: template.recommendedModel,
+    recommendedImageModel: template.recommendedImageModel,
 });
 
 export type SerializedAgentTemplate = ReturnType<typeof templateToPlain>;

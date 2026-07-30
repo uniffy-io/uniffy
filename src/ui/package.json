@@ -30,6 +30,7 @@
         "@emoji-mart/react": "^1.1.1",
         "@headlessui/react": "^2.2.9",
         "@lezer/highlight": "^1.2.3",
+        "@lobehub/icons-static-svg": "^1.94.0",
         "@milkdown/components": "^7.18.0",
         "@milkdown/core": "^7.18.0",
         "@milkdown/crepe": "^7.18.0",

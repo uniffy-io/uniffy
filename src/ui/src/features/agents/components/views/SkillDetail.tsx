@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     ArrowCounterClockwise,
+    ArrowLeft,
     CaretDown,
     CaretRight,
     CircleNotch,
@@ -447,6 +448,15 @@ function SavedSkillDetail({ skill }: { skill: SerializedSkill }) {
     return (
         <div className="flex h-full flex-col overflow-hidden" data-testid="skill-detail">
             <div className="px-6 py-4 border-b border-border">
+                <button
+                    type="button"
+                    onClick={() => navigate("/agents/skills")}
+                    className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    data-testid="skill-detail-back"
+                >
+                    <ArrowLeft size={14} />
+                    All skills
+                </button>
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                         <InlineTextEdit

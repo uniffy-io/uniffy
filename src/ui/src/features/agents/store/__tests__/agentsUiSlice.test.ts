@@ -3,9 +3,8 @@ import {
     agentsUiReducer,
     selectLastSection,
     selectSidebarCollapsed,
-    selectSidebarSearch,
     setLastSection,
-    setSidebarSearch,
+    setSidebarCollapsed,
     toggleSidebar,
 } from '@/features/agents/store/agentsUiSlice';
 import type { RootState } from '@/app/store';
@@ -40,9 +39,9 @@ describe('agentsUiSlice reducers', () => {
         expect(agentsUiReducer(collapsed, toggleSidebar()).sidebarCollapsed).toBe(false);
     });
 
-    it('holds the sidebar search query', () => {
-        const state = agentsUiReducer(undefined, setSidebarSearch('review'));
-        expect(selectSidebarSearch(stateWith(state))).toBe('review');
-        expect(selectSidebarCollapsed(stateWith(state))).toBe(false);
+    it('sets sidebar collapse explicitly', () => {
+        const state = agentsUiReducer(undefined, setSidebarCollapsed(true));
+        expect(selectSidebarCollapsed(stateWith(state))).toBe(true);
+        expect(selectSidebarCollapsed(stateWith(agentsUiReducer(state, setSidebarCollapsed(false))))).toBe(false);
     });
 });

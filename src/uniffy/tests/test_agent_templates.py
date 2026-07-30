@@ -11,7 +11,11 @@ from uuid import UUID, uuid4
 from uniffy.core.data_files import DATA_DIR, load_documents
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import AccessMode
-from uniffy.domains.agents.templates import AGENT_TEMPLATES, get_template
+from uniffy.domains.agents.templates import (
+    AGENT_TEMPLATES,
+    get_default_template,
+    get_template,
+)
 from uniffy.domains.agents.tools.registry import get_tool_registry
 
 
@@ -20,16 +24,17 @@ def _run(coro):
 
 
 class TestCatalogIntegrity:
-    def test_first_template_is_assistant(self) -> None:
-        assert AGENT_TEMPLATES[0].key == "assistant"
-        assert AGENT_TEMPLATES[0].name == "Assistant"
+    def test_exactly_one_default_template(self) -> None:
+        flagged = [t for t in AGENT_TEMPLATES if t.is_default]
+        assert len(flagged) == 1
+        assert get_default_template() is flagged[0]
 
     def test_keys_are_unique(self) -> None:
         keys = [t.key for t in AGENT_TEMPLATES]
         assert len(keys) == len(set(keys))
 
     def test_get_template_resolves_and_raises(self) -> None:
-        assert get_template("assistant") is AGENT_TEMPLATES[0]
+        assert get_template(AGENT_TEMPLATES[0].key) is AGENT_TEMPLATES[0]
         try:
             get_template("nope")
         except KeyError:
@@ -135,8 +140,8 @@ def _org_create(skill_rows: list[tuple[UUID, str]]):
 
 
 class TestDefaultAgentBootstrap:
-    def test_seeds_one_default_agent_from_assistant_template(self) -> None:
-        template = get_template("assistant")
+    def test_seeds_one_default_agent_from_default_template(self) -> None:
+        template = get_default_template()
         skill_id = uuid4()
         org, owner_id, agents, agent_ops = _org_create(
             [(skill_id, template.bundled_skill_names[0])]

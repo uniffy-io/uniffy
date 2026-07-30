@@ -1,10 +1,25 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { CircleNotch, Lightning, Plus } from "@phosphor-icons/react";
+import { useNavigate, useParams } from "react-router-dom";
+import { CircleNotch, Lightning, Plus, Tray } from "@phosphor-icons/react";
+import { SkillSource } from "@uniffy/proto/agents/v1/skills_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { selectSkillById, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
-import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import {
+    BrowseBody,
+    BrowseCard,
+    BrowseEmpty,
+    BrowseGrid,
+    BrowseGroupLabel,
+    BrowseHeader,
+} from "@/features/agents/components/browse/BrowseSurface";
+import {
+    selectAllSkills,
+    selectSkillById,
+    selectSkillsLoading,
+} from "@/features/agents/store/agentSkillsSlice";
+import { fetchSkills, type SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
+import { selectInboxCount } from "@/features/agents/store/agentSkillDraftsSlice";
 import { selectDraftById } from "@/features/agents/store/agentSkillDraftsSlice";
 import { fetchSkillDraft, fetchSkillDrafts } from "@/features/agents/store/agentSkillDraftsThunks";
 import { SkillDraftsInbox } from "@/features/agents/components/skills/SkillDraftsInbox";
@@ -25,30 +40,7 @@ export function SkillsView({ onNewSkill, creatingSkill }: SkillsViewProps) {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!subId) {
-        return (
-            <div
-                className="flex h-full flex-1 items-center justify-center px-4"
-                data-testid="skills-empty-state"
-            >
-                <div className="flex flex-col items-center text-center max-w-md">
-                    <Lightning size={48} weight="light" className="text-muted-foreground/30 mb-4" />
-                    <h2 className="text-lg font-semibold text-foreground">Select a skill</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Skills are reusable markdown instructions your agents load on demand. Pick
-                        one from the sidebar to view or edit it.
-                    </p>
-                    <Button
-                        onClick={onNewSkill}
-                        disabled={creatingSkill}
-                        className="mt-5"
-                        data-testid="skills-new-skill"
-                    >
-                        <Plus size={16} className="mr-1" />
-                        {creatingSkill ? "Creating..." : "New skill"}
-                    </Button>
-                </div>
-            </div>
-        );
+        return <SkillsBrowse onNewSkill={onNewSkill} creatingSkill={creatingSkill} />;
     }
 
     if (subId === "drafts") {
@@ -57,6 +49,126 @@ export function SkillsView({ onNewSkill, creatingSkill }: SkillsViewProps) {
     }
 
     return <SkillPane skillId={subId} />;
+}
+
+const SKILL_GROUPS = [
+    { source: SkillSource.ORGANIZATION, label: "Organization" },
+    { source: SkillSource.BUNDLED, label: "Bundled" },
+] as const;
+
+function SkillCard({ skill, onOpen }: { skill: SerializedSkill; onOpen: () => void }) {
+    return (
+        <BrowseCard
+            onOpen={onOpen}
+            testId={`skills-card-${skill.id}`}
+            leading={
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Lightning size={18} weight="duotone" />
+                </span>
+            }
+            title={skill.displayName || skill.name}
+            subtitle={skill.description || "No description"}
+            badges={
+                skill.alwaysActive ? (
+                    <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">
+                        always on
+                    </Badge>
+                ) : undefined
+            }
+            chips={
+                <Badge variant="secondary" className="font-mono text-[10px] font-medium">
+                    {skill.name}
+                </Badge>
+            }
+        />
+    );
+}
+
+function SkillsBrowse({
+    onNewSkill,
+    creatingSkill,
+}: {
+    onNewSkill: () => void;
+    creatingSkill: boolean;
+}) {
+    const navigate = useNavigate();
+    const skillsMap = useAppSelector(selectAllSkills);
+    const draftCount = useAppSelector(selectInboxCount);
+    const [search, setSearch] = useState("");
+
+    const query = search.trim().toLowerCase();
+    const skills = Object.values(skillsMap).filter((skill) => {
+        const label = skill.displayName || skill.name;
+        return !query || label.toLowerCase().includes(query);
+    });
+
+    return (
+        <div className="flex h-full flex-col overflow-hidden" data-testid="skills-browse">
+            <BrowseHeader
+                title="Skills"
+                subtitle="Reusable markdown instructions agents load on demand."
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search skills..."
+                testId="skills-browse-header"
+                action={
+                    <div className="flex items-center gap-2">
+                        {draftCount > 0 && (
+                            <Button
+                                variant="outline"
+                                onClick={() => navigate("/agents/skills/drafts")}
+                                data-testid="skills-browse-drafts-button"
+                            >
+                                <Tray size={16} />
+                                {draftCount} draft{draftCount === 1 ? "" : "s"}
+                            </Button>
+                        )}
+                        <Button
+                            onClick={onNewSkill}
+                            disabled={creatingSkill}
+                            data-testid="skills-new-skill"
+                        >
+                            <Plus size={16} />
+                            {creatingSkill ? "Creating..." : "New skill"}
+                        </Button>
+                    </div>
+                }
+            />
+            <BrowseBody testId="skills-browse-body">
+                {skills.length === 0 ? (
+                    <BrowseEmpty
+                        icon={Lightning}
+                        title={query ? "No match" : "No skills yet"}
+                        description={
+                            query
+                                ? `No skill matches "${search.trim()}".`
+                                : "A skill is a markdown snippet an agent loads when it needs it."
+                        }
+                        testId="skills-browse-empty"
+                    />
+                ) : (
+                    SKILL_GROUPS.map(({ source, label }) => {
+                        const group = skills.filter((skill) => skill.source === source);
+                        if (group.length === 0) return null;
+                        return (
+                            <div key={source}>
+                                <BrowseGroupLabel>{label}</BrowseGroupLabel>
+                                <BrowseGrid>
+                                    {group.map((skill) => (
+                                        <SkillCard
+                                            key={skill.id}
+                                            skill={skill}
+                                            onOpen={() => navigate(`/agents/skills/${skill.id}`)}
+                                        />
+                                    ))}
+                                </BrowseGrid>
+                            </div>
+                        );
+                    })
+                )}
+            </BrowseBody>
+        </div>
+    );
 }
 
 function PaneSpinner() {

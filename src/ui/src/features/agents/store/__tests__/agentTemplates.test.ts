@@ -20,6 +20,8 @@ const assistant = {
     soulPrompt: 'You are the workspace assistant.',
     enabledTools: ['search.query'],
     enabledSkillIds: ['skill-1'],
+    recommendedModel: '',
+    recommendedImageModel: '',
 };
 
 describe('templateToPlain', () => {

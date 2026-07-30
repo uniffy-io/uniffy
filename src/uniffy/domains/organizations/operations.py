@@ -132,9 +132,9 @@ class OrganizationOperations:
 
         from uniffy.core.models.agents.agent import Agent
         from uniffy.domains.agents.skills.operations import SkillOperations
-        from uniffy.domains.agents.templates import get_template
+        from uniffy.domains.agents.templates import get_default_template
 
-        template = get_template("assistant")
+        template = get_default_template()
         enabled_skills = await SkillOperations(self._session).resolve_bundled_skill_ids(
             template.bundled_skill_names
         )

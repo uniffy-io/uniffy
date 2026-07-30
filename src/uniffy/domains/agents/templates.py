@@ -20,6 +20,12 @@ class AgentTemplate:
     soul_prompt: str
     enabled_tools: list[str]
     bundled_skill_names: list[str]
+    # Model ids the template works best on; prefill only, applied at create
+    # time when an org key's provider actually serves them.
+    recommended_model: str = ""
+    recommended_image_model: str = ""
+    # Seeds the org bootstrap default agent; exactly one template carries it.
+    is_default: bool = False
 
 
 def _load_catalog() -> tuple[AgentTemplate, ...]:
@@ -35,6 +41,11 @@ def _load_catalog() -> tuple[AgentTemplate, ...]:
                 soul_prompt=doc.body,
                 enabled_tools=doc.items("tools"),
                 bundled_skill_names=doc.items("skills"),
+                recommended_model=str(doc.meta.get("recommended_model", "")),
+                recommended_image_model=str(
+                    doc.meta.get("recommended_image_model", "")
+                ),
+                is_default=str(doc.meta.get("default", "")).lower() == "true",
             ),
         ))
 
@@ -50,3 +61,11 @@ def get_template(key: str) -> AgentTemplate:
         if template.key == key:
             return template
     raise KeyError(key)
+
+
+def get_default_template() -> AgentTemplate:
+    """The template flagged `default: true`, else the lowest-order one."""
+    for template in AGENT_TEMPLATES:
+        if template.is_default:
+            return template
+    return AGENT_TEMPLATES[0]

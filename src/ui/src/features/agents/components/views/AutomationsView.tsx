@@ -1,20 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
+    ArrowLeft,
     Timer,
     Trash,
     Play,
     Clock,
+    ClockCounterClockwise,
     CircleNotch,
     CheckCircle,
+    Plus,
+    Robot,
     XCircle,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { cn } from "@/shared/utils/cn";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
-import { EmptyState } from "@/components/feedback/EmptyState";
+import {
+    BrowseBody,
+    BrowseCard,
+    BrowseEmpty,
+    BrowseGrid,
+    BrowseHeader,
+} from "@/features/agents/components/browse/BrowseSurface";
+import { selectAllAgents, selectDeletedAgents } from "@/features/agents/store/agentsSlice";
 import {
     selectCronTasksList,
     selectCronLoading,
@@ -145,9 +157,11 @@ function TaskRunHistory({ taskId }: { taskId: string }) {
 function TaskDetailPanel({
     task,
     onDelete,
+    onBack,
 }: {
     task: SerializedCronTask;
     onDelete: () => void;
+    onBack: () => void;
 }) {
     const [togglingEnabled, setTogglingEnabled] = useState(false);
     const [triggering, setTriggering] = useState(false);
@@ -181,7 +195,19 @@ function TaskDetailPanel({
 
     return (
         <div className="flex h-full flex-col overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-2 border-b border-border/60 bg-card">
+            <div className="border-b border-border/60 bg-card">
+            <div className="flex items-center gap-3 px-4 pt-3">
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    data-testid="automations-detail-back"
+                >
+                    <ArrowLeft size={14} />
+                    All automations
+                </button>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2">
                 <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
                     <Timer size={18} className="text-muted-foreground" />
                 </div>
@@ -223,6 +249,7 @@ function TaskDetailPanel({
                         <Trash size={18} />
                     </Button>
                 </div>
+            </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -311,6 +338,123 @@ function TaskDetailPanel({
     );
 }
 
+function AutomationCard({
+    task,
+    agentName,
+    onOpen,
+}: {
+    task: SerializedCronTask;
+    agentName: string;
+    onOpen: () => void;
+}) {
+    const failed = !task.isEnabled && task.consecutiveFailures >= task.maxConsecutiveFailures;
+    const nextRun = task.isEnabled && task.nextRunAt
+        ? formatRelativeTime(protoTimestampToDateStr(task.nextRunAt))
+        : null;
+
+    return (
+        <BrowseCard
+            onOpen={onOpen}
+            dimmed={!task.isEnabled}
+            testId={`automations-card-${task.id}`}
+            leading={
+                <span
+                    className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                        failed
+                            ? "bg-red-500/10 text-red-500"
+                            : task.isEnabled
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground",
+                    )}
+                >
+                    <ClockCounterClockwise size={18} weight="duotone" />
+                </span>
+            }
+            title={task.name}
+            subtitle={task.prompt}
+            badges={<TaskStatusBadge task={task} />}
+            chips={
+                <>
+                    <Badge variant="secondary" className="gap-1 text-[10px] font-medium">
+                        <Clock size={10} />
+                        {cronToHuman(task.cronExpression)}
+                    </Badge>
+                    <Badge variant="secondary" className="gap-1 text-[10px] font-medium">
+                        <Robot size={10} />
+                        {agentName}
+                    </Badge>
+                    {nextRun && (
+                        <span className="text-[10px] text-muted-foreground">next {nextRun}</span>
+                    )}
+                </>
+            }
+        />
+    );
+}
+
+function AutomationsBrowse({
+    tasks,
+    onNewAutomation,
+}: {
+    tasks: SerializedCronTask[];
+    onNewAutomation: () => void;
+}) {
+    const navigate = useNavigate();
+    const agentsMap = useAppSelector(selectAllAgents);
+    const deletedAgentsMap = useAppSelector(selectDeletedAgents);
+    const [search, setSearch] = useState("");
+
+    const query = search.trim().toLowerCase();
+    const visible = tasks.filter((task) => !query || task.name.toLowerCase().includes(query));
+    const agentName = (agentId: string) =>
+        agentsMap[agentId]?.name ?? deletedAgentsMap[agentId]?.name ?? "Unknown agent";
+
+    return (
+        <div className="flex h-full flex-col overflow-hidden" data-testid="automations-browse">
+            <BrowseHeader
+                title="Automations"
+                subtitle="An agent runs a prompt you define on a recurring schedule."
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search automations..."
+                testId="automations-browse-header"
+                action={
+                    <Button onClick={onNewAutomation} data-testid="automations-new-button">
+                        <Plus size={16} />
+                        New automation
+                    </Button>
+                }
+            />
+            <BrowseBody testId="automations-browse-body">
+                {visible.length === 0 ? (
+                    <BrowseEmpty
+                        icon={Timer}
+                        title={query ? "No match" : "No automations yet"}
+                        description={
+                            query
+                                ? `No automation matches "${search.trim()}".`
+                                : "Schedule an agent to run a prompt on its own, on the cadence you pick."
+                        }
+                        testId="automations-browse-empty"
+                    />
+                ) : (
+                    <BrowseGrid>
+                        {visible.map((task) => (
+                            <AutomationCard
+                                key={task.id}
+                                task={task}
+                                agentName={agentName(task.agentId)}
+                                onOpen={() => navigate(`/agents/automations/${task.id}`)}
+                            />
+                        ))}
+                    </BrowseGrid>
+                )}
+            </BrowseBody>
+        </div>
+    );
+}
+
 export function AutomationsView({ onNewAutomation }: { onNewAutomation: () => void }) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -337,27 +481,14 @@ export function AutomationsView({ onNewAutomation }: { onNewAutomation: () => vo
     }
 
     if (!selectedTask) {
-        return (
-            <div className="flex h-full flex-col">
-                <EmptyState
-                    icon={Timer}
-                    title={tasks.length > 0 ? "No automation selected" : "No automations yet"}
-                    description={
-                        tasks.length > 0
-                            ? "Pick an automation from the sidebar to see its schedule and run history."
-                            : "Automations run an agent with a prompt you define on a recurring schedule."
-                    }
-                    actionLabel="New automation"
-                    onAction={onNewAutomation}
-                />
-            </div>
-        );
+        return <AutomationsBrowse tasks={tasks} onNewAutomation={onNewAutomation} />;
     }
 
     return (
         <TaskDetailPanel
             task={selectedTask}
             onDelete={() => handleDelete(selectedTask.id)}
+            onBack={() => navigate("/agents/automations")}
         />
     );
 }

@@ -866,10 +866,23 @@ admin plus a plain member (`(both products)`).
 - [ ] Agent detail header: Test / Clone / Share actions render as
       chat-style header buttons; Share opens the access dialog even on
       an agent another builder created (manage override).
-- [ ] Create agent: sidebar `+` opens the template modal (Blank card
-      first, emoji tiles, paired-skill badges); the same gallery shows
-      in the empty state when no agents exist; both flows land on the
-      created agent's Overview tab.
+- [ ] Catalog: the icon in the sidebar header reaches the grid, fills
+      with the primary color while on `/agents/catalog`, and slides its
+      label out on hover (same behaviour as the notes Graph/Tags icons);
+      search filters by name, description, and tool name; a card opens
+      `/agents/catalog/:key` with the soul prompt, skill badges, and
+      tools grouped by category; templates carrying a `*.delete_*` tool
+      show the approval warning.
+- [ ] The shared `CompactNavItem` extraction did not regress the notes
+      sidebar (Graph, Tags) or the files sidebar (All Files, Tags,
+      Filters): icons, hover labels, and active states all behave.
+- [ ] Create agent: "Use this template" (grid card or detail pane)
+      opens the modal with that template summarised and the name
+      prefilled; the `X` on the summary drops to Blank and keeps the
+      typed name; sidebar `+` opens the modal on Blank with a Browse
+      catalog button; the empty state offers catalog + blank. Every
+      path lands on the created agent's Overview tab with the
+      template's tools and skills already enabled.
 - [ ] Overview keeps the collapsed Model settings disclosure; its
       no-keys empty state points to `/admin/agents`; Capabilities and
       the automation detail use the shared toggle (no bespoke green
