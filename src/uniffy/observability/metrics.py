@@ -289,6 +289,12 @@ AGENT_MODEL_PARAM_DROPPED_TOTAL = Counter(
     ["provider", "param"],
 )
 
+AGENT_IMAGE_PARAM_DROPPED_TOTAL = Counter(
+    "uniffy_agent_image_param_dropped_total",
+    "Image params stripped at request build because the target image model rejects them",
+    ["provider", "param"],
+)
+
 
 LLM_PROVIDER_LRU_HIT_TOTAL = Counter(
     "uniffy_llm_provider_lru_hit_total",

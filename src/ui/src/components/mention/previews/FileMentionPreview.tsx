@@ -16,7 +16,9 @@ import { FileProcessingIndicator } from '@/components/mention/LiveIndicators';
 import { parseUrn } from '@/shared/utils/urn';
 import { useAppSelector } from '@/app/hooks';
 import { buildThumbnailUrl } from '@/shared/utils/fileUrls';
+import { cn } from '@/shared/utils/cn';
 import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
+import { MentionMediaPreview } from '@/components/mention/previews/MentionMediaPreview';
 import type { MentionLiveState } from '@/components/mention/types';
 
 interface FileMentionPreviewProps {
@@ -70,40 +72,40 @@ export function FileMentionPreview({
   const typeLabel = mime?.split('/')[1]?.toUpperCase() || 'File';
   const sizeLabel = liveState.fileSize ? formatFileSize(liveState.fileSize) : null;
   const isProcessing = liveState.fileProcessingStatus === 'processing' || liveState.fileProcessingStatus === 'pending';
-  const hasVisualPreview = !isProcessing && !thumbFailed && organizationId && fileId && (mime?.startsWith('image/') || mime?.startsWith('video/') || mime === 'application/pdf');
+  // With a thumbnail the card is the picture; the metadata drops to a caption.
+  const mediaForward = !isProcessing && !thumbFailed && organizationId && fileId && (mime?.startsWith('image/') || mime?.startsWith('video/') || mime === 'application/pdf');
   const thumbnailUrl = organizationId && fileId ? buildThumbnailUrl(organizationId, fileId) : null;
 
   return (
     <>
 
-      {/* Thumbnail preview for images and videos */}
-      {hasVisualPreview && thumbnailUrl && (
-        <span className="block relative w-full h-32 bg-muted/50 overflow-hidden">
-          <img
-            src={thumbnailUrl}
-            alt=""
-            className="w-full h-full object-cover"
-            onError={() => setThumbFailed(true)}
-          />
-          {mime?.startsWith('video/') && (
-            <span className="flex absolute inset-0 items-center justify-center bg-black/20">
-              <VideoCamera size={28} weight="fill" className="text-white/80" />
-            </span>
-          )}
-        </span>
+      {mediaForward && thumbnailUrl && (
+        <MentionMediaPreview
+          src={thumbnailUrl}
+          isVideo={mime?.startsWith('video/')}
+          onError={() => setThumbFailed(true)}
+        />
       )}
 
       {/* Gradient wash when no thumbnail */}
-      {!hasVisualPreview && (
+      {!mediaForward && (
         <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-blue-500/10 via-blue-500/5 to-transparent pointer-events-none" />
       )}
 
-      {/* Header */}
-      <span className="block relative px-4 pr-10 pt-3 pb-2 pl-5">
+      {/* Header. With a thumbnail this is a caption, so it loses the icon badge
+          (the image already says what the file is) and stays on one line. */}
+      <span
+        className={cn(
+          'block relative pr-10',
+          mediaForward ? 'px-3 pt-2 pb-1.5 pl-4' : 'px-4 pt-3 pb-2 pl-5',
+        )}
+      >
         <span className="flex items-start gap-3">
-          <span className="grid place-items-center shrink-0 w-8 h-8 rounded-lg border border-primary/55 bg-primary/10 text-primary">
-            <FileIconBadge mime={mime} />
-          </span>
+          {!mediaForward && (
+            <span className="grid place-items-center shrink-0 w-8 h-8 rounded-lg border border-primary/55 bg-primary/10 text-primary">
+              <FileIconBadge mime={mime} />
+            </span>
+          )}
           <span className="block flex-1 min-w-0 pt-0.5">
             <span className="block font-semibold text-sm truncate">{title}</span>
             <span className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -125,8 +127,10 @@ export function FileMentionPreview({
         </span>
       </span>
 
-      {/* Extracted text snippet (or user description) */}
-      {description && !isProcessing && (
+      {/* Extracted text snippet (or user description). Suppressed under a
+          thumbnail: for a generated image it is the prompt again, and it pushed
+          the picture down to a strip. */}
+      {description && !isProcessing && !mediaForward && (
         <span className="block px-4 pb-2 pl-[3.875rem]">
           <span className="block text-xs text-muted-foreground/80 leading-relaxed line-clamp-3 whitespace-pre-wrap break-words font-mono">
             {description}

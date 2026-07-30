@@ -38,6 +38,8 @@ def _to_proto(resolved: ResolvedRuntimeSettings) -> RuntimeSettings:
             else ""
         ),
         default_chat_model=resolved.default_chat_model or "",
+        image_max_resolution=resolved.image_max_resolution or "",
+        image_max_quality=resolved.image_max_quality or "",
     )
 
 
@@ -98,6 +100,8 @@ class RuntimeSettingsHandlers:
                     personal_memory_bridge_enabled=s.personal_memory_bridge_enabled,
                     default_provider_key_id=s.default_provider_key_id,
                     default_chat_model=s.default_chat_model,
+                    image_max_resolution=s.image_max_resolution,
+                    image_max_quality=s.image_max_quality,
                 )
                 return RuntimeSettingsResponse(
                     settings=_to_proto(resolved), configured=configured

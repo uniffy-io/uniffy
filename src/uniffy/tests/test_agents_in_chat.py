@@ -698,12 +698,14 @@ def _binding_row(
     *,
     model_override: str | None = None,
     model_params_override: dict | None = None,
+    image_params_override: dict | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         channel_id=uuid7(),
         agent_id=uuid7(),
         model_override=model_override,
         model_params_override=model_params_override,
+        image_params_override=image_params_override,
     )
 
 
@@ -955,6 +957,7 @@ class TestChannelAgentConfigHandlers:
         )
         assert response.config.model_override == ""
         assert response.config.model_params_override == ""
+        assert response.config.image_params_override == ""
         assert len(fake_ops.get_calls) == 1
 
     def test_update_config_passes_set_values_to_ops(self, monkeypatch) -> None:
@@ -967,6 +970,7 @@ class TestChannelAgentConfigHandlers:
                     **self._request_ids(),
                     model_override="gpt-5.4",
                     model_params_override='{"temperature": 0.4}',
+                    image_params_override='{"resolution": "2K"}',
                 ),
                 MagicMock(),
             )
@@ -974,6 +978,7 @@ class TestChannelAgentConfigHandlers:
         call = fake_ops.update_calls[0]
         assert call["model_override"] == "gpt-5.4"
         assert call["model_params_override"] == {"temperature": 0.4}
+        assert call["image_params_override"] == {"resolution": "2K"}
 
     def test_update_config_present_empty_clears(self, monkeypatch) -> None:
         fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
@@ -985,6 +990,7 @@ class TestChannelAgentConfigHandlers:
                     **self._request_ids(),
                     model_override="",
                     model_params_override="",
+                    image_params_override="",
                 ),
                 MagicMock(),
             )
@@ -992,6 +998,7 @@ class TestChannelAgentConfigHandlers:
         call = fake_ops.update_calls[0]
         assert call["model_override"] == ""
         assert call["model_params_override"] == {}
+        assert call["image_params_override"] == {}
 
     def test_update_config_absent_fields_stay_unchanged(self, monkeypatch) -> None:
         fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())
@@ -1005,6 +1012,7 @@ class TestChannelAgentConfigHandlers:
         call = fake_ops.update_calls[0]
         assert call["model_override"] is None
         assert call["model_params_override"] is None
+        assert call["image_params_override"] is None
 
     def test_update_config_rejects_malformed_params_json(self, monkeypatch) -> None:
         fake_ops = _install_config_handler_env(monkeypatch, binding=_binding_row())

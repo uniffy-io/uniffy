@@ -17,6 +17,8 @@ import { useAgentsBuilderAccess } from '@/features/agents/hooks/useAgentsBuilder
 import { ThinkingPane } from '@/features/agents/components/ThinkingPane';
 import { ToolActivityPane, type ToolStep } from '@/features/agents/components/ToolActivityPane';
 import { persistedThinkingBlocks } from '@/features/agents/utils/thinkingBlocks';
+import { GeneratedImageCard } from '@/features/chat/components/channel/GeneratedImageCard';
+import { parseImageMeta, type ImageGenerationMeta } from '@/features/chat/utils/imageMeta';
 import type { ChatMessage } from '@/features/chat/types';
 
 interface AgentMessageBodyProps {
@@ -230,17 +232,44 @@ export function AgentToolActivityPane({ toolMessages }: { toolMessages: ChatMess
         };
     });
 
+    // A generated image carries its resolved params on the result row; they are
+    // what the regenerate menu patches, and the model never saw most of them.
+    const imageResults: { messageId: string; meta: ImageGenerationMeta }[] = toolMessages
+        .flatMap((message) => {
+            const toolCallId = readString(message.metadata, 'tool_call_id');
+            const resultMsg = toolCallId
+                ? channelMessages.find(
+                      (m) =>
+                          m.senderType === 'AGENT' &&
+                          m.metadata?.['kind'] === 'tool_result' &&
+                          m.metadata?.['tool_call_id'] === toolCallId,
+                  )
+                : undefined;
+            const meta = resultMsg ? parseImageMeta(resultMsg.metadata?.['tool_meta']) : null;
+            return meta && resultMsg ? [{ messageId: resultMsg.id, meta }] : [];
+        });
+
     const live = steps.some((s) => s.status === 'running');
     const onStop = live && agentId ? () => dispatch(stopAgentRun({ channelId, agentId })) : undefined;
 
     return (
-        <ToolActivityPane
-            steps={steps}
-            live={live}
-            answerStarted={!live}
-            onStop={onStop}
-            testId={`chat-agent-tool-activity-${toolMessages[0]?.id ?? ''}`}
-        />
+        <div className="min-w-0 flex-1">
+            <ToolActivityPane
+                steps={steps}
+                live={live}
+                answerStarted={!live}
+                onStop={onStop}
+                testId={`chat-agent-tool-activity-${toolMessages[0]?.id ?? ''}`}
+            />
+            {imageResults.map(({ messageId, meta }) => (
+                <GeneratedImageCard
+                    key={messageId}
+                    meta={meta}
+                    channelId={channelId}
+                    messageId={messageId}
+                />
+            ))}
+        </div>
     );
 }
 

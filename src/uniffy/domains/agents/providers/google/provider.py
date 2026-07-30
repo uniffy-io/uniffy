@@ -27,6 +27,17 @@ from uniffy.domains.agents.providers.google.converters import (
 
 logger = logger.bind(component="agents.providers.google.provider")
 
+DEFAULT_ASPECT_RATIO = "1:1"
+
+# The API rejects a lowercase tier silently: the request succeeds and comes
+# back at the default size, so the mapping must preserve the uppercase K.
+_IMAGE_SIZES = {"512px": "512px", "1K": "1K", "2K": "2K", "4K": "4K"}
+
+
+def to_image_size(resolution: str | None) -> str:
+    """Normalised resolution tier -> the ``imageSize`` spelling Google accepts."""
+    return _IMAGE_SIZES.get(resolution or "", "1K")
+
 
 class GoogleProvider(LLMProvider):
     """Google Gemini provider using the google-genai Python SDK."""
@@ -69,63 +80,32 @@ class GoogleProvider(LLMProvider):
         prompt: str,
         *,
         model: str,
-        size: str = "1024x1024",
-        quality: str = "auto",
+        params: dict | None = None,
     ) -> tuple[bytes, str]:
-        """Generate an image using a Google model.
+        """Generate an image using a Google model; returns (bytes, mime_type).
 
-        Supports two generation paths:
-
-        - **Gemini models** (e.g. ``gemini-2.0-flash-exp``,
-          ``gemini-2.5-flash-image``) use ``generate_content`` with
-          ``response_modalities=["IMAGE"]``.
-        - **Imagen models** (e.g. ``imagen-3.0-generate-002``) use
-          the dedicated ``generate_images`` API.
-
-        Parameters
-        ----------
-        prompt : str
-            Text description of the desired image.
-        model : str
-            Model identifier.
-        size : str
-            Image dimensions (e.g. "1024x1024").
-        quality : str
-            Image quality setting (kept for interface compatibility).
-
-        Returns
-        -------
-        tuple[bytes, str]
-            (image_bytes, mime_type).
-
+        Gemini models produce images through ``generate_content`` with
+        ``response_modalities=["IMAGE"]``; Imagen models use the dedicated
+        ``generate_images`` endpoint.
         """
+        params = params or {}
         if model.startswith("imagen"):
-            return await self._generate_image_imagen(prompt, model=model, size=size)
-        return await self._generate_image_gemini(prompt, model=model, size=size)
+            return await self._generate_image_imagen(prompt, model=model, params=params)
+        return await self._generate_image_gemini(prompt, model=model, params=params)
 
     async def _generate_image_gemini(
         self,
         prompt: str,
         *,
         model: str,
-        size: str,
+        params: dict,
     ) -> tuple[bytes, str]:
-        """Generate an image via Gemini's native image output.
-
-        Uses ``generate_content`` with ``response_modalities=["IMAGE"]``.
-
-        """
-        aspect_ratio_map = {
-            "1024x1024": "1:1",
-            "1536x1024": "3:2",
-            "1024x1536": "2:3",
-        }
-        aspect_ratio = aspect_ratio_map.get(size, "1:1")
-
+        """Generate an image via Gemini's native image output."""
         config = types.GenerateContentConfig(
             response_modalities=["IMAGE"],
             image_config=types.ImageConfig(
-                aspect_ratio=aspect_ratio,
+                aspect_ratio=params.get("aspect_ratio", DEFAULT_ASPECT_RATIO),
+                image_size=to_image_size(params.get("resolution")),
             ),
         )
 
@@ -150,23 +130,14 @@ class GoogleProvider(LLMProvider):
         prompt: str,
         *,
         model: str,
-        size: str,
+        params: dict,
     ) -> tuple[bytes, str]:
-        """Generate an image via the Imagen API.
-
-        Uses the dedicated ``generate_images`` endpoint.
-
-        """
-        aspect_ratio_map = {
-            "1024x1024": "1:1",
-            "1536x1024": "3:2",
-            "1024x1536": "2:3",
-        }
-        aspect_ratio = aspect_ratio_map.get(size, "1:1")
-
+        """Generate an image via the dedicated Imagen ``generate_images`` endpoint."""
         config = types.GenerateImagesConfig(
             numberOfImages=1,
-            aspectRatio=aspect_ratio,
+            aspectRatio=params.get("aspect_ratio", DEFAULT_ASPECT_RATIO),
+            imageSize=to_image_size(params.get("resolution")),
+            personGeneration=params.get("person_generation", "allow_adult"),
             outputMimeType="image/png",
         )
 

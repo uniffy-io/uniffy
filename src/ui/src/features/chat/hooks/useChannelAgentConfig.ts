@@ -13,12 +13,14 @@ import {
 export interface ChannelAgentConfigState {
     modelOverride: string | null;
     modelParams: ModelParamValues;
+    imageParams: ModelParamValues;
 }
 
 /** Absent field = leave unchanged; null model / empty params = clear the override. */
 export interface ChannelAgentConfigChanges {
     modelOverride?: string | null;
     modelParams?: ModelParamValues;
+    imageParams?: ModelParamValues;
 }
 
 export interface ChannelAgentConfigIds {
@@ -35,10 +37,13 @@ export interface UseChannelAgentConfigResult {
 }
 
 export const configFromProto = (
-    proto: { modelOverride: string; modelParamsOverride: string } | undefined,
+    proto:
+        | { modelOverride: string; modelParamsOverride: string; imageParamsOverride: string }
+        | undefined,
 ): ChannelAgentConfigState => ({
     modelOverride: proto?.modelOverride ? proto.modelOverride : null,
     modelParams: parseModelParamValues(proto?.modelParamsOverride ?? ''),
+    imageParams: parseModelParamValues(proto?.imageParamsOverride ?? ''),
 });
 
 export const applyConfigChanges = (
@@ -48,19 +53,32 @@ export const applyConfigChanges = (
     modelOverride:
         changes.modelOverride !== undefined ? changes.modelOverride : config.modelOverride,
     modelParams: changes.modelParams !== undefined ? changes.modelParams : config.modelParams,
+    imageParams: changes.imageParams !== undefined ? changes.imageParams : config.imageParams,
 });
 
 /** Wire contract on the optional update fields: absent = unchanged, "" = clear. */
 export const buildUpdatePayload = (
     changes: ChannelAgentConfigChanges,
-): { modelOverride?: string; modelParamsOverride?: string } => {
-    const payload: { modelOverride?: string; modelParamsOverride?: string } = {};
+): {
+    modelOverride?: string;
+    modelParamsOverride?: string;
+    imageParamsOverride?: string;
+} => {
+    const payload: {
+        modelOverride?: string;
+        modelParamsOverride?: string;
+        imageParamsOverride?: string;
+    } = {};
     if (changes.modelOverride !== undefined) {
         payload.modelOverride = changes.modelOverride ?? '';
     }
     if (changes.modelParams !== undefined) {
         payload.modelParamsOverride =
             Object.keys(changes.modelParams).length > 0 ? JSON.stringify(changes.modelParams) : '';
+    }
+    if (changes.imageParams !== undefined) {
+        payload.imageParamsOverride =
+            Object.keys(changes.imageParams).length > 0 ? JSON.stringify(changes.imageParams) : '';
     }
     return payload;
 };

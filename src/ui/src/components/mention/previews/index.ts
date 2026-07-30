@@ -9,3 +9,4 @@ export { ChatMessageMentionPreview } from '@/components/mention/previews/ChatMes
 export { AgentMentionPreview } from '@/components/mention/previews/AgentMentionPreview';
 export { TagMentionPreview } from '@/components/mention/previews/TagMentionPreview';
 export { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
+export { MentionMediaPreview } from '@/components/mention/previews/MentionMediaPreview';

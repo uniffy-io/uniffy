@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
     ArrowRight,
     CaretDown,
     CaretRight,
     Key,
+    Sparkle,
+    X,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import {
     selectProviderKeys,
+    selectModelsByProvider,
     selectModelsForKey,
     selectModelsLoadingForKey,
+    selectUsableProviderKeys,
 } from "@/features/agents/store/agentProvidersSlice";
 import { fetchModelsForKey } from "@/features/agents/store/agentProvidersThunks";
 import { updateAgent, uploadAgentAvatar, deleteAgentAvatar } from "@/features/agents/store/agentsThunks";
@@ -23,12 +27,17 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ModelParamsSection } from "@/features/agents/components/ModelParamsSection";
+import { ImageCostHint } from "@/features/agents/components/ImageCostHint";
+import { parseImagePriceEstimates } from "@/features/agents/utils/imageParams";
+import { IMAGE_GENERATION_TOOL } from "@/features/agents/config/toolCatalog";
+import { ProviderLogo } from "@/features/agents/components/ProviderLogo";
 import {
     parseModelParamsSchema,
     parseModelParamValues,
     stripInvalidParams,
     type ModelParamValues,
 } from "@/features/agents/utils/modelParamsSchema";
+import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
 import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { roleCanEdit } from "@/shared/utils/contentRoles";
@@ -52,12 +61,34 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
     const providerKeys = useAppSelector(selectProviderKeys);
+    const modelsByProvider = useAppSelector(selectModelsByProvider);
+    const { isOrgAdmin } = useAgentsBuilderAccess();
 
     const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
-    const canEdit = roleCanEdit(myRole);
+    // A deleted agent is a historical record: readable, never editable.
+    const canEdit = roleCanEdit(myRole) && !agent.isDeleted;
 
-    const [modelSettingsOpen, setModelSettingsOpen] = useState(false);
+    // Read once: the effect below strips the history entry, and the guidance has
+    // to outlive that so it does not vanish on the next render.
+    const [arrivedFromCreate] = useState(
+        () => (location.state as { needsModelSetup?: boolean } | null)?.needsModelSetup === true,
+    );
+    const [modelSettingsOpen, setModelSettingsOpen] = useState(arrivedFromCreate);
+    const modelSectionRef = useRef<HTMLElement | null>(null);
+
+    useEffect(() => {
+        if (!arrivedFromCreate) return;
+        navigate(location.pathname, { replace: true, state: null });
+        modelSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- one shot on arrival; navigate() here would otherwise loop
+    }, []);
+
+    // Pinned to the agent we landed on: this component stays mounted while the
+    // sidebar switches agents, and the guidance must not follow along.
+    const [createdAgentId] = useState(() => (arrivedFromCreate ? agent.id : null));
+    const [setupDismissed, setSetupDismissed] = useState(false);
 
     const primaryKeyId = agent.primaryProviderKeyId || "";
     const imageKeyId = agent.imageProviderKeyId || "";
@@ -79,10 +110,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         }
     }, [dispatch, imageKeyId]);
 
-    const enabledKeys = useMemo(
-        () => Object.values(providerKeys).filter((k) => k.isValid && k.isEnabled),
-        [providerKeys],
-    );
+    const enabledKeys = useAppSelector(selectUsableProviderKeys);
 
     const allKeys = useMemo(() => Object.values(providerKeys), [providerKeys]);
     const hasAnyKeys = allKeys.length > 0;
@@ -92,6 +120,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
             enabledKeys.map((k) => ({
                 value: k.id,
                 label: `${k.label} (${k.provider})`,
+                icon: <ProviderLogo provider={k.provider} size="sm" />,
             })),
         [enabledKeys],
     );
@@ -103,10 +132,51 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         [keyChoices],
     );
 
-    const imageKeyOptions: SelectOption<string>[] = useMemo(
-        () => [{ value: "", label: "No key assigned" }, ...keyChoices],
-        [keyChoices],
-    );
+    // Catalog-derived, so this costs no extra request: providers whose catalog
+    // carries at least one image model.
+    const imageCapableProviders = useMemo(() => {
+        const providers = new Set<string>();
+        for (const [provider, models] of Object.entries(modelsByProvider)) {
+            if (models.some((m) => m.supportsImageGeneration)) {
+                providers.add(provider);
+            }
+        }
+        return providers;
+    }, [modelsByProvider]);
+
+    // Offering a text-only key here just leads to an empty model list. The
+    // already-assigned key stays listed so an existing config is never dropped
+    // silently, and an unloaded catalog falls back to showing everything rather
+    // than hiding keys that are actually fine.
+    const imageKeyOptions: SelectOption<string>[] = useMemo(() => {
+        const catalogKnown = imageCapableProviders.size > 0;
+        const choices = enabledKeys
+            .filter(
+                (k) =>
+                    !catalogKnown || imageCapableProviders.has(k.provider) || k.id === imageKeyId,
+            )
+            .map((k) => ({
+                value: k.id,
+                label: `${k.label} (${k.provider})`,
+                icon: <ProviderLogo provider={k.provider} size="sm" />,
+            }));
+        return [{ value: "", label: "No key assigned" }, ...choices];
+    }, [enabledKeys, imageCapableProviders, imageKeyId]);
+
+    // Walk the picker chain forward: a key has to be chosen before its model
+    // list exists, so only one control is ever ringed at a time per column.
+    const wantsImageModel = agent.enabledTools.includes(IMAGE_GENERATION_TOOL);
+    // Nothing to point at when the org holds no image-capable key.
+    const canPickImageModel = imageKeyOptions.length > 1;
+    const guideImage = wantsImageModel && canPickImageModel;
+    const guiding = createdAgentId === agent.id && !setupDismissed && hasAnyKeys;
+    const needsChatKey = guiding && !primaryKeyId;
+    const needsChatModel = guiding && !!primaryKeyId && !agent.primaryModel;
+    const needsImageKey = guiding && guideImage && !imageKeyId;
+    const needsImageModel = guiding && guideImage && !!imageKeyId && !agent.imageModel;
+    const guidanceActive = needsChatKey || needsChatModel || needsImageKey || needsImageModel;
+
+    const attentionRing = (active: boolean) => (active ? "uniffy-attention-ring" : undefined);
 
     // Only curated catalog chat models are selectable - keeps live-API noise
     // (whisper, realtime, embeddings, image-only) out of the chat pickers.
@@ -179,6 +249,39 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         handleUpdate({ modelParams: JSON.stringify(next) });
     };
 
+    const imageParamValues = useMemo(
+        () => parseModelParamValues(agent.imageParams),
+        [agent.imageParams],
+    );
+
+    const imageModelSchemaJson = useMemo(
+        () =>
+            imageKeyModels.find((m) => m.id === agent.imageModel)?.imageParameterSchemaJson ?? "",
+        [imageKeyModels, agent.imageModel],
+    );
+
+    const imagePriceEstimates = useMemo(
+        () => parseImagePriceEstimates(
+            imageKeyModels.find((m) => m.id === agent.imageModel)?.imagePriceEstimatesJson ?? "",
+        ),
+        [imageKeyModels, agent.imageModel],
+    );
+
+    const handleImageModelChange = (value: string) => {
+        const fields: { imageModel: string; imageParams?: string } = { imageModel: value };
+        if (Object.keys(imageParamValues).length > 0) {
+            const nextSchema = parseModelParamsSchema(
+                imageKeyModels.find((m) => m.id === value)?.imageParameterSchemaJson ?? "",
+            );
+            fields.imageParams = JSON.stringify(stripInvalidParams(nextSchema, imageParamValues));
+        }
+        handleUpdate(fields);
+    };
+
+    const handleImageParamsChange = (next: ModelParamValues) => {
+        handleUpdate({ imageParams: JSON.stringify(next) });
+    };
+
     const handleAvatarUpload = useCallback(
         async (file: File) => {
             const buffer = await file.arrayBuffer();
@@ -194,6 +297,21 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     const handleAvatarDelete = useCallback(async () => {
         await dispatch(deleteAgentAvatar(agent.id));
     }, [dispatch, agent.id]);
+
+    // Buffered like the name field: a per-keystroke update RPC round-trips the
+    // stored value back over the input and eats characters.
+    const [styleState, setStyleState] = useState({
+        id: agent.id,
+        value: agent.imageStylePrompt,
+    });
+    if (styleState.id !== agent.id) {
+        setStyleState({ id: agent.id, value: agent.imageStylePrompt });
+    }
+    const styleChanged = styleState.value !== agent.imageStylePrompt;
+
+    const handleSaveStylePrompt = () => {
+        if (styleChanged) handleUpdate({ imageStylePrompt: styleState.value });
+    };
 
     const [nameState, setNameState] = useState({ id: agent.id, value: agent.name });
     if (nameState.id !== agent.id) {
@@ -289,7 +407,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
             </section>
 
             {canEdit && (
-            <section className="py-6">
+            <section className="py-6" ref={modelSectionRef}>
                 <button
                     type="button"
                     onClick={() => setModelSettingsOpen(!modelSettingsOpen)}
@@ -309,6 +427,34 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                         <CaretRight size={16} className="text-muted-foreground shrink-0" />
                     )}
                 </button>
+                {guidanceActive && modelSettingsOpen && (
+                    <div
+                        className="mt-4 flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-500"
+                        data-testid="agent-model-setup-hint"
+                    >
+                        <Sparkle size={16} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                                Pick a model to finish setting up {agent.name}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                {guideImage
+                                    ? "Choose a provider key and chat model. This agent can also generate images, so give it an image model too."
+                                    : "Choose a provider key, then the chat model this agent runs on."}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setSetupDismissed(true)}
+                            title="Dismiss"
+                            aria-label="Dismiss model setup hint"
+                            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                            data-testid="agent-model-setup-hint-dismiss"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
                 {modelSettingsOpen && (
                 <div className="mt-5">
                     {!hasAnyKeys ? (
@@ -323,15 +469,18 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                 Add a provider API key to start using this agent.
                                 Organization keys and defaults are managed on the
                                 admin agents page.
+                                {!isOrgAdmin && " Only an organization admin can add one."}
                             </p>
-                            <Button
-                                size="md"
-                                onClick={() => navigate("/admin/agents")}
-                            >
-                                <Key size={16} weight="bold" />
-                                Add Provider Key
-                                <ArrowRight size={14} />
-                            </Button>
+                            {isOrgAdmin && (
+                                <Button
+                                    size="md"
+                                    onClick={() => navigate("/admin/agents?tab=keys")}
+                                >
+                                    <Key size={16} weight="bold" />
+                                    Add Provider Key
+                                    <ArrowRight size={14} />
+                                </Button>
+                            )}
                         </div>
                     ) : (
                         <>
@@ -349,6 +498,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             placeholder="Select provider key..."
                                             disabled={!canEdit}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsChatKey)}
                                         />
                                     </div>
                                     <div>
@@ -366,6 +516,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             }
                                             disabled={!canEdit || !primaryKeyId}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsChatModel)}
                                         />
                                     </div>
                                     <ModelParamsSection
@@ -389,13 +540,14 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             placeholder="Select provider key..."
                                             disabled={!canEdit}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsImageKey)}
                                         />
                                     </div>
                                     <div>
                                         <FieldLabel>Model</FieldLabel>
                                         <Select
                                             value={agent.imageModel}
-                                            onChange={(value) => handleUpdate({ imageModel: value })}
+                                            onChange={handleImageModelChange}
                                             options={imageModelOptions}
                                             placeholder={
                                                 !imageKeyId
@@ -406,11 +558,68 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             }
                                             disabled={!canEdit || !imageKeyId}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsImageModel)}
                                         />
                                         <p className="text-xs text-muted-foreground mt-1.5">
-                                            Used for the image generation tool
+                                            {!canPickImageModel
+                                                ? "No organization key has an image model available"
+                                                : wantsImageModel
+                                                    ? "This agent has the image generation tool enabled"
+                                                    : "Used for the image generation tool"}
                                         </p>
                                     </div>
+                                    {agent.imageModel && (
+                                        <>
+                                            <ModelParamsSection
+                                                title="Image Defaults"
+                                                schemaJson={imageModelSchemaJson}
+                                                values={imageParamValues}
+                                                onChange={handleImageParamsChange}
+                                                disabled={!canEdit}
+                                                renderRowSuffix={(key) =>
+                                                    key === "resolution" || key === "quality" ? (
+                                                        <ImageCostHint
+                                                            estimates={imagePriceEstimates}
+                                                            values={imageParamValues}
+                                                        />
+                                                    ) : null
+                                                }
+                                            />
+                                            <div>
+                                                <FieldLabel>Style Preset</FieldLabel>
+                                                <textarea
+                                                    value={styleState.value}
+                                                    onChange={(e) =>
+                                                        setStyleState({
+                                                            id: agent.id,
+                                                            value: e.target.value,
+                                                        })
+                                                    }
+                                                    onBlur={handleSaveStylePrompt}
+                                                    rows={3}
+                                                    disabled={!canEdit}
+                                                    placeholder="e.g. flat vector illustration, muted palette, no text"
+                                                    className={cn(
+                                                        "w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground",
+                                                        "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
+                                                        "placeholder:text-muted-foreground resize-y",
+                                                        !canEdit && "opacity-50 cursor-not-allowed",
+                                                    )}
+                                                />
+                                                <div className="mt-1.5 flex items-start justify-between gap-3">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Appended to every image prompt. Providers dropped
+                                                        their style parameter, so house style lives here.
+                                                    </p>
+                                                    {styleChanged && (
+                                                        <Button size="sm" onClick={handleSaveStylePrompt}>
+                                                            Save
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 

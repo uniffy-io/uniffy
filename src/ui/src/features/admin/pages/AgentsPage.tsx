@@ -334,6 +334,21 @@ function GeneralTab() {
     );
 }
 
+// Empty = no ceiling; the backend clamps only when a tier is set.
+const IMAGE_RESOLUTION_OPTIONS = [
+    { value: '', label: 'No limit' },
+    { value: '1K', label: '1K' },
+    { value: '2K', label: '2K' },
+    { value: '4K', label: '4K' },
+];
+
+const IMAGE_QUALITY_OPTIONS = [
+    { value: '', label: 'No limit' },
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+];
+
 function RuntimeTab() {
     const dispatch = useAppDispatch();
     const orgId = useAppSelector((s) => s.auth.currentOrganizationId);
@@ -455,6 +470,30 @@ function RuntimeTab() {
                         value={form.defaultChatModel}
                         onChange={(v) => update({ defaultChatModel: v })}
                         options={modelOptions}
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Image resolution ceiling"
+                    description="Highest output size any agent may generate, whichever layer asks for more. A 4K image costs several times a 1K one."
+                >
+                    <Select
+                        value={form.imageMaxResolution}
+                        onChange={(v) => update({ imageMaxResolution: v })}
+                        options={IMAGE_RESOLUTION_OPTIONS}
+                        disabled={busy}
+                    />
+                </FieldRow>
+
+                <FieldRow
+                    label="Image quality ceiling"
+                    description="Highest rendering effort any agent may request. High quality costs substantially more than low."
+                >
+                    <Select
+                        value={form.imageMaxQuality}
+                        onChange={(v) => update({ imageMaxQuality: v })}
+                        options={IMAGE_QUALITY_OPTIONS}
                         disabled={busy}
                     />
                 </FieldRow>

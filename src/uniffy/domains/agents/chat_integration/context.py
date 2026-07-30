@@ -23,7 +23,11 @@ from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import SubjectType
 from uniffy.domains.agents.cache import fetch_agent_row
-from uniffy.domains.agents.providers.catalog import validate_model_params
+from uniffy.domains.agents.providers.catalog import (
+    provider_for_model,
+    validate_image_params,
+    validate_model_params,
+)
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
 from uniffy.domains.agents.runtime.model_resolver import (
@@ -213,6 +217,7 @@ class ChatAgentContextOperations:
         agent_id: UUID,
         model_override: str | None = None,
         model_params_override: dict | None = None,
+        image_params_override: dict | None = None,
     ) -> AgentChannelBinding:
         """`None` arguments leave the field unchanged; empty values clear it."""
         channel, agent, binding = await self._load_triple(
@@ -241,6 +246,22 @@ class ChatAgentContextOperations:
             binding.model_params_override = await self._strip_params_for_binding(
                 organization_id, agent, binding
             )
+
+        if image_params_override is not None:
+            next_image = image_params_override or None
+            if next_image:
+                # A member tuning their own conversation may not touch knobs the
+                # builder owns (moderation, output format).
+                try:
+                    validate_image_params(
+                        provider_for_model(agent.image_model) or "",
+                        agent.image_model,
+                        next_image,
+                        audience="user",
+                    )
+                except ValueError as exc:
+                    raise ValidationError("image_params_override", str(exc)) from exc
+            binding.image_params_override = next_image
 
         await self._session.commit()
         await self._session.refresh(binding)

@@ -154,6 +154,8 @@ def _update_kwargs(**overrides):
         personal_memory_bridge_enabled=True,
         default_provider_key_id="",
         default_chat_model="",
+        image_max_resolution="",
+        image_max_quality="",
     )
     kwargs.update(overrides)
     return kwargs
@@ -190,6 +192,8 @@ def test_admin_update_round_trips_every_field() -> None:
                     circuit_breaker_recovery_seconds=99,
                     personal_memory_bridge_enabled=False,
                     default_chat_model="claude-sonnet-4-6",
+                    image_max_resolution="2K",
+                    image_max_quality="high",
                 )
             )
         assert configured is True
@@ -200,6 +204,8 @@ def test_admin_update_round_trips_every_field() -> None:
         assert resolved.circuit_breaker_recovery_seconds == 99
         assert resolved.personal_memory_bridge_enabled is False
         assert resolved.default_chat_model == "claude-sonnet-4-6"
+        assert resolved.image_max_resolution == "2K"
+        assert resolved.image_max_quality == "high"
 
     asyncio.run(run())
 

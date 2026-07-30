@@ -12,6 +12,8 @@ export interface RuntimeSettingsPlain {
     personalMemoryBridgeEnabled: boolean;
     defaultProviderKeyId: string;
     defaultChatModel: string;
+    imageMaxResolution: string;
+    imageMaxQuality: string;
 }
 
 export interface RuntimeSettingsResult {
@@ -28,6 +30,8 @@ const toPlain = (s: RuntimeSettings): RuntimeSettingsPlain => ({
     personalMemoryBridgeEnabled: s.personalMemoryBridgeEnabled,
     defaultProviderKeyId: s.defaultProviderKeyId,
     defaultChatModel: s.defaultChatModel,
+    imageMaxResolution: s.imageMaxResolution,
+    imageMaxQuality: s.imageMaxQuality,
 });
 
 export const fetchRuntimeSettings = createAsyncThunk<
@@ -65,6 +69,8 @@ export const saveRuntimeSettings = createAsyncThunk<
                 personalMemoryBridgeEnabled: settings.personalMemoryBridgeEnabled,
                 defaultProviderKeyId: settings.defaultProviderKeyId,
                 defaultChatModel: settings.defaultChatModel,
+                imageMaxResolution: settings.imageMaxResolution,
+                imageMaxQuality: settings.imageMaxQuality,
             },
         });
         if (!response.settings) throw new Error('No settings in response');

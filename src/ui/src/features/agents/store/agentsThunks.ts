@@ -38,6 +38,8 @@ export const agentToPlain = (agent: AgentInfo) => ({
     userRole: agent.userRole,
     imageModel: agent.imageModel,
     modelParams: agent.modelParams,
+    imageParams: agent.imageParams,
+    imageStylePrompt: agent.imageStylePrompt,
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
     imageProviderKeyId: agent.imageProviderKeyId || "",
     tagIds: agent.tags.map((t) => t.id),
@@ -89,6 +91,8 @@ export const createAgent = createAsyncThunk<
         imageProviderKeyId?: string;
         tagIds?: string[];
         modelParams?: string;
+        imageParams?: string;
+        imageStylePrompt?: string;
     },
     { state: RootState; rejectValue: string }
 >('agents/createAgent', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -109,6 +113,8 @@ export const createAgent = createAsyncThunk<
             imageProviderKeyId: params.imageProviderKeyId,
             tagIds: params.tagIds ?? [],
             modelParams: params.modelParams,
+            imageParams: params.imageParams,
+            imageStylePrompt: params.imageStylePrompt,
         });
         if (!response.agent) throw new Error('No agent in response');
         hydrateAgentTags(dispatch, [response.agent]);
@@ -137,6 +143,9 @@ export const updateAgent = createAsyncThunk<
         tagIds?: string[];
         // Replaces the stored params object wholesale; "{}" resets to provider defaults.
         modelParams?: string;
+        // Same contract for the image-generation knobs.
+        imageParams?: string;
+        imageStylePrompt?: string;
     },
     { state: RootState; rejectValue: string }
 >('agents/updateAgent', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -190,6 +199,9 @@ export const cloneAgent = createAsyncThunk<
             imageProviderKeyId: source.imageProviderKeyId || undefined,
             modelParams:
                 source.modelParams && source.modelParams !== '{}' ? source.modelParams : undefined,
+            imageParams:
+                source.imageParams && source.imageParams !== '{}' ? source.imageParams : undefined,
+            imageStylePrompt: source.imageStylePrompt || undefined,
         });
         if (!createResponse.agent) throw new Error('No agent in response');
         if (source.enabledTools.length > 0) {

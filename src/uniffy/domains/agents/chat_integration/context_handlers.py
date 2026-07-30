@@ -73,10 +73,15 @@ def _config_to_proto(binding: AgentChannelBinding) -> ProtoChannelAgentConfig:
             if binding.model_params_override
             else ""
         ),
+        image_params_override=(
+            json.dumps(binding.image_params_override)
+            if binding.image_params_override
+            else ""
+        ),
     )
 
 
-def _parse_params_json(raw: str) -> dict:
+def _parse_params_json(raw: str, field: str = "model_params_override") -> dict:
     """Empty string clears; otherwise the payload must be a JSON object."""
     if not raw.strip():
         return {}
@@ -84,11 +89,11 @@ def _parse_params_json(raw: str) -> dict:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise ConnectError(
-            Code.INVALID_ARGUMENT, "model_params_override is not valid JSON"
+            Code.INVALID_ARGUMENT, f"{field} is not valid JSON"
         ) from exc
     if not isinstance(parsed, dict):
         raise ConnectError(
-            Code.INVALID_ARGUMENT, "model_params_override must be a JSON object"
+            Code.INVALID_ARGUMENT, f"{field} must be a JSON object"
         )
     return parsed
 
@@ -299,6 +304,11 @@ class ChannelAgentContextHandlers:
         model_override = (
             request.model_override if request.HasField("model_override") else None
         )
+        image_params_override = (
+            _parse_params_json(request.image_params_override, "image_params_override")
+            if request.HasField("image_params_override")
+            else None
+        )
         model_params_override = (
             _parse_params_json(request.model_params_override)
             if request.HasField("model_params_override")
@@ -320,6 +330,7 @@ class ChannelAgentContextHandlers:
                     agent_id=agent_id,
                     model_override=model_override,
                     model_params_override=model_params_override,
+                    image_params_override=image_params_override,
                 )
                 return UpdateChannelAgentConfigResponse(
                     config=_config_to_proto(binding)

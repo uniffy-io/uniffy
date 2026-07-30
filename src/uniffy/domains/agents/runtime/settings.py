@@ -19,6 +19,10 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.provider_key import ProviderKey
+from uniffy.domains.agents.providers.catalog.image_params import (
+    QUALITY_ORDER,
+    RESOLUTION_ORDER,
+)
 from uniffy.domains.agents.providers.catalog.loader import provider_for_model
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -32,6 +36,10 @@ DEFAULT_SEND_DEADLINE_SECONDS = 300
 DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5
 DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS = 60
 DEFAULT_DISPLAY_CURRENCY = "USD"
+# Empty = no ceiling. Both clamp the resolved image params for every agent in
+# the org, whichever layer asked for the larger output.
+DEFAULT_IMAGE_MAX_RESOLUTION = ""
+DEFAULT_IMAGE_MAX_QUALITY = ""
 
 
 @dataclass(frozen=True)
@@ -47,6 +55,8 @@ class ResolvedRuntimeSettings:
     personal_memory_bridge_enabled: bool
     default_provider_key_id: UUID | None
     default_chat_model: str | None
+    image_max_resolution: str | None
+    image_max_quality: str | None
 
 
 _CACHE_TTL_SECONDS = 30.0
@@ -64,6 +74,8 @@ def _defaults() -> ResolvedRuntimeSettings:
         personal_memory_bridge_enabled=True,
         default_provider_key_id=None,
         default_chat_model=None,
+        image_max_resolution=None,
+        image_max_quality=None,
     )
 
 
@@ -84,6 +96,11 @@ def _coerce_positive_int(raw: object, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return value if value > 0 else default
+
+
+def _coerce_choice(raw: object, allowed: tuple[str, ...]) -> str | None:
+    value = str(raw).strip() if raw else ""
+    return value if value in allowed else None
 
 
 def _from_blob(blob: dict) -> ResolvedRuntimeSettings:
@@ -108,6 +125,10 @@ def _from_blob(blob: dict) -> ResolvedRuntimeSettings:
         ),
         default_provider_key_id=_coerce_key_id(blob.get("default_provider_key_id")),
         default_chat_model=str(model).strip() or None if model else None,
+        image_max_resolution=_coerce_choice(
+            blob.get("image_max_resolution"), RESOLUTION_ORDER
+        ),
+        image_max_quality=_coerce_choice(blob.get("image_max_quality"), QUALITY_ORDER),
     )
 
 
@@ -181,6 +202,8 @@ class RuntimeSettingsOperations:
         personal_memory_bridge_enabled: bool,
         default_provider_key_id: str,
         default_chat_model: str,
+        image_max_resolution: str,
+        image_max_quality: str,
     ) -> tuple[ResolvedRuntimeSettings, bool]:
         await self._org_ops.require_org_admin(user_id, organization_id)
 
@@ -212,6 +235,11 @@ class RuntimeSettingsOperations:
             "personal_memory_bridge_enabled": bool(personal_memory_bridge_enabled),
             "default_provider_key_id": str(key_id) if key_id else "",
             "default_chat_model": (default_chat_model or "").strip(),
+            "image_max_resolution": _coerce_choice(
+                image_max_resolution, RESOLUTION_ORDER
+            ) or DEFAULT_IMAGE_MAX_RESOLUTION,
+            "image_max_quality": _coerce_choice(image_max_quality, QUALITY_ORDER)
+            or DEFAULT_IMAGE_MAX_QUALITY,
         }
 
         await self._settings.merge_json(
@@ -232,6 +260,8 @@ class RuntimeSettingsOperations:
                 "default_provider_key_id": patch["default_provider_key_id"],
                 "default_chat_model": patch["default_chat_model"],
                 "personal_memory_bridge_enabled": patch["personal_memory_bridge_enabled"],
+                "image_max_resolution": patch["image_max_resolution"],
+                "image_max_quality": patch["image_max_quality"],
             },
         )
         await self._session.commit()

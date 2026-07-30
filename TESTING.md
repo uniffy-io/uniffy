@@ -498,6 +498,35 @@ plain member (`(both products)`).
       the created agent is an ordinary org-owned row (editable, sharable,
       deletable).
 
+### Image generation parameters
+
+- [ ] Builder: agent detail -> Overview -> Model settings -> pick an image
+      key + model. "Image Defaults" appears with aspect ratio, resolution
+      and quality for an OpenAI model, aspect ratio + resolution for a
+      Google one. A per-image price shows under resolution and quality.
+- [ ] Switch the image model between providers: knobs the new model does
+      not support disappear and stored values for them are dropped, not
+      carried over.
+- [ ] Style preset: type, click away (or Save), reload -> the text stuck.
+      Generate an image and confirm the style shows in the output.
+- [ ] Chat: DM an agent that has image generation enabled -> the params
+      popover shows an "Image Generation" group; `moderation` and
+      `output format` do NOT appear there (builder-only).
+- [ ] Set resolution to 2K in the popover, ask for an image -> the result
+      is 2K even though the prompt never said so; the chips under the image
+      read the resolved values.
+- [ ] Ask in plain language ("make it 16:9") -> the model emits the knob
+      itself and the result honours it, without touching the popover.
+- [ ] "Regenerate with..." on a generated image: picking a preset produces
+      a new image with only that knob changed; the original prompt and the
+      other params are preserved.
+- [ ] Admin: `/admin/agents` -> Runtime -> set the image resolution ceiling
+      to 1K -> a builder default or chat override of 4K still runs, clamped
+      to 1K (no error), and the run log cost matches the clamped tier.
+- [ ] An agent with the image tool enabled but NO image model: the tool
+      fails with "no image model configured" and the chat popover shows no
+      image group.
+
 ### Test drawer
 
 - [ ] Agent detail -> "Test agent" opens the drawer: send a message, the

@@ -128,14 +128,14 @@ def _parse_uuid(value: str, field: str) -> UUID:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
 
-def _parse_model_params(raw: str) -> dict:
-    """Parse a model_params JSON string into a plain object."""
+def _parse_params(raw: str, field: str) -> dict:
+    """Parse a tuned-parameter JSON string into a plain object."""
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ConnectError(Code.INVALID_ARGUMENT, "model_params is not valid JSON") from exc
+        raise ConnectError(Code.INVALID_ARGUMENT, f"{field} is not valid JSON") from exc
     if not isinstance(parsed, dict):
-        raise ConnectError(Code.INVALID_ARGUMENT, "model_params must be a JSON object")
+        raise ConnectError(Code.INVALID_ARGUMENT, f"{field} must be a JSON object")
     return parsed
 
 
@@ -196,9 +196,17 @@ class AgentsHandlers:
         )
         tag_ids = _parse_tag_ids(list(request.tag_ids))
         model_params = (
-            _parse_model_params(request.model_params)
+            _parse_params(request.model_params, "model_params")
             if request.HasField("model_params")
             else None
+        )
+        image_params = (
+            _parse_params(request.image_params, "image_params")
+            if request.HasField("image_params")
+            else None
+        )
+        image_style_prompt = (
+            request.image_style_prompt if request.HasField("image_style_prompt") else None
         )
 
         try:
@@ -223,6 +231,8 @@ class AgentsHandlers:
                     image_provider_key_id=image_provider_key_id,
                     tag_ids=tag_ids or None,
                     model_params=model_params,
+                    image_params=image_params,
+                    image_style_prompt=image_style_prompt or "",
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
@@ -431,9 +441,17 @@ class AgentsHandlers:
             tag_ids = _parse_tag_ids(list(request.tag_ids.ids))
 
         model_params = (
-            _parse_model_params(request.model_params)
+            _parse_params(request.model_params, "model_params")
             if request.HasField("model_params")
             else None
+        )
+        image_params = (
+            _parse_params(request.image_params, "image_params")
+            if request.HasField("image_params")
+            else None
+        )
+        image_style_prompt = (
+            request.image_style_prompt if request.HasField("image_style_prompt") else None
         )
 
         try:
@@ -459,6 +477,8 @@ class AgentsHandlers:
                     clear_image_provider_key=clear_image_provider_key,
                     tag_ids=tag_ids,
                     model_params=model_params,
+                    image_params=image_params,
+                    image_style_prompt=image_style_prompt,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])

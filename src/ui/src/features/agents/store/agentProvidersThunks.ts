@@ -50,6 +50,8 @@ export const modelInfoToPlain = (model: ModelInfo) => ({
     supportsImageGeneration: model.supportsImageGeneration,
     catalogKnown: model.catalogKnown,
     parameterSchemaJson: model.parameterSchemaJson,
+    imageParameterSchemaJson: model.imageParameterSchemaJson,
+    imagePriceEstimatesJson: model.imagePriceEstimatesJson,
 });
 
 export type SerializedModelInfo = ReturnType<typeof modelInfoToPlain>;

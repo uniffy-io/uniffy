@@ -33,7 +33,7 @@ import {
 const ids = { organizationId: 'org-1', channelId: 'ch-1', agentId: 'ag-1' };
 
 function config(overrides: Partial<ChannelAgentConfigState> = {}): ChannelAgentConfigState {
-    return { modelOverride: null, modelParams: {}, ...overrides };
+    return { modelOverride: null, modelParams: {}, imageParams: {}, ...overrides };
 }
 
 beforeEach(() => {
@@ -42,10 +42,9 @@ beforeEach(() => {
 
 describe('configFromProto', () => {
     it('maps empty wire strings to no-override state', () => {
-        expect(configFromProto({ modelOverride: '', modelParamsOverride: '' })).toEqual({
-            modelOverride: null,
-            modelParams: {},
-        });
+        expect(
+            configFromProto({ modelOverride: '', modelParamsOverride: '', imageParamsOverride: '' }),
+        ).toEqual({ modelOverride: null, modelParams: {}, imageParams: {} });
     });
 
     it('maps set values through', () => {
@@ -53,17 +52,30 @@ describe('configFromProto', () => {
             configFromProto({
                 modelOverride: 'gpt-x',
                 modelParamsOverride: '{"temperature":0.2}',
+                imageParamsOverride: '{"aspect_ratio":"16:9"}',
             }),
-        ).toEqual({ modelOverride: 'gpt-x', modelParams: { temperature: 0.2 } });
+        ).toEqual({
+            modelOverride: 'gpt-x',
+            modelParams: { temperature: 0.2 },
+            imageParams: { aspect_ratio: '16:9' },
+        });
     });
 
     it('treats a missing proto as no overrides', () => {
-        expect(configFromProto(undefined)).toEqual({ modelOverride: null, modelParams: {} });
+        expect(configFromProto(undefined)).toEqual({
+            modelOverride: null,
+            modelParams: {},
+            imageParams: {},
+        });
     });
 
     it('ignores malformed params JSON', () => {
         expect(
-            configFromProto({ modelOverride: '', modelParamsOverride: 'not-json' }).modelParams,
+            configFromProto({
+                modelOverride: '',
+                modelParamsOverride: 'not-json',
+                imageParamsOverride: '',
+            }).modelParams,
         ).toEqual({});
     });
 });
@@ -103,10 +115,12 @@ describe('applyConfigChanges', () => {
         expect(applyConfigChanges(current, { modelParams: { temperature: 1 } })).toEqual({
             modelOverride: 'm-1',
             modelParams: { temperature: 1 },
+            imageParams: {},
         });
         expect(applyConfigChanges(current, { modelOverride: null })).toEqual({
             modelOverride: null,
             modelParams: { temperature: 0.5 },
+            imageParams: {},
         });
     });
 });
@@ -114,11 +128,19 @@ describe('applyConfigChanges', () => {
 describe('fetchChannelAgentConfig', () => {
     it('fetches by ids and maps the proto config', async () => {
         mocks.getChannelAgentConfig.mockResolvedValue({
-            config: { modelOverride: 'm-2', modelParamsOverride: '{"top_p":0.9}' },
+            config: {
+                modelOverride: 'm-2',
+                modelParamsOverride: '{"top_p":0.9}',
+                imageParamsOverride: '',
+            },
         });
         const state = await fetchChannelAgentConfig(ids);
         expect(mocks.getChannelAgentConfig).toHaveBeenCalledWith(ids);
-        expect(state).toEqual({ modelOverride: 'm-2', modelParams: { top_p: 0.9 } });
+        expect(state).toEqual({
+            modelOverride: 'm-2',
+            modelParams: { top_p: 0.9 },
+            imageParams: {},
+        });
     });
 });
 
@@ -135,10 +157,12 @@ describe('runConfigUpdate', () => {
         expect(setConfig).toHaveBeenNthCalledWith(1, {
             modelOverride: 'picked-model',
             modelParams: { temperature: 0.5 },
+            imageParams: {},
         });
         expect(setConfig).toHaveBeenNthCalledWith(2, {
             modelOverride: 'served-model',
             modelParams: {},
+            imageParams: {},
         });
     });
 
@@ -166,7 +190,11 @@ describe('runConfigUpdate', () => {
 
         await runConfigUpdate(ids, current, { modelOverride: null }, setConfig);
 
-        expect(setConfig).toHaveBeenNthCalledWith(1, { modelOverride: null, modelParams: {} });
+        expect(setConfig).toHaveBeenNthCalledWith(1, {
+            modelOverride: null,
+            modelParams: {},
+            imageParams: {},
+        });
         expect(setConfig).toHaveBeenNthCalledWith(2, current);
         expect(mocks.toastError).toHaveBeenCalledWith('boom');
     });

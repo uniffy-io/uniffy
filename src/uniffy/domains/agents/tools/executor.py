@@ -157,6 +157,7 @@ class ToolExecutor:
                     success=result.success,
                     data=_truncate_result(result.data),
                     error=result.error,
+                    metadata=result.metadata,
                 )
         except TimeoutError:
             logger.warning(

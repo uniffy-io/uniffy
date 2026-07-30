@@ -27,14 +27,8 @@ def agent_to_proto(
 ) -> AgentInfo:
     """Convert an :class:`Agent` row to its proto representation.
 
-    Parameters
-    ----------
-    agent : Agent
-        Agent row.
-    user_role : ContentRole | None
-        Effective role of the requesting user, if known. Set this when
-        the proto will travel to the frontend so the UI can render the
-        correct edit/share affordances; omit for internal callers.
+    Set ``user_role`` when the proto travels to the frontend so the UI can
+    render the correct edit/share affordances; omit for internal callers.
     """
     avatar_url = get_avatar_url(
         agent.id,
@@ -77,6 +71,8 @@ def agent_to_proto(
             str(agent.image_provider_key_id) if agent.image_provider_key_id else ""
         ),
         model_params=json.dumps(agent.model_params or {}),
+        image_params=json.dumps(agent.image_params or {}),
+        image_style_prompt=agent.image_style_prompt or "",
     )
 
     if resolved_baseline is not None:

@@ -51,6 +51,10 @@ from uniffy.domains.agents.runtime.destinations import (
     SessionDestination,
 )
 from uniffy.domains.agents.runtime.file_loader import FileContext
+from uniffy.domains.agents.runtime.image_config import (
+    apply_image_tool_schema,
+    resolve_image_config,
+)
 from uniffy.domains.agents.runtime.model_resolver import resolve_provider_and_model
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
@@ -464,6 +468,10 @@ class RuntimeOperations:
         tool_schemas = _resolve_tool_schemas(
             registry, enabled_tools, skill_entries, invoked_entry
         )
+        image_config = await resolve_image_config(
+            self._session, agent, organization_id=organization_id
+        )
+        tool_schemas = apply_image_tool_schema(tool_schemas, image_config)
 
         memory_scope = await self._resolve_memory_scope(
             destination=SessionDestination(session_id=session_id),
@@ -594,6 +602,11 @@ class RuntimeOperations:
                     memory_scope=memory_scope,
                     memory_bridge_scope=memory_bridge,
                     is_test_session=agent_session.is_test,
+                    image_params=image_config.params if image_config else {},
+                    image_max_resolution=(
+                        image_config.max_resolution if image_config else None
+                    ),
+                    image_max_quality=image_config.max_quality if image_config else None,
                 )
                 executor = ToolExecutor(registry, tool_ctx)
 
@@ -1080,6 +1093,7 @@ class RuntimeOperations:
         agent_session = None
         model_override: str | None = None
         params_override: dict | None = None
+        image_params_override: dict | None = None
 
         channel_id: UUID | None = None
         if isinstance(destination, SessionDestination):
@@ -1128,6 +1142,7 @@ class RuntimeOperations:
             if binding is not None:
                 model_override = binding.model_override
                 params_override = binding.model_params_override
+                image_params_override = binding.image_params_override
 
         agent = await self._agent_ops.get_for_runtime(
             user_id,
@@ -1183,6 +1198,13 @@ class RuntimeOperations:
         tool_schemas = _resolve_tool_schemas(
             registry, enabled_tools, skill_entries, invoked_entry
         )
+        image_config = await resolve_image_config(
+            self._session,
+            agent,
+            organization_id=organization_id,
+            override_params=image_params_override,
+        )
+        tool_schemas = apply_image_tool_schema(tool_schemas, image_config)
 
         memory_scope = await self._resolve_memory_scope(
             destination=destination,
@@ -1402,6 +1424,11 @@ class RuntimeOperations:
                 memory_scope=memory_scope,
                 memory_bridge_scope=memory_bridge,
                 is_test_session=agent_session.is_test if agent_session else False,
+                image_params=image_config.params if image_config else {},
+                image_max_resolution=(
+                    image_config.max_resolution if image_config else None
+                ),
+                image_max_quality=image_config.max_quality if image_config else None,
             )
             executor = ToolExecutor(registry, tool_ctx)
 
@@ -1643,6 +1670,7 @@ class RuntimeOperations:
                     tool_name=tc.name,
                     tool_call_id=tc.id,
                     tool_result=content,
+                    tool_metadata=res.metadata,
                 )
                 yield StreamEvent(
                     type=EventType.TOOL_RESULT_END,
@@ -1713,6 +1741,7 @@ class RuntimeOperations:
                     tool_name=tc.name,
                     tool_call_id=tc.id,
                     tool_result=content,
+                    tool_metadata=tool_result.metadata,
                 )
                 yield StreamEvent(
                     type=EventType.TOOL_RESULT_END,

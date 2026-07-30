@@ -34,6 +34,8 @@ from uniffy.domains.agents.cache import (
 from uniffy.domains.agents.content_policy import check_admin_content
 from uniffy.domains.agents.providers.catalog import (
     provider_for_model,
+    strip_unsupported_image_params,
+    validate_image_params,
     validate_model_params,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -63,6 +65,25 @@ def _strip_invalid_params(model_id: str, params: dict) -> dict:
             continue
         kept[knob] = value
     return kept
+
+
+def _check_image_params(model_id: str, params: dict | None) -> None:
+    """Validate image knobs against the image model's catalog schema."""
+    if not params:
+        return
+    provider = provider_for_model(model_id)
+    try:
+        validate_image_params(provider or "", model_id, params)
+    except ValueError as exc:
+        raise ValidationError("image_params", str(exc)) from exc
+
+
+def _strip_invalid_image_params(model_id: str, params: dict) -> dict:
+    """Drop image knobs the newly selected image model rejects."""
+    provider = provider_for_model(model_id)
+    if provider is None:
+        return {}
+    return strip_unsupported_image_params(provider, model_id, params)
 
 
 def _coerce_uuid_list(values: list | None) -> list[UUID]:
@@ -215,6 +236,8 @@ class AgentOperations(BaseContentOperations[Agent]):
         image_provider_key_id: UUID | None = None,
         tag_ids: list[UUID] | None = None,
         model_params: dict | None = None,
+        image_params: dict | None = None,
+        image_style_prompt: str = "",
     ) -> Agent:
         """Create a new agent configuration."""
         await require_agents_builder(self.session, user_id, organization_id)
@@ -230,6 +253,9 @@ class AgentOperations(BaseContentOperations[Agent]):
             check_admin_content(soul_prompt, "soul_prompt")
 
         _check_model_params(primary_model, model_params)
+        _check_image_params(image_model, image_params)
+        if image_style_prompt:
+            check_admin_content(image_style_prompt, "image_style_prompt")
 
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
@@ -260,6 +286,8 @@ class AgentOperations(BaseContentOperations[Agent]):
             primary_provider_key_id=primary_provider_key_id,
             image_provider_key_id=image_provider_key_id,
             model_params=model_params or {},
+            image_params=image_params or {},
+            image_style_prompt=image_style_prompt,
         )
         self.session.add(agent)
         await self.session.commit()
@@ -426,6 +454,8 @@ class AgentOperations(BaseContentOperations[Agent]):
         clear_image_provider_key: bool = False,
         tag_ids: list[UUID] | None = None,
         model_params: dict | None = None,
+        image_params: dict | None = None,
+        image_style_prompt: str | None = None,
     ) -> Agent:
         """Update an agent configuration.
 
@@ -496,6 +526,29 @@ class AgentOperations(BaseContentOperations[Agent]):
             )
             updates["model_params"] = model_params
             agent.model_params = model_params
+        if image_style_prompt is not None:
+            check_admin_content(image_style_prompt, "image_style_prompt")
+            updates["image_style_prompt"] = image_style_prompt
+            agent.image_style_prompt = image_style_prompt
+        if image_params is not None:
+            _check_image_params(
+                image_model if image_model is not None else agent.image_model,
+                image_params,
+            )
+            updates["image_params"] = image_params
+            agent.image_params = image_params
+
+        if image_model is not None and image_params is None and agent.image_params:
+            kept = _strip_invalid_image_params(image_model, agent.image_params)
+            if kept != agent.image_params:
+                logger.warning(
+                    "Dropped image_params invalid for the new image model",
+                    agent_id=str(agent_id),
+                    model=image_model,
+                    dropped=sorted(set(agent.image_params) - set(kept)),
+                )
+                updates["image_params"] = kept
+                agent.image_params = kept
 
         if primary_model is not None and model_params is None and agent.model_params:
             kept = _strip_invalid_params(primary_model, agent.model_params)

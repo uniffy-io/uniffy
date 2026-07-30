@@ -33,26 +33,29 @@ class ToolContext:
     # Side-channel for a write tool to surface runtime stream events (e.g. a
     # proposed skill draft) that the loop drains and forwards to the client.
     pending_events: list = field(default_factory=list)
+    # Image-generation knobs the runtime resolved for this run (agent defaults
+    # under any per-conversation override). The image tool merges the model's
+    # own call args over these, then clamps the result to the org ceiling -
+    # which is why the ceiling travels too.
+    image_params: dict = field(default_factory=dict)
+    image_max_resolution: str | None = None
+    image_max_quality: str | None = None
 
 
 @dataclass
 class ToolResult:
     """Structured result from a tool execution.
 
-    Attributes
-    ----------
-    success : bool
-        Whether the tool executed successfully.
-    data : str
-        Serialized output for the LLM to read.
-    error : str | None
-        Error description when success is False.
-
+    ``data`` is what the LLM reads. ``metadata`` is machine-readable detail the
+    LLM never sees: it rides to the client on the tool-call row so a renderer
+    can act on the result (the image card's regenerate menu needs the resolved
+    params, which the model never chose).
     """
 
     success: bool
     data: str
     error: str | None = None
+    metadata: dict | None = None
 
 
 @dataclass(frozen=True)

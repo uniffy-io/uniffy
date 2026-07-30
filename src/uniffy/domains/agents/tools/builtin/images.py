@@ -10,31 +10,32 @@ from loguru import logger
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.domains.agents.providers.catalog import (
+    get_image_parameter_schema,
+    resolve_image_params,
+)
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 
 logger = logger.bind(component="agents.tools.builtin.images")
 
+_EXTENSIONS = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+
+_KNOB_HINTS = {
+    "aspect_ratio": "Shape of the image. Pick the one that fits how the image will be used.",
+    "resolution": (
+        "Output size tier. Higher tiers cost multiples of the lower ones, "
+        "so only raise it when the user asks for a large or print-quality image."
+    ),
+    "quality": "Rendering effort. 'high' costs substantially more than 'low'.",
+    "background": "Use 'transparent' only when the user wants a cut-out with no backdrop.",
+}
+
 
 async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
-    """Generate an image from a text prompt and store it as a file.
+    """Generate an image from a text prompt and store it in Attachments.
 
-    Retrieves the agent's configured image_model, calls the appropriate
-    provider's image generation API, uploads the result to S3, creates
-    File and FileVersion records in the user's Attachments folder, and
-    enqueues thumbnail generation jobs.
-
-    Parameters
-    ----------
-    ctx : ToolContext
-        Execution context with session, user_id, organization_id, agent_id.
-    args : dict
-        Tool arguments: prompt (required), size (optional), quality (optional).
-
-    Returns
-    -------
-    ToolResult
-        Result containing the generated file's URN and details.
-
+    Knobs merge call args over the params the runtime resolved for this run,
+    then get stripped to what the target model accepts.
     """
     from sqlalchemy import select
 
@@ -52,8 +53,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
     if not prompt:
         return ToolResult(success=False, data="", error="prompt is required")
 
-    size = args.get("size", "1024x1024")
-    quality = args.get("quality", "auto")
+    call_params = {k: v for k, v in args.items() if k != "prompt"}
 
     if not ctx.agent_id:
         return ToolResult(
@@ -105,19 +105,33 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             model_id=image_model,
         )
 
+    params = resolve_image_params(
+        ctx.image_params,
+        None,
+        call_params,
+        provider.name,
+        image_model,
+        max_resolution=ctx.image_max_resolution,
+        max_quality=ctx.image_max_quality,
+    )
+    size = provider.image_billing_size(image_model, params)
+    quality = params.get("quality", "auto")
+
+    style = (agent.image_style_prompt or "").strip()
+    full_prompt = f"{prompt}\n\nStyle: {style}" if style else prompt
+
     # Generate the image and track duration
     gen_start = time.monotonic()
     image_bytes, mime_type = await provider.generate_image(
-        prompt,
+        full_prompt,
         model=image_model,
-        size=size,
-        quality=quality,
+        params=params,
     )
     gen_duration_ms = int((time.monotonic() - gen_start) * 1000)
 
     # Upload to S3
     file_id = generate_id()
-    ext = "png" if mime_type == "image/png" else "webp"
+    ext = _EXTENSIONS.get(mime_type, "png")
     filename = f"generated-image-{file_id}.{ext}"
     storage_key = f"{ctx.organization_id}/{ctx.user_id}/{file_id}/{filename}"
 
@@ -273,6 +287,7 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
                 "output_file_urn": file_urn,
                 "size": size,
                 "quality": quality,
+                "image_params": params,
                 "tokens": 0,
                 "cost": float(image_cost) if image_cost is not None else 0.0,
                 "cost_currency": image_cost_currency,
@@ -286,22 +301,27 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
 
     # Enqueue thumbnail/extraction jobs only after the file row is committed, so
     # the core worker can load it - mirrors FileOperations._enqueue_processing_jobs.
+    # This runs inside the EGRESS worker, which only initialises its own pool, so
+    # it has to reach the core queue through the lazy-reconnect accessor; the
+    # raising one would leave every generated image without a thumbnail.
+    from uniffy.core.valkey import get_queue_safe
     from uniffy.workers.utils.mime import get_jobs_for_mime_type
 
     jobs = get_jobs_for_mime_type(mime_type)
     if jobs:
-        try:
-            from uniffy.core.valkey import get_queue
-
-            queue = get_queue("core")
+        queue = await get_queue_safe("core")
+        if queue is None:
+            logger.warning(
+                "Core queue unavailable; generated image has no thumbnail",
+                file_id=str(file_id),
+            )
+        else:
             for job_name in jobs:
                 await queue.enqueue_job(
                     job_name,
                     str(file_id),
                     str(ctx.organization_id),
                 )
-        except RuntimeError:
-            pass
 
     try:
         await check_and_fire_alerts(
@@ -327,7 +347,52 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
             f"Prompt: {prompt[:100]}\n\n"
             f"Use this exact mention to reference the image: {mention}"
         ),
+        metadata={
+            "kind": "image_generation",
+            "prompt": prompt,
+            "params": params,
+            "file_id": str(file_id),
+            "file_urn": file_urn,
+            "model": image_model,
+            "cost": float(image_cost) if image_cost is not None else None,
+            "cost_currency": image_cost_currency,
+        },
     )
+
+
+def build_image_tool_schema(provider: str, model_id: str) -> dict:
+    """Tool schema for the image model an agent actually runs on.
+
+    The static definition below is a fallback for agents with no image model.
+    Once one resolves, the runtime swaps in this schema so the enums match what
+    the provider accepts and the model cannot emit a value that would 400.
+    Builder-audience knobs are left out entirely - they are the builder's call,
+    not the LLM's.
+    """
+    schema: dict = {
+        "type": "object",
+        "properties": {
+            "prompt": {
+                "type": "string",
+                "description": "A detailed text description of the image to generate.",
+            },
+        },
+        "required": ["prompt"],
+    }
+    for knob, spec in (get_image_parameter_schema(provider, model_id) or {}).items():
+        if spec.get("audience") == "builder" or spec.get("type") != "enum":
+            continue
+        entry: dict = {"type": "string", "enum": list(spec["enum"])}
+        default = spec.get("default")
+        hint = _KNOB_HINTS.get(knob, "")
+        if default is not None:
+            entry["description"] = (
+                f"{hint} Omit to use the configured default ({default})."
+            ).strip()
+        elif hint:
+            entry["description"] = hint
+        schema["properties"][knob] = entry
+    return schema
 
 
 generate_image = ToolDefinition(
@@ -335,7 +400,9 @@ generate_image = ToolDefinition(
     description=(
         "Generate an image from a text prompt using AI. "
         "The image is saved as a file in the user's Attachments folder. "
-        "Returns the file URN that can be referenced in notes or messages."
+        "Returns the file URN that can be referenced in notes or messages. "
+        "Omit the optional knobs unless the user asked for a specific shape or size - "
+        "the agent's configured defaults apply otherwise."
     ),
     parameter_schema={
         "type": "object",
@@ -343,26 +410,6 @@ generate_image = ToolDefinition(
             "prompt": {
                 "type": "string",
                 "description": ("A detailed text description of the image to generate."),
-            },
-            "size": {
-                "type": "string",
-                "description": (
-                    "Image dimensions. Options: '1024x1024' (square), "
-                    "'1536x1024' (landscape), '1024x1536' (portrait). "
-                    "Default: '1024x1024'."
-                ),
-                "enum": ["1024x1024", "1536x1024", "1024x1536"],
-                "default": "1024x1024",
-            },
-            "quality": {
-                "type": "string",
-                "description": (
-                    "Image quality. 'auto' for default, "
-                    "'high' for higher quality, "
-                    "'low' for faster generation."
-                ),
-                "enum": ["auto", "high", "low"],
-                "default": "auto",
             },
         },
         "required": ["prompt"],

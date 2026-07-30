@@ -222,11 +222,23 @@ class LLMProvider(ABC):
         prompt: str,
         *,
         model: str,
-        size: str = "1024x1024",
-        quality: str = "auto",
+        params: dict | None = None,
     ) -> tuple[bytes, str]:
-        """Generate an image from a text prompt; returns `(bytes, mime_type)`."""
+        """Generate an image from a text prompt; returns `(bytes, mime_type)`.
+
+        `params` carries validated normalized knobs (`aspect_ratio`,
+        `resolution`, `quality`, ...) that each provider maps onto its native
+        request shape; providers speak pixels or ratios, never both.
+        """
         raise NotImplementedError("This provider does not support image generation")
+
+    def image_billing_size(self, model: str, params: dict) -> str:
+        """The `WIDTHxHEIGHT` key a generation is billed under.
+
+        Empty for providers priced flat per image, whose catalog entry carries
+        `cost_per_image` instead of a size matrix.
+        """
+        return ""
 
     @abstractmethod
     async def get_available_models(self) -> list[ModelInfo]:
