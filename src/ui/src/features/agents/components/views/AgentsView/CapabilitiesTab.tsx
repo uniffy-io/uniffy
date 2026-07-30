@@ -11,10 +11,14 @@ import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { Select } from "@/components/ui/select";
 import { TOOL_SECTIONS } from "@/features/agents/config/toolCatalog";
 import type { ToolGroup, ToolCategorySection } from "@/features/agents/config/toolCatalog";
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import { selectIntegrationConnections } from "@/features/integrations/store/integrationsSlice";
+import type { ConnectionPlain } from "@/features/integrations/store/integrationsThunks";
+import { integrationLabel } from "@/features/integrations/config/integrationBrands";
 import { updateAgent } from "@/features/agents/store/agentsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
 import type { SerializedSkill } from "@/features/agents/store/agentSkillsThunks";
@@ -25,17 +29,45 @@ const listRowClass = "flex items-center gap-3 py-2 border-b border-border/60 las
 function ToolGroupRows({
     group,
     enabledTools,
+    connectedProviders,
+    usableConnections,
+    pinnedConnections,
     disabled,
     onToggle,
     onToggleAll,
+    onPinConnection,
 }: {
     group: ToolGroup;
     enabledTools: Set<string>;
+    connectedProviders: Set<string>;
+    usableConnections: ConnectionPlain[];
+    pinnedConnections: Record<string, string>;
     disabled?: boolean;
     onToggle: (toolName: string, enabled: boolean) => void;
     onToggleAll: (groupTools: string[], enabled: boolean) => void;
+    onPinConnection: (providerId: string, connectionId: string) => void;
 }) {
     const [expanded, setExpanded] = useState(false);
+
+    const providerId = group.requiresConnection;
+    const missingConnection =
+        providerId !== undefined && !connectedProviders.has(providerId);
+
+    const providerConnections = useMemo(
+        () => (providerId ? usableConnections.filter((c) => c.provider === providerId) : []),
+        [usableConnections, providerId]
+    );
+    const pinnedId = providerId !== undefined ? pinnedConnections[providerId] ?? "" : "";
+    const pinnedMissing =
+        pinnedId !== "" && !providerConnections.some((c) => c.id === pinnedId);
+    const showConnectionPicker = providerId !== undefined;
+    const connectionOptions = useMemo(
+        () => [
+            { value: "", label: "Automatic" },
+            ...providerConnections.map((c) => ({ value: c.id, label: c.name })),
+        ],
+        [providerConnections]
+    );
 
     const groupToolNames = useMemo(
         () => group.tools.map((t) => t.name),
@@ -59,9 +91,23 @@ function ToolGroupRows({
                 >
                     {expanded ? <CaretDown size={16} /> : <CaretRight size={16} />}
                 </button>
-                <span className="text-sm font-medium text-foreground flex-1">
-                    {group.group}
-                </span>
+                <div className="flex flex-1 min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-sm font-medium text-foreground">
+                        {group.group}
+                    </span>
+                    {showConnectionPicker && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground">Connection</span>
+                            <Select
+                                size="sm"
+                                value={pinnedMissing ? "" : pinnedId}
+                                onChange={(value) => onPinConnection(providerId, value)}
+                                options={connectionOptions}
+                                disabled={disabled}
+                            />
+                        </div>
+                    )}
+                </div>
                 <span className="text-xs text-muted-foreground tabular-nums">
                     {enabledInGroup}/{group.tools.length}
                 </span>
@@ -72,6 +118,16 @@ function ToolGroupRows({
                     onChange={() => onToggleAll(groupToolNames, !allEnabled)}
                 />
             </div>
+            {showConnectionPicker && pinnedMissing && (
+                <p className="pl-7 py-1 text-xs text-muted-foreground">
+                    Pinned connection no longer exists
+                </p>
+            )}
+            {missingConnection && (
+                <p className="pl-7 py-1 text-xs text-muted-foreground">
+                    {`No ${integrationLabel(group.requiresConnection)} connection. An org admin can add one under Admin > Integrations.`}
+                </p>
+            )}
             {expanded && (
                 <div className="pl-7">
                     {group.tools.map((tool) => (
@@ -110,19 +166,27 @@ function ToolGroupRows({
 function ToolCategory({
     section,
     enabledTools,
+    connectedProviders,
+    usableConnections,
+    pinnedConnections,
     enabledCount,
     totalCount,
     disabled,
     onToggle,
     onToggleAll,
+    onPinConnection,
 }: {
     section: ToolCategorySection;
     enabledTools: Set<string>;
+    connectedProviders: Set<string>;
+    usableConnections: ConnectionPlain[];
+    pinnedConnections: Record<string, string>;
     enabledCount: number;
     totalCount: number;
     disabled?: boolean;
     onToggle: (toolName: string, enabled: boolean) => void;
     onToggleAll: (groupTools: string[], enabled: boolean) => void;
+    onPinConnection: (providerId: string, connectionId: string) => void;
 }) {
     return (
         <section className="border-b border-border pb-6">
@@ -144,9 +208,13 @@ function ToolCategory({
                     key={group.group}
                     group={group}
                     enabledTools={enabledTools}
+                    connectedProviders={connectedProviders}
+                    usableConnections={usableConnections}
+                    pinnedConnections={pinnedConnections}
                     disabled={disabled}
                     onToggle={onToggle}
                     onToggleAll={onToggleAll}
+                    onPinConnection={onPinConnection}
                 />
             ))}
         </section>
@@ -244,13 +312,25 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
     const skillsMap = useAppSelector(selectAllSkills);
     const skillsLoading = useAppSelector(selectSkillsLoading);
     const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
-    const canEdit = roleCanEdit(myRole);
+    // A deleted agent is a historical record: readable, never editable.
+    const canEdit = roleCanEdit(myRole) && !agent.isDeleted;
 
     const skills = useMemo(() => Object.values(skillsMap), [skillsMap]);
+    const connections = useAppSelector(selectIntegrationConnections);
 
     useEffect(() => {
         dispatch(fetchSkills());
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const usableConnections = useMemo(
+        () => connections.filter((c) => c.isValid && c.isEnabled),
+        [connections]
+    );
+
+    const connectedProviders = useMemo(
+        () => new Set(usableConnections.map((c) => c.provider)),
+        [usableConnections]
+    );
 
     const enabledTools = useMemo(
         () => new Set(agent.enabledTools),
@@ -298,6 +378,19 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
         [agent.id, agent.enabledTools, dispatch]
     );
 
+    const handlePinConnection = useCallback(
+        (providerId: string, connectionId: string) => {
+            const updated = { ...agent.integrationConnections };
+            if (connectionId) {
+                updated[providerId] = connectionId;
+            } else {
+                delete updated[providerId];
+            }
+            dispatch(updateAgent({ agentId: agent.id, integrationConnections: updated }));
+        },
+        [agent.id, agent.integrationConnections, dispatch]
+    );
+
     const enabledSkillIds = useMemo(
         () => new Set(agent.enabledSkills),
         [agent.enabledSkills]
@@ -331,11 +424,15 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
                         key={section.category}
                         section={section}
                         enabledTools={enabledTools}
+                        connectedProviders={connectedProviders}
+                        usableConnections={usableConnections}
+                        pinnedConnections={agent.integrationConnections}
                         enabledCount={counts.enabled}
                         totalCount={counts.total}
                         disabled={!canEdit}
                         onToggle={handleToolToggle}
                         onToggleAll={handleToolToggleAll}
+                        onPinConnection={handlePinConnection}
                     />
                 );
             })}

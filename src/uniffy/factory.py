@@ -35,6 +35,9 @@ from uniffy_proto.chat.v1.chat_stream_connect import ChatStreamServiceASGIApplic
 from uniffy_proto.comments.v1.comments_connect import CommentsServiceASGIApplication
 from uniffy_proto.files.v1.files_connect import FilesServiceASGIApplication
 from uniffy_proto.groups.v1.groups_connect import GroupsServiceASGIApplication
+from uniffy_proto.integrations.v1.integrations_connect import (
+    IntegrationsServiceASGIApplication,
+)
 from uniffy_proto.mail.v1.mail_connect import OrgMailServiceASGIApplication
 from uniffy_proto.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy_proto.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
@@ -134,6 +137,11 @@ from uniffy.domains.files.http_routes import (
 )
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
+from uniffy.domains.integrations.client_cache import (
+    close_integration_invalidation_subscriber,
+    init_integration_invalidation_subscriber,
+)
+from uniffy.domains.integrations.service import IntegrationsServiceImpl
 from uniffy.domains.mail.service import OrgMailServiceImpl
 from uniffy.domains.mail.system_service import SystemMailServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
@@ -358,6 +366,11 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Provider invalidation subscriber not available: {e}")
 
     try:
+        await init_integration_invalidation_subscriber()
+    except Exception as e:
+        logger.warning(f"Integration invalidation subscriber not available: {e}")
+
+    try:
         await subscribe_dek_invalidations()
     except Exception as e:
         logger.warning(f"Org DEK invalidation subscriber not available: {e}")
@@ -418,6 +431,7 @@ async def lifespan(app: FastAPI):
     await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
+    await close_integration_invalidation_subscriber()
     await close_dek_invalidation_subscriber()
     await close_deployment_dek_invalidation_subscriber()
     await close_streams_client()
@@ -620,6 +634,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/calls.v1.CallService",
         CallServiceASGIApplication(CallServiceImpl(), interceptors=interceptors),
+    )
+    dispatcher.add_service(
+        "/integrations.v1.IntegrationsService",
+        IntegrationsServiceASGIApplication(IntegrationsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.ProvidersService",

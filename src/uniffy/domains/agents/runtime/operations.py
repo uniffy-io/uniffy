@@ -89,6 +89,11 @@ from uniffy.domains.agents.tools.definitions import ToolContext, ToolResult
 from uniffy.domains.agents.tools.executor import ToolExecutor
 from uniffy.domains.agents.tools.registry import ToolRegistry, get_tool_registry, to_api_name
 from uniffy.domains.chat.sender_resolver import SenderResolver
+from uniffy.domains.integrations.tool_gate import (
+    filter_enabled_tools_for_prompt,
+    filter_integration_tool_schemas,
+    has_advertised_integration_tools,
+)
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
@@ -478,6 +483,10 @@ class RuntimeOperations:
             self._session, agent, organization_id=organization_id
         )
         tool_schemas = apply_image_tool_schema(tool_schemas, image_config)
+        tool_schemas = await filter_integration_tool_schemas(
+            self._session, organization_id, tool_schemas
+        )
+        enabled_tools = filter_enabled_tools_for_prompt(enabled_tools, tool_schemas)
 
         memory_scope = await self._resolve_memory_scope(
             destination=SessionDestination(session_id=session_id),
@@ -508,6 +517,7 @@ class RuntimeOperations:
             invoked_skill=invoked_entry,
             memory_context=memory_context,
             user_timezone=user_timezone,
+            external_content_note=has_advertised_integration_tools(tool_schemas),
         )
 
         request_params = resolve_request_params(
@@ -627,6 +637,7 @@ class RuntimeOperations:
                         image_config.max_resolution if image_config else None
                     ),
                     image_max_quality=image_config.max_quality if image_config else None,
+                    integration_connections=agent.integration_connections or {},
                 )
                 executor = ToolExecutor(registry, tool_ctx)
 
@@ -1225,6 +1236,10 @@ class RuntimeOperations:
             override_params=image_params_override,
         )
         tool_schemas = apply_image_tool_schema(tool_schemas, image_config)
+        tool_schemas = await filter_integration_tool_schemas(
+            self._session, organization_id, tool_schemas
+        )
+        enabled_tools = filter_enabled_tools_for_prompt(enabled_tools, tool_schemas)
 
         memory_scope = await self._resolve_memory_scope(
             destination=destination,
@@ -1264,6 +1279,7 @@ class RuntimeOperations:
             memory_context=memory_context,
             user_timezone=user_timezone,
             chat_context=chat_context_block,
+            external_content_note=has_advertised_integration_tools(tool_schemas),
         )
 
         request_params = resolve_request_params(
@@ -1465,6 +1481,7 @@ class RuntimeOperations:
                     image_config.max_resolution if image_config else None
                 ),
                 image_max_quality=image_config.max_quality if image_config else None,
+                integration_connections=agent.integration_connections or {},
             )
             executor = ToolExecutor(registry, tool_ctx)
 

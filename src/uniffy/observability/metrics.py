@@ -325,6 +325,37 @@ AGENT_MEMORY_READ_AFTER_NO_RECALL_TOTAL = Counter(
 )
 
 
+AGENT_TOOL_CALLS_TOTAL = Counter(
+    "uniffy_agent_tool_calls_total",
+    "Agent tool executions by outcome at the ToolExecutor boundary",
+    ["tool", "status"],
+)
+
+AGENT_TOOL_DURATION = Histogram(
+    "uniffy_agent_tool_duration_seconds",
+    "Agent tool execution duration at the ToolExecutor boundary",
+    ["tool"],
+)
+
+INTEGRATION_HTTP_REQUESTS_TOTAL = Counter(
+    "uniffy_integration_http_requests_total",
+    "Outbound integration API requests by response class",
+    ["provider", "status_class"],
+)
+
+INTEGRATION_HTTP_DURATION = Histogram(
+    "uniffy_integration_http_duration_seconds",
+    "Outbound integration API request duration",
+    ["provider"],
+)
+
+INTEGRATION_CONNECTION_VALIDATIONS_TOTAL = Counter(
+    "uniffy_integration_connection_validations_total",
+    "Integration credential probes by outcome",
+    ["provider", "outcome"],
+)
+
+
 LLM_PROVIDER_LRU_HIT_TOTAL = Counter(
     "uniffy_llm_provider_lru_hit_total",
     "In-process LLM-provider-client LRU hits (decrypt + construct skipped)",

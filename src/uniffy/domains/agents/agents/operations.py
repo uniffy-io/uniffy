@@ -22,6 +22,7 @@ from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.users.cache import invalidate_agent_profile
@@ -42,6 +43,7 @@ from uniffy.domains.agents.providers.catalog import (
     validate_image_params,
     validate_model_params,
 )
+from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.tags import TagAssignment, TagOperations
 
@@ -88,6 +90,56 @@ def _strip_invalid_image_params(model_id: str, params: dict) -> dict:
     if provider is None:
         return {}
     return strip_unsupported_image_params(provider, model_id, params)
+
+
+async def _validate_integration_connections(
+    session: AsyncSession,
+    organization_id: UUID,
+    mapping: dict | None,
+) -> None:
+    """Check a pin map against the registry and this org's connection rows.
+
+    Disabled or invalid connections are accepted deliberately: admins toggle
+    keys freely and the runtime degrades to a recoverable tool error.
+    """
+    if not mapping:
+        return
+    registry = get_integration_registry()
+    ids: dict[str, UUID] = {}
+    for provider_id, raw in mapping.items():
+        if not isinstance(provider_id, str) or registry.get(provider_id) is None:
+            raise ValidationError(
+                "integration_connections",
+                f"Unknown integration provider '{provider_id}'",
+            )
+        try:
+            ids[provider_id] = UUID(raw if isinstance(raw, str) else "")
+        except ValueError:
+            raise ValidationError(
+                "integration_connections",
+                f"Connection id for '{provider_id}' must be a UUID",
+            ) from None
+    result = await session.execute(
+        select(IntegrationConnection.id, IntegrationConnection.provider).where(
+            IntegrationConnection.organization_id == organization_id,
+            IntegrationConnection.id.in_(list(ids.values())),
+        )
+    )
+    provider_by_id = {row.id: row.provider for row in result}
+    for provider_id, connection_id in ids.items():
+        found = provider_by_id.get(connection_id)
+        if found is None:
+            raise ValidationError(
+                "integration_connections",
+                f"No {provider_id} connection with id {connection_id} exists "
+                f"in this organization",
+            )
+        if found != provider_id:
+            raise ValidationError(
+                "integration_connections",
+                f"Connection {connection_id} belongs to provider '{found}', "
+                f"not '{provider_id}'",
+            )
 
 
 def _coerce_uuid_list(values: list | None) -> list[UUID]:
@@ -242,6 +294,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         model_params: dict | None = None,
         image_params: dict | None = None,
         image_style_prompt: str = "",
+        integration_connections: dict | None = None,
     ) -> Agent:
         """Create a new agent configuration."""
         await require_agents_builder(self.session, user_id, organization_id)
@@ -258,6 +311,9 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         _check_model_params(primary_model, model_params)
         _check_image_params(image_model, image_params)
+        await _validate_integration_connections(
+            self.session, organization_id, integration_connections
+        )
         if image_style_prompt:
             check_admin_content(image_style_prompt, "image_style_prompt")
 
@@ -292,6 +348,7 @@ class AgentOperations(BaseContentOperations[Agent]):
             model_params=model_params or {},
             image_params=image_params or {},
             image_style_prompt=image_style_prompt,
+            integration_connections=integration_connections or {},
         )
         self.session.add(agent)
         await self.session.commit()
@@ -465,6 +522,7 @@ class AgentOperations(BaseContentOperations[Agent]):
         model_params: dict | None = None,
         image_params: dict | None = None,
         image_style_prompt: str | None = None,
+        integration_connections: dict | None = None,
     ) -> Agent:
         """Update an agent configuration.
 
@@ -535,6 +593,13 @@ class AgentOperations(BaseContentOperations[Agent]):
             )
             updates["model_params"] = model_params
             agent.model_params = model_params
+        if integration_connections is not None:
+            await _validate_integration_connections(
+                self.session, organization_id, integration_connections
+            )
+            updates["integration_connections"] = integration_connections
+            agent.integration_connections = integration_connections
+
         if image_style_prompt is not None:
             check_admin_content(image_style_prompt, "image_style_prompt")
             updates["image_style_prompt"] = image_style_prompt

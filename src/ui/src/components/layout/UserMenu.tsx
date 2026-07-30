@@ -30,6 +30,7 @@ import { clearAgentMessages } from '@/features/agents/store/agentMessagesSlice';
 import { clearAgentMemories } from '@/features/agents/store/agentMemoriesSlice';
 import { clearAgentProviders } from '@/features/agents/store/agentProvidersSlice';
 import { clearAgentRuntimeSettings } from '@/features/admin/store/agentRuntimeSettingsSlice';
+import { clearIntegrations } from '@/features/integrations/store/integrationsSlice';
 import { clearTags } from '@/features/tags/store/tagsSlice';
 import { clearCalls } from '@/features/calls/store/callsSlice';
 import { clearMemoryAccessToken } from '@/config/api';
@@ -128,6 +129,7 @@ export function UserMenu() {
         dispatch(clearAgentMemories());
         dispatch(clearAgentProviders());
         dispatch(clearAgentRuntimeSettings());
+        dispatch(clearIntegrations());
         dispatch(clearTags());
         dispatch(clearCalls());
         clearNotesCache().catch(console.error);

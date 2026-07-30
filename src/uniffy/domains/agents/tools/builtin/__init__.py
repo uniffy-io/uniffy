@@ -49,3 +49,10 @@ def register_all(registry: ToolRegistry) -> None:
         registry.register(tool)
     for tool in SYSTEM_TOOLS:
         registry.register(tool)
+
+    # Integration tool packs live with their integration (domains/integrations/
+    # providers/*), not in this package; the registry aggregates them here.
+    from uniffy.domains.integrations.registry import get_integration_registry
+
+    for tool in get_integration_registry().all_tools():
+        registry.register(tool)

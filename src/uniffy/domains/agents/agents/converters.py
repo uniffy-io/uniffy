@@ -73,6 +73,7 @@ def agent_to_proto(
         model_params=json.dumps(agent.model_params or {}),
         image_params=json.dumps(agent.image_params or {}),
         image_style_prompt=agent.image_style_prompt or "",
+        integration_connections=json.dumps(agent.integration_connections or {}),
         is_deleted=agent.is_deleted,
     )
 
@@ -102,4 +103,6 @@ def agent_template_to_proto(
         soul_prompt=template.soul_prompt,
         enabled_tools=list(template.enabled_tools),
         enabled_skill_ids=enabled_skill_ids,
+        recommended_model=template.recommended_model,
+        recommended_image_model=template.recommended_image_model,
     )

@@ -1,7 +1,7 @@
 """Tool executor for agent runtime."""
 
 import asyncio
-import re
+import time
 
 from loguru import logger
 
@@ -16,68 +16,28 @@ from uniffy.domains.agents.tools.definitions import (
     ToolResult,
 )
 from uniffy.domains.agents.tools.registry import ToolRegistry
+from uniffy.domains.agents.tools.sanitization import sanitize_tool_error
+from uniffy.observability.metrics import AGENT_TOOL_CALLS_TOTAL, AGENT_TOOL_DURATION
 
 logger = logger.bind(component="agents.tools.executor")
 
 MAX_TOOL_RESULT_CHARS = 100_000
 
-_SENSITIVE_PATTERNS = [
-    re.compile(r"(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN)\s", re.IGNORECASE),
-    re.compile(r"psycopg|asyncpg|sqlalchemy", re.IGNORECASE),
-    re.compile(r"(?:/home/|/usr/|/var/|/tmp/|/etc/|/opt/)[^\s]+"),
-    re.compile(r'File "[^"]+", line \d+'),
-    re.compile(r"Traceback \(most recent call last\)"),
-    re.compile(r"(?:postgresql|valkey|mysql|mongodb)://", re.IGNORECASE),
-]
+# Metric label values stay bounded: the typed failure reasons pass through,
+# every other exception collapses to "error".
+_METRIC_STATUSES = {"timeout", "not_found", "permission_denied", "validation_error"}
 
 
-def _sanitize_error_message(tool_name: str, exc: Exception) -> str:
-    """Produce a safe error message for the LLM.
-
-    Checks the raw exception string for patterns that may leak
-    internal details (SQL, file paths, connection strings). If any
-    sensitive pattern is found, returns a generic message. Otherwise
-    returns the original error text.
-
-    Parameters
-    ----------
-    tool_name : str
-        Name of the tool that failed.
-    exc : Exception
-        The caught exception.
-
-    Returns
-    -------
-    str
-        A sanitized error message safe for LLM consumption.
-
-    """
-    raw = str(exc)
-    for pattern in _SENSITIVE_PATTERNS:
-        if pattern.search(raw):
-            logger.warning(
-                "Sanitized sensitive error for LLM",
-                tool=tool_name,
-                original_error=raw,
-            )
-            return f"Internal error executing {tool_name}. The operation could not be completed."
-    return f"Internal error executing {tool_name}: {raw}"
+def _metric_status(result: ToolResult, error_reason: str | None) -> str:
+    if result.success:
+        return "success"
+    if error_reason in _METRIC_STATUSES:
+        return error_reason
+    return "error"
 
 
 def _truncate_result(data: str) -> str:
-    """Truncate tool result data if it exceeds MAX_TOOL_RESULT_CHARS.
-
-    Parameters
-    ----------
-    data : str
-        The tool result data.
-
-    Returns
-    -------
-    str
-        The data, truncated with a notice if it exceeded the limit.
-
-    """
+    """Truncate tool result data if it exceeds MAX_TOOL_RESULT_CHARS."""
     if len(data) <= MAX_TOOL_RESULT_CHARS:
         return data
     return (
@@ -140,6 +100,7 @@ class ToolExecutor:
         """
         tool_def = self._registry.get(tool_call.name)
         if tool_def is None:
+            AGENT_TOOL_CALLS_TOTAL.labels(tool="unknown", status="unknown_tool").inc()
             return ToolResult(
                 success=False,
                 data="",
@@ -147,6 +108,7 @@ class ToolExecutor:
             )
 
         error_reason: str | None = None
+        started = time.perf_counter()
         try:
             result = await asyncio.wait_for(
                 tool_def.executor(self._context, tool_call.input),
@@ -220,8 +182,15 @@ class ToolExecutor:
             result = ToolResult(
                 success=False,
                 data="",
-                error=_sanitize_error_message(tool_call.name, exc),
+                error=sanitize_tool_error(tool_call.name, exc),
             )
+
+        AGENT_TOOL_DURATION.labels(tool=tool_def.name).observe(
+            time.perf_counter() - started
+        )
+        AGENT_TOOL_CALLS_TOTAL.labels(
+            tool=tool_def.name, status=_metric_status(result, error_reason)
+        ).inc()
 
         if not tool_def.read_only:
             await self._emit_tool_call_audit(tool_def, result, error_reason)

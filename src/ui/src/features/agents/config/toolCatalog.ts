@@ -8,6 +8,8 @@ export interface ToolEntry {
 export interface ToolGroup {
     group: string;
     tools: ToolEntry[];
+    /** Integration provider id whose org connection these tools call through. */
+    requiresConnection?: string;
 }
 
 export type ToolCategory = "platform" | "external";
@@ -146,8 +148,34 @@ export const TOOL_SECTIONS: ToolCategorySection[] = [
                     { name: "images.generate_image", displayName: "Generate Image", description: "Generate an image from a text prompt using AI", destructive: false },
                 ],
             },
+            {
+                group: "GitHub",
+                requiresConnection: "github",
+                tools: [
+                    { name: "github.search_issues", displayName: "Search Issues", description: "Search issues and pull requests", destructive: false },
+                    { name: "github.search_repos", displayName: "Search Repositories", description: "Search repositories by name or keywords", destructive: false },
+                    { name: "github.search_code", displayName: "Search Code", description: "Search file contents across repositories", destructive: false },
+                    { name: "github.list_repos", displayName: "List Repositories", description: "List accessible repositories", destructive: false },
+                    { name: "github.get_repo", displayName: "Read Repository", description: "Read repository metadata and default branch", destructive: false },
+                    { name: "github.list_branches", displayName: "List Branches", description: "List branches in a repository", destructive: false },
+                    { name: "github.list_releases", displayName: "List Releases", description: "List releases with their notes", destructive: false },
+                    { name: "github.get_file", displayName: "Read File", description: "Read a file from a repository", destructive: false },
+                    { name: "github.get_issue", displayName: "Read Issue", description: "Read an issue with its recent comments", destructive: false },
+                    { name: "github.list_pull_requests", displayName: "List Pull Requests", description: "List pull requests", destructive: false },
+                    { name: "github.get_pull_request", displayName: "Read Pull Request", description: "Read a pull request with changed files", destructive: false },
+                    { name: "github.get_pull_request_diff", displayName: "Read Pull Request Diff", description: "Read a pull request's per-file patch hunks", destructive: false },
+                    { name: "github.list_pr_reviews", displayName: "Read Reviews", description: "Read a pull request's reviews and inline comments", destructive: false },
+                    { name: "github.list_commits", displayName: "List Commits", description: "List commits on a branch or path", destructive: false },
+                    { name: "github.get_commit", displayName: "Read Commit", description: "Read a commit's message, stats, and changed files", destructive: false },
+                    { name: "github.compare", displayName: "Compare Refs", description: "Compare two refs: commits and changed files", destructive: false },
+                    { name: "github.get_checks", displayName: "Read CI Checks", description: "Read commit status and check runs", destructive: false },
+                ],
+            },
         ],
     },
 ];
 
 export const TOOL_CATALOG: ToolGroup[] = TOOL_SECTIONS.flatMap((s) => s.groups);
+
+// The only tool that needs the image model configured to do anything.
+export const IMAGE_GENERATION_TOOL = "images.generate_image";

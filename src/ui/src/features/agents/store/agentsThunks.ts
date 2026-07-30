@@ -4,6 +4,7 @@ import { agentsApi } from '@/features/agents/api/agentsApi';
 import type { RootState } from '@/app/store';
 import type { AgentInfo } from '@uniffy/proto/agents/v1/agents_pb';
 import { bulkUpsertTags, tagToPlain } from '@/features/tags';
+import { parseIntegrationConnections } from '@/features/agents/utils/integrationConnections';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -40,6 +41,7 @@ export const agentToPlain = (agent: AgentInfo) => ({
     modelParams: agent.modelParams,
     imageParams: agent.imageParams,
     imageStylePrompt: agent.imageStylePrompt,
+    integrationConnections: parseIntegrationConnections(agent.integrationConnections),
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
     imageProviderKeyId: agent.imageProviderKeyId || "",
     tagIds: agent.tags.map((t) => t.id),
@@ -113,6 +115,7 @@ export const createAgent = createAsyncThunk<
         modelParams?: string;
         imageParams?: string;
         imageStylePrompt?: string;
+        integrationConnections?: Record<string, string>;
     },
     { state: RootState; rejectValue: string }
 >('agents/createAgent', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -135,6 +138,10 @@ export const createAgent = createAsyncThunk<
             modelParams: params.modelParams,
             imageParams: params.imageParams,
             imageStylePrompt: params.imageStylePrompt,
+            integrationConnections:
+                params.integrationConnections !== undefined
+                    ? JSON.stringify(params.integrationConnections)
+                    : undefined,
         });
         if (!response.agent) throw new Error('No agent in response');
         hydrateAgentTags(dispatch, [response.agent]);
@@ -166,13 +173,15 @@ export const updateAgent = createAsyncThunk<
         // Same contract for the image-generation knobs.
         imageParams?: string;
         imageStylePrompt?: string;
+        // Replaces the provider-to-connection pin map wholesale; {} resets to automatic.
+        integrationConnections?: Record<string, string>;
     },
     { state: RootState; rejectValue: string }
 >('agents/updateAgent', async (params, { getState, dispatch, rejectWithValue }) => {
     try {
         const state = getState();
         const organizationId = getOrganizationId(state);
-        const { agentId, tagIds, ...fields } = params;
+        const { agentId, tagIds, integrationConnections, ...fields } = params;
         // Proto3 repeated fields cannot distinguish unset from empty, so resend the current
         // Redux value for every repeated field; caller-provided values override.
         const current = state.agents.agents[agentId];
@@ -184,6 +193,10 @@ export const updateAgent = createAsyncThunk<
             enabledSkills: fields.enabledSkills ?? current?.enabledSkills ?? [],
             fallbackModels: fields.fallbackModels ?? current?.fallbackModels ?? [],
             tagIds: tagIds !== undefined ? { ids: tagIds } : undefined,
+            integrationConnections:
+                integrationConnections !== undefined
+                    ? JSON.stringify(integrationConnections)
+                    : undefined,
         });
         if (!response.agent) throw new Error('No agent in response');
         hydrateAgentTags(dispatch, [response.agent]);
@@ -222,6 +235,10 @@ export const cloneAgent = createAsyncThunk<
             imageParams:
                 source.imageParams && source.imageParams !== '{}' ? source.imageParams : undefined,
             imageStylePrompt: source.imageStylePrompt || undefined,
+            integrationConnections:
+                Object.keys(source.integrationConnections).length > 0
+                    ? source.integrationConnections
+                    : undefined,
         });
         if (!createResponse.agent) throw new Error('No agent in response');
         if (source.enabledTools.length > 0) {

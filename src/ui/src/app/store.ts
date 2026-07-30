@@ -40,6 +40,7 @@ import { agentProvidersReducer } from '@/features/agents/store/agentProvidersSli
 import { agentUsageReducer } from '@/features/agents/store/agentUsageSlice';
 import { agentCronReducer } from '@/features/agents/store/agentCronSlice';
 import { agentMemoriesReducer } from '@/features/agents/store/agentMemoriesSlice';
+import { integrationsReducer } from '@/features/integrations/store/integrationsSlice';
 import { errorToastMiddleware } from '@/app/errorToastMiddleware';
 import { presenceReducer } from '@/features/presence/store/presenceSlice';
 import { sprintsReducer } from '@/features/projects/store/sprintsSlice';
@@ -179,6 +180,7 @@ const rootReducer = combineReducers({
   agentUsage: agentUsageReducer,
   agentCron: agentCronReducer,
   agentMemories: agentMemoriesReducer,
+  integrations: integrationsReducer,
   sprints: sprintsReducer,
   rooms: roomsReducer,
   zenMode: zenModeReducer,

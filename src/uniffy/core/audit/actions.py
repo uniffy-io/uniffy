@@ -126,6 +126,12 @@ class Action:
     # Agents - image gen (tool calls get a dynamic suffix via tool_call_action)
     AGENT_IMAGE_GENERATION = "agent.image_generation"
 
+    # Integrations - connections (hint only, never the secret)
+    INTEGRATION_CONNECTION_ADDED = "integration.connection_added"
+    INTEGRATION_CONNECTION_UPDATED = "integration.connection_updated"
+    INTEGRATION_CONNECTION_REMOVED = "integration.connection_removed"
+    INTEGRATION_CONNECTION_TOGGLED = "integration.connection_toggled"
+
     # Notes
     NOTE_DELETED = "note.deleted"
     NOTE_RESTORED = "note.restored"

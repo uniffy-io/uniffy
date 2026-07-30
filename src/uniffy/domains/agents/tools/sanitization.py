@@ -31,25 +31,10 @@ _SENSITIVE_PATTERNS: list[re.Pattern[str]] = [
 
 
 def sanitize_tool_error(tool_name: str, exc: Exception) -> str:
-    """Produce a safe error string for a failed tool call.
+    """Map a failed tool call's exception to a string safe to show the LLM.
 
-    Typed domain exceptions (``NotFoundError``, ``PermissionDeniedError``,
-    ``ValidationError``) are considered safe and returned with a short
-    prefix. Every other exception is scanned for sensitive patterns and
-    replaced with a generic message if any pattern matches.
-
-    Parameters
-    ----------
-    tool_name : str
-        The tool name for the generic fallback message.
-    exc : Exception
-        The caught exception.
-
-    Returns
-    -------
-    str
-        A string safe to include in a ToolResult returned to the LLM.
-
+    Typed domain exceptions are safe and keep a short prefix; anything else
+    is scanned for sensitive fragments and genericized on a match.
     """
     if isinstance(exc, NotFoundError):
         return f"Not found: {exc}"

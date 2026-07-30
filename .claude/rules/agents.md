@@ -76,7 +76,7 @@ Tool executors call domain `*Operations` classes directly in-process (no RPC hop
 - Tool results are stored in original tool-call order regardless of read-group concurrency.
 - Destructive tools (`destructive=True`: the four `*.delete_*` tools) require user approval in streaming mode via `ApprovalStore` - an in-process `asyncio.Event` store with TTL sweep. It does NOT survive restarts or span processes; durability is not part of the contract.
 
-Adding a tool: executor in `tools/builtin/{domain}.py` -> module-level `ToolDefinition` -> export in the module tool list -> register in `tools/builtin/__init__.py:register_all()` -> add to `src/ui/src/features/agents/config/toolCatalog.ts` for the builder UI.
+Adding a tool: executor in `tools/builtin/{domain}.py` -> module-level `ToolDefinition` -> export in the module tool list -> register in `tools/builtin/__init__.py:register_all()` -> add to `src/ui/src/features/agents/config/toolCatalog.ts` for the builder UI. Platform tools live in `tools/builtin/`; EXTERNAL integration tool packs (github.*) live with their integration under `domains/integrations/providers/{name}/` and `register_all()` aggregates them from the integration registry. Integration tools are also advertise-filtered per org connection state (`.claude/rules/integrations.md` owns that contract). `ToolExecutor.execute` observes `uniffy_agent_tool_calls_total{tool, status}` + `uniffy_agent_tool_duration_seconds{tool}` for every tool and carries `ToolResult.metadata` through to chat rows as `tool_meta`.
 
 ## Templates and the default agent
 

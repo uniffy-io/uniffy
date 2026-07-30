@@ -20,6 +20,7 @@ import {
     Phone,
     LockKey,
     Lifebuoy,
+    Plugs,
 } from '@phosphor-icons/react';
 
 interface NavItem {
@@ -60,6 +61,7 @@ const orgGroups: NavGroup[] = [
         title: 'Workspace',
         items: [
             { name: 'Agents', path: '/admin/agents', icon: Robot },
+            { name: 'Integrations', path: '/admin/integrations', icon: Plugs },
             { name: 'Rooms', path: '/admin/rooms', icon: Door },
             { name: 'Storage', path: '/admin/storage', icon: Database },
             { name: 'Email', path: '/admin/email', icon: Envelope },

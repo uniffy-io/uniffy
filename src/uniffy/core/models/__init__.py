@@ -51,6 +51,7 @@ from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
+from uniffy.core.models.integrations.connection import IntegrationConnection
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.invitation import Invitation
@@ -148,6 +149,8 @@ __all__ = [
     "UploadStatus",
     # Bookmarks
     "Bookmark",
+    # Integrations
+    "IntegrationConnection",
     # Agents
     "Agent",
     "AgentMessage",

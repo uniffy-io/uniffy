@@ -209,6 +209,11 @@ class AgentsHandlers:
         image_style_prompt = (
             request.image_style_prompt if request.HasField("image_style_prompt") else None
         )
+        integration_connections = (
+            _parse_params(request.integration_connections, "integration_connections")
+            if request.HasField("integration_connections")
+            else None
+        )
 
         try:
             async with open_session() as session:
@@ -234,6 +239,7 @@ class AgentsHandlers:
                     model_params=model_params,
                     image_params=image_params,
                     image_style_prompt=image_style_prompt or "",
+                    integration_connections=integration_connections,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
@@ -457,6 +463,11 @@ class AgentsHandlers:
         image_style_prompt = (
             request.image_style_prompt if request.HasField("image_style_prompt") else None
         )
+        integration_connections = (
+            _parse_params(request.integration_connections, "integration_connections")
+            if request.HasField("integration_connections")
+            else None
+        )
 
         try:
             async with open_session() as session:
@@ -483,6 +494,7 @@ class AgentsHandlers:
                     model_params=model_params,
                     image_params=image_params,
                     image_style_prompt=image_style_prompt,
+                    integration_connections=integration_connections,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])

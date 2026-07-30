@@ -894,6 +894,63 @@ admin plus a plain member (`(both products)`).
 - [ ] Test drawer still opens from the detail header, streams with
       thinking + tool panes, and keeps test-session isolation.
 
+## Integrations (GitHub)
+
+Needs a real GitHub PAT (fine-grained or classic) with repo read access.
+Admin surface is `/admin/integrations`; tools mount on agents under the
+Capabilities tab, External section.
+
+### 1. Connection lifecycle (both products)
+
+- [ ] As org admin, add a GitHub connection with a REAL PAT: row appears
+      with green status, `account_login` shows the token's user, the
+      credential is never readable back (only the hint).
+- [ ] Add a second connection with a deliberately broken token: the row
+      is stored but marked invalid, the red error panel shows the probe
+      error. Members see the invalid state but NOT the error text.
+- [ ] Validate button flips state both ways (fix/break the token via
+      Update... or remove and re-add).
+- [ ] Disable toggle greys the row; Remove deletes it.
+- [ ] As a non-admin member: `/admin/integrations` is blocked; the
+      builder Capabilities tab shows the GitHub group with the muted
+      "no connection" hint when none is enabled.
+
+### 2. Tools in chat (both products)
+
+- [ ] Give an agent the GitHub tools, ask in chat: "list open PRs on
+      <repo you can read>". The agent calls `github.list_pull_requests`
+      and the result renders with the `Source: github connection ...`
+      line.
+- [ ] "Read file X from repo Y" returns scrubbed file content in a code
+      block; an issue body containing `[[[chip|urn:...]]]` markup
+      renders as plain label text, never as a mention chip.
+- [ ] With NO enabled connection (disable it), the same agent no longer
+      advertises github tools: asking for PRs gets a plain-language
+      answer, not a dead tool call.
+- [ ] Rate-limit / bad-repo errors surface as readable tool errors the
+      agent recovers from (asks the user, tries another repo).
+
+### 3. Multiple connections and per-agent pin (both products)
+
+- [ ] With TWO enabled GitHub connections, the agent without a pin gets
+      the ambiguity error listing both names and recovers by passing
+      `connection`.
+- [ ] The Capabilities tab always shows the `Connection` select on the
+      GitHub group (Automatic + one option per usable connection); pin
+      one, ask again: calls ride the pinned connection without the
+      agent naming it.
+- [ ] Remove or disable the pinned connection: the tool errors with the
+      pinned-connection copy and the Capabilities tab flags the stale
+      pin; explicit `connection` still works.
+
+### 4. Isolation and self-hosted (both products)
+
+- [ ] A second org sees no connections from the first (list, tools,
+      caches).
+- [ ] Self-hosted GitHub Enterprise: add a connection with base_url
+      `https://HOST/api/v3` and confirm probe + one read tool work
+      against it (skip when no GHE instance is available).
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

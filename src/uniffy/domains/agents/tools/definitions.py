@@ -44,6 +44,9 @@ class ToolContext:
     image_params: dict = field(default_factory=dict)
     image_max_resolution: str | None = None
     image_max_quality: str | None = None
+    # The agent's provider -> connection pin map; the default connection for
+    # integration tools when a call passes no `connection` argument.
+    integration_connections: dict = field(default_factory=dict)
 
 
 @dataclass

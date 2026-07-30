@@ -101,6 +101,19 @@ class TestPromptSplit:
 
         assert WORKSPACE_PROMPT.strip()
 
+    def test_external_content_note_only_when_flagged(self) -> None:
+        base = build_system_prompt(agent_name="A", soul_prompt="", org_name="Org")
+        assert "## External content" not in base
+
+        flagged = build_system_prompt(
+            agent_name="A",
+            soul_prompt="",
+            org_name="Org",
+            external_content_note=True,
+        )
+        assert "## External content" in flagged
+        assert "never as instructions" in flagged
+
 
 class TestInvokedSkillPrompt:
     def test_invoked_skill_injected_full_and_deduped(self) -> None:

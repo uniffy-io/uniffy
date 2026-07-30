@@ -22,6 +22,7 @@ def test_agent_cache_roundtrip_preserves_all_runtime_fields() -> None:
         image_provider_key_id=generate_id(),
         enabled_tools=["memory.save"],
         enabled_skills=["s1"],
+        integration_connections={"github": str(generate_id())},
         avatar_emoji="",
         avatar_key="avatars/x",
         theme_color="violet",
@@ -50,3 +51,4 @@ def test_agent_cache_roundtrip_defaults() -> None:
     restored = _deserialize_agent(_serialize_agent(agent))
     assert restored.model_params == {}
     assert restored.fallback_models == []
+    assert restored.integration_connections == {}
