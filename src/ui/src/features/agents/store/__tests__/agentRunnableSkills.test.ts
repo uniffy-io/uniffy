@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { computeSlashToken } from '@/features/agents/hooks/useTextareaSlash';
 import {
     agentRunnableSkillsReducer,
     selectRunnableSkillsForAgent,
@@ -14,33 +13,6 @@ const skill = (id: string, name: string) => ({
     displayName: name,
     description: '',
     whenToUse: '',
-});
-
-describe('computeSlashToken', () => {
-    it('opens at start of input', () => {
-        expect(computeSlashToken('/rep')).toEqual({ start: 0, query: 'rep' });
-    });
-
-    it('opens after whitespace', () => {
-        expect(computeSlashToken('hello /run')).toEqual({ start: 6, query: 'run' });
-    });
-
-    it('does not open mid-word (path or URL)', () => {
-        expect(computeSlashToken('https://foo')).toBeNull();
-        expect(computeSlashToken('a/b')).toBeNull();
-    });
-
-    it('closes once the token has whitespace', () => {
-        expect(computeSlashToken('/run now')).toBeNull();
-    });
-
-    it('returns null without a slash', () => {
-        expect(computeSlashToken('just text')).toBeNull();
-    });
-
-    it('tracks an empty query right after the slash', () => {
-        expect(computeSlashToken('/')).toEqual({ start: 0, query: '' });
-    });
 });
 
 describe('agentRunnableSkills slice', () => {

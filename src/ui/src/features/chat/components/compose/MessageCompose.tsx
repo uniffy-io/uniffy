@@ -18,7 +18,7 @@ import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { ChatMentionPopup } from '@/features/agents/components/chat/ChatMentionPopup';
 import { SkillSlashPopup } from '@/features/agents/components/chat/SkillSlashPopup';
-import { computeSlashToken } from '@/features/agents/hooks/useTextareaSlash';
+import { computeSlashToken, matchLeadingSkillCommand } from '@/features/agents/utils/slashCommands';
 import { fetchRunnableSkills, type SerializedRunnableSkill } from '@/features/agents/store/agentRunnableSkillsThunks';
 import { selectRunnableSkillsForAgent } from '@/features/agents/store/agentRunnableSkillsSlice';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
@@ -588,24 +588,33 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
 
     const fileIds = pendingFiles.filter((f) => f.fileId).map((f) => f.fileId!);
 
-    if (!trimmed && fileIds.length === 0) return;
+    // A leading "/name" the popup never got to resolve still invokes the skill.
+    // Everything after it stays the user's own turn: the skill body rides the
+    // system prompt, user text must not.
+    const leadingCommand = pendingInvokedSkill
+      ? null
+      : matchLeadingSkillCommand(trimmed, runnableSkills);
+    const invokedSkill = pendingInvokedSkill ?? leadingCommand?.skill ?? null;
+    const body = leadingCommand ? leadingCommand.rest : trimmed;
+
+    if (!body && fileIds.length === 0 && !invokedSkill) return;
 
     // Attached files become inline mentions so they render as chips and the agent
     // receives the file URN, not just the raw attachment. Skip any already mentioned.
     const attachmentMentions = pendingFiles
-      .filter((f) => Boolean(f.fileId) && !trimmed.includes(f.fileId!))
+      .filter((f) => Boolean(f.fileId) && !body.includes(f.fileId!))
       .map((f) => `[[[${f.name}|urn:uniffy:content:FILE:${f.fileId!}]]]`)
       .join(' ');
     const content = attachmentMentions
-      ? trimmed
-        ? `${trimmed} ${attachmentMentions}`
+      ? body
+        ? `${body} ${attachmentMentions}`
         : attachmentMentions
-      : trimmed;
+      : body;
 
-    const metadata = pendingInvokedSkill
+    const metadata = invokedSkill
       ? {
-          invoked_skill_id: pendingInvokedSkill.id,
-          invoked_skill_name: pendingInvokedSkill.name,
+          invoked_skill_id: invokedSkill.id,
+          invoked_skill_name: invokedSkill.name,
         }
       : undefined;
 
@@ -615,7 +624,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     setPendingInvokedSkill(null);
     closeSlash();
     updateState();
-  }, [onSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit, pendingInvokedSkill, closeSlash]);
+  }, [onSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit, pendingInvokedSkill, runnableSkills, closeSlash]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     // Backspace after a chip deletes it; contentEditable=false elements aren't auto-removed.
