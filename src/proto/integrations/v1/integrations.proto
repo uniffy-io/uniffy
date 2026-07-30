@@ -1,0 +1,198 @@
+syntax = "proto3";
+
+package integrations.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/integrations/v1;integrationsv1";
+
+// IntegrationsService manages org-wide credentials for external services
+// (GitHub, GitLab, ...). Connections are admin-managed infrastructure like
+// LLM provider keys: no access policy, usable by every member through an
+// agent whose builder enabled the matching tools.
+service IntegrationsService {
+  // List the integration providers this build ships (static descriptors)
+  rpc ListIntegrationProviders(ListIntegrationProvidersRequest) returns (ListIntegrationProvidersResponse) {}
+
+  // List the org's connections (credentials are masked)
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse) {}
+
+  // Add a connection; the credential is probed inline and the result stored
+  rpc AddConnection(AddConnectionRequest) returns (AddConnectionResponse) {}
+
+  // Update name, base URL, write policy, or rotate the credential
+  rpc UpdateConnection(UpdateConnectionRequest) returns (UpdateConnectionResponse) {}
+
+  // Remove a connection
+  rpc RemoveConnection(RemoveConnectionRequest) returns (RemoveConnectionResponse) {}
+
+  // Re-probe a stored connection against the external service
+  rpc ValidateConnection(ValidateConnectionRequest) returns (ValidateConnectionResponse) {}
+
+  // Enable or disable a connection
+  rpc ToggleConnection(ToggleConnectionRequest) returns (ToggleConnectionResponse) {}
+}
+
+// Static descriptor for one shipped integration provider
+message IntegrationProviderInfo {
+  // Provider id, also the tool-name prefix (e.g. "github")
+  string id = 1;
+  // Display label (e.g. "GitHub")
+  string label = 2;
+  // Cloud API base URL used when a connection sets none
+  string default_base_url = 3;
+  // Credential shape hint for the add form (e.g. "ghp_... / github_pat_...")
+  string credential_placeholder = 4;
+  // Provider documentation for creating the credential
+  string credential_docs_url = 5;
+  // Whether self-hosted instances are supported via a per-connection base URL
+  bool supports_base_url_override = 6;
+}
+
+// Connection info (never includes the credential)
+message IntegrationConnectionInfo {
+  // Unique connection ID
+  string id = 1;
+  // Provider id (e.g. "github")
+  string provider = 2;
+  // Admin-chosen name, unique per (org, provider)
+  string name = 3;
+  // Self-hosted API base URL; unset means the provider's cloud default
+  optional string base_url = 4;
+  // Masked hint of the credential
+  string credential_hint = 5;
+  // Account the credential acts as, discovered by the validation probe
+  optional string account_login = 6;
+  // Whether write tools (create issue, comment) may use this connection
+  bool allow_writes = 7;
+  // Whether the credential passed its last validation
+  bool is_valid = 8;
+  // Whether the connection is enabled for use
+  bool is_enabled = 9;
+  // When the credential was last validated
+  optional google.protobuf.Timestamp last_validated_at = 10;
+  // When the connection was last used by a tool call
+  optional google.protobuf.Timestamp last_used_at = 11;
+  // Last validation or usage error; rides only for org admins
+  optional string last_error = 12;
+  // User who created this connection
+  string created_by = 13;
+  // When the connection was created
+  google.protobuf.Timestamp created_at = 14;
+  // When the connection was last updated
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+// Request to list shipped integration providers
+message ListIntegrationProvidersRequest {
+  // Organization ID
+  string organization_id = 1;
+}
+
+// Response with the shipped provider descriptors
+message ListIntegrationProvidersResponse {
+  repeated IntegrationProviderInfo providers = 1;
+}
+
+// Request to list the org's connections
+message ListConnectionsRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Optional provider filter
+  optional string provider = 2;
+}
+
+// Response with the org's connections
+message ListConnectionsResponse {
+  repeated IntegrationConnectionInfo connections = 1;
+}
+
+// Request to add a connection
+message AddConnectionRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Provider id (e.g. "github")
+  string provider = 2;
+  // Admin-chosen name, unique per (org, provider)
+  string name = 3;
+  // The credential (PAT / token); write-only, never returned
+  string credential = 4;
+  // Self-hosted API base URL; unset means the provider's cloud default
+  optional string base_url = 5;
+  // Whether write tools may use this connection (defaults to false)
+  bool allow_writes = 6;
+}
+
+// Response containing the added connection
+message AddConnectionResponse {
+  IntegrationConnectionInfo connection = 1;
+}
+
+// Request to update a connection. Absent optional fields keep their value;
+// an empty base_url clears the override back to the provider default.
+// A credential value rotates the stored secret and re-runs the probe.
+message UpdateConnectionRequest {
+  // Connection ID to update
+  string connection_id = 1;
+  // Organization ID
+  string organization_id = 2;
+  // New name
+  optional string name = 3;
+  // New base URL; empty string clears to the provider default
+  optional string base_url = 4;
+  // New write policy
+  optional bool allow_writes = 5;
+  // Replacement credential; write-only, never returned
+  optional string credential = 6;
+}
+
+// Response containing the updated connection
+message UpdateConnectionResponse {
+  IntegrationConnectionInfo connection = 1;
+}
+
+// Request to remove a connection
+message RemoveConnectionRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Connection ID to remove
+  string connection_id = 2;
+}
+
+// Response for remove operation
+message RemoveConnectionResponse {
+  bool success = 1;
+}
+
+// Request to validate a connection
+message ValidateConnectionRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Connection ID to validate
+  string connection_id = 2;
+}
+
+// Response for validate operation (admin-gated RPC, raw probe error allowed)
+message ValidateConnectionResponse {
+  // Whether the credential passed the probe
+  bool is_valid = 1;
+  // Probe error when not valid
+  optional string error = 2;
+  // Account the credential acts as
+  optional string account_login = 3;
+}
+
+// Request to toggle a connection on or off
+message ToggleConnectionRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Connection ID to toggle
+  string connection_id = 2;
+  // Whether to enable (true) or disable (false) the connection
+  bool enabled = 3;
+}
+
+// Response containing the toggled connection
+message ToggleConnectionResponse {
+  IntegrationConnectionInfo connection = 1;
+}

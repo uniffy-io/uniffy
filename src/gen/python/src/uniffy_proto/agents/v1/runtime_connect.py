@@ -39,6 +39,9 @@ class RuntimeService(Protocol):
     async def get_usage_stats(self, request: agents_dot_v1_dot_runtime__pb2.GetUsageStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetUsageStatsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def regenerate_image(self, request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
     def __init__(self, service: RuntimeService | AsyncGenerator[RuntimeService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -114,6 +117,16 @@ class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_usage_stats,
+                ),
+                "/agents.v1.RuntimeService/RegenerateImage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RegenerateImage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.regenerate_image,
                 ),
             },
             interceptors=interceptors,
@@ -269,6 +282,26 @@ class RuntimeServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def regenerate_image(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RegenerateImage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 class RuntimeSettingsService(Protocol):
     async def get_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -375,6 +408,8 @@ class RuntimeServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_usage_stats(self, request: agents_dot_v1_dot_runtime__pb2.GetUsageStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetUsageStatsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def regenerate_image(self, request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
 class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
@@ -450,6 +485,16 @@ class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_usage_stats,
+                ),
+                "/agents.v1.RuntimeService/RegenerateImage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RegenerateImage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.regenerate_image,
                 ),
             },
             interceptors=interceptors,
@@ -599,6 +644,26 @@ class RuntimeServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.RuntimeService",
                 input=agents_dot_v1_dot_runtime__pb2.GetUsageStatsRequest,
                 output=agents_dot_v1_dot_runtime__pb2.GetUsageStatsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def regenerate_image(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RegenerateImage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

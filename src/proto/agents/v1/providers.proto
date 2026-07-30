@@ -98,6 +98,13 @@ message ModelInfo {
   // JSON object describing the model's tunable parameters (knob -> bounded
   // spec, merged from the catalog); "" when the model is not catalog-known
   string parameter_schema_json = 19;
+  // JSON object describing the model's image-generation knobs (knob ->
+  // bounded spec); "" when the model generates no images.
+  string image_parameter_schema_json = 20;
+  // JSON object of per-image USD estimates keyed
+  // "{aspect_ratio}|{resolution}|{quality}"; "" when the model has no
+  // published image rates. Values are estimates for token-metered models.
+  string image_price_estimates_json = 21;
 }
 
 // Request to add a new provider key

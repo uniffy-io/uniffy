@@ -56,10 +56,12 @@ enum MemorySource {
   MEMORY_SOURCE_MANUAL = 2;
 }
 
-// Memory info returned to clients
+// Memory info returned to clients.
+// agent_id is set only on organization entries bound to one agent; absent means
+// every agent in the bucket reads it. created_by_agent_id is provenance.
 message MemoryInfo {
   string id = 1;
-  string agent_id = 2;
+  optional string agent_id = 2;
   string key = 3;
   string content = 4;
   MemoryCategory category = 5;
@@ -75,15 +77,19 @@ message MemoryInfo {
   string created_by_name = 15;
   optional string channel_id = 16;
   optional string session_id = 17;
+  optional string created_by_agent_id = 18;
+  string created_by_agent_name = 19;
 }
 
 // --- Requests and Responses ---
 
 // Scope defaults to MEMORY_SCOPE_USER (the caller's own entries).
 // channel_id / session_id are required subject ids for their scopes.
+// agent_id narrows to one agent's organization entries and is rejected on
+// every other scope, where memory is shared by all agents.
 message ListMemoriesRequest {
   string organization_id = 1;
-  string agent_id = 2;
+  optional string agent_id = 2;
   optional MemoryCategory category = 3;
   optional string search = 4;
   optional common.v1.PaginationRequest pagination = 5;
@@ -99,7 +105,7 @@ message ListMemoriesResponse {
 
 message CreateMemoryRequest {
   string organization_id = 1;
-  string agent_id = 2;
+  optional string agent_id = 2;
   string key = 3;
   string content = 4;
   MemoryCategory category = 5;

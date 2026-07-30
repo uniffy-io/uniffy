@@ -26,6 +26,7 @@ const (
 	RuntimeService_CancelStream_FullMethodName          = "/agents.v1.RuntimeService/CancelStream"
 	RuntimeService_RespondToConfirmation_FullMethodName = "/agents.v1.RuntimeService/RespondToConfirmation"
 	RuntimeService_GetUsageStats_FullMethodName         = "/agents.v1.RuntimeService/GetUsageStats"
+	RuntimeService_RegenerateImage_FullMethodName       = "/agents.v1.RuntimeService/RegenerateImage"
 )
 
 // RuntimeServiceClient is the client API for RuntimeService service.
@@ -57,6 +58,10 @@ type RuntimeServiceClient interface {
 	RespondToConfirmation(ctx context.Context, in *RespondToConfirmationRequest, opts ...grpc.CallOption) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
 	GetUsageStats(ctx context.Context, in *GetUsageStatsRequest, opts ...grpc.CallOption) (*GetUsageStatsResponse, error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(ctx context.Context, in *RegenerateImageRequest, opts ...grpc.CallOption) (*RegenerateImageResponse, error)
 }
 
 type runtimeServiceClient struct {
@@ -164,6 +169,16 @@ func (c *runtimeServiceClient) GetUsageStats(ctx context.Context, in *GetUsageSt
 	return out, nil
 }
 
+func (c *runtimeServiceClient) RegenerateImage(ctx context.Context, in *RegenerateImageRequest, opts ...grpc.CallOption) (*RegenerateImageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegenerateImageResponse)
+	err := c.cc.Invoke(ctx, RuntimeService_RegenerateImage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RuntimeServiceServer is the server API for RuntimeService service.
 // All implementations must embed UnimplementedRuntimeServiceServer
 // for forward compatibility.
@@ -193,6 +208,10 @@ type RuntimeServiceServer interface {
 	RespondToConfirmation(context.Context, *RespondToConfirmationRequest) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
 	GetUsageStats(context.Context, *GetUsageStatsRequest) (*GetUsageStatsResponse, error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(context.Context, *RegenerateImageRequest) (*RegenerateImageResponse, error)
 	mustEmbedUnimplementedRuntimeServiceServer()
 }
 
@@ -223,6 +242,9 @@ func (UnimplementedRuntimeServiceServer) RespondToConfirmation(context.Context, 
 }
 func (UnimplementedRuntimeServiceServer) GetUsageStats(context.Context, *GetUsageStatsRequest) (*GetUsageStatsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUsageStats not implemented")
+}
+func (UnimplementedRuntimeServiceServer) RegenerateImage(context.Context, *RegenerateImageRequest) (*RegenerateImageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegenerateImage not implemented")
 }
 func (UnimplementedRuntimeServiceServer) mustEmbedUnimplementedRuntimeServiceServer() {}
 func (UnimplementedRuntimeServiceServer) testEmbeddedByValue()                        {}
@@ -350,6 +372,24 @@ func _RuntimeService_GetUsageStats_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RuntimeService_RegenerateImage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegenerateImageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeServiceServer).RegenerateImage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeService_RegenerateImage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeServiceServer).RegenerateImage(ctx, req.(*RegenerateImageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RuntimeService_ServiceDesc is the grpc.ServiceDesc for RuntimeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -372,6 +412,10 @@ var RuntimeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUsageStats",
 			Handler:    _RuntimeService_GetUsageStats_Handler,
+		},
+		{
+			MethodName: "RegenerateImage",
+			Handler:    _RuntimeService_RegenerateImage_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

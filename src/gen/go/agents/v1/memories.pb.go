@@ -185,28 +185,32 @@ func (MemorySource) EnumDescriptor() ([]byte, []int) {
 	return file_agents_v1_memories_proto_rawDescGZIP(), []int{2}
 }
 
-// Memory info returned to clients
+// Memory info returned to clients.
+// agent_id is set only on organization entries bound to one agent; absent means
+// every agent in the bucket reads it. created_by_agent_id is provenance.
 type MemoryInfo struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AgentId         string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Key             string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
-	Content         string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
-	Category        MemoryCategory         `protobuf:"varint,5,opt,name=category,proto3,enum=agents.v1.MemoryCategory" json:"category,omitempty"`
-	Importance      float32                `protobuf:"fixed32,6,opt,name=importance,proto3" json:"importance,omitempty"`
-	AccessCount     int32                  `protobuf:"varint,7,opt,name=access_count,json=accessCount,proto3" json:"access_count,omitempty"`
-	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Scope           MemoryScope            `protobuf:"varint,10,opt,name=scope,proto3,enum=agents.v1.MemoryScope" json:"scope,omitempty"`
-	Description     string                 `protobuf:"bytes,11,opt,name=description,proto3" json:"description,omitempty"`
-	Pinned          bool                   `protobuf:"varint,12,opt,name=pinned,proto3" json:"pinned,omitempty"`
-	Source          MemorySource           `protobuf:"varint,13,opt,name=source,proto3,enum=agents.v1.MemorySource" json:"source,omitempty"`
-	CreatedByUserId string                 `protobuf:"bytes,14,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
-	CreatedByName   string                 `protobuf:"bytes,15,opt,name=created_by_name,json=createdByName,proto3" json:"created_by_name,omitempty"`
-	ChannelId       *string                `protobuf:"bytes,16,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
-	SessionId       *string                `protobuf:"bytes,17,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId            *string                `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
+	Key                string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	Content            string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
+	Category           MemoryCategory         `protobuf:"varint,5,opt,name=category,proto3,enum=agents.v1.MemoryCategory" json:"category,omitempty"`
+	Importance         float32                `protobuf:"fixed32,6,opt,name=importance,proto3" json:"importance,omitempty"`
+	AccessCount        int32                  `protobuf:"varint,7,opt,name=access_count,json=accessCount,proto3" json:"access_count,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Scope              MemoryScope            `protobuf:"varint,10,opt,name=scope,proto3,enum=agents.v1.MemoryScope" json:"scope,omitempty"`
+	Description        string                 `protobuf:"bytes,11,opt,name=description,proto3" json:"description,omitempty"`
+	Pinned             bool                   `protobuf:"varint,12,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	Source             MemorySource           `protobuf:"varint,13,opt,name=source,proto3,enum=agents.v1.MemorySource" json:"source,omitempty"`
+	CreatedByUserId    string                 `protobuf:"bytes,14,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
+	CreatedByName      string                 `protobuf:"bytes,15,opt,name=created_by_name,json=createdByName,proto3" json:"created_by_name,omitempty"`
+	ChannelId          *string                `protobuf:"bytes,16,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	SessionId          *string                `protobuf:"bytes,17,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
+	CreatedByAgentId   *string                `protobuf:"bytes,18,opt,name=created_by_agent_id,json=createdByAgentId,proto3,oneof" json:"created_by_agent_id,omitempty"`
+	CreatedByAgentName string                 `protobuf:"bytes,19,opt,name=created_by_agent_name,json=createdByAgentName,proto3" json:"created_by_agent_name,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *MemoryInfo) Reset() {
@@ -247,8 +251,8 @@ func (x *MemoryInfo) GetId() string {
 }
 
 func (x *MemoryInfo) GetAgentId() string {
-	if x != nil {
-		return x.AgentId
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
 	}
 	return ""
 }
@@ -358,12 +362,28 @@ func (x *MemoryInfo) GetSessionId() string {
 	return ""
 }
 
+func (x *MemoryInfo) GetCreatedByAgentId() string {
+	if x != nil && x.CreatedByAgentId != nil {
+		return *x.CreatedByAgentId
+	}
+	return ""
+}
+
+func (x *MemoryInfo) GetCreatedByAgentName() string {
+	if x != nil {
+		return x.CreatedByAgentName
+	}
+	return ""
+}
+
 // Scope defaults to MEMORY_SCOPE_USER (the caller's own entries).
 // channel_id / session_id are required subject ids for their scopes.
+// agent_id narrows to one agent's organization entries and is rejected on
+// every other scope, where memory is shared by all agents.
 type ListMemoriesRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	AgentId        *string                `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
 	Category       *MemoryCategory        `protobuf:"varint,3,opt,name=category,proto3,enum=agents.v1.MemoryCategory,oneof" json:"category,omitempty"`
 	Search         *string                `protobuf:"bytes,4,opt,name=search,proto3,oneof" json:"search,omitempty"`
 	Pagination     *v1.PaginationRequest  `protobuf:"bytes,5,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
@@ -412,8 +432,8 @@ func (x *ListMemoriesRequest) GetOrganizationId() string {
 }
 
 func (x *ListMemoriesRequest) GetAgentId() string {
-	if x != nil {
-		return x.AgentId
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
 	}
 	return ""
 }
@@ -515,7 +535,7 @@ func (x *ListMemoriesResponse) GetPagination() *v1.PaginationResponse {
 type CreateMemoryRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	AgentId        *string                `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
 	Key            string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
 	Content        string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
 	Category       MemoryCategory         `protobuf:"varint,5,opt,name=category,proto3,enum=agents.v1.MemoryCategory" json:"category,omitempty"`
@@ -566,8 +586,8 @@ func (x *CreateMemoryRequest) GetOrganizationId() string {
 }
 
 func (x *CreateMemoryRequest) GetAgentId() string {
-	if x != nil {
-		return x.AgentId
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
 	}
 	return ""
 }
@@ -1204,11 +1224,11 @@ var File_agents_v1_memories_proto protoreflect.FileDescriptor
 
 const file_agents_v1_memories_proto_rawDesc = "" +
 	"\n" +
-	"\x18agents/v1/memories.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\x05\n" +
+	"\x18agents/v1/memories.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb8\x06\n" +
 	"\n" +
 	"MemoryInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x10\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1e\n" +
+	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n" +
 	"\acontent\x18\x04 \x01(\tR\acontent\x125\n" +
 	"\bcategory\x18\x05 \x01(\x0e2\x19.agents.v1.MemoryCategoryR\bcategory\x12\x1e\n" +
@@ -1228,24 +1248,29 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\x12created_by_user_id\x18\x0e \x01(\tR\x0fcreatedByUserId\x12&\n" +
 	"\x0fcreated_by_name\x18\x0f \x01(\tR\rcreatedByName\x12\"\n" +
 	"\n" +
-	"channel_id\x18\x10 \x01(\tH\x00R\tchannelId\x88\x01\x01\x12\"\n" +
+	"channel_id\x18\x10 \x01(\tH\x01R\tchannelId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"session_id\x18\x11 \x01(\tH\x01R\tsessionId\x88\x01\x01B\r\n" +
+	"session_id\x18\x11 \x01(\tH\x02R\tsessionId\x88\x01\x01\x122\n" +
+	"\x13created_by_agent_id\x18\x12 \x01(\tH\x03R\x10createdByAgentId\x88\x01\x01\x121\n" +
+	"\x15created_by_agent_name\x18\x13 \x01(\tR\x12createdByAgentNameB\v\n" +
+	"\t_agent_idB\r\n" +
 	"\v_channel_idB\r\n" +
-	"\v_session_id\"\xb0\x03\n" +
+	"\v_session_idB\x16\n" +
+	"\x14_created_by_agent_id\"\xc2\x03\n" +
 	"\x13ListMemoriesRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12:\n" +
-	"\bcategory\x18\x03 \x01(\x0e2\x19.agents.v1.MemoryCategoryH\x00R\bcategory\x88\x01\x01\x12\x1b\n" +
-	"\x06search\x18\x04 \x01(\tH\x01R\x06search\x88\x01\x01\x12A\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1e\n" +
+	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x12:\n" +
+	"\bcategory\x18\x03 \x01(\x0e2\x19.agents.v1.MemoryCategoryH\x01R\bcategory\x88\x01\x01\x12\x1b\n" +
+	"\x06search\x18\x04 \x01(\tH\x02R\x06search\x88\x01\x01\x12A\n" +
 	"\n" +
-	"pagination\x18\x05 \x01(\v2\x1c.common.v1.PaginationRequestH\x02R\n" +
+	"pagination\x18\x05 \x01(\v2\x1c.common.v1.PaginationRequestH\x03R\n" +
 	"pagination\x88\x01\x01\x12,\n" +
 	"\x05scope\x18\x06 \x01(\x0e2\x16.agents.v1.MemoryScopeR\x05scope\x12\"\n" +
 	"\n" +
-	"channel_id\x18\a \x01(\tH\x03R\tchannelId\x88\x01\x01\x12\"\n" +
+	"channel_id\x18\a \x01(\tH\x04R\tchannelId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"session_id\x18\b \x01(\tH\x04R\tsessionId\x88\x01\x01B\v\n" +
+	"session_id\x18\b \x01(\tH\x05R\tsessionId\x88\x01\x01B\v\n" +
+	"\t_agent_idB\v\n" +
 	"\t_categoryB\t\n" +
 	"\a_searchB\r\n" +
 	"\v_paginationB\r\n" +
@@ -1255,23 +1280,24 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\bmemories\x18\x01 \x03(\v2\x15.agents.v1.MemoryInfoR\bmemories\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xa6\x03\n" +
+	"pagination\"\xb8\x03\n" +
 	"\x13CreateMemoryRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x10\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1e\n" +
+	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n" +
 	"\acontent\x18\x04 \x01(\tR\acontent\x125\n" +
 	"\bcategory\x18\x05 \x01(\x0e2\x19.agents.v1.MemoryCategoryR\bcategory\x12#\n" +
 	"\n" +
-	"importance\x18\x06 \x01(\x02H\x00R\n" +
+	"importance\x18\x06 \x01(\x02H\x01R\n" +
 	"importance\x88\x01\x01\x12,\n" +
 	"\x05scope\x18\a \x01(\x0e2\x16.agents.v1.MemoryScopeR\x05scope\x12\"\n" +
 	"\n" +
-	"channel_id\x18\b \x01(\tH\x01R\tchannelId\x88\x01\x01\x12\"\n" +
+	"channel_id\x18\b \x01(\tH\x02R\tchannelId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"session_id\x18\t \x01(\tH\x02R\tsessionId\x88\x01\x01\x12 \n" +
+	"session_id\x18\t \x01(\tH\x03R\tsessionId\x88\x01\x01\x12 \n" +
 	"\vdescription\x18\n" +
-	" \x01(\tR\vdescriptionB\r\n" +
+	" \x01(\tR\vdescriptionB\v\n" +
+	"\t_agent_idB\r\n" +
 	"\v_importanceB\r\n" +
 	"\v_channel_idB\r\n" +
 	"\v_session_id\"\xba\x02\n" +

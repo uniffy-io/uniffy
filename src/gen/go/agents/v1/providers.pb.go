@@ -208,8 +208,15 @@ type ModelInfo struct {
 	// JSON object describing the model's tunable parameters (knob -> bounded
 	// spec, merged from the catalog); "" when the model is not catalog-known
 	ParameterSchemaJson string `protobuf:"bytes,19,opt,name=parameter_schema_json,json=parameterSchemaJson,proto3" json:"parameter_schema_json,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// JSON object describing the model's image-generation knobs (knob ->
+	// bounded spec); "" when the model generates no images.
+	ImageParameterSchemaJson string `protobuf:"bytes,20,opt,name=image_parameter_schema_json,json=imageParameterSchemaJson,proto3" json:"image_parameter_schema_json,omitempty"`
+	// JSON object of per-image USD estimates keyed
+	// "{aspect_ratio}|{resolution}|{quality}"; "" when the model has no
+	// published image rates. Values are estimates for token-metered models.
+	ImagePriceEstimatesJson string `protobuf:"bytes,21,opt,name=image_price_estimates_json,json=imagePriceEstimatesJson,proto3" json:"image_price_estimates_json,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *ModelInfo) Reset() {
@@ -371,6 +378,20 @@ func (x *ModelInfo) GetCatalogKnown() bool {
 func (x *ModelInfo) GetParameterSchemaJson() string {
 	if x != nil {
 		return x.ParameterSchemaJson
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetImageParameterSchemaJson() string {
+	if x != nil {
+		return x.ImageParameterSchemaJson
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetImagePriceEstimatesJson() string {
+	if x != nil {
+		return x.ImagePriceEstimatesJson
 	}
 	return ""
 }
@@ -1144,7 +1165,7 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"created_by\x18\f \x01(\tR\tcreatedByB\x14\n" +
 	"\x12_last_validated_atB\x0f\n" +
 	"\r_last_used_atB\r\n" +
-	"\v_last_error\"\x98\x06\n" +
+	"\v_last_error\"\x94\a\n" +
 	"\tModelInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
@@ -1168,7 +1189,9 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\x12cache_write_per_1m\x18\x10 \x01(\tR\x0fcacheWritePer1m\x12:\n" +
 	"\x19supports_image_generation\x18\x11 \x01(\bR\x17supportsImageGeneration\x12#\n" +
 	"\rcatalog_known\x18\x12 \x01(\bR\fcatalogKnown\x122\n" +
-	"\x15parameter_schema_json\x18\x13 \x01(\tR\x13parameterSchemaJson\"\x92\x01\n" +
+	"\x15parameter_schema_json\x18\x13 \x01(\tR\x13parameterSchemaJson\x12=\n" +
+	"\x1bimage_parameter_schema_json\x18\x14 \x01(\tR\x18imageParameterSchemaJson\x12;\n" +
+	"\x1aimage_price_estimates_json\x18\x15 \x01(\tR\x17imagePriceEstimatesJson\"\x92\x01\n" +
 	"\x15AddProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x14\n" +

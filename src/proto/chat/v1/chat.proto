@@ -223,6 +223,9 @@ message ChatChannel {
   // The requesting user's agent-chat folder holding this channel. Per-user
   // (from the member row), only set on is_agent_dm channels.
   optional string agent_folder_id = 37;
+  // The bound agent was deleted, so this chat is frozen: history reads, sends
+  // are refused. Only meaningful on is_agent_dm channels.
+  bool agent_is_retired = 38;
 }
 
 // ThreadInfo holds thread metadata embedded in root messages.
@@ -1132,6 +1135,10 @@ message ChannelAgentConfig {
   // JSON object of tuned parameter overrides for this (channel, agent),
   // merged over the agent's own model_params; "" = none.
   string model_params_override = 2;
+  // JSON object of image-generation overrides for this (channel, agent),
+  // merged over the agent's own image_params; "" = none. Builder-only knobs
+  // are rejected here.
+  string image_params_override = 3;
 }
 
 message GetChannelAgentConfigRequest {
@@ -1151,6 +1158,7 @@ message UpdateChannelAgentConfigRequest {
   optional string model_override = 4;
   // Absent = unchanged, "" = clear, otherwise a JSON object.
   optional string model_params_override = 5;
+  optional string image_params_override = 6;
 }
 
 message UpdateChannelAgentConfigResponse {

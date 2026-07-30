@@ -47,7 +47,7 @@ MEMORY_SOURCE_TOOL: MemorySource
 MEMORY_SOURCE_MANUAL: MemorySource
 
 class MemoryInfo(_message.Message):
-    __slots__ = ("id", "agent_id", "key", "content", "category", "importance", "access_count", "created_at", "updated_at", "scope", "description", "pinned", "source", "created_by_user_id", "created_by_name", "channel_id", "session_id")
+    __slots__ = ("id", "agent_id", "key", "content", "category", "importance", "access_count", "created_at", "updated_at", "scope", "description", "pinned", "source", "created_by_user_id", "created_by_name", "channel_id", "session_id", "created_by_agent_id", "created_by_agent_name")
     ID_FIELD_NUMBER: _ClassVar[int]
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
@@ -65,6 +65,8 @@ class MemoryInfo(_message.Message):
     CREATED_BY_NAME_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BY_AGENT_ID_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BY_AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
     id: str
     agent_id: str
     key: str
@@ -82,7 +84,9 @@ class MemoryInfo(_message.Message):
     created_by_name: str
     channel_id: str
     session_id: str
-    def __init__(self, id: _Optional[str] = ..., agent_id: _Optional[str] = ..., key: _Optional[str] = ..., content: _Optional[str] = ..., category: _Optional[_Union[MemoryCategory, str]] = ..., importance: _Optional[float] = ..., access_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scope: _Optional[_Union[MemoryScope, str]] = ..., description: _Optional[str] = ..., pinned: _Optional[bool] = ..., source: _Optional[_Union[MemorySource, str]] = ..., created_by_user_id: _Optional[str] = ..., created_by_name: _Optional[str] = ..., channel_id: _Optional[str] = ..., session_id: _Optional[str] = ...) -> None: ...
+    created_by_agent_id: str
+    created_by_agent_name: str
+    def __init__(self, id: _Optional[str] = ..., agent_id: _Optional[str] = ..., key: _Optional[str] = ..., content: _Optional[str] = ..., category: _Optional[_Union[MemoryCategory, str]] = ..., importance: _Optional[float] = ..., access_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., scope: _Optional[_Union[MemoryScope, str]] = ..., description: _Optional[str] = ..., pinned: _Optional[bool] = ..., source: _Optional[_Union[MemorySource, str]] = ..., created_by_user_id: _Optional[str] = ..., created_by_name: _Optional[str] = ..., channel_id: _Optional[str] = ..., session_id: _Optional[str] = ..., created_by_agent_id: _Optional[str] = ..., created_by_agent_name: _Optional[str] = ...) -> None: ...
 
 class ListMemoriesRequest(_message.Message):
     __slots__ = ("organization_id", "agent_id", "category", "search", "pagination", "scope", "channel_id", "session_id")

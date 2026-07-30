@@ -33,6 +33,9 @@ class AgentsService(Protocol):
     async def delete_agent(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def restore_agent(self, request: agents_dot_v1_dot_agents__pb2.RestoreAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.RestoreAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def upload_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -100,6 +103,16 @@ class AgentsServiceASGIApplication(ConnectASGIApplication[AgentsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_agent,
+                ),
+                "/agents.v1.AgentsService/RestoreAgent": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RestoreAgent",
+                        service_name="agents.v1.AgentsService",
+                        input=agents_dot_v1_dot_agents__pb2.RestoreAgentRequest,
+                        output=agents_dot_v1_dot_agents__pb2.RestoreAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.restore_agent,
                 ),
                 "/agents.v1.AgentsService/UploadAgentAvatar": Endpoint.unary(
                     method=MethodInfo(
@@ -255,6 +268,26 @@ class AgentsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def restore_agent(
+        self,
+        request: agents_dot_v1_dot_agents__pb2.RestoreAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_agents__pb2.RestoreAgentResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestoreAgent",
+                service_name="agents.v1.AgentsService",
+                input=agents_dot_v1_dot_agents__pb2.RestoreAgentRequest,
+                output=agents_dot_v1_dot_agents__pb2.RestoreAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def upload_agent_avatar(
         self,
         request: agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest,
@@ -350,6 +383,8 @@ class AgentsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_agent(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def restore_agent(self, request: agents_dot_v1_dot_agents__pb2.RestoreAgentRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.RestoreAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def upload_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.UploadAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.UploadAgentAvatarResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_agent_avatar(self, request: agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarRequest, ctx: RequestContext) -> agents_dot_v1_dot_agents__pb2.DeleteAgentAvatarResponse:
@@ -413,6 +448,16 @@ class AgentsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_agent,
+                ),
+                "/agents.v1.AgentsService/RestoreAgent": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RestoreAgent",
+                        service_name="agents.v1.AgentsService",
+                        input=agents_dot_v1_dot_agents__pb2.RestoreAgentRequest,
+                        output=agents_dot_v1_dot_agents__pb2.RestoreAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.restore_agent,
                 ),
                 "/agents.v1.AgentsService/UploadAgentAvatar": EndpointSync.unary(
                     method=MethodInfo(
@@ -562,6 +607,26 @@ class AgentsServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.AgentsService",
                 input=agents_dot_v1_dot_agents__pb2.DeleteAgentRequest,
                 output=agents_dot_v1_dot_agents__pb2.DeleteAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def restore_agent(
+        self,
+        request: agents_dot_v1_dot_agents__pb2.RestoreAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_agents__pb2.RestoreAgentResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestoreAgent",
+                service_name="agents.v1.AgentsService",
+                input=agents_dot_v1_dot_agents__pb2.RestoreAgentRequest,
+                output=agents_dot_v1_dot_agents__pb2.RestoreAgentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

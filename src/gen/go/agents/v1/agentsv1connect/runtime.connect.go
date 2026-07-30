@@ -56,6 +56,9 @@ const (
 	// RuntimeServiceGetUsageStatsProcedure is the fully-qualified name of the RuntimeService's
 	// GetUsageStats RPC.
 	RuntimeServiceGetUsageStatsProcedure = "/agents.v1.RuntimeService/GetUsageStats"
+	// RuntimeServiceRegenerateImageProcedure is the fully-qualified name of the RuntimeService's
+	// RegenerateImage RPC.
+	RuntimeServiceRegenerateImageProcedure = "/agents.v1.RuntimeService/RegenerateImage"
 	// RuntimeSettingsServiceGetRuntimeSettingsProcedure is the fully-qualified name of the
 	// RuntimeSettingsService's GetRuntimeSettings RPC.
 	RuntimeSettingsServiceGetRuntimeSettingsProcedure = "/agents.v1.RuntimeSettingsService/GetRuntimeSettings"
@@ -89,6 +92,10 @@ type RuntimeServiceClient interface {
 	RespondToConfirmation(context.Context, *connect.Request[v1.RespondToConfirmationRequest]) (*connect.Response[v1.RespondToConfirmationResponse], error)
 	// Get usage statistics for an organization
 	GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(context.Context, *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error)
 }
 
 // NewRuntimeServiceClient constructs a client for the agents.v1.RuntimeService service. By default,
@@ -144,6 +151,12 @@ func NewRuntimeServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(runtimeServiceMethods.ByName("GetUsageStats")),
 			connect.WithClientOptions(opts...),
 		),
+		regenerateImage: connect.NewClient[v1.RegenerateImageRequest, v1.RegenerateImageResponse](
+			httpClient,
+			baseURL+RuntimeServiceRegenerateImageProcedure,
+			connect.WithSchema(runtimeServiceMethods.ByName("RegenerateImage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -156,6 +169,7 @@ type runtimeServiceClient struct {
 	cancelStream          *connect.Client[v1.CancelStreamRequest, v1.CancelStreamResponse]
 	respondToConfirmation *connect.Client[v1.RespondToConfirmationRequest, v1.RespondToConfirmationResponse]
 	getUsageStats         *connect.Client[v1.GetUsageStatsRequest, v1.GetUsageStatsResponse]
+	regenerateImage       *connect.Client[v1.RegenerateImageRequest, v1.RegenerateImageResponse]
 }
 
 // SendMessage calls agents.v1.RuntimeService.SendMessage.
@@ -193,6 +207,11 @@ func (c *runtimeServiceClient) GetUsageStats(ctx context.Context, req *connect.R
 	return c.getUsageStats.CallUnary(ctx, req)
 }
 
+// RegenerateImage calls agents.v1.RuntimeService.RegenerateImage.
+func (c *runtimeServiceClient) RegenerateImage(ctx context.Context, req *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error) {
+	return c.regenerateImage.CallUnary(ctx, req)
+}
+
 // RuntimeServiceHandler is an implementation of the agents.v1.RuntimeService service.
 type RuntimeServiceHandler interface {
 	// Send a user message and get the assistant response
@@ -218,6 +237,10 @@ type RuntimeServiceHandler interface {
 	RespondToConfirmation(context.Context, *connect.Request[v1.RespondToConfirmationRequest]) (*connect.Response[v1.RespondToConfirmationResponse], error)
 	// Get usage statistics for an organization
 	GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(context.Context, *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error)
 }
 
 // NewRuntimeServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -269,6 +292,12 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 		connect.WithSchema(runtimeServiceMethods.ByName("GetUsageStats")),
 		connect.WithHandlerOptions(opts...),
 	)
+	runtimeServiceRegenerateImageHandler := connect.NewUnaryHandler(
+		RuntimeServiceRegenerateImageProcedure,
+		svc.RegenerateImage,
+		connect.WithSchema(runtimeServiceMethods.ByName("RegenerateImage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.RuntimeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case RuntimeServiceSendMessageProcedure:
@@ -285,6 +314,8 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 			runtimeServiceRespondToConfirmationHandler.ServeHTTP(w, r)
 		case RuntimeServiceGetUsageStatsProcedure:
 			runtimeServiceGetUsageStatsHandler.ServeHTTP(w, r)
+		case RuntimeServiceRegenerateImageProcedure:
+			runtimeServiceRegenerateImageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -320,6 +351,10 @@ func (UnimplementedRuntimeServiceHandler) RespondToConfirmation(context.Context,
 
 func (UnimplementedRuntimeServiceHandler) GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.GetUsageStats is not implemented"))
+}
+
+func (UnimplementedRuntimeServiceHandler) RegenerateImage(context.Context, *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.RegenerateImage is not implemented"))
 }
 
 // RuntimeSettingsServiceClient is a client for the agents.v1.RuntimeSettingsService service.

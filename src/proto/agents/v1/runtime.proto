@@ -32,6 +32,10 @@ service RuntimeService {
   rpc RespondToConfirmation(RespondToConfirmationRequest) returns (RespondToConfirmationResponse) {}
   // Get usage statistics for an organization
   rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse) {}
+  // Re-run the image generation behind a chat message with adjusted
+  // parameters. Re-executes the image tool under the CALLER's identity; it
+  // does not drive the LLM and writes no user message.
+  rpc RegenerateImage(RegenerateImageRequest) returns (RegenerateImageResponse) {}
 }
 
 // RuntimeSettingsService manages the per-org agent runtime settings blob.
@@ -52,6 +56,11 @@ message RuntimeSettings {
   string default_provider_key_id = 7;
   // Org default chat model (empty string = none)
   string default_chat_model = 8;
+  // Ceilings clamping every agent's resolved image params. Empty = no ceiling.
+  // "512px" | "1K" | "2K" | "4K"
+  string image_max_resolution = 9;
+  // "low" | "medium" | "high"
+  string image_max_quality = 10;
 }
 
 message GetRuntimeSettingsRequest {
@@ -67,6 +76,23 @@ message RuntimeSettingsResponse {
   RuntimeSettings settings = 1;
   // Whether an org-level settings row exists (vs pure code defaults).
   bool configured = 2;
+}
+
+message RegenerateImageRequest {
+  string organization_id = 1;
+  string channel_id = 2;
+  // The generated-image tool-call row to regenerate from.
+  string message_id = 3;
+  // JSON object of image knobs to change; merged over the original call's
+  // resolved params. Builder-only knobs are rejected.
+  string params_patch = 4;
+}
+
+message RegenerateImageResponse {
+  // The new tool-call row carrying the regenerated image.
+  string message_id = 1;
+  // JSON object: prompt, params, file_urn, model, cost.
+  string result_metadata = 2;
 }
 
 message GetUsageStatsRequest {

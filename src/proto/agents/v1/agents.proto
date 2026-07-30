@@ -22,8 +22,12 @@ service AgentsService {
   // Update an agent configuration
   rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse) {}
 
-  // Delete an agent
+  // Delete an agent. The row survives so its past chat messages keep
+  // resolving a name and avatar; everything that would keep it acting stops.
   rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse) {}
+
+  // Bring a deleted agent back. Its automations stay disabled.
+  rpc RestoreAgent(RestoreAgentRequest) returns (RestoreAgentResponse) {}
 
   // Upload agent avatar image (synchronous processing)
   rpc UploadAgentAvatar(UploadAgentAvatarRequest) returns (UploadAgentAvatarResponse) {}
@@ -75,6 +79,18 @@ message AgentInfo {
   // JSON object of tuned model parameters (knob -> value), validated
   // against the model's parameter schema. "{}" = provider defaults.
   string model_params = 23;
+  // JSON object of image-generation defaults (knob -> value), validated
+  // against the image model's schema. "{}" = provider defaults.
+  string image_params = 24;
+  // House style folded into every generated-image prompt.
+  string image_style_prompt = 25;
+  // Deleted agents are returned only when a listing asks for them. They cannot
+  // act: no chat replies, no automation runs.
+  bool is_deleted = 26;
+  optional google.protobuf.Timestamp deleted_at = 27;
+  // JSON object pinning an integration provider to one org connection
+  // (provider id -> connection id). "{}" = automatic resolution.
+  string integration_connections = 28;
 }
 
 // --- Requests and Responses ---
@@ -102,6 +118,11 @@ message CreateAgentRequest {
   repeated string tag_ids = 16;
   // JSON object of tuned model parameters (knob -> value)
   optional string model_params = 17;
+  // JSON object of image-generation defaults (knob -> value)
+  optional string image_params = 18;
+  optional string image_style_prompt = 19;
+  // JSON object pinning integration providers to org connections
+  optional string integration_connections = 20;
 }
 
 message CreateAgentResponse {
@@ -137,6 +158,9 @@ message ListAgentsRequest {
   // Filter agents that carry every tag id in this list (logical AND).
   // Empty = no tag filter.
   repeated string tag_ids = 5;
+  // Return deleted agents INSTEAD of live ones, for the builder's deleted
+  // group. Builder-gated.
+  bool deleted_only = 6;
 }
 
 message ListAgentsResponse {
@@ -172,6 +196,13 @@ message UpdateAgentRequest {
   // JSON object of tuned model parameters (knob -> value); replaces the
   // stored object wholesale ("{}" resets to provider defaults)
   optional string model_params = 16;
+  // JSON object of image-generation defaults; replaces the stored object
+  // wholesale ("{}" resets to provider defaults)
+  optional string image_params = 17;
+  optional string image_style_prompt = 18;
+  // JSON object pinning integration providers to org connections; replaces
+  // the stored object wholesale ("{}" resets to automatic resolution)
+  optional string integration_connections = 19;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from
@@ -187,6 +218,15 @@ message DeleteAgentRequest {
 
 message DeleteAgentResponse {
   bool success = 1;
+}
+
+message RestoreAgentRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message RestoreAgentResponse {
+  AgentInfo agent = 1;
 }
 
 message UploadAgentAvatarRequest {
@@ -221,6 +261,10 @@ message AgentTemplate {
   repeated string enabled_tools = 6;
   // Bundled skill rows resolved by the server; empty when a skill is unseeded.
   repeated string enabled_skill_ids = 7;
+  // Model ids the template works best on; empty when the template has no
+  // recommendation. Prefill only - clients apply them when the org serves them.
+  string recommended_model = 8;
+  string recommended_image_model = 9;
 }
 
 message ListAgentTemplatesRequest {

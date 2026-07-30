@@ -24,6 +24,7 @@ const (
 	AgentsService_ListAgents_FullMethodName          = "/agents.v1.AgentsService/ListAgents"
 	AgentsService_UpdateAgent_FullMethodName         = "/agents.v1.AgentsService/UpdateAgent"
 	AgentsService_DeleteAgent_FullMethodName         = "/agents.v1.AgentsService/DeleteAgent"
+	AgentsService_RestoreAgent_FullMethodName        = "/agents.v1.AgentsService/RestoreAgent"
 	AgentsService_UploadAgentAvatar_FullMethodName   = "/agents.v1.AgentsService/UploadAgentAvatar"
 	AgentsService_DeleteAgentAvatar_FullMethodName   = "/agents.v1.AgentsService/DeleteAgentAvatar"
 	AgentsService_PreviewSystemPrompt_FullMethodName = "/agents.v1.AgentsService/PreviewSystemPrompt"
@@ -44,8 +45,11 @@ type AgentsServiceClient interface {
 	ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error)
 	// Update an agent configuration
 	UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*UpdateAgentResponse, error)
-	// Delete an agent
+	// Delete an agent. The row survives so its past chat messages keep
+	// resolving a name and avatar; everything that would keep it acting stops.
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*DeleteAgentResponse, error)
+	// Bring a deleted agent back. Its automations stay disabled.
+	RestoreAgent(ctx context.Context, in *RestoreAgentRequest, opts ...grpc.CallOption) (*RestoreAgentResponse, error)
 	// Upload agent avatar image (synchronous processing)
 	UploadAgentAvatar(ctx context.Context, in *UploadAgentAvatarRequest, opts ...grpc.CallOption) (*UploadAgentAvatarResponse, error)
 	// Delete agent avatar
@@ -114,6 +118,16 @@ func (c *agentsServiceClient) DeleteAgent(ctx context.Context, in *DeleteAgentRe
 	return out, nil
 }
 
+func (c *agentsServiceClient) RestoreAgent(ctx context.Context, in *RestoreAgentRequest, opts ...grpc.CallOption) (*RestoreAgentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RestoreAgentResponse)
+	err := c.cc.Invoke(ctx, AgentsService_RestoreAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentsServiceClient) UploadAgentAvatar(ctx context.Context, in *UploadAgentAvatarRequest, opts ...grpc.CallOption) (*UploadAgentAvatarResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UploadAgentAvatarResponse)
@@ -168,8 +182,11 @@ type AgentsServiceServer interface {
 	ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error)
 	// Update an agent configuration
 	UpdateAgent(context.Context, *UpdateAgentRequest) (*UpdateAgentResponse, error)
-	// Delete an agent
+	// Delete an agent. The row survives so its past chat messages keep
+	// resolving a name and avatar; everything that would keep it acting stops.
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error)
+	// Bring a deleted agent back. Its automations stay disabled.
+	RestoreAgent(context.Context, *RestoreAgentRequest) (*RestoreAgentResponse, error)
 	// Upload agent avatar image (synchronous processing)
 	UploadAgentAvatar(context.Context, *UploadAgentAvatarRequest) (*UploadAgentAvatarResponse, error)
 	// Delete agent avatar
@@ -202,6 +219,9 @@ func (UnimplementedAgentsServiceServer) UpdateAgent(context.Context, *UpdateAgen
 }
 func (UnimplementedAgentsServiceServer) DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAgent not implemented")
+}
+func (UnimplementedAgentsServiceServer) RestoreAgent(context.Context, *RestoreAgentRequest) (*RestoreAgentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestoreAgent not implemented")
 }
 func (UnimplementedAgentsServiceServer) UploadAgentAvatar(context.Context, *UploadAgentAvatarRequest) (*UploadAgentAvatarResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadAgentAvatar not implemented")
@@ -326,6 +346,24 @@ func _AgentsService_DeleteAgent_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentsService_RestoreAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestoreAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsServiceServer).RestoreAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsService_RestoreAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsServiceServer).RestoreAgent(ctx, req.(*RestoreAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentsService_UploadAgentAvatar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UploadAgentAvatarRequest)
 	if err := dec(in); err != nil {
@@ -424,6 +462,10 @@ var AgentsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAgent",
 			Handler:    _AgentsService_DeleteAgent_Handler,
+		},
+		{
+			MethodName: "RestoreAgent",
+			Handler:    _AgentsService_RestoreAgent_Handler,
 		},
 		{
 			MethodName: "UploadAgentAvatar",
