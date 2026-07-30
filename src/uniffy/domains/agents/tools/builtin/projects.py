@@ -316,7 +316,6 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
         organization_id=ctx.organization_id,
         project_id=project_id,
         title=title,
-        task_type=args.get("task_type", "task"),
         **kwargs,
     )
 
