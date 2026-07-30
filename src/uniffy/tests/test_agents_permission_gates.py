@@ -20,6 +20,7 @@ from uuid import uuid4
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import AccessMode, DomainType
@@ -63,14 +64,20 @@ def _perm_session(
     org_role=None,
     admin_domains: frozenset = frozenset(),
     rows: dict | None = None,
+    agent_deleted: bool = False,
 ):
     """Fake session answering org-role and domain-admin lookups.
 
     ``rows`` maps additional mapped classes to the row a full-entity
-    select of that class should return.
+    select of that class should return. ``agent_deleted`` answers the
+    agent-liveness probes that guard acting paths.
     """
 
     async def execute(stmt):
+        # Retire fan-outs issue bulk UPDATE / DELETE, which carry no
+        # column_descriptions; nothing reads their result.
+        if not hasattr(stmt, "column_descriptions"):
+            return _result(None)
         entity = stmt.column_descriptions[0].get("entity")
         if entity is OrganizationMember:
             return _result(org_role)
@@ -79,6 +86,8 @@ def _perm_session(
             return _result(uuid4() if domain in admin_domains else None)
         if rows is not None and entity in rows:
             return _result(rows[entity])
+        if entity is Agent:
+            return _result(agent_deleted)
         return _result(None)
 
     session = MagicMock()

@@ -172,7 +172,8 @@ function SoulPromptEditor({
 
 export function InstructionsTab({ agent }: { agent: SerializedAgent }) {
     const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
-    const canEdit = roleCanEdit(myRole);
+    // A deleted agent is a historical record: readable, never editable.
+    const canEdit = roleCanEdit(myRole) && !agent.isDeleted;
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     return (

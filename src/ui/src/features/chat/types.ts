@@ -47,6 +47,8 @@ export interface ChatChannel {
   isAgentDm: boolean;
   customName?: string;
   agentId?: string;
+  /** The bound agent was deleted: history reads, the composer is closed. */
+  agentIsRetired?: boolean;
   agentFolderId: string | null;
   tagIds: string[];
   unreadCount?: number;

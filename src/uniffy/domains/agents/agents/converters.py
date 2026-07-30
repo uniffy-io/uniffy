@@ -73,7 +73,11 @@ def agent_to_proto(
         model_params=json.dumps(agent.model_params or {}),
         image_params=json.dumps(agent.image_params or {}),
         image_style_prompt=agent.image_style_prompt or "",
+        is_deleted=agent.is_deleted,
     )
+
+    if agent.deleted_at is not None:
+        proto.deleted_at.CopyFrom(datetime_to_timestamp(agent.deleted_at))
 
     if resolved_baseline is not None:
         proto.baseline_role = content_role_to_proto(resolved_baseline)

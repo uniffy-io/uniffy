@@ -23,6 +23,8 @@ from uniffy_proto.agents.v1.agents_pb2 import (
     ListAgentTemplatesResponse,
     PreviewSystemPromptRequest,
     PreviewSystemPromptResponse,
+    RestoreAgentRequest,
+    RestoreAgentResponse,
     UpdateAgentRequest,
     UpdateAgentResponse,
     UploadAgentAvatarRequest,
@@ -310,6 +312,8 @@ class AgentsHandlers:
         try:
             async with open_session() as session:
                 ops = AgentOperations(session)
+                if request.deleted_only:
+                    await require_agents_builder(session, user_id, org_id)
                 agents, total = await ops.list_agents(
                     user_id=user_id,
                     organization_id=org_id,
@@ -318,6 +322,7 @@ class AgentsHandlers:
                     page=page,
                     page_size=page_size,
                     tag_ids=tag_ids or None,
+                    deleted_only=request.deleted_only,
                 )
                 total_pages = (total + page_size - 1) // page_size if page_size else 1
                 roles = [await ops.resolve_role(user_id, org_id, a) for a in agents]
@@ -521,6 +526,43 @@ class AgentsHandlers:
             raise
         except Exception as exc:
             raise _map_domain_error("delete_agent", exc) from exc
+
+    async def restore_agent(
+        self,
+        request: RestoreAgentRequest,
+        ctx: RequestContext,
+    ) -> RestoreAgentResponse:
+        """Bring a deleted agent back; its automations stay disabled."""
+        user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
+
+        try:
+            async with open_session() as session:
+                ops = AgentOperations(session)
+                agent = await ops.restore_agent(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    agent_id=agent_id,
+                )
+                user_role = await ops.resolve_role(user_id, org_id, agent)
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, agent,
+                )
+                return RestoreAgentResponse(
+                    agent=agent_to_proto(
+                        agent,
+                        user_role=user_role,
+                        tags=tags_by_id.get(agent.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("restore_agent", exc) from exc
 
     async def upload_agent_avatar(
         self,

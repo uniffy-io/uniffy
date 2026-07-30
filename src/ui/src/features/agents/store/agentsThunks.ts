@@ -43,6 +43,8 @@ export const agentToPlain = (agent: AgentInfo) => ({
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
     imageProviderKeyId: agent.imageProviderKeyId || "",
     tagIds: agent.tags.map((t) => t.id),
+    isDeleted: agent.isDeleted,
+    deletedAt: timestampToPlain(agent.deletedAt),
     createdAt: timestampToPlain(agent.createdAt),
     updatedAt: timestampToPlain(agent.updatedAt),
 });
@@ -72,6 +74,24 @@ export const fetchAgents = createAsyncThunk<
         return response.agents.map(agentToPlain);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch agents');
+    }
+});
+
+/** The builder's deleted group. Server refuses this to non-builders. */
+export const fetchDeletedAgents = createAsyncThunk<
+    SerializedAgent[],
+    void,
+    { state: RootState; rejectValue: string }
+>('agents/fetchDeletedAgents', async (_, { getState, dispatch, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await agentsApi.listAgents({ organizationId, deletedOnly: true });
+        hydrateAgentTags(dispatch, response.agents);
+        return response.agents.map(agentToPlain);
+    } catch (error) {
+        return rejectWithValue(
+            error instanceof Error ? error.message : 'Failed to fetch deleted agents',
+        );
     }
 });
 
@@ -232,6 +252,21 @@ export const deleteAgent = createAsyncThunk<
         return agentId;
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete agent');
+    }
+});
+
+export const restoreAgent = createAsyncThunk<
+    SerializedAgent,
+    string,
+    { state: RootState; rejectValue: string }
+>('agents/restoreAgent', async (agentId, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await agentsApi.restoreAgent({ organizationId, agentId });
+        if (!response.agent) throw new Error('No agent in response');
+        return agentToPlain(response.agent);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to restore agent');
     }
 });
 

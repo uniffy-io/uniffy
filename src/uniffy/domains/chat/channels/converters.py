@@ -96,6 +96,7 @@ def channel_to_proto(
     dm_member_ids: list[str] | None = None,
     tags: list[Tag] | None = None,
     agent_folder_id: UUID | None = None,
+    agent_is_retired: bool = False,
 ) -> ProtoChatChannel:
     proto = ProtoChatChannel(
         id=str(channel.id),
@@ -121,6 +122,7 @@ def channel_to_proto(
         proto.custom_name = channel.custom_name
     if channel.agent_id is not None:
         proto.agent_id = str(channel.agent_id)
+        proto.agent_is_retired = agent_is_retired
     if agent_folder_id is not None:
         proto.agent_folder_id = str(agent_folder_id)
 

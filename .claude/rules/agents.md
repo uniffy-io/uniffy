@@ -29,6 +29,18 @@ There is no personal tier: agents, skills, automations, and provider keys are or
 
 Old `/agents/chat` links redirect to `/chat`. There is no user-facing session list anywhere.
 
+## Deletion is a retirement, not a purge
+
+`DeleteAgent` retires: the row keeps `is_deleted=true` forever because it is also the display record for every chat message the agent sent (`SenderResolver` resolves agents by id and deliberately does NOT filter deletion). Never hard-delete an agent row outside an org purge - it would strip the name and avatar off history that users still read.
+
+`delete_agent` fans out in one transaction: clears `is_default`, disables the agent's cron tasks (`is_enabled=false`, rows kept), deletes the org-for-one-agent memory tier (`agents_memories.agent_id = id`) and invalidates its bucket, drops the search row and the agent caches. Deliberately kept: `AgentChannelBinding` rows (per-conversation model/param config, so a restore comes back configured), agent DM channels, sessions, run logs, spend, skill usage, feedback, the S3 avatar, and memories the agent merely WROTE elsewhere (`created_by_agent_id` is provenance, the audience owns the entry).
+
+**Soft delete is enforced where the agent ACTS, not only where it is listed.** Four gates, all required: `mention_detector.py` joins the agent row so a deleted agent yields no invocation (no run, no typing indicator); `chat_integration/operations.py::respond_to_chat_message` re-checks for the explicit-invoke path; `CronTaskOperations.get_due_tasks` joins the agent row and `trigger_now` refuses; `ChatMessageOperations.send_message` refuses a send into an agent DM whose agent is gone. A new path that makes an agent act needs the same check.
+
+`RestoreAgent` un-deletes, re-indexes and re-caches, and leaves cron tasks disabled - a restore must never resume schedules nobody asked for. `ListAgents.deleted_only` (builder-gated) serves the builder's Deleted group; every other listing stays live-only.
+
+Frozen agent DMs: `ChatChannel.agent_is_retired` is hydrated on `ListChannels`, `ListAgentChats` and `GetChannel`, so a client renders the read-only state instead of inferring it from an agent missing off a picker (which is also true for an agent that member simply cannot see). There is no live event for an agent deleted while a DM is open; the next load renders read-only and a send is refused by the typed error.
+
 ## Sessions are internal, not user content
 
 `agents_sessions` rows back the test drawer, the AI Builder, and cron runs - chat channels are THE user conversation system. `SessionsService` is trimmed to what those need: CreateSession, GetSession, ListMessages, EditMessage, RetryMessage, SubmitMessageFeedback. There is deliberately no list/rename/archive/stats/compact RPC; do not add user-facing session surfaces without revisiting the sessions-vs-chat consolidation plan. `RerunFromMessage` and run streaming live on `RuntimeService`.

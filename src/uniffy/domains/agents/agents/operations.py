@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import String, cast, func, select
+from sqlalchemy import String, cast, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
@@ -20,6 +20,8 @@ from uniffy.core.content.members import (
 )
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.agents.cron_task import AgentCronTask
+from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.users.cache import invalidate_agent_profile
@@ -28,10 +30,12 @@ from uniffy.domains.agents.cache import (
     fetch_agent_row,
     invalidate_cached_agent,
     invalidate_cached_agent_skills,
+    invalidate_memory_index,
     set_cached_agent,
     track_agent_skill_refs,
 )
 from uniffy.domains.agents.content_policy import check_admin_content
+from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.providers.catalog import (
     provider_for_model,
     strip_unsupported_image_params,
@@ -344,15 +348,20 @@ class AgentOperations(BaseContentOperations[Agent]):
         page: int = 1,
         page_size: int = 50,
         tag_ids: list[UUID] | None = None,
+        deleted_only: bool = False,
     ) -> tuple[list[Agent], int]:
-        """List agents the user can access."""
+        """List agents the user can access.
+
+        ``deleted_only`` swaps the set for the retired rows, which is what the
+        builder's deleted group renders; the access filter still applies.
+        """
         from sqlalchemy import or_
 
         from uniffy.core.models.permissions.content_member import ContentMember
 
         query = select(Agent).where(
             Agent.organization_id == organization_id,
-            Agent.is_deleted == False,  # noqa: E712
+            Agent.is_deleted == deleted_only,
         )
 
         if group_id:
@@ -716,7 +725,12 @@ class AgentOperations(BaseContentOperations[Agent]):
         organization_id: UUID,
         agent_id: UUID,
     ) -> None:
-        """Soft-delete an agent."""
+        """Retire an agent: the row survives, everything that makes it act stops.
+
+        The row is also the display record for every chat message the agent
+        sent (``SenderResolver`` resolves agents by id without filtering
+        deletion), so it is never removed here.
+        """
         agent = await self._fetch_by_id(agent_id, organization_id)
         if agent is None:
             raise NotFoundError("Agent", agent_id)
@@ -727,9 +741,30 @@ class AgentOperations(BaseContentOperations[Agent]):
 
         agent.is_deleted = True
         agent.deleted_at = datetime.now(UTC)
-        await self.session.commit()
+        agent.is_default = False
 
-        from uniffy.core.search.indexer import build_content_urn
+        # Schedules would otherwise keep firing against an agent that can no
+        # longer answer, one failed run per tick. Rows stay for the history.
+        await self.session.execute(
+            update(AgentCronTask)
+            .where(
+                AgentCronTask.agent_id == agent_id,
+                AgentCronTask.organization_id == organization_id,
+            )
+            .values(is_enabled=False)
+        )
+
+        # The org-for-one-agent memory tier has no audience without its agent.
+        # Entries the agent WROTE into shared buckets stay: created_by_agent_id
+        # is provenance, and the audience owns them.
+        await self.session.execute(
+            delete(AgentMemory).where(
+                AgentMemory.organization_id == organization_id,
+                AgentMemory.agent_id == agent_id,
+            )
+        )
+
+        await self.session.commit()
 
         await self.search_indexer.remove(
             build_content_urn(self.content_type, agent_id), organization_id
@@ -739,10 +774,46 @@ class AgentOperations(BaseContentOperations[Agent]):
         await invalidate_agent_profile(agent_id)
         await invalidate_cached_agent(agent_id)
         await invalidate_cached_agent_skills(agent_id)
+        await invalidate_memory_index(organization_id, MemoryScopeRef.org(agent_id))
         if old_skill_ids:
             await track_agent_skill_refs(
                 agent_id, removed_skill_ids=old_skill_ids
             )
+
+    async def restore_agent(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        agent_id: UUID,
+    ) -> Agent:
+        """Bring a deleted agent back. Automations stay disabled deliberately.
+
+        A restore that silently resumed cron schedules would start runs nobody
+        asked for, so re-enabling one is a separate, explicit act.
+        """
+        agent = await self._fetch_by_id(agent_id, organization_id)
+        if agent is None:
+            raise NotFoundError("Agent", agent_id)
+
+        await require_agents_builder(self.session, user_id, organization_id)
+
+        if not agent.is_deleted:
+            return agent
+
+        agent.is_deleted = False
+        agent.deleted_at = None
+        await self.session.commit()
+        await self.session.refresh(agent)
+
+        await self._index_for_search(agent)
+        await set_cached_agent(agent)
+        await invalidate_agent_profile(agent_id)
+        skill_ids = _coerce_uuid_list(agent.enabled_skills)
+        if skill_ids:
+            await track_agent_skill_refs(agent_id, added_skill_ids=skill_ids)
+
+        return agent
 
     async def get_default_agent(
         self,

@@ -551,6 +551,35 @@ plain member (`(both products)`).
       the created agent is an ordinary org-owned row (editable, sharable,
       deletable).
 
+### Agent deletion and restore
+
+Needs a builder, a plain member who already has a DM with the agent, and an
+agent that owns at least one automation.
+
+- [ ] Builder: agent detail -> trash icon -> the dialog states that chats stay
+      readable, automations pause, and a restore is possible. Confirm -> the
+      agent leaves the Agents list and appears under "Deleted" in the sidebar,
+      greyed with a trash icon.
+- [ ] Its automations show as paused in the Automations section, and "Run now"
+      on one of them is refused with "This automation's agent was deleted".
+- [ ] Search: the agent no longer appears in global search or in an `@` mention
+      picker; a chat model picker does not offer it.
+- [ ] The member's existing DM is still in the chat sidebar, dimmed with a trash
+      icon. Opening it shows the full history with the agent's name and avatar
+      intact; the composer is replaced by a "was deleted" notice.
+- [ ] In a channel the agent belonged to: `@`-mentioning it does nothing (no
+      typing indicator, no reply, no error toast); replying to one of its old
+      messages also does nothing.
+- [ ] Deleted detail page: every field is read-only (no save on Overview,
+      Instructions or Capabilities) and the Test drawer / clone buttons are gone.
+- [ ] Restore: builder opens the deleted agent -> Restore -> it returns to the
+      Agents list, becomes editable, answers in the DM again, and appears in
+      search. Its automations stay PAUSED until re-enabled by hand.
+- [ ] Deleting the org's default agent: the default badge is gone afterwards and
+      an admin can mark another agent default.
+- [ ] Memory: an org memory bound to that one agent disappears; an org-general
+      entry the agent wrote stays, as does a member's personal entry.
+
 ### Image generation parameters
 
 - [ ] Builder: agent detail -> Overview -> Model settings -> pick an image

@@ -291,14 +291,21 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         return tasks, total
 
     async def get_due_tasks(self) -> list[AgentCronTask]:
-        """Return all enabled, non-deleted tasks with `next_run_at <= now`."""
+        """Return all enabled, non-deleted tasks with `next_run_at <= now`.
+
+        A deleted agent cannot answer, so its tasks are skipped here as well as
+        disabled on delete: without the join, a schedule whose agent went away
+        would burn one failed run per tick.
+        """
         now = datetime.now(UTC)
         result = await self.session.execute(
             select(AgentCronTask)
+            .join(Agent, Agent.id == AgentCronTask.agent_id)
             .where(
                 AgentCronTask.is_enabled == True,  # noqa: E712
                 AgentCronTask.is_deleted == False,  # noqa: E712
                 AgentCronTask.next_run_at <= now,
+                Agent.is_deleted == False,  # noqa: E712
             )
             .order_by(AgentCronTask.next_run_at.asc())
             .limit(100)
@@ -435,6 +442,12 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
             raise PermissionDeniedError(
                 "trigger", "Only the task's execution user can run it on demand"
             )
+
+        agent_deleted = await self.session.execute(
+            select(Agent.is_deleted).where(Agent.id == task.agent_id)
+        )
+        if agent_deleted.scalar_one_or_none() is not False:
+            raise ValidationError("agent", "This automation's agent was deleted")
 
         run_log = AgentRunLog(
             cron_task_id=task.id,

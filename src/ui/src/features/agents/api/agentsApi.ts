@@ -7,6 +7,7 @@ import {
     ListAgentsRequestSchema,
     UpdateAgentRequestSchema,
     DeleteAgentRequestSchema,
+    RestoreAgentRequestSchema,
     UploadAgentAvatarRequestSchema,
     DeleteAgentAvatarRequestSchema,
     PreviewSystemPromptRequestSchema,
@@ -31,6 +32,9 @@ export const agentsApi = {
     },
     deleteAgent: async (request: MessageInitShape<typeof DeleteAgentRequestSchema>) => {
         return client.deleteAgent(request);
+    },
+    restoreAgent: async (request: MessageInitShape<typeof RestoreAgentRequestSchema>) => {
+        return client.restoreAgent(request);
     },
     uploadAgentAvatar: async (request: MessageInitShape<typeof UploadAgentAvatarRequestSchema>) => {
         return client.uploadAgentAvatar(request);
