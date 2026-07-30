@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CaretDown, CaretRight, PencilSimple, PushPin, Trash } from '@phosphor-icons/react';
+import { CaretDown, CaretRight, PencilSimple, PushPin, Robot, Trash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { Badge } from '@/components/ui/badge';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
@@ -175,6 +175,12 @@ export function MemoryRow({
                         <Badge className="bg-muted text-muted-foreground border-transparent">
                             {memory.source === MemorySource.MANUAL ? 'Manual' : 'Auto-saved'}
                         </Badge>
+                        {memory.createdByAgentName && (
+                            <span className="flex items-center gap-1">
+                                <Robot size={12} />
+                                {memory.createdByAgentName}
+                            </span>
+                        )}
                         {memory.createdByName && <span>saved by {memory.createdByName}</span>}
                         <span>Read {memory.accessCount}x</span>
                         <ImportanceBar value={memory.importance} />

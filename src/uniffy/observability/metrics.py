@@ -295,6 +295,35 @@ AGENT_IMAGE_PARAM_DROPPED_TOTAL = Counter(
     ["provider", "param"],
 )
 
+AGENT_MEMORY_RECALL_RUNS_TOTAL = Counter(
+    "uniffy_agent_memory_recall_runs_total",
+    "Query-conditioned memory recall attempts per run, by outcome and query script",
+    ["outcome", "script"],
+)
+
+AGENT_MEMORY_RECALL_PROMOTED_TOTAL = Counter(
+    "uniffy_agent_memory_recall_promoted_total",
+    "Memory entries promoted to full content on the trigger turn",
+    ["script"],
+)
+
+AGENT_MEMORY_RECALL_OVERFLOW_TOTAL = Counter(
+    "uniffy_agent_memory_recall_overflow_total",
+    "Entries that scored above threshold but exceeded the promotion caps",
+    ["script"],
+)
+
+AGENT_MEMORY_RECALL_SECONDS = Histogram(
+    "uniffy_agent_memory_recall_seconds",
+    "Memory recall scoring query duration",
+)
+
+AGENT_MEMORY_READ_AFTER_NO_RECALL_TOTAL = Counter(
+    "uniffy_agent_memory_read_after_no_recall_total",
+    "memory.read hits in runs where query-conditioned recall promoted nothing",
+    ["script"],
+)
+
 
 LLM_PROVIDER_LRU_HIT_TOTAL = Counter(
     "uniffy_llm_provider_lru_hit_total",

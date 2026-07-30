@@ -1,8 +1,8 @@
 """Unit tests for audience-scoped agent memories.
 
-Covers scope routing, prompt injection shape (leak guard), tool scope
-enforcement, permission gates, pin caps, and quota validation. Mocked
-sessions throughout; no live DB or Valkey.
+Covers bucket routing, the agent-binding invariant, prompt injection shape
+(leak guard), tool scope enforcement, permission gates, pin caps, and quota
+validation. Mocked sessions throughout; no live DB or Valkey.
 """
 
 import asyncio
@@ -64,9 +64,10 @@ def _memory(scope=MemoryScope.USER, **overrides):
         "session_id": uuid4() if scope is MemoryScope.SESSION else None,
     }
     defaults = dict(
-        agent_id=uuid4(),
+        agent_id=uuid4() if scope is MemoryScope.ORG else None,
         organization_id=uuid4(),
         created_by_user_id=uuid4(),
+        created_by_agent_id=uuid4(),
         scope=scope.value,
         key="k",
         description="d",
@@ -115,7 +116,8 @@ class TestScopeRouting:
 
     def test_direct_session_routes_to_user(self):
         ref = self._resolve(SessionDestination(session_id=uuid4()), session_kind="direct")
-        assert ref == MemoryScopeRef(MemoryScope.USER, USER_ID)
+        assert ref == MemoryScopeRef.user(USER_ID)
+        assert ref.agent_id is None
 
     def test_cron_session_routes_to_user(self):
         ref = self._resolve(SessionDestination(session_id=uuid4()), session_kind="cron")
@@ -124,12 +126,12 @@ class TestScopeRouting:
     def test_group_session_routes_to_session(self):
         sid = uuid4()
         ref = self._resolve(SessionDestination(session_id=sid), session_kind="group")
-        assert ref == MemoryScopeRef(MemoryScope.SESSION, sid)
+        assert ref == MemoryScopeRef.session(sid)
 
     def test_global_session_routes_to_session(self):
         sid = uuid4()
         ref = self._resolve(SessionDestination(session_id=sid), session_kind="global")
-        assert ref == MemoryScopeRef(MemoryScope.SESSION, sid)
+        assert ref == MemoryScopeRef.session(sid)
 
     def test_agent_dm_routes_to_user(self):
         channel = ChatChannel(
@@ -144,7 +146,7 @@ class TestScopeRouting:
             channel_id=channel.id, agent_id=uuid4(), trigger_message_id=uuid4()
         )
         ref = self._resolve(dest, channel=channel)
-        assert ref == MemoryScopeRef(MemoryScope.USER, USER_ID)
+        assert ref == MemoryScopeRef.user(USER_ID)
 
     def test_group_dm_routes_to_channel(self):
         channel = ChatChannel(
@@ -159,7 +161,7 @@ class TestScopeRouting:
             channel_id=channel.id, agent_id=uuid4(), trigger_message_id=uuid4()
         )
         ref = self._resolve(dest, channel=channel)
-        assert ref == MemoryScopeRef(MemoryScope.CHANNEL, channel.id)
+        assert ref == MemoryScopeRef.channel(channel.id)
 
     def test_public_channel_routes_to_channel(self):
         channel = ChatChannel(
@@ -173,7 +175,7 @@ class TestScopeRouting:
             channel_id=channel.id, agent_id=uuid4(), trigger_message_id=uuid4()
         )
         ref = self._resolve(dest, channel=channel)
-        assert ref == MemoryScopeRef(MemoryScope.CHANNEL, channel.id)
+        assert ref == MemoryScopeRef.channel(channel.id)
 
 
 USER_ID = uuid4()
@@ -257,8 +259,24 @@ class TestScopeHelpers:
             cols = scope_subject_columns(MemoryScopeRef(scope, sid))
             assert cols[column] == sid
             assert sum(v is not None for v in cols.values()) == 1
-        org_cols = scope_subject_columns(MemoryScopeRef(MemoryScope.ORG))
+        org_cols = scope_subject_columns(MemoryScopeRef.org())
         assert all(v is None for v in org_cols.values())
+
+    def test_org_binding_rides_the_agent_column(self):
+        agent_id = uuid4()
+        cols = scope_subject_columns(MemoryScopeRef.org(agent_id))
+        assert cols["agent_id"] == agent_id
+        assert cols["user_id"] is None
+
+    def test_only_org_memory_can_bind_to_an_agent(self):
+        for scope in (MemoryScope.USER, MemoryScope.CHANNEL, MemoryScope.SESSION):
+            with pytest.raises(ValueError):
+                MemoryScopeRef(scope, uuid4(), uuid4())
+
+    def test_cache_agent_segment_marks_shared_buckets(self):
+        assert MemoryScopeRef.user(USER_ID).cache_agent == "all"
+        agent_id = uuid4()
+        assert MemoryScopeRef.org(agent_id).cache_agent == str(agent_id)
 
     def test_scope_ref_roundtrip(self):
         for scope in MemoryScope:
@@ -267,8 +285,10 @@ class TestScopeHelpers:
             assert ref.scope is scope
             if scope is MemoryScope.ORG:
                 assert ref.subject_id is None
+                assert ref.agent_id == memory.agent_id
             else:
                 assert ref.subject_id is not None
+                assert ref.agent_id is None
 
 
 class TestTools:
@@ -292,13 +312,13 @@ class TestTools:
         assert err is not None and not err.success
 
     def test_read_requires_key_or_query(self):
-        ctx = self._ctx(memory_scope=MemoryScopeRef(MemoryScope.USER, USER_ID))
+        ctx = self._ctx(memory_scope=MemoryScopeRef.user(USER_ID))
         result = _run(_execute_memory_read(ctx, {}))
         assert not result.success
         assert "key or query" in result.error
 
     def test_read_query_mode_searches_and_bumps_counters(self):
-        ctx = self._ctx(memory_scope=MemoryScopeRef(MemoryScope.USER, USER_ID))
+        ctx = self._ctx(memory_scope=MemoryScopeRef.user(USER_ID))
         rows = [_memory(MemoryScope.USER, key="deploy_steps", content="use blue-green")]
         search_result = MagicMock()
         search_result.scalars.return_value.all.return_value = rows
@@ -315,7 +335,7 @@ class TestTools:
 
     def test_save_never_writes_user_scope_from_channel_run(self):
         """Poisoning guard: the executor passes the resolved ref through unchanged."""
-        channel_ref = MemoryScopeRef(MemoryScope.CHANNEL, uuid4())
+        channel_ref = MemoryScopeRef.channel(uuid4())
         ctx = self._ctx(memory_scope=channel_ref)
         captured = {}
 
@@ -341,10 +361,11 @@ class TestTools:
 
         assert result.success
         assert captured["ref"] == channel_ref
+        assert captured["created_by_agent_id"] == ctx.agent_id
         assert "channel members" in result.data
 
     def test_forget_refuses_pinned(self):
-        ref = MemoryScopeRef(MemoryScope.CHANNEL, uuid4())
+        ref = MemoryScopeRef.channel(uuid4())
         ctx = self._ctx(memory_scope=ref)
         pinned_row = _memory(MemoryScope.CHANNEL, pinned=True)
         ctx.session.execute.return_value = _scalar_result(pinned_row)
@@ -353,15 +374,109 @@ class TestTools:
         assert "pinned" in result.error
         ctx.session.delete.assert_not_called()
 
-    def test_read_filters_org_scope_is_surface_only(self):
-        ctx = self._ctx(memory_scope=MemoryScopeRef(MemoryScope.ORG))
-        filters = _read_filters(ctx, ctx.memory_scope)
-        assert len(filters) > 1
-
     def test_read_filters_surface_scope_is_one_or_clause(self):
-        ctx = self._ctx(memory_scope=MemoryScopeRef(MemoryScope.USER, USER_ID))
+        ctx = self._ctx(memory_scope=MemoryScopeRef.user(USER_ID))
         filters = _read_filters(ctx, ctx.memory_scope)
         assert len(filters) == 1
+
+    def test_read_set_spans_surface_and_both_org_tiers(self):
+        ctx = self._ctx(memory_scope=MemoryScopeRef.user(USER_ID))
+        clause = str(_read_filters(ctx, ctx.memory_scope)[0].compile(
+            compile_kwargs={"literal_binds": True}
+        ))
+        assert ctx.agent_id.hex in clause
+        assert clause.count("agents_memories.scope = 'org'") == 2
+
+
+class TestSaveAudience:
+    """`audience` maps a named audience to a writable bucket or refuses loudly."""
+
+    def _ctx(self, memory_scope):
+        session = MagicMock()
+        session.execute = AsyncMock()
+        session.commit = AsyncMock()
+        return ToolContext(
+            session=session,
+            user_id=USER_ID,
+            organization_id=ORG_ID,
+            agent_id=uuid4(),
+            memory_scope=memory_scope,
+        )
+
+    def _save(self, ctx, audience, captured=None):
+        class FakeOps:
+            def __init__(self, session):
+                pass
+
+            async def save_from_tool(self, **kwargs):
+                if captured is not None:
+                    captured.update(kwargs)
+                return _memory(MemoryScope.ORG, key="k"), True
+
+        original = memory_ops_mod.MemoryOperations
+        memory_ops_mod.MemoryOperations = FakeOps
+        try:
+            return _run(
+                _execute_memory_save(
+                    ctx,
+                    {
+                        "key": "k",
+                        "description": "d",
+                        "content": "c",
+                        "audience": audience,
+                    },
+                )
+            )
+        finally:
+            memory_ops_mod.MemoryOperations = original
+
+    def test_org_audience_refused_for_non_builder(self, monkeypatch):
+        import uniffy.domains.agents.access as access_mod
+
+        async def not_builder(session, user_id, organization_id):
+            return False
+
+        monkeypatch.setattr(access_mod, "is_agents_builder", not_builder)
+        captured = {}
+        result = self._save(self._ctx(MemoryScopeRef.user(USER_ID)), "organization", captured)
+        assert not result.success
+        assert "builder" in result.error
+        assert "Nothing was saved" in result.error
+        assert captured == {}
+
+    def test_org_audience_builder_saves_org_general(self, monkeypatch):
+        import uniffy.domains.agents.access as access_mod
+
+        async def builder(session, user_id, organization_id):
+            return True
+
+        monkeypatch.setattr(access_mod, "is_agents_builder", builder)
+        captured = {}
+        result = self._save(self._ctx(MemoryScopeRef.user(USER_ID)), "organization", captured)
+        assert result.success
+        assert captured["ref"] == MemoryScopeRef.org()
+        assert captured["ref"].agent_id is None
+
+    def test_personal_audience_refused_in_shared_space(self):
+        captured = {}
+        result = self._save(self._ctx(MemoryScopeRef.channel(uuid4())), "personal", captured)
+        assert not result.success
+        assert "1:1" in result.error
+        assert captured == {}
+
+    def test_personal_audience_in_dm_is_the_surface(self):
+        surface = MemoryScopeRef.user(USER_ID)
+        captured = {}
+        result = self._save(self._ctx(surface), "personal", captured)
+        assert result.success
+        assert captured["ref"] == surface
+
+    def test_invalid_audience_is_an_error(self):
+        captured = {}
+        result = self._save(self._ctx(MemoryScopeRef.user(USER_ID)), "everyone", captured)
+        assert not result.success
+        assert "audience" in result.error.lower()
+        assert captured == {}
 
 
 class TestValidation:
@@ -386,11 +501,7 @@ class TestValidation:
         session.execute = AsyncMock(return_value=_scalar_result(MAX_MEMORIES_PER_SCOPE))
         ops = MemoryOperations(session)
         with pytest.raises(ValidationError):
-            _run(
-                ops._check_quota(
-                    uuid4(), ORG_ID, MemoryScopeRef(MemoryScope.USER, USER_ID)
-                )
-            )
+            _run(ops._check_quota(ORG_ID, MemoryScopeRef.user(USER_ID)))
 
 
 class TestPermissionGates:
@@ -410,8 +521,7 @@ class TestPermissionGates:
                 ops._require_view(
                     user_id=USER_ID,
                     organization_id=ORG_ID,
-                    agent_id=uuid4(),
-                    ref=MemoryScopeRef(MemoryScope.USER, uuid4()),
+                    ref=MemoryScopeRef.user(uuid4()),
                 )
             )
 
@@ -542,24 +652,22 @@ class TestMemoryBridge:
             runtime_ops_mod.is_personal_bridge_enabled = original_bridge
 
     def test_bridge_only_applies_to_shared_surfaces(self):
-        assert self._resolve(MemoryScopeRef(MemoryScope.USER, USER_ID)) is None
-        assert self._resolve(MemoryScopeRef(MemoryScope.ORG)) is None
+        assert self._resolve(MemoryScopeRef.user(USER_ID)) is None
+        assert self._resolve(MemoryScopeRef.org()) is None
 
     def test_bridge_requires_org_gate(self):
-        ref = MemoryScopeRef(MemoryScope.CHANNEL, uuid4())
-        assert self._resolve(ref, org_allows=False) is None
+        assert self._resolve(MemoryScopeRef.channel(uuid4()), org_allows=False) is None
 
     def test_bridge_requires_opt_in(self):
-        ref = MemoryScopeRef(MemoryScope.CHANNEL, uuid4())
-        assert self._resolve(ref, opted_in=False) is None
+        assert self._resolve(MemoryScopeRef.channel(uuid4()), opted_in=False) is None
 
     def test_bridge_grants_user_read_ref(self):
-        ref = MemoryScopeRef(MemoryScope.SESSION, uuid4())
-        assert self._resolve(ref) == MemoryScopeRef(MemoryScope.USER, USER_ID)
+        ref = MemoryScopeRef.session(uuid4())
+        assert self._resolve(ref) == MemoryScopeRef.user(USER_ID)
 
     def test_bridge_never_changes_write_scope(self):
         """With the bridge active, saves still target the surface scope."""
-        channel_ref = MemoryScopeRef(MemoryScope.CHANNEL, uuid4())
+        channel_ref = MemoryScopeRef.channel(uuid4())
         session = MagicMock()
         ctx = ToolContext(
             session=session,
@@ -567,7 +675,7 @@ class TestMemoryBridge:
             organization_id=ORG_ID,
             agent_id=uuid4(),
             memory_scope=channel_ref,
-            memory_bridge_scope=MemoryScopeRef(MemoryScope.USER, USER_ID),
+            memory_bridge_scope=MemoryScopeRef.user(USER_ID),
         )
         captured = {}
 
@@ -601,7 +709,11 @@ class TestHandlersScopeParse:
 
         with pytest.raises((ConnectError, ValidationError)):
             _parse_scope_ref(
-                MEMORY_SCOPE_CHANNEL, channel_id=None, session_id=None, user_id=USER_ID
+                MEMORY_SCOPE_CHANNEL,
+                channel_id=None,
+                session_id=None,
+                agent_id=None,
+                user_id=USER_ID,
             )
 
     def test_unspecified_defaults_to_caller_user_scope(self):
@@ -610,6 +722,39 @@ class TestHandlersScopeParse:
         from uniffy.domains.agents.memories.handlers import _parse_scope_ref
 
         ref = _parse_scope_ref(
-            MEMORY_SCOPE_UNSPECIFIED, channel_id=None, session_id=None, user_id=USER_ID
+            MEMORY_SCOPE_UNSPECIFIED,
+            channel_id=None,
+            session_id=None,
+            agent_id=None,
+            user_id=USER_ID,
         )
-        assert ref == MemoryScopeRef(MemoryScope.USER, USER_ID)
+        assert ref == MemoryScopeRef.user(USER_ID)
+
+    def test_agent_binding_rejected_outside_org_scope(self):
+        from uniffy_proto.agents.v1.memories_pb2 import MEMORY_SCOPE_USER
+
+        from uniffy.domains.agents.memories.handlers import _parse_scope_ref
+
+        with pytest.raises(ValidationError):
+            _parse_scope_ref(
+                MEMORY_SCOPE_USER,
+                channel_id=None,
+                session_id=None,
+                agent_id=str(uuid4()),
+                user_id=USER_ID,
+            )
+
+    def test_org_scope_keeps_the_agent_binding(self):
+        from uniffy_proto.agents.v1.memories_pb2 import MEMORY_SCOPE_ORG
+
+        from uniffy.domains.agents.memories.handlers import _parse_scope_ref
+
+        agent_id = uuid4()
+        ref = _parse_scope_ref(
+            MEMORY_SCOPE_ORG,
+            channel_id=None,
+            session_id=None,
+            agent_id=str(agent_id),
+            user_id=USER_ID,
+        )
+        assert ref == MemoryScopeRef.org(agent_id)

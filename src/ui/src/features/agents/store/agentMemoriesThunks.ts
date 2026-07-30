@@ -4,17 +4,24 @@ import type { RootState } from '@/app/store';
 import type { MemoryInfo } from '@uniffy/proto/agents/v1/memories_pb';
 import { MemoryCategory, MemoryScope } from '@uniffy/proto/agents/v1/memories_pb';
 
+/**
+ * A memory bucket: an audience plus its agent binding. `agentId` is only
+ * meaningful on organization memory, where it narrows to one agent's entries;
+ * everywhere else the audience shares one bucket across all agents.
+ */
 export interface MemoryScopeSubject {
     scope: MemoryScope;
     subjectId?: string;
+    agentId?: string;
 }
 
 export const memoryScopeKey = (subject: MemoryScopeSubject): string =>
-    `${subject.scope}:${subject.subjectId ?? 'org'}`;
+    `${subject.scope}:${subject.subjectId ?? 'org'}:${subject.agentId ?? 'all'}`;
 
-const subjectIds = (subject: MemoryScopeSubject) => ({
+const bucketIds = (subject: MemoryScopeSubject) => ({
     channelId: subject.scope === MemoryScope.CHANNEL ? subject.subjectId : undefined,
     sessionId: subject.scope === MemoryScope.SESSION ? subject.subjectId : undefined,
+    agentId: subject.scope === MemoryScope.ORG ? subject.agentId : undefined,
 });
 
 const getOrganizationId = (state: RootState): string => {
@@ -45,6 +52,8 @@ export const memoryToPlain = (memory: MemoryInfo) => ({
     source: memory.source,
     createdByUserId: memory.createdByUserId,
     createdByName: memory.createdByName,
+    createdByAgentId: memory.createdByAgentId,
+    createdByAgentName: memory.createdByAgentName,
     channelId: memory.channelId,
     sessionId: memory.sessionId,
     createdAt: timestampToPlain(memory.createdAt),
@@ -55,16 +64,15 @@ export type SerializedMemory = ReturnType<typeof memoryToPlain>;
 
 export const fetchMemories = createAsyncThunk<
     { scopeKey: string; memories: SerializedMemory[]; totalCount: number },
-    MemoryScopeSubject & { agentId: string; category?: number; search?: string },
+    MemoryScopeSubject & { category?: number; search?: string },
     { state: RootState; rejectValue: string }
 >('agentMemories/fetchMemories', async (params, { getState, rejectWithValue }) => {
     try {
         const organizationId = getOrganizationId(getState());
         const response = await memoriesApi.listMemories({
             organizationId,
-            agentId: params.agentId,
             scope: params.scope,
-            ...subjectIds(params),
+            ...bucketIds(params),
             category: params.category !== undefined ? params.category as MemoryCategory : undefined,
             search: params.search || undefined,
         });
@@ -82,7 +90,6 @@ export const fetchMemories = createAsyncThunk<
 export const createMemory = createAsyncThunk<
     { scopeKey: string; memory: SerializedMemory },
     MemoryScopeSubject & {
-        agentId: string;
         key: string;
         description: string;
         content: string;
@@ -95,9 +102,8 @@ export const createMemory = createAsyncThunk<
         const organizationId = getOrganizationId(getState());
         const response = await memoriesApi.createMemory({
             organizationId,
-            agentId: params.agentId,
             scope: params.scope,
-            ...subjectIds(params),
+            ...bucketIds(params),
             key: params.key,
             description: params.description,
             content: params.content,

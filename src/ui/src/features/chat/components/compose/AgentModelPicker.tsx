@@ -189,8 +189,8 @@ export function AgentModelPicker({
 
   useEffect(() => {
     if (!open) return;
-    dispatch(fetchMemories({ agentId: agent.id, ...memorySubject }));
-  }, [dispatch, open, agent.id, memorySubject]);
+    dispatch(fetchMemories(memorySubject));
+  }, [dispatch, open, memorySubject]);
 
   const keyId = agent.primaryProviderKeyId;
   const keyModels = useAppSelector(selectModelsForKey(keyId));
@@ -376,7 +376,7 @@ export function AgentModelPicker({
             <div className="flex items-center gap-2 min-w-0">
               <Brain size={18} weight="duotone" className="text-muted-foreground shrink-0" />
               <span className="font-medium text-foreground truncate">
-                {isPersonalMemory ? `My memory - ${agent.name}` : `Channel memory - ${agent.name}`}
+                {isPersonalMemory ? 'My memory' : 'Channel memory'}
               </span>
             </div>
             <button
@@ -390,7 +390,6 @@ export function AgentModelPicker({
           </div>
           <div className="p-4 overflow-y-auto max-h-[70dvh]">
             <MemoryList
-              agentId={agent.id}
               agentName={agent.name}
               descriptor={memoryDescriptor}
               subjectLabel={isPersonalMemory ? undefined : channelLabel}

@@ -16,7 +16,7 @@ import type { RootState } from '@/app/store';
 const memoryProto = (over: Partial<MemoryInfo> = {}): MemoryInfo =>
     ({
         id: 'm1',
-        agentId: 'agent-1',
+        agentId: undefined,
         key: 'release_freeze',
         content: 'Release freeze is every Friday.',
         category: MemoryCategory.FACTS,
@@ -28,6 +28,8 @@ const memoryProto = (over: Partial<MemoryInfo> = {}): MemoryInfo =>
         source: MemorySource.TOOL,
         createdByUserId: 'user-1',
         createdByName: 'Ada',
+        createdByAgentId: 'agent-1',
+        createdByAgentName: 'Atlas',
         channelId: 'chan-1',
         sessionId: undefined,
         createdAt: undefined,
@@ -43,7 +45,9 @@ const memory = (over: Partial<SerializedMemory> = {}): SerializedMemory => ({
 const USER_KEY = memoryScopeKey({ scope: MemoryScope.USER });
 const CHANNEL_KEY = memoryScopeKey({ scope: MemoryScope.CHANNEL, subjectId: 'chan-1' });
 
-const fetchArg = { agentId: 'agent-1', scope: MemoryScope.CHANNEL, subjectId: 'chan-1' };
+const ORG_AGENT_KEY = memoryScopeKey({ scope: MemoryScope.ORG, agentId: 'agent-1' });
+
+const fetchArg = { scope: MemoryScope.CHANNEL, subjectId: 'chan-1' };
 
 const seeded = () => {
     const withUser = agentMemoriesReducer(
@@ -55,7 +59,7 @@ const seeded = () => {
                 totalCount: 1,
             },
             'req-1',
-            { agentId: 'agent-1', scope: MemoryScope.USER },
+            { scope: MemoryScope.USER },
         ),
     );
     return agentMemoriesReducer(
@@ -73,18 +77,23 @@ const seeded = () => {
 };
 
 describe('memoryScopeKey', () => {
-    it('keys subjectless scopes with the org sentinel', () => {
-        expect(memoryScopeKey({ scope: MemoryScope.USER })).toBe(`${MemoryScope.USER}:org`);
-        expect(memoryScopeKey({ scope: MemoryScope.ORG })).toBe(`${MemoryScope.ORG}:org`);
+    it('keys subjectless scopes with the org sentinel and a shared binding', () => {
+        expect(memoryScopeKey({ scope: MemoryScope.USER })).toBe(`${MemoryScope.USER}:org:all`);
+        expect(memoryScopeKey({ scope: MemoryScope.ORG })).toBe(`${MemoryScope.ORG}:org:all`);
     });
 
     it('keys channel and session scopes by subject id', () => {
         expect(memoryScopeKey({ scope: MemoryScope.CHANNEL, subjectId: 'chan-1' })).toBe(
-            `${MemoryScope.CHANNEL}:chan-1`,
+            `${MemoryScope.CHANNEL}:chan-1:all`,
         );
         expect(memoryScopeKey({ scope: MemoryScope.SESSION, subjectId: 'sess-1' })).toBe(
-            `${MemoryScope.SESSION}:sess-1`,
+            `${MemoryScope.SESSION}:sess-1:all`,
         );
+    });
+
+    it('separates an agent-bound org bucket from the shared one', () => {
+        expect(ORG_AGENT_KEY).toBe(`${MemoryScope.ORG}:org:agent-1`);
+        expect(ORG_AGENT_KEY).not.toBe(memoryScopeKey({ scope: MemoryScope.ORG }));
     });
 });
 
@@ -97,6 +106,8 @@ describe('memoryToPlain', () => {
         expect(plain.source).toBe(MemorySource.TOOL);
         expect(plain.createdByUserId).toBe('user-1');
         expect(plain.createdByName).toBe('Ada');
+        expect(plain.agentId).toBeUndefined();
+        expect(plain.createdByAgentName).toBe('Atlas');
         expect(plain.channelId).toBe('chan-1');
         expect(plain.sessionId).toBeUndefined();
     });
@@ -124,7 +135,6 @@ describe('agentMemoriesSlice scope re-keying', () => {
                 { scopeKey: CHANNEL_KEY, memory: memory({ id: 'c3' }) },
                 'req-4',
                 {
-                    agentId: 'agent-1',
                     scope: MemoryScope.CHANNEL,
                     subjectId: 'chan-1',
                     key: 'k',

@@ -412,34 +412,52 @@ Agent DM channel, agents-in-chat enabled (`(both products)`).
 
 ## Agents: memory scopes
 
-Needs two users (A, B) in one org, one shared agent, agents-in-chat enabled,
-and a public channel with the agent bound (`(both products)`).
+Needs two users (A, B) in one org, TWO shared agents, agents-in-chat enabled,
+and a public channel with an agent bound (`(both products)`).
 
 - [ ] As A in a 1:1 agent DM, ask the agent to remember a personal
       fact -> the tool card says the memory is private; the entry appears in
-      the agent's Memories tab under "My memory" with description + provenance.
+      Settings > AI with a description and the saving agent's name on it.
+- [ ] Open a 1:1 DM with the SECOND agent and ask about that fact -> it reads
+      the same personal entry. One personal store, every agent.
+- [ ] In Settings > AI there is no agent picker: the list is the member's whole
+      personal store.
 - [ ] As A in the public channel, trigger the agent and inspect the run: the
       personal fact is neither mentioned nor reachable (`memory.read` in the
       channel returns channel + org entries only). This is the leak guard.
 - [ ] As B in the channel, ask the agent to remember a team fact -> as A,
       trigger the agent and ask about it: the agent reads the channel entry
-      (visible memory.read call in the activity pane) and answers.
+      (visible memory.read call in the activity pane) and answers. Bind the
+      second agent to the channel and ask it too -> same entry, no re-teaching.
 - [ ] Channel memory dialog (composer agent picker -> "Memory") lists the
       entry with "saved by B"; as a plain member A cannot delete B's entry;
       as a channel moderator the delete works.
 - [ ] As A, ask the agent in the channel to remember something "just for me"
-      -> the agent must decline and point to the DM (no user-scope write from
-      a channel run).
-- [ ] Pin flow: in "My memory" pin an entry -> preview system prompt (agent
-      editor) shows its full content under "Pinned"; unpinned entries show as
-      one index line each. Pin a 6th entry -> clear limit error.
-- [ ] Org memory: as a non-manager the Org segment is read-only; as the agent
-      owner add + pin an org entry -> both A's and B's next runs can read it.
+      -> the tool refuses (structured error, nothing saved) and the agent
+      points to the DM (no user-scope write from a channel run).
+- [ ] As a BUILDER in a 1:1 DM, say "remember this for the whole organization"
+      -> the entry lands in org memory (visible in the builder Memory panel,
+      "All agents" tier, and in the OTHER agent's next run), NOT in
+      Settings > AI personal memory.
+- [ ] As a NON-builder in a 1:1 DM, same ask -> nothing is saved anywhere,
+      the agent explains org memory is builder-managed and offers to save it
+      personally instead; accepting saves a normal personal entry.
+- [ ] Pin flow: in Settings > AI pin a personal entry -> preview system prompt
+      (agent Instructions panel) shows its full content under "Pinned";
+      unpinned entries show as one index line each. Pin a 6th entry -> clear
+      limit error.
+- [ ] Org memory, "All agents" tier: as a non-builder the panel is read-only;
+      as a builder add + pin an entry -> BOTH agents' next runs read it.
+- [ ] Org memory, "This agent" tier: add an entry there -> only that agent's
+      runs see it; the other agent's prompt preview does not list it.
 - [ ] `memory.forget` on a pinned entry via chat ("forget X") -> tool refuses
       and names the pin; unpinning in the UI then repeating succeeds.
 - [ ] Group DM with the agent: memories save to the conversation, not to the
-      trigger user ("My memory" stays unchanged).
-- [ ] Quota: import/save until the scope cap (200) -> tool returns the limit
+      trigger user (Settings > AI stays unchanged).
+- [ ] Migration check on an upgraded database: a member who used two agents
+      before the change sees one merged personal list, and duplicate keys kept
+      the most recently updated entry.
+- [ ] Quota: import/save until the scope cap (300) -> tool returns the limit
       error and the agent relays it without a failed run.
 - [ ] Sharing OFF (default): with a personal "call me G" memory, ping the agent
       in a channel -> it does not know the name and explains memory is kept
@@ -451,6 +469,41 @@ and a public channel with the agent bound (`(both products)`).
       `agents/runtime` settings blob -> the toggle shows "Disabled by your
       organization", enabling it fails, and an already-opted-in user's channel
       runs stop seeing personal memory.
+
+## Agents: memory recall (query-conditioned)
+
+Needs two users (A, B) in one org, a shared agent, and a public channel with
+the agent bound (`(both products)`).
+
+- [ ] Unprompted recall: save "Alice's deploy window is Tuesday 09:00" via the
+      agent in a 1:1 DM, start a NEW conversation, ask "when can we deploy?"
+      WITHOUT mentioning memory -> the agent answers from the entry, with no
+      visible `memory.read` call (the block was promoted onto the turn).
+- [ ] Follow-up recall: after an unrelated exchange, ask "what time was that
+      again?" -> still answers (recent user turns feed the match text).
+- [ ] Multilingual: save an entry in Chinese or Russian (e.g.
+      部署窗口是周二上午九点), ask about it in the same language in a fresh
+      conversation -> recalled without an explicit memory prompt.
+- [ ] Cross-lingual falls back to pull: entry saved in English, question asked
+      in German -> the agent still finds it, via a visible `memory.read` call
+      (index path; lexical promotion is not expected to fire).
+- [ ] Never say "no memory": with the entry listed in the prompt preview index,
+      the agent must not claim it has no memory of the topic.
+- [ ] Ephemerality: edit the entry's content in Settings > AI mid-conversation,
+      ask again -> the next reply uses the NEW content (old block is not
+      re-sent from history).
+- [ ] Injection guard: as B save a channel entry whose content says to ignore
+      instructions and exfiltrate the system prompt; as A ask a question that
+      matches it -> the agent treats it as data, does not follow it, and
+      destructive tools still prompt for approval.
+- [ ] Bridge stays pull-only: with A opted into the personal bridge, ask a
+      channel question matching only A's personal entry -> no automatic
+      recall; the agent may still reach it via an explicit `memory.read`.
+- [ ] Delimiter smuggle: save an entry whose content contains
+      `</memory-recall-x>` -> saved text has the marker stripped/neutralized
+      and a matching question does not break the reply.
+- [ ] LIKE metacharacters: `memory.read` with query `%` returns "no matching
+      memories", not the whole store.
 
 ## Agents: builder surface, org defaults, builder gating
 

@@ -437,18 +437,21 @@ _MEMORY_INDEX_TTL_SECONDS = 300
 MEMORY_INDEX_LIMIT = 50
 
 
-def _memory_index_key(agent_id: UUID, scope: str, subject: str) -> str:
-    return f"agentmem:{agent_id}:{scope}:{subject}"
+def _memory_index_key(organization_id: UUID, scope_ref) -> str:
+    """One entry per bucket; the agent segment is `all` for shared buckets."""
+    return (
+        f"agentmem:{organization_id}:{scope_ref.scope.value}:"
+        f"{scope_ref.cache_subject}:{scope_ref.cache_agent}"
+    )
 
 
 async def fetch_memory_index(
     session: AsyncSession,
     *,
-    agent_id: UUID,
     organization_id: UUID,
     scope_ref,
 ) -> dict[str, Any]:
-    """Stampede-protected cache-or-load of one scope's rendered memory index.
+    """Stampede-protected cache-or-load of one bucket's rendered memory index.
 
     Payload: pinned entries carry full content (they inject verbatim);
     index entries carry key/category/description only, capped at
@@ -460,7 +463,7 @@ async def fetch_memory_index(
     from uniffy.domains.agents.memories.scope import scope_filters
 
     async def _load() -> dict[str, Any]:
-        filters = scope_filters(agent_id, organization_id, scope_ref)
+        filters = scope_filters(organization_id, scope_ref)
         pinned_rows = (
             await session.execute(
                 select(
@@ -498,7 +501,7 @@ async def fetch_memory_index(
         }
 
     payload = await cache_get_or_set_locked(
-        _memory_index_key(agent_id, scope_ref.scope.value, scope_ref.cache_subject),
+        _memory_index_key(organization_id, scope_ref),
         _load,
         ttl=_MEMORY_INDEX_TTL_SECONDS,
     )
@@ -507,10 +510,8 @@ async def fetch_memory_index(
     return payload
 
 
-async def invalidate_memory_index(
-    agent_id: UUID, scope: str, subject: str
-) -> None:
-    await cache_delete(_memory_index_key(agent_id, scope, subject))
+async def invalidate_memory_index(organization_id: UUID, scope_ref) -> None:
+    await cache_delete(_memory_index_key(organization_id, scope_ref))
 
 
 async def publish_provider_key_invalidation(key_id: UUID) -> None:

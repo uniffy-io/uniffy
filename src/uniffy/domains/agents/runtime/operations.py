@@ -35,6 +35,12 @@ from uniffy.domains.agents.content_policy import check_user_message
 from uniffy.domains.agents.currency import convert as convert_currency
 from uniffy.domains.agents.currency import get_display_currency
 from uniffy.domains.agents.memories.bridge import is_personal_bridge_enabled
+from uniffy.domains.agents.memories.recall import (
+    attach_recall_block,
+    build_memory_recall,
+    build_recall_query,
+    render_recall_block,
+)
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.pricing import PRICING_CURRENCY, compute_text_cost, get_pricing
 from uniffy.domains.agents.providers.base import (
@@ -560,6 +566,19 @@ class RuntimeOperations:
         # 11b. Resolve any content blocks that need S3 downloads
         await _resolve_pending_content_blocks(llm_messages)
 
+        # 11c. Ephemeral query-conditioned recall on the trigger turn: rides
+        # only llm_messages, never the stored row, so no turn re-quotes it.
+        recall_block = await self._build_memory_recall_block(
+            agent_id=agent_session.agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            context_messages=context_messages,
+            content=content,
+        )
+        recall_promoted = bool(
+            recall_block and attach_recall_block(llm_messages, recall_block)
+        )
+
         # 12. Store user message with enriched content (file text baked in
         # so the LLM retains file context on subsequent turns).
         stored_content = _build_stored_content(content, files)
@@ -601,6 +620,7 @@ class RuntimeOperations:
                     user_timezone=user_timezone,
                     memory_scope=memory_scope,
                     memory_bridge_scope=memory_bridge,
+                    memory_recall_promoted=recall_promoted,
                     is_test_session=agent_session.is_test,
                     image_params=image_config.params if image_config else {},
                     image_max_resolution=(
@@ -1308,6 +1328,21 @@ class RuntimeOperations:
         # Resolve any content blocks that need S3 downloads
         await _resolve_pending_content_blocks(llm_messages)
 
+        # Ephemeral query-conditioned recall on the trigger turn: rides only
+        # llm_messages, never a stored row and never the client stream. On the
+        # rerun path the anchor is the newest user turn in context, so the
+        # block lands on it via the same attach.
+        recall_block = await self._build_memory_recall_block(
+            agent_id=agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            context_messages=context_messages,
+            content=content,
+        )
+        recall_promoted = bool(
+            recall_block and attach_recall_block(llm_messages, recall_block)
+        )
+
         if rerun_anchor is None:
             # 11. Store user message with enriched content (file text baked in
             # so the LLM retains file context on subsequent turns).
@@ -1423,6 +1458,7 @@ class RuntimeOperations:
                 user_timezone=user_timezone,
                 memory_scope=memory_scope,
                 memory_bridge_scope=memory_bridge,
+                memory_recall_promoted=recall_promoted,
                 is_test_session=agent_session.is_test if agent_session else False,
                 image_params=image_config.params if image_config else {},
                 image_max_resolution=(
@@ -1999,8 +2035,8 @@ class RuntimeOperations:
         """
         if isinstance(destination, SessionDestination):
             if session_kind in ("group", "global"):
-                return MemoryScopeRef(MemoryScope.SESSION, destination.session_id)
-            return MemoryScopeRef(MemoryScope.USER, user_id)
+                return MemoryScopeRef.session(destination.session_id)
+            return MemoryScopeRef.user(user_id)
 
         from uniffy.domains.chat.cache import get_or_load_channel
 
@@ -2012,17 +2048,23 @@ class RuntimeOperations:
             and channel.is_agent_dm
             and channel.channel_type == ChannelType.DIRECT
         ):
-            return MemoryScopeRef(MemoryScope.USER, user_id)
-        return MemoryScopeRef(MemoryScope.CHANNEL, destination.channel_id)
+            return MemoryScopeRef.user(user_id)
+        return MemoryScopeRef.channel(destination.channel_id)
 
     _MEMORY_SCOPE_LABELS = {
-        MemoryScope.USER: "Personal memory for this user (private to them)",
+        MemoryScope.USER: (
+            "Personal memory for this user (private to them; kept with every "
+            "assistant they talk to)"
+        ),
         MemoryScope.CHANNEL: "Channel memory (shared with all members of this channel)",
         MemoryScope.SESSION: "Session memory (shared with participants of this session)",
         MemoryScope.ORG: (
             "Organization memory (curated by agent managers; visible to all members)"
         ),
     }
+    _MEMORY_AGENT_ORG_LABEL = (
+        "Organization memory kept for you specifically (curated by agent managers)"
+    )
     _MEMORY_BRIDGE_LABEL = (
         "Personal memory of the user who triggered this run (they opted in to "
         "using it in shared spaces; replies here are visible to others and may "
@@ -2051,7 +2093,7 @@ class RuntimeOperations:
         except Exception:
             logger.opt(exception=True).warning("Memory bridge resolution failed")
             return None
-        return MemoryScopeRef(MemoryScope.USER, user_id)
+        return MemoryScopeRef.user(user_id)
 
     async def _build_memory_context(
         self,
@@ -2061,10 +2103,11 @@ class RuntimeOperations:
         scope_ref: MemoryScopeRef,
         bridge_ref: MemoryScopeRef | None = None,
     ) -> str | None:
-        """Assemble the org + surface (+ opted-in personal) memory blocks."""
+        """Assemble the org tiers + surface (+ opted-in personal) memory blocks."""
         try:
             refs: list[tuple[MemoryScopeRef, str]] = [
-                (MemoryScopeRef(MemoryScope.ORG), self._MEMORY_SCOPE_LABELS[MemoryScope.ORG]),
+                (MemoryScopeRef.org(), self._MEMORY_SCOPE_LABELS[MemoryScope.ORG]),
+                (MemoryScopeRef.org(agent_id), self._MEMORY_AGENT_ORG_LABEL),
                 (scope_ref, self._MEMORY_SCOPE_LABELS[scope_ref.scope]),
             ]
             if bridge_ref is not None:
@@ -2073,7 +2116,6 @@ class RuntimeOperations:
             for ref, label in refs:
                 payload = await fetch_memory_index(
                     self._session,
-                    agent_id=agent_id,
                     organization_id=organization_id,
                     scope_ref=ref,
                 )
@@ -2089,6 +2131,32 @@ class RuntimeOperations:
         except Exception:
             logger.opt(exception=True).warning("Failed to build memory context")
             return None
+
+    async def _build_memory_recall_block(
+        self,
+        *,
+        agent_id: UUID,
+        organization_id: UUID,
+        scope_ref: MemoryScopeRef,
+        context_messages: list,
+        content: str,
+    ) -> str | None:
+        """Dynamic recall for the trigger turn: surface bucket + both org
+        tiers, NEVER the bridge bucket (personal memory stays pull-only in
+        shared spaces). Returns the rendered block or None.
+        """
+        query = build_recall_query(context_messages, content)
+        if not query:
+            return None
+        recall = await build_memory_recall(
+            self._session,
+            organization_id=organization_id,
+            refs=[scope_ref, MemoryScopeRef.org(), MemoryScopeRef.org(agent_id)],
+            query=query,
+        )
+        if recall is None:
+            return None
+        return render_recall_block(recall)
 
     async def _build_chat_context_for_destination(
         self,

@@ -78,10 +78,14 @@ def memory_scope_from_proto(proto_scope: int) -> MemoryScope:
     return scope
 
 
-def memory_to_proto(memory: AgentMemory, *, created_by_name: str = "") -> MemoryInfo:
+def memory_to_proto(
+    memory: AgentMemory,
+    *,
+    created_by_name: str = "",
+    created_by_agent_name: str = "",
+) -> MemoryInfo:
     info = MemoryInfo(
         id=str(memory.id),
-        agent_id=str(memory.agent_id),
         key=memory.key,
         content=memory.content,
         category=memory_category_to_proto(memory.category),
@@ -95,9 +99,14 @@ def memory_to_proto(memory: AgentMemory, *, created_by_name: str = "") -> Memory
         source=_SOURCE_TO_PROTO.get(memory.source, MEMORY_SOURCE_UNSPECIFIED),
         created_by_user_id=str(memory.created_by_user_id),
         created_by_name=created_by_name,
+        created_by_agent_name=created_by_agent_name,
     )
+    if memory.agent_id is not None:
+        info.agent_id = str(memory.agent_id)
     if memory.channel_id is not None:
         info.channel_id = str(memory.channel_id)
     if memory.session_id is not None:
         info.session_id = str(memory.session_id)
+    if memory.created_by_agent_id is not None:
+        info.created_by_agent_id = str(memory.created_by_agent_id)
     return info

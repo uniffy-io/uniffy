@@ -29,6 +29,7 @@ from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.login.user import User
 from uniffy.db import open_session
@@ -54,21 +55,27 @@ def _parse_scope_ref(
     *,
     channel_id: str | None,
     session_id: str | None,
+    agent_id: str | None,
     user_id: UUID,
 ) -> MemoryScopeRef:
+    """Only organization memory takes an agent; every other bucket is shared."""
     scope = memory_scope_from_proto(scope_value)
     try:
+        if scope is not MemoryScope.ORG and agent_id:
+            raise ValidationError(
+                "agent_id", "Only organization memory can be scoped to one agent"
+            )
         if scope is MemoryScope.USER:
-            return MemoryScopeRef(scope, user_id)
+            return MemoryScopeRef.user(user_id)
         if scope is MemoryScope.CHANNEL:
             if not channel_id:
                 raise ValidationError("channel_id", "channel_id is required for channel scope")
-            return MemoryScopeRef(scope, UUID(channel_id))
+            return MemoryScopeRef.channel(UUID(channel_id))
         if scope is MemoryScope.SESSION:
             if not session_id:
                 raise ValidationError("session_id", "session_id is required for session scope")
-            return MemoryScopeRef(scope, UUID(session_id))
-        return MemoryScopeRef(scope, None)
+            return MemoryScopeRef.session(UUID(session_id))
+        return MemoryScopeRef.org(UUID(agent_id) if agent_id else None)
     except ValueError:
         raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -86,6 +93,39 @@ async def _resolve_names(
         )
     ).all()
     return {uid: (full_name or username or "") for uid, full_name, username in rows}
+
+
+async def _resolve_agent_names(
+    session: AsyncSession, agent_ids: set[UUID]
+) -> dict[UUID, str]:
+    """Provenance labels: which agent wrote an entry the whole audience shares."""
+    if not agent_ids:
+        return {}
+    rows = (
+        await session.execute(
+            select(Agent.id, Agent.name).where(Agent.id.in_(agent_ids))  # type: ignore[attr-defined]
+        )
+    ).all()
+    return dict(rows)
+
+
+async def _to_proto_list(
+    session: AsyncSession, memories: list
+) -> list:
+    names = await _resolve_names(session, {m.created_by_user_id for m in memories})
+    agent_names = await _resolve_agent_names(
+        session, {m.created_by_agent_id for m in memories if m.created_by_agent_id}
+    )
+    return [
+        memory_to_proto(
+            m,
+            created_by_name=names.get(m.created_by_user_id, ""),
+            created_by_agent_name=agent_names.get(m.created_by_agent_id, "")
+            if m.created_by_agent_id
+            else "",
+        )
+        for m in memories
+    ]
 
 
 def _map_error(exc: Exception) -> ConnectError:
@@ -111,7 +151,6 @@ class MemoriesHandlers:
 
         try:
             org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -119,6 +158,7 @@ class MemoriesHandlers:
             request.scope,
             channel_id=request.channel_id if request.HasField("channel_id") else None,
             session_id=request.session_id if request.HasField("session_id") else None,
+            agent_id=request.agent_id if request.HasField("agent_id") else None,
             user_id=user_id,
         )
 
@@ -138,7 +178,6 @@ class MemoriesHandlers:
                 memory = await ops.create_memory(
                     user_id=user_id,
                     organization_id=org_id,
-                    agent_id=agent_id,
                     ref=ref,
                     key=request.key,
                     description=request.description,
@@ -146,13 +185,8 @@ class MemoriesHandlers:
                     category=category,
                     importance=importance,
                 )
-                names = await _resolve_names(session, {memory.created_by_user_id})
-                return CreateMemoryResponse(
-                    memory=memory_to_proto(
-                        memory,
-                        created_by_name=names.get(memory.created_by_user_id, ""),
-                    )
-                )
+                infos = await _to_proto_list(session, [memory])
+                return CreateMemoryResponse(memory=infos[0])
         except ConnectError:
             raise
         except Exception as e:
@@ -167,7 +201,6 @@ class MemoriesHandlers:
 
         try:
             org_id = UUID(request.organization_id)
-            agent_id = UUID(request.agent_id)
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid ID format")
 
@@ -175,6 +208,7 @@ class MemoriesHandlers:
             request.scope,
             channel_id=request.channel_id if request.HasField("channel_id") else None,
             session_id=request.session_id if request.HasField("session_id") else None,
+            agent_id=request.agent_id if request.HasField("agent_id") else None,
             user_id=user_id,
         )
 
@@ -199,24 +233,15 @@ class MemoriesHandlers:
                 memories, total = await ops.list_memories(
                     user_id=user_id,
                     organization_id=org_id,
-                    agent_id=agent_id,
                     ref=ref,
                     category=category,
                     search=search,
                     page=page,
                     page_size=page_size,
                 )
-                names = await _resolve_names(
-                    session, {m.created_by_user_id for m in memories}
-                )
                 total_pages = (total + page_size - 1) // page_size if total > 0 else 0
                 return ListMemoriesResponse(
-                    memories=[
-                        memory_to_proto(
-                            m, created_by_name=names.get(m.created_by_user_id, "")
-                        )
-                        for m in memories
-                    ],
+                    memories=await _to_proto_list(session, memories),
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,
@@ -266,13 +291,8 @@ class MemoriesHandlers:
                     category=category,
                     importance=importance,
                 )
-                names = await _resolve_names(session, {memory.created_by_user_id})
-                return UpdateMemoryResponse(
-                    memory=memory_to_proto(
-                        memory,
-                        created_by_name=names.get(memory.created_by_user_id, ""),
-                    )
-                )
+                infos = await _to_proto_list(session, [memory])
+                return UpdateMemoryResponse(memory=infos[0])
         except ConnectError:
             raise
         except Exception as e:
@@ -391,13 +411,8 @@ class MemoriesHandlers:
                     memory_id=memory_id,
                     pinned=request.pinned,
                 )
-                names = await _resolve_names(session, {memory.created_by_user_id})
-                return SetMemoryPinnedResponse(
-                    memory=memory_to_proto(
-                        memory,
-                        created_by_name=names.get(memory.created_by_user_id, ""),
-                    )
-                )
+                infos = await _to_proto_list(session, [memory])
+                return SetMemoryPinnedResponse(memory=infos[0])
         except ConnectError:
             raise
         except Exception as e:

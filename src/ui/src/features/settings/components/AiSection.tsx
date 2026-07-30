@@ -1,6 +1,7 @@
 import { Brain, ChartBar } from '@phosphor-icons/react';
 import { UsageView } from '@/features/agents/components/views/UsageView';
 import { MemorySharingToggle } from '@/features/agents/components/memory/MemorySharingToggle';
+import { PersonalMemorySection } from '@/features/agents/components/memory/PersonalMemorySection';
 
 export function AiSection() {
     return (
@@ -13,12 +14,13 @@ export function AiSection() {
                 </p>
             </div>
 
-            <section className="space-y-3">
+            <section className="space-y-4">
                 <div className="flex items-center gap-2">
                     <Brain size={18} weight="duotone" className="text-primary" />
                     <h2 className="text-base font-semibold">Agent memory</h2>
                 </div>
                 <MemorySharingToggle />
+                <PersonalMemorySection />
             </section>
 
             <section className="space-y-3">

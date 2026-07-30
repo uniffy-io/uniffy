@@ -13,6 +13,7 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.memory import AgentMemory, MemoryScope, MemorySource
 from uniffy.core.models.agents.session import AgentSession
 from uniffy.domains.agents.cache import invalidate_memory_index
+from uniffy.domains.agents.memories.sanitize import escape_like, strip_control_chars
 from uniffy.domains.agents.memories.scope import (
     MemoryScopeRef,
     scope_filters,
@@ -23,7 +24,7 @@ from uniffy.domains.chat.access import ChatAccessChecker
 
 VALID_CATEGORIES: set[str] = {"preferences", "facts", "context", "instructions"}
 
-MAX_MEMORIES_PER_SCOPE = 200
+MAX_MEMORIES_PER_SCOPE = 300
 MAX_CONTENT_CHARS = 4000
 MAX_PINNED_ENTRIES = 5
 MAX_PINNED_CHARS = 2000
@@ -37,17 +38,17 @@ def _validate_entry_fields(
     category: str,
     importance: float,
 ) -> tuple[str, str, str]:
-    key = key.strip()
+    key = strip_control_chars(key).strip()
     if not key:
         raise ValidationError("key", "Key is required")
     if len(key) > 255:
         raise ValidationError("key", "Key must be 255 characters or fewer")
-    description = description.strip()
+    description = strip_control_chars(description).strip()
     if not description:
         raise ValidationError("description", "Description is required")
     if len(description) > 255:
         raise ValidationError("description", "Description must be 255 characters or fewer")
-    content = content.strip()
+    content = strip_control_chars(content, keep_newlines=True).strip()
     if not content:
         raise ValidationError("content", "Content is required")
     if len(content) > MAX_CONTENT_CHARS:
@@ -99,11 +100,12 @@ class MemoryOperations:
         return row
 
     async def _require_agent_manage(
-        self, user_id: UUID, organization_id: UUID, agent_id: UUID
+        self, user_id: UUID, organization_id: UUID, agent_id: UUID | None
     ) -> None:
         from uniffy.domains.agents.access import require_agents_builder
 
-        await self._get_agent(agent_id, organization_id)
+        if agent_id is not None:
+            await self._get_agent(agent_id, organization_id)
         await require_agents_builder(self._session, user_id, organization_id)
 
     async def _require_view(
@@ -111,7 +113,6 @@ class MemoryOperations:
         *,
         user_id: UUID,
         organization_id: UUID,
-        agent_id: UUID,
         ref: MemoryScopeRef,
     ) -> None:
         if ref.scope is MemoryScope.USER:
@@ -143,11 +144,10 @@ class MemoryOperations:
         *,
         user_id: UUID,
         organization_id: UUID,
-        agent_id: UUID,
         ref: MemoryScopeRef,
     ) -> None:
         if ref.scope is MemoryScope.ORG:
-            await self._require_agent_manage(user_id, organization_id, agent_id)
+            await self._require_agent_manage(user_id, organization_id, ref.agent_id)
             return
         if ref.scope is MemoryScope.CHANNEL:
             if ref.subject_id is None:
@@ -158,7 +158,6 @@ class MemoryOperations:
         await self._require_view(
             user_id=user_id,
             organization_id=organization_id,
-            agent_id=agent_id,
             ref=ref,
         )
 
@@ -214,14 +213,12 @@ class MemoryOperations:
             raise PermissionDeniedError("pin", "Only the session owner can pin memories")
         await self._require_agent_manage(user_id, organization_id, memory.agent_id)
 
-    async def _check_quota(
-        self, agent_id: UUID, organization_id: UUID, ref: MemoryScopeRef
-    ) -> None:
+    async def _check_quota(self, organization_id: UUID, ref: MemoryScopeRef) -> None:
         count = (
             await self._session.execute(
                 select(func.count())
                 .select_from(AgentMemory)
-                .where(*scope_filters(agent_id, organization_id, ref))
+                .where(*scope_filters(organization_id, ref))
             )
         ).scalar() or 0
         if count >= MAX_MEMORIES_PER_SCOPE:
@@ -232,9 +229,8 @@ class MemoryOperations:
             )
 
     async def _invalidate(self, memory: AgentMemory) -> None:
-        ref = scope_ref_for_memory(memory)
         await invalidate_memory_index(
-            memory.agent_id, ref.scope.value, ref.cache_subject
+            memory.organization_id, scope_ref_for_memory(memory)
         )
 
     async def _get_memory(self, memory_id: UUID, organization_id: UUID) -> AgentMemory:
@@ -254,7 +250,6 @@ class MemoryOperations:
         *,
         user_id: UUID,
         organization_id: UUID,
-        agent_id: UUID,
         ref: MemoryScopeRef,
         key: str,
         description: str,
@@ -270,18 +265,16 @@ class MemoryOperations:
             category=category,
             importance=importance,
         )
-        await self._get_agent(agent_id, organization_id)
         await self._require_create(
             user_id=user_id,
             organization_id=organization_id,
-            agent_id=agent_id,
             ref=ref,
         )
 
         existing = (
             await self._session.execute(
                 select(AgentMemory).where(
-                    *scope_filters(agent_id, organization_id, ref),
+                    *scope_filters(organization_id, ref),
                     AgentMemory.key == key,
                 )
             )
@@ -290,10 +283,9 @@ class MemoryOperations:
             raise ValidationError(
                 "key", f"A memory with key '{key}' already exists in this scope"
             )
-        await self._check_quota(agent_id, organization_id, ref)
+        await self._check_quota(organization_id, ref)
 
         memory = AgentMemory(
-            agent_id=agent_id,
             organization_id=organization_id,
             created_by_user_id=user_id,
             scope=ref.scope.value,
@@ -315,8 +307,8 @@ class MemoryOperations:
         self,
         *,
         created_by_user_id: UUID,
+        created_by_agent_id: UUID,
         organization_id: UUID,
-        agent_id: UUID,
         ref: MemoryScopeRef,
         key: str,
         description: str,
@@ -327,7 +319,8 @@ class MemoryOperations:
         """Upsert for the runtime tools; scope was resolved by the runtime, no user gate.
 
         Returns (row, created). Concurrent saves of the same key land on the
-        unique constraint and become updates instead of raising.
+        unique constraint and become updates instead of raising. The bucket is
+        always shared, so the writing agent is recorded as provenance only.
         """
         key, description, content = _validate_entry_fields(
             key=key,
@@ -339,22 +332,22 @@ class MemoryOperations:
         existing = (
             await self._session.execute(
                 select(AgentMemory).where(
-                    *scope_filters(agent_id, organization_id, ref),
+                    *scope_filters(organization_id, ref),
                     AgentMemory.key == key,
                 )
             )
         ).scalar_one_or_none()
         created = existing is None
         if created:
-            await self._check_quota(agent_id, organization_id, ref)
+            await self._check_quota(organization_id, ref)
 
         now = datetime.now(UTC)
         stmt = (
             pg_insert(AgentMemory)
             .values(
-                agent_id=agent_id,
                 organization_id=organization_id,
                 created_by_user_id=created_by_user_id,
+                created_by_agent_id=created_by_agent_id,
                 scope=ref.scope.value,
                 **scope_subject_columns(ref),
                 key=key,
@@ -375,6 +368,7 @@ class MemoryOperations:
                     "content": content,
                     "category": category,
                     "importance": float(importance),
+                    "created_by_agent_id": created_by_agent_id,
                     "updated_at": now,
                 },
             )
@@ -390,7 +384,6 @@ class MemoryOperations:
         *,
         user_id: UUID,
         organization_id: UUID,
-        agent_id: UUID,
         ref: MemoryScopeRef,
         category: str | None = None,
         search: str | None = None,
@@ -400,20 +393,19 @@ class MemoryOperations:
         await self._require_view(
             user_id=user_id,
             organization_id=organization_id,
-            agent_id=agent_id,
             ref=ref,
         )
 
-        base_filters = scope_filters(agent_id, organization_id, ref)
+        base_filters = scope_filters(organization_id, ref)
         if category is not None:
             base_filters.append(AgentMemory.category == category)
         if search is not None and search.strip():
-            pattern = f"%{search.strip()}%"
+            pattern = f"%{escape_like(search.strip())}%"
             base_filters.append(
                 or_(
-                    AgentMemory.key.ilike(pattern),  # type: ignore[union-attr]
-                    AgentMemory.description.ilike(pattern),  # type: ignore[union-attr]
-                    AgentMemory.content.ilike(pattern),  # type: ignore[union-attr]
+                    AgentMemory.key.ilike(pattern, escape="\\"),  # type: ignore[union-attr]
+                    AgentMemory.description.ilike(pattern, escape="\\"),  # type: ignore[union-attr]
+                    AgentMemory.content.ilike(pattern, escape="\\"),  # type: ignore[union-attr]
                 )
             )
 
@@ -454,14 +446,14 @@ class MemoryOperations:
         )
 
         if description is not None:
-            description = description.strip()
+            description = strip_control_chars(description).strip()
             if not description or len(description) > 255:
                 raise ValidationError(
                     "description", "Description must be 1-255 characters"
                 )
             memory.description = description
         if content is not None:
-            content = content.strip()
+            content = strip_control_chars(content, keep_newlines=True).strip()
             if not content or len(content) > MAX_CONTENT_CHARS:
                 raise ValidationError(
                     "content", f"Content must be 1-{MAX_CONTENT_CHARS} characters"
@@ -520,7 +512,7 @@ class MemoryOperations:
             rows = (
                 await self._session.execute(
                     select(AgentMemory.id, AgentMemory.content).where(
-                        *scope_filters(memory.agent_id, organization_id, ref),
+                        *scope_filters(organization_id, ref),
                         AgentMemory.pinned.is_(True),  # type: ignore[union-attr]
                     )
                 )

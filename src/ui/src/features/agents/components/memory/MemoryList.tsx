@@ -26,6 +26,8 @@ import {
 export interface MemoryScopeDescriptor {
     scope: MemoryScope;
     subjectId?: string;
+    /** Organization memory only: narrows the list to one agent's entries. */
+    agentId?: string;
     canCreate: boolean;
     canPin: boolean;
     canEdit: (memory: SerializedMemory) => boolean;
@@ -35,16 +37,18 @@ export interface MemoryScopeDescriptor {
 const PINNED_MAX_ENTRIES = 5;
 const PINNED_MAX_CHARS = 2000;
 
-function emptyStateCopy(scope: MemoryScope): string {
-    switch (scope) {
+function emptyStateCopy(descriptor: MemoryScopeDescriptor): string {
+    switch (descriptor.scope) {
         case MemoryScope.ORG:
-            return 'No organization-wide memories yet. Agent managers can add entries every conversation should know.';
+            return descriptor.agentId
+                ? 'Nothing kept for this agent alone yet. Entries here reach only its conversations.'
+                : 'No organization-wide memories yet. Agent managers can add entries every agent should know.';
         case MemoryScope.CHANNEL:
-            return 'No channel memories yet. The agent saves shared facts here during conversations in this channel.';
+            return 'No channel memories yet. Agents save shared facts here during conversations in this channel.';
         case MemoryScope.SESSION:
-            return 'No session memories yet. The agent saves shared facts here during this session.';
+            return 'No session memories yet. Agents save shared facts here during this session.';
         default:
-            return 'This agent has not stored any memories yet. Memories are created automatically during conversations.';
+            return 'Nothing remembered about you yet. Entries are created during conversations with any of your agents.';
     }
 }
 
@@ -54,18 +58,16 @@ function byImportanceThenRecency(a: SerializedMemory, b: SerializedMemory): numb
 }
 
 export function MemoryList({
-    agentId,
     agentName,
     descriptor,
     subjectLabel,
 }: {
-    agentId: string;
-    agentName: string;
+    agentName?: string;
     descriptor: MemoryScopeDescriptor;
     subjectLabel?: string;
 }) {
     const dispatch = useAppDispatch();
-    const { scope, subjectId, canCreate, canPin, canEdit, canDelete } = descriptor;
+    const { scope, subjectId, agentId, canCreate, canPin, canEdit, canDelete } = descriptor;
     const scopeKey = memoryScopeKey(descriptor);
     const scopeState = useAppSelector(selectMemoryScope(scopeKey));
 
@@ -77,14 +79,14 @@ export function MemoryList({
     useEffect(() => {
         dispatch(
             fetchMemories({
-                agentId,
                 scope,
                 subjectId,
+                agentId,
                 category: categoryFilter !== 'all' ? Number(categoryFilter) : undefined,
                 search: search.trim() || undefined,
             })
         );
-    }, [dispatch, agentId, scope, subjectId, categoryFilter, search]);
+    }, [dispatch, scope, subjectId, agentId, categoryFilter, search]);
 
     const memories = useMemo(() => Object.values(scopeState.memories), [scopeState.memories]);
 
@@ -122,9 +124,9 @@ export function MemoryList({
         (values: MemoryFormValues & { key: string }) => {
             dispatch(
                 createMemory({
-                    agentId,
                     scope,
                     subjectId,
+                    agentId,
                     key: values.key,
                     description: values.description,
                     content: values.content,
@@ -134,7 +136,7 @@ export function MemoryList({
             );
             setShowCreateForm(false);
         },
-        [dispatch, agentId, scope, subjectId]
+        [dispatch, scope, subjectId, agentId]
     );
 
     const handleSave = useCallback(
@@ -187,7 +189,7 @@ export function MemoryList({
     if (scopeState.loading && memories.length === 0) {
         return (
             <div className="space-y-4">
-                <MemoryAudienceBanner scope={scope} agentName={agentName} subjectLabel={subjectLabel} />
+                <MemoryAudienceBanner descriptor={descriptor} agentName={agentName} subjectLabel={subjectLabel} />
                 <div className="flex items-center justify-center py-12">
                     <CircleNotch size={24} className="animate-spin text-muted-foreground" />
                 </div>
@@ -197,7 +199,7 @@ export function MemoryList({
 
     return (
         <div className="space-y-4">
-            <MemoryAudienceBanner scope={scope} agentName={agentName} subjectLabel={subjectLabel} />
+            <MemoryAudienceBanner descriptor={descriptor} agentName={agentName} subjectLabel={subjectLabel} />
 
             <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex-1 max-w-sm relative">
@@ -267,7 +269,7 @@ export function MemoryList({
                     />
                     <p className="text-muted-foreground font-medium">No memories found</p>
                     <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">
-                        {emptyStateCopy(scope)}
+                        {emptyStateCopy(descriptor)}
                     </p>
                 </div>
             )}

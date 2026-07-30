@@ -8,71 +8,77 @@ import {
     type MemoryScopeDescriptor,
 } from "@/features/agents/components/memory/MemoryList";
 
-type MemorySegment = "user" | "org";
+type Tier = "shared" | "agent";
 
-const SEGMENTS: Array<{ key: MemorySegment; label: string }> = [
-    { key: "user", label: "My memory" },
-    { key: "org", label: "Org memory" },
+const TIERS: { id: Tier; label: string; blurb: string }[] = [
+    {
+        id: "shared",
+        label: "All agents",
+        blurb: "Facts every agent in the organization should know.",
+    },
+    {
+        id: "agent",
+        label: "This agent",
+        blurb: "Facts only this agent carries into its conversations.",
+    },
 ];
 
+/**
+ * Organization memory in its two tiers. Personal memories belong to the member
+ * who owns them, not to whoever manages the agent, so they are managed in
+ * Settings > AI - a builder must not browse another member's entries from here.
+ */
 export function MemoriesTab({ agent }: { agent: SerializedAgent }) {
-    const [segment, setSegment] = useState<MemorySegment>("user");
     const canManageAgent = roleCanManage(agent.userRole);
+    const [tier, setTier] = useState<Tier>("shared");
 
     const descriptor = useMemo<MemoryScopeDescriptor>(
-        () =>
-            segment === "user"
-                ? {
-                      scope: MemoryScope.USER,
-                      canCreate: true,
-                      canPin: true,
-                      canEdit: () => true,
-                      canDelete: () => true,
-                  }
-                : {
-                      scope: MemoryScope.ORG,
-                      canCreate: canManageAgent,
-                      canPin: canManageAgent,
-                      canEdit: () => canManageAgent,
-                      canDelete: () => canManageAgent,
-                  },
-        [segment, canManageAgent]
+        () => ({
+            scope: MemoryScope.ORG,
+            agentId: tier === "agent" ? agent.id : undefined,
+            canCreate: canManageAgent,
+            canPin: canManageAgent,
+            canEdit: () => canManageAgent,
+            canDelete: () => canManageAgent,
+        }),
+        [tier, agent.id, canManageAgent]
     );
+
+    const active = TIERS.find((t) => t.id === tier) ?? TIERS[0];
 
     return (
         <div className="max-w-4xl mx-auto space-y-4">
             <div>
                 <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Agent Memories
+                    Organization Memory
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                    View and manage what this agent remembers
+                    {active.blurb} Members manage what agents remember about them
+                    personally in Settings &gt; AI.
                 </p>
             </div>
 
-            <div className="flex items-center gap-0 border-b border-border">
-                {SEGMENTS.map((s) => (
+            <div className="inline-flex rounded-md border border-border p-0.5">
+                {TIERS.map((option) => (
                     <button
-                        key={s.key}
+                        key={option.id}
                         type="button"
-                        onClick={() => setSegment(s.key)}
+                        onClick={() => setTier(option.id)}
+                        data-testid={`memory-tier-${option.id}`}
                         className={cn(
-                            "px-4 py-2 text-sm -mb-px border-b-2 transition-colors cursor-pointer",
-                            segment === s.key
-                                ? "text-primary border-primary font-medium"
-                                : "text-muted-foreground border-transparent hover:text-foreground"
+                            "px-3 py-1.5 text-sm rounded transition-colors cursor-pointer",
+                            tier === option.id
+                                ? "bg-muted text-foreground font-medium"
+                                : "text-muted-foreground hover:text-foreground"
                         )}
-                        data-testid={`agent-memories-segment-${s.key}`}
-                        data-active={segment === s.key ? "true" : "false"}
                     >
-                        {s.label}
+                        {option.label}
                     </button>
                 ))}
             </div>
 
             <MemoryList
-                key={segment}
-                agentId={agent.id}
+                key={tier}
                 agentName={agent.name}
                 descriptor={descriptor}
             />

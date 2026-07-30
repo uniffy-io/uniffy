@@ -30,6 +30,10 @@ class ToolContext:
     # Opted-in personal scope, READ-only widening for shared-space runs;
     # write tools must never target it.
     memory_bridge_scope: MemoryScopeRef | None = None
+    # True when query-conditioned recall promoted at least one entry onto the
+    # trigger turn; memory.read uses the inverse to count recall misses that a
+    # pull then recovered.
+    memory_recall_promoted: bool = False
     # Side-channel for a write tool to surface runtime stream events (e.g. a
     # proposed skill draft) that the loop drains and forwards to the client.
     pending_events: list = field(default_factory=list)

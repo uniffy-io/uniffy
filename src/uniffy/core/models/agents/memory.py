@@ -37,16 +37,22 @@ class MemorySource(str, Enum):
 
 
 class AgentMemory(SQLModel, table=True):
-    """A memory entry visible exactly to the audience of its scope subject."""
+    """A memory entry visible to the audience of its scope subject.
+
+    ``agent_id`` is the binding, not the owner: NULL means every agent that
+    reaches this audience shares the entry, and only organization entries may
+    bind to a single agent.
+    """
 
     __tablename__ = "agents_memories"
     __table_args__ = (
         UniqueConstraint(
-            "agent_id",
+            "organization_id",
             "scope",
             "user_id",
             "channel_id",
             "session_id",
+            "agent_id",
             "key",
             name="uq_agents_memories_scope_key",
             postgresql_nulls_not_distinct=True,
@@ -66,33 +72,38 @@ class AgentMemory(SQLModel, table=True):
             "source IN ('tool', 'manual')",
             name="agents_memories_source_valid",
         ),
+        CheckConstraint(
+            "agent_id IS NULL OR scope = 'org'",
+            name="agents_memories_agent_binding",
+        ),
         Index(
-            "ix_agents_memories_personal",
-            "agent_id",
+            "ix_agents_memories_user",
             "user_id",
-            postgresql_where="user_id IS NOT NULL",
+            "organization_id",
+            "importance",
+            "updated_at",
+            postgresql_where="scope = 'user'",
         ),
         Index(
             "ix_agents_memories_channel",
-            "agent_id",
             "channel_id",
-            postgresql_where="channel_id IS NOT NULL",
+            postgresql_where="scope = 'channel'",
         ),
         Index(
             "ix_agents_memories_session",
-            "agent_id",
             "session_id",
-            postgresql_where="session_id IS NOT NULL",
+            postgresql_where="scope = 'session'",
         ),
         Index(
             "ix_agents_memories_org",
+            "organization_id",
             "agent_id",
             postgresql_where="scope = 'org'",
         ),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
-    agent_id: UUID = Field(nullable=False)
+    agent_id: UUID | None = Field(default=None, nullable=True)
     scope: str = Field(
         sa_column=Column(String(20), nullable=False),
     )
@@ -115,6 +126,7 @@ class AgentMemory(SQLModel, table=True):
     )
     organization_id: UUID = Field(nullable=False)
     created_by_user_id: UUID = Field(nullable=False)
+    created_by_agent_id: UUID | None = Field(default=None, nullable=True)
     source: str = Field(
         sa_column=Column(String(10), nullable=False, default=MemorySource.TOOL.value),
     )

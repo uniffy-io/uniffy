@@ -38,7 +38,6 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
@@ -676,29 +675,35 @@ class AgentsHandlers:
         user_id: UUID,
         organization_id: UUID,
     ) -> str | None:
-        """Preview renders what a private session would inject: org + personal scope."""
+        """Preview renders what a private session would inject: both org tiers + personal."""
         try:
-            labels = {
-                MemoryScope.ORG: (
+            refs_with_labels = (
+                (
+                    MemoryScopeRef.org(),
                     "Organization memory (curated by agent managers; "
-                    "visible to all members)"
+                    "visible to all members)",
                 ),
-                MemoryScope.USER: "Personal memory for this user (private to them)",
-            }
+                (
+                    MemoryScopeRef.org(agent_id),
+                    "Organization memory kept for you specifically "
+                    "(curated by agent managers)",
+                ),
+                (
+                    MemoryScopeRef.user(user_id),
+                    "Personal memory for this user (private to them; kept with "
+                    "every assistant they talk to)",
+                ),
+            )
             blocks: list[MemoryScopeBlock] = []
-            for ref in (
-                MemoryScopeRef(MemoryScope.ORG),
-                MemoryScopeRef(MemoryScope.USER, user_id),
-            ):
+            for ref, label in refs_with_labels:
                 payload = await fetch_memory_index(
                     session,
-                    agent_id=agent_id,
                     organization_id=organization_id,
                     scope_ref=ref,
                 )
                 blocks.append(
                     MemoryScopeBlock(
-                        label=labels[ref.scope],
+                        label=label,
                         pinned=payload.get("pinned") or [],
                         index=payload.get("index") or [],
                         total=int(payload.get("total") or 0),
