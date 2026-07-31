@@ -137,14 +137,17 @@ export function ChatPage() {
     }
   }, [channelId, dispatch]);
 
-  const hashHandledRef = useRef(false);
+  const hashHandledRef = useRef<string | null>(null);
   const channelMessageIds = useAppSelector((state) =>
     channelId ? state.chatMessages.idsByChannel[channelId] : undefined,
   );
   const messagesLoaded = (channelMessageIds?.length ?? 0) > 0;
   useEffect(() => {
-    if (hashHandledRef.current || !hashMessageId || !messagesLoaded || !channelId) return;
-    hashHandledRef.current = true;
+    if (!hashMessageId || !messagesLoaded || !channelId) return;
+    // Keyed on the target so a second deep link into an already-open channel still jumps.
+    const target = `${channelId}#${hashMessageId}`;
+    if (hashHandledRef.current === target) return;
+    hashHandledRef.current = target;
 
     (async () => {
       const result = await dispatch(

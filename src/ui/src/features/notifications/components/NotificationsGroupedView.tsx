@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CaretDown, CaretRight, BellSimple } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { parseUrn, urnToPath } from '@/shared/utils/urn';
+import { parseUrn } from '@/shared/utils/urn';
+import { notificationTargetPath } from '@/features/notifications/utils/notificationTarget';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { getUrnTypeTheme } from '@/config/theme/urnColors';
 import { formatSmartDateTime } from '@/shared/utils/dateFormatting';
@@ -83,14 +84,9 @@ export function NotificationsGroupedView() {
         if (!notification.isRead) {
             dispatch(markNotificationAsRead(notification.id));
         }
-        if (notification.sourceUrn) {
-            const parsed = parseUrn(notification.sourceUrn);
-            if (parsed) {
-                const path = urnToPath(notification.sourceUrn);
-                if (path) {
-                    navigate(path);
-                }
-            }
+        const path = notificationTargetPath(notification);
+        if (path) {
+            navigate(path);
         }
     }, [dispatch, navigate]);
 

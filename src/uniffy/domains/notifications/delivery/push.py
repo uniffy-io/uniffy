@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.notifications.push_subscription import PushSubscription
+from uniffy.domains.notifications.converters import notification_type_to_proto
 from uniffy.domains.notifications.delivery.base import DeliveryAdapter
 
 logger = logger.bind(component="notifications.delivery.push")
@@ -54,13 +55,14 @@ class PushAdapter(DeliveryAdapter):
             logger.debug(f"Push skipped: no subscriptions for user {user_id}")
             return False
 
+        # The worker resolves the click target from these; it cannot map a URN to a
+        # route on its own, and the route table is frontend-owned.
         payload = json.dumps({
             "title": event.title,
             "body": event.body or "",
-            "url": event.source_urn or "",
-            "notification_type": event.notification_type.value
-            if hasattr(event.notification_type, "value")
-            else str(event.notification_type),
+            "source_urn": event.source_urn or "",
+            "notification_type": notification_type_to_proto(event.notification_type),
+            "metadata": {k: str(v) for k, v in (event.metadata or {}).items() if v is not None},
         })
 
         delivered = 0

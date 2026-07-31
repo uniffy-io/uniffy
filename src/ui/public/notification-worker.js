@@ -1,6 +1,18 @@
 // Notification-only service worker: web-push display + click routing.
 // No fetch interception and no auth - authenticated asset reads use the asset cookie, not a worker.
 
+// The worker has no route table - a URN cannot be turned into a path here, so the
+// click target is the in-app resolver route, which owns the mapping.
+function resolverUrl(payload) {
+  if (!payload.source_urn) return '/';
+  const params = new URLSearchParams({ urn: payload.source_urn });
+  if (payload.notification_type) params.set('type', String(payload.notification_type));
+  if (payload.metadata && Object.keys(payload.metadata).length > 0) {
+    params.set('meta', JSON.stringify(payload.metadata));
+  }
+  return `/n?${params.toString()}`;
+}
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
@@ -16,8 +28,8 @@ self.addEventListener('push', (event) => {
     body: payload.body || '',
     icon: '/favicon-96x96.png',
     badge: '/favicon-96x96.png',
-    data: { url: payload.url || '/' },
-    tag: payload.notification_type || 'uniffy-notification',
+    data: { url: resolverUrl(payload) },
+    tag: payload.notification_type ? String(payload.notification_type) : 'uniffy-notification',
     renotify: true,
   };
 

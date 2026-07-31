@@ -74,6 +74,11 @@ def notification_to_proto(
     if notification.actor_id:
         proto.actor_id = str(notification.actor_id)
 
+    if notification.notification_metadata:
+        proto.metadata.update(
+            {k: str(v) for k, v in notification.notification_metadata.items() if v is not None}
+        )
+
     read_at = optional_timestamp(notification.read_at)
     if read_at:
         proto.read_at.CopyFrom(read_at)

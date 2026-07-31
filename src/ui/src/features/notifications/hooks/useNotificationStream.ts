@@ -77,6 +77,7 @@ export function useNotificationStream() {
                                 readAt: n.readAt ? timestampDate(n.readAt).toISOString() : null,
                                 createdAt: n.createdAt ? timestampDate(n.createdAt).toISOString() : new Date().toISOString(),
                                 expiresAt: n.expiresAt ? timestampDate(n.expiresAt).toISOString() : null,
+                                metadata: { ...n.metadata },
                             };
                             dispatch(addRealtimeNotification(serialized));
 

@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
@@ -13,6 +13,7 @@ import { MainLayout } from '@/shared/layouts/MainLayout';
 import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { StreamingProvider } from '@/components/streaming/StreamingProvider';
+import { notificationTargetPath } from '@/features/notifications/utils/notificationTarget';
 import { FileViewerModal } from '@/features/files';
 import { RoomViewerModal } from '@/features/rooms/components/detail/RoomViewerModal';
 import { UploadTray } from '@/features/files/components/upload/UploadTray';
@@ -228,6 +229,33 @@ function ChatIndexRedirect() {
         return <Navigate to={`/chat/${lastChannelId}`} replace state={{ fromLastOpened: true }} />;
     }
     return <LazyRoute><ChatPage /></LazyRoute>;
+}
+
+/**
+ * PushNotificationRedirect - Landing route for web-push clicks.
+ * The service worker cannot map a URN to a route, so it sends the notification
+ * fields here and the shared resolver picks the destination.
+ */
+function PushNotificationRedirect() {
+    const [searchParams] = useSearchParams();
+
+    const rawMeta = searchParams.get('meta');
+    let metadata: Record<string, string> = {};
+    if (rawMeta) {
+        try {
+            metadata = JSON.parse(rawMeta) as Record<string, string>;
+        } catch {
+            metadata = {};
+        }
+    }
+
+    const path = notificationTargetPath({
+        notificationType: Number(searchParams.get('type') ?? 0),
+        sourceUrn: searchParams.get('urn') ?? '',
+        metadata,
+    });
+
+    return <Navigate to={path ?? '/notifications'} replace />;
 }
 
 export function App() {
@@ -638,6 +666,16 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><NotificationsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Web-push click target; resolves to the content route */}
+                        <Route
+                            path="/n"
+                            element={
+                                <ProtectedRoute>
+                                    <PushNotificationRedirect />
                                 </ProtectedRoute>
                             }
                         />

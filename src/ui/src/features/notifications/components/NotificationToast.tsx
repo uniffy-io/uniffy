@@ -23,7 +23,8 @@ import {
 import type { Icon } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { cn } from '@/shared/utils/cn';
-import { parseUrn, urnToPath } from '@/shared/utils/urn';
+import { parseUrn } from '@/shared/utils/urn';
+import { notificationTargetPath } from '@/features/notifications/utils/notificationTarget';
 import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
 import { SUBJECT_TYPE } from '@/components/subject/types';
 import { getUrnTypeTheme } from '@/config/theme/urnColors';
@@ -83,14 +84,9 @@ export function NotificationToast({
         onMarkAsRead(notification.id);
         toast.dismiss(toastId);
 
-        if (notification.sourceUrn) {
-            const parsed = parseUrn(notification.sourceUrn);
-            if (parsed) {
-                const path = urnToPath(notification.sourceUrn);
-                if (path) {
-                    navigate(path);
-                }
-            }
+        const path = notificationTargetPath(notification);
+        if (path) {
+            navigate(path);
         }
     }, [notification, toastId, onMarkAsRead, navigate]);
 

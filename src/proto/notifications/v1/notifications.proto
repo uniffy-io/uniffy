@@ -101,6 +101,9 @@ message Notification {
   string actor_name = 13;
   // Avatar URL of the actor (optional)
   string actor_avatar_url = 14;
+  // Deep-link context the source URN cannot carry on its own (chat message_id,
+  // root_message_id, channel_id, ...)
+  map<string, string> metadata = 15;
 }
 
 // Request to list notifications

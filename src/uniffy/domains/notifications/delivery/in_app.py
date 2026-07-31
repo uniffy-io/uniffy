@@ -70,5 +70,10 @@ class InAppAdapter(DeliveryAdapter):
             "actor_name": actor_name,
             "is_read": False,
             "created_at": notification.created_at.isoformat(),
+            "metadata": {
+                k: str(v)
+                for k, v in (notification.notification_metadata or {}).items()
+                if v is not None
+            },
         }
         await publish_notification(notification.user_id, payload)

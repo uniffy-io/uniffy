@@ -42,6 +42,7 @@ export interface SerializedPageNotification {
     readAt: string | null;
     createdAt: string;
     expiresAt: string | null;
+    metadata: Record<string, string>;
 }
 
 export type PageViewMode = 'list' | 'grouped';
@@ -111,6 +112,7 @@ const notificationToPlain = (n: Notification): SerializedPageNotification => ({
     readAt: n.readAt ? timestampDate(n.readAt).toISOString() : null,
     createdAt: n.createdAt ? timestampDate(n.createdAt).toISOString() : new Date().toISOString(),
     expiresAt: n.expiresAt ? timestampDate(n.expiresAt).toISOString() : null,
+    metadata: { ...n.metadata },
 });
 
 export const searchPageNotifications = createAsyncThunk<

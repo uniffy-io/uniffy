@@ -209,6 +209,9 @@ Secure cookie, so several of these cannot be exercised there.
       session; the old one shows as revoked under web Settings > Sessions).
 - [ ] Enable push notifications (Settings), confirm the dedicated `/notification-worker.js` registers and a
       test notification displays + click-through focuses the app. (The media worker is gone; push is its own worker.)
+- [ ] Push click routing, both paths: with the app open in a tab, a push click focuses that tab and lands on the
+      content (chat mention -> the message, note share -> the note). With every tab closed, the same click opens a
+      window on the content, not on the dashboard. Unresolvable targets land on `/notifications`.
 - [ ] A user who had the OLD `media-stream-worker` installed loads the app once: it is unregistered on boot
       (Application > Service Workers shows it removed) and assets still load via the cookie.
 
@@ -317,6 +320,21 @@ on two clients (web tab A, web tab B or mobile) plus a second user for the send 
 - [ ] Enter edit-message mode, change text, cancel: no draft was created or overwritten.
 - [ ] Kill the network, type, restore the network: the next debounce saves silently (no error
       toasts at any point).
+
+## Chat notification deep links
+
+Chat notifications name the channel as their source; the message they were raised for rides in
+metadata. Needs two users, one channel, one thread.
+
+- [ ] User B mentions A in a channel. A clicks the notification in the bell dropdown: the channel
+      opens AND the mentioned message is scrolled to and highlighted, not just the channel.
+- [ ] Same for the live toast, the `/notifications` list view, and the grouped view.
+- [ ] B replies in a thread A follows. A clicks the notification: the channel opens, the thread
+      panel opens on the right at the correct root, and the reply is highlighted.
+- [ ] While already sitting in that channel, A clicks a second chat notification for a different
+      message in it: the view jumps to the new message (regression for the one-shot hash guard).
+- [ ] Mobile: a thread-reply notification opens the thread screen for the right root; mention and
+      DM notifications open the channel.
 
 ## Agents: OpenRouter and xAI provider keys
 

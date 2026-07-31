@@ -85,6 +85,19 @@ export function routeFromUrn(urn: string): string | null {
   return builder && id ? builder(id) : null;
 }
 
+// Chat notifications carry the CHAT channel URN as their source; the message that
+// triggered them only exists in metadata.
+function routeForNotification(proto: ProtoNotification): string | null {
+  if (proto.notificationType === NotificationType.CHAT_THREAD_REPLY) {
+    const rootMessageId = proto.metadata.root_message_id;
+    const channelId = proto.metadata.channel_id;
+    if (rootMessageId && channelId) {
+      return `/chat/thread/${rootMessageId}?channelId=${channelId}`;
+    }
+  }
+  return routeFromUrn(proto.sourceUrn);
+}
+
 export function notificationToPlain(proto: ProtoNotification): SerializedNotification {
   const meta = TYPE_META[proto.notificationType] ?? {
     kind: "system" as const,
@@ -100,7 +113,7 @@ export function notificationToPlain(proto: ProtoNotification): SerializedNotific
     createdAtSeconds,
     timeLabel: relativeTime(createdAtSeconds),
     sourceUrn: proto.sourceUrn,
-    route: routeFromUrn(proto.sourceUrn),
+    route: routeForNotification(proto),
     iconKind: meta.kind,
     tone: meta.tone ?? null,
   };

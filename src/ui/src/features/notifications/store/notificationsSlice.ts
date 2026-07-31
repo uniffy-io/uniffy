@@ -21,6 +21,7 @@ export interface SerializedNotification {
     readAt: string | null;
     createdAt: string;
     expiresAt: string | null;
+    metadata: Record<string, string>;
 }
 
 export type NotificationFilterType =
@@ -72,6 +73,7 @@ const notificationToPlain = (n: Notification): SerializedNotification => ({
     readAt: n.readAt ? timestampDate(n.readAt).toISOString() : null,
     createdAt: n.createdAt ? timestampDate(n.createdAt).toISOString() : new Date().toISOString(),
     expiresAt: n.expiresAt ? timestampDate(n.expiresAt).toISOString() : null,
+    metadata: { ...n.metadata },
 });
 
 export const fetchNotifications = createAsyncThunk<
