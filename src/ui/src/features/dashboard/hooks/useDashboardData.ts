@@ -169,8 +169,8 @@ export function useDashboardData() {
   const bookmarks = useAppSelector((state) => state.bookmarks?.bookmarks ?? {});
   const bookmarksLoading = useAppSelector((state) => state.bookmarks?.loading ?? false);
 
+  // The sessions slice is a plain store filled by run thunks; it tracks no fetch of its own.
   const agentSessions = useAppSelector((state) => state.agentSessions?.sessions ?? {});
-  const agentSessionsLoading = useAppSelector((state) => state.agentSessions?.loading ?? false);
 
   const events = useAppSelector((state) => state.calendar?.events ?? {});
 
@@ -233,7 +233,7 @@ export function useDashboardData() {
 
     agentSessions: {
       data: agentSessions,
-      loading: agentSessionsLoading,
+      loading: false,
       error: null,
     },
 

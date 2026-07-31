@@ -24,6 +24,8 @@ function model(overrides: Partial<SerializedModelInfo> = {}): SerializedModelInf
     supportsImageGeneration: false,
     catalogKnown: true,
     parameterSchemaJson: '',
+    imageParameterSchemaJson: '',
+    imagePriceEstimatesJson: '',
     ...overrides,
   };
 }
@@ -43,12 +45,18 @@ const models = [
 describe('hasParamsOverride', () => {
   it('is false without a config or with empty params', () => {
     expect(hasParamsOverride(null)).toBe(false);
-    expect(hasParamsOverride({ modelOverride: null, modelParams: {} })).toBe(false);
+    expect(hasParamsOverride({ modelOverride: null, modelParams: {}, imageParams: {} })).toBe(
+      false,
+    );
   });
 
   it('is true once any knob is set', () => {
     expect(
-      hasParamsOverride({ modelOverride: null, modelParams: { temperature: 0.2 } }),
+      hasParamsOverride({
+        modelOverride: null,
+        modelParams: { temperature: 0.2 },
+        imageParams: {},
+      }),
     ).toBe(true);
   });
 });

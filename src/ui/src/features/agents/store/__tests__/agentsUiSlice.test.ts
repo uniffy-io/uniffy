@@ -9,7 +9,7 @@ import {
 } from '@/features/agents/store/agentsUiSlice';
 import type { RootState } from '@/app/store';
 
-function stateWith(agentsUi: Record<string, unknown>): RootState {
+function stateWith(agentsUi: object): RootState {
     return { agentsUi } as unknown as RootState;
 }
 

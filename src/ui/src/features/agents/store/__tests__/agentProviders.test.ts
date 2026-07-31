@@ -40,6 +40,8 @@ const model = (id: string, provider: string): SerializedModelInfo => ({
     supportsImageGeneration: false,
     catalogKnown: true,
     parameterSchemaJson: '',
+    imageParameterSchemaJson: '',
+    imagePriceEstimatesJson: '',
 });
 
 const withKeys = (keys: SerializedProviderKey[]) =>

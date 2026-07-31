@@ -154,7 +154,7 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
             <Trash
               size={12}
               className="shrink-0 text-muted-foreground/70"
-              title="Agent deleted"
+              alt="Agent deleted"
               data-testid={`chat-sidebar-dm-retired-${channel.id}`}
             />
           )}

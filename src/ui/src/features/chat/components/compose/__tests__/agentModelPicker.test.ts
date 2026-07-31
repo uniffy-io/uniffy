@@ -31,6 +31,8 @@ function model(overrides: Partial<SerializedModelInfo> = {}): SerializedModelInf
     supportsImageGeneration: false,
     catalogKnown: true,
     parameterSchemaJson: '',
+    imageParameterSchemaJson: '',
+    imagePriceEstimatesJson: '',
     ...overrides,
   };
 }
