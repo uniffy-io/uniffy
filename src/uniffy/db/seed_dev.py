@@ -14,7 +14,9 @@ async def seed_development_data(
     admin_password: str,
     search_indexer,
 ) -> None:
-    """Seed test users, groups, provider keys, and dev agents."""
+    """Seed test users and groups, plus provider keys, agents and rooms when
+    starter content is on.
+    """
     from uniffy.core.models import Group, OrganizationMember, OrganizationRole, User
     from uniffy.core.models.login.group_member import GroupMember, GroupRole
     from uniffy.core.search.indexer import build_content_urn
@@ -147,6 +149,14 @@ async def seed_development_data(
         )
 
     logger.info("Indexed test users for search")
+
+    from uniffy.db.seed import starter_content_enabled
+
+    if not starter_content_enabled():
+        logger.info(
+            "SEED_STARTER_CONTENT off: skipping provider keys, dev agents and rooms"
+        )
+        return
 
     provider_keys = await _seed_provider_keys(session, default_org, admin_user)
 
