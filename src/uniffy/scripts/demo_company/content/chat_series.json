@@ -1,0 +1,1404 @@
+[
+  {
+    "channel": "clinical-huddle",
+    "occurrences": 50,
+    "start_days_ago": 75,
+    "every_days": 1,
+    "at": "09:02",
+    "gap_minutes": 3,
+    "variables": {
+      "clinician": [
+        "Dr Ilieva",
+        "Dr Marinov",
+        "Dr Petrova",
+        "Dr Georgiev",
+        "Dr Stoyanova",
+        "Dr Dimitrov"
+      ],
+      "room_note": [
+        "consulting room 4",
+        "consulting room 7",
+        "consulting room 2",
+        "consulting room 11"
+      ],
+      "count": [
+        "3",
+        "5",
+        "6",
+        "8",
+        "9",
+        "11",
+        "12",
+        "14"
+      ],
+      "wait": [
+        "7",
+        "9",
+        "12",
+        "14",
+        "18",
+        "22"
+      ],
+      "speciality": [
+        "endocrinology",
+        "cardiology",
+        "dermatology",
+        "paediatrics",
+        "general practice"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Huddle {short_date}. Full rota today, {count} same-day slots still open across {speciality}. Average wait yesterday was {wait} minutes."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Good. Keep two of those slots for walk-ins until noon, that is what the red-flag triage in the intake SOP assumes."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Done, reception has it."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Huddle {short_date}. {clinician} is running about {wait} minutes late, {room_note} is the bottleneck. Reception is calling the affected patients."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Tell them the truth and give a real choice: wait, rebook today, or see the duty clinician. No vague apologies."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Noted for the reception script, I will fold the wording in this week."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Huddle {short_date}. Two overnight escalations, both chest pain, both sent to emergency correctly. Nothing outstanding this morning."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Third one was a telehealth call that escalated at {time}. The clinician had the address, which is exactly why we ask for it."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Good. That is the SOP working, not luck."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Huddle {short_date}. {clinician} is off sick, {speciality} list is being redistributed. {count} patients affected."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "I can absorb four this afternoon. Move the complex follow-ups rather than the new referrals."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Agreed, reception is calling now."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Huddle {short_date}. Reminder on allergies: structured field, not free text. Prescribing checks cannot see free text and that is how a near miss happens."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "I will spot check the last {count} intakes today and come back with numbers."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Same request from the lab side for requesting clinician on the form, {count} requests last week came in without one."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Huddle {short_date}. NHIF paperwork queue is {count} deep, nothing older than two days. Reception is on top of it."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Fine. Coverage never delays assessment, we settle the paperwork afterwards."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Two new starters shadow {clinician} today, they will be in {room_note}."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Huddle {short_date}. One near miss reported yesterday: two patients with the same surname, caught at the second identifier. Reported the same day, exactly right."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "We will add the date of birth read-back to the reception checklist rather than blame anyone."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "That is the fix. System, not person."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Huddle {short_date}. Quiet morning, {count} bookings, {wait} minute average wait. {clinician} has capacity if anyone needs to offload."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Lab is clear too, all urgent panels from yesterday reported before {time}."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Then use the slack to catch up on the outstanding follow-up letters."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Huddle {short_date}. Interpreter booked for the {time} appointment in {room_note}. Ask at booking, not at the door."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Thank you. Consent is not consent if the patient did not understand the explanation."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "We now ask the language question in the booking form, so this should get rarer."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Huddle {short_date}. {speciality} follow-ups are drifting past six weeks. That is a safety issue before it is a scheduling one."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "I will pull the list today and we can triage by risk rather than by date booked."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Yes. Bring the numbers to the managers sync."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "lab-ops",
+    "occurrences": 50,
+    "start_days_ago": 75,
+    "every_days": 1,
+    "at": "07:45",
+    "gap_minutes": 4,
+    "variables": {
+      "analyser": [
+        "Cobas c503",
+        "Sysmex XN-1000",
+        "Architect ci4100",
+        "Stago Compact Max"
+      ],
+      "analyte": [
+        "potassium",
+        "creatinine",
+        "haemoglobin",
+        "INR",
+        "TSH",
+        "CRP",
+        "glucose",
+        "platelets"
+      ],
+      "level": [
+        "level 1",
+        "level 2",
+        "level 3"
+      ],
+      "samples": [
+        "48",
+        "61",
+        "73",
+        "84",
+        "96",
+        "112",
+        "127"
+      ],
+      "minutes": [
+        "38",
+        "44",
+        "52",
+        "61",
+        "70"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: {analyser} {level} passed on all analytes. Reporting open. {samples} samples in the overnight rack."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Instrument link is up, no queued results stuck in the interface."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: {analyte} on the {analyser} failed {level}. Reporting for that analyte is stopped until it clears. Everything else is running."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Understood. If it holds past midday, call the clinics so nobody is waiting on a result that is not coming."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: all passed. Median turnaround yesterday {minutes} minutes from sample reception to validated result, {samples} samples total."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "That is the number I want on the QA review slide, not the average."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: repeat on the {analyser} after a reagent change, {level} back in range on the second run. Documented as a non-conformity with the reagent lot number."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Lot number is in the register, and the supplier has been told."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: passed. Two samples rejected at reception, both haemolysed, both redrawn within the hour. Requesting clinic informed the same morning."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Seen. That was the {time} draw, we will retrain the phlebotomist on order of draw."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: passed. One critical {analyte} phoned to the requesting clinician within 30 minutes and logged with the name of who took the call."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Good. A critical value is never delivered only in writing."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: passed. Cold storage held between 4 and 8 C overnight, logger download attached to the daily record."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "The spare logger is calibrated and in the cabinet if that one starts drifting again."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "QC {short_date}: passed. {samples} samples, {minutes} minute median turnaround. Coagulation is the constraint, the four hour window leaves no room for a late courier."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Understood, Plovdiv coagulation requests will go on the early run from now on."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "lab-ops",
+    "occurrences": 10,
+    "start_days_ago": 63,
+    "every_days": 7,
+    "at": "16:20",
+    "gap_minutes": 6,
+    "variables": {
+      "rejections": [
+        "4",
+        "6",
+        "7",
+        "9",
+        "11"
+      ],
+      "eqa": [
+        "all analytes within consensus",
+        "one analyte flagged for review",
+        "no outliers"
+      ],
+      "backlog": [
+        "none",
+        "two panels",
+        "one panel"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Weekly lab summary, week ending {short_date}: {rejections} sample rejections, external quality assessment {eqa}, reporting backlog {backlog}."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Rejections are the number I care about most. Which clinic and which reason?"
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Mostly labelling at the patient side, one clotted coagulation tube. All fed back to the collecting clinic the same day."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Weekly lab summary, week ending {short_date}: {rejections} rejections, EQA {eqa}. Turnaround held inside target on every panel except vitamin D."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Vitamin D is not urgent, but patients still wait on it. Can we batch it twice a week instead of once?"
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Yes, from next week. That cuts the worst case by three days."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Weekly lab summary, week ending {short_date}: {rejections} rejections, EQA {eqa}, backlog {backlog}. One reagent lot is close to expiry and will be used first."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Procurement has the reorder in, delivery is expected before the current lot runs out."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Good. Running out mid week would stop reporting on that analyte entirely."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "plovdiv",
+    "occurrences": 40,
+    "start_days_ago": 60,
+    "every_days": 1,
+    "at": "11:35",
+    "gap_minutes": 5,
+    "variables": {
+      "temp": [
+        "4.8",
+        "5.4",
+        "6.1",
+        "6.7",
+        "7.2",
+        "7.9"
+      ],
+      "samples": [
+        "12",
+        "17",
+        "21",
+        "24",
+        "28",
+        "33"
+      ],
+      "delay": [
+        "on time",
+        "ten minutes late",
+        "twenty minutes late",
+        "five minutes early"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Courier {short_date}: left Plovdiv {delay} with {samples} samples. Cool box logger reading {temp} C on departure."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Received in Sofia, logger held inside spec the whole way. All registered before the afternoon run."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Courier {short_date}: {delay}, {samples} samples including two urgent coagulation. Flagged for the four hour window."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Both loaded first on arrival, results back to Plovdiv this afternoon."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Courier {short_date}: {delay}. One late draw at {time} missed the run, stored per the cold chain rules and going on tomorrow morning."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Correct call. Better a day later than a result nobody can trust."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Courier {short_date}: {samples} samples away {delay}. Waiting room was full this morning, cardiology day always is."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "The second specialist day is worth costing out. Bring it to the managers sync with the booking numbers."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Courier {short_date}: logger read {temp} C on arrival, which is the top of our range. Box was in the sun at pickup."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Nothing quarantined this time, but move the pickup point into the shade. Above 8 C and we lose the run."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "bob@uniffy.io",
+            "text": "Courier {short_date}: {delay}, {samples} samples. Trakia training room is booked for patient education this evening as usual."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Fourteen registered for the diabetes session, that is the best turnout so far."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "reception",
+    "occurrences": 45,
+    "start_days_ago": 70,
+    "every_days": 1,
+    "at": "18:45",
+    "gap_minutes": 4,
+    "variables": {
+      "seen": [
+        "54",
+        "63",
+        "71",
+        "78",
+        "86",
+        "94"
+      ],
+      "noshow": [
+        "2",
+        "3",
+        "4",
+        "5",
+        "7"
+      ],
+      "walkins": [
+        "4",
+        "6",
+        "8",
+        "9",
+        "12"
+      ],
+      "issue": [
+        "the card terminal dropped twice",
+        "the queue display froze for an hour",
+        "the printer at desk 2 jammed",
+        "nothing broke today"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Front desk {short_date}: {seen} patients seen, {walkins} walk-ins, {noshow} no-shows. Otherwise {issue}."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "No-shows are creeping up. Let us try the reminder the evening before rather than the morning of."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Front desk {short_date}: {seen} patients, {noshow} no-shows. Two patients asked for their records today, both sent to the DPO mailbox rather than handled at the desk."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Exactly right. Identity gets verified before anything is released, and family members do not count."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Front desk {short_date}: {seen} patients, {walkins} walk-ins. One patient upset about a bill, itemised copy sent by email and the tone kept neutral."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Good. Billing is neutral and itemised, never defensive."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Front desk {short_date}: {seen} patients, {issue}. Reception coped, but we are one person short on Fridays."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "I will look at the Friday rota this week. That is the day walk-ins spike."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Front desk {short_date}: {seen} patients, {noshow} no-shows, {walkins} walk-ins. Interpreter needed twice, booked once in advance and once on the spot."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "The on the spot one is the problem. Ask the language question at booking every time."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Front desk {short_date}: {seen} patients. NHIF cards checked without a queue today, and {issue}."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Thanks, I will keep an eye on the terminal. If it drops again we swap the unit rather than reboot it a third time."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "telehealth",
+    "occurrences": 40,
+    "start_days_ago": 70,
+    "every_days": 1,
+    "at": "20:10",
+    "gap_minutes": 4,
+    "variables": {
+      "sessions": [
+        "18",
+        "23",
+        "27",
+        "31",
+        "36",
+        "42"
+      ],
+      "escalated": [
+        "none",
+        "one",
+        "two"
+      ],
+      "reason": [
+        "chest pain, sent to emergency",
+        "abdominal pain needing examination, converted to a face to face slot",
+        "a child under one with fever, seen the same afternoon",
+        "breathlessness at rest, ambulance called"
+      ],
+      "quality": [
+        "clean",
+        "two dropped calls",
+        "one call switched to phone",
+        "audio only for one session"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Telehealth {short_date}: {sessions} sessions, {escalated} escalated. Connection quality {quality}."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Logged. Repeat platform failures get raised with the vendor, they are a safety issue and not just an annoyance."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Telehealth {short_date}: {sessions} sessions. One escalation, {reason}. Address was on file, which is why we ask at the start of every call."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Follow-up booked before the call ended, so nobody is relying on call us if it gets worse."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Telehealth {short_date}: {sessions} sessions, {quality}. Reminder that the booths on floor 2 are for patient consultations only."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Booking rules are in the office guide, I will repeat it in the weekly digest."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Telehealth {short_date}: {sessions} sessions. A clinician joined from a coworking desk, which is not allowed. Confidentiality, not preference."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "I have spoken with them. Closed room, headset, wired connection, or the session does not happen."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Telehealth {short_date}: {sessions} sessions, {escalated} escalated, {quality}. No controlled substances prescribed in a first contact, as expected."
+          },
+          {
+            "from": "diana@uniffy.io",
+            "text": "Portal side is quiet, no failed result publications today."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "myvitalis",
+    "occurrences": 40,
+    "start_days_ago": 70,
+    "every_days": 1,
+    "at": "17:30",
+    "gap_minutes": 5,
+    "variables": {
+      "area": [
+        "results view",
+        "appointment booking",
+        "consent capture",
+        "referral letters",
+        "notifications"
+      ],
+      "version": [
+        "2.14.1",
+        "2.14.2",
+        "2.15.0",
+        "2.15.1",
+        "2.16.0",
+        "2.16.2"
+      ],
+      "metric": [
+        "p95 load 1.8s",
+        "p95 load 1.2s",
+        "p95 load 2.4s",
+        "error rate 0.3 percent"
+      ],
+      "bug": [
+        "abnormal values rendered in the wrong colour on small screens",
+        "the booking confirmation email lost the clinic address",
+        "the consent PDF exported without the signature block",
+        "the results filter dropped the date range on reload"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "diana@uniffy.io",
+            "text": "MyVitalis {version} shipped {short_date}. Focus was the {area}. {metric} after rollout."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Nothing unusual in the logs since the deploy."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Patients read results when they are worried. Every point of clarity there is worth two elsewhere."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "diana@uniffy.io",
+            "text": "Bug found in the {area} on {short_date}: {bug}. Fix is in {version}, going out tomorrow."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Is any of that clinically misleading? If yes it is a same day fix, not a tomorrow fix."
+          },
+          {
+            "from": "diana@uniffy.io",
+            "text": "Not misleading, only ugly. Confirmed with two clinicians before deciding."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "diana@uniffy.io",
+            "text": "Standup notes {short_date}: {area} work continues, {metric}. Blocked on nothing."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Staging matches production config now, so the surprise we had last month should not repeat."
+          },
+          {
+            "from": "diana@uniffy.io",
+            "text": "Good. That surprise cost us a day."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "diana@uniffy.io",
+            "text": "Accessibility pass on the {area} finished {short_date}. Minimum body size is enforced in the component now, not per template."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Thank you. Small type on a lab report is a clinical problem, not a style one."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Can we get the same treatment on the printed appointment letters?"
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "diana@uniffy.io",
+            "text": "{version} rolled back on {short_date} after {bug} appeared in production. Previous version is live again, no patient data affected."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Confirmed from the logs, and the incident note is written."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Rolling back fast is the right instinct. Write down what let it through."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "it-support",
+    "occurrences": 40,
+    "start_days_ago": 70,
+    "every_days": 1,
+    "at": "16:05",
+    "gap_minutes": 4,
+    "variables": {
+      "tickets": [
+        "3",
+        "5",
+        "7",
+        "9",
+        "12",
+        "14"
+      ],
+      "topic": [
+        "a laptop that would not take the MFA enrolment",
+        "a printer queue stuck at reception",
+        "an expired badge on the lab floor",
+        "a password manager invite that never arrived",
+        "a phishing report that turned out to be a real invoice"
+      ],
+      "phish": [
+        "two",
+        "four",
+        "five",
+        "seven",
+        "nine"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "IT {short_date}: {tickets} tickets closed, longest one was {topic}. {phish} phishing reports, all answered."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Thanks for answering even the false alarms. That is why people keep reporting."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "IT {short_date}: {tickets} tickets. Reminder that a secret pasted into chat counts as compromised and gets rotated, with no drama attached."
+          },
+          {
+            "from": "diana@uniffy.io",
+            "text": "Rotated the one from this morning already. My fault, no excuses."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "IT {short_date}: {tickets} tickets, mostly {topic}. Quarterly access review starts next week, system owners will get their lists."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Mine is ready. Two locums finished last month and their accounts are already disabled."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "IT {short_date}: a leaver was processed today, accounts disabled before the exit conversation ended and the device struck off the register."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Badge and keys came back the same day. That is the whole process working."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "IT {short_date}: {phish} phishing reports, all fake supplier invoices this week. Nobody clicked, which is the outcome we want."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "One of them used a real reagent supplier name. Convincing enough that I checked twice."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "people-ops",
+    "occurrences": 25,
+    "start_days_ago": 56,
+    "every_days": 2,
+    "at": "15:15",
+    "gap_minutes": 5,
+    "variables": {
+      "role": [
+        "a GP for the Sofia rota",
+        "a phlebotomist",
+        "a paediatric nurse",
+        "a frontend engineer",
+        "a reception coordinator"
+      ],
+      "stage": [
+        "first interview",
+        "second interview",
+        "trial shift",
+        "offer sent",
+        "offer accepted"
+      ],
+      "leave": [
+        "annual leave",
+        "sick leave",
+        "parental leave",
+        "study leave for accredited CPD"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Hiring update {short_date}: {role}, currently at {stage}. Registration is verified before any patient contact, no exceptions."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Good. And two shadowed clinics before consulting alone."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Rota note {short_date}: two {leave} requests approved for next month, no clash inside the same speciality."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Thanks. August is the crunch, first requested first approved and we hold to that."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Onboarding {short_date}: new starter finished the first week checklist, data protection training recorded by the DPO."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Accounts match the role only, nothing extra provisioned just in case."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "CPD {short_date}: three study days booked this quarter, one conference. Clinical claims in the talk go past the medical director first."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Send me the slides a week ahead and it is a five minute review, not a week of back and forth."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Return from {leave} planned for {short_date}: phased first month at eighty percent load on full pay, as the policy says."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Rota already reflects it."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "procurement",
+    "occurrences": 25,
+    "start_days_ago": 56,
+    "every_days": 2,
+    "at": "14:40",
+    "gap_minutes": 5,
+    "variables": {
+      "item": [
+        "EDTA tubes",
+        "citrate tubes",
+        "biochemistry reagent packs",
+        "examination gloves",
+        "consulting room couch paper",
+        "blood culture bottles"
+      ],
+      "qty": [
+        "10 boxes",
+        "25 boxes",
+        "40 boxes",
+        "2 pallets",
+        "6 cases"
+      ],
+      "eta": [
+        "Tuesday",
+        "Thursday",
+        "next Monday",
+        "within ten days"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Order {short_date}: {qty} of {item}, delivery {eta}. Stock covers us until then with about a week of margin."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Approved and sent. Consumables follow the lab process, not the general expense ladder."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Stock check {short_date}: {item} down to under two weeks of cover. Reordering {qty} today, {eta}."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Plovdiv has a spare case if you need to bridge a gap."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Delivery {short_date}: {qty} of {item} arrived, lot numbers recorded and the oldest lot goes first."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Invoice matched to the order, nothing to query."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Supplier moved the {item} delivery to {eta}. Not urgent yet, but if it slips again we switch supplier for that line."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Say the word and I will get a second quote."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "sofia-hq",
+    "occurrences": 25,
+    "start_days_ago": 56,
+    "every_days": 2,
+    "at": "12:20",
+    "gap_minutes": 4,
+    "variables": {
+      "thing": [
+        "the floor 3 kitchen tap",
+        "the lift on the east side",
+        "the badge reader on floor 1",
+        "the air conditioning in Serdica",
+        "the bike rack lighting"
+      ],
+      "status": [
+        "fixed this morning",
+        "reported, contractor coming this week",
+        "waiting on a part",
+        "back in service"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Facilities {short_date}: {thing} is {status}. Anything patient facing gets treated as urgent, so tell me rather than working around it."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Badge access on the lab floor stays lab-only while that reader is out. No holding doors for anyone, including people you know."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Facilities {short_date}: {thing} is {status}. Parking is full again by 08:30, so the tram is the safer bet for a morning clinic."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "And nobody parks in the ambulance bay. Not even for two minutes."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Facilities {short_date}: fire drill scheduled for next week, announced as always. Assembly point is the far end of the car park by the flagpoles."
+          },
+          {
+            "from": "admin@uniffy.io",
+            "text": "Defibrillator at reception was checked this morning, pads are in date."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Facilities {short_date}: {thing} is {status}. Floor 2 is a clinical floor, so no calls in the corridor and no food. Patients hear more than you think."
+          },
+          {
+            "from": "diana@uniffy.io",
+            "text": "Fair. Moving my standup back up to floor 4."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "patient-safety",
+    "occurrences": 20,
+    "start_days_ago": 56,
+    "every_days": 3,
+    "at": "13:10",
+    "gap_minutes": 6,
+    "variables": {
+      "kind": [
+        "a near miss on medication reconciliation",
+        "a delayed result notification",
+        "a wrong room call for a patient with a common surname",
+        "an equipment failure with no clinical consequence",
+        "an aggressive visitor at reception"
+      ],
+      "action": [
+        "the reception checklist gains a read-back step",
+        "the notification path is being rewritten",
+        "the equipment is out of service until serviced",
+        "a second identifier is now required before the room call"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Log {short_date}: {kind}. No harm reached the patient. Proposed fix is that {action}."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Agreed. Conditions, not culprits. I will write it up for the committee."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "eve@uniffy.io",
+            "text": "Log {short_date}: {kind}, reported by the person involved on the same day. Reviewing within five working days as a near miss."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Same day reporting is exactly the culture we promised. Note that in the review."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Log {short_date}: {kind}. Patient informed in person, plain apology given, and we told them what we are changing."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "Insurer notified as well, and the record reference is in the incident form rather than the patient detail."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "alice@uniffy.io",
+            "text": "Log {short_date}: {kind}. Interim measure in place today, permanent fix is that {action}."
+          },
+          {
+            "from": "eve@uniffy.io",
+            "text": "Lab side has the same interim step so the two do not contradict each other."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "announcements",
+    "occurrences": 9,
+    "start_days_ago": 60,
+    "every_days": 7,
+    "at": "10:30",
+    "gap_minutes": 8,
+    "variables": {
+      "headline": [
+        "clinic waiting times came down again",
+        "the lab held turnaround inside target on every panel",
+        "the patient portal shipped a clearer results view",
+        "we passed the internal audit with no major findings",
+        "the Plovdiv cardiology day is now fully booked three weeks out"
+      ],
+      "ask": [
+        "book your data protection refresher if you have not",
+        "check your access list if you own a system",
+        "put your leave in before the August rush",
+        "read the updated intake SOP, the allergy step changed"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "Weekly digest {short_date}. Good news first: {headline}. One ask this week: {ask}."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Adding to that: the handbook is the source of truth, so if something in it is wrong, fix it rather than working around it."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "admin@uniffy.io",
+            "text": "Weekly digest {short_date}. {headline}. Reminder: {ask}. Questions in thread rather than a new post, please."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "From the clinical side, thank you to everyone who reported a near miss this week. That is how the system gets safer."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Weekly digest {short_date}. {headline}. Also: {ask}, it takes five minutes."
+          },
+          {
+            "from": "bob@uniffy.io",
+            "text": "And the Friday rota gap is covered from next week, thanks to two people swapping voluntarily."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "channel": "marketing",
+    "occurrences": 18,
+    "start_days_ago": 54,
+    "every_days": 3,
+    "at": "11:50",
+    "gap_minutes": 5,
+    "variables": {
+      "campaign": [
+        "the winter prevention screening page",
+        "the telehealth explainer video",
+        "the Plovdiv cardiology day announcement",
+        "the diabetes patient education series",
+        "the lab turnaround transparency page"
+      ],
+      "channel_name": [
+        "the newsletter",
+        "the website",
+        "the waiting room screens",
+        "the patient portal banner"
+      ]
+    },
+    "variants": [
+      {
+        "messages": [
+          {
+            "from": "diana@uniffy.io",
+            "text": "Draft {short_date}: {campaign} is ready for review, going out on {channel_name}. No fear, no countdowns, no stock photos of worried people."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Any clinical claim in it needs my sign-off recorded in the campaign note. Send it over and I will read it today."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Copy review {short_date}: {campaign} rewritten to say the number and give a next step, rather than saying slightly elevated."
+          },
+          {
+            "from": "alice@uniffy.io",
+            "text": "Much better. Patients act on specifics, not on adjectives."
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "from": "diana@uniffy.io",
+            "text": "Live {short_date}: {campaign} is on {channel_name}. Bulgarian and English written from the same brief, not translated one from the other."
+          },
+          {
+            "from": "charlie@uniffy.io",
+            "text": "Reception has printed copies for anyone who asks at the desk."
+          }
+        ]
+      }
+    ]
+  }
+]

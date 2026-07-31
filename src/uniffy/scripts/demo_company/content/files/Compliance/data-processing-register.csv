@@ -1,0 +1,13 @@
+activity,data_subjects,data_categories,legal_basis,processor,location,retention,last_review
+Outpatient care records,Patients,"Identity, health, insurance",Art 9(2)(h),In house,Sofia HQ,5 years after last contact,2026-03-12
+Laboratory results,Patients,"Identity, health",Art 9(2)(h),In house,Sofia HQ,5 years,2026-03-12
+Imaging,Patients,"Identity, health",Art 9(2)(h),Radiology partner,Sofia,10 years,2026-02-20
+Telehealth consultations,Patients,"Identity, health",Art 9(2)(h),Vitalis Connect,EU (Frankfurt),Note only; no recording,2026-03-12
+Patient portal accounts,Patients,"Identity, contact",Art 6(1)(b),In house,Sofia HQ,Until account closure + 1 year,2026-03-12
+Appointment reminders,Patients,"Contact, appointment",Art 6(1)(b),SMS gateway,EU (Sofia),12 months,2026-01-30
+NHIF reimbursement,Patients,"Identity, treatment codes",Art 6(1)(c),In house,Sofia HQ,10 years,2026-01-30
+Marketing newsletter,Subscribers,"Contact",Consent,Email platform,EU (Dublin),Until withdrawal,2026-02-20
+Employee records,Staff,"Identity, payroll, contract",Art 6(1)(b) and (c),In house,Sofia HQ,50 years payroll per law,2026-03-01
+CCTV,"Patients, staff, visitors","Image",Legitimate interest,In house,Sofia HQ,30 days,2026-03-01
+Incident reports,"Patients, staff","Health, incident detail",Art 9(2)(h),In house,Sofia HQ,10 years,2026-03-12
+Job applications,Candidates,"Identity, CV",Consent,ATS vendor,EU (Amsterdam),6 months after decision,2026-02-05

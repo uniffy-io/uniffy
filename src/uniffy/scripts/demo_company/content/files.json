@@ -1,0 +1,34 @@
+{
+  "Brand/vitalis-logo.svg": {
+    "description": "Vitalis Health primary logo mark. Teal plate, amber pulse line.",
+    "tags": ["brand"]
+  },
+  "Brand/brand-palette.csv": {
+    "description": "Machine-readable brand palette with usage rules per colour.",
+    "tags": ["brand"]
+  },
+  "Clinical/patient-intake-form.md": {
+    "description": "Printable intake form matching the Patient Intake SOP.",
+    "tags": ["clinical"]
+  },
+  "Clinical/lab-panel-reference-ranges.csv": {
+    "description": "Reference and critical ranges by panel and analyte, Vitalis Lab.",
+    "tags": ["clinical", "lab"]
+  },
+  "Compliance/data-processing-register.csv": {
+    "description": "GDPR Article 30 processing register. Reviewed twice a year by the DPO.",
+    "tags": ["compliance", "policy"]
+  },
+  "Facilities/sofia-hq-room-directory.csv": {
+    "description": "Every room at Sofia HQ with floor, capacity and booking status.",
+    "tags": ["sofia-office"]
+  },
+  "People/onboarding-checklist.csv": {
+    "description": "Onboarding tasks by day, owner and role scope.",
+    "tags": ["onboarding", "people"]
+  },
+  "IT/device-asset-register.csv": {
+    "description": "Managed device register with encryption status and warranty dates.",
+    "tags": ["compliance"]
+  }
+}

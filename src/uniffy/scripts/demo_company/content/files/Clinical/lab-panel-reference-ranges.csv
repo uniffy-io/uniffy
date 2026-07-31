@@ -1,0 +1,19 @@
+panel,analyte,unit,low,high,critical_low,critical_high,sample_type
+Basic metabolic,Glucose (fasting),mmol/L,3.9,5.6,2.2,25.0,Fluoride plasma
+Basic metabolic,Creatinine (F),umol/L,45,84,,600,Serum
+Basic metabolic,Creatinine (M),umol/L,59,104,,600,Serum
+Basic metabolic,Potassium,mmol/L,3.5,5.1,2.5,6.5,Serum
+Basic metabolic,Sodium,mmol/L,136,145,120,160,Serum
+Full blood count,Haemoglobin (F),g/L,120,150,70,200,EDTA whole blood
+Full blood count,Haemoglobin (M),g/L,135,170,70,200,EDTA whole blood
+Full blood count,Leukocytes,10^9/L,4.0,10.0,1.0,30.0,EDTA whole blood
+Full blood count,Platelets,10^9/L,150,400,30,1000,EDTA whole blood
+Thyroid,TSH,mIU/L,0.4,4.0,,100,Serum
+Thyroid,Free T4,pmol/L,12.0,22.0,,,Serum
+Lipids,Total cholesterol,mmol/L,,5.0,,,Serum
+Lipids,LDL cholesterol,mmol/L,,3.0,,,Serum
+Lipids,HDL cholesterol (F),mmol/L,1.2,,,,Serum
+Lipids,Triglycerides,mmol/L,,1.7,,20.0,Serum
+Inflammation,CRP,mg/L,,5.0,,,Serum
+Vitamins,Vitamin D (25-OH),ng/mL,30,100,,,Serum
+Coagulation,INR,ratio,0.8,1.2,,5.0,Citrate plasma

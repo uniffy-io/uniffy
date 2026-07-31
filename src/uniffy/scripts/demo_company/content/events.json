@@ -1,0 +1,147 @@
+[
+  {
+    "title": "Clinical huddle",
+    "description": "Overnight escalations, today's rota, patients needing a second look. Runs off the [Patient Intake SOP](patient-intake-sop.md). 30 minutes, standing, in [Rila](room:Rila).",
+    "day_offset": 0,
+    "start": "09:00",
+    "duration_minutes": 30,
+    "recurrence": { "pattern": "DAILY", "interval": 1, "days_of_week": ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] },
+    "room": "Rila",
+    "location": "Sofia HQ, floor 3",
+    "tags": ["clinical"],
+    "attendees": ["alice@uniffy.io", "bob@uniffy.io"]
+  },
+  {
+    "title": "New joiner welcome",
+    "description": "Badges, laptops and a tour for [Maria Nikolova](user:maria@uniffy.io). Bring questions on the [First Week Checklist](first-week-checklist.md) and [Systems and Access](systems-and-access.md).",
+    "day_offset": 0,
+    "start": "10:00",
+    "duration_minutes": 45,
+    "room": "Pirin",
+    "location": "Sofia HQ, floor 3",
+    "tags": ["onboarding", "people"],
+    "attendees": ["charlie@uniffy.io", "maria@uniffy.io"]
+  },
+  {
+    "title": "Sprint planning: MyVitalis portal",
+    "description": "Two week sprint for the patient portal. Theme is results readability, measured against [Voice and Tone](voice-and-tone.md).",
+    "day_offset": 0,
+    "start": "13:00",
+    "duration_minutes": 60,
+    "recurrence": { "pattern": "BIWEEKLY", "interval": 1 },
+    "room": "Rila",
+    "location": "Sofia HQ, floor 3",
+    "tags": ["handbook"],
+    "attendees": ["diana@uniffy.io", "eve@uniffy.io"]
+  },
+  {
+    "title": "GDPR and patient data refresher",
+    "description": "Mandatory yearly session with the DPO on [Patient Data Protection Policy](patient-data-protection-policy.md): retention, subject requests, the 72-hour breach clock. Register reviewed live from [data-processing-register.csv](file:Compliance/data-processing-register.csv).",
+    "day_offset": 1,
+    "start": "11:00",
+    "duration_minutes": 90,
+    "room": "Serdica",
+    "location": "Sofia HQ, floor 4",
+    "tags": ["compliance", "policy"],
+    "attendees": ["alice@uniffy.io", "bob@uniffy.io", "charlie@uniffy.io", "maria@uniffy.io"]
+  },
+  {
+    "title": "Cardiology clinic, Plovdiv",
+    "description": "Sofia cardiologist consulting in Plovdiv. Booked slots only, no walk-ins. Logistics in the [Plovdiv Clinic Guide](plovdiv-clinic-guide.md).",
+    "day_offset": 1,
+    "start": "08:00",
+    "duration_minutes": 480,
+    "recurrence": { "pattern": "WEEKLY", "interval": 1 },
+    "location": "Plovdiv clinic, Trakia district",
+    "tags": ["clinical", "plovdiv-clinic"]
+  },
+  {
+    "title": "Clinic managers sync",
+    "description": "Sofia and Plovdiv managers in [Iskar](room:Iskar): rota, waiting times, equipment, complaints, courier timings from the [Plovdiv Clinic Guide](plovdiv-clinic-guide.md).",
+    "day_offset": 2,
+    "start": "09:30",
+    "duration_minutes": 45,
+    "recurrence": { "pattern": "WEEKLY", "interval": 1 },
+    "room": "Iskar",
+    "location": "Sofia HQ, floor 3",
+    "tags": ["clinical", "sofia-office"],
+    "attendees": ["bob@uniffy.io"]
+  },
+  {
+    "title": "Patient safety committee",
+    "description": "Incident review and protocol changes per [Adverse Event Reporting](adverse-event-reporting-sop.md). Medical director chairs, in [Vitosha](room:Vitosha).",
+    "day_offset": 2,
+    "start": "14:00",
+    "duration_minutes": 90,
+    "recurrence": { "pattern": "MONTHLY", "interval": 1 },
+    "room": "Vitosha",
+    "location": "Sofia HQ, ground floor",
+    "tags": ["clinical", "compliance"],
+    "attendees": ["alice@uniffy.io"]
+  },
+  {
+    "title": "Patient education evening",
+    "description": "Open session for patients on managing type 2 diabetes. [Trakia Training Room](room:Trakia Training Room) is blocked from 17:00.",
+    "day_offset": 2,
+    "start": "17:00",
+    "duration_minutes": 120,
+    "recurrence": { "pattern": "WEEKLY", "interval": 1 },
+    "room": "Trakia Training Room",
+    "location": "Plovdiv clinic",
+    "tags": ["plovdiv-clinic", "clinical"]
+  },
+  {
+    "title": "Board meeting",
+    "description": "Quarterly numbers, clinic expansion, lab accreditation status against [Lab Sample Handling SOP](lab-sample-handling-sop.md).",
+    "day_offset": 3,
+    "start": "09:00",
+    "duration_minutes": 120,
+    "recurrence": { "pattern": "MONTHLY", "interval": 1 },
+    "room": "Vitosha",
+    "location": "Sofia HQ, ground floor",
+    "tags": ["handbook"]
+  },
+  {
+    "title": "Quarterly all-hands",
+    "description": "Where we are against the plan, what changed in the clinics, questions taken live and remote. Grounded in [Mission and Values](mission-and-values.md).",
+    "day_offset": 3,
+    "start": "16:00",
+    "duration_minutes": 60,
+    "room": "Serdica",
+    "location": "Sofia HQ, floor 4",
+    "tags": ["handbook", "people"],
+    "attendees": ["alice@uniffy.io", "bob@uniffy.io", "charlie@uniffy.io", "diana@uniffy.io", "eve@uniffy.io"]
+  },
+  {
+    "title": "Lab QA review",
+    "description": "Rejections, turnaround times, QC breaches and external quality assessment, against [lab-panel-reference-ranges.csv](file:Clinical/lab-panel-reference-ranges.csv) and the [Lab Sample Handling SOP](lab-sample-handling-sop.md).",
+    "day_offset": 4,
+    "start": "10:00",
+    "duration_minutes": 45,
+    "recurrence": { "pattern": "WEEKLY", "interval": 1 },
+    "room": "Pirin",
+    "location": "Sofia HQ, floor 3",
+    "tags": ["lab", "clinical"],
+    "attendees": ["eve@uniffy.io"]
+  },
+  {
+    "title": "First aid and resuscitation training",
+    "description": "Hands-on session with the training mannequins in [Serdica](room:Serdica). Mandatory every two years for clinical staff, CPD days per [Leave and Time Off](leave-and-time-off-policy.md).",
+    "day_offset": 4,
+    "start": "13:00",
+    "duration_minutes": 180,
+    "room": "Serdica",
+    "location": "Sofia HQ, floor 4",
+    "tags": ["clinical", "people"]
+  },
+  {
+    "title": "Flu vaccination day",
+    "description": "Free vaccination for all staff in the ground floor lobby. Drop in, no booking. Parking and access notes in the [Sofia HQ Guide](sofia-hq-guide.md).",
+    "day_offset": 9,
+    "start": "09:00",
+    "duration_minutes": 480,
+    "all_day": true,
+    "location": "Sofia HQ, ground floor lobby",
+    "tags": ["people", "sofia-office"]
+  }
+]
