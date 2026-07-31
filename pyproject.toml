@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "uniffy"
 version = "0.1.0"
-description = "Your Work, connected"
+description = "Teamwork. simplified, amplified, unified."
 readme = "README.md"
 authors = [
   { name = "kaibauniffy", email = "326951564+kaibauniffy@users.noreply.github.com" },

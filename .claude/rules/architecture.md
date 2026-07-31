@@ -10,7 +10,7 @@ paths:
 | Technology | Purpose |
 |------------|---------|
 | Python 3.13+ | Backend language |
-| FastAPI | Web framework (async only) |
+| FastAPI + Granian | Web framework (async only) |
 | SQLModel + asyncpg | ORM and async database driver |
 | PostgreSQL 18 | Primary database |
 | Meilisearch | Typo-tolerant full-text search |
