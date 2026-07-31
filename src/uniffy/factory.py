@@ -119,7 +119,10 @@ from uniffy.domains.agents.runtime.settings_handlers import (
 from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.audit.service import AuditServiceImpl
-from uniffy.domains.auth.interceptors import AuthRevocationInterceptor
+from uniffy.domains.auth.interceptors import (
+    AuthenticationInterceptor,
+    AuthRevocationInterceptor,
+)
 from uniffy.domains.auth.mfa.service import MfaServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
@@ -494,11 +497,18 @@ def create_app() -> FastAPI:
 
 def _create_api_dispatcher() -> ConnectRPCDispatcher:
     logging_interceptor = LoggingInterceptor()
-    # AuthRevocationInterceptor runs FIRST so a revoked access token never reaches
-    # handler code. LoggingInterceptor still gets the access log line because
-    # ConnectRPC unwinds interceptors in reverse order on raise.
+    # AuthenticationInterceptor runs FIRST and denies by default, so a handler
+    # that forgets its own identity check is not reachable without a token.
+    # Revocation follows, so a revoked access token never reaches handler code.
+    # LoggingInterceptor still gets the access log line because ConnectRPC
+    # unwinds interceptors in reverse order on raise.
+    authentication_interceptor = AuthenticationInterceptor()
     auth_revocation_interceptor = AuthRevocationInterceptor()
-    interceptors = [auth_revocation_interceptor, logging_interceptor]
+    interceptors = [
+        authentication_interceptor,
+        auth_revocation_interceptor,
+        logging_interceptor,
+    ]
     dispatcher = ConnectRPCDispatcher()
 
     dispatcher.add_service(

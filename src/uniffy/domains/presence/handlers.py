@@ -24,6 +24,7 @@ from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_organization_id_from_context,
     get_user_id_from_context,
+    resolve_organization_id,
 )
 from uniffy.domains.presence.converters import (
     proto_status_to_string,
@@ -32,31 +33,6 @@ from uniffy.domains.presence.converters import (
 from uniffy.domains.presence.operations import PresenceOperations
 
 logger = logger.bind(component="presence.handlers")
-
-
-def _resolve_org(ctx: RequestContext, request_org_id: str) -> UUID:
-    """JWT wins; request value must match when both are present.
-
-    Mirrors the tags handler pattern so a request-body ``org_id`` can
-    never override the authenticated session's org scope.
-    """
-    inferred = get_organization_id_from_context(ctx)
-    if request_org_id:
-        try:
-            parsed = UUID(request_org_id)
-        except ValueError as exc:
-            raise ConnectError(
-                Code.INVALID_ARGUMENT, "Invalid organization_id format"
-            ) from exc
-        if inferred is not None and inferred != parsed:
-            raise ConnectError(
-                Code.PERMISSION_DENIED,
-                "organization_id does not match the authenticated session",
-            )
-        return parsed
-    if inferred is None:
-        raise ConnectError(Code.INVALID_ARGUMENT, "organization_id is required")
-    return inferred
 
 
 class PresenceHandlers:
@@ -68,7 +44,7 @@ class PresenceHandlers:
         """Heartbeat; publishes a change event when the status differs from the previous value."""
         user_id = get_user_id_from_context(ctx)
 
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         status_string = proto_status_to_string(request.status)
         client = request.client or "web"
@@ -92,7 +68,7 @@ class PresenceHandlers:
     ) -> GetBulkPresenceResponse:
         get_user_id_from_context(ctx)
 
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if len(request.user_ids) > 200:
             raise ConnectError(

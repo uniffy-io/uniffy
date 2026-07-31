@@ -68,7 +68,12 @@ async def _execute_generate_image(ctx: ToolContext, args: dict) -> ToolResult:
         )
 
     # Load the agent to get image_model
-    result = await ctx.session.execute(select(Agent).where(Agent.id == ctx.agent_id))
+    result = await ctx.session.execute(
+        select(Agent).where(
+            Agent.id == ctx.agent_id,
+            Agent.organization_id == ctx.organization_id,
+        )
+    )
     agent = result.scalar_one_or_none()
     if not agent or not agent.image_model:
         return ToolResult(

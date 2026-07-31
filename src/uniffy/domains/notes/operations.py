@@ -277,7 +277,9 @@ class NoteOperations(BaseContentOperations[Note]):
         if effective_mode != AccessMode.OWNER_ONLY or group_ids:
             await self._emit_shared_notification(user_id, organization_id, note)
         await self._broadcast_open_to_org_create(organization_id, note.id, effective_mode)
-        await self._notify_new_mentions(user_id, organization_id, note, old_refs=None)
+        await self._notify_new_mentions(
+                user_id, organization_id, note, old_refs=None, writer_id=user_id
+            )
 
         return note
 
@@ -445,7 +447,9 @@ class NoteOperations(BaseContentOperations[Note]):
             )
 
         if content_changed:
-            await self._notify_new_mentions(user_id, organization_id, note, old_refs=old_refs)
+            await self._notify_new_mentions(
+                user_id, organization_id, note, old_refs=old_refs, writer_id=user_id
+            )
 
         return note
 
@@ -507,6 +511,7 @@ class NoteOperations(BaseContentOperations[Note]):
             tag_ops = TagOperations(self.session)
             for nid in removed_ids:
                 await tag_ops.unassign_all_for_urn(
+                    actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(self.content_type, nid),
                 )
@@ -665,7 +670,10 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._index_for_search(note)
         await self.session.commit()
 
-        await self._notify_new_mentions(actor_id, organization_id, note, old_refs=old_refs)
+        # No acting user on the snapshot path, so nobody is excluded as the writer.
+        await self._notify_new_mentions(
+            actor_id, organization_id, note, old_refs=old_refs, writer_id=None
+        )
 
         return note
 
@@ -755,6 +763,7 @@ class NoteOperations(BaseContentOperations[Note]):
         for nid in trash_ids:
             urn = build_content_urn(self.content_type, nid)
             await tag_ops.unassign_all_for_urn(
+                actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=urn,
             )
@@ -943,10 +952,16 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
         note: Note,
         old_refs: list[str] | None,
+        writer_id: UUID | None = None,
     ) -> None:
-        # ``old_refs=None`` on create -> every mention counts as new. Self-mentions skipped.
+        # ``old_refs=None`` on create -> every mention counts as new. Self-mentions
+        # skipped, but only when the writer is actually known: the realtime
+        # snapshot path has no acting user and attributes the save to the owner,
+        # so discarding on that value would drop the owner from a notification an
+        # editor wrote for them.
         new_mentioned = extract_mentioned_user_ids(note.outgoing_references)
-        new_mentioned.discard(user_id)
+        if writer_id is not None:
+            new_mentioned.discard(writer_id)
         if old_refs is not None:
             new_mentioned -= extract_mentioned_user_ids(old_refs)
         if not new_mentioned:

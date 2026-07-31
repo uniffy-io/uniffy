@@ -414,14 +414,16 @@ class FilesHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid upload_id")
 
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async with open_session() as session:
                 ops = FileOperations(session)
                 upload = await ops.get_upload_status(upload_id)
 
-                if not upload:
+                # Same not-found shape for a foreign upload as for a missing one,
+                # so the id space is not probeable.
+                if not upload or upload.user_id != user_id:
                     raise ConnectError(Code.NOT_FOUND, "Upload not found")
 
                 completed_chunks = await ops.list_completed_part_numbers(upload_id)

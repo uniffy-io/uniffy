@@ -32,8 +32,8 @@ from uniffy.core.errors import (
 from uniffy.db import open_session
 from uniffy.domains.agents.access import is_org_admin
 from uniffy.domains.auth.context import (
-    get_organization_id_from_context,
     get_user_id_from_context,
+    resolve_organization_id,
 )
 from uniffy.domains.integrations.converters import (
     connection_to_proto,
@@ -51,22 +51,6 @@ def _parse_uuid(value: str, field: str) -> UUID:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}") from exc
-
-
-def _resolve_org(ctx: RequestContext, request_org_id: str) -> UUID:
-    """JWT wins; a mismatching body value is a permission error."""
-    inferred = get_organization_id_from_context(ctx)
-    if request_org_id:
-        parsed = _parse_uuid(request_org_id, "organization_id")
-        if inferred is not None and inferred != parsed:
-            raise ConnectError(
-                Code.PERMISSION_DENIED,
-                "organization_id does not match the authenticated session",
-            )
-        return parsed
-    if inferred is None:
-        raise ConnectError(Code.INVALID_ARGUMENT, "organization_id is required")
-    return inferred
 
 
 def _domain_error_to_connect(operation: str, exc: Exception) -> ConnectError:
@@ -91,7 +75,7 @@ class IntegrationsHandlers:
         ctx: RequestContext,
     ) -> ListIntegrationProvidersResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = _resolve_org(ctx, request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
@@ -113,7 +97,7 @@ class IntegrationsHandlers:
         ctx: RequestContext,
     ) -> ListConnectionsResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = _resolve_org(ctx, request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
 
         provider = request.provider if request.HasField("provider") else None
 
@@ -144,7 +128,7 @@ class IntegrationsHandlers:
         ctx: RequestContext,
     ) -> AddConnectionResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = _resolve_org(ctx, request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
@@ -173,7 +157,7 @@ class IntegrationsHandlers:
         ctx: RequestContext,
     ) -> UpdateConnectionResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = _resolve_org(ctx, request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         kwargs: dict = {}
@@ -209,7 +193,7 @@ class IntegrationsHandlers:
         ctx: RequestContext,
     ) -> RemoveConnectionResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = _resolve_org(ctx, request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         try:
@@ -232,7 +216,7 @@ class IntegrationsHandlers:
         ctx: RequestContext,
     ) -> ValidateConnectionResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = _resolve_org(ctx, request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         try:
@@ -261,7 +245,7 @@ class IntegrationsHandlers:
         ctx: RequestContext,
     ) -> ToggleConnectionResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = _resolve_org(ctx, request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         connection_id = _parse_uuid(request.connection_id, "connection_id")
 
         try:

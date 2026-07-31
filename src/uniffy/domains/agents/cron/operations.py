@@ -160,6 +160,12 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
             raise NotFoundError("AgentCronTask", task_id)
 
         await require_agents_builder(self.session, user_id, organization_id)
+        # Builder is a domain-level power over the automation surface, not a
+        # content bypass: the task carries its prompt and runs as its execution
+        # user, so touching one also needs an editor role on the task itself.
+        # Without this an edit doubles as a read of an OWNER_ONLY prompt, and
+        # a schedule or enabled flip never passes the identity guard below.
+        await self._require_edit(user_id, organization_id, task)
 
         if name is not None:
             task.name = name.strip()
@@ -218,6 +224,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
             raise NotFoundError("AgentCronTask", task_id)
 
         await require_agents_builder(self.session, user_id, organization_id)
+        await self._require_delete(user_id, organization_id, task)
 
         task.is_deleted = True
         task.deleted_at = datetime.now(UTC)

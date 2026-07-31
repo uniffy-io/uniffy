@@ -1030,6 +1030,7 @@ class FileOperations(BaseContentOperations[File]):
         if permanent:
             tag_ops = TagOperations(self.session)
             await tag_ops.unassign_all_for_urn(
+                actor_id=user_id,
                 organization_id=file_org,
                 content_urn=build_content_urn(self.content_type, file_id),
             )
@@ -1318,6 +1319,7 @@ class FileOperations(BaseContentOperations[File]):
             total_deleted_bytes += file.size_bytes
             await self.s3.delete_object(file.storage_key)
             await tag_ops.unassign_all_for_urn(
+                actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=build_content_urn(self.content_type, file.id),
             )
@@ -1849,6 +1851,7 @@ class FolderOperations:
                 s3 = get_s3_client()
                 await s3.delete_object(file.storage_key)
                 await tag_ops.unassign_all_for_urn(
+                    actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(ContentType.FILE, file.id),
                 )

@@ -59,6 +59,10 @@ class ToolContext:
     # enabled set, so this is routing state, not an authorization surface.
     deferred_tool_groups: dict = field(default_factory=dict)
     loaded_tool_groups: list = field(default_factory=list)
+    # Every tool this run may execute, resolved from the agent's enabled set
+    # after the image and integration filters. Deny by default: advertisement
+    # is not authorization, and a model can name a tool it was never offered.
+    allowed_tools: frozenset[str] = frozenset()
 
 
 @dataclass

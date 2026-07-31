@@ -997,6 +997,56 @@ Capabilities tab, External section.
       `https://HOST/api/v3` and confirm probe + one read tool work
       against it (skip when no GHE instance is available).
 
+## Realtime session revocation and lifetime
+
+The realtime socket re-authorizes itself every 30s and cannot outlive the
+token that opened it. Needs two browsers signed in as the same user, plus an
+org admin in a second profile (`(both products)`).
+
+- [ ] Revoke this device: open a note in browser A and in browser B, then from
+      B's Settings > Security revoke A's session -> A's socket closes, the
+      badge leaves Live, and A cannot reconnect (its reload lands on login).
+      B keeps editing.
+- [ ] Revoke then reconnect: with A's session revoked, watch A's network panel
+      -> the realtime upgrade is refused, not accepted-then-closed.
+- [ ] Idle socket: in A open the notes list (socket open, no doc attached),
+      revoke A's session, then open a note -> the attach is refused instead of
+      loading the doc.
+- [ ] Token expiry: leave a note open past the access-token lifetime (default
+      15 min) -> the socket closes with 4409, the client refreshes, and editing
+      continues with no visible interruption and no lost keystrokes.
+- [ ] Membership removal mid-edit: user A edits a note, an org admin removes A
+      from the org -> within ~30s A's socket closes and further edits are
+      refused; A's earlier merged edits stay in the doc (CRDT trade-off).
+- [ ] Healthy session is untouched: two peers editing the same note for
+      several minutes see no spontaneous disconnects.
+
+## Agents: tool authorization
+
+An agent executes only the tools its builder enabled, and automations are
+gated by the task's own access policy. Needs a builder plus a second member
+(`(both products)`).
+
+- [ ] Tool not enabled: on an agent with only note tools enabled, ask it to
+      delete a file -> it reports it cannot, and no file is deleted. The tool
+      pane shows no delete step.
+- [ ] Disabled integration: with the GitHub connection disabled, ask an agent
+      whose GitHub tools are enabled for a repo listing -> refusal, no call.
+- [ ] Automation prompt stays private: member B creates an automation
+      (default owner-only), then a builder who is not B opens `/agents`
+      automations -> B's task is not listed, and editing it by id fails.
+- [ ] Builder with a grant: B shares the task with the builder as EDITOR ->
+      the builder can retime it, and the run still executes as B.
+- [ ] Prompt rewrite moves the identity: the builder rewrites the prompt ->
+      the task's execution user becomes the builder, and the next run acts
+      with the builder's permissions.
+- [ ] Scheduled delete needs no approval: an automation whose prompt deletes a
+      note it owns runs to completion unattended (no approval card, delete
+      applied) - this is the documented cron policy, not a bug.
+- [ ] Folder names stay scoped: put a note in a private folder, share only the
+      note with another member, ask their agent to list notes -> the location
+      reads "unknown folder", never the private folder's name.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

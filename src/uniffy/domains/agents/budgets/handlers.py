@@ -45,7 +45,11 @@ from uniffy.domains.agents.budgets.converters import (
     user_quota_to_proto,
 )
 from uniffy.domains.agents.budgets.operations import BudgetsOperations
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import (
+    get_user_id_from_context,
+    resolve_organization_id,
+)
+from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="agents.budgets.handlers")
 
@@ -487,14 +491,12 @@ class BudgetsHandlers:
         ctx: RequestContext,
     ) -> GetDisplayCurrencyResponse:
         """Return the org's display currency (or the module default)."""
-        get_user_id_from_context(ctx)
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id format")
+        user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
+                await OrganizationOperations(session).require_org_member(user_id, org_id)
                 ops = BudgetsOperations(session)
                 cur = await ops.get_display_currency(organization_id=org_id)
                 return GetDisplayCurrencyResponse(display_currency=cur)

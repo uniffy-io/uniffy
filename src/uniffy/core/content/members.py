@@ -94,6 +94,13 @@ def register_content_loader(content_type: ContentType, loader: ContentLoader) ->
     _CONTENT_LOADERS[content_type] = loader
 
 
+def find_content_loader(content_type: ContentType) -> ContentLoader | None:
+    """Non-raising lookup for callers that treat an unregistered type as
+    "cannot decide" rather than an error.
+    """
+    return _CONTENT_LOADERS.get(content_type)
+
+
 # Domain-level management power (e.g. agents builders): grants MANAGE on rows of
 # a content type without touching effective_role, so reads/lists/search stay
 # unaffected. See permissions.md "Domain admin".

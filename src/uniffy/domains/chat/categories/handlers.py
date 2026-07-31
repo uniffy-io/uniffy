@@ -23,7 +23,10 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import (
+    get_user_id_from_context,
+    resolve_organization_id,
+)
 from uniffy.domains.chat.categories.operations import ChatCategoryOperations
 from uniffy.domains.chat.channels.converters import category_to_proto, channel_to_proto
 
@@ -108,15 +111,18 @@ class CategoryHandlers:
         request: ListCategoriesRequest,
         ctx: RequestContext,
     ) -> ListCategoriesResponse:
-        try:
-            org_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+        user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
 
-        async with open_session() as session:
-            ops = ChatCategoryOperations(session)
-            cats = await ops.list_categories(org_id)
-            return ListCategoriesResponse(categories=[category_to_proto(c) for c in cats])
+        try:
+            async with open_session() as session:
+                ops = ChatCategoryOperations(session)
+                cats = await ops.list_categories(user_id, org_id)
+                return ListCategoriesResponse(
+                    categories=[category_to_proto(c) for c in cats]
+                )
+        except (NotFoundError, PermissionDeniedError) as e:
+            _handle_error(e)
 
     async def reorder_categories(
         self,

@@ -47,16 +47,7 @@ def _truncate_result(data: str) -> str:
 
 
 class ToolExecutor:
-    """Executes tool calls within a permission-scoped context.
-
-    Parameters
-    ----------
-    registry : ToolRegistry
-        Tool registry to look up tool definitions.
-    context : ToolContext
-        Execution context with session, user_id, organization_id.
-
-    """
+    """Executes tool calls within a permission-scoped context."""
 
     def __init__(self, registry: ToolRegistry, context: ToolContext) -> None:
         self._registry = registry
@@ -73,30 +64,12 @@ class ToolExecutor:
         return self._context
 
     async def execute(self, tool_call: ToolCall) -> ToolResult:
-        """Execute a single tool call.
+        """Run one tool call, converting every failure into a ``ToolResult``.
 
-        Looks up the tool by name, invokes its executor with the
-        provided arguments, and returns a structured result. Errors
-        are caught and returned as failed ToolResults rather than
-        propagated.
-
-        For every mutating tool (``read_only=False``), an
-        ``agent.tool_call.<name>`` row is written through the central
-        audit pipeline. The row attributes the action to the human
-        owner (``ctx.user_id``) and surfaces the agent's identity via
-        ``details.actor_kind = "agent"`` + ``details.agent_id``.
-        Read-only tools are not audited.
-
-        Parameters
-        ----------
-        tool_call : ToolCall
-            The tool call from the LLM (id, name, input).
-
-        Returns
-        -------
-        ToolResult
-            Execution result with success/failure and data or error.
-
+        This is the authorization point for the agent's enabled-tool set: the
+        provider tools param only advertises, and a model can emit a name it
+        was never offered. Mutating tools (``read_only=False``) also write an
+        ``agent.tool_call.<name>`` audit row attributed to the human.
         """
         tool_def = self._registry.get(tool_call.name)
         if tool_def is None:
@@ -105,6 +78,24 @@ class ToolExecutor:
                 success=False,
                 data="",
                 error=f"Unknown tool: {tool_call.name}",
+            )
+
+        # Internal tools (view_skill, load_group) are advertised by the runtime
+        # on its own terms and never appear in a builder's enabled set.
+        if not tool_def.internal and tool_def.name not in self._context.allowed_tools:
+            AGENT_TOOL_CALLS_TOTAL.labels(tool=tool_def.name, status="not_enabled").inc()
+            logger.warning(
+                "Tool call rejected: not enabled for this agent",
+                tool=tool_def.name,
+                agent_id=str(self._context.agent_id),
+            )
+            return ToolResult(
+                success=False,
+                data="",
+                error=(
+                    f"Tool {tool_call.name} is not enabled for this agent. "
+                    "Work with the tools you have."
+                ),
             )
 
         error_reason: str | None = None

@@ -22,7 +22,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from sqlalchemy import select
 from uniffy_proto.agents.v1.runtime_pb2 import (
     AgentStreamEvent,
     CancelStreamRequest,
@@ -51,7 +50,6 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.models.login.organization_member import OrganizationRole
-from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.core.valkey.queue import get_queue
 from uniffy.core.valkey.rate_limit import check_agent_message_limits
@@ -707,17 +705,15 @@ class RuntimeHandlers:
                 org_ops = OrganizationOperations(session)
                 membership = await org_ops.require_org_member(user_id, org_id)
 
-                user_result = await session.execute(
-                    select(User.is_system_admin).where(User.id == user_id)
-                )
-                is_sys_admin = user_result.scalar_one_or_none() or False
-
+                # Org-wide usage follows the org role only. A platform operator
+                # holding a plain member seat gets their own rows like anyone
+                # else; cross-tenant reach requires a SupportSession.
                 is_org_admin = membership.role in (
                     OrganizationRole.ADMIN,
                     OrganizationRole.OWNER,
                 )
 
-                scoped_user_id = None if (is_org_admin or is_sys_admin) else user_id
+                scoped_user_id = None if is_org_admin else user_id
 
                 ops = UsageOperations(session)
                 stats = await ops.get_usage_stats(

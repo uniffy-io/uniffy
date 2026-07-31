@@ -6,11 +6,12 @@ import json
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.extraction import UnsupportedFormatError, can_extract, extract_text
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.types import ContentType
 from uniffy.domains.agents.tools.builtin.args import (
     MAX_PAGE,
     clamp_int,
@@ -67,11 +68,30 @@ def _folder_urn(folder_id: UUID | str) -> str:
     return f"urn:uniffy:content:FOLDER:{folder_id}"
 
 
-async def _fetch_folder_names(session: AsyncSession, ids: set[UUID]) -> dict[UUID, str]:
-    """Folder names for a listing, one query for the whole page."""
+async def _fetch_folder_names(ctx: ToolContext, ids: set[UUID]) -> dict[UUID, str]:
+    """Folder names for a listing, restricted to folders the caller can view.
+
+    A file shared out of a private folder must not carry that folder's name
+    with it; callers render a missing id as "folder".
+    """
     if not ids:
         return {}
-    result = await session.execute(select(Folder.id, Folder.name).where(Folder.id.in_(ids)))
+    access = ContentAccessQuery(ctx.session)
+    result = await ctx.session.execute(
+        select(Folder.id, Folder.name).where(
+            Folder.id.in_(ids),
+            Folder.organization_id == ctx.organization_id,
+            await access.build_accessible_filter(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                content_type=ContentType.FOLDER,
+                content_id_column=Folder.id,
+                owner_id_column=Folder.owner_id,
+                access_mode_column=Folder.access_mode,
+                baseline_role_column=Folder.baseline_role,
+            ),
+        )
+    )
     return {row[0]: row[1] for row in result.all()}
 
 
@@ -173,7 +193,7 @@ async def _execute_list_files(ctx: ToolContext, args: dict) -> ToolResult:
         )
 
     folder_names = await _fetch_folder_names(
-        ctx.session, {f.folder_id for f in files if f.folder_id}
+        ctx, {f.folder_id for f in files if f.folder_id}
     )
 
     lines = [f"Found {total} files in {scope} (showing {len(files)}, page {page}):"]
@@ -300,7 +320,7 @@ async def _execute_move_file(ctx: ToolContext, args: dict) -> ToolResult:
 
     destination = "the top level"
     if folder_id is not None:
-        names = await _fetch_folder_names(ctx.session, {folder_id})
+        names = await _fetch_folder_names(ctx, {folder_id})
         destination = f"'{names.get(folder_id, 'folder')}'"
 
     urn = f"urn:uniffy:content:FILE:{file.id}"
@@ -333,7 +353,7 @@ async def _execute_get_file_info(ctx: ToolContext, args: dict) -> ToolResult:
     )
     file_tag_slugs = [tag.slug for tag in tags_by_urn.get(urn, [])]
     folder_names = await _fetch_folder_names(
-        ctx.session, {file.folder_id} if file.folder_id else set()
+        ctx, {file.folder_id} if file.folder_id else set()
     )
 
     data = json.dumps(

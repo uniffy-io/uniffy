@@ -141,6 +141,19 @@ def _resolve_tool_schemas(
     return schemas or None
 
 
+def _allowed_tool_names(tool_schemas: list[dict] | None) -> frozenset[str]:
+    """Internal names of every tool this run may execute.
+
+    Taken from the fully-resolved schema set (image swap + integration gate
+    applied) rather than ``agent.enabled_tools``, so a tool whose integration
+    connection is gone is not executable either. Deferral splits this set; it
+    never widens it.
+    """
+    return frozenset(
+        from_api_name(schema.get("name", "")) for schema in tool_schemas or []
+    )
+
+
 def _is_load_only_turn(tool_calls: list) -> bool:
     """True when every call in the turn is tools.load_group."""
     return bool(tool_calls) and all(
@@ -526,6 +539,7 @@ class RuntimeOperations:
         # The external-content note keys off the full enabled set: a deferred
         # integration group can surface mid-run via tools.load_group.
         external_note = has_advertised_integration_tools(tool_schemas)
+        allowed_tools = _allowed_tool_names(tool_schemas)
         loaded_tool_groups = list(agent_session.loaded_tool_groups or [])
         plan = plan_tool_advertisement(registry, tool_schemas, loaded_tool_groups)
         tool_schemas = plan.tool_schemas or None
@@ -683,6 +697,7 @@ class RuntimeOperations:
                     integration_connections=agent.integration_connections or {},
                     deferred_tool_groups=plan.deferred_names(),
                     loaded_tool_groups=loaded_tool_groups,
+                    allowed_tools=allowed_tools,
                 )
                 executor = ToolExecutor(registry, tool_ctx)
 
@@ -1304,6 +1319,7 @@ class RuntimeOperations:
         # The external-content note keys off the full enabled set: a deferred
         # integration group can surface mid-run via tools.load_group.
         external_note = has_advertised_integration_tools(tool_schemas)
+        allowed_tools = _allowed_tool_names(tool_schemas)
         plan = plan_tool_advertisement(registry, tool_schemas, loaded_tool_groups)
         tool_schemas = plan.tool_schemas or None
         deferred_pool = dict(plan.deferred)
@@ -1552,6 +1568,7 @@ class RuntimeOperations:
                 channel_id=channel_id,
                 deferred_tool_groups=plan.deferred_names(),
                 loaded_tool_groups=loaded_tool_groups,
+                allowed_tools=allowed_tools,
             )
             executor = ToolExecutor(registry, tool_ctx)
 

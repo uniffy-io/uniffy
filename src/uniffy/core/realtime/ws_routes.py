@@ -2,8 +2,9 @@
 
 One WS per browser tab, all docs multiplexed onto it. Upgrade enforces, in order:
 origin allowlist, bearer JWT, ``type==access``, ``org_id`` match, ``min_tkv``
-watermark (catches the "connect with an already-revoked token" race). Per-doc
-role resolution runs lazily inside ``run_multiplexed_session``.
+watermark and per-session revoke (both catch the "connect with an already-revoked
+token" race), active membership. Per-doc role resolution runs lazily inside
+``run_multiplexed_session``, which also re-checks all of it on a timer.
 """
 
 from typing import Annotated
@@ -24,7 +25,7 @@ from uniffy.core.realtime.auth import (
 )
 from uniffy.core.realtime.session import run_multiplexed_session
 from uniffy.core.realtime.state import WSSession
-from uniffy.domains.auth.revocation import is_access_token_revoked
+from uniffy.domains.auth.revocation import is_access_token_revoked, is_session_revoked
 from uniffy.domains.auth.tokens import decode_access_token
 from uniffy.observability.metrics import REALTIME_AUTH_FAILURES_TOTAL
 
@@ -75,6 +76,8 @@ async def realtime(
         token_org_raw = payload.get("org_id")
         token_org = UUID(token_org_raw) if token_org_raw else None
         token_version = payload.get("tkv")
+        exp_raw = payload.get("exp")
+        expires_at = float(exp_raw) if isinstance(exp_raw, (int, float)) else None
         sid_raw = payload.get("sid")
         try:
             session_id = UUID(sid_raw) if sid_raw else None
@@ -108,6 +111,18 @@ async def realtime(
         await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="token revoked")
         return
 
+    # Per-session revoke does not bump token_version, so the watermark above
+    # cannot see it: without this check "log out this device" leaves that device
+    # able to open a fresh realtime channel.
+    if await is_session_revoked(session_id):
+        REALTIME_AUTH_FAILURES_TOTAL.labels(reason="session_revoked").inc()
+        logger.warning(
+            f"realtime upgrade rejected: session revoked (user={user_id}, sid={session_id})",
+            component=LOGGER_COMPONENT,
+        )
+        await ws.close(code=WS_CLOSE_UNAUTHENTICATED, reason="session revoked")
+        return
+
     if not await is_active_member(user_id, org_id):
         REALTIME_AUTH_FAILURES_TOTAL.labels(reason="membership_revoked").inc()
         logger.warning(
@@ -127,5 +142,6 @@ async def realtime(
         conn_id=id(ws),
         ws=ws,
         session_id=session_id,
+        expires_at=expires_at,
     )
     await run_multiplexed_session(ws, ws_session)

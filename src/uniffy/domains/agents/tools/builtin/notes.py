@@ -7,11 +7,12 @@ import json
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.shared import NodeType
+from uniffy.core.types import ContentType
 from uniffy.domains.agents.tools.builtin.args import MAX_PAGE, clamp_int, clamp_page, parse_uuid
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.tags import TagOperations
@@ -58,11 +59,31 @@ def _kind(note: Note) -> str:
     return _KIND_LABELS.get(note.node_type, "note")
 
 
-async def _fetch_titles(session: AsyncSession, ids: set[UUID]) -> dict[UUID, str]:
-    """Titles for parent folders, one query for the whole listing."""
+async def _fetch_titles(ctx: ToolContext, ids: set[UUID]) -> dict[UUID, str]:
+    """Titles for parent folders, one query for the whole listing.
+
+    Restricted to folders the caller can view: a note shared into a private
+    folder must not carry that folder's name back out. Callers render a missing
+    id as "unknown folder".
+    """
     if not ids:
         return {}
-    result = await session.execute(select(Note.id, Note.title).where(Note.id.in_(ids)))
+    access = ContentAccessQuery(ctx.session)
+    result = await ctx.session.execute(
+        select(Note.id, Note.title).where(
+            Note.id.in_(ids),
+            Note.organization_id == ctx.organization_id,
+            await access.build_accessible_filter(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                content_type=ContentType.NOTE,
+                content_id_column=Note.id,
+                owner_id_column=Note.owner_id,
+                access_mode_column=Note.access_mode,
+                baseline_role_column=Note.baseline_role,
+            ),
+        )
+    )
     return {row[0]: row[1] for row in result.all()}
 
 
@@ -99,12 +120,17 @@ async def _resolve_folder_arg(
 
 
 async def _node_types_by_id(
-    session: AsyncSession,
+    ctx: ToolContext,
     ids: list[UUID],
 ) -> dict[UUID, NodeType]:
     if not ids:
         return {}
-    result = await session.execute(select(Note.id, Note.node_type).where(Note.id.in_(ids)))
+    result = await ctx.session.execute(
+        select(Note.id, Note.node_type).where(
+            Note.id.in_(ids),
+            Note.organization_id == ctx.organization_id,
+        )
+    )
     return {row[0]: row[1] for row in result.all()}
 
 
@@ -135,7 +161,7 @@ async def _execute_search_notes(ctx: ToolContext, args: dict) -> ToolResult:
     for r in results:
         with contextlib.suppress(ValueError, IndexError):
             ids.append(UUID(r.urn.split(":")[-1]))
-    kinds = await _node_types_by_id(ctx.session, ids)
+    kinds = await _node_types_by_id(ctx, ids)
 
     lines: list[str] = []
     folders_hidden = 0
@@ -204,7 +230,7 @@ async def _execute_list_notes(ctx: ToolContext, args: dict) -> ToolResult:
         )
 
     folder_titles = await _fetch_titles(
-        ctx.session, {n.parent_id for n in notes if n.parent_id}
+        ctx, {n.parent_id for n in notes if n.parent_id}
     )
 
     lines = [f"Found {total} notes in {scope} (showing {len(notes)}, page {page}):"]
@@ -261,7 +287,7 @@ async def _execute_list_folders(ctx: ToolContext, args: dict) -> ToolResult:
         return ToolResult(success=True, data=f"No notes folders in {scope}.")
 
     parent_titles = await _fetch_titles(
-        ctx.session, {f.parent_id for f in folders if f.parent_id}
+        ctx, {f.parent_id for f in folders if f.parent_id}
     )
 
     lines = [f"Found {total} folders in {scope} (showing {len(folders)}, page {page}):"]
@@ -317,7 +343,7 @@ async def _execute_read_note(ctx: ToolContext, args: dict) -> ToolResult:
     note_tags = [tag.slug for tag in tags_by_urn.get(urn, [])]
 
     folder_titles = await _fetch_titles(
-        ctx.session, {note.parent_id} if note.parent_id else set()
+        ctx, {note.parent_id} if note.parent_id else set()
     )
 
     result_dict: dict = {
@@ -478,7 +504,7 @@ async def _execute_move_note(ctx: ToolContext, args: dict) -> ToolResult:
 
     destination = "the top level"
     if parent_id is not None:
-        titles = await _fetch_titles(ctx.session, {parent_id})
+        titles = await _fetch_titles(ctx, {parent_id})
         destination = f"'{titles.get(parent_id, 'folder')}'"
 
     return ToolResult(

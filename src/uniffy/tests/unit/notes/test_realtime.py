@@ -12,7 +12,7 @@ import base64
 import time
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pycrdt
 import pytest
@@ -46,12 +46,7 @@ from uniffy.core.realtime.ydoc_manager import (
     YDocManager,
     YDocSession,
 )
-from uniffy.core.types import ContentRole, ContentType, NodeType
-
-
-def _run(coro):
-    return asyncio.run(coro)
-
+from uniffy.core.types import ContentRole, ContentType, NodeType, generate_id
 
 _conn_id_seq = 0
 
@@ -70,7 +65,7 @@ def _make_handle(
 ) -> ClientHandle:
     handle = ClientHandle(
         conn_id=_next_conn_id(),
-        user_id=user_id or uuid4(),
+        user_id=user_id or generate_id(),
         can_edit=can_edit,
         token_version=token_version,
         ws=AsyncMock(),
@@ -80,9 +75,9 @@ def _make_handle(
 
 def _make_router_session(content_type: ContentType = ContentType.NOTE) -> YDocSession:
     return YDocSession(
-        key=(content_type, uuid4()),
+        key=(content_type, generate_id()),
         ydoc=pycrdt.Doc(),
-        organization_id=uuid4(),
+        organization_id=generate_id(),
     )
 
 
@@ -228,64 +223,64 @@ class TestAdapterRegistry:
 class TestEnforceRoleChange:
     """Decision matrix for one perm-channel payload."""
 
-    def test_blocked_closes_session(self) -> None:
+    async def test_blocked_closes_session(self) -> None:
         manager = YDocManager()
         handle = _make_handle(can_edit=True)
-        _run(manager._enforce_role_change(handle, "BLOCKED"))
+        await manager._enforce_role_change(handle, "BLOCKED")
         assert handle.closed is True
         handle.ws.close.assert_awaited_once()
         kwargs = handle.ws.close.call_args.kwargs
         assert kwargs["code"] == WS_CLOSE_FORBIDDEN
 
-    def test_none_role_closes_session(self) -> None:
+    async def test_none_role_closes_session(self) -> None:
         manager = YDocManager()
         handle = _make_handle(can_edit=True)
-        _run(manager._enforce_role_change(handle, None))
+        await manager._enforce_role_change(handle, None)
         assert handle.closed is True
         handle.ws.close.assert_awaited_once()
 
-    def test_viewer_downgrades_edit(self) -> None:
+    async def test_viewer_downgrades_edit(self) -> None:
         manager = YDocManager()
         handle = _make_handle(can_edit=True)
-        _run(manager._enforce_role_change(handle, "VIEWER"))
+        await manager._enforce_role_change(handle, "VIEWER")
         assert handle.can_edit is False
         assert handle.closed is False
         handle.ws.close.assert_not_called()
 
-    def test_editor_restores_edit(self) -> None:
+    async def test_editor_restores_edit(self) -> None:
         manager = YDocManager()
         handle = _make_handle(can_edit=False)
-        _run(manager._enforce_role_change(handle, "EDITOR"))
+        await manager._enforce_role_change(handle, "EDITOR")
         assert handle.can_edit is True
         assert handle.closed is False
 
-    def test_close_handle_idempotent(self) -> None:
+    async def test_close_handle_idempotent(self) -> None:
         manager = YDocManager()
         handle = _make_handle()
-        _run(manager._close_handle(handle, WS_CLOSE_FORBIDDEN, "first"))
-        _run(manager._close_handle(handle, WS_CLOSE_FORBIDDEN, "second"))
+        await manager._close_handle(handle, WS_CLOSE_FORBIDDEN, "first")
+        await manager._close_handle(handle, WS_CLOSE_FORBIDDEN, "second")
         handle.ws.close.assert_awaited_once()
 
 
 class TestCloseStaleUserSessions:
     """Token-revoke fanout: only sessions with older versions get closed."""
 
-    def test_only_older_token_versions_closed(self) -> None:
+    async def test_only_older_token_versions_closed(self) -> None:
         manager = YDocManager()
-        user_id = uuid4()
+        user_id = generate_id()
         session = _make_router_session()
         manager._sessions[session.key] = session
 
         stale = _make_handle(user_id=user_id, token_version=3)
         fresh = _make_handle(user_id=user_id, token_version=7)
-        other_user = _make_handle(user_id=uuid4(), token_version=2)
+        other_user = _make_handle(user_id=generate_id(), token_version=2)
         session.clients = {
             stale.conn_id: stale,
             fresh.conn_id: fresh,
             other_user.conn_id: other_user,
         }
 
-        _run(manager._close_stale_user_sessions(user_id, new_version=5))
+        await manager._close_stale_user_sessions(user_id, new_version=5)
 
         assert stale.closed is True
         stale.ws.close.assert_awaited_once()
@@ -295,15 +290,15 @@ class TestCloseStaleUserSessions:
         assert other_user.closed is False
         other_user.ws.close.assert_not_called()
 
-    def test_missing_token_version_treated_as_stale(self) -> None:
+    async def test_missing_token_version_treated_as_stale(self) -> None:
         manager = YDocManager()
-        user_id = uuid4()
+        user_id = generate_id()
         session = _make_router_session()
         manager._sessions[session.key] = session
         handle = _make_handle(user_id=user_id, token_version=None)
         session.clients = {handle.conn_id: handle}
 
-        _run(manager._close_stale_user_sessions(user_id, new_version=2))
+        await manager._close_stale_user_sessions(user_id, new_version=2)
 
         assert handle.closed is True
 
@@ -311,7 +306,7 @@ class TestCloseStaleUserSessions:
 class TestSnapshotWriterDebounce:
     """Each schedule call resets the timer; only the last one fires."""
 
-    def test_rapid_schedule_calls_coalesce_into_one_flush(self) -> None:
+    async def test_rapid_schedule_calls_coalesce_into_one_flush(self) -> None:
         flush_calls = 0
 
         async def fake_flush(session, *, force=False):
@@ -329,10 +324,10 @@ class TestSnapshotWriterDebounce:
 
             await asyncio.sleep(0.15)
 
-        _run(go())
+        await go()
         assert flush_calls == 1
 
-    def test_cancel_drops_pending_timer_without_flush(self) -> None:
+    async def test_cancel_drops_pending_timer_without_flush(self) -> None:
         flush_calls = 0
 
         async def fake_flush(session, *, force=False):
@@ -348,10 +343,10 @@ class TestSnapshotWriterDebounce:
             await writer.cancel(session.key)
             await asyncio.sleep(0.1)
 
-        _run(go())
+        await go()
         assert flush_calls == 0
 
-    def test_overdue_pending_window_flushes_instead_of_rearming(self) -> None:
+    async def test_overdue_pending_window_flushes_instead_of_rearming(self) -> None:
         flush_calls: list[bool] = []
 
         async def fake_flush(session, *, force=False):
@@ -373,11 +368,11 @@ class TestSnapshotWriterDebounce:
 
             await writer.cancel(session.key)
 
-        _run(go())
+        await go()
 
 
 class TestSnapshotForceFlush:
-    def test_force_flush_persists_in_process(self) -> None:
+    async def test_force_flush_persists_in_process(self) -> None:
         async def go() -> None:
             writer = SnapshotWriter(debounce_seconds=60.0)
             session = _make_router_session()
@@ -399,9 +394,9 @@ class TestSnapshotForceFlush:
             assert args[3]
             get_queue.assert_not_called()
 
-        _run(go())
+        await go()
 
-    def test_non_force_flush_enqueues(self) -> None:
+    async def test_non_force_flush_enqueues(self) -> None:
         async def go() -> None:
             writer = SnapshotWriter(debounce_seconds=60.0)
             session = _make_router_session()
@@ -419,11 +414,11 @@ class TestSnapshotForceFlush:
             persist.assert_not_called()
             queue.enqueue_job.assert_awaited_once()
 
-        _run(go())
+        await go()
 
 
 class TestEvictionFlushOrdering:
-    def test_session_registered_until_force_flush_completes(self) -> None:
+    async def test_session_registered_until_force_flush_completes(self) -> None:
         async def go() -> None:
             manager = YDocManager()
             session = _make_router_session()
@@ -442,7 +437,7 @@ class TestEvictionFlushOrdering:
             assert observed == [(True, True)]
             assert session.key not in manager._sessions
 
-        _run(go())
+        await go()
 
 
 class TestCanvasRender:
@@ -653,13 +648,13 @@ class TestOutboundBackpressure:
         from uniffy.core.types import ContentType
 
         ws_session = WSSession(
-            user_id=uuid4(),
-            organization_id=uuid4(),
+            user_id=generate_id(),
+            organization_id=generate_id(),
             token_version=1,
             conn_id=_next_conn_id(),
             ws=AsyncMock(),
         )
-        doc_key = (ContentType.NOTE, uuid4())
+        doc_key = (ContentType.NOTE, generate_id())
         handle = ClientHandle(
             conn_id=ws_session.conn_id,
             user_id=ws_session.user_id,
@@ -687,7 +682,7 @@ class TestQueryAwarenessRelay:
     """A query-awareness frame fans out to live peers so they re-announce, rather
     than being dropped - that drop left a joiner blind to idle peers' cursors."""
 
-    def test_query_awareness_relayed_to_peers_not_source(self) -> None:
+    async def test_query_awareness_relayed_to_peers_not_source(self) -> None:
         import pycrdt
 
         from uniffy.core.realtime.multiplex import peek_var_string
@@ -701,12 +696,12 @@ class TestQueryAwarenessRelay:
         from uniffy.core.realtime.ydoc_manager import ydoc_manager
         from uniffy.core.types import ContentType
 
-        org_id = uuid4()
-        doc_key = (ContentType.NOTE, uuid4())
+        org_id = generate_id()
+        doc_key = (ContentType.NOTE, generate_id())
 
         def make_client() -> tuple[WSSession, ClientHandle]:
             ws_session = WSSession(
-                user_id=uuid4(),
+                user_id=generate_id(),
                 organization_id=org_id,
                 token_version=1,
                 conn_id=_next_conn_id(),
@@ -742,7 +737,7 @@ class TestQueryAwarenessRelay:
             finally:
                 ydoc_manager._sessions.pop(doc_key, None)
 
-        _run(go())
+        await go()
 
         assert asker_ws.outbound.qsize() == 0
         assert peer_ws.outbound.qsize() == 1
@@ -755,7 +750,7 @@ class TestQueryAwarenessRelay:
 class TestRealtimeSaveCAS:
     """``realtime_save`` must skip downstream side effects when CAS loses."""
 
-    def test_cas_miss_returns_none_and_skips_side_effects(self) -> None:
+    async def test_cas_miss_returns_none_and_skips_side_effects(self) -> None:
         from unittest.mock import AsyncMock, MagicMock
 
         from uniffy.domains.notes.operations import NoteOperations
@@ -770,7 +765,7 @@ class TestRealtimeSaveCAS:
             note.node_type = NodeType.NOTE
             note.version = 7
             note.outgoing_references = []
-            note.owner_id = uuid4()
+            note.owner_id = generate_id()
 
             def read_result() -> MagicMock:
                 result = MagicMock()
@@ -799,8 +794,8 @@ class TestRealtimeSaveCAS:
             ops._notify_new_mentions = AsyncMock()
 
             result = await ops.realtime_save(
-                organization_id=uuid4(),
-                note_id=uuid4(),
+                organization_id=generate_id(),
+                note_id=generate_id(),
                 content="new body",
                 canvas_content=None,
             )
@@ -810,17 +805,17 @@ class TestRealtimeSaveCAS:
             ops._index_for_search.assert_not_called()
             ops._notify_new_mentions.assert_not_called()
 
-        _run(go())
+        await go()
 
 
 class TestPerKeyHydrationLock:
     """Hydration of doc A must not block acquire of doc B."""
 
-    def test_hydration_lock_is_per_key(self) -> None:
+    async def test_hydration_lock_is_per_key(self) -> None:
         async def go() -> None:
             manager = YDocManager()
-            key_a = (ContentType.NOTE, uuid4())
-            key_b = (ContentType.NOTE, uuid4())
+            key_a = (ContentType.NOTE, generate_id())
+            key_b = (ContentType.NOTE, generate_id())
 
             manager._hydration_locks[key_a] = asyncio.Lock()
             await manager._hydration_locks[key_a].acquire()
@@ -831,7 +826,7 @@ class TestPerKeyHydrationLock:
 
             manager._hydration_locks[key_a].release()
 
-        _run(go())
+        await go()
 
 
 from uniffy.core.realtime.multiplex import (
@@ -958,7 +953,7 @@ from uniffy.core.realtime.state import DocKey
 
 class TestChannelParsers:
     def test_doc_channel_roundtrip(self):
-        ct, cid = ContentType.NOTE, uuid4()
+        ct, cid = ContentType.NOTE, generate_id()
         channel = f"realtime:doc:{ct.value}:{cid}"
         assert _parse_doc_channel(channel) == (ct, cid)
 
@@ -968,12 +963,12 @@ class TestChannelParsers:
         assert _parse_doc_channel("realtime:doc:NOTE:not-a-uuid") is None
 
     def test_perm_channel_roundtrip(self):
-        ct, cid = ContentType.NOTE, uuid4()
+        ct, cid = ContentType.NOTE, generate_id()
         channel = f"realtime:perm:{ct.value}:{cid}"
         assert _parse_perm_channel(channel) == (ct, cid)
 
     def test_revoke_channel_roundtrip(self):
-        uid = uuid4()
+        uid = generate_id()
         assert _parse_revoke_channel(f"auth:revoke:{uid}") == uid
 
     def test_revoke_channel_invalid(self):
@@ -1028,7 +1023,7 @@ def _make_router_with_callbacks() -> tuple[RealtimeRouter, _StubCallbacks]:
 
 
 class TestRouterDocDispatch:
-    def test_drops_self_replica_echo(self):
+    async def test_drops_self_replica_echo(self):
         r, cb = _make_router_with_callbacks()
         sess = _make_router_session()
         r.register_doc_session(sess.key, sess)
@@ -1038,10 +1033,10 @@ class TestRouterDocDispatch:
             "origin_replica": r._self_replica,
             "update": base64.b64encode(b"abc").decode(),
         }
-        _run(r._handle_doc_message(channel, payload))
+        await r._handle_doc_message(channel, payload)
         assert cb.applied_updates == []
 
-    def test_routes_remote_update(self):
+    async def test_routes_remote_update(self):
         r, cb = _make_router_with_callbacks()
         sess = _make_router_session()
         r.register_doc_session(sess.key, sess)
@@ -1052,10 +1047,10 @@ class TestRouterDocDispatch:
             "origin_replica": "other-replica",
             "update": base64.b64encode(update).decode(),
         }
-        _run(r._handle_doc_message(channel, payload))
+        await r._handle_doc_message(channel, payload)
         assert cb.applied_updates == [(sess, update)]
 
-    def test_content_replace_dispatches_even_from_own_replica(self):
+    async def test_content_replace_dispatches_even_from_own_replica(self):
         # The publishing process may itself hold the live session, so the
         # graft path must not be origin-deduped.
         r, cb = _make_router_with_callbacks()
@@ -1068,47 +1063,41 @@ class TestRouterDocDispatch:
             "origin_replica": r._self_replica,
             "content": "fresh column text",
         }
-        _run(r._handle_doc_message(channel, payload))
+        await r._handle_doc_message(channel, payload)
         assert cb.content_replaced == [(sess.key, "fresh column text")]
         assert cb.applied_updates == []
 
-    def test_content_replace_without_session_or_content_is_dropped(self):
+    async def test_content_replace_without_session_or_content_is_dropped(self):
         r, cb = _make_router_with_callbacks()
-        _run(
-            r._handle_doc_message(
-                f"realtime:doc:NOTE:{uuid4()}",
-                {"kind": "content_replace", "content": "x"},
-            )
+        await r._handle_doc_message(
+            f"realtime:doc:NOTE:{generate_id()}",
+            {"kind": "content_replace", "content": "x"},
         )
         sess = _make_router_session()
         r.register_doc_session(sess.key, sess)
-        _run(
-            r._handle_doc_message(
-                f"realtime:doc:{sess.key[0].value}:{sess.key[1]}",
-                {"kind": "content_replace", "content": 42},
-            )
+        await r._handle_doc_message(
+            f"realtime:doc:{sess.key[0].value}:{sess.key[1]}",
+            {"kind": "content_replace", "content": 42},
         )
         assert cb.content_replaced == []
 
-    def test_unknown_doc_session_drops_silently(self):
+    async def test_unknown_doc_session_drops_silently(self):
         r, cb = _make_router_with_callbacks()
-        channel = f"realtime:doc:NOTE:{uuid4()}"
-        _run(
-            r._handle_doc_message(
-                channel,
-                {"origin_replica": "other", "update": base64.b64encode(b"x").decode()},
-            )
+        channel = f"realtime:doc:NOTE:{generate_id()}"
+        await r._handle_doc_message(
+            channel,
+            {"origin_replica": "other", "update": base64.b64encode(b"x").decode()},
         )
         assert cb.applied_updates == []
 
 
 class TestRouterPermDispatch:
-    def test_targeted_user_invokes_enforce(self):
+    async def test_targeted_user_invokes_enforce(self):
         r, cb = _make_router_with_callbacks()
-        key = (ContentType.NOTE, uuid4())
-        target_user = uuid4()
+        key = (ContentType.NOTE, generate_id())
+        target_user = generate_id()
         h_target = _make_handle(user_id=target_user)
-        h_other = _make_handle(user_id=uuid4())
+        h_other = _make_handle(user_id=generate_id())
         r.attach_handle(key, h_target)
         r.attach_handle(key, h_other)
 
@@ -1118,12 +1107,12 @@ class TestRouterPermDispatch:
             "user_id": str(target_user),
             "new_role": "VIEWER",
         }
-        _run(r._handle_perm_message(channel, payload))
+        await r._handle_perm_message(channel, payload)
         assert cb.enforced == [(h_target, "VIEWER")]
 
-    def test_content_wide_invokes_reauthorize(self):
+    async def test_content_wide_invokes_reauthorize(self):
         r, cb = _make_router_with_callbacks()
-        key = (ContentType.NOTE, uuid4())
+        key = (ContentType.NOTE, generate_id())
 
         channel = f"realtime:perm:{key[0].value}:{key[1]}"
         payload = {
@@ -1131,32 +1120,32 @@ class TestRouterPermDispatch:
             "user_id": None,
             "new_role": None,
         }
-        _run(r._handle_perm_message(channel, payload))
+        await r._handle_perm_message(channel, payload)
         assert cb.reauthorized == [key]
 
 
 class TestRouterRevokeDispatch:
-    def test_closes_stale_sessions_for_known_user(self):
+    async def test_closes_stale_sessions_for_known_user(self):
         r, cb = _make_router_with_callbacks()
-        user = uuid4()
+        user = generate_id()
         h = _make_handle(user_id=user)
-        r.attach_handle((ContentType.NOTE, uuid4()), h)
+        r.attach_handle((ContentType.NOTE, generate_id()), h)
 
         channel = f"auth:revoke:{user}"
-        _run(r._handle_revoke_message(channel, {"token_version": 2}))
+        await r._handle_revoke_message(channel, {"token_version": 2})
         assert cb.closed_stale == [(user, 2)]
 
-    def test_no_handles_for_user_drops_silently(self):
+    async def test_no_handles_for_user_drops_silently(self):
         r, cb = _make_router_with_callbacks()
-        channel = f"auth:revoke:{uuid4()}"
-        _run(r._handle_revoke_message(channel, {"token_version": 2}))
+        channel = f"auth:revoke:{generate_id()}"
+        await r._handle_revoke_message(channel, {"token_version": 2})
         assert cb.closed_stale == []
 
 
 class TestRouterRegistryHygiene:
     def test_attach_detach_drops_empty_buckets(self):
         r, _ = _make_router_with_callbacks()
-        key = (ContentType.NOTE, uuid4())
+        key = (ContentType.NOTE, generate_id())
         h = _make_handle()
         r.attach_handle(key, h)
         assert key in r._doc_handles
@@ -1168,7 +1157,7 @@ class TestRouterRegistryHygiene:
 
     def test_detach_idempotent(self):
         r, _ = _make_router_with_callbacks()
-        key = (ContentType.NOTE, uuid4())
+        key = (ContentType.NOTE, generate_id())
         h = _make_handle()
         r.attach_handle(key, h)
         r.detach_handle(key, h)
@@ -1178,7 +1167,7 @@ class TestRouterRegistryHygiene:
 class TestContentReplaceGraft:
     """Legacy column writes graft into live docs instead of being clobbered."""
 
-    def test_graft_replaces_markdown_and_fans_out(self) -> None:
+    async def test_graft_replaces_markdown_and_fans_out(self) -> None:
         async def go() -> None:
             from uniffy.domains.notes import realtime_adapter  # noqa: F401  (registers NOTE)
 
@@ -1204,9 +1193,9 @@ class TestContentReplaceGraft:
             assert fanned == ["update"]
             schedule.assert_awaited_once_with(session)
 
-        _run(go())
+        await go()
 
-    def test_graft_is_noop_when_content_matches(self) -> None:
+    async def test_graft_is_noop_when_content_matches(self) -> None:
         async def go() -> None:
             from uniffy.domains.notes import realtime_adapter  # noqa: F401
 
@@ -1221,16 +1210,16 @@ class TestContentReplaceGraft:
 
             schedule.assert_not_awaited()
 
-        _run(go())
+        await go()
 
-    def test_graft_without_live_session_is_ignored(self) -> None:
+    async def test_graft_without_live_session_is_ignored(self) -> None:
         async def go() -> None:
             manager = YDocManager()
-            await manager._apply_content_replace((ContentType.NOTE, uuid4()), "text")
+            await manager._apply_content_replace((ContentType.NOTE, generate_id()), "text")
 
-        _run(go())
+        await go()
 
-    def test_graft_survives_concurrent_edit(self) -> None:
+    async def test_graft_survives_concurrent_edit(self) -> None:
         """The transform update merges with an edit made after the state
         snapshot instead of wiping it (CRDT delete-by-id, not by index)."""
 
@@ -1250,4 +1239,190 @@ class TestContentReplaceGraft:
             ytext += " and web appended"
             assert str(ytext) == "mobile wrote this and web appended"
 
-        _run(go())
+        await go()
+
+
+def _ws_session(
+    *,
+    token_version: int | None = 1,
+    session_id=None,
+    expires_at: float | None = None,
+    connected_at: float | None = None,
+):
+    from uniffy.core.realtime.state import WSSession
+
+    return WSSession(
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        token_version=token_version,
+        conn_id=_next_conn_id(),
+        ws=AsyncMock(),
+        session_id=session_id,
+        expires_at=expires_at,
+        connected_at=time.time() if connected_at is None else connected_at,
+    )
+
+
+def _revocation_patches(
+    *,
+    token_revoked: bool = False,
+    session_revoked: bool = False,
+    active_member: bool = True,
+):
+    import uniffy.core.realtime.reauth as reauth_mod
+
+    return (
+        patch.object(
+            reauth_mod, "is_access_token_revoked", AsyncMock(return_value=token_revoked)
+        ),
+        patch.object(
+            reauth_mod, "is_session_revoked", AsyncMock(return_value=session_revoked)
+        ),
+        patch.object(reauth_mod, "is_active_member", AsyncMock(return_value=active_member)),
+    )
+
+
+class TestConnectionReauth:
+    """A live socket outlives the JWT that opened it, so every upgrade signal is
+    re-checked while it runs."""
+
+    async def _denial(self, ws_session, **flags):
+        from uniffy.core.realtime.reauth import connection_denial
+
+        token, sid, member = _revocation_patches(**flags)
+
+        async def go():
+            with token, sid, member:
+                return await connection_denial(ws_session)
+
+        return await go()
+
+    async def test_healthy_connection_is_not_denied(self) -> None:
+        assert await self._denial(_ws_session(expires_at=time.time() + 600)) is None
+
+    async def test_revoked_session_closes_a_live_socket(self) -> None:
+        from uniffy.core.realtime.auth import WS_CLOSE_TOKEN_REVOKED
+
+        # "Log out this device" leaves token_version alone, so the watermark
+        # alone cannot see it.
+        denial = await self._denial(
+            _ws_session(session_id=generate_id(), expires_at=time.time() + 600),
+            session_revoked=True,
+        )
+        assert denial is not None
+        assert denial.code == WS_CLOSE_TOKEN_REVOKED
+        assert denial.metric_reason == "session_revoked"
+
+    async def test_revoked_token_version_closes_a_live_socket(self) -> None:
+        denial = await self._denial(
+            _ws_session(expires_at=time.time() + 600), token_revoked=True
+        )
+        assert denial is not None
+        assert denial.metric_reason == "token_revoked"
+
+    async def test_lost_membership_closes_a_live_socket(self) -> None:
+        from uniffy.core.realtime.auth import WS_CLOSE_FORBIDDEN
+
+        # Removing a member publishes no realtime signal of its own.
+        denial = await self._denial(
+            _ws_session(expires_at=time.time() + 600), active_member=False
+        )
+        assert denial is not None
+        assert denial.code == WS_CLOSE_FORBIDDEN
+        assert denial.metric_reason == "membership_revoked"
+
+    async def test_expired_token_closes_with_reauth_required(self) -> None:
+        from uniffy.core.realtime.auth import WS_CLOSE_REAUTH_REQUIRED
+
+        denial = await self._denial(_ws_session(expires_at=time.time() - 1))
+        assert denial is not None
+        # 4410 would stop the client from reconnecting; this must not.
+        assert denial.code == WS_CLOSE_REAUTH_REQUIRED
+        assert denial.metric_reason == "token_expired"
+
+    async def test_token_without_exp_still_has_a_ceiling(self) -> None:
+        from uniffy.core.realtime.reauth import (
+            MAX_SOCKET_LIFETIME_SECONDS,
+            socket_deadline,
+        )
+
+        opened = time.time() - MAX_SOCKET_LIFETIME_SECONDS - 1
+        ws_session = _ws_session(expires_at=None, connected_at=opened)
+        assert socket_deadline(ws_session) == opened + MAX_SOCKET_LIFETIME_SECONDS
+        assert await self._denial(ws_session) is not None
+
+    async def test_attach_is_refused_after_a_revoke(self) -> None:
+        """An idle socket holds no doc handle, so the revoke fanout cannot see
+        it; the attach path has to check for itself."""
+        from uniffy.core.realtime.session import _attach_doc
+
+        ws = AsyncMock()
+        ws_session = _ws_session(session_id=generate_id(), expires_at=time.time() + 600)
+        token, sid, member = _revocation_patches(session_revoked=True)
+
+        async def go():
+            with token, sid, member:
+                return await _attach_doc(
+                    ws, ws_session, (ContentType.NOTE, generate_id()), "NOTE:x"
+                )
+
+        assert await go() is None
+        ws.close.assert_awaited_once()
+
+    async def test_watchdog_closes_the_socket_when_a_signal_flips(self) -> None:
+        import uniffy.core.realtime.session as session_mod
+
+        ws = AsyncMock()
+        ws_session = _ws_session(expires_at=time.time() + 600)
+        token, sid, member = _revocation_patches(token_revoked=True)
+
+        async def go():
+            with token, sid, member, patch.object(session_mod, "REAUTH_INTERVAL_SECONDS", 0):
+                await session_mod._reauth_watchdog(ws, ws_session)
+
+        await go()
+        ws.close.assert_awaited_once()
+
+
+class TestUpgradeChecksRevokedSession:
+    """The watermark and the per-session marker are separate signals; the
+    upgrade has to consult both before it accepts."""
+
+    async def _upgrade(self, *, session_revoked: bool):
+        import uniffy.core.realtime.ws_routes as ws_routes
+
+        ws = AsyncMock()
+        ws.headers = {"origin": "http://localhost:5173", "authorization": "Bearer t"}
+        org_id = generate_id()
+        payload = {
+            "type": "access",
+            "sub": str(generate_id()),
+            "org_id": str(org_id),
+            "tkv": 1,
+            "sid": str(generate_id()),
+            "exp": time.time() + 600,
+        }
+        with (
+            patch.object(ws_routes, "origin_is_allowed", lambda *_a, **_k: True),
+            patch.object(ws_routes, "decode_access_token", lambda _t: payload),
+            patch.object(ws_routes, "is_access_token_revoked", AsyncMock(return_value=False)),
+            patch.object(
+                ws_routes, "is_session_revoked", AsyncMock(return_value=session_revoked)
+            ),
+            patch.object(ws_routes, "is_active_member", AsyncMock(return_value=True)),
+            patch.object(ws_routes, "run_multiplexed_session", AsyncMock()),
+        ):
+            await ws_routes.realtime(ws, org_id)
+        return ws
+
+    async def test_upgrade_rejects_a_revoked_session_id(self) -> None:
+        from uniffy.core.realtime.auth import WS_CLOSE_UNAUTHENTICATED
+
+        ws = await self._upgrade(session_revoked=True)
+        ws.accept.assert_not_awaited()
+        ws.close.assert_awaited_once()
+        assert ws.close.await_args.kwargs["code"] == WS_CLOSE_UNAUTHENTICATED
+
+    async def test_upgrade_accepts_a_live_session(self) -> None:
+        ws = await self._upgrade(session_revoked=False)
+        ws.accept.assert_awaited_once()

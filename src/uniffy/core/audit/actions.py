@@ -81,6 +81,7 @@ class Action:
     GROUP_DELETED = "group.deleted"
     GROUP_MEMBER_ADDED = "group.member_added"
     GROUP_MEMBER_REMOVED = "group.member_removed"
+    GROUP_MEMBER_ROLE_CHANGED = "group.member_role_changed"
 
     # Domain admin
     DOMAIN_ADMIN_GRANTED = "domain_admin.granted"

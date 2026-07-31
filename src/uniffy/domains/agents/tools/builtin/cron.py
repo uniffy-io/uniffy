@@ -153,8 +153,11 @@ async def _execute_cron_delete(ctx: ToolContext, args: dict) -> ToolResult:
     task_id = UUID(task_id_str)
 
     ops = CronTaskOperations(ctx.session)
-    # get_by_id + _require_delete happen inside delete()
-    await ops.delete(ctx.user_id, ctx.organization_id, task_id)
+    await ops.delete_cron_task(
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+        task_id=task_id,
+    )
 
     return ToolResult(success=True, data="Scheduled task deleted.")
 

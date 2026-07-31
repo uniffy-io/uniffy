@@ -116,6 +116,33 @@ def get_organization_id_from_context(ctx: RequestContext) -> UUID | None:
         return None
 
 
+def resolve_organization_id(ctx: RequestContext, request_org_id: str) -> UUID:
+    """JWT wins; request value must match when both are present.
+
+    Letting the request body override the JWT claim turns ``org_id`` into a
+    client-controlled scope: a user logged into org A could call an operation
+    against org B by passing it in the body, and every downstream op would
+    have to remember to verify membership. Pinning to the JWT removes that
+    footgun. The request field stays accepted for pre-org-selection callers
+    (no ``org_id`` in the token).
+    """
+    inferred = get_organization_id_from_context(ctx)
+    if request_org_id:
+        try:
+            parsed = UUID(request_org_id)
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id") from exc
+        if inferred is not None and inferred != parsed:
+            raise ConnectError(
+                Code.PERMISSION_DENIED,
+                "organization_id does not match the authenticated session",
+            )
+        return parsed
+    if inferred is None:
+        raise ConnectError(Code.INVALID_ARGUMENT, "organization_id is required")
+    return inferred
+
+
 def get_session_id_from_context(ctx: RequestContext) -> UUID | None:
     """Extract session ID from the access token, or None when absent."""
     headers = ctx.request_headers()

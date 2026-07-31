@@ -1,0 +1,127 @@
+"""Gates on handlers that previously extracted the caller identity and dropped it.
+
+Each case here pins a specific escalation: an org read reachable without
+membership, an upload record readable across tenants, and a platform
+operator reading org-wide usage from a plain member seat.
+"""
+
+from contextlib import asynccontextmanager
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from connectrpc.code import Code
+from connectrpc.errors import ConnectError
+
+from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.types import generate_id
+from uniffy.domains.chat.categories.operations import ChatCategoryOperations
+from uniffy.domains.organizations.operations import OrganizationOperations
+
+ORG = generate_id()
+ACTOR = generate_id()
+
+
+def _membership(role: OrganizationRole, is_active: bool = True) -> OrganizationMember:
+    return OrganizationMember(
+        user_id=ACTOR, organization_id=ORG, role=role, is_active=is_active
+    )
+
+
+def _as(role: OrganizationRole | None, is_active: bool = True):
+    row = None if role is None else _membership(role, is_active)
+    return patch.object(
+        OrganizationOperations, "get_membership", AsyncMock(return_value=row)
+    )
+
+
+@pytest.mark.parametrize(
+    "role,active",
+    [(None, True), (OrganizationRole.MEMBER, False)],
+    ids=["non-member", "deactivated"],
+)
+async def test_list_categories_requires_active_membership(role, active) -> None:
+    """Reachable with no credentials at all before the fix."""
+    session = MagicMock()
+    session.execute = AsyncMock()
+    ops = ChatCategoryOperations(session, access=MagicMock())
+
+    with _as(role, active), pytest.raises(PermissionDeniedError):
+        await ops.list_categories(ACTOR, ORG)
+
+    session.execute.assert_not_awaited()
+
+
+async def test_list_categories_allows_a_plain_member() -> None:
+    session = MagicMock()
+    session.execute = AsyncMock(
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: []))
+    )
+    ops = ChatCategoryOperations(session, access=MagicMock())
+
+    with _as(OrganizationRole.MEMBER):
+        assert await ops.list_categories(ACTOR, ORG) == []
+
+
+def _upload_status_ctx(session):
+    @asynccontextmanager
+    async def fake_open_session():
+        yield session
+
+    return (
+        patch(
+            "uniffy.domains.files.handlers.get_user_id_from_context",
+            MagicMock(return_value=ACTOR),
+        ),
+        patch("uniffy.domains.files.handlers.open_session", fake_open_session),
+    )
+
+
+async def test_get_upload_status_hides_another_users_upload() -> None:
+    """The response carries filename and size, so a foreign hit is a leak."""
+    from uniffy_proto.files.v1.files_pb2 import GetUploadStatusRequest
+
+    from uniffy.domains.files.handlers import FilesHandlers
+
+    upload_id = generate_id()
+    foreign = SimpleNamespace(
+        id=upload_id,
+        user_id=generate_id(),
+        filename="acquisition-terms.pdf",
+        total_size=1024,
+        total_chunks=2,
+    )
+
+    session = MagicMock()
+    ops = MagicMock()
+    ops.get_upload_status = AsyncMock(return_value=foreign)
+    ops.list_completed_part_numbers = AsyncMock(return_value=[1])
+
+    patch_user, patch_session = _upload_status_ctx(session)
+    with patch_user, patch_session, patch(
+        "uniffy.domains.files.handlers.FileOperations", MagicMock(return_value=ops)
+    ), pytest.raises(ConnectError) as exc_info:
+        await FilesHandlers().get_upload_status(
+            GetUploadStatusRequest(upload_id=str(upload_id)), MagicMock()
+        )
+
+    assert exc_info.value.code == Code.NOT_FOUND
+    ops.list_completed_part_numbers.assert_not_awaited()
+
+
+def test_usage_stats_does_not_widen_for_a_system_admin_member() -> None:
+    """`is_system_admin` must not substitute for an org-admin role.
+
+    Cross-tenant reach belongs to an audited SupportSession, so a platform
+    operator on a plain member seat sees only their own usage rows.
+    """
+    import inspect
+
+    from uniffy.domains.agents.runtime import handlers as runtime_handlers
+
+    # Asserted at source level because the handler needs a live session to
+    # reach the branch. The invariant is that no system-admin check exists
+    # here at all, which is stable across refactors of the surrounding code.
+    source = inspect.getsource(runtime_handlers.RuntimeHandlers.get_usage_stats)
+    assert "is_system_admin" not in source

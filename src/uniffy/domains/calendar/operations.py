@@ -767,6 +767,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if permanent:
             tag_ops = TagOperations(self.session)
             await tag_ops.unassign_all_for_urn(
+                actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=build_content_urn(self.content_type, event_id),
             )

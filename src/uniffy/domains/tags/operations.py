@@ -531,6 +531,7 @@ class TagOperations:
     async def unassign(
         self,
         *,
+        actor_id: UUID,
         organization_id: UUID,
         content_urn: str,
         tag_ids: Iterable[UUID] | None = None,
@@ -604,6 +605,7 @@ class TagOperations:
                 "added": [],
                 "removed": [str(tid) for tid in removed_tag_ids],
                 "source": source or "",
+                "actor_id": str(actor_id),
                 "tag_counts": {str(tid): tag_counts.get(tid, 0) for tid in affected_id_list},
                 "tag_urns": {str(tid): _tag_urn(tid) for tid in affected_id_list},
             },
@@ -613,11 +615,13 @@ class TagOperations:
     async def unassign_all_for_urn(
         self,
         *,
+        actor_id: UUID,
         organization_id: UUID,
         content_urn: str,
     ) -> list[UUID]:
         """Drop every assignment pointing at a URN. Called on content delete."""
         return await self.unassign(
+            actor_id=actor_id,
             organization_id=organization_id,
             content_urn=content_urn,
             tag_ids=None,

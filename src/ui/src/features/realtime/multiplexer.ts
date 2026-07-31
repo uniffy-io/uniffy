@@ -12,13 +12,14 @@ import {
 import * as syncProtocol from 'y-protocols/sync';
 import * as encoding from 'lib0/encoding';
 import * as decoding from 'lib0/decoding';
-import { getAccessToken } from '@/config/api';
+import { getAccessToken, refreshAccessToken } from '@/config/api';
 import { encodeDocFrame, peekVarString } from '@/features/realtime/multiplex';
 import { REMOTE_ORIGIN } from '@/features/realtime/persistence/encryptedYjsPersistence';
 import {
   CANONICAL_SUBPROTOCOL,
   WS_CLOSE_FORBIDDEN,
   WS_CLOSE_NORMAL,
+  WS_CLOSE_REAUTH_REQUIRED,
   WS_CLOSE_TOKEN_REVOKED,
   type RealtimeStatus,
 } from '@/features/realtime/protocol';
@@ -269,6 +270,12 @@ class RealtimeMultiplexer {
         // Server-side logout-all-devices; let the app shell redirect.
         return;
       }
+      if (event.code === WS_CLOSE_REAUTH_REQUIRED) {
+        // The socket hit its token's lifetime. Reconnecting with the same
+        // memory token would be refused, so refresh first.
+        this.reconnectAfterRefresh();
+        return;
+      }
       if (event.code === WS_CLOSE_FORBIDDEN) {
         // Auth/permission lost; surface as disconnected but still try to
         // reconnect (the user may regain access via an org switch).
@@ -296,6 +303,20 @@ class RealtimeMultiplexer {
       // re-derives whatever the server is actually missing.
       if (entry.pendingLocalFrames) entry.droppedWhileDisconnected = true;
     }
+  }
+
+  private reconnectAfterRefresh(): void {
+    if (this.destroyed || this.docs.size === 0) return;
+    this.emitStatusAll('connecting');
+    void refreshAccessToken()
+      .catch(() => null)
+      .finally(() => {
+        if (this.destroyed || this.docs.size === 0) return;
+        // A failed refresh falls through to normal backoff: the interceptor
+        // retries on the next RPC and `uniffy:auth:refreshed` reconnects us.
+        this.reconnectDelayMs = RECONNECT_INITIAL_MS;
+        this.connectNow();
+      });
   }
 
   private scheduleReconnect(): void {

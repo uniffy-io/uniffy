@@ -2,12 +2,10 @@
 converter field gating, and the handler guards that run before any row load.
 """
 
-import asyncio
 from contextlib import asynccontextmanager, contextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace as NS
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
 
 import pytest
 from connectrpc.code import Code
@@ -21,6 +19,7 @@ from uniffy_proto.integrations.v1.integrations_pb2 import (
 )
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.types import generate_id
 from uniffy.domains.integrations.converters import connection_to_proto
 from uniffy.domains.integrations.handlers import IntegrationsHandlers
 from uniffy.domains.integrations.operations import _normalize_base_url
@@ -29,7 +28,7 @@ from uniffy.domains.integrations.operations import _normalize_base_url
 def _connection_row(**overrides):
     now = datetime.now(UTC)
     defaults = dict(
-        id=uuid4(),
+        id=generate_id(),
         provider="github",
         name="primary",
         base_url=None,
@@ -41,7 +40,7 @@ def _connection_row(**overrides):
         last_validated_at=None,
         last_used_at=None,
         last_error="401 from upstream",
-        created_by=uuid4(),
+        created_by=generate_id(),
         created_at=now,
         updated_at=now,
     )
@@ -61,7 +60,7 @@ def _ctx_as(user_id, org_id, session):
             MagicMock(return_value=user_id),
         ),
         patch(
-            "uniffy.domains.integrations.handlers.get_organization_id_from_context",
+            "uniffy.domains.auth.context.get_organization_id_from_context",
             MagicMock(return_value=org_id),
         ),
         patch("uniffy.domains.integrations.handlers.open_session", fake_open_session),
@@ -119,21 +118,21 @@ def test_converter_leaves_optional_fields_unset_when_none() -> None:
     assert populated.account_login == "octocat"
 
 
-def test_request_org_mismatching_the_session_is_a_permission_error() -> None:
+async def test_request_org_mismatching_the_session_is_a_permission_error() -> None:
     handlers = IntegrationsHandlers()
-    request = ListConnectionsRequest(organization_id=str(uuid4()))
+    request = ListConnectionsRequest(organization_id=str(generate_id()))
     with (
-        _ctx_as(uuid4(), uuid4(), MagicMock()),
+        _ctx_as(generate_id(), generate_id(), MagicMock()),
         pytest.raises(ConnectError) as exc_info,
     ):
-        asyncio.run(handlers.list_connections(request, MagicMock()))
+        await handlers.list_connections(request, MagicMock())
     assert exc_info.value.code == Code.PERMISSION_DENIED
 
 
 @pytest.mark.parametrize("rpc", ["update", "remove", "validate", "toggle"])
-def test_malformed_connection_id_is_an_invalid_argument(rpc: str) -> None:
+async def test_malformed_connection_id_is_an_invalid_argument(rpc: str) -> None:
     handlers = IntegrationsHandlers()
-    org_id = uuid4()
+    org_id = generate_id()
     requests = {
         "update": UpdateConnectionRequest(
             organization_id=str(org_id), connection_id="not-a-uuid", name="x"
@@ -155,8 +154,8 @@ def test_malformed_connection_id_is_an_invalid_argument(rpc: str) -> None:
         "toggle": handlers.toggle_connection,
     }[rpc]
     with (
-        _ctx_as(uuid4(), org_id, MagicMock()),
+        _ctx_as(generate_id(), org_id, MagicMock()),
         pytest.raises(ConnectError) as exc_info,
     ):
-        asyncio.run(handler(requests[rpc], MagicMock()))
+        await handler(requests[rpc], MagicMock())
     assert exc_info.value.code == Code.INVALID_ARGUMENT

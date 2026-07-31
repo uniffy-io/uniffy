@@ -196,6 +196,17 @@ NOTIFICATION_DELIVERIES_TOTAL = Counter(
     ["channel"],
 )
 
+NOTIFICATION_RECIPIENTS_DROPPED_TOTAL = Counter(
+    "uniffy_notification_recipients_dropped_total",
+    "Recipients dropped before delivery for lacking view access on the content",
+)
+
+NOTIFICATION_RECIPIENTS_UNFILTERED_TOTAL = Counter(
+    "uniffy_notification_recipients_unfiltered_total",
+    "Notification events delivered without an access check, by content type",
+    ["content_type"],
+)
+
 
 APPROVAL_STORE_PENDING_SIZE = Gauge(
     "uniffy_approval_store_pending_size",
@@ -482,6 +493,12 @@ REALTIME_PERMISSION_REJECTIONS_TOTAL = Counter(
 REALTIME_AUTH_FAILURES_TOTAL = Counter(
     "uniffy_realtime_auth_failures_total",
     "Realtime WebSocket upgrades that failed authentication or origin checks",
+    ["reason"],
+)
+
+REALTIME_REAUTH_CLOSES_TOTAL = Counter(
+    "uniffy_realtime_reauth_closes_total",
+    "Live realtime sockets closed by the periodic re-authorization check",
     ["reason"],
 )
 

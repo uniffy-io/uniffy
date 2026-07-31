@@ -117,8 +117,11 @@ class ChatCategoryOperations:
 
     async def list_categories(
         self,
+        user_id: UUID,
         organization_id: UUID,
     ) -> list[ChatChannelCategory]:
+        await self._require_org_member(user_id, organization_id)
+
         result = await self.session.execute(
             select(ChatChannelCategory)
             .where(ChatChannelCategory.organization_id == organization_id)
@@ -167,6 +170,11 @@ class ChatCategoryOperations:
 
         # Re-index so mention chips show the new category name.
         await self._refresh_channels_by_id([channel_id])
+
+    async def _require_org_member(self, user_id: UUID, organization_id: UUID) -> None:
+        from uniffy.domains.organizations.operations import OrganizationOperations
+
+        await OrganizationOperations(self.session).require_org_member(user_id, organization_id)
 
     async def _require_org_admin(self, user_id: UUID, organization_id: UUID) -> None:
         if await self.access.is_org_admin(user_id, organization_id):

@@ -1,16 +1,17 @@
 """Audit emissions for the groups domain.
 
-Covers create / update / delete plus add_member / remove_member.
+Covers create / update / delete plus the three member mutations.
 """
 
-import asyncio
+from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupRole
+from uniffy.core.types import generate_id
 from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.organizations.operations import OrganizationOperations
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -23,35 +24,58 @@ def _audit_rows(session: MagicMock) -> list:
 
 def _make_group() -> Group:
     return Group(
-        id=uuid4(),
-        organization_id=uuid4(),
+        id=generate_id(),
+        organization_id=generate_id(),
         name="Engineering",
         slug="engineering",
-        created_by_user_id=uuid4(),
+        created_by_user_id=generate_id(),
         description="",
         is_private=False,
         is_default=False,
     )
 
 
-def test_create_emits_group_created() -> None:
+def _permitted(group: Group | None = None) -> ExitStack:
+    """Stub the org gates and the org-scoped row load so the test observes
+    only the audit behavior.
+    """
+    stack = ExitStack()
+    stack.enter_context(
+        patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None))
+    )
+    stack.enter_context(
+        patch.object(OrganizationOperations, "require_org_member", AsyncMock(return_value=None))
+    )
+    stack.enter_context(
+        patch(
+            "uniffy.domains.groups.operations.invalidate_perm_user",
+            AsyncMock(return_value=None),
+        )
+    )
+    if group is not None:
+        stack.enter_context(
+            patch.object(GroupOperations, "_fetch", AsyncMock(return_value=group))
+        )
+    return stack
+
+
+async def test_create_emits_group_created() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
     ops = GroupOperations(session)
-    actor = uuid4()
-    org = uuid4()
+    actor = generate_id()
+    org = generate_id()
 
-    asyncio.run(
-        ops.create(
+    with _permitted():
+        await ops.create(
             organization_id=org,
             name="Designers",
             created_by_user_id=actor,
             is_private=True,
         )
-    )
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -63,7 +87,7 @@ def test_create_emits_group_created() -> None:
     assert row.details["is_private"] is True
 
 
-def test_update_emits_changed_keys() -> None:
+async def test_update_emits_changed_keys() -> None:
     group = _make_group()
     session = MagicMock()
     session.add = MagicMock()
@@ -71,16 +95,13 @@ def test_update_emits_changed_keys() -> None:
     session.refresh = AsyncMock()
 
     ops = GroupOperations(session)
-    with patch.object(
-        GroupOperations, "get_by_id", AsyncMock(return_value=group)
-    ):
-        asyncio.run(
-            ops.update(
-                group_id=group.id,
-                name="Eng",
-                description="Updated",
-                actor_user_id=uuid4(),
-            )
+    with _permitted(group):
+        await ops.update(
+            group_id=group.id,
+            organization_id=group.organization_id,
+            actor_user_id=generate_id(),
+            name="Eng",
+            description="Updated",
         )
 
     rows = _audit_rows(session)
@@ -89,7 +110,7 @@ def test_update_emits_changed_keys() -> None:
     assert sorted(rows[0].details["changed_keys"]) == ["description", "name"]
 
 
-def test_update_with_no_changes_skips_audit() -> None:
+async def test_update_with_no_changes_skips_audit() -> None:
     group = _make_group()
     session = MagicMock()
     session.add = MagicMock()
@@ -97,32 +118,29 @@ def test_update_with_no_changes_skips_audit() -> None:
     session.refresh = AsyncMock()
 
     ops = GroupOperations(session)
-    with patch.object(
-        GroupOperations, "get_by_id", AsyncMock(return_value=group)
-    ):
-        asyncio.run(ops.update(group_id=group.id, actor_user_id=uuid4()))
+    with _permitted(group):
+        await ops.update(
+            group_id=group.id,
+            organization_id=group.organization_id,
+            actor_user_id=generate_id(),
+        )
 
     assert _audit_rows(session) == []
 
 
-def test_delete_emits_group_deleted_with_member_count() -> None:
+async def test_delete_emits_group_deleted_with_member_count() -> None:
     group = _make_group()
     session = MagicMock()
     member_lookup = MagicMock()
-    member_lookup.all.return_value = [(uuid4(),), (uuid4(),)]
+    member_lookup.all.return_value = [(generate_id(),), (generate_id(),)]
     session.execute = AsyncMock(return_value=member_lookup)
     session.add = MagicMock()
     session.delete = AsyncMock()
     session.commit = AsyncMock()
 
     ops = GroupOperations(session)
-    with patch.object(
-        GroupOperations, "get_by_id", AsyncMock(return_value=group)
-    ), patch(
-        "uniffy.domains.groups.operations.invalidate_perm_user",
-        AsyncMock(return_value=None),
-    ):
-        asyncio.run(ops.delete(group.id, actor_user_id=uuid4()))
+    with _permitted(group):
+        await ops.delete(group.id, group.organization_id, actor_user_id=generate_id())
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -131,7 +149,7 @@ def test_delete_emits_group_deleted_with_member_count() -> None:
     assert row.details["member_count"] == 2
 
 
-def test_add_member_emits_group_member_added() -> None:
+async def test_add_member_emits_group_member_added() -> None:
     group = _make_group()
     session = MagicMock()
     session.add = MagicMock()
@@ -139,17 +157,16 @@ def test_add_member_emits_group_member_added() -> None:
     session.refresh = AsyncMock()
 
     ops = GroupOperations(session)
-    target = uuid4()
-    actor = uuid4()
+    target = generate_id()
+    actor = generate_id()
 
-    with patch.object(
-        GroupOperations, "get_by_id", AsyncMock(return_value=group)
-    ), patch(
-        "uniffy.domains.groups.operations.invalidate_perm_user",
-        AsyncMock(return_value=None),
-    ):
-        asyncio.run(
-            ops.add_member(group.id, target, GroupRole.MEMBER, actor_user_id=actor)
+    with _permitted(group):
+        await ops.add_member(
+            group_id=group.id,
+            organization_id=group.organization_id,
+            user_id=target,
+            actor_user_id=actor,
+            role=GroupRole.MEMBER,
         )
 
     rows = _audit_rows(session)
@@ -160,7 +177,40 @@ def test_add_member_emits_group_member_added() -> None:
     assert added[0].details["role"] == "MEMBER"
 
 
-def test_remove_member_emits_group_member_removed() -> None:
+async def test_update_member_role_emits_role_changed() -> None:
+    group = _make_group()
+    membership = MagicMock(role=GroupRole.MEMBER)
+    session = MagicMock()
+    session.execute = AsyncMock(
+        return_value=MagicMock(scalar_one_or_none=lambda: membership)
+    )
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+
+    ops = GroupOperations(session)
+    target = generate_id()
+    actor = generate_id()
+
+    with _permitted(group):
+        await ops.update_member_role(
+            group_id=group.id,
+            organization_id=group.organization_id,
+            user_id=target,
+            role=GroupRole.ADMIN,
+            actor_user_id=actor,
+        )
+
+    rows = _audit_rows(session)
+    changed = [r for r in rows if r.action == Action.GROUP_MEMBER_ROLE_CHANGED]
+    assert len(changed) == 1
+    assert changed[0].actor_user_id == actor
+    assert changed[0].details["target_user_id"] == str(target)
+    assert changed[0].details["previous_role"] == "MEMBER"
+    assert changed[0].details["role"] == "ADMIN"
+
+
+async def test_remove_member_emits_group_member_removed() -> None:
     group = _make_group()
     membership = MagicMock(role=GroupRole.MEMBER)
     session = MagicMock()
@@ -172,16 +222,16 @@ def test_remove_member_emits_group_member_removed() -> None:
     session.commit = AsyncMock()
 
     ops = GroupOperations(session)
-    target = uuid4()
-    actor = uuid4()
+    target = generate_id()
+    actor = generate_id()
 
-    with patch.object(
-        GroupOperations, "get_by_id", AsyncMock(return_value=group)
-    ), patch(
-        "uniffy.domains.groups.operations.invalidate_perm_user",
-        AsyncMock(return_value=None),
-    ):
-        asyncio.run(ops.remove_member(group.id, target, actor_user_id=actor))
+    with _permitted(group):
+        await ops.remove_member(
+            group_id=group.id,
+            organization_id=group.organization_id,
+            user_id=target,
+            actor_user_id=actor,
+        )
 
     rows = _audit_rows(session)
     removed = [r for r in rows if r.action == Action.GROUP_MEMBER_REMOVED]

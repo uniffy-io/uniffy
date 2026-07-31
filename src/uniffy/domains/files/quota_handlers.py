@@ -36,7 +36,10 @@ from uniffy_proto.files.v1.files_pb2 import (
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import (
+    get_user_id_from_context,
+    resolve_organization_id,
+)
 from uniffy.domains.files.quota_converters import (
     storage_quota_to_proto,
     storage_usage_to_proto,
@@ -48,6 +51,7 @@ from uniffy.domains.files.version_policy import (
     get_org_version_policy_view,
     update_org_version_policy,
 )
+from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="files.quota_handlers")
 
@@ -61,15 +65,14 @@ class QuotaHandlersMixin:
         ctx: RequestContext,
     ) -> GetOrgStorageQuotaResponse:
         """Get the organization storage quota configuration and total usage."""
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
+                await OrganizationOperations(session).require_org_member(
+                    user_id, organization_id
+                )
                 ops = QuotaOperations(session)
                 quota = await ops.get_org_quota(organization_id)
                 total_used, total_count = await ops.get_org_usage(organization_id)

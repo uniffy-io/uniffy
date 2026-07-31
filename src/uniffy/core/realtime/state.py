@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -47,6 +48,9 @@ class WSSession:
     happens lazily on the first frame for each new docname. ``session_id`` is
     the access-token ``sid`` claim, used by the router to close a single
     revoked session without disturbing the user's other live tokens.
+    ``expires_at`` is the token's ``exp``, which bounds how long this socket may
+    live - a socket that outlives its token turns a stolen access token into an
+    unbounded channel.
     """
 
     user_id: UUID
@@ -55,6 +59,8 @@ class WSSession:
     conn_id: int
     ws: WebSocket
     session_id: UUID | None = None
+    expires_at: float | None = None
+    connected_at: float = field(default_factory=time.time)
     outbound: asyncio.Queue[bytes] = field(default_factory=_new_outbound_queue)
     doc_handles: dict[DocKey, ClientHandle] = field(default_factory=dict)
     closed: bool = False

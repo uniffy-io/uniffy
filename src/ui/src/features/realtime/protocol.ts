@@ -6,6 +6,9 @@ export const WS_CLOSE_UNAUTHENTICATED = 4401;
 export const WS_CLOSE_FORBIDDEN = 4403;
 export const WS_CLOSE_NOT_FOUND = 4404;
 export const WS_CLOSE_IDLE = 4408;
+// The server bounds a socket by the lifetime of the token that opened it.
+// Refresh, then reconnect - this is not a revocation.
+export const WS_CLOSE_REAUTH_REQUIRED = 4409;
 export const WS_CLOSE_TOKEN_REVOKED = 4410;
 
 export type RealtimeStatus =
