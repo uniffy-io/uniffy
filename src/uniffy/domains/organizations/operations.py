@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.auth.cache import invalidate_org_defaults
+from uniffy.core.auth.cache import invalidate_domain_admin, invalidate_org_defaults
 from uniffy.core.auth.permissions import invalidate_visible_sets_for_user
 from uniffy.core.auth.permissions.visible_sets import invalidate_visible_sets_for_org
 from uniffy.core.crypto import OrgCipher
@@ -127,6 +127,37 @@ class OrganizationOperations:
             channel_type=ChannelType.PUBLIC,
             description="Organization-wide discussions",
             is_default=True,
+        )
+        await self._session.commit()
+
+        from uniffy.core.models.agents.agent import Agent
+        from uniffy.domains.agents.skills.operations import SkillOperations
+        from uniffy.domains.agents.templates import get_default_template
+
+        template = get_default_template()
+        enabled_skills = await SkillOperations(self._session).resolve_bundled_skill_ids(
+            template.bundled_skill_names
+        )
+
+        default_agent = Agent(
+            organization_id=org.id,
+            owner_id=owner_user_id,
+            name=template.name,
+            soul_prompt=template.soul_prompt,
+            enabled_tools=list(template.enabled_tools),
+            enabled_skills=enabled_skills,
+            avatar_emoji=template.emoji,
+            is_default=True,
+            # Org-visible; NULL baseline inherits the org's AGENT default.
+            access_mode=AccessMode.OPEN_TO_ORG,
+        )
+        self._session.add(default_agent)
+        await self._session.commit()
+
+        from uniffy.domains.agents.agents.operations import AgentOperations
+
+        await AgentOperations(self._session)._index_for_search(
+            default_agent, skip_member_lookup=True
         )
         await self._session.commit()
 
@@ -331,6 +362,10 @@ class OrganizationOperations:
         user_id: UUID,
         org_id: UUID,
     ) -> OrganizationMember | None:
+        """Row lookup, deactivated rows included - management flows (re-add,
+        remove, role edits) need to see them. Permission gates must use the
+        ``require_org_*`` helpers, which reject a deactivated membership.
+        """
         result = await self._session.execute(
             select(OrganizationMember).where(
                 OrganizationMember.user_id == user_id,
@@ -345,10 +380,8 @@ class OrganizationOperations:
         org_id: UUID,
     ) -> OrganizationMember:
         membership = await self.get_membership(user_id, org_id)
-        if not membership or membership.role not in (
-            OrganizationRole.OWNER,
-            OrganizationRole.ADMIN,
-        ):
+        admin_roles = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
+        if not membership or not membership.is_active or membership.role not in admin_roles:
             raise PermissionDeniedError("Requires organization admin privileges")
         return membership
 
@@ -361,7 +394,11 @@ class OrganizationOperations:
         single accountable person.
         """
         membership = await self.get_membership(user_id, org_id)
-        if not membership or membership.role != OrganizationRole.OWNER:
+        if (
+            not membership
+            or not membership.is_active
+            or membership.role != OrganizationRole.OWNER
+        ):
             raise PermissionDeniedError("Requires organization owner privileges")
         return membership
 
@@ -371,7 +408,7 @@ class OrganizationOperations:
         org_id: UUID,
     ) -> OrganizationMember:
         membership = await self.get_membership(user_id, org_id)
-        if not membership:
+        if not membership or not membership.is_active:
             raise PermissionDeniedError("Requires organization membership")
         return membership
 
@@ -423,6 +460,29 @@ class OrganizationOperations:
     ) -> OrganizationMember:
         existing = await self.get_membership(user_id, org_id)
         if existing:
+            if existing.is_active:
+                return existing
+            existing.is_active = True
+            existing.role = role
+            existing.updated_at = datetime.now(UTC)
+
+            await write_audit_event(
+                self._session,
+                organization_id=org_id,
+                actor_user_id=actor_user_id,
+                action=Action.ORGANIZATION_MEMBER_ADDED,
+                resource_type="USER",
+                resource_id=user_id,
+                details={"role": role.value},
+            )
+            await self._session.commit()
+            await self._session.refresh(existing)
+
+            await _drop_user_perm_cache(user_id)
+            from uniffy.core.auth.membership import invalidate_membership_cache
+
+            await invalidate_membership_cache(user_id, org_id)
+
             return existing
 
         membership = OrganizationMember(
@@ -477,7 +537,7 @@ class OrganizationOperations:
         target_user_id: UUID,
         new_role: OrganizationRole,
     ) -> tuple[OrganizationMember, User]:
-        await self.require_org_admin(admin_user_id, org_id)
+        admin_membership = await self.require_org_admin(admin_user_id, org_id)
 
         result = await self._session.execute(
             select(OrganizationMember, User)
@@ -492,10 +552,8 @@ class OrganizationOperations:
         member, user = row[0], row[1]
 
         # Only OWNER can change roles to/from OWNER.
-        admin_membership = await self.get_membership(admin_user_id, org_id)
-
         if member.role == OrganizationRole.OWNER or new_role == OrganizationRole.OWNER:
-            if not admin_membership or admin_membership.role != OrganizationRole.OWNER:
+            if admin_membership.role != OrganizationRole.OWNER:
                 raise PermissionDeniedError("Only owners can modify owner roles")
 
         previous_role = member.role
@@ -775,6 +833,7 @@ class OrganizationOperations:
         await self._session.commit()
         await self._session.refresh(da)
 
+        await invalidate_domain_admin(org_id, target_user_id, domain)
         await invalidate_visible_sets_for_user(org_id, target_user_id)
 
         from uniffy.core.valkey.pubsub import publish_notification
@@ -824,6 +883,9 @@ class OrganizationOperations:
 
         await self._session.commit()
 
+        # The gate reads this through a 600s Valkey entry, so without an
+        # explicit drop a revoked domain admin keeps their powers.
+        await invalidate_domain_admin(org_id, target_user_id, domain)
         await invalidate_visible_sets_for_user(org_id, target_user_id)
 
         from uniffy.core.valkey.pubsub import publish_notification

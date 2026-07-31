@@ -17,7 +17,7 @@ import {
     DayOfWeek as ProtoDayOfWeek,
     ResourceType as ProtoResourceType,
 } from '@uniffy/proto/cal/v1/calendar_pb';
-import { AccessMode, ContentRole } from '@uniffy/proto/common/v1/common_pb';
+import { AccessMode } from '@uniffy/proto/common/v1/common_pb';
 import { create } from '@bufbuild/protobuf';
 import { TimestampSchema, timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import type {
@@ -144,16 +144,6 @@ const EDIT_SCOPE_TO_PROTO: Record<RecurrenceEditScope, ProtoRecurrenceEditScope>
     'this_and_following': ProtoRecurrenceEditScope.THIS_AND_FOLLOWING,
 };
 
-function frontendVisibilityToAccessMode(v: 'private' | 'organization'): { accessMode: number; baselineRole: number | undefined } {
-    return v === 'organization'
-        ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: ContentRole.VIEWER }
-        : { accessMode: AccessMode.OWNER_ONLY, baselineRole: undefined };
-}
-
-function accessModeToFrontendVisibility(mode: number): 'private' | 'organization' {
-    return mode === AccessMode.OPEN_TO_ORG ? 'organization' : 'private';
-}
-
 const attendeeFromProto = (proto: ProtoAttendee): Attendee => ({
     id: proto.id,
     name: proto.name,
@@ -206,7 +196,6 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     isFocusTime: proto.isFocusTime,
     tagIds: proto.tags.map((tag) => tag.id),
     linkedResources: proto.linkedResources.map(linkedResourceFromProto),
-    visibility: accessModeToFrontendVisibility(proto.accessMode),
     createdAt: timestampToIso(proto.createdAt),
     updatedAt: timestampToIso(proto.updatedAt),
     reminders: [...(proto.reminders || [])],
@@ -320,7 +309,6 @@ export const createEvent = createAsyncThunk<
         recurrence?: RecurrenceConfig;
         isFocusTime?: boolean;
         tagIds?: string[];
-        visibility?: string;
         reminders?: number[];
         roomId?: string;
     },
@@ -359,7 +347,6 @@ export const createEvent = createAsyncThunk<
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime || false,
             tagIds: params.tagIds || [],
-            ...frontendVisibilityToAccessMode((params.visibility as 'private' | 'organization') || 'private'),
             reminders: params.reminders || [],
             roomId: params.roomId || undefined,
             channelId: params.channelId,
@@ -410,7 +397,6 @@ export const updateEvent = createAsyncThunk<
         recurrence?: RecurrenceConfig;
         isFocusTime?: boolean;
         tagIds?: string[];
-        visibility?: string;
         reminders?: number[];
         recurrenceEditScope?: RecurrenceEditScope;
         occurrenceDate?: string;
@@ -450,7 +436,6 @@ export const updateEvent = createAsyncThunk<
             recurrence: recurrenceConfig,
             isFocusTime: params.isFocusTime,
             tagIds: params.tagIds !== undefined ? { ids: params.tagIds } : undefined,
-            ...(params.visibility ? frontendVisibilityToAccessMode(params.visibility as 'private' | 'organization') : {}),
             reminders: params.reminders,
             recurrenceEditScope: params.recurrenceEditScope
                 ? EDIT_SCOPE_TO_PROTO[params.recurrenceEditScope]

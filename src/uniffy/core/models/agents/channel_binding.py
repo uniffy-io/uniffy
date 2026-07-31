@@ -64,9 +64,21 @@ class AgentChannelBinding(SQLModel, table=True):
         default=None,
         sa_column=Column(PG_JSONB, nullable=True),
     )
+    image_params_override: dict | None = Field(
+        default=None,
+        sa_column=Column(PG_JSONB, nullable=True),
+    )
     tool_allowlist: list[str] | None = Field(
         default=None,
         sa_column=Column(PG_JSONB, nullable=True),
+    )
+    loaded_tool_groups: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(
+            PG_JSONB,
+            nullable=False,
+            server_default=text("'[]'::jsonb"),
+        ),
     )
     system_prompt_addendum: str | None = Field(
         default=None,

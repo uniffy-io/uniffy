@@ -117,11 +117,16 @@ Order of checks at upgrade (all in `ws_routes.py`):
 2. Subprotocol JWT decode (or `Authorization` header for mobile).
 3. `payload["type"] == "access"` - refresh tokens are rejected even though they share the HS256 secret.
 4. Token `org_id` claim matches the URL `org_id` query.
+5. `min_tkv` watermark AND the per-session `sid` marker. **Both revocation signals, not one:** per-session revoke deliberately does not bump `token_version`, so the watermark alone would let a "logged out" device open a fresh socket.
+6. Active org membership.
+
+**A socket outlives the JWT that opened it, so the same signals are re-checked while it runs.** `core/realtime/reauth.py::connection_denial` is the single decision function; `session.py` calls it from a per-socket watchdog every `REAUTH_INTERVAL_SECONDS` and again on every `_attach_doc`. It covers what the revoke fanout structurally cannot: the fanout iterates per-doc handles, so a connected socket with no doc attached is invisible to it, and org-member removal publishes no realtime signal at all. It also makes the token's `exp` a real ceiling (`WSSession.expires_at`, falling back to `MAX_SOCKET_LIFETIME_SECONDS` when a token carries no `exp`) - otherwise a stolen access token converts into an unbounded read/write channel. Closes are counted by reason on `uniffy_realtime_reauth_closes_total`.
 
 Per-doc authorize runs **lazily** on the first frame for each unseen docname inside `run_multiplexed_session`. Denial closes the whole socket (`4403`) rather than just the doc - otherwise the client waits forever for a SyncStep1.
 
 Close codes (`features/realtime/protocol.ts` mirrors these):
-- `1009` oversized frame, `4401` missing/invalid token, `4403` forbidden (org / view / edit / revoked), `4404` not found, `4408` idle eviction, `4410` token revoked.
+- `1009` oversized frame, `4401` missing/invalid token, `4403` forbidden (org / view / edit / revoked), `4404` not found, `4408` idle eviction, `4409` re-auth required, `4410` token revoked.
+- `4409` and `4410` must stay distinct: on `4410` the client stops and lets the app shell redirect, on `4409` it refreshes the token and reconnects (`reconnectAfterRefresh`). Closing an expired-token socket with `4410` would log the user out of realtime for the rest of the tab's life.
 
 Token refresh mid-session: `api.ts::refreshAccessToken` dispatches `uniffy:auth:refreshed`; the multiplexer disconnects + reconnects with the new token. Token revocation (`token_version` bump in `domains/users/operations.py::update_user`) publishes `auth:revoke:{user_id}` and the router closes every stale handle with `4410`.
 

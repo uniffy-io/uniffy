@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
@@ -7,12 +7,15 @@ import { rehydrateAuth } from '@/config';
 import { useTheme } from '@/config/theme/ThemeProvider';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminRoute } from '@/features/admin/components/AdminRoute';
+import { AgentsBuilderRoute } from '@/features/agents/components/AgentsBuilderRoute';
 import { PlatformRoute } from '@/features/platform/components/PlatformRoute';
 import { MainLayout } from '@/shared/layouts/MainLayout';
 import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { StreamingProvider } from '@/components/streaming/StreamingProvider';
+import { notificationTargetPath } from '@/features/notifications/utils/notificationTarget';
 import { FileViewerModal } from '@/features/files';
+import { RoomViewerModal } from '@/features/rooms/components/detail/RoomViewerModal';
 import { UploadTray } from '@/features/files/components/upload/UploadTray';
 import { CallProvider } from '@/features/calls/components/CallProvider';
 import { CallDock } from '@/features/calls/components/CallDock';
@@ -59,6 +62,7 @@ const AuditLogsPage = lazyImport(() => import('@/features/admin/pages/AuditLogsP
 const AdminAgentsPage = lazyImport(() => import('@/features/admin/pages/AgentsPage'), 'AgentsPage');
 const StoragePage = lazyImport(() => import('@/features/admin/pages/StoragePage'), 'StoragePage');
 const CallsAdminPage = lazyImport(() => import('@/features/admin/pages/CallsPage'), 'CallsPage');
+const IntegrationsPage = lazyImport(() => import('@/features/admin/pages/IntegrationsPage'), 'IntegrationsPage');
 
 // Platform (cross-tenant operator surface)
 const PlatformLayout = lazyImport(() => import('@/features/platform/layouts/PlatformLayout'), 'PlatformLayout');
@@ -78,6 +82,7 @@ const FilesPage = lazyImport(() => import('@/features/files/pages/FilesPage'), '
 const FiltersPage = lazyImport(() => import('@/features/files/pages/FiltersPage'), 'FiltersPage');
 const FilesTrashPage = lazyImport(() => import('@/features/files/pages/FilesTrashPage'), 'FilesTrashPage');
 const RoomsAdminPage = lazyImport(() => import('@/features/rooms/pages/RoomsPage'), 'RoomsPage');
+const RoomPage = lazyImport(() => import('@/features/rooms/pages/RoomPage'), 'RoomPage');
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
 const PortfolioPage = lazyImport(() => import('@/features/projects/pages/PortfolioPage'), 'PortfolioPage');
 const TaskRedirectPage = lazyImport(() => import('@/features/projects/pages/TaskRedirectPage'), 'TaskRedirectPage');
@@ -226,6 +231,33 @@ function ChatIndexRedirect() {
     return <LazyRoute><ChatPage /></LazyRoute>;
 }
 
+/**
+ * PushNotificationRedirect - Landing route for web-push clicks.
+ * The service worker cannot map a URN to a route, so it sends the notification
+ * fields here and the shared resolver picks the destination.
+ */
+function PushNotificationRedirect() {
+    const [searchParams] = useSearchParams();
+
+    const rawMeta = searchParams.get('meta');
+    let metadata: Record<string, string> = {};
+    if (rawMeta) {
+        try {
+            metadata = JSON.parse(rawMeta) as Record<string, string>;
+        } catch {
+            metadata = {};
+        }
+    }
+
+    const path = notificationTargetPath({
+        notificationType: Number(searchParams.get('type') ?? 0),
+        sourceUrn: searchParams.get('urn') ?? '',
+        metadata,
+    });
+
+    return <Navigate to={path ?? '/notifications'} replace />;
+}
+
 export function App() {
     return (
         <AuthInitializer>
@@ -235,6 +267,8 @@ export function App() {
                     <SpotlightSearch />
                     {/* Global File Viewer Modal - can be opened from search without navigating */}
                     <FileViewerModal />
+                    {/* Global Room Viewer Modal - room mentions and search hits open in place */}
+                    <RoomViewerModal />
                     {/* Global Zen Mode handler - toggles distraction-free mode */}
                     <ZenModeHandler />
                     {/* Global streaming connections (notifications, chat, presence) - mounts once, hooks no-op when unauthenticated */}
@@ -340,6 +374,7 @@ export function App() {
                             <Route path="calls" element={<LazyRoute><CallsAdminPage /></LazyRoute>} />
                             <Route path="audit-logs" element={<LazyRoute><AuditLogsPage /></LazyRoute>} />
                             <Route path="agents" element={<LazyRoute><AdminAgentsPage /></LazyRoute>} />
+                            <Route path="integrations" element={<LazyRoute><IntegrationsPage /></LazyRoute>} />
                             <Route path="rooms" element={<LazyRoute><RoomsAdminPage /></LazyRoute>} />
 
                             {/* Storage Management */}
@@ -479,6 +514,18 @@ export function App() {
                             }
                         />
 
+                        {/* Room detail - the target of every room URN link */}
+                        <Route
+                            path="/rooms/:roomId"
+                            element={
+                                <ProtectedRoute>
+                                    <MainLayout>
+                                        <LazyRoute><RoomPage /></LazyRoute>
+                                    </MainLayout>
+                                </ProtectedRoute>
+                            }
+                        />
+
                         {/* Portfolio */}
                         <Route
                             path="/portfolio"
@@ -576,31 +623,40 @@ export function App() {
                             }
                         />
 
-                        {/* Agents routes */}
+                        {/* Agents builder routes (org admins + AGENTS domain admins) */}
                         <Route
                             path="/agents"
                             element={
-                                <ProtectedRoute>
+                                <AgentsBuilderRoute>
                                     <LazyRoute><AgentsPage /></LazyRoute>
-                                </ProtectedRoute>
+                                </AgentsBuilderRoute>
                             }
                         />
 
                         <Route
                             path="/agents/:tab"
                             element={
-                                <ProtectedRoute>
+                                <AgentsBuilderRoute>
                                     <LazyRoute><AgentsPage /></LazyRoute>
-                                </ProtectedRoute>
+                                </AgentsBuilderRoute>
                             }
                         />
 
                         <Route
                             path="/agents/:tab/:subId"
                             element={
-                                <ProtectedRoute>
+                                <AgentsBuilderRoute>
                                     <LazyRoute><AgentsPage /></LazyRoute>
-                                </ProtectedRoute>
+                                </AgentsBuilderRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/agents/:tab/:subId/:panel"
+                            element={
+                                <AgentsBuilderRoute>
+                                    <LazyRoute><AgentsPage /></LazyRoute>
+                                </AgentsBuilderRoute>
                             }
                         />
 
@@ -610,6 +666,16 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><NotificationsPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Web-push click target; resolves to the content route */}
+                        <Route
+                            path="/n"
+                            element={
+                                <ProtectedRoute>
+                                    <PushNotificationRedirect />
                                 </ProtectedRoute>
                             }
                         />

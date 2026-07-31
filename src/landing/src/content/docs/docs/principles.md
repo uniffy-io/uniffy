@@ -15,7 +15,7 @@ Each principle below is collapsed. Click a title to read it.
 <details class="principle">
 <summary>One codebase, one product</summary>
 
-Cloud and self hosted ship from the same commit. There is no "Community Edition" with features stripped out. No enterprise tier locked behind a license check. No private fork that only paying customers get. The instance running at `cloud.uniffy.io` is exactly the code you can pull from GitHub and run on your own servers.
+Cloud and self hosted ship from the same commit. There is no "Community Edition" with features stripped out. No enterprise tier locked behind a license check. No private fork that only paying customers get. A license key changes one number, how many seats you can activate. It never unlocks a feature. The instance running at `cloud.uniffy.io` is exactly the code you can pull from GitHub and run on your own servers.
 
 Two things follow from that.
 
@@ -58,11 +58,11 @@ If you are evaluating Uniffy and you want or need this, **Uniffy is not for you*
 
 The product does not send telemetry. We do not collect usage events. We do not collect crash reports. We do not pull fonts or assets from a CDN. Everything the app needs is bundled into it.
 
-The only call we make to ourselves is a license check for paid self hosted deployments. Once a day, your instance asks our license server whether the license is still valid. That call carries the license key, the instance id, and the version of Uniffy you are running. Nothing else. No usage data. No user names. No workspace content. The free tier does not make this call at all. If you need a fully air gapped paid deployment, we can issue an offline license that drops it too.
+There is no license server. A paid license is a signed file that your deployment verifies offline against keys that ship inside the product. Your instance never calls us. Not on install, not once a day, not ever, free or paid. A deployment with no outbound route to the internet is a fully supported configuration, not a special arrangement. The [licensing page](/docs/deployment/licensing/) in the deployment guide has the details.
 
 If we ever ship an optional analytics opt in, it will be off by default and clearly labeled. If you cannot find the switch, the feature does not exist.
 
-Every call Uniffy makes to the outside world, whether that is the license check, sending mail through your SMTP provider, talking to an AI model, or hitting a webhook target, goes through a dedicated **egress worker**. The main backend and the core worker never reach the wider internet directly. You can put them on a network with no outbound route at all. Only the egress worker needs outbound firewall rules. If your security team wants a single chokepoint to audit, log, or block outbound traffic, that is exactly what they get.
+Every call Uniffy makes to the outside world, whether that is sending mail through your SMTP provider, talking to an AI model, or hitting a webhook target, goes through a dedicated **egress worker**. The main backend and the core worker never reach the wider internet directly. You can put them on a network with no outbound route at all. Only the egress worker needs outbound firewall rules. If your security team wants a single chokepoint to audit, log, or block outbound traffic, that is exactly what they get.
 
 </details>
 

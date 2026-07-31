@@ -1,4 +1,4 @@
-"""ConnectRPC interceptors enforcing access-token revocation.
+"""ConnectRPC interceptors enforcing authentication and access-token revocation.
 
 The JWT signature check in :func:`get_user_id_from_context` does not
 talk to PG or Valkey, so a token issued before a force-logout / org
@@ -26,11 +26,67 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 
+from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.auth.revocation import (
     is_access_token_revoked,
     is_session_revoked,
 )
 from uniffy.domains.auth.tokens import decode_token_unsafe
+
+PUBLIC_METHODS: frozenset[str] = frozenset(
+    {
+        # Credential entry points: no session exists yet.
+        "auth.v1.AuthService/Register",
+        "auth.v1.AuthService/Login",
+        "auth.v1.AuthService/RefreshToken",
+        "auth.v1.AuthService/GetAuthConfig",
+        # Carries its own credential in the body rather than the header:
+        # the refresh token, which is not an access token.
+        "auth.v1.AuthService/SwitchOrganization",
+        # Reached from an emailed link before the recipient has an account.
+        "auth.v1.AuthService/GetInvitation",
+        "auth.v1.AuthService/AcceptInvitation",
+        # Password reset: the token in the body is the credential.
+        "auth.v1.AuthService/SendPasswordReset",
+        "auth.v1.AuthService/VerifyPasswordResetToken",
+        "auth.v1.AuthService/ResetPassword",
+        # MFA legs that run mid-login, holding an enrollment-only or
+        # challenge token rather than an access token. The handlers
+        # authenticate those themselves; see ENROLLMENT_ALLOWED_RPCS.
+        "auth.v1.MfaService/BeginEnrollment",
+        "auth.v1.MfaService/ConfirmEnrollment",
+        "auth.v1.MfaService/GetMfaStatus",
+        "auth.v1.MfaService/VerifyMfa",
+        # Static server public key, needed before a push subscription exists.
+        "notifications.v1.NotificationsService/GetVapidPublicKey",
+    }
+)
+
+
+class AuthenticationInterceptor:
+    """Reject any RPC outside :data:`PUBLIC_METHODS` that carries no valid
+    access token.
+
+    Authentication used to be opt-in per handler, 468 times over, so a
+    handler that forgot ``get_user_id_from_context`` was reachable with no
+    credentials. This makes the default deny: a new RPC is private unless
+    it is added to the allowlist above, and handlers keep their own
+    authorization checks on top.
+    """
+
+    async def on_start(self, ctx: RequestContext) -> None:
+        method = ctx.method()
+        if f"{method.service_name}/{method.name}" in PUBLIC_METHODS:
+            return None
+        # Raises UNAUTHENTICATED on a missing, malformed, expired or
+        # wrong-type token. Identity itself is re-resolved by the handler.
+        get_user_id_from_context(ctx)
+        return None
+
+    async def on_end(
+        self, _token: None, _ctx: RequestContext, _error: Exception | None
+    ) -> None:
+        return None
 
 
 class AuthRevocationInterceptor:
@@ -56,9 +112,9 @@ class AuthRevocationInterceptor:
     async def _enforce(ctx: RequestContext) -> None:
         """Decode the bearer token if present and check the watermark.
 
-        Unauthenticated endpoints (Register, Login, RefreshToken) carry
-        no Authorization header. We skip silently for those - the
-        downstream handler enforces its own gate.
+        A missing header is not an error here: the allowlisted public
+        methods legitimately carry none, and every other method was
+        already rejected by :class:`AuthenticationInterceptor`.
         """
         headers = ctx.request_headers()
         auth_header = headers.get("authorization", "")
@@ -93,4 +149,4 @@ class AuthRevocationInterceptor:
                 raise ConnectError(Code.UNAUTHENTICATED, "Session has been revoked")
 
 
-__all__ = ["AuthRevocationInterceptor"]
+__all__ = ["AuthenticationInterceptor", "AuthRevocationInterceptor", "PUBLIC_METHODS"]

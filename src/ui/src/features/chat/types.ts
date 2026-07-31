@@ -47,6 +47,8 @@ export interface ChatChannel {
   isAgentDm: boolean;
   customName?: string;
   agentId?: string;
+  /** The bound agent was deleted: history reads, the composer is closed. */
+  agentIsRetired?: boolean;
   agentFolderId: string | null;
   tagIds: string[];
   unreadCount?: number;
@@ -97,6 +99,8 @@ export interface ChatMessage {
   senderName?: string;
   senderAvatarUrl?: string;
   attachments?: MessageAttachment[];
+  /** The caller's own thumbs rating on an agent reply ('up' | 'down'); absent when unrated. */
+  feedbackRating?: string;
 }
 
 export interface ChatChannelMember {

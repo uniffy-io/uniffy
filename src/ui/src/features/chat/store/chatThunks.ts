@@ -45,6 +45,7 @@ import {
   setChannelLoading,
   addReactionToMessage,
   removeReactionFromMessage,
+  setMessageFeedback,
 } from '@/features/chat/store/chatMessagesSlice';
 import {
   setDrafts,
@@ -60,8 +61,15 @@ import {
   setLoadingThread,
   addReactionToThreadMessage,
   removeReactionFromThreadMessage,
+  setThreadMessageFeedback,
 } from '@/features/chat/store/chatThreadsSlice';
 import { fetchAgents } from '@/features/agents/store/agentsThunks';
+import {
+  fetchAvailableModels,
+  fetchProviderKeys,
+} from '@/features/agents/store/agentProvidersThunks';
+import { fetchAgentTools } from '@/features/agents/store/agentToolsThunks';
+import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import { markNotificationsReadBySource } from '@/features/notifications/store/notificationsSlice';
 import type { RootState } from '@/app/store';
 import type { ChatMessage, ChatChannel, ChatChannelMember } from '@/features/chat/types';
@@ -400,6 +408,7 @@ export const sendMessage = createAsyncThunk<
     rootId?: string;
     replyToId?: string;
     attachmentFileIds?: string[];
+    metadata?: Record<string, string>;
   },
   { state: RootState; rejectValue: string }
 >('chat/sendMessage', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -412,6 +421,7 @@ export const sendMessage = createAsyncThunk<
       rootId: params.rootId,
       replyToId: params.replyToId,
       attachmentFileIds: params.attachmentFileIds ?? [],
+      metadata: params.metadata ?? {},
     });
     if (!response.message) {
       return rejectWithValue('Failed to send message');
@@ -626,6 +636,28 @@ export const removeReaction = createAsyncThunk<
       currentUserId,
     }));
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to remove reaction');
+  }
+});
+
+export const submitAgentReplyFeedback = createAsyncThunk<
+  { channelId: string; messageId: string; rating: string },
+  { channelId: string; messageId: string; rating: string },
+  { state: RootState; rejectValue: string }
+>('chat/submitAgentReplyFeedback', async (params, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    // Chat agent replies are rated through the agents feedback RPC, targeted
+    // by chat message id (messageId stays unset; the RPC takes exactly one).
+    await sessionsApi.submitMessageFeedback({
+      organizationId,
+      chatMessageId: params.messageId,
+      rating: params.rating,
+    });
+    dispatch(setMessageFeedback({ messageId: params.messageId, rating: params.rating }));
+    dispatch(setThreadMessageFeedback({ messageId: params.messageId, rating: params.rating }));
+    return params;
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to submit feedback');
   }
 });
 
@@ -1384,6 +1416,8 @@ export const initializeChat = createAsyncThunk<
 >('chat/initialize', async ({ channelId: initialChannelId, messageId }, { getState, dispatch, rejectWithValue }) => {
   try {
     // Load channels, categories, unread counts, and agents in parallel; agents power DM avatars and pickers.
+    // Provider keys and the model catalog ride along so the DM model picker is
+    // populated before the user opens it, not after.
     await Promise.all([
       dispatch(fetchChannels()).unwrap(),
       dispatch(fetchCategories()).unwrap(),
@@ -1392,6 +1426,10 @@ export const initializeChat = createAsyncThunk<
       dispatch(fetchThreadsInbox()).unwrap(),
       dispatch(fetchDrafts()).unwrap().catch(() => {}),
       dispatch(fetchAgents()).unwrap().catch(() => {}),
+      dispatch(fetchProviderKeys()).unwrap().catch(() => {}),
+      dispatch(fetchAvailableModels()).unwrap().catch(() => {}),
+      // Labels the tool-activity pane shows while an agent run streams.
+      dispatch(fetchAgentTools()).unwrap().catch(() => {}),
     ]);
 
     const state = getState();

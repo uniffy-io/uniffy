@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
@@ -33,10 +34,15 @@ async def detect_agent_mentions(
     if message.sender_type != SenderType.USER:
         return []
 
+    # Joined against the agent row so a deleted agent produces no invocation at
+    # all - no run, no typing indicator, no failed reply.
     member_rows = await session.execute(
-        select(ChatChannelMember.subject_id).where(
+        select(ChatChannelMember.subject_id)
+        .join(Agent, Agent.id == ChatChannelMember.subject_id)
+        .where(
             ChatChannelMember.channel_id == channel.id,
             ChatChannelMember.subject_type == SubjectType.AGENT,
+            Agent.is_deleted == False,  # noqa: E712
         )
     )
     agent_members: set[UUID] = {r[0] for r in member_rows.all()}

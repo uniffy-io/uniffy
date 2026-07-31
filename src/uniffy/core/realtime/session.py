@@ -2,7 +2,9 @@
 
 Inbound: peek docname, lazy authorize on first sight, dispatch payload. Outbound:
 drain pre-framed bytes from ``WSSession.outbound``. VIEWER handles are read-only;
-a write frame on ``can_edit=False`` closes the socket with ``4403``.
+a write frame on ``can_edit=False`` closes the socket with ``4403``. A third task
+re-authorizes the connection on a timer so a revoke or an expiring token closes
+the socket even while it sits idle with no doc attached.
 """
 
 import asyncio
@@ -16,6 +18,11 @@ from uniffy.core.auth.permissions import role_can_edit, role_can_view
 from uniffy.core.realtime.adapter import get_realtime_adapter
 from uniffy.core.realtime.auth import WS_CLOSE_FORBIDDEN, WS_CLOSE_UNSUPPORTED_TYPE
 from uniffy.core.realtime.multiplex import encode_doc_frame, peek_var_string
+from uniffy.core.realtime.reauth import (
+    REAUTH_INTERVAL_SECONDS,
+    Denial,
+    connection_denial,
+)
 from uniffy.core.realtime.state import (
     ClientHandle,
     WSSession,
@@ -37,6 +44,7 @@ from uniffy.observability.metrics import (
     REALTIME_AWARENESS_MESSAGES_TOTAL,
     REALTIME_FRAMES_DROPPED_TOTAL,
     REALTIME_PERMISSION_REJECTIONS_TOTAL,
+    REALTIME_REAUTH_CLOSES_TOTAL,
     REALTIME_UPDATE_MESSAGES_TOTAL,
 )
 
@@ -53,6 +61,7 @@ LOGGER_COMPONENT = "realtime.session"
 async def run_multiplexed_session(ws: WebSocket, ws_session: WSSession) -> None:
     """Drive one multiplexed WebSocket; releases every attached doc on exit."""
     out_task = asyncio.create_task(_pump_outbound(ws, ws_session))
+    reauth_task = asyncio.create_task(_reauth_watchdog(ws, ws_session))
     try:
         await _drive_inbound(ws, ws_session)
     except WebSocketDisconnect:
@@ -66,9 +75,10 @@ async def run_multiplexed_session(ws: WebSocket, ws_session: WSSession) -> None:
     except Exception as exc:
         logger.exception(f"session loop crashed: {exc}", component=LOGGER_COMPONENT)
     finally:
-        out_task.cancel()
-        with contextlib.suppress(BaseException):
-            await out_task
+        for task in (out_task, reauth_task):
+            task.cancel()
+            with contextlib.suppress(BaseException):
+                await task
         await ydoc_manager.release_all(ws_session)
         # Code 1011 signals "reconnect"; code 1000 would suppress multiplexer backoff.
         with contextlib.suppress(BaseException):
@@ -79,6 +89,33 @@ async def _pump_outbound(ws: WebSocket, ws_session: WSSession) -> None:
     while True:
         frame = await ws_session.outbound.get()
         await ws.send_bytes(frame)
+
+
+async def _reauth_watchdog(ws: WebSocket, ws_session: WSSession) -> None:
+    """Close the socket once its token, session or membership stops holding.
+
+    The revoke fanout only reaches handles registered on a doc, so a connected
+    socket with nothing attached is invisible to it. This task sees every
+    socket, which also makes the token's own expiry a real ceiling.
+    """
+    while True:
+        await asyncio.sleep(REAUTH_INTERVAL_SECONDS)
+        denial = await connection_denial(ws_session)
+        if denial is None:
+            continue
+        await _close_denied(ws, ws_session, denial)
+        return
+
+
+async def _close_denied(ws: WebSocket, ws_session: WSSession, denial: Denial) -> None:
+    REALTIME_REAUTH_CLOSES_TOTAL.labels(reason=denial.metric_reason).inc()
+    logger.info(
+        f"closing conn {ws_session.conn_id} for user {ws_session.user_id}: "
+        f"{denial.metric_reason}",
+        component=LOGGER_COMPONENT,
+    )
+    with contextlib.suppress(BaseException):
+        await ws.close(code=denial.code, reason=denial.reason)
 
 
 async def _drive_inbound(ws: WebSocket, ws_session: WSSession) -> None:
@@ -131,6 +168,13 @@ async def _attach_doc(
 ) -> ClientHandle | None:
     """Lazy per-doc authorize + acquire on first frame. Closes with ``4403`` on denial."""
     content_type, content_id = key
+    # An idle socket must not be able to attach its first doc after the token or
+    # session behind it was revoked; the watchdog interval is not a grace period.
+    denial = await connection_denial(ws_session)
+    if denial is not None:
+        await _close_denied(ws, ws_session, denial)
+        return None
+
     try:
         adapter = get_realtime_adapter(content_type)
     except LookupError:

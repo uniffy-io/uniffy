@@ -1,0 +1,19 @@
+day,task,owner,role_scope,mandatory
+1,Badge and building access issued,Office manager,All,Yes
+1,Laptop handover and MFA enrolment,IT,All,Yes
+1,Read Company Overview and Mission and Values,New joiner,All,Yes
+1,Information Security Policy acknowledged,New joiner,All,Yes
+1,Fire exits and assembly point walkthrough,Office manager,All,Yes
+2,System accounts provisioned,IT,All,Yes
+2,Payroll and contract paperwork,People,All,Yes
+2,Buddy assigned and first 1:1 booked,Line manager,All,Yes
+3,Licence and registration verified,People,Clinical,Yes
+3,Clinical record system training,Clinic manager,Clinical,Yes
+3,Cold chain induction,Laboratory manager,Lab,Yes
+4,Shadow two clinics,Clinic manager,Clinical,Yes
+4,Telehealth induction,Telehealth lead,Telehealth rota,Yes
+5,Data protection training completed,DPO,All,Yes
+5,Working pattern reflected in calendar,New joiner,All,Yes
+5,Out-of-hours contacts confirmed,Line manager,All,Yes
+30,Probation check-in,Line manager,All,Yes
+90,Competency assessment,Clinic or lab manager,"Clinical, Lab",Yes

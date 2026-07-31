@@ -26,6 +26,7 @@ const (
 	RuntimeService_CancelStream_FullMethodName          = "/agents.v1.RuntimeService/CancelStream"
 	RuntimeService_RespondToConfirmation_FullMethodName = "/agents.v1.RuntimeService/RespondToConfirmation"
 	RuntimeService_GetUsageStats_FullMethodName         = "/agents.v1.RuntimeService/GetUsageStats"
+	RuntimeService_RegenerateImage_FullMethodName       = "/agents.v1.RuntimeService/RegenerateImage"
 )
 
 // RuntimeServiceClient is the client API for RuntimeService service.
@@ -57,6 +58,10 @@ type RuntimeServiceClient interface {
 	RespondToConfirmation(ctx context.Context, in *RespondToConfirmationRequest, opts ...grpc.CallOption) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
 	GetUsageStats(ctx context.Context, in *GetUsageStatsRequest, opts ...grpc.CallOption) (*GetUsageStatsResponse, error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(ctx context.Context, in *RegenerateImageRequest, opts ...grpc.CallOption) (*RegenerateImageResponse, error)
 }
 
 type runtimeServiceClient struct {
@@ -164,6 +169,16 @@ func (c *runtimeServiceClient) GetUsageStats(ctx context.Context, in *GetUsageSt
 	return out, nil
 }
 
+func (c *runtimeServiceClient) RegenerateImage(ctx context.Context, in *RegenerateImageRequest, opts ...grpc.CallOption) (*RegenerateImageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegenerateImageResponse)
+	err := c.cc.Invoke(ctx, RuntimeService_RegenerateImage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RuntimeServiceServer is the server API for RuntimeService service.
 // All implementations must embed UnimplementedRuntimeServiceServer
 // for forward compatibility.
@@ -193,6 +208,10 @@ type RuntimeServiceServer interface {
 	RespondToConfirmation(context.Context, *RespondToConfirmationRequest) (*RespondToConfirmationResponse, error)
 	// Get usage statistics for an organization
 	GetUsageStats(context.Context, *GetUsageStatsRequest) (*GetUsageStatsResponse, error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(context.Context, *RegenerateImageRequest) (*RegenerateImageResponse, error)
 	mustEmbedUnimplementedRuntimeServiceServer()
 }
 
@@ -223,6 +242,9 @@ func (UnimplementedRuntimeServiceServer) RespondToConfirmation(context.Context, 
 }
 func (UnimplementedRuntimeServiceServer) GetUsageStats(context.Context, *GetUsageStatsRequest) (*GetUsageStatsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUsageStats not implemented")
+}
+func (UnimplementedRuntimeServiceServer) RegenerateImage(context.Context, *RegenerateImageRequest) (*RegenerateImageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegenerateImage not implemented")
 }
 func (UnimplementedRuntimeServiceServer) mustEmbedUnimplementedRuntimeServiceServer() {}
 func (UnimplementedRuntimeServiceServer) testEmbeddedByValue()                        {}
@@ -350,6 +372,24 @@ func _RuntimeService_GetUsageStats_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RuntimeService_RegenerateImage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegenerateImageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeServiceServer).RegenerateImage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeService_RegenerateImage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeServiceServer).RegenerateImage(ctx, req.(*RegenerateImageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RuntimeService_ServiceDesc is the grpc.ServiceDesc for RuntimeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -373,6 +413,10 @@ var RuntimeService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetUsageStats",
 			Handler:    _RuntimeService_GetUsageStats_Handler,
 		},
+		{
+			MethodName: "RegenerateImage",
+			Handler:    _RuntimeService_RegenerateImage_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -391,5 +435,152 @@ var RuntimeService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
+	Metadata: "agents/v1/runtime.proto",
+}
+
+const (
+	RuntimeSettingsService_GetRuntimeSettings_FullMethodName    = "/agents.v1.RuntimeSettingsService/GetRuntimeSettings"
+	RuntimeSettingsService_UpdateRuntimeSettings_FullMethodName = "/agents.v1.RuntimeSettingsService/UpdateRuntimeSettings"
+)
+
+// RuntimeSettingsServiceClient is the client API for RuntimeSettingsService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// RuntimeSettingsService manages the per-org agent runtime settings blob.
+// Both methods require org admin.
+type RuntimeSettingsServiceClient interface {
+	GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*GetRuntimeSettingsResponse, error)
+	UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*UpdateRuntimeSettingsResponse, error)
+}
+
+type runtimeSettingsServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewRuntimeSettingsServiceClient(cc grpc.ClientConnInterface) RuntimeSettingsServiceClient {
+	return &runtimeSettingsServiceClient{cc}
+}
+
+func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*GetRuntimeSettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRuntimeSettingsResponse)
+	err := c.cc.Invoke(ctx, RuntimeSettingsService_GetRuntimeSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*UpdateRuntimeSettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateRuntimeSettingsResponse)
+	err := c.cc.Invoke(ctx, RuntimeSettingsService_UpdateRuntimeSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RuntimeSettingsServiceServer is the server API for RuntimeSettingsService service.
+// All implementations must embed UnimplementedRuntimeSettingsServiceServer
+// for forward compatibility.
+//
+// RuntimeSettingsService manages the per-org agent runtime settings blob.
+// Both methods require org admin.
+type RuntimeSettingsServiceServer interface {
+	GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*GetRuntimeSettingsResponse, error)
+	UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*UpdateRuntimeSettingsResponse, error)
+	mustEmbedUnimplementedRuntimeSettingsServiceServer()
+}
+
+// UnimplementedRuntimeSettingsServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedRuntimeSettingsServiceServer struct{}
+
+func (UnimplementedRuntimeSettingsServiceServer) GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*GetRuntimeSettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRuntimeSettings not implemented")
+}
+func (UnimplementedRuntimeSettingsServiceServer) UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*UpdateRuntimeSettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateRuntimeSettings not implemented")
+}
+func (UnimplementedRuntimeSettingsServiceServer) mustEmbedUnimplementedRuntimeSettingsServiceServer() {
+}
+func (UnimplementedRuntimeSettingsServiceServer) testEmbeddedByValue() {}
+
+// UnsafeRuntimeSettingsServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to RuntimeSettingsServiceServer will
+// result in compilation errors.
+type UnsafeRuntimeSettingsServiceServer interface {
+	mustEmbedUnimplementedRuntimeSettingsServiceServer()
+}
+
+func RegisterRuntimeSettingsServiceServer(s grpc.ServiceRegistrar, srv RuntimeSettingsServiceServer) {
+	// If the following call panics, it indicates UnimplementedRuntimeSettingsServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&RuntimeSettingsService_ServiceDesc, srv)
+}
+
+func _RuntimeSettingsService_GetRuntimeSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRuntimeSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeSettingsServiceServer).GetRuntimeSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeSettingsService_GetRuntimeSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeSettingsServiceServer).GetRuntimeSettings(ctx, req.(*GetRuntimeSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RuntimeSettingsService_UpdateRuntimeSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRuntimeSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeSettingsServiceServer).UpdateRuntimeSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeSettingsService_UpdateRuntimeSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeSettingsServiceServer).UpdateRuntimeSettings(ctx, req.(*UpdateRuntimeSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// RuntimeSettingsService_ServiceDesc is the grpc.ServiceDesc for RuntimeSettingsService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var RuntimeSettingsService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "agents.v1.RuntimeSettingsService",
+	HandlerType: (*RuntimeSettingsServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetRuntimeSettings",
+			Handler:    _RuntimeSettingsService_GetRuntimeSettings_Handler,
+		},
+		{
+			MethodName: "UpdateRuntimeSettings",
+			Handler:    _RuntimeSettingsService_UpdateRuntimeSettings_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "agents/v1/runtime.proto",
 }

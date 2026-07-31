@@ -4,7 +4,6 @@ import {
     ShieldCheck,
     NotePencil,
     FolderSimple,
-    CalendarDots,
     WarningCircle,
     Kanban,
     Robot,
@@ -25,7 +24,6 @@ const CONTENT_TYPE_ICONS: Record<number, typeof NotePencil> = {
     [ContentType.NOTE]: NotePencil,
     [ContentType.FILE]: FolderSimple,
     [ContentType.PROJECT]: Kanban,
-    [ContentType.CALENDAR_EVENT]: CalendarDots,
     [ContentType.AGENT]: Robot,
 };
 
@@ -33,9 +31,18 @@ const ALL_CONTENT_TYPES = [
     ContentType.NOTE,
     ContentType.FILE,
     ContentType.PROJECT,
-    ContentType.CALENDAR_EVENT,
     ContentType.AGENT,
 ];
+
+const CONTENT_TYPE_DESCRIPTIONS: Partial<Record<number, string>> = {
+    [ContentType.AGENT]:
+        'Controls who can USE agents in chat, not who can build them. Agents without ' +
+        'their own sharing setup follow this default live; the baseline role is what ' +
+        'every member gets, and Viewer is enough to chat with an agent. Stricter than ' +
+        '"Open to organization" hides agents from members until a builder shares them. ' +
+        'Creating and editing agents always requires an org admin or Agents domain ' +
+        'admin, and provider keys stay admin-managed regardless of this setting.',
+};
 
 interface ContentTypeCardProps {
     contentType: number;
@@ -46,6 +53,7 @@ interface ContentTypeCardProps {
 function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardProps) {
     const [saving, setSaving] = useState(false);
     const Icon = CONTENT_TYPE_ICONS[contentType] || NotePencil;
+    const description = CONTENT_TYPE_DESCRIPTIONS[contentType];
 
     const handleChange = async (next: { accessMode: AccessMode; baselineRole: number | null }) => {
         setSaving(true);
@@ -76,6 +84,10 @@ function ContentTypeCard({ contentType, defaults, onUpdate }: ContentTypeCardPro
                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 )}
             </div>
+
+            {description && (
+                <p className="text-xs text-muted-foreground leading-snug mb-4">{description}</p>
+            )}
 
             <AccessModeSelector
                 value={{

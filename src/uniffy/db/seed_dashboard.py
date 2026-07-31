@@ -33,11 +33,6 @@ def _rand_past(max_days: int = 14) -> datetime:
     )
 
 
-def _today_at(hour: int, minute: int = 0) -> datetime:
-    now = datetime.now(UTC)
-    return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-
 def _slugify(text: str) -> str:
     return text.lower().replace(" ", "-").replace(".", "")[:500]
 

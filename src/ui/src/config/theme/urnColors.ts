@@ -13,7 +13,6 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.PROJECT]: '#f97316',        // orange-500
   [UrnType.TASK]: '#14b8a6',           // teal-500
   [UrnType.AGENT]: '#06b6d4',          // cyan-500
-  [UrnType.PROMPT]: '#a855f7',         // purple-500
   [UrnType.ROOM]: '#0ea5e9',           // sky-500
   [UrnType.CHAT_MESSAGE]: '#8b5cf6',   // violet-500 (same as chat)
   [UrnType.TAG]: '#64748b',            // slate-500 (per-tag color overrides at chip level)
@@ -136,16 +135,6 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     shadow: 'shadow-cyan-500/50',
     glow: 'inset-shadow-[0_2px_4px_rgb(6_182_212_/_0.45)]',
   },
-  [UrnType.PROMPT]: {
-    gradient: 'from-purple-500/10 via-purple-500/5 to-transparent',
-    iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
-    iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
-    accentText: 'text-purple-600 dark:text-purple-400',
-    badgeBg: 'bg-purple-500/10',
-    border: 'border-purple-500/40 dark:border-purple-500/20',
-    shadow: 'shadow-purple-500/50',
-    glow: 'inset-shadow-sm inset-shadow-purple-500/30',
-  },
   [UrnType.ROOM]: {
     gradient: 'from-sky-500/10 via-sky-500/5 to-transparent',
     iconBg: 'bg-gradient-to-br from-sky-500 to-sky-600',
@@ -222,7 +211,6 @@ export const URN_TYPE_LEGEND: Array<{
   { type: UrnType.PROJECT, label: 'Projects', hexColor: URN_TYPE_HEX_COLORS[UrnType.PROJECT], tailwindBg: 'bg-orange-500' },
   { type: UrnType.TASK, label: 'Tasks', hexColor: URN_TYPE_HEX_COLORS[UrnType.TASK], tailwindBg: 'bg-teal-500' },
   { type: UrnType.AGENT, label: 'Agents', hexColor: URN_TYPE_HEX_COLORS[UrnType.AGENT], tailwindBg: 'bg-cyan-500' },
-  { type: UrnType.PROMPT, label: 'Prompts', hexColor: URN_TYPE_HEX_COLORS[UrnType.PROMPT], tailwindBg: 'bg-purple-500' },
   { type: UrnType.ROOM, label: 'Rooms', hexColor: URN_TYPE_HEX_COLORS[UrnType.ROOM], tailwindBg: 'bg-sky-500' },
   { type: UrnType.TAG, label: 'Tags', hexColor: URN_TYPE_HEX_COLORS[UrnType.TAG], tailwindBg: 'bg-slate-500' },
 ];

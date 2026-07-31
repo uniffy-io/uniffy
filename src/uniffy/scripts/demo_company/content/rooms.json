@@ -1,0 +1,112 @@
+[
+  {
+    "name": "Vitosha",
+    "description": "Ground floor boardroom. Used for board, committee and partner meetings.",
+    "room_type": "CONFERENCE_ROOM",
+    "capacity": 14,
+    "building": "Sofia HQ",
+    "floor": "0",
+    "location": "Sofia HQ, ground floor, behind reception",
+    "amenities": ["video", "projector", "phone", "catering"]
+  },
+  {
+    "name": "Rila",
+    "description": "Main meeting room on the office floor. Default room for the clinical huddle.",
+    "room_type": "MEETING_ROOM",
+    "capacity": 8,
+    "building": "Sofia HQ",
+    "floor": "3",
+    "location": "Sofia HQ, floor 3, north side",
+    "amenities": ["video", "whiteboard", "tv"]
+  },
+  {
+    "name": "Pirin",
+    "description": "Six person room with a whiteboard wall.",
+    "room_type": "MEETING_ROOM",
+    "capacity": 6,
+    "building": "Sofia HQ",
+    "floor": "3",
+    "location": "Sofia HQ, floor 3, east side",
+    "amenities": ["whiteboard", "tv"]
+  },
+  {
+    "name": "Iskar",
+    "description": "Small room for four. Good for interviews and 1:1s.",
+    "room_type": "MEETING_ROOM",
+    "capacity": 4,
+    "building": "Sofia HQ",
+    "floor": "3",
+    "location": "Sofia HQ, floor 3, west side",
+    "amenities": ["whiteboard"]
+  },
+  {
+    "name": "Studena",
+    "description": "Phone booth. Calls only, never booked for meetings.",
+    "room_type": "OFFICE",
+    "capacity": 1,
+    "building": "Sofia HQ",
+    "floor": "3",
+    "location": "Sofia HQ, floor 3, by the stairwell",
+    "amenities": ["phone", "soundproof"]
+  },
+  {
+    "name": "Bistritsa",
+    "description": "Second phone booth, next to the kitchen.",
+    "room_type": "OFFICE",
+    "capacity": 1,
+    "building": "Sofia HQ",
+    "floor": "3",
+    "location": "Sofia HQ, floor 3, by the kitchen",
+    "amenities": ["phone", "soundproof"]
+  },
+  {
+    "name": "Serdica",
+    "description": "Training room and all-hands space. Live-stream rig for remote staff.",
+    "room_type": "CONFERENCE_ROOM",
+    "capacity": 20,
+    "building": "Sofia HQ",
+    "floor": "4",
+    "location": "Sofia HQ, floor 4, next to the roof terrace",
+    "amenities": ["video", "projector", "whiteboard", "live-stream"]
+  },
+  {
+    "name": "Telehealth Booth 1",
+    "description": "Soundproof consultation booth. Patient consultations only.",
+    "room_type": "OFFICE",
+    "capacity": 1,
+    "building": "Sofia HQ",
+    "floor": "2",
+    "location": "Sofia HQ, floor 2, by the nurses station",
+    "amenities": ["soundproof", "video", "headset"]
+  },
+  {
+    "name": "Telehealth Booth 2",
+    "description": "Second consultation booth. Patient consultations only.",
+    "room_type": "OFFICE",
+    "capacity": 1,
+    "building": "Sofia HQ",
+    "floor": "2",
+    "location": "Sofia HQ, floor 2, south corridor",
+    "amenities": ["soundproof", "video", "headset"]
+  },
+  {
+    "name": "Maritsa",
+    "description": "Meeting room at the Plovdiv clinic.",
+    "room_type": "MEETING_ROOM",
+    "capacity": 6,
+    "building": "Plovdiv clinic",
+    "floor": "1",
+    "location": "Plovdiv, Trakia district, first floor",
+    "amenities": ["video", "whiteboard"]
+  },
+  {
+    "name": "Trakia Training Room",
+    "description": "Training space in Plovdiv. Patient education every Wednesday evening.",
+    "room_type": "CONFERENCE_ROOM",
+    "capacity": 16,
+    "building": "Plovdiv clinic",
+    "floor": "1",
+    "location": "Plovdiv, Trakia district, first floor, rear",
+    "amenities": ["projector", "whiteboard", "video"]
+  }
+]

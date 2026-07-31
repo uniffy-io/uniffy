@@ -1,123 +1,145 @@
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { useNavigate, useParams } from "react-router-dom";
 import {
-  ChatCircle,
-  Plugs,
-  ChatsCircle,
-  ChartBar,
+  Books,
   ClockCounterClockwise,
   Robot,
   Lightning,
-  Notebook,
-  Key,
 } from "@phosphor-icons/react";
-import { useNavigate } from "react-router-dom";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
-import {
-  selectActiveTab,
-  selectSidebarCollapsed,
-  type AgentsTab,
-} from "@/features/agents/store/agentsUiSlice";
-import { useAppDispatch } from "@/app/hooks";
-import { toggleSidebar } from "@/features/agents/store/agentsUiSlice";
-import { useShortcutHandler } from "@/features/settings";
-import { AgentsSidebar } from "@/features/agents/components/layout/AgentsSidebar";
-import { ChatView } from "@/features/agents/components/views/ChatView";
-import { IntegrationsView } from "@/features/agents/components/views/IntegrationsView";
-import { ConversationsView } from "@/features/agents/components/views/ConversationsView";
-import { UsageView } from "@/features/agents/components/views/UsageView";
-import { AutomationsView } from "@/features/agents/components/views/AutomationsView";
-import { AgentsView } from "@/features/agents/components/views/AgentsView";
-import { SkillsView } from "@/features/agents/components/views/SkillsView";
-import { PromptsView } from "@/features/agents/components/views/PromptsView";
-import { ConfigView } from "@/features/agents/components/views/ConfigView";
+import { clearPanelLayout, loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { Drawer } from "@/components/ui/drawer";
 import {
   CollapsibleSidebarRail,
   type SidebarSection,
 } from "@/components/layout/CollapsibleSidebarRail";
-
-function useAgentsSections(): SidebarSection[] {
-  const navigate = useNavigate();
-  const activeTab = useAppSelector(selectActiveTab);
-
-  return useMemo(() => [
-    { id: "chat", icon: ChatCircle, label: "Chat", isActive: activeTab === "chat", onClick: () => navigate("/agents/chat") },
-    { id: "agents", icon: Robot, label: "Agents", isActive: activeTab === "agents", onClick: () => navigate("/agents/agents") },
-    { id: "skills", icon: Lightning, label: "Skills", isActive: activeTab === "skills", onClick: () => navigate("/agents/skills") },
-    { id: "prompts", icon: Notebook, label: "Prompts", isActive: activeTab === "prompts", onClick: () => navigate("/agents/prompts") },
-    { id: "usage", icon: ChartBar, label: "Usage", isActive: activeTab === "usage", onClick: () => navigate("/agents/usage") },
-    { id: "integrations", icon: Plugs, label: "Integrations", isActive: activeTab === "integrations", onClick: () => navigate("/agents/integrations") },
-    { id: "conversations", icon: ChatsCircle, label: "Conversations", isActive: activeTab === "conversations", onClick: () => navigate("/agents/conversations") },
-    { id: "automations", icon: ClockCounterClockwise, label: "Automations", isActive: activeTab === "automations", onClick: () => navigate("/agents/automations") },
-    { id: "config", icon: Key, label: "Keys", isActive: activeTab === "config", onClick: () => navigate("/agents/config") },
-  ], [activeTab, navigate]);
-}
-
-function renderView(tab: AgentsTab) {
-  switch (tab) {
-    case "agents":
-      return <AgentsView />;
-    case "skills":
-      return <SkillsView />;
-    case "prompts":
-      return <PromptsView />;
-    case "config":
-      return <ConfigView />;
-    case "chat":
-      return <ChatView />;
-    case "integrations":
-      return <IntegrationsView />;
-    case "conversations":
-      return <ConversationsView />;
-    case "usage":
-      return <UsageView />;
-    case "automations":
-      return <AutomationsView />;
-  }
-}
+import { useShortcutHandler } from "@/features/settings";
+import {
+  selectSidebarCollapsed,
+  setSidebarCollapsed,
+  toggleSidebar,
+  type AgentsSection,
+} from "@/features/agents/store/agentsUiSlice";
+import { fetchAgents, fetchDeletedAgents } from "@/features/agents/store/agentsThunks";
+import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import { createSkillDraft, fetchSkillDrafts } from "@/features/agents/store/agentSkillDraftsThunks";
+import { fetchCronTasks } from "@/features/agents/store/agentCronThunks";
+import {
+  fetchAvailableModels,
+  fetchProviderKeys,
+} from "@/features/agents/store/agentProvidersThunks";
+import {
+  fetchConnections,
+  fetchIntegrationProviders,
+} from "@/features/integrations/store/integrationsThunks";
+import { fetchAgentTemplates } from "@/features/agents/store/agentTemplatesThunks";
+import { fetchAgentTools } from "@/features/agents/store/agentToolsThunks";
+import { AgentsModuleSidebar } from "@/features/agents/components/layout/AgentsModuleSidebar";
+import { AgentsView } from "@/features/agents/components/views/AgentsView";
+import { CatalogView } from "@/features/agents/components/views/CatalogView";
+import { SkillsView } from "@/features/agents/components/views/SkillsView";
+import { AutomationsView } from "@/features/agents/components/views/AutomationsView";
+import { CreateAgentModal } from "@/features/agents/components/CreateAgentModal";
+import { CreateTaskModal } from "@/features/agents/components/CreateTaskModal";
+import { ProviderKeyNotice } from "@/features/agents/components/ProviderKeyNotice";
 
 export function AgentsLayout() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const { tab } = useParams<{ tab?: string }>();
+  const section = (tab ?? "agents") as AgentsSection;
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
-  const activeTab = useAppSelector(selectActiveTab);
   const sidebarCollapsed = useAppSelector(selectSidebarCollapsed);
-  const agentsSections = useAgentsSections();
+  const { isMobile } = useBreakpoint();
 
-  const [defaultLayout] = useState(() => loadPanelLayout("agents-nav"));
+  const [defaultLayout] = useState(() => {
+    for (const staleKey of ["agents-nav", "agents-list", "agents-automations"]) {
+      clearPanelLayout(staleKey);
+    }
+    return loadPanelLayout("agents-sidebar");
+  });
+  const [createAgentOpen, setCreateAgentOpen] = useState(false);
+  const [createAgentTemplateKey, setCreateAgentTemplateKey] = useState<string | null>(null);
+  const [createTaskOpen, setCreateTaskOpen] = useState(false);
+  const [creatingSkill, setCreatingSkill] = useState(false);
 
-  const handleLayoutChange = useCallback(
-    (layout: Record<string, number>) => {
-      savePanelLayout("agents-nav", layout);
-    },
-    [],
-  );
+  // Fetched here, not in the sidebar: Zen mode and the mobile drawer unmount
+  // the sidebar, and the content views still need this data. Keys and models
+  // load up front so every model dropdown in the builder opens populated.
+  useEffect(() => {
+    dispatch(fetchAgents());
+    dispatch(fetchDeletedAgents());
+    dispatch(fetchSkills());
+    dispatch(fetchSkillDrafts({ status: "pending" }));
+    dispatch(fetchCronTasks());
+    dispatch(fetchProviderKeys());
+    dispatch(fetchAvailableModels());
+    dispatch(fetchAgentTemplates());
+    dispatch(fetchAgentTools());
+    dispatch(fetchIntegrationProviders());
+    dispatch(fetchConnections());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleExpandSidebar = useCallback(() => {
+  const handleLayoutChange = useCallback((layout: Record<string, number>) => {
+    savePanelLayout("agents-sidebar", layout);
+  }, []);
+
+  const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
 
-  useShortcutHandler("app.toggleSidebar", handleExpandSidebar);
+  useShortcutHandler("app.toggleSidebar", handleToggleSidebar);
 
+  const handleNewAgent = useCallback((templateKey?: string) => {
+    setCreateAgentTemplateKey(templateKey ?? null);
+    setCreateAgentOpen(true);
+  }, []);
+
+  const handleNewSkill = useCallback(async () => {
+    if (creatingSkill) return;
+    setCreatingSkill(true);
+    try {
+      const draft = await dispatch(
+        createSkillDraft({ kind: "create", name: "", displayName: "", content: "" }),
+      ).unwrap();
+      navigate(`/agents/skills/drafts/${draft.id}`);
+    } finally {
+      setCreatingSkill(false);
+    }
+  }, [creatingSkill, dispatch, navigate]);
+
+  const handleNewAutomation = useCallback(() => {
+    setCreateTaskOpen(true);
+  }, []);
+
+  const railSections: SidebarSection[] = [
+    { id: "agents", icon: Robot, label: "Agents", isActive: section === "agents", onClick: () => navigate("/agents/agents") },
+    { id: "catalog", icon: Books, label: "Catalog", isActive: section === "catalog", onClick: () => navigate("/agents/catalog") },
+    { id: "skills", icon: Lightning, label: "Skills", isActive: section === "skills", onClick: () => navigate("/agents/skills") },
+    { id: "automations", icon: ClockCounterClockwise, label: "Automations", isActive: section === "automations", onClick: () => navigate("/agents/automations") },
+  ];
+
+  const sidebar = <AgentsModuleSidebar />;
+
+  const sidebarAsDrawer = isMobile;
   const showSidebar = !isZenMode && !sidebarCollapsed;
-  const showCollapsedRail = !isZenMode && sidebarCollapsed;
+  const showCollapsedRail = !isZenMode && sidebarCollapsed && !sidebarAsDrawer;
 
   return (
     <div
       className={cn(
-        "relative flex flex-col bg-background text-foreground overflow-hidden",
+        "relative bg-background text-foreground overflow-hidden",
         "transition-[height] duration-300 ease-in-out",
-        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0"
+        isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
       )}
     >
       {showCollapsedRail && (
         <div className="absolute inset-y-0 left-0 z-30 w-12">
-          <CollapsibleSidebarRail
-            onExpand={handleExpandSidebar}
-            sections={agentsSections}
-          >
-            <AgentsSidebar collapsed={false} />
+          <CollapsibleSidebarRail onExpand={handleToggleSidebar} sections={railSections}>
+            {sidebar}
           </CollapsibleSidebarRail>
         </div>
       )}
@@ -128,33 +150,65 @@ export function AgentsLayout() {
         defaultLayout={defaultLayout}
         onLayoutChange={handleLayoutChange}
       >
-        {showSidebar && (
+        {showSidebar && !sidebarAsDrawer && (
           <>
             <Panel
-              id="agents-nav"
-              defaultSize={220}
-              minSize={160}
-              maxSize={320}
-              className="bg-background border-r border-border overflow-hidden"
+              id="agents-sidebar"
+              defaultSize={280}
+              minSize={180}
+              maxSize={400}
+              className="bg-background overflow-hidden"
             >
-              <AgentsSidebar collapsed={false} />
+              {sidebar}
             </Panel>
 
             <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
           </>
         )}
 
-        <Panel id="agents-main" minSize={400}>
+        <Panel id="agents-main" minSize={isMobile ? 200 : 400}>
           <div
             className={cn(
-              "h-full flex flex-col overflow-hidden",
-              showCollapsedRail && "ml-12"
+              "h-full flex flex-col overflow-hidden bg-card",
+              showCollapsedRail && "ml-12",
             )}
           >
-            {renderView(activeTab)}
+            <ProviderKeyNotice />
+            {/* min-h-0 so the notice takes its band out of the section's height
+                instead of pushing its bottom past the clipped container. */}
+            <div className="min-h-0 flex-1">
+              {section === "catalog" ? (
+                <CatalogView onUseTemplate={handleNewAgent} />
+              ) : section === "skills" ? (
+                <SkillsView onNewSkill={handleNewSkill} creatingSkill={creatingSkill} />
+              ) : section === "automations" ? (
+                <AutomationsView onNewAutomation={handleNewAutomation} />
+              ) : (
+                <AgentsView onNewAgent={handleNewAgent} />
+              )}
+            </div>
           </div>
         </Panel>
       </Group>
+
+      {sidebarAsDrawer && (
+        <Drawer
+          open={showSidebar}
+          onClose={() => dispatch(setSidebarCollapsed(true))}
+          side="left"
+          className="w-72"
+          ariaLabel="Agents sidebar"
+        >
+          {sidebar}
+        </Drawer>
+      )}
+
+      <CreateAgentModal
+        open={createAgentOpen}
+        initialTemplateKey={createAgentTemplateKey}
+        onClose={() => setCreateAgentOpen(false)}
+      />
+      <CreateTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
     </div>
   );
 }

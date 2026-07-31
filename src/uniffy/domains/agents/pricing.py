@@ -76,16 +76,109 @@ def compute_image_cost(
     if count <= 0:
         return None
 
-    if pricing.image_prices:
-        sizes = pricing.image_prices.get(size)
-        if isinstance(sizes, dict):
-            raw_price = sizes.get(quality)
-            if raw_price is not None:
-                return (Decimal(str(raw_price)) * Decimal(count)).quantize(
-                    Decimal("0.000001")
-                )
+    unit = _image_unit_price(pricing, size=size, quality=quality)
+    if unit is not None:
+        return (unit * Decimal(count)).quantize(Decimal("0.000001"))
 
     if pricing.cost_per_image is not None:
         return (pricing.cost_per_image * Decimal(count)).quantize(Decimal("0.000001"))
 
     return None
+
+
+def image_price_estimates(provider: str, model_id: str) -> dict[str, str]:
+    """Per-image USD estimates keyed ``"{aspect_ratio}|{resolution}|{quality}"``.
+
+    Precomputed server-side so the chat and builder forms can price the current
+    selection without reimplementing the size math a provider needs. Absent keys
+    mean "no published rate"; the UI shows no figure rather than a guess.
+    """
+    from uniffy.domains.agents.providers.catalog.loader import (
+        get_image_parameter_schema,
+    )
+    from uniffy.domains.agents.providers.openai.images import compute_size
+
+    pricing = get_model(provider, model_id)
+    schema = get_image_parameter_schema(provider, model_id)
+    if pricing is None or not schema:
+        return {}
+
+    ratios = schema.get("aspect_ratio", {}).get("enum") or [""]
+    resolutions = schema.get("resolution", {}).get("enum") or [""]
+    qualities = schema.get("quality", {}).get("enum") or ["auto"]
+
+    estimates: dict[str, str] = {}
+    for ratio in ratios:
+        for resolution in resolutions:
+            size = (
+                compute_size(ratio, resolution)
+                if pricing.image_arbitrary_size
+                else _fixed_size(pricing, ratio)
+            )
+            for quality in qualities:
+                cost = compute_image_cost(
+                    pricing, size=size, quality=quality, count=1
+                )
+                if cost is not None:
+                    estimates[f"{ratio}|{resolution}|{quality}"] = str(cost)
+    return estimates
+
+
+def _fixed_size(pricing: Model, aspect_ratio: str) -> str:
+    """The priced size whose shape matches ``aspect_ratio`` on a fixed-size model."""
+    wanted = {"1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536"}
+    return wanted.get(aspect_ratio, "1024x1024")
+
+
+def _pixels(size: str) -> int | None:
+    """Pixel count for a ``WIDTHxHEIGHT`` size string, or ``None``."""
+    width, _, height = size.partition("x")
+    try:
+        return int(width) * int(height)
+    except ValueError:
+        return None
+
+
+def _image_unit_price(pricing: Model, *, size: str, quality: str) -> Decimal | None:
+    """Per-image rate from the size/quality matrix, scaled by pixels when the
+    model is token-metered and the exact size has no published rate.
+
+    ``auto`` bills as ``medium`` on the gpt-image family; the catalog matrix
+    keys on the real quality names.
+    """
+    if not pricing.image_prices:
+        return None
+
+    tiers = pricing.image_prices.get(size)
+    if isinstance(tiers, dict):
+        raw_price = tiers.get(quality) or (
+            tiers.get("medium") if quality == "auto" else None
+        )
+        if raw_price is not None:
+            return Decimal(str(raw_price))
+
+    if not pricing.image_price_scales_with_pixels:
+        return None
+
+    target_pixels = _pixels(size)
+    if not target_pixels:
+        return None
+
+    # Output tokens scale with pixel count, so the published rate for another
+    # size of the same quality tier scales across. Nearest priced size wins so
+    # the estimate stays anchored to a real number.
+    best: tuple[int, Decimal] | None = None
+    for priced_size, tiers in pricing.image_prices.items():
+        if not isinstance(tiers, dict):
+            continue
+        raw_price = tiers.get(quality) or (
+            tiers.get("medium") if quality == "auto" else None
+        )
+        priced_pixels = _pixels(priced_size)
+        if raw_price is None or not priced_pixels:
+            continue
+        distance = abs(priced_pixels - target_pixels)
+        if best is None or distance < best[0]:
+            scaled = Decimal(str(raw_price)) * Decimal(target_pixels) / Decimal(priced_pixels)
+            best = (distance, scaled)
+    return best[1] if best else None

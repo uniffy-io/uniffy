@@ -16,10 +16,12 @@ from uniffy_proto.agents.v1.agents_connect import AgentsServiceASGIApplication
 from uniffy_proto.agents.v1.budgets_connect import BudgetsServiceASGIApplication
 from uniffy_proto.agents.v1.cron_connect import CronServiceASGIApplication
 from uniffy_proto.agents.v1.memories_connect import MemoriesServiceASGIApplication
-from uniffy_proto.agents.v1.prompts_connect import PromptsServiceASGIApplication
 from uniffy_proto.agents.v1.providers_connect import ProvidersServiceASGIApplication
 from uniffy_proto.agents.v1.rate_limits_connect import RateLimitsServiceASGIApplication
-from uniffy_proto.agents.v1.runtime_connect import RuntimeServiceASGIApplication
+from uniffy_proto.agents.v1.runtime_connect import (
+    RuntimeServiceASGIApplication,
+    RuntimeSettingsServiceASGIApplication,
+)
 from uniffy_proto.agents.v1.sessions_connect import SessionsServiceASGIApplication
 from uniffy_proto.agents.v1.skills_connect import SkillsServiceASGIApplication
 from uniffy_proto.audit.v1.audit_connect import AuditServiceASGIApplication
@@ -33,6 +35,9 @@ from uniffy_proto.chat.v1.chat_stream_connect import ChatStreamServiceASGIApplic
 from uniffy_proto.comments.v1.comments_connect import CommentsServiceASGIApplication
 from uniffy_proto.files.v1.files_connect import FilesServiceASGIApplication
 from uniffy_proto.groups.v1.groups_connect import GroupsServiceASGIApplication
+from uniffy_proto.integrations.v1.integrations_connect import (
+    IntegrationsServiceASGIApplication,
+)
 from uniffy_proto.mail.v1.mail_connect import OrgMailServiceASGIApplication
 from uniffy_proto.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy_proto.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
@@ -89,13 +94,18 @@ from uniffy.core.valkey import (
     signal_pubsub_shutdown,
 )
 from uniffy.core.webhooks import register_webhook_provider, webhooks_router
-from uniffy.db import close_db, init_db, open_session, seed_initial_data
+from uniffy.db import (
+    close_db,
+    init_db,
+    open_session,
+    seed_initial_data,
+    sync_bundled_skills,
+)
 from uniffy.domains.agents.agents.http_routes import agent_avatars_router
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
 from uniffy.domains.agents.budgets.service import BudgetsServiceImpl
 from uniffy.domains.agents.cron.service import CronServiceImpl
 from uniffy.domains.agents.memories.service import MemoriesServiceImpl
-from uniffy.domains.agents.prompts.service import PromptsServiceImpl
 from uniffy.domains.agents.providers.client_cache import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
@@ -103,10 +113,16 @@ from uniffy.domains.agents.providers.client_cache import (
 from uniffy.domains.agents.providers.service import ProvidersServiceImpl
 from uniffy.domains.agents.rate_limits.service import RateLimitsServiceImpl
 from uniffy.domains.agents.runtime.service import RuntimeServiceImpl
+from uniffy.domains.agents.runtime.settings_handlers import (
+    RuntimeSettingsServiceImpl,
+)
 from uniffy.domains.agents.sessions.service import SessionsServiceImpl
 from uniffy.domains.agents.skills.service import SkillsServiceImpl
 from uniffy.domains.audit.service import AuditServiceImpl
-from uniffy.domains.auth.interceptors import AuthRevocationInterceptor
+from uniffy.domains.auth.interceptors import (
+    AuthenticationInterceptor,
+    AuthRevocationInterceptor,
+)
 from uniffy.domains.auth.mfa.service import MfaServiceImpl
 from uniffy.domains.auth.service import AuthServiceImpl
 from uniffy.domains.bookmarks.service import BookmarksServiceImpl
@@ -124,6 +140,11 @@ from uniffy.domains.files.http_routes import (
 )
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.groups.service import GroupsServiceImpl
+from uniffy.domains.integrations.client_cache import (
+    close_integration_invalidation_subscriber,
+    init_integration_invalidation_subscriber,
+)
+from uniffy.domains.integrations.service import IntegrationsServiceImpl
 from uniffy.domains.mail.service import OrgMailServiceImpl
 from uniffy.domains.mail.system_service import SystemMailServiceImpl
 from uniffy.domains.notes.service import NotesServiceImpl
@@ -348,6 +369,11 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Provider invalidation subscriber not available: {e}")
 
     try:
+        await init_integration_invalidation_subscriber()
+    except Exception as e:
+        logger.warning(f"Integration invalidation subscriber not available: {e}")
+
+    try:
         await subscribe_dek_invalidations()
     except Exception as e:
         logger.warning(f"Org DEK invalidation subscriber not available: {e}")
@@ -370,6 +396,14 @@ async def lifespan(app: FastAPI):
         logger.info("Stream revoke coordinator started successfully")
     except Exception as e:
         logger.warning(f"Stream revoke coordinator not available: {e}")
+
+    # Ahead of the seed: the bootstrapped default agent resolves bundled skills
+    # by id, so the rows have to exist before the first organization is created.
+    try:
+        await sync_bundled_skills()
+    except Exception as e:
+        logger.exception(f"Failed to sync bundled skills: {e}")
+        raise
 
     try:
         await seed_initial_data()
@@ -400,6 +434,7 @@ async def lifespan(app: FastAPI):
     await realtime_pubsub_router.stop()
     signal_pubsub_shutdown()
     await close_provider_invalidation_subscriber()
+    await close_integration_invalidation_subscriber()
     await close_dek_invalidation_subscriber()
     await close_deployment_dek_invalidation_subscriber()
     await close_streams_client()
@@ -462,11 +497,18 @@ def create_app() -> FastAPI:
 
 def _create_api_dispatcher() -> ConnectRPCDispatcher:
     logging_interceptor = LoggingInterceptor()
-    # AuthRevocationInterceptor runs FIRST so a revoked access token never reaches
-    # handler code. LoggingInterceptor still gets the access log line because
-    # ConnectRPC unwinds interceptors in reverse order on raise.
+    # AuthenticationInterceptor runs FIRST and denies by default, so a handler
+    # that forgets its own identity check is not reachable without a token.
+    # Revocation follows, so a revoked access token never reaches handler code.
+    # LoggingInterceptor still gets the access log line because ConnectRPC
+    # unwinds interceptors in reverse order on raise.
+    authentication_interceptor = AuthenticationInterceptor()
     auth_revocation_interceptor = AuthRevocationInterceptor()
-    interceptors = [auth_revocation_interceptor, logging_interceptor]
+    interceptors = [
+        authentication_interceptor,
+        auth_revocation_interceptor,
+        logging_interceptor,
+    ]
     dispatcher = ConnectRPCDispatcher()
 
     dispatcher.add_service(
@@ -604,6 +646,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
         CallServiceASGIApplication(CallServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
+        "/integrations.v1.IntegrationsService",
+        IntegrationsServiceASGIApplication(IntegrationsServiceImpl(), interceptors=interceptors),
+    )
+    dispatcher.add_service(
         "/agents.v1.ProvidersService",
         ProvidersServiceASGIApplication(ProvidersServiceImpl(), interceptors=interceptors),
     )
@@ -618,10 +664,6 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/agents.v1.SkillsService",
         SkillsServiceASGIApplication(SkillsServiceImpl(), interceptors=interceptors),
-    )
-    dispatcher.add_service(
-        "/agents.v1.PromptsService",
-        PromptsServiceASGIApplication(PromptsServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/agents.v1.MemoriesService",
@@ -645,6 +687,12 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
             StreamRevokeWatchMiddleware(
                 RuntimeServiceASGIApplication(RuntimeServiceImpl(), interceptors=interceptors)
             )
+        ),
+    )
+    dispatcher.add_service(
+        "/agents.v1.RuntimeSettingsService",
+        RuntimeSettingsServiceASGIApplication(
+            RuntimeSettingsServiceImpl(), interceptors=interceptors
         ),
     )
 

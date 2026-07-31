@@ -64,7 +64,8 @@ from uniffy.core.errors import (
     PermissionDeniedError,
     ValidationError,
 )
-from uniffy.core.models.chat.channel import ChannelType
+from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChannelRole
 from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChannelMemberModel
 from uniffy.core.search.indexer import build_content_urn
@@ -134,6 +135,27 @@ def _parse_tag_ids(raw_ids: list[str]) -> list[UUID]:
         except ValueError as exc:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid tag_id") from exc
     return out
+
+
+async def _retired_agent_ids(
+    session: AsyncSession,
+    channels: list[ChatChannel],
+) -> set[UUID]:
+    """Agent ids among these channels whose agent was deleted, in one query.
+
+    Drives `ChatChannel.agent_is_retired` so the client can freeze the chat
+    instead of inferring retirement from an agent missing off a picker list.
+    """
+    agent_ids = {c.agent_id for c in channels if c.is_agent_dm and c.agent_id is not None}
+    if not agent_ids:
+        return set()
+    rows = await session.execute(
+        select(Agent.id).where(
+            Agent.id.in_(agent_ids),
+            Agent.is_deleted == True,  # noqa: E712
+        )
+    )
+    return {r[0] for r in rows.all()}
 
 
 async def _hydrate_channel_tags(
@@ -300,6 +322,7 @@ class ChannelHandlers:
                         await set_cached_dm_peers(channel_id, dm_ids)
 
                 tags_by_id = await _hydrate_channel_tags(session, org_id, [channel.id])
+                retired = await _retired_agent_ids(session, [channel])
 
                 return GetChannelResponse(
                     channel=channel_to_proto(
@@ -309,6 +332,7 @@ class ChannelHandlers:
                         is_member=membership is not None,
                         dm_member_ids=dm_ids,
                         tags=tags_by_id.get(channel.id),
+                        agent_is_retired=channel.agent_id in retired,
                     )
                 )
         except (NotFoundError, PermissionDeniedError) as e:
@@ -494,12 +518,14 @@ class ChannelHandlers:
                     for cid, peers in cached_map.items():
                         dm_ids_by_channel[cid] = peers
 
+                retired = await _retired_agent_ids(session, [c for c, _ in rows])
                 channels_proto = [
                     channel_to_proto(
                         channel,
                         stats,
                         is_member=True,
                         dm_member_ids=dm_ids_by_channel.get(channel.id),
+                        agent_is_retired=channel.agent_id in retired,
                     )
                     for channel, stats in rows
                 ]
@@ -685,6 +711,7 @@ class ChannelHandlers:
                     user_tags = await _hydrate_channel_tags(
                         session, org_id, user_channel_ids
                     )
+                    retired = await _retired_agent_ids(session, [ch for ch, _, _, _ in rows])
                     channels = [
                         channel_to_proto(
                             ch,
@@ -694,6 +721,7 @@ class ChannelHandlers:
                             dm_member_ids=dm_members_map.get(str(ch.id)),
                             tags=user_tags.get(ch.id),
                             agent_folder_id=folder_id,
+                            agent_is_retired=ch.agent_id in retired,
                         )
                         for ch, stats, role, folder_id in rows
                     ]

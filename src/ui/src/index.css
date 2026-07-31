@@ -186,6 +186,22 @@
   animation: uniffy-typing-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Attention ring: draws the eye to a control the user still has to fill in */
+@keyframes uniffy-attention-ring {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45); }
+  50% { box-shadow: 0 0 0 4px hsl(var(--primary) / 0); }
+}
+
+.uniffy-attention-ring {
+  border-color: hsl(var(--primary));
+  animation: uniffy-attention-ring 1.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the border cue; drop the pulse. */
+  .uniffy-attention-ring { animation: none; }
+}
+
 /* Status colors — semantic, theme-independent (see config/theme/statusColors.ts) */
 :root {
   --status-error: #dc2626;

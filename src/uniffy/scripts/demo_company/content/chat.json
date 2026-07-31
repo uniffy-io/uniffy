@@ -1,0 +1,542 @@
+{
+  "categories": [
+    {
+      "name": "Clinics",
+      "channels": [
+        {
+          "name": "clinical-huddle",
+          "type": "PUBLIC",
+          "description": "Daily huddle follow-ups, escalations and rota cover.",
+          "members": ["alice@uniffy.io", "bob@uniffy.io", "eve@uniffy.io", "admin@uniffy.io"],
+          "messages": [
+            {
+              "from": "bob@uniffy.io",
+              "text": "Morning. [Clinical huddle](event:Clinical huddle) is in [Rila](room:Rila) as usual. Two things on the list: the Tuesday cardiology cover and the intake form change.",
+              "minutes_ago": 2880,
+              "replies": [
+                {
+                  "from": "alice@uniffy.io",
+                  "text": "I can take Tuesday morning if we push the 11:00 back by fifteen minutes.",
+                  "minutes_ago": 2865
+                },
+                {
+                  "from": "bob@uniffy.io",
+                  "text": "Done, reception will call the two affected patients today.",
+                  "minutes_ago": 2850
+                }
+              ]
+            },
+            {
+              "from": "alice@uniffy.io",
+              "text": "Reminder that allergies go in as structured data, not in the free-text box. Third near miss this quarter came from a free-text allergy. Step 5 of the [Patient Intake SOP](patient-intake-sop.md) is explicit about it.",
+              "minutes_ago": 2760
+            },
+            {
+              "from": "eve@uniffy.io",
+              "text": "Related from the lab side: two samples yesterday arrived without a collection time on the label. Both had to be redrawn. [Lab Sample Handling SOP](lab-sample-handling-sop.md) section on identification, please read it again with your teams.",
+              "minutes_ago": 1500
+            },
+            {
+              "from": "bob@uniffy.io",
+              "text": "Understood. I will run it at Wednesday's [Clinic managers sync](event:Clinic managers sync) and add a line to the reception checklist.",
+              "minutes_ago": 1440
+            },
+            {
+              "from": "alice@uniffy.io",
+              "text": "One more: anything that looks like an incident goes in the same day, even near misses. Process is in [Adverse Event Reporting](adverse-event-reporting-sop.md). Nobody has ever been in trouble here for reporting one.",
+              "minutes_ago": 420
+            }
+          ]
+        },
+        {
+          "name": "sofia-hq",
+          "type": "PUBLIC",
+          "description": "Sofia HQ building, rooms, parking and facilities.",
+          "members": ["bob@uniffy.io", "charlie@uniffy.io", "diana@uniffy.io", "admin@uniffy.io"],
+          "messages": [
+            {
+              "from": "charlie@uniffy.io",
+              "text": "Reminder that [Studena](room:Studena) and [Bistritsa](room:Bistritsa) are phone booths, not meeting rooms. Found a four person standup in Studena this morning, which is impressive but not the plan.",
+              "minutes_ago": 2400
+            },
+            {
+              "from": "bob@uniffy.io",
+              "text": "And please stop booking the telehealth booths on floor 2 for internal calls. They are patient rooms. Full etiquette list is in the [Sofia HQ Guide](sofia-hq-guide.md).",
+              "minutes_ago": 2380
+            },
+            {
+              "from": "admin@uniffy.io",
+              "text": "Capacities and floors are all in [the room directory](file:Facilities/sofia-hq-room-directory.csv) if you are not sure which room fits.",
+              "minutes_ago": 2350
+            },
+            {
+              "from": "charlie@uniffy.io",
+              "text": "[Flu vaccination day](event:Flu vaccination day) is confirmed for next week in the ground floor lobby. Drop in, no booking, takes five minutes.",
+              "minutes_ago": 600,
+              "replies": [
+                {
+                  "from": "diana@uniffy.io",
+                  "text": "Does it count as work time for remote folks who come in for it?",
+                  "minutes_ago": 580
+                },
+                {
+                  "from": "charlie@uniffy.io",
+                  "text": "Yes, and the travel is claimable per [Expenses and Travel](expenses-and-travel-policy.md).",
+                  "minutes_ago": 540
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "plovdiv",
+          "type": "PUBLIC",
+          "description": "Plovdiv clinic operations and the Sofia courier run.",
+          "members": ["bob@uniffy.io", "alice@uniffy.io", "eve@uniffy.io"],
+          "messages": [
+            {
+              "from": "bob@uniffy.io",
+              "text": "Courier was twenty minutes late today, samples still made the cold chain window. Logger read 6.2 C on arrival.",
+              "minutes_ago": 1800
+            },
+            {
+              "from": "eve@uniffy.io",
+              "text": "Fine, that is inside spec. If it slips past 8 C we quarantine and call before anything is reported, per the [Lab Sample Handling SOP](lab-sample-handling-sop.md).",
+              "minutes_ago": 1780
+            },
+            {
+              "from": "alice@uniffy.io",
+              "text": "[Cardiology clinic, Plovdiv](event:Cardiology clinic, Plovdiv) is full for the next three Tuesdays. Worth asking whether we add a second specialist day.",
+              "minutes_ago": 900
+            },
+            {
+              "from": "bob@uniffy.io",
+              "text": "I will bring numbers to the [Clinic managers sync](event:Clinic managers sync). Room in Plovdiv is not the constraint, [Maritsa](room:Maritsa) is free most of the week.",
+              "minutes_ago": 870
+            }
+          ]
+        },
+        {
+          "name": "patient-safety",
+          "type": "PRIVATE",
+          "description": "Incident review preparation. Membership limited to the committee.",
+          "members": ["alice@uniffy.io", "bob@uniffy.io", "eve@uniffy.io", "admin@uniffy.io"],
+          "messages": [
+            {
+              "from": "alice@uniffy.io",
+              "text": "Agenda for the [Patient safety committee](event:Patient safety committee): two near misses, one delayed result, and the intake form change. No names in this channel, reference the record instead.",
+              "minutes_ago": 2000
+            },
+            {
+              "from": "eve@uniffy.io",
+              "text": "The delayed result was an analyser QC failure on Thursday. Reporting stopped for that analyte until it cleared, which is the correct behaviour, but the clinic was told four hours late.",
+              "minutes_ago": 1900,
+              "replies": [
+                {
+                  "from": "alice@uniffy.io",
+                  "text": "So the fix is the notification path, not the QC rule. Good. That is a system fix, exactly what we want out of a review.",
+                  "minutes_ago": 1880
+                }
+              ]
+            },
+            {
+              "from": "bob@uniffy.io",
+              "text": "Both near misses were reported the same day by the people involved. Worth saying out loud in the meeting.",
+              "minutes_ago": 1500
+            }
+          ]
+        },
+        {
+          "name": "reception",
+          "type": "PUBLIC",
+          "description": "Front desk: bookings, walk-ins, NHIF paperwork, daily numbers.",
+          "members": ["charlie@uniffy.io", "bob@uniffy.io", "admin@uniffy.io"],
+          "messages": [
+            {
+              "from": "charlie@uniffy.io",
+              "text": "Daily numbers land here at the end of each shift. Anything a patient could hear or see goes in the same day, not at the end of the week.",
+              "minutes_ago": 4400
+            },
+            {
+              "from": "bob@uniffy.io",
+              "text": "Records requests are never handled at the desk. They go to the DPO mailbox and identity gets verified first, per [Patient Data Protection Policy](patient-data-protection-policy.md).",
+              "minutes_ago": 4380
+            },
+            {
+              "from": "charlie@uniffy.io",
+              "text": "Steps for a first contact are in [Patient Intake SOP](patient-intake-sop.md), including which two identifiers we confirm out loud.",
+              "minutes_ago": 4360
+            }
+          ]
+        },
+        {
+          "name": "telehealth",
+          "type": "PUBLIC",
+          "description": "Vitalis Connect sessions, escalations and platform quality.",
+          "members": ["alice@uniffy.io", "diana@uniffy.io", "admin@uniffy.io", "bob@uniffy.io"],
+          "messages": [
+            {
+              "from": "alice@uniffy.io",
+              "text": "Nightly session summary goes here. Escalation rules are in [Telehealth Consultation SOP](telehealth-consultation-sop.md): chest pain, focal neurology, breathlessness at rest, abdominal pain needing examination, suspected fracture, any child under one with fever.",
+              "minutes_ago": 4300
+            },
+            {
+              "from": "admin@uniffy.io",
+              "text": "Booths [Telehealth Booth 1](room:Telehealth Booth 1) and [Telehealth Booth 2](room:Telehealth Booth 2) are bookable for consultations only.",
+              "minutes_ago": 4280
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lab",
+      "channels": [
+        {
+          "name": "lab-ops",
+          "type": "PUBLIC",
+          "description": "Vitalis Lab day to day: QC, turnaround, reagents.",
+          "members": ["eve@uniffy.io", "alice@uniffy.io", "admin@uniffy.io"],
+          "messages": [
+            {
+              "from": "eve@uniffy.io",
+              "text": "Weekly [Lab QA review](event:Lab QA review) moved to [Pirin](room:Pirin) because Rila is taken by sprint planning. Same time, Friday 10:00.",
+              "minutes_ago": 2600
+            },
+            {
+              "from": "eve@uniffy.io",
+              "text": "Updated ranges are in [lab-panel-reference-ranges.csv](file:Clinical/lab-panel-reference-ranges.csv). The only change is vitamin D, we now flag below 30 ng/mL instead of 20.",
+              "minutes_ago": 2100,
+              "replies": [
+                {
+                  "from": "alice@uniffy.io",
+                  "text": "That will increase the number of results patients see flagged. Can we make sure the wording explains what it means rather than just colouring it red?",
+                  "minutes_ago": 2050
+                },
+                {
+                  "from": "eve@uniffy.io",
+                  "text": "Agreed. [Voice and Tone](voice-and-tone.md) says say the number and give a next step, so the template does both now.",
+                  "minutes_ago": 2000
+                }
+              ]
+            },
+            {
+              "from": "admin@uniffy.io",
+              "text": "Cool box VH-CB-0007 is back from calibration and logged in [the device register](file:IT/device-asset-register.csv).",
+              "minutes_ago": 300
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Operations",
+      "channels": [
+        {
+          "name": "it-support",
+          "type": "PUBLIC",
+          "description": "Accounts, devices, phishing reports, access reviews.",
+          "members": ["admin@uniffy.io", "diana@uniffy.io", "charlie@uniffy.io", "eve@uniffy.io"],
+          "messages": [
+            {
+              "from": "admin@uniffy.io",
+              "text": "Ticket summaries land here daily. Anything touching patient safety is handled immediately, at any hour, per [Information Security Policy](information-security-policy.md).",
+              "minutes_ago": 4500
+            },
+            {
+              "from": "admin@uniffy.io",
+              "text": "Access is by role and requested by your manager. The list of systems and who owns them is in [Systems and Access](systems-and-access.md).",
+              "minutes_ago": 4480
+            },
+            {
+              "from": "diana@uniffy.io",
+              "text": "Reminder that a secret pasted into chat is treated as compromised and rotated. No embarrassment, just rotate it.",
+              "minutes_ago": 4460
+            }
+          ]
+        },
+        {
+          "name": "procurement",
+          "type": "PUBLIC",
+          "description": "Reagents, consumables, equipment and supplier issues.",
+          "members": ["eve@uniffy.io", "admin@uniffy.io", "bob@uniffy.io"],
+          "messages": [
+            {
+              "from": "eve@uniffy.io",
+              "text": "Lab consumables run on the lab process rather than the general expense ladder, see [Expenses and Travel](expenses-and-travel-policy.md) for everything else.",
+              "minutes_ago": 4200
+            },
+            {
+              "from": "admin@uniffy.io",
+              "text": "Equipment goes on [the device register](file:IT/device-asset-register.csv) when it arrives, including cool boxes and loggers.",
+              "minutes_ago": 4180
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Product",
+      "channels": [
+        {
+          "name": "myvitalis",
+          "type": "PUBLIC",
+          "description": "MyVitalis patient portal and Vitalis Connect.",
+          "members": ["diana@uniffy.io", "admin@uniffy.io", "alice@uniffy.io"],
+          "messages": [
+            {
+              "from": "diana@uniffy.io",
+              "text": "[Sprint planning: MyVitalis portal](event:Sprint planning: MyVitalis portal) tomorrow. Theme is results readability: bigger type, plain language, always a booked next step.",
+              "minutes_ago": 1700
+            },
+            {
+              "from": "alice@uniffy.io",
+              "text": "Please treat the 12 pt minimum on printed reports as a clinical requirement, not a style preference. Half our readers are over 65. It is written down in [Visual Identity](visual-identity.md).",
+              "minutes_ago": 1650
+            },
+            {
+              "from": "diana@uniffy.io",
+              "text": "Noted, we will lock the minimum in the component rather than leave it to each template.",
+              "minutes_ago": 1600
+            },
+            {
+              "from": "admin@uniffy.io",
+              "text": "Two telehealth sessions dropped yesterday evening. Logged with the platform vendor. Per the [Telehealth Consultation SOP](telehealth-consultation-sop.md) a pattern of failures is a patient safety issue, so I am tracking it, not just filing it.",
+              "minutes_ago": 240
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Company",
+      "channels": [
+        {
+          "name": "announcements",
+          "type": "PUBLIC",
+          "description": "Company-wide announcements. Low traffic, please keep replies in threads.",
+          "members": ["admin@uniffy.io", "charlie@uniffy.io", "alice@uniffy.io", "bob@uniffy.io", "diana@uniffy.io", "eve@uniffy.io"],
+          "messages": [
+            {
+              "from": "admin@uniffy.io",
+              "text": "The handbook now lives in the workspace. Start at [Company Overview](company-overview.md) and [Mission and Values](mission-and-values.md).",
+              "minutes_ago": 4300,
+              "replies": [
+                {
+                  "from": "charlie@uniffy.io",
+                  "text": "New joiners get pointed at [First Week Checklist](first-week-checklist.md) on day one, so please keep it accurate.",
+                  "minutes_ago": 4200
+                }
+              ]
+            },
+            {
+              "from": "charlie@uniffy.io",
+              "text": "[Quarterly all-hands](event:Quarterly all-hands) is Thursday 16:00 in [Serdica](room:Serdica), streamed for everyone remote. Questions can go in ahead of time.",
+              "minutes_ago": 1200
+            },
+            {
+              "from": "admin@uniffy.io",
+              "text": "Yearly [GDPR and patient data refresher](event:GDPR and patient data refresher) is mandatory. If your calendar clashes, tell the DPO and take the later session, do not skip it.",
+              "minutes_ago": 480
+            }
+          ]
+        },
+        {
+          "name": "people-ops",
+          "type": "PUBLIC",
+          "description": "Hiring, rota, leave, onboarding and CPD.",
+          "members": ["charlie@uniffy.io", "bob@uniffy.io", "alice@uniffy.io", "admin@uniffy.io"],
+          "messages": [
+            {
+              "from": "charlie@uniffy.io",
+              "text": "Leave requests go through the calendar with manager approval. Clinical staff request six weeks ahead so the rota can absorb it, per [Leave and Time Off](leave-and-time-off-policy.md).",
+              "minutes_ago": 4600
+            },
+            {
+              "from": "bob@uniffy.io",
+              "text": "Two clinicians from the same speciality cannot be off in the same week without my sign-off. August fills first, so plan early.",
+              "minutes_ago": 4580
+            },
+            {
+              "from": "charlie@uniffy.io",
+              "text": "Every new starter follows [First Week Checklist](first-week-checklist.md), and managers can track it in [onboarding-checklist.csv](file:People/onboarding-checklist.csv).",
+              "minutes_ago": 4560
+            },
+            {
+              "from": "charlie@uniffy.io",
+              "text": "[Maria Nikolova](user:maria@uniffy.io) joins us this week as clinic coordinator in Sofia. Laptop, badge and accounts are ready, and [New joiner welcome](event:New joiner welcome) is booked in [Pirin](room:Pirin).",
+              "minutes_ago": 180,
+              "replies": [
+                {
+                  "from": "bob@uniffy.io",
+                  "text": "Welcome. Sit with reception for the first two days, that is where the whole clinic makes sense fastest.",
+                  "minutes_ago": 165
+                },
+                {
+                  "from": "alice@uniffy.io",
+                  "text": "And read [Patient Intake SOP](patient-intake-sop.md) before you touch a booking. The allergy step is the one that matters most.",
+                  "minutes_ago": 150
+                },
+                {
+                  "from": "eve@uniffy.io",
+                  "text": "If you end up carrying samples anywhere, the cold chain rules are in [Lab Sample Handling SOP](lab-sample-handling-sop.md). Ask me rather than guessing.",
+                  "minutes_ago": 140
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "marketing",
+          "type": "PUBLIC",
+          "description": "Campaigns, website, patient-facing copy.",
+          "members": ["diana@uniffy.io", "charlie@uniffy.io", "alice@uniffy.io"],
+          "messages": [
+            {
+              "from": "diana@uniffy.io",
+              "text": "Everything patient-facing follows [Voice and Tone](voice-and-tone.md) and [Brand Foundations](brand-foundations.md). No fear-based copy, ever.",
+              "minutes_ago": 4100
+            },
+            {
+              "from": "charlie@uniffy.io",
+              "text": "Colours and type are in [Visual Identity](visual-identity.md), and the palette file is [brand-palette.csv](file:Brand/brand-palette.csv). Alert Coral is for abnormal results only, not for emphasis.",
+              "minutes_ago": 4080
+            }
+          ]
+        },
+        {
+          "name": "random",
+          "type": "PUBLIC",
+          "description": "Non-work chatter. Coffee, mountains, dogs.",
+          "members": ["charlie@uniffy.io", "diana@uniffy.io", "bob@uniffy.io", "eve@uniffy.io"],
+          "messages": [
+            {
+              "from": "diana@uniffy.io",
+              "text": "Whoever left the good coffee in the floor 4 kitchen: thank you, and I am sorry.",
+              "minutes_ago": 1100
+            },
+            {
+              "from": "bob@uniffy.io",
+              "text": "Vitosha hike on Saturday if the weather holds. Meeting at the Simeonovo lift at 09:00.",
+              "minutes_ago": 800,
+              "replies": [
+                {
+                  "from": "eve@uniffy.io",
+                  "text": "In. Bringing the dog, he is faster than all of us.",
+                  "minutes_ago": 760
+                },
+                {
+                  "from": "charlie@uniffy.io",
+                  "text": "In, assuming the lift is actually running this week.",
+                  "minutes_ago": 700
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "direct_messages": [
+    {
+      "participants": ["charlie@uniffy.io", "maria@uniffy.io"],
+      "messages": [
+        {
+          "from": "charlie@uniffy.io",
+          "text": "Welcome to Vitalis, Maria. Start with [Company Overview](company-overview.md) and [Mission and Values](mission-and-values.md), then work down [First Week Checklist](first-week-checklist.md). No rush, it is built for a week.",
+          "minutes_ago": 200
+        },
+        {
+          "from": "charlie@uniffy.io",
+          "text": "Your accounts are set to your role only, nothing extra. If you hit a wall, [Systems and Access](systems-and-access.md) says who owns what, and IT answer fast.",
+          "minutes_ago": 195
+        },
+        {
+          "from": "charlie@uniffy.io",
+          "text": "Practical bits for the building are in the [Sofia HQ Guide](sofia-hq-guide.md): badges, parking, which rooms you can book. [Studena](room:Studena) is a phone booth, not a meeting room, and people will tell you so.",
+          "minutes_ago": 190
+        },
+        {
+          "from": "maria@uniffy.io",
+          "text": "Thank you. Badge worked first try, and I found the kitchen on floor 3 before I found my desk.",
+          "minutes_ago": 120
+        },
+        {
+          "from": "charlie@uniffy.io",
+          "text": "That is the correct order of priorities. [New joiner welcome](event:New joiner welcome) is in [Pirin](room:Pirin), and your data protection session is booked as [GDPR and patient data refresher](event:GDPR and patient data refresher).",
+          "minutes_ago": 110
+        },
+        {
+          "from": "maria@uniffy.io",
+          "text": "Both in my calendar. One question: if a patient asks me for their records at the desk, what do I do?",
+          "minutes_ago": 90
+        },
+        {
+          "from": "charlie@uniffy.io",
+          "text": "Never handle it at the desk. It goes to the DPO mailbox and identity gets verified first, per [Patient Data Protection Policy](patient-data-protection-policy.md). A relative asking on the patient's behalf is the case we refuse most often.",
+          "minutes_ago": 80
+        }
+      ]
+    },
+    {
+      "participants": ["alice@uniffy.io", "bob@uniffy.io"],
+      "messages": [
+        {
+          "from": "bob@uniffy.io",
+          "text": "Can you cover Thursday afternoon? Dr Ilieva is out and I would rather not cancel eight patients.",
+          "minutes_ago": 1300
+        },
+        {
+          "from": "alice@uniffy.io",
+          "text": "Yes, from 13:00. Move the two complex follow-ups to Friday and keep the rest.",
+          "minutes_ago": 1240
+        },
+        {
+          "from": "bob@uniffy.io",
+          "text": "Perfect, reception is calling them now with the wording from [Voice and Tone](voice-and-tone.md).",
+          "minutes_ago": 1200
+        }
+      ]
+    },
+    {
+      "participants": ["charlie@uniffy.io", "diana@uniffy.io"],
+      "messages": [
+        {
+          "from": "charlie@uniffy.io",
+          "text": "Your new engineer starts Monday. Laptop and MFA are ready, badge is with reception.",
+          "minutes_ago": 900
+        },
+        {
+          "from": "diana@uniffy.io",
+          "text": "Thanks. Does she need the clinical record system? She only touches the portal.",
+          "minutes_ago": 880
+        },
+        {
+          "from": "charlie@uniffy.io",
+          "text": "Then no. Access is by role and nobody gets an account just in case, see [Systems and Access](systems-and-access.md).",
+          "minutes_ago": 860
+        }
+      ]
+    },
+    {
+      "participants": ["alice@uniffy.io", "bob@uniffy.io", "eve@uniffy.io"],
+      "messages": [
+        {
+          "from": "eve@uniffy.io",
+          "text": "Pulling the three of us together before the committee so the incident summary is one story, not three.",
+          "minutes_ago": 700
+        },
+        {
+          "from": "alice@uniffy.io",
+          "text": "Good. Facts in the report, interpretation in the review, no names.",
+          "minutes_ago": 680
+        },
+        {
+          "from": "bob@uniffy.io",
+          "text": "I will bring the reception timeline. Fifteen minutes before [Patient safety committee](event:Patient safety committee) should be enough.",
+          "minutes_ago": 640
+        }
+      ]
+    }
+  ]
+}

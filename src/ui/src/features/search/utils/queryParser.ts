@@ -58,8 +58,6 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'tasks': SearchResultType.TASK,
     'agent': SearchResultType.AGENT,
     'agents': SearchResultType.AGENT,
-    'prompt': SearchResultType.PROMPT,
-    'prompts': SearchResultType.PROMPT,
     'room': SearchResultType.ROOM,
     'rooms': SearchResultType.ROOM,
     // tag entity itself, not "content tagged with X" - use tag: for the latter
@@ -200,8 +198,6 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Tasks';
         case SearchResultType.AGENT:
             return 'Agents';
-        case SearchResultType.PROMPT:
-            return 'Prompts';
         case SearchResultType.ROOM:
             return 'Rooms';
         case SearchResultType.TAG:
@@ -237,8 +233,6 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'task';
         case SearchResultType.AGENT:
             return 'agent';
-        case SearchResultType.PROMPT:
-            return 'prompt';
         case SearchResultType.ROOM:
             return 'room';
         case SearchResultType.TAG:

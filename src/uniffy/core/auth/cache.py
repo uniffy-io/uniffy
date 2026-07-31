@@ -160,10 +160,6 @@ async def invalidate_org_defaults(
     await cache_invalidate_by_tag(_defaults_tag(organization_id, content_type))
 
 
-async def invalidate_org_admin(organization_id: UUID, user_id: UUID) -> None:
-    await cache_invalidate_many(_org_admin_key(organization_id, user_id))
-
-
 async def invalidate_domain_admin(
     organization_id: UUID,
     user_id: UUID,

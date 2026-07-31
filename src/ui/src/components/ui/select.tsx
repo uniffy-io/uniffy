@@ -18,6 +18,9 @@ interface SelectProps<T extends string | number = string> {
     className?: string;
     triggerClassName?: string;
     size?: 'sm' | 'md';
+    /** Widens the dropdown past the trigger when labels are long. */
+    menuMinWidth?: number;
+    ariaLabel?: string;
 }
 
 interface DropdownPosition {
@@ -36,6 +39,8 @@ export function Select<T extends string | number = string>({
     className,
     triggerClassName,
     size = 'md',
+    menuMinWidth = 120,
+    ariaLabel,
 }: SelectProps<T>) {
     const [isOpen, setIsOpen] = useState(false);
     const [position, setPosition] = useState<DropdownPosition | null>(null);
@@ -53,13 +58,17 @@ export function Select<T extends string | number = string>({
 
         const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
+        // A menu wider than its trigger can run past the right edge, so pull it back.
+        const width = Math.max(rect.width, menuMinWidth);
+        const maxLeft = window.innerWidth - width - 8;
+
         setPosition({
             top: openUpward ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
-            left: rect.left,
-            width: rect.width,
+            left: Math.max(8, Math.min(rect.left, maxLeft)),
+            width,
             openUpward,
         });
-    }, [options.length]);
+    }, [options.length, menuMinWidth]);
 
     useEffect(() => {
         if (isOpen) {
@@ -139,7 +148,6 @@ export function Select<T extends string | number = string>({
                     top: position.top,
                     left: position.left,
                     width: position.width,
-                    minWidth: 120,
                 }}
                 className={cn(
                     'z-[200] overflow-hidden rounded-md',
@@ -165,9 +173,11 @@ export function Select<T extends string | number = string>({
                                     size === 'sm' ? 'text-xs' : 'text-sm'
                                 )}
                             >
-                                <span className="flex items-center gap-2">
+                                <span className="flex min-w-0 items-center gap-2">
                                     {option.icon}
-                                    {option.label}
+                                    <span className="truncate" title={option.label}>
+                                        {option.label}
+                                    </span>
                                 </span>
                                 {isSelected && <Check size={16} weight="bold" className="text-primary" />}
                             </button>
@@ -187,6 +197,9 @@ export function Select<T extends string | number = string>({
                 type="button"
                 onClick={handleToggle}
                 disabled={disabled}
+                aria-label={ariaLabel}
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
                 className={cn(
                     'flex items-center justify-between gap-2 rounded-md border border-border bg-background',
                     'font-medium transition-colors',
@@ -206,7 +219,7 @@ export function Select<T extends string | number = string>({
                     size={16}
                     weight="bold"
                     className={cn(
-                        'text-muted-foreground transition-transform duration-200',
+                        'shrink-0 text-muted-foreground transition-transform duration-200',
                         isOpen && 'rotate-180'
                     )}
                 />

@@ -39,6 +39,9 @@ class RuntimeService(Protocol):
     async def get_usage_stats(self, request: agents_dot_v1_dot_runtime__pb2.GetUsageStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetUsageStatsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def regenerate_image(self, request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
     def __init__(self, service: RuntimeService | AsyncGenerator[RuntimeService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -114,6 +117,16 @@ class RuntimeServiceASGIApplication(ConnectASGIApplication[RuntimeService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_usage_stats,
+                ),
+                "/agents.v1.RuntimeService/RegenerateImage": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RegenerateImage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.regenerate_image,
                 ),
             },
             interceptors=interceptors,
@@ -269,6 +282,113 @@ class RuntimeServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def regenerate_image(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RegenerateImage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+class RuntimeSettingsService(Protocol):
+    async def get_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def update_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+
+class RuntimeSettingsServiceASGIApplication(ConnectASGIApplication[RuntimeSettingsService]):
+    def __init__(self, service: RuntimeSettingsService | AsyncGenerator[RuntimeSettingsService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
+        super().__init__(
+            service=service,
+            endpoints=lambda svc: {
+                "/agents.v1.RuntimeSettingsService/GetRuntimeSettings": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetRuntimeSettings",
+                        service_name="agents.v1.RuntimeSettingsService",
+                        input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_runtime_settings,
+                ),
+                "/agents.v1.RuntimeSettingsService/UpdateRuntimeSettings": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateRuntimeSettings",
+                        service_name="agents.v1.RuntimeSettingsService",
+                        input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_runtime_settings,
+                ),
+            },
+            interceptors=interceptors,
+            read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
+        )
+
+    @property
+    def path(self) -> str:
+        """Returns the URL path to mount the application to when serving multiple applications."""
+        return "/agents.v1.RuntimeSettingsService"
+
+
+class RuntimeSettingsServiceClient(ConnectClient):
+    async def get_runtime_settings(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetRuntimeSettings",
+                service_name="agents.v1.RuntimeSettingsService",
+                input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
+                output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_runtime_settings(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateRuntimeSettings",
+                service_name="agents.v1.RuntimeSettingsService",
+                input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
+                output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -287,6 +407,8 @@ class RuntimeServiceSync(Protocol):
     def respond_to_confirmation(self, request: agents_dot_v1_dot_runtime__pb2.RespondToConfirmationRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RespondToConfirmationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_usage_stats(self, request: agents_dot_v1_dot_runtime__pb2.GetUsageStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetUsageStatsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def regenerate_image(self, request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -363,6 +485,16 @@ class RuntimeServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_usage_stats,
+                ),
+                "/agents.v1.RuntimeService/RegenerateImage": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RegenerateImage",
+                        service_name="agents.v1.RuntimeService",
+                        input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.regenerate_image,
                 ),
             },
             interceptors=interceptors,
@@ -512,6 +644,111 @@ class RuntimeServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.RuntimeService",
                 input=agents_dot_v1_dot_runtime__pb2.GetUsageStatsRequest,
                 output=agents_dot_v1_dot_runtime__pb2.GetUsageStatsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def regenerate_image(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RegenerateImage",
+                service_name="agents.v1.RuntimeService",
+                input=agents_dot_v1_dot_runtime__pb2.RegenerateImageRequest,
+                output=agents_dot_v1_dot_runtime__pb2.RegenerateImageResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+class RuntimeSettingsServiceSync(Protocol):
+    def get_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def update_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+
+class RuntimeSettingsServiceWSGIApplication(ConnectWSGIApplication):
+    def __init__(self, service: RuntimeSettingsServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
+        super().__init__(
+            endpoints={
+                "/agents.v1.RuntimeSettingsService/GetRuntimeSettings": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetRuntimeSettings",
+                        service_name="agents.v1.RuntimeSettingsService",
+                        input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_runtime_settings,
+                ),
+                "/agents.v1.RuntimeSettingsService/UpdateRuntimeSettings": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateRuntimeSettings",
+                        service_name="agents.v1.RuntimeSettingsService",
+                        input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
+                        output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_runtime_settings,
+                ),
+            },
+            interceptors=interceptors,
+            read_max_bytes=read_max_bytes,
+            compressions=compressions,
+            codecs=codecs,
+        )
+
+    @property
+    def path(self) -> str:
+        """Returns the URL path to mount the application to when serving multiple applications."""
+        return "/agents.v1.RuntimeSettingsService"
+
+
+class RuntimeSettingsServiceClientSync(ConnectClientSync):
+    def get_runtime_settings(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetRuntimeSettings",
+                service_name="agents.v1.RuntimeSettingsService",
+                input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
+                output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def update_runtime_settings(
+        self,
+        request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateRuntimeSettings",
+                service_name="agents.v1.RuntimeSettingsService",
+                input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
+                output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -26,10 +26,6 @@ ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {
         "default_access_mode": AccessMode.OPEN_TO_ORG,
         "default_baseline_role": ContentRole.VIEWER,
     },
-    ContentType.CALENDAR_EVENT: {
-        "default_access_mode": AccessMode.OPEN_TO_ORG,
-        "default_baseline_role": ContentRole.VIEWER,
-    },
     ContentType.PROJECT: {
         "default_access_mode": AccessMode.OPEN_TO_ORG,
         "default_baseline_role": ContentRole.EDITOR,
@@ -39,14 +35,6 @@ ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {
         "default_baseline_role": ContentRole.VIEWER,
     },
     ContentType.ROOM: {
-        "default_access_mode": AccessMode.OPEN_TO_ORG,
-        "default_baseline_role": ContentRole.VIEWER,
-    },
-    ContentType.PROVIDER_KEY: {
-        "default_access_mode": AccessMode.OWNER_ONLY,
-        "default_baseline_role": None,
-    },
-    ContentType.PROMPT: {
         "default_access_mode": AccessMode.OPEN_TO_ORG,
         "default_baseline_role": ContentRole.VIEWER,
     },

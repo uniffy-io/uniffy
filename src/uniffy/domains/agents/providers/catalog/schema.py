@@ -45,6 +45,11 @@ class ParamSpec(BaseModel):
     enum: list[str] | None = None
     step: float | None = None
     hidden: bool = False
+    # "builder" knobs are settable only on the agent itself: they are stripped
+    # from the tool schema the model sees and rejected on the per-conversation
+    # override path, so neither a member nor the LLM can loosen a moderation
+    # or output-format decision the builder made.
+    audience: Literal["user", "builder"] = "user"
 
     @model_validator(mode="after")
     def _check(self) -> ParamSpec:
@@ -105,6 +110,22 @@ class Model(BaseModel):
     # Flat per-image USD rate (Gemini-style), used when image_prices has no
     # matching size/quality.
     cost_per_image: Decimal | None = None
+    # Token-metered image models (the gpt-image family) publish rates only for
+    # their 1K sizes; output tokens scale with pixel count, so a larger size is
+    # priced by scaling the nearest matrix entry. Every derived figure is an
+    # estimate and is rendered as such.
+    image_price_scales_with_pixels: bool = False
+    # The model's API takes any WIDTHxHEIGHT inside its envelope rather than a
+    # fixed size list, so a ratio + tier can be turned into exact pixels.
+    image_arbitrary_size: bool = False
+    # Per-model default overrides for the provider's image_params_base, and the
+    # image knobs this model's API rejects. Same contract as options /
+    # unsupported_params, applied to the image-generation endpoint.
+    image_options: dict[str, object] = Field(default_factory=dict)
+    unsupported_image_params: list[str] = Field(default_factory=list)
+    # Narrows an image enum to the subset this model's API accepts, e.g.
+    # gpt-image-1 takes three of the ten aspect ratios.
+    image_enums: dict[str, list[str]] = Field(default_factory=dict)
     # Per-model default overrides for knobs declared in the provider's
     # params_base (catwalk-scalar shape); "provider_options" nests the
     # escape-hatch keys. Keys are validated against the provider decls.
@@ -150,6 +171,7 @@ class ProviderCatalog(BaseModel):
     default_small_model_id: str | None = None
     params_base: dict[str, ParamSpec] = Field(default_factory=dict)
     provider_options: dict[str, ParamSpec] = Field(default_factory=dict)
+    image_params_base: dict[str, ParamSpec] = Field(default_factory=dict)
     models: list[Model]
 
     @model_validator(mode="after")
@@ -165,6 +187,7 @@ class ProviderCatalog(BaseModel):
                 if alias in ids:
                     raise ValueError(f"alias {alias!r} collides with a model id")
             self._check_options(model)
+            self._check_image_options(model)
         for label, default in (
             ("default_large_model_id", self.default_large_model_id),
             ("default_small_model_id", self.default_small_model_id),
@@ -198,6 +221,46 @@ class ProviderCatalog(BaseModel):
             if spec is None:
                 raise ValueError(f"model {model.id!r}: undeclared option {key!r}")
             spec.check_value(f"model {model.id!r} option {key!r}", value)
+
+    def _check_image_options(self, model: Model) -> None:
+        if not (model.image_options or model.unsupported_image_params or model.image_enums):
+            return
+        if not self.image_params_base:
+            raise ValueError(
+                f"model {model.id!r}: image options declared but the provider "
+                "has no image_params_base",
+            )
+        for name in model.unsupported_image_params:
+            if name not in self.image_params_base:
+                raise ValueError(
+                    f"model {model.id!r}: unsupported_image_params entry {name!r} "
+                    "is not a declared image knob",
+                )
+            if name in model.image_options:
+                raise ValueError(
+                    f"model {model.id!r}: image option {name!r} is unsupported",
+                )
+        for key, value in model.image_options.items():
+            spec = self.image_params_base.get(key)
+            if spec is None:
+                raise ValueError(f"model {model.id!r}: undeclared image option {key!r}")
+            spec.check_value(f"model {model.id!r} image option {key!r}", value)
+        for key, members in model.image_enums.items():
+            spec = self.image_params_base.get(key)
+            if spec is None:
+                raise ValueError(f"model {model.id!r}: undeclared image enum {key!r}")
+            if spec.type != "enum":
+                raise ValueError(f"model {model.id!r}: image knob {key!r} is not an enum")
+            if not members:
+                raise ValueError(f"model {model.id!r}: image enum {key!r} is empty")
+            for member in members:
+                spec.check_value(f"model {model.id!r} image enum {key!r}", member)
+            default = model.image_options.get(key, spec.default)
+            if default is not None and default not in members:
+                raise ValueError(
+                    f"model {model.id!r}: image knob {key!r} default {default!r} "
+                    "is outside its narrowed enum",
+                )
 
 
 class Catalog(BaseModel):

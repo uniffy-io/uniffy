@@ -60,7 +60,7 @@ class Folder(SQLModel, table=True):
 
     @property
     def urn(self) -> str:
-        return f"urn:uniffy:content:FILE:{self.id}"
+        return f"urn:uniffy:content:FOLDER:{self.id}"
 
     def __repr__(self) -> str:
         return (

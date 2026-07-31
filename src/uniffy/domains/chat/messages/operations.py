@@ -15,6 +15,7 @@ from uniffy.core.content.references import (
     extract_mentioned_agent_ids_from_content,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
@@ -96,6 +97,15 @@ class ChatMessageOperations:
 
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.require_send(user_id, channel)
+
+        # An agent DM whose agent was deleted is frozen: the history stays
+        # readable, but nothing new can be said to an agent that cannot answer.
+        if channel.is_agent_dm and channel.agent_id is not None:
+            agent_deleted = await self.session.execute(
+                select(Agent.is_deleted).where(Agent.id == channel.agent_id)
+            )
+            if agent_deleted.scalar_one_or_none() is not False:
+                raise ValidationError("channel", "This agent was deleted")
 
         # Hold the loaded root row and thread it to _handle_thread_reply to avoid a re-fetch.
         root_msg: ChatMessage | None = None

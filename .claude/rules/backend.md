@@ -38,6 +38,7 @@ Adding a new domain:
 - **Permission checks live inside domain operations.** The full model is in `.claude/rules/permissions.md` - the single source of truth; do not re-explain it.
 - **Multi-tenancy:** all content scoped to `organization_id`; users are global, memberships org-scoped. Verifying org access is part of every domain operation's contract.
 - **Imports at the top.** The one exception is the circular-import case in agent tool executors.
+- **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.
 
@@ -101,6 +102,31 @@ Both are `(namespace, key) -> value` KV rows: plaintext JSONB `value`, or `value
 - **Resolution chain:** per-org row -> env default -> coded default -> typed error. Canonical: `core/mail/resolver.py`, `domains/system_config/operations.py`.
 - **Audit operator-facing writes** in the same transaction (`write_audit_event`).
 - **A real table is still right** for high-cardinality, relational, or hot-path-indexed config (`permissions_org_defaults` is the reference counter-example: materialized policy, not operator config).
+
+## Shipped content (`src/uniffy/data/`)
+
+Content we author and ship with the build - prompts, agent templates, bundled skills, the model catalog, seed assets. It is neither user data nor operator config: nobody edits it at runtime, and a release is the only thing that changes it. **All of it lives in `src/uniffy/data/{kind}/`, never in a python literal and never in a per-domain folder.** One directory means one place to look, one reader, and one packaging path (`COPY src/uniffy` ships it; it works air-gapped and self-hosters get updates on image upgrade).
+
+| Kind | Path | Consumed by |
+|---|---|---|
+| Agent templates | `data/catalog/*.md` | `domains/agents/templates.py` |
+| Bundled agent skills | `data/skills/*.md` | `db/bundled_skills.py` |
+| Platform prompts | `data/prompts/*.md` | `domains/agents/runtime/workspace_prompt.py` |
+| Model catalog | `data/models/catalog.json` | `domains/agents/providers/catalog/loader.py` |
+| Seed assets | `data/assets/` | `db/seed.py` |
+
+`core/data_files.py` is the only reader: `DATA_DIR`, `load_documents(dir) -> list[DataDocument]`, and a deliberately tiny frontmatter parser (scalar `key: value` plus `- item` block lists - enough for this content, so no PyYAML dependency). Markdown-with-frontmatter is the default shape: metadata in the frontmatter, prose in the body, so prompt text stays readable and diffable instead of hiding inside a triple-quoted string.
+
+Two consumption shapes. Pick by whether other rows must reference the content:
+
+- **Read at import into a module constant** - the default. `WORKSPACE_PROMPT`, `AGENT_TEMPLATES`, the model catalog. No table, no migration, no seeding, no lifecycle. Editing the file and restarting is the whole update path.
+- **Project into rows** only when other tables key on it (bundled skills: agents store skill ids in `enabled_skills`, usages record `skill_id`). Then the file stays the source of truth and the rows are its projection, which carries four obligations:
+  - Sync on **every** boot from its own entry point with its own advisory lock, **before** `seed_initial_data`. Never inside the "no organizations exist" guard - that block runs once on a virgin DB, so anything seeded there never reaches an existing deployment again.
+  - The file declares a **fixed id** (v7 literal, generated once and committed - `generate_id = uuid7`, there is no uuid5 anywhere). Generating ids at install time makes the same content a different entity per deployment and breaks every cross-deployment reference.
+  - Upsert by that id so content edits propagate; insert-if-absent silently freezes old text forever.
+  - Content removed from the repo is **retired** (a status flag the list/picker paths filter), never deleted - deleting cascades child rows and silently strips the id out of whatever referenced it.
+
+Do not duplicate shipped content in the frontend. Expose it over an RPC (`ListAgentTemplates` is the reference) - a hand-synced TS mirror drifts the first time someone edits one side.
 
 ## Performance-critical domains
 

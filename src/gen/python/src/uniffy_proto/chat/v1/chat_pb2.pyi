@@ -78,7 +78,7 @@ class ChatSubject(_message.Message):
     def __init__(self, type: _Optional[_Union[_common_pb2.SubjectType, str]] = ..., id: _Optional[str] = ...) -> None: ...
 
 class ChatChannel(_message.Message):
-    __slots__ = ("id", "organization_id", "owner_id", "name", "slug", "description", "channel_type", "is_encrypted", "is_archived", "is_default", "icon", "category_id", "created_at", "updated_at", "message_count", "root_message_count", "member_count", "last_message_at", "last_root_message_at", "current_user_role", "is_member", "dm_member_ids", "is_agent_dm", "custom_name", "agent_id", "tags", "agent_folder_id")
+    __slots__ = ("id", "organization_id", "owner_id", "name", "slug", "description", "channel_type", "is_encrypted", "is_archived", "is_default", "icon", "category_id", "created_at", "updated_at", "message_count", "root_message_count", "member_count", "last_message_at", "last_root_message_at", "current_user_role", "is_member", "dm_member_ids", "is_agent_dm", "custom_name", "agent_id", "tags", "agent_folder_id", "agent_is_retired")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     OWNER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -106,6 +106,7 @@ class ChatChannel(_message.Message):
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
     AGENT_FOLDER_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_IS_RETIRED_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     owner_id: str
@@ -133,7 +134,8 @@ class ChatChannel(_message.Message):
     agent_id: str
     tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
     agent_folder_id: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., is_encrypted: _Optional[bool] = ..., is_archived: _Optional[bool] = ..., is_default: _Optional[bool] = ..., icon: _Optional[str] = ..., category_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., message_count: _Optional[int] = ..., root_message_count: _Optional[int] = ..., member_count: _Optional[int] = ..., last_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_root_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., current_user_role: _Optional[_Union[ChannelRole, str]] = ..., is_member: _Optional[bool] = ..., dm_member_ids: _Optional[_Iterable[str]] = ..., is_agent_dm: _Optional[bool] = ..., custom_name: _Optional[str] = ..., agent_id: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., agent_folder_id: _Optional[str] = ...) -> None: ...
+    agent_is_retired: bool
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., channel_type: _Optional[_Union[ChannelType, str]] = ..., is_encrypted: _Optional[bool] = ..., is_archived: _Optional[bool] = ..., is_default: _Optional[bool] = ..., icon: _Optional[str] = ..., category_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., message_count: _Optional[int] = ..., root_message_count: _Optional[int] = ..., member_count: _Optional[int] = ..., last_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_root_message_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., current_user_role: _Optional[_Union[ChannelRole, str]] = ..., is_member: _Optional[bool] = ..., dm_member_ids: _Optional[_Iterable[str]] = ..., is_agent_dm: _Optional[bool] = ..., custom_name: _Optional[str] = ..., agent_id: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., agent_folder_id: _Optional[str] = ..., agent_is_retired: _Optional[bool] = ...) -> None: ...
 
 class ThreadInfo(_message.Message):
     __slots__ = ("reply_count", "last_reply_at", "participant_ids", "has_unread")
@@ -158,7 +160,7 @@ class ReplyContext(_message.Message):
     def __init__(self, id: _Optional[str] = ..., sender_name: _Optional[str] = ..., content_preview: _Optional[str] = ...) -> None: ...
 
 class ChatMessage(_message.Message):
-    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "reply_to_id", "thread", "reactions", "sender_name", "sender_avatar_url", "reply_context")
+    __slots__ = ("id", "channel_id", "sender_id", "sender_type", "content", "root_id", "edited_at", "is_deleted", "is_pinned", "metadata", "created_at", "reply_to_id", "feedback_rating", "thread", "reactions", "sender_name", "sender_avatar_url", "reply_context")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -178,6 +180,7 @@ class ChatMessage(_message.Message):
     METADATA_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     REPLY_TO_ID_FIELD_NUMBER: _ClassVar[int]
+    FEEDBACK_RATING_FIELD_NUMBER: _ClassVar[int]
     THREAD_FIELD_NUMBER: _ClassVar[int]
     REACTIONS_FIELD_NUMBER: _ClassVar[int]
     SENDER_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -195,12 +198,13 @@ class ChatMessage(_message.Message):
     metadata: _containers.ScalarMap[str, str]
     created_at: _timestamp_pb2.Timestamp
     reply_to_id: str
+    feedback_rating: str
     thread: ThreadInfo
     reactions: _containers.RepeatedCompositeFieldContainer[ReactionGroup]
     sender_name: str
     sender_avatar_url: str
     reply_context: ReplyContext
-    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reply_to_id: _Optional[str] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ..., reply_context: _Optional[_Union[ReplyContext, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., channel_id: _Optional[str] = ..., sender_id: _Optional[str] = ..., sender_type: _Optional[_Union[SenderType, str]] = ..., content: _Optional[str] = ..., root_id: _Optional[str] = ..., edited_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_deleted: _Optional[bool] = ..., is_pinned: _Optional[bool] = ..., metadata: _Optional[_Mapping[str, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reply_to_id: _Optional[str] = ..., feedback_rating: _Optional[str] = ..., thread: _Optional[_Union[ThreadInfo, _Mapping]] = ..., reactions: _Optional[_Iterable[_Union[ReactionGroup, _Mapping]]] = ..., sender_name: _Optional[str] = ..., sender_avatar_url: _Optional[str] = ..., reply_context: _Optional[_Union[ReplyContext, _Mapping]] = ...) -> None: ...
 
 class ReactionGroup(_message.Message):
     __slots__ = ("emoji", "count", "user_ids", "current_user_reacted")
@@ -1409,12 +1413,14 @@ class ResetChannelAgentContextResponse(_message.Message):
     def __init__(self, divider_message_id: _Optional[str] = ..., reset_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., stats: _Optional[_Union[ChannelAgentContextStats, _Mapping]] = ...) -> None: ...
 
 class ChannelAgentConfig(_message.Message):
-    __slots__ = ("model_override", "model_params_override_json")
+    __slots__ = ("model_override", "model_params_override", "image_params_override")
     MODEL_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
-    MODEL_PARAMS_OVERRIDE_JSON_FIELD_NUMBER: _ClassVar[int]
+    MODEL_PARAMS_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    IMAGE_PARAMS_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
     model_override: str
-    model_params_override_json: str
-    def __init__(self, model_override: _Optional[str] = ..., model_params_override_json: _Optional[str] = ...) -> None: ...
+    model_params_override: str
+    image_params_override: str
+    def __init__(self, model_override: _Optional[str] = ..., model_params_override: _Optional[str] = ..., image_params_override: _Optional[str] = ...) -> None: ...
 
 class GetChannelAgentConfigRequest(_message.Message):
     __slots__ = ("organization_id", "channel_id", "agent_id")
@@ -1433,18 +1439,20 @@ class GetChannelAgentConfigResponse(_message.Message):
     def __init__(self, config: _Optional[_Union[ChannelAgentConfig, _Mapping]] = ...) -> None: ...
 
 class UpdateChannelAgentConfigRequest(_message.Message):
-    __slots__ = ("organization_id", "channel_id", "agent_id", "model_override", "model_params_override_json")
+    __slots__ = ("organization_id", "channel_id", "agent_id", "model_override", "model_params_override", "image_params_override")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     AGENT_ID_FIELD_NUMBER: _ClassVar[int]
     MODEL_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
-    MODEL_PARAMS_OVERRIDE_JSON_FIELD_NUMBER: _ClassVar[int]
+    MODEL_PARAMS_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    IMAGE_PARAMS_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     channel_id: str
     agent_id: str
     model_override: str
-    model_params_override_json: str
-    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., model_override: _Optional[str] = ..., model_params_override_json: _Optional[str] = ...) -> None: ...
+    model_params_override: str
+    image_params_override: str
+    def __init__(self, organization_id: _Optional[str] = ..., channel_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., model_override: _Optional[str] = ..., model_params_override: _Optional[str] = ..., image_params_override: _Optional[str] = ...) -> None: ...
 
 class UpdateChannelAgentConfigResponse(_message.Message):
     __slots__ = ("config",)

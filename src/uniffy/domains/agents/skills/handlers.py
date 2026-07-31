@@ -88,12 +88,6 @@ class SkillsHandlers:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization ID format")
 
         always_active = request.always_active if request.HasField("always_active") else False
-        owner_id: UUID | None = None
-        if request.HasField("owner_id") and request.owner_id:
-            try:
-                owner_id = UUID(request.owner_id)
-            except ValueError:
-                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid owner ID format")
 
         try:
             async with open_session() as session:
@@ -106,7 +100,6 @@ class SkillsHandlers:
                     description=request.description,
                     content=request.content,
                     always_active=always_active,
-                    owner_id=owner_id,
                 )
                 return CreateSkillResponse(skill=skill_to_proto(skill))
 
@@ -271,6 +264,7 @@ class SkillsHandlers:
         display_name = request.display_name if request.HasField("display_name") else None
         description = request.description if request.HasField("description") else None
         content = request.content if request.HasField("content") else None
+        when_to_use = request.when_to_use if request.HasField("when_to_use") else None
         always_active = request.always_active if request.HasField("always_active") else None
 
         try:
@@ -284,6 +278,7 @@ class SkillsHandlers:
                     display_name=display_name,
                     description=description,
                     content=content,
+                    when_to_use=when_to_use,
                     always_active=always_active,
                 )
                 active_number = await ops.resolve_active_version_number(skill)
@@ -374,7 +369,6 @@ class SkillsHandlers:
                     when_to_use=request.when_to_use,
                     requires_tools=list(request.requires_tools),
                     requires_context=list(request.requires_context),
-                    suggested_scope=request.suggested_scope or "personal",
                     suggested_always_active=request.suggested_always_active,
                     rationale=request.rationale,
                 )
@@ -506,9 +500,9 @@ class SkillsHandlers:
                     when_to_use=request.when_to_use,
                     requires_tools=list(request.requires_tools),
                     requires_context=list(request.requires_context),
-                    suggested_scope=request.suggested_scope or "personal",
                     suggested_always_active=request.suggested_always_active,
                     change_summary=request.change_summary,
+                    allow_replace=request.allow_replace,
                 )
                 active_number = await ops.resolve_active_version_number(skill)
                 return SaveSkillDraftResponse(

@@ -85,6 +85,7 @@ export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
     isAgentDm: proto.isAgentDm,
     customName: proto.customName ?? undefined,
     agentId: proto.agentId ?? undefined,
+    agentIsRetired: proto.agentIsRetired,
     agentFolderId: proto.agentFolderId ?? null,
     tagIds: proto.tags.map((t) => t.id),
   };
@@ -128,6 +129,7 @@ export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
     reactions: proto.reactions.map(reactionGroupToPlain),
     senderName: proto.senderName || undefined,
     senderAvatarUrl: proto.senderAvatarUrl || undefined,
+    feedbackRating: proto.feedbackRating || undefined,
   };
 }
 

@@ -1,29 +1,32 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Group, Panel, Separator } from "react-resizable-panels";
 import {
-    Plus,
-    Trash,
+    ArrowLeft,
     Timer,
+    Trash,
     Play,
-    Pause,
     Clock,
+    ClockCounterClockwise,
     CircleNotch,
     CheckCircle,
-    XCircle,
-    ArrowClockwise,
-    CaretRight,
+    Plus,
     Robot,
-    Lightning,
+    XCircle,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import {
+    BrowseBody,
+    BrowseCard,
+    BrowseEmpty,
+    BrowseGrid,
+    BrowseHeader,
+} from "@/features/agents/components/browse/BrowseSurface";
+import { selectAllAgents, selectDeletedAgents } from "@/features/agents/store/agentsSlice";
 import {
     selectCronTasksList,
     selectCronLoading,
@@ -31,313 +34,17 @@ import {
 } from "@/features/agents/store/agentCronSlice";
 import {
     fetchCronTasks,
-    createCronTask,
     updateCronTask,
     deleteCronTask,
     fetchCronRunLogs,
     triggerCronTask,
 } from "@/features/agents/store/agentCronThunks";
+import { cronToHuman } from "@/features/agents/utils/cronSchedule";
 import type { SerializedCronTask } from "@/features/agents/store/agentCronThunks";
-
-type Frequency = "minutes" | "hourly" | "daily" | "weekly" | "monthly";
-
-interface ScheduleConfig {
-    frequency: Frequency;
-    minuteInterval: number;
-    hour: number;
-    minute: number;
-    weekdays: number[];
-    monthDay: number;
-}
-
-const DEFAULT_SCHEDULE: ScheduleConfig = {
-    frequency: "daily",
-    minuteInterval: 30,
-    hour: 9,
-    minute: 0,
-    weekdays: [1, 2, 3, 4, 5],
-    monthDay: 1,
-};
-
-const FREQUENCY_OPTIONS = [
-    { value: "minutes" as Frequency, label: "Every X minutes" },
-    { value: "hourly" as Frequency, label: "Every hour" },
-    { value: "daily" as Frequency, label: "Daily" },
-    { value: "weekly" as Frequency, label: "Weekly" },
-    { value: "monthly" as Frequency, label: "Monthly" },
-];
-
-const MINUTE_INTERVAL_OPTIONS = [
-    { value: 5, label: "5 minutes" },
-    { value: 10, label: "10 minutes" },
-    { value: 15, label: "15 minutes" },
-    { value: 30, label: "30 minutes" },
-];
-
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const MONTH_DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({
-    value: i + 1,
-    label: `${i + 1}${ordinalSuffix(i + 1)}`,
-}));
-
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
-    value: i,
-    label: formatHour(i),
-}));
-
-const MINUTE_OPTIONS = [
-    { value: 0, label: ":00" },
-    { value: 15, label: ":15" },
-    { value: 30, label: ":30" },
-    { value: 45, label: ":45" },
-];
-
-function ordinalSuffix(n: number): string {
-    if (n >= 11 && n <= 13) return "th";
-    switch (n % 10) {
-        case 1: return "st";
-        case 2: return "nd";
-        case 3: return "rd";
-        default: return "th";
-    }
-}
-
-function formatHour(h: number): string {
-    if (h === 0) return "12 AM";
-    if (h === 12) return "12 PM";
-    return h < 12 ? `${h} AM` : `${h - 12} PM`;
-}
-
-function scheduleToCron(config: ScheduleConfig): string {
-    switch (config.frequency) {
-        case "minutes":
-            return `*/${config.minuteInterval} * * * *`;
-        case "hourly":
-            return `${config.minute} * * * *`;
-        case "daily":
-            return `${config.minute} ${config.hour} * * *`;
-        case "weekly": {
-            const days = config.weekdays.length > 0
-                ? config.weekdays.sort((a, b) => a - b).join(",")
-                : "*";
-            return `${config.minute} ${config.hour} * * ${days}`;
-        }
-        case "monthly":
-            return `${config.minute} ${config.hour} ${config.monthDay} * *`;
-    }
-}
-
-function cronToHuman(cron: string): string {
-    const parts = cron.split(" ");
-    if (parts.length !== 5) return cron;
-    const [min, hour, dom, , dow] = parts;
-
-    if (min.startsWith("*/") && hour === "*") {
-        return `Every ${min.slice(2)} minutes`;
-    }
-    if (hour === "*" && dom === "*" && dow === "*") {
-        return min === "0" ? "Every hour" : `Every hour at :${min.padStart(2, "0")}`;
-    }
-
-    const timeStr = formatHour(Number(hour))
-        + (Number(min) > 0 ? `:${min.padStart(2, "0")}` : "");
-
-    if (dom !== "*" && dow === "*") {
-        return `${ordinalSuffix(Number(dom))} of every month at ${timeStr}`;
-    }
-
-    if (dow !== "*" && dom === "*") {
-        const dayNames = dow.split(",").map((d) => {
-            const num = Number(d);
-            if (d.includes("-")) {
-                const [start, end] = d.split("-").map(Number);
-                if (start === 1 && end === 5) return "weekdays";
-                if (start === 0 && end === 6) return "every day";
-                return `${WEEKDAY_LABELS[start]}-${WEEKDAY_LABELS[end]}`;
-            }
-            return WEEKDAY_LABELS[num] ?? d;
-        });
-        if (dayNames.length === 1 && dayNames[0] === "weekdays") {
-            return `Weekdays at ${timeStr}`;
-        }
-        if (dayNames.length === 7 || (dayNames.length === 1 && dayNames[0] === "every day")) {
-            return `Daily at ${timeStr}`;
-        }
-        return `${dayNames.join(", ")} at ${timeStr}`;
-    }
-
-    if (dom === "*" && dow === "*") {
-        return `Daily at ${timeStr}`;
-    }
-
-    return cron;
-}
-
-const TIMEZONE_OPTIONS = [
-    { value: "UTC", label: "UTC" },
-    { value: "America/New_York", label: "US Eastern" },
-    { value: "America/Chicago", label: "US Central" },
-    { value: "America/Denver", label: "US Mountain" },
-    { value: "America/Los_Angeles", label: "US Pacific" },
-    { value: "Europe/London", label: "London" },
-    { value: "Europe/Berlin", label: "Berlin" },
-    { value: "Europe/Paris", label: "Paris" },
-    { value: "Asia/Tokyo", label: "Tokyo" },
-    { value: "Asia/Shanghai", label: "Shanghai" },
-    { value: "Australia/Sydney", label: "Sydney" },
-];
 
 function protoTimestampToDateStr(ts?: { seconds: number; nanos: number }): string | undefined {
     if (!ts) return undefined;
     return new Date(ts.seconds * 1000).toISOString();
-}
-
-function ScheduleBuilder({
-    value,
-    onChange,
-}: {
-    value: ScheduleConfig;
-    onChange: (config: ScheduleConfig) => void;
-}) {
-    const toggleWeekday = (day: number) => {
-        const next = value.weekdays.includes(day)
-            ? value.weekdays.filter((d) => d !== day)
-            : [...value.weekdays, day];
-        onChange({ ...value, weekdays: next });
-    };
-
-    const selectWeekdayPreset = (preset: "weekdays" | "everyday" | "weekends") => {
-        const map = {
-            weekdays: [1, 2, 3, 4, 5],
-            everyday: [0, 1, 2, 3, 4, 5, 6],
-            weekends: [0, 6],
-        };
-        onChange({ ...value, weekdays: map[preset] });
-    };
-
-    return (
-        <div className="space-y-4">
-            <div>
-                <label className="block text-sm text-muted-foreground mb-1.5">Repeat</label>
-                <Select<string>
-                    value={value.frequency}
-                    onChange={(f) => onChange({ ...value, frequency: f as Frequency })}
-                    options={FREQUENCY_OPTIONS}
-                />
-            </div>
-
-            {value.frequency === "minutes" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">Interval</label>
-                    <Select<number>
-                        value={value.minuteInterval}
-                        onChange={(v) => onChange({ ...value, minuteInterval: v })}
-                        options={MINUTE_INTERVAL_OPTIONS}
-                    />
-                </div>
-            )}
-
-            {value.frequency !== "minutes" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">
-                        {value.frequency === "hourly" ? "At minute" : "Time"}
-                    </label>
-                    {value.frequency === "hourly" ? (
-                        <Select<number>
-                            value={value.minute}
-                            onChange={(m) => onChange({ ...value, minute: m })}
-                            options={MINUTE_OPTIONS}
-                        />
-                    ) : (
-                        <div className="flex gap-2">
-                            <div className="flex-1">
-                                <Select<number>
-                                    value={value.hour}
-                                    onChange={(h) => onChange({ ...value, hour: h })}
-                                    options={HOUR_OPTIONS}
-                                />
-                            </div>
-                            <div className="w-24">
-                                <Select<number>
-                                    value={value.minute}
-                                    onChange={(m) => onChange({ ...value, minute: m })}
-                                    options={MINUTE_OPTIONS}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {value.frequency === "weekly" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">Days</label>
-                    <div className="flex gap-1 mb-2">
-                        {WEEKDAY_LABELS.map((label, i) => {
-                            const active = value.weekdays.includes(i);
-                            return (
-                                <button
-                                    key={i}
-                                    type="button"
-                                    onClick={() => toggleWeekday(i)}
-                                    className={cn(
-                                        "flex-1 py-1.5 rounded-md text-xs font-medium transition-colors",
-                                        active
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted text-muted-foreground hover:text-foreground",
-                                    )}
-                                >
-                                    {label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => selectWeekdayPreset("weekdays")}
-                            className="text-xs text-primary hover:underline"
-                        >
-                            Weekdays
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => selectWeekdayPreset("weekends")}
-                            className="text-xs text-primary hover:underline"
-                        >
-                            Weekends
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => selectWeekdayPreset("everyday")}
-                            className="text-xs text-primary hover:underline"
-                        >
-                            Every day
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {value.frequency === "monthly" && (
-                <div>
-                    <label className="block text-sm text-muted-foreground mb-1.5">Day of month</label>
-                    <Select<number>
-                        value={value.monthDay}
-                        onChange={(d) => onChange({ ...value, monthDay: d })}
-                        options={MONTH_DAY_OPTIONS}
-                    />
-                </div>
-            )}
-
-            <div className="bg-muted/50 border border-border rounded-lg px-3 py-2">
-                <span className="text-xs text-muted-foreground">Schedule: </span>
-                <span className="text-sm font-medium text-foreground">
-                    {cronToHuman(scheduleToCron(value))}
-                </span>
-            </div>
-        </div>
-    );
 }
 
 function TaskStatusBadge({ task }: { task: SerializedCronTask }) {
@@ -359,101 +66,6 @@ function TaskStatusBadge({ task }: { task: SerializedCronTask }) {
         <Badge variant="default" className="text-xs bg-green-600 dark:bg-green-700">
             Active
         </Badge>
-    );
-}
-
-function CreateTaskForm({
-    agentOptions,
-    onSubmit,
-    onCancel,
-}: {
-    agentOptions: { value: string; label: string }[];
-    onSubmit: () => void;
-    onCancel: () => void;
-}) {
-    const dispatch = useAppDispatch();
-    const [agentId, setAgentId] = useState(agentOptions[0]?.value ?? "");
-    const [name, setName] = useState("");
-    const [prompt, setPrompt] = useState("");
-    const [schedule, setSchedule] = useState<ScheduleConfig>(DEFAULT_SCHEDULE);
-    const [timezone, setTimezone] = useState("UTC");
-    const [submitting, setSubmitting] = useState(false);
-
-    const cronExpression = scheduleToCron(schedule);
-    const canSubmit = agentId && name.trim() && prompt.trim() && !submitting;
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!canSubmit) return;
-        setSubmitting(true);
-        try {
-            await dispatch(
-                createCronTask({
-                    agentId,
-                    name: name.trim(),
-                    prompt: prompt.trim(),
-                    cronExpression,
-                    timezone,
-                }),
-            ).unwrap();
-            onSubmit();
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-                <label className="block text-sm text-muted-foreground mb-1">Agent</label>
-                <Select value={agentId} onChange={setAgentId} options={agentOptions} />
-            </div>
-            <div>
-                <label className="block text-sm text-muted-foreground mb-1">Task Name</label>
-                <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Daily standup summary"
-                />
-            </div>
-            <div>
-                <label className="block text-sm text-muted-foreground mb-1">Prompt</label>
-                <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="The instruction sent to the agent on each execution..."
-                    className={cn(
-                        "w-full rounded-lg border border-border bg-input px-3 py-2 text-sm",
-                        "text-foreground placeholder:text-muted-foreground",
-                        "focus:outline-none focus:ring-2 focus:ring-ring min-h-[100px] resize-y",
-                    )}
-                />
-            </div>
-
-            <div className="bg-card border border-border rounded-lg p-4">
-                <h3 className="text-sm font-medium text-foreground mb-3">Schedule</h3>
-                <ScheduleBuilder value={schedule} onChange={setSchedule} />
-            </div>
-
-            <div>
-                <label className="block text-sm text-muted-foreground mb-1">Timezone</label>
-                <Select value={timezone} onChange={setTimezone} options={TIMEZONE_OPTIONS} />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="ghost" onClick={onCancel}>
-                    Cancel
-                </Button>
-                <Button type="submit" disabled={!canSubmit}>
-                    {submitting ? (
-                        <CircleNotch size={16} className="animate-spin" />
-                    ) : (
-                        <Plus size={16} />
-                    )}
-                    Create Task
-                </Button>
-            </div>
-        </form>
     );
 }
 
@@ -530,11 +142,6 @@ function TaskRunHistory({ taskId }: { taskId: string }) {
                                 <span>{log.inputTokens + log.outputTokens} tokens</span>
                             )}
                         </div>
-                        {log.resultSummary && (
-                            <p className="text-sm text-foreground mt-1 line-clamp-2">
-                                {log.resultSummary}
-                            </p>
-                        )}
                         {log.error && (
                             <p className="text-sm text-red-500 dark:text-red-400 mt-1 line-clamp-2">
                                 {log.error}
@@ -550,9 +157,11 @@ function TaskRunHistory({ taskId }: { taskId: string }) {
 function TaskDetailPanel({
     task,
     onDelete,
+    onBack,
 }: {
     task: SerializedCronTask;
     onDelete: () => void;
+    onBack: () => void;
 }) {
     const [togglingEnabled, setTogglingEnabled] = useState(false);
     const [triggering, setTriggering] = useState(false);
@@ -585,214 +194,283 @@ function TaskDetailPanel({
     const scheduleLabel = cronToHuman(task.cronExpression);
 
     return (
-        <>
-            <div className="px-6 py-4 border-b border-border">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                        <Timer size={20} className="text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h2 className="text-xl font-semibold text-foreground">{task.name}</h2>
-                        <p className="text-sm text-muted-foreground truncate">
-                            {scheduleLabel} ({task.timezone})
-                            {task.agentName && ` - ${task.agentName}`}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleTrigger}
-                            disabled={triggering}
-                            title="Run now"
-                        >
-                            {triggering ? (
-                                <CircleNotch size={14} className="animate-spin" />
-                            ) : (
-                                <Play size={14} weight="fill" />
-                            )}
-                            {triggering ? "Running..." : "Run Now"}
-                        </Button>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={task.isEnabled}
-                            aria-label={task.isEnabled ? "Pause task" : "Resume task"}
-                            disabled={togglingEnabled}
-                            onClick={handleToggle}
-                            className={cn(
-                                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                                task.isEnabled ? "bg-primary" : "bg-muted-foreground/30",
-                                togglingEnabled && "opacity-50 cursor-not-allowed",
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    "inline-block h-4 w-4 rounded-full bg-white transition-transform",
-                                    task.isEnabled ? "translate-x-6" : "translate-x-1",
-                                )}
-                            />
-                        </button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onDelete}
-                            className="text-muted-foreground hover:text-red-500"
-                            aria-label="Delete task"
-                            title="Delete"
-                        >
-                            <Trash size={18} />
-                        </Button>
-                    </div>
-                </div>
+        <div className="flex h-full flex-col overflow-hidden">
+            <div className="border-b border-border/60 bg-card">
+            <div className="flex items-center gap-3 px-4 pt-3">
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    data-testid="automations-detail-back"
+                >
+                    <ArrowLeft size={14} />
+                    All automations
+                </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-                    <h3 className="font-medium text-foreground">Task Details</h3>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Status</span>
-                        <TaskStatusBadge task={task} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Schedule</span>
-                        <span className="text-sm text-foreground">{scheduleLabel}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Timezone</span>
-                        <span className="text-sm text-foreground">{task.timezone}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Next Run</span>
-                        <span className="text-sm text-foreground">
-                            {task.nextRunAt
-                                ? formatRelativeTime(protoTimestampToDateStr(task.nextRunAt))
-                                : "N/A"}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Last Run</span>
-                        <span className="text-sm text-foreground">
-                            {task.lastRunAt
-                                ? formatRelativeTime(protoTimestampToDateStr(task.lastRunAt))
-                                : "Never"}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Total Runs</span>
-                        <span className="text-sm text-foreground">{task.runCount}</span>
-                    </div>
-                    {task.consecutiveFailures > 0 && (
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
-                                Consecutive Failures
-                            </span>
-                            <Badge variant="destructive" className="text-xs">
-                                {task.consecutiveFailures} / {task.maxConsecutiveFailures}
-                            </Badge>
-                        </div>
-                    )}
-                    {task.lastRunError && (
-                        <div className="mt-2 p-3 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50">
-                            <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">
-                                Last Error
-                            </p>
-                            <p className="text-xs text-red-600 dark:text-red-300 whitespace-pre-wrap break-words">
-                                {task.lastRunError}
-                            </p>
-                        </div>
-                    )}
+            <div className="flex items-center gap-3 px-4 py-2">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <Timer size={18} className="text-muted-foreground" />
                 </div>
-
-                <div className="bg-card border border-border rounded-lg p-4">
-                    <h3 className="font-medium text-foreground mb-2">Prompt</h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {task.prompt}
+                <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-semibold text-foreground truncate">{task.name}</h2>
+                    <p className="text-xs text-muted-foreground truncate">
+                        {scheduleLabel} ({task.timezone})
+                        {task.agentName && ` - ${task.agentName}`}
                     </p>
                 </div>
-
-                <div className="bg-card border border-border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-muted-foreground" />
-                            <h3 className="font-medium text-foreground">Execution History</h3>
-                        </div>
-                    </div>
-                    <TaskRunHistory taskId={task.id} />
+                <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleTrigger}
+                        disabled={triggering}
+                        title="Run now"
+                    >
+                        {triggering ? (
+                            <CircleNotch size={14} className="animate-spin" />
+                        ) : (
+                            <Play size={14} weight="fill" />
+                        )}
+                        {triggering ? "Running..." : "Run Now"}
+                    </Button>
+                    <ToggleSwitch
+                        enabled={task.isEnabled}
+                        onChange={handleToggle}
+                        disabled={togglingEnabled}
+                    />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onDelete}
+                        className="text-muted-foreground hover:text-red-500"
+                        aria-label="Delete task"
+                        title="Delete"
+                    >
+                        <Trash size={18} />
+                    </Button>
                 </div>
             </div>
-        </>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+                <section className="border-b border-border px-6 py-5">
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                        Task Details
+                    </h3>
+                    <div className="space-y-3 max-w-2xl">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Status</span>
+                            <TaskStatusBadge task={task} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Schedule</span>
+                            <span className="text-sm text-foreground">{scheduleLabel}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Timezone</span>
+                            <span className="text-sm text-foreground">{task.timezone}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Next Run</span>
+                            <span className="text-sm text-foreground">
+                                {task.nextRunAt
+                                    ? formatRelativeTime(protoTimestampToDateStr(task.nextRunAt))
+                                    : "N/A"}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Last Run</span>
+                            <span className="text-sm text-foreground">
+                                {task.lastRunAt
+                                    ? formatRelativeTime(protoTimestampToDateStr(task.lastRunAt))
+                                    : "Never"}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Total Runs</span>
+                            <span className="text-sm text-foreground">{task.runCount}</span>
+                        </div>
+                        {task.consecutiveFailures > 0 && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">
+                                    Consecutive Failures
+                                </span>
+                                <Badge variant="destructive" className="text-xs">
+                                    {task.consecutiveFailures} / {task.maxConsecutiveFailures}
+                                </Badge>
+                            </div>
+                        )}
+                        {task.lastRunError && (
+                            <div className="mt-2 p-3 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50">
+                                <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">
+                                    Last Error
+                                </p>
+                                <p className="text-xs text-red-600 dark:text-red-300 whitespace-pre-wrap break-words">
+                                    {task.lastRunError}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                <section className="border-b border-border px-6 py-5">
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                        Prompt
+                    </h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap max-w-2xl">
+                        {task.prompt}
+                    </p>
+                </section>
+
+                <section className="px-6 py-5">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Clock size={14} className="text-muted-foreground" />
+                        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+                            Execution History
+                        </h3>
+                    </div>
+                    <div className="max-w-2xl">
+                        <TaskRunHistory taskId={task.id} />
+                    </div>
+                </section>
+            </div>
+        </div>
     );
 }
 
-export function AutomationsView({ agentId }: { agentId?: string } = {}) {
+function AutomationCard({
+    task,
+    agentName,
+    onOpen,
+}: {
+    task: SerializedCronTask;
+    agentName: string;
+    onOpen: () => void;
+}) {
+    const failed = !task.isEnabled && task.consecutiveFailures >= task.maxConsecutiveFailures;
+    const nextRun = task.isEnabled && task.nextRunAt
+        ? formatRelativeTime(protoTimestampToDateStr(task.nextRunAt))
+        : null;
+
+    return (
+        <BrowseCard
+            onOpen={onOpen}
+            dimmed={!task.isEnabled}
+            testId={`automations-card-${task.id}`}
+            leading={
+                <span
+                    className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                        failed
+                            ? "bg-red-500/10 text-red-500"
+                            : task.isEnabled
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground",
+                    )}
+                >
+                    <ClockCounterClockwise size={18} weight="duotone" />
+                </span>
+            }
+            title={task.name}
+            subtitle={task.prompt}
+            badges={<TaskStatusBadge task={task} />}
+            chips={
+                <>
+                    <Badge variant="secondary" className="gap-1 text-[10px] font-medium">
+                        <Clock size={10} />
+                        {cronToHuman(task.cronExpression)}
+                    </Badge>
+                    <Badge variant="secondary" className="gap-1 text-[10px] font-medium">
+                        <Robot size={10} />
+                        {agentName}
+                    </Badge>
+                    {nextRun && (
+                        <span className="text-[10px] text-muted-foreground">next {nextRun}</span>
+                    )}
+                </>
+            }
+        />
+    );
+}
+
+function AutomationsBrowse({
+    tasks,
+    onNewAutomation,
+}: {
+    tasks: SerializedCronTask[];
+    onNewAutomation: () => void;
+}) {
+    const navigate = useNavigate();
+    const agentsMap = useAppSelector(selectAllAgents);
+    const deletedAgentsMap = useAppSelector(selectDeletedAgents);
+    const [search, setSearch] = useState("");
+
+    const query = search.trim().toLowerCase();
+    const visible = tasks.filter((task) => !query || task.name.toLowerCase().includes(query));
+    const agentName = (agentId: string) =>
+        agentsMap[agentId]?.name ?? deletedAgentsMap[agentId]?.name ?? "Unknown agent";
+
+    return (
+        <div className="flex h-full flex-col overflow-hidden" data-testid="automations-browse">
+            <BrowseHeader
+                title="Automations"
+                subtitle="An agent runs a prompt you define on a recurring schedule."
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search automations..."
+                testId="automations-browse-header"
+                action={
+                    <Button onClick={onNewAutomation} data-testid="automations-new-button">
+                        <Plus size={16} />
+                        New automation
+                    </Button>
+                }
+            />
+            <BrowseBody testId="automations-browse-body">
+                {visible.length === 0 ? (
+                    <BrowseEmpty
+                        icon={Timer}
+                        title={query ? "No match" : "No automations yet"}
+                        description={
+                            query
+                                ? `No automation matches "${search.trim()}".`
+                                : "Schedule an agent to run a prompt on its own, on the cadence you pick."
+                        }
+                        testId="automations-browse-empty"
+                    />
+                ) : (
+                    <BrowseGrid>
+                        {visible.map((task) => (
+                            <AutomationCard
+                                key={task.id}
+                                task={task}
+                                agentName={agentName(task.agentId)}
+                                onOpen={() => navigate(`/agents/automations/${task.id}`)}
+                            />
+                        ))}
+                    </BrowseGrid>
+                )}
+            </BrowseBody>
+        </div>
+    );
+}
+
+export function AutomationsView({ onNewAutomation }: { onNewAutomation: () => void }) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { subId } = useParams<{ subId?: string }>();
-    const allTasks = useAppSelector(selectCronTasksList);
+    const { subId } = useParams<{ tab?: string; subId?: string }>();
+    const tasks = useAppSelector(selectCronTasksList);
     const loading = useAppSelector(selectCronLoading);
-    const agents = useAppSelector((state) => state.agents.agents);
-
-    // Top-level: selection is URL-driven (subId). Embedded: selection is local state.
-    const isTopLevel = !agentId;
-    const [localSelectedTaskId, setLocalSelectedTaskId] = useState<string | null>(null);
-    const selectedTaskId = isTopLevel ? (subId ?? null) : localSelectedTaskId;
-
-    const selectTask = useCallback(
-        (taskId: string | null) => {
-            if (isTopLevel) {
-                navigate(taskId ? `/agents/automations/${taskId}` : "/agents/automations", { replace: !taskId });
-            } else {
-                setLocalSelectedTaskId(taskId);
-            }
-        },
-        [isTopLevel, navigate],
-    );
-
-    const [showCreateForm, setShowCreateForm] = useState(false);
-
-    const tasks = useMemo(
-        () => (agentId ? allTasks.filter((t) => t.agentId === agentId) : allTasks),
-        [allTasks, agentId],
-    );
-
-    const agentOptions = useMemo(
-        () =>
-            agentId
-                ? Object.values(agents)
-                      .filter((a) => a.id === agentId)
-                      .map((a) => ({ value: a.id, label: a.name }))
-                : Object.values(agents).map((a) => ({
-                      value: a.id,
-                      label: a.name,
-                  })),
-        [agents, agentId],
-    );
-
-    useEffect(() => {
-        dispatch(fetchCronTasks(agentId ? { agentId } : undefined));
-    }, [agentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const selectedTask = useMemo(
-        () => (selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null),
-        [selectedTaskId, tasks],
+        () => (subId ? tasks.find((t) => t.id === subId) ?? null : null),
+        [subId, tasks],
     );
 
     const handleDelete = async (taskId: string) => {
         await dispatch(deleteCronTask(taskId)).unwrap();
-        if (selectedTaskId === taskId) {
-            selectTask(null);
-        }
+        navigate("/agents/automations", { replace: true });
     };
-
-    const [defaultAutoLayout] = useState(() => loadPanelLayout("agents-automations"));
-
-    const handleAutoLayoutChange = useCallback(
-        (layout: Record<string, number>) => {
-            savePanelLayout("agents-automations", layout);
-        },
-        [],
-    );
 
     if (loading && tasks.length === 0) {
         return (
@@ -802,301 +480,15 @@ export function AutomationsView({ agentId }: { agentId?: string } = {}) {
         );
     }
 
-    if (!isTopLevel) {
-        return (
-            <div className="flex h-full flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                    <div>
-                        <h3 className="text-sm font-semibold text-foreground">Scheduled Tasks</h3>
-                        <p className="text-xs text-muted-foreground">
-                            Recurring runs for this agent on a cron schedule.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => dispatch(fetchCronTasks({ agentId }))}
-                            aria-label="Refresh"
-                        >
-                            <ArrowClockwise size={16} />
-                        </Button>
-                        <Button
-                            size="sm"
-                            onClick={() => {
-                                setShowCreateForm(true);
-                                selectTask(null);
-                            }}
-                        >
-                            <Plus size={14} />
-                            New task
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {showCreateForm ? (
-                        <div className="border border-border rounded-lg bg-card p-4">
-                            {agentOptions.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-8">
-                                    <Robot size={28} className="text-muted-foreground mb-2" />
-                                    <p className="text-sm text-muted-foreground">
-                                        Create an agent first to schedule tasks
-                                    </p>
-                                </div>
-                            ) : (
-                                <CreateTaskForm
-                                    agentOptions={agentOptions}
-                                    onSubmit={() => setShowCreateForm(false)}
-                                    onCancel={() => setShowCreateForm(false)}
-                                />
-                            )}
-                        </div>
-                    ) : selectedTask ? (
-                        <div className="border border-border rounded-lg bg-card">
-                            <div className="px-4 py-2 border-b border-border flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Task detail</span>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => selectTask(null)}
-                                >
-                                    Back to list
-                                </Button>
-                            </div>
-                            <TaskDetailPanel
-                                task={selectedTask}
-                                onDelete={() => handleDelete(selectedTask.id)}
-                            />
-                        </div>
-                    ) : tasks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 border border-dashed border-border rounded-lg bg-muted/30">
-                            <Timer size={32} className="text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">No scheduled tasks yet</p>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                className="mt-3"
-                                onClick={() => setShowCreateForm(true)}
-                            >
-                                <Plus size={14} />
-                                Create task
-                            </Button>
-                        </div>
-                    ) : (
-                        tasks.map((task) => {
-                            const agentName = agents[task.agentId]?.name;
-                            return (
-                                <button
-                                    key={task.id}
-                                    type="button"
-                                    onClick={() => selectTask(task.id)}
-                                    className="w-full text-left border border-border rounded-lg bg-card hover:bg-muted px-4 py-3 flex items-center gap-3 transition-colors"
-                                >
-                                    <div className="shrink-0">
-                                        <TaskStatusBadge task={task} />
-                                    </div>
-                                    <div className="flex flex-col flex-1 min-w-0">
-                                        <span className="text-sm font-medium truncate text-foreground">
-                                            {task.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground truncate">
-                                            {cronToHuman(task.cronExpression)}
-                                            {agentName && ` - ${agentName}`}
-                                        </span>
-                                    </div>
-                                    <CaretRight size={14} className="text-muted-foreground shrink-0" />
-                                </button>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-        );
+    if (!selectedTask) {
+        return <AutomationsBrowse tasks={tasks} onNewAutomation={onNewAutomation} />;
     }
 
     return (
-        <div className="flex h-full overflow-hidden">
-            <Group
-                orientation="horizontal"
-                className="h-full w-full flex"
-                defaultLayout={defaultAutoLayout}
-                onLayoutChange={handleAutoLayoutChange}
-            >
-            <Panel
-                id="automations-sidebar"
-                defaultSize={280}
-                minSize={200}
-                maxSize={400}
-                className="border-r border-border bg-card overflow-hidden"
-            >
-            <div className="h-full flex flex-col">
-                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                    <span className="font-semibold text-foreground">Scheduled Tasks</span>
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => dispatch(fetchCronTasks())}
-                            aria-label="Refresh"
-                        >
-                            <ArrowClockwise size={16} />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className={showCreateForm ? "text-primary bg-primary/10" : ""}
-                            onClick={() => {
-                                setShowCreateForm(!showCreateForm);
-                                if (!showCreateForm) selectTask(null);
-                            }}
-                            aria-label="Create task"
-                        >
-                            <Plus size={16} />
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto">
-                    {tasks.length === 0 && !loading ? (
-                        <div className="flex flex-col items-center justify-center py-12 px-4">
-                            <Timer size={28} className="text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground text-center">
-                                No scheduled tasks yet
-                            </p>
-                        </div>
-                    ) : (
-                        tasks.map((task) => {
-                            const isSelected = task.id === selectedTaskId;
-                            const agentName = agents[task.agentId]?.name;
-                            return (
-                                <button
-                                    key={task.id}
-                                    type="button"
-                                    onClick={() => {
-                                        selectTask(task.id);
-                                        setShowCreateForm(false);
-                                    }}
-                                    className={cn(
-                                        "w-full px-4 py-3 flex items-center gap-3",
-                                        "cursor-pointer transition-colors text-left",
-                                        isSelected
-                                            ? "bg-primary/10 border-l-2 border-primary"
-                                            : "hover:bg-muted border-l-2 border-transparent",
-                                    )}
-                                >
-                                    <div className="shrink-0">
-                                        {task.lastRunStatus === "error" ? (
-                                            <XCircle
-                                                size={16}
-                                                weight="fill"
-                                                className="text-red-500 dark:text-red-400"
-                                            />
-                                        ) : task.isEnabled ? (
-                                            <Play
-                                                size={16}
-                                                weight="fill"
-                                                className="text-green-600 dark:text-green-400"
-                                            />
-                                        ) : (
-                                            <Pause
-                                                size={16}
-                                                weight="fill"
-                                                className="text-muted-foreground"
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col flex-1 min-w-0">
-                                        <span className="text-sm font-medium truncate text-foreground">
-                                            {task.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground truncate">
-                                            {cronToHuman(task.cronExpression)}
-                                            {agentName && ` - ${agentName}`}
-                                        </span>
-                                    </div>
-                                    <CaretRight
-                                        size={14}
-                                        className="text-muted-foreground shrink-0"
-                                    />
-                                </button>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-            </Panel>
-
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
-
-            <Panel id="automations-detail" minSize={400}>
-            <div className="h-full flex flex-col overflow-hidden">
-                {showCreateForm ? (
-                    <>
-                        <div className="px-6 py-4 border-b border-border">
-                            <h2 className="text-xl font-semibold text-foreground">
-                                Create Scheduled Task
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Set up a recurring task that runs on a schedule
-                            </p>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-6">
-                            <div className="max-w-xl">
-                                {agentOptions.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-12">
-                                        <Robot
-                                            size={32}
-                                            className="text-muted-foreground mb-2"
-                                        />
-                                        <p className="text-sm text-muted-foreground">
-                                            Create an agent first to schedule tasks
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <CreateTaskForm
-                                        agentOptions={agentOptions}
-                                        onSubmit={() => setShowCreateForm(false)}
-                                        onCancel={() => setShowCreateForm(false)}
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    </>
-                ) : selectedTask ? (
-                    <TaskDetailPanel
-                        task={selectedTask}
-                        onDelete={() => handleDelete(selectedTask.id)}
-                    />
-                ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                            <Lightning
-                                size={32}
-                                className="text-muted-foreground mx-auto mb-2"
-                            />
-                            <p className="text-muted-foreground">
-                                {tasks.length > 0
-                                    ? "Select a task from the sidebar"
-                                    : "No scheduled tasks configured"}
-                            </p>
-                            {tasks.length === 0 && (
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="mt-3"
-                                    onClick={() => setShowCreateForm(true)}
-                                >
-                                    <Plus size={14} />
-                                    Create Task
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-            </Panel>
-            </Group>
-        </div>
+        <TaskDetailPanel
+            task={selectedTask}
+            onDelete={() => handleDelete(selectedTask.id)}
+            onBack={() => navigate("/agents/automations")}
+        />
     );
 }

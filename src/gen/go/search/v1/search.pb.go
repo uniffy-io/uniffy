@@ -33,13 +33,12 @@ const (
 	SearchResultType_SEARCH_RESULT_TYPE_PROJECT        SearchResultType = 6
 	SearchResultType_SEARCH_RESULT_TYPE_TASK           SearchResultType = 7
 	SearchResultType_SEARCH_RESULT_TYPE_AGENT          SearchResultType = 8
-	SearchResultType_SEARCH_RESULT_TYPE_PROMPT         SearchResultType = 9
-	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE   SearchResultType = 10
-	SearchResultType_SEARCH_RESULT_TYPE_ROOM           SearchResultType = 11
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT     SearchResultType = 12
-	SearchResultType_SEARCH_RESULT_TYPE_TAG            SearchResultType = 13
-	SearchResultType_SEARCH_RESULT_TYPE_FOLDER         SearchResultType = 14
-	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER   SearchResultType = 15
+	SearchResultType_SEARCH_RESULT_TYPE_CHAT_MESSAGE   SearchResultType = 9
+	SearchResultType_SEARCH_RESULT_TYPE_ROOM           SearchResultType = 10
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_CHAT     SearchResultType = 11
+	SearchResultType_SEARCH_RESULT_TYPE_TAG            SearchResultType = 12
+	SearchResultType_SEARCH_RESULT_TYPE_FOLDER         SearchResultType = 13
+	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER   SearchResultType = 14
 )
 
 // Enum value maps for SearchResultType.
@@ -54,13 +53,12 @@ var (
 		6:  "SEARCH_RESULT_TYPE_PROJECT",
 		7:  "SEARCH_RESULT_TYPE_TASK",
 		8:  "SEARCH_RESULT_TYPE_AGENT",
-		9:  "SEARCH_RESULT_TYPE_PROMPT",
-		10: "SEARCH_RESULT_TYPE_CHAT_MESSAGE",
-		11: "SEARCH_RESULT_TYPE_ROOM",
-		12: "SEARCH_RESULT_TYPE_AGENT_CHAT",
-		13: "SEARCH_RESULT_TYPE_TAG",
-		14: "SEARCH_RESULT_TYPE_FOLDER",
-		15: "SEARCH_RESULT_TYPE_AGENT_FOLDER",
+		9:  "SEARCH_RESULT_TYPE_CHAT_MESSAGE",
+		10: "SEARCH_RESULT_TYPE_ROOM",
+		11: "SEARCH_RESULT_TYPE_AGENT_CHAT",
+		12: "SEARCH_RESULT_TYPE_TAG",
+		13: "SEARCH_RESULT_TYPE_FOLDER",
+		14: "SEARCH_RESULT_TYPE_AGENT_FOLDER",
 	}
 	SearchResultType_value = map[string]int32{
 		"SEARCH_RESULT_TYPE_UNSPECIFIED":    0,
@@ -72,13 +70,12 @@ var (
 		"SEARCH_RESULT_TYPE_PROJECT":        6,
 		"SEARCH_RESULT_TYPE_TASK":           7,
 		"SEARCH_RESULT_TYPE_AGENT":          8,
-		"SEARCH_RESULT_TYPE_PROMPT":         9,
-		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":   10,
-		"SEARCH_RESULT_TYPE_ROOM":           11,
-		"SEARCH_RESULT_TYPE_AGENT_CHAT":     12,
-		"SEARCH_RESULT_TYPE_TAG":            13,
-		"SEARCH_RESULT_TYPE_FOLDER":         14,
-		"SEARCH_RESULT_TYPE_AGENT_FOLDER":   15,
+		"SEARCH_RESULT_TYPE_CHAT_MESSAGE":   9,
+		"SEARCH_RESULT_TYPE_ROOM":           10,
+		"SEARCH_RESULT_TYPE_AGENT_CHAT":     11,
+		"SEARCH_RESULT_TYPE_TAG":            12,
+		"SEARCH_RESULT_TYPE_FOLDER":         13,
+		"SEARCH_RESULT_TYPE_AGENT_FOLDER":   14,
 	}
 )
 
@@ -121,13 +118,13 @@ type SearchRequest struct {
 	MyContentOnly  bool     `protobuf:"varint,7,opt,name=my_content_only,json=myContentOnly,proto3" json:"my_content_only,omitempty"`
 	OwnerFilter    string   `protobuf:"bytes,8,opt,name=owner_filter,json=ownerFilter,proto3" json:"owner_filter,omitempty"`
 	// Metadata field filters (e.g., {"channel_id": "uuid"} for chat message scoping)
-	MetadataFilters map[string]string `protobuf:"bytes,10,rep,name=metadata_filters,json=metadataFilters,proto3" json:"metadata_filters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	MetadataFilters map[string]string `protobuf:"bytes,9,rep,name=metadata_filters,json=metadataFilters,proto3" json:"metadata_filters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Pagination offset into the result set (max_total_hits caps the window)
-	Offset int32 `protobuf:"varint,11,opt,name=offset,proto3" json:"offset,omitempty"`
+	Offset int32 `protobuf:"varint,10,opt,name=offset,proto3" json:"offset,omitempty"`
 	// Client ranking context: listed types float to the top in this order.
 	// Applied within match-strength buckets, so a weak (typo/partial) match
 	// never outranks a full match via its type alone.
-	TypePriority  []SearchResultType `protobuf:"varint,12,rep,packed,name=type_priority,json=typePriority,proto3,enum=search.v1.SearchResultType" json:"type_priority,omitempty"`
+	TypePriority  []SearchResultType `protobuf:"varint,11,rep,packed,name=type_priority,json=typePriority,proto3,enum=search.v1.SearchResultType" json:"type_priority,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1036,7 +1033,7 @@ var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x16search/v1/search.proto\x12\tsearch.v1\"\xb7\x04\n" +
+	"\x16search/v1/search.proto\x12\tsearch.v1\"\xb1\x04\n" +
 	"\rSearchRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12>\n" +
@@ -1047,14 +1044,13 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x0fproject_filters\x18\x06 \x03(\tR\x0eprojectFilters\x12&\n" +
 	"\x0fmy_content_only\x18\a \x01(\bR\rmyContentOnly\x12!\n" +
 	"\fowner_filter\x18\b \x01(\tR\vownerFilter\x12X\n" +
-	"\x10metadata_filters\x18\n" +
-	" \x03(\v2-.search.v1.SearchRequest.MetadataFiltersEntryR\x0fmetadataFilters\x12\x16\n" +
-	"\x06offset\x18\v \x01(\x05R\x06offset\x12@\n" +
-	"\rtype_priority\x18\f \x03(\x0e2\x1b.search.v1.SearchResultTypeR\ftypePriority\x1aB\n" +
+	"\x10metadata_filters\x18\t \x03(\v2-.search.v1.SearchRequest.MetadataFiltersEntryR\x0fmetadataFilters\x12\x16\n" +
+	"\x06offset\x18\n" +
+	" \x01(\x05R\x06offset\x12@\n" +
+	"\rtype_priority\x18\v \x03(\x0e2\x1b.search.v1.SearchResultTypeR\ftypePriority\x1aB\n" +
 	"\x14MetadataFiltersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\t\x10\n" +
-	"\"d\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"d\n" +
 	"\x0eSearchResponse\x121\n" +
 	"\x05items\x18\x01 \x03(\v2\x1b.search.v1.SearchResultItemR\x05items\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
@@ -1144,7 +1140,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"urn_status\x180 \x01(\tR\turnStatus\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x90\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf1\x03\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1154,15 +1150,14 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"!SEARCH_RESULT_TYPE_CALENDAR_EVENT\x10\x05\x12\x1e\n" +
 	"\x1aSEARCH_RESULT_TYPE_PROJECT\x10\x06\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_TASK\x10\a\x12\x1c\n" +
-	"\x18SEARCH_RESULT_TYPE_AGENT\x10\b\x12\x1d\n" +
-	"\x19SEARCH_RESULT_TYPE_PROMPT\x10\t\x12#\n" +
-	"\x1fSEARCH_RESULT_TYPE_CHAT_MESSAGE\x10\n" +
-	"\x12\x1b\n" +
-	"\x17SEARCH_RESULT_TYPE_ROOM\x10\v\x12!\n" +
-	"\x1dSEARCH_RESULT_TYPE_AGENT_CHAT\x10\f\x12\x1a\n" +
-	"\x16SEARCH_RESULT_TYPE_TAG\x10\r\x12\x1d\n" +
-	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\x0e\x12#\n" +
-	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0f2\xf6\x01\n" +
+	"\x18SEARCH_RESULT_TYPE_AGENT\x10\b\x12#\n" +
+	"\x1fSEARCH_RESULT_TYPE_CHAT_MESSAGE\x10\t\x12\x1b\n" +
+	"\x17SEARCH_RESULT_TYPE_ROOM\x10\n" +
+	"\x12!\n" +
+	"\x1dSEARCH_RESULT_TYPE_AGENT_CHAT\x10\v\x12\x1a\n" +
+	"\x16SEARCH_RESULT_TYPE_TAG\x10\f\x12\x1d\n" +
+	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\r\x12#\n" +
+	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0e2\xf6\x01\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12T\n" +
 	"\rGetReferences\x12\x1f.search.v1.GetReferencesRequest\x1a .search.v1.GetReferencesResponse\"\x00\x12N\n" +

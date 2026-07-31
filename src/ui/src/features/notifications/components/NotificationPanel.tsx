@@ -17,7 +17,7 @@ import type {
     NotificationFilterType,
 } from '@/features/notifications/store/notificationsSlice';
 import { useNavigate } from 'react-router-dom';
-import { parseUrn, urnToPath } from '@/shared/utils/urn';
+import { notificationTargetPath } from '@/features/notifications/utils/notificationTarget';
 
 interface TimeGroup {
     label: string;
@@ -284,15 +284,10 @@ export function NotificationPanel({ onClose, anchorRef }: NotificationPanelProps
             markAsRead(notification.id);
         }
 
-        if (notification.sourceUrn) {
-            const parsed = parseUrn(notification.sourceUrn);
-            if (parsed) {
-                const path = urnToPath(notification.sourceUrn);
-                if (path) {
-                    navigate(path);
-                    onClose();
-                }
-            }
+        const path = notificationTargetPath(notification);
+        if (path) {
+            navigate(path);
+            onClose();
         }
     }, [markAsRead, navigate, onClose]);
 

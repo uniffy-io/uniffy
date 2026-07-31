@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { CaretDown, CheckCircle, CircleNotch, ClockCountdown } from '@phosphor-icons/react';
-import { sanitizeStreamingMarkdown } from '@/features/chat/utils/streamingMarkdown';
+import { CrepeEditor } from '@/components/editor/CrepeEditor';
+import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { cn } from '@/shared/utils/cn';
 
 import {
@@ -70,12 +69,20 @@ export function ThinkingPane({ blocks, live, answerStarted }: ThinkingPaneProps)
                                 )}
                                 <div className="w-px flex-1 bg-border mt-1" />
                             </div>
-                            <div className="text-[13px] leading-relaxed text-muted-foreground break-words pb-3 min-w-0 [&_p:not(:last-child)]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_code]:text-xs [&_pre]:overflow-x-auto">
-                                <Markdown remarkPlugins={[remarkGfm]}>
-                                    {block.done
-                                        ? block.content
-                                        : sanitizeStreamingMarkdown(block.content)}
-                                </Markdown>
+                            <div className="text-[13px] leading-relaxed text-muted-foreground break-words pb-3 min-w-0 flex-1">
+                                {block.done ? (
+                                    <CrepeEditor
+                                        contentType={ContentType.AGENT}
+                                        contentId=""
+                                        value={block.content}
+                                        readonly
+                                        compact
+                                        enableUpload={false}
+                                        className="chat-bubble-editor border-none bg-transparent [&_.crepe-editor-compact]:p-0 [&_.ProseMirror]:text-muted-foreground"
+                                    />
+                                ) : (
+                                    <span className="whitespace-pre-wrap">{block.content}</span>
+                                )}
                             </div>
                         </div>
                     ))}

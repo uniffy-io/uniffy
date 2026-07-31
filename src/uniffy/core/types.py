@@ -55,7 +55,6 @@ class ContentType(str, Enum):
     TASK = "TASK"
     AGENT = "AGENT"
     PROVIDER_KEY = "PROVIDER_KEY"
-    PROMPT = "PROMPT"
     AGENT_CRON_TASK = "AGENT_CRON_TASK"
     CHAT = "CHAT"
     AGENT_CHAT = "AGENT_CHAT"

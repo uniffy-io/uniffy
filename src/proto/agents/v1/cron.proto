@@ -61,20 +61,19 @@ message CronTaskInfo {
   optional common.v1.ContentRole baseline_role = 24;
 }
 
-// Execution log entry
+// Execution log entry, served from the shared agents_run_logs table.
 message CronRunLogInfo {
   string id = 1;
   string cron_task_id = 2;
   string organization_id = 3;
-  optional string agent_run_log_id = 4;
-  string session_id = 5;
-  string status = 6;
-  optional string error = 7;
-  optional string result_summary = 8;
-  google.protobuf.Timestamp started_at = 9;
-  optional google.protobuf.Timestamp completed_at = 10;
-  int32 input_tokens = 11;
-  int32 output_tokens = 12;
+  // Empty until the execution has a session (pending placeholder rows).
+  string session_id = 4;
+  string status = 5;
+  optional string error = 6;
+  google.protobuf.Timestamp started_at = 7;
+  optional google.protobuf.Timestamp completed_at = 8;
+  int32 input_tokens = 9;
+  int32 output_tokens = 10;
 }
 
 // --- Requests and Responses ---

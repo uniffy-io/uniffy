@@ -62,12 +62,18 @@ class MessageWriter(Protocol):
         tool_call_id: str | None = None,
         tool_args: dict | None = None,
         tool_result: str | None = None,
+        tool_metadata: dict | None = None,
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
         invoked_skill_name: str | None = None,
         thinking: list[dict] | None = None,
     ) -> AgentMessage:
-        """Persist a message and return an `AgentMessage`-shaped envelope."""
+        """Persist a message and return an `AgentMessage`-shaped envelope.
+
+        `tool_metadata` is machine-readable result detail for the client and
+        only reaches chat rows; `agents_messages` carries no metadata column,
+        so the session writer accepts and drops it.
+        """
 
     async def reserve_assistant_placeholder(self) -> AgentMessage | None:
         """Insert an empty in-flight assistant row that streamed deltas patch.
@@ -155,6 +161,7 @@ class SessionMessageWriter:
         tool_call_id: str | None = None,
         tool_args: dict | None = None,
         tool_result: str | None = None,
+        tool_metadata: dict | None = None,
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
         invoked_skill_name: str | None = None,
@@ -316,6 +323,7 @@ class ChatChannelMessageWriter:
         tool_call_id: str | None = None,
         tool_args: dict | None = None,
         tool_result: str | None = None,
+        tool_metadata: dict | None = None,
         is_thinking: bool = False,
         file_ids: list[str] | None = None,
         invoked_skill_name: str | None = None,
@@ -352,6 +360,8 @@ class ChatChannelMessageWriter:
             meta["tool_args"] = tool_args
         if tool_result is not None:
             meta["tool_result"] = tool_result
+        if tool_metadata:
+            meta["tool_meta"] = tool_metadata
         if model:
             meta["model"] = model
         if input_tokens:

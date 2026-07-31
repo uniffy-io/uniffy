@@ -81,6 +81,7 @@ class Action:
     GROUP_DELETED = "group.deleted"
     GROUP_MEMBER_ADDED = "group.member_added"
     GROUP_MEMBER_REMOVED = "group.member_removed"
+    GROUP_MEMBER_ROLE_CHANGED = "group.member_role_changed"
 
     # Domain admin
     DOMAIN_ADMIN_GRANTED = "domain_admin.granted"
@@ -118,12 +119,19 @@ class Action:
     AGENT_RATE_LIMIT_CREATED = "agent.rate_limit_created"
     AGENT_RATE_LIMIT_UPDATED = "agent.rate_limit_updated"
     AGENT_RATE_LIMIT_DELETED = "agent.rate_limit_deleted"
+    AGENT_RUNTIME_SETTINGS_UPDATED = "agent.runtime_settings_updated"
 
     # Agents - provider key toggles (separate from add / rotate / delete)
     AGENT_PROVIDER_KEY_TOGGLED = "agent.provider_key_toggled"
 
     # Agents - image gen (tool calls get a dynamic suffix via tool_call_action)
     AGENT_IMAGE_GENERATION = "agent.image_generation"
+
+    # Integrations - connections (hint only, never the secret)
+    INTEGRATION_CONNECTION_ADDED = "integration.connection_added"
+    INTEGRATION_CONNECTION_UPDATED = "integration.connection_updated"
+    INTEGRATION_CONNECTION_REMOVED = "integration.connection_removed"
+    INTEGRATION_CONNECTION_TOGGLED = "integration.connection_toggled"
 
     # Notes
     NOTE_DELETED = "note.deleted"

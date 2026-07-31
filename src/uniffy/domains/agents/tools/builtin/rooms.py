@@ -209,6 +209,7 @@ async def _execute_get_room(ctx: ToolContext, args: dict) -> ToolResult:
     booking_ops = BookingOperations(ctx.session)
     now = datetime.now(UTC)
     upcoming = await booking_ops.check_availability(
+        user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         room_id=room_id,  # type: ignore[arg-type]
         start_date=now,
@@ -337,6 +338,7 @@ async def _execute_find_available(ctx: ToolContext, args: dict) -> ToolResult:
 
     ops = BookingOperations(ctx.session)
     rooms = await ops.find_available_rooms(
+        user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         start_time=start_time,
         end_time=end_time,
@@ -465,6 +467,8 @@ _ROOM_TYPE_SCHEMA = {
 
 list_rooms = ToolDefinition(
     name="rooms.list_rooms",
+    display_name="List Rooms",
+    group="Rooms",
     description=(
         "List rooms in the organization with optional capacity, amenity, "
         "building, floor, or text-search filters. Paginated."
@@ -499,6 +503,8 @@ list_rooms = ToolDefinition(
 
 get_room = ToolDefinition(
     name="rooms.get_room",
+    display_name="Get Room",
+    group="Rooms",
     description=(
         "Get a single room's details plus its bookings for the next 7 days."
     ),
@@ -513,6 +519,8 @@ get_room = ToolDefinition(
 
 list_bookings = ToolDefinition(
     name="rooms.list_bookings",
+    display_name="List Bookings",
+    group="Rooms",
     description=(
         "List room bookings, optionally filtered by room, date range, or status. "
         "Returns room name and booker for each row."
@@ -550,6 +558,8 @@ list_bookings = ToolDefinition(
 
 find_available = ToolDefinition(
     name="rooms.find_available",
+    display_name="Find Available Rooms",
+    group="Rooms",
     description=(
         "Find rooms that are free for the given time window. "
         "Optional minimum capacity, amenity list, and room_type filters."
@@ -581,6 +591,8 @@ find_available = ToolDefinition(
 
 book_room = ToolDefinition(
     name="rooms.book_room",
+    display_name="Book Room",
+    group="Rooms",
     description=(
         "Reserve a room for a time slot. Returns a structured error if the "
         "room is already booked or not available for booking."
@@ -617,6 +629,8 @@ book_room = ToolDefinition(
 
 cancel_booking = ToolDefinition(
     name="rooms.cancel_booking",
+    display_name="Cancel Booking",
+    group="Rooms",
     description=(
         "Cancel a room booking. Only the booker or an org admin can cancel; "
         "this is destructive and requires confirmation."

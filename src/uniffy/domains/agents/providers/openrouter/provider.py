@@ -21,8 +21,7 @@ class OpenRouterProvider(OpenAIProvider):
 
     _use_responses_api = False
 
-    def __init__(self, credential: str, credential_type: str = "api_key") -> None:
-        self._credential_type = credential_type
+    def __init__(self, credential: str) -> None:
         self._client = openai.AsyncOpenAI(
             api_key=credential,
             base_url="https://openrouter.ai/api/v1",
@@ -58,11 +57,7 @@ class OpenRouterProvider(OpenAIProvider):
             return False, f"Validation error: HTTP {response.status}"
         return True, None
 
-    async def get_available_models(
-        self,
-        *,
-        force_refresh: bool = False,
-    ) -> list[ModelInfo]:
+    async def get_available_models(self) -> list[ModelInfo]:
         return model_infos_for_provider("openrouter")
 
     def _apply_reasoning(self, kwargs: dict, effort: str) -> None:

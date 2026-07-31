@@ -22,8 +22,12 @@ service AgentsService {
   // Update an agent configuration
   rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse) {}
 
-  // Delete an agent
+  // Delete an agent. The row survives so its past chat messages keep
+  // resolving a name and avatar; everything that would keep it acting stops.
   rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse) {}
+
+  // Bring a deleted agent back. Its automations stay disabled.
+  rpc RestoreAgent(RestoreAgentRequest) returns (RestoreAgentResponse) {}
 
   // Upload agent avatar image (synchronous processing)
   rpc UploadAgentAvatar(UploadAgentAvatarRequest) returns (UploadAgentAvatarResponse) {}
@@ -33,6 +37,12 @@ service AgentsService {
 
   // Preview the fully assembled system prompt for an agent
   rpc PreviewSystemPrompt(PreviewSystemPromptRequest) returns (PreviewSystemPromptResponse) {}
+
+  // List the shipped agent templates that prefill the create flow
+  rpc ListAgentTemplates(ListAgentTemplatesRequest) returns (ListAgentTemplatesResponse) {}
+
+  // List the tools an agent can be given, as the builder groups them
+  rpc ListTools(ListToolsRequest) returns (ListToolsResponse) {}
 }
 
 // Agent configuration info returned to clients
@@ -60,20 +70,30 @@ message AgentInfo {
   string primary_provider_key_id = 18;
   // Provider key ID for the image model (empty = not assigned)
   string image_provider_key_id = 19;
-  // Prompt template ID (empty = no template, uses soul_prompt directly)
-  string prompt_id = 20;
   // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 21;
+  optional common.v1.ContentRole baseline_role = 20;
   // Effective role of the requesting user on this agent (if known).
   // Set by the server so the UI can render edit/share affordances
   // without re-resolving permissions client-side.
-  optional common.v1.ContentRole user_role = 22;
+  optional common.v1.ContentRole user_role = 21;
   // Hydrated unified-tag rows assigned to this agent. Server-populated
   // via ``TagOperations.get_for_urns``; clients should treat as read-only.
-  repeated tags.v1.Tag tags = 23;
+  repeated tags.v1.Tag tags = 22;
   // JSON object of tuned model parameters (knob -> value), validated
   // against the model's parameter schema. "{}" = provider defaults.
-  string model_params = 24;
+  string model_params = 23;
+  // JSON object of image-generation defaults (knob -> value), validated
+  // against the image model's schema. "{}" = provider defaults.
+  string image_params = 24;
+  // House style folded into every generated-image prompt.
+  string image_style_prompt = 25;
+  // Deleted agents are returned only when a listing asks for them. They cannot
+  // act: no chat replies, no automation runs.
+  bool is_deleted = 26;
+  optional google.protobuf.Timestamp deleted_at = 27;
+  // JSON object pinning an integration provider to one org connection
+  // (provider id -> connection id). "{}" = automatic resolution.
+  string integration_connections = 28;
 }
 
 // --- Requests and Responses ---
@@ -96,13 +116,16 @@ message CreateAgentRequest {
   optional string primary_provider_key_id = 13;
   // Provider key ID for the image model
   optional string image_provider_key_id = 14;
-  // Prompt template ID
-  optional string prompt_id = 15;
-  optional common.v1.ContentRole baseline_role = 16;
+  optional common.v1.ContentRole baseline_role = 15;
   // Optional unified-tag ids to assign on create.
-  repeated string tag_ids = 17;
+  repeated string tag_ids = 16;
   // JSON object of tuned model parameters (knob -> value)
-  optional string model_params = 18;
+  optional string model_params = 17;
+  // JSON object of image-generation defaults (knob -> value)
+  optional string image_params = 18;
+  optional string image_style_prompt = 19;
+  // JSON object pinning integration providers to org connections
+  optional string integration_connections = 20;
 }
 
 message CreateAgentResponse {
@@ -134,11 +157,13 @@ message ListAgentsRequest {
   string organization_id = 1;
   optional common.v1.PaginationRequest pagination = 2;
   optional common.v1.AccessMode access_mode = 3;
-  optional bool personal_only = 4;
-  optional string group_id = 5;
+  optional string group_id = 4;
   // Filter agents that carry every tag id in this list (logical AND).
   // Empty = no tag filter.
-  repeated string tag_ids = 6;
+  repeated string tag_ids = 5;
+  // Return deleted agents INSTEAD of live ones, for the builder's deleted
+  // group. Builder-gated.
+  bool deleted_only = 6;
 }
 
 message ListAgentsResponse {
@@ -147,6 +172,8 @@ message ListAgentsResponse {
 }
 
 message UpdateAgentRequest {
+  // Access-policy changes (access mode, baseline role, group grants) go
+  // through permissions.v1.MembersService, never this request.
   string organization_id = 1;
   string agent_id = 2;
   optional string name = 3;
@@ -157,28 +184,28 @@ message UpdateAgentRequest {
   optional string theme_color = 8;
   optional bool is_default = 9;
   repeated string enabled_skills = 10;
-  optional common.v1.AccessMode access_mode = 11;
-  repeated string group_ids = 12;
-  repeated string enabled_tools = 13;
+  repeated string enabled_tools = 11;
   // Image generation model (empty string = disabled)
-  optional string image_model = 14;
+  optional string image_model = 12;
   // Provider key ID for the primary model
-  optional string primary_provider_key_id = 15;
+  optional string primary_provider_key_id = 13;
   // Provider key ID for the image model
-  optional string image_provider_key_id = 16;
-  // Prompt template ID
-  optional string prompt_id = 17;
-  // Clear the prompt template (set to null)
-  optional bool clear_prompt = 18;
-  optional common.v1.ContentRole baseline_role = 19;
+  optional string image_provider_key_id = 14;
   // Replacement set of unified-tag ids. Empty list clears all manual
   // tags; field unset (HasField=false) leaves them untouched. Mirrors
   // the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
   // pattern.
-  optional AgentTagIds tag_ids = 20;
+  optional AgentTagIds tag_ids = 15;
   // JSON object of tuned model parameters (knob -> value); replaces the
   // stored object wholesale ("{}" resets to provider defaults)
-  optional string model_params = 21;
+  optional string model_params = 16;
+  // JSON object of image-generation defaults; replaces the stored object
+  // wholesale ("{}" resets to provider defaults)
+  optional string image_params = 17;
+  optional string image_style_prompt = 18;
+  // JSON object pinning integration providers to org connections; replaces
+  // the stored object wholesale ("{}" resets to automatic resolution)
+  optional string integration_connections = 19;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from
@@ -194,6 +221,15 @@ message DeleteAgentRequest {
 
 message DeleteAgentResponse {
   bool success = 1;
+}
+
+message RestoreAgentRequest {
+  string organization_id = 1;
+  string agent_id = 2;
+}
+
+message RestoreAgentResponse {
+  AgentInfo agent = 1;
 }
 
 message UploadAgentAvatarRequest {
@@ -215,4 +251,56 @@ message PreviewSystemPromptRequest {
 
 message PreviewSystemPromptResponse {
   string system_prompt = 1;
+}
+
+// A shipped starting point for a new agent. Prefill only - a created agent is
+// an ordinary row with no link back to its template.
+message AgentTemplate {
+  string key = 1;
+  string name = 2;
+  string emoji = 3;
+  string description = 4;
+  string soul_prompt = 5;
+  repeated string enabled_tools = 6;
+  // Bundled skill rows resolved by the server; empty when a skill is unseeded.
+  repeated string enabled_skill_ids = 7;
+  // Model ids the template works best on; empty when the template has no
+  // recommendation. Prefill only - clients apply them when the org serves them.
+  string recommended_model = 8;
+  string recommended_image_model = 9;
+}
+
+message ListAgentTemplatesRequest {
+  string organization_id = 1;
+}
+
+message ListAgentTemplatesResponse {
+  repeated AgentTemplate templates = 1;
+}
+
+// One selectable capability in the agent builder. The server owns this copy;
+// clients render what they receive instead of keeping their own tool list.
+message ToolInfo {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  // Builder grouping label, e.g. "Notes" or "GitHub".
+  string group = 4;
+  // "platform" for tools that run against this deployment, "external" for
+  // tools that call a third-party API.
+  string category = 5;
+  bool destructive = 6;
+  // Integration provider id whose org connection this tool calls through;
+  // empty for platform tools.
+  string requires_connection = 7;
+}
+
+message ListToolsRequest {
+  string organization_id = 1;
+}
+
+// Ordered as the builder renders them: category, then group, then registration
+// order within the group.
+message ListToolsResponse {
+  repeated ToolInfo tools = 1;
 }

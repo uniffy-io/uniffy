@@ -14,13 +14,13 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
-from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.run_log import AgentRunLog
-from uniffy.core.models.chat.channel import ChatChannel
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import SenderType as ChatSenderType
 from uniffy.core.types import SubjectType
@@ -28,12 +28,20 @@ from uniffy.db.session import open_session
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.budget_alerts import check_and_fire_alerts
 from uniffy.domains.agents.cache import (
-    fetch_agent_prompt,
     fetch_agent_skills,
+    fetch_memory_index,
 )
 from uniffy.domains.agents.content_policy import check_user_message
 from uniffy.domains.agents.currency import convert as convert_currency
 from uniffy.domains.agents.currency import get_display_currency
+from uniffy.domains.agents.memories.bridge import is_personal_bridge_enabled
+from uniffy.domains.agents.memories.recall import (
+    attach_recall_block,
+    build_memory_recall,
+    build_recall_query,
+    render_recall_block,
+)
+from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.pricing import PRICING_CURRENCY, compute_text_cost, get_pricing
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
@@ -49,15 +57,22 @@ from uniffy.domains.agents.runtime.destinations import (
     SessionDestination,
 )
 from uniffy.domains.agents.runtime.file_loader import FileContext
-from uniffy.domains.agents.runtime.model_resolver import resolve_model
+from uniffy.domains.agents.runtime.image_config import (
+    apply_image_tool_schema,
+    resolve_image_config,
+)
+from uniffy.domains.agents.runtime.model_resolver import resolve_provider_and_model
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
+    MemoryScopeBlock,
     SkillPromptEntry,
     build_chat_context_section,
+    build_memory_block,
     build_system_prompt,
     skill_passes_activation,
     to_skill_prompt_entry,
 )
+from uniffy.domains.agents.runtime.settings import get_runtime_settings
 from uniffy.domains.agents.runtime.writers import (
     ChatChannelMessageWriter,
     MessageWriter,
@@ -70,16 +85,34 @@ from uniffy.domains.agents.sessions.operations import (
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.usage import record_skill_event, record_skill_injections
+from uniffy.domains.agents.tools.deferral import (
+    LOAD_GROUP_TOOL,
+    LOADED_GROUPS_METADATA_KEY,
+    plan_tool_advertisement,
+)
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolResult
 from uniffy.domains.agents.tools.executor import ToolExecutor
-from uniffy.domains.agents.tools.registry import ToolRegistry, get_tool_registry, to_api_name
+from uniffy.domains.agents.tools.registry import (
+    ToolRegistry,
+    from_api_name,
+    get_tool_registry,
+    to_api_name,
+)
 from uniffy.domains.chat.sender_resolver import SenderResolver
+from uniffy.domains.integrations.tool_gate import (
+    filter_integration_tool_schemas,
+    has_advertised_integration_tools,
+)
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
 logger = logger.bind(component="agents.runtime.operations")
 
 MAX_TOOL_ITERATIONS = 10
+# Turns whose only calls are tools.load_group don't consume the work budget;
+# loads are idempotent per group, so this cap only guards a model stuck in a
+# load-call loop.
+MAX_LOAD_ONLY_ITERATIONS = 3
 READ_TOOL_POOL_SIZE = 5
 
 
@@ -106,6 +139,43 @@ def _resolve_tool_schemas(
     if advertises and SKILL_VIEW_TOOL not in enabled_tools:
         schemas.extend(registry.get_anthropic_schemas([SKILL_VIEW_TOOL]))
     return schemas or None
+
+
+def _allowed_tool_names(tool_schemas: list[dict] | None) -> frozenset[str]:
+    """Internal names of every tool this run may execute.
+
+    Taken from the fully-resolved schema set (image swap + integration gate
+    applied) rather than ``agent.enabled_tools``, so a tool whose integration
+    connection is gone is not executable either. Deferral splits this set; it
+    never widens it.
+    """
+    return frozenset(
+        from_api_name(schema.get("name", "")) for schema in tool_schemas or []
+    )
+
+
+def _is_load_only_turn(tool_calls: list) -> bool:
+    """True when every call in the turn is tools.load_group."""
+    return bool(tool_calls) and all(
+        from_api_name(tc.name) == LOAD_GROUP_TOOL for tc in tool_calls
+    )
+
+
+def _expand_loaded_schemas(
+    tool_schemas: list[dict],
+    deferred_pool: dict[str, list[dict]] | None,
+    tool_results: dict[str, ToolResult],
+) -> None:
+    """Append schemas for groups a load_group call advertised this turn.
+
+    Append-only, in load order: the advertised prefix stays byte-stable so the
+    provider prompt cache is invalidated once per load, not per turn.
+    """
+    if not deferred_pool:
+        return
+    for res in tool_results.values():
+        for group in (res.metadata or {}).get(LOADED_GROUPS_METADATA_KEY, []):
+            tool_schemas.extend(deferred_pool.pop(group, []))
 
 
 def _split_read_write(
@@ -417,27 +487,13 @@ class RuntimeOperations:
         role = membership.role
         user_role = role.value if hasattr(role, "value") else str(role)
 
-        target_model = agent_session.model_override or agent.primary_model
-        provider_key_id: UUID | None = None
-
-        if agent.primary_provider_key_id:
-            provider, pk = await self._provider_ops.get_provider_for_key(
-                organization_id=organization_id,
-                key_id=agent.primary_provider_key_id,
-            )
-            provider_key_id = pk.id
-        else:
-            resolved = await self._provider_ops.get_key_and_provider_for_model(
-                organization_id=organization_id,
-                model_id=target_model,
-            )
-            if resolved is None:
-                raise NotFoundError(
-                    "ProviderKey",
-                    f"No configured provider has model '{target_model}' available",
-                )
-            provider, pk = resolved
-            provider_key_id = pk.id
+        provider, provider_key_id, model = await resolve_provider_and_model(
+            self._session,
+            self._provider_ops,
+            organization_id=organization_id,
+            agent=agent,
+            model_override=agent_session.model_override,
+        )
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
@@ -473,17 +529,38 @@ class RuntimeOperations:
         tool_schemas = _resolve_tool_schemas(
             registry, enabled_tools, skill_entries, invoked_entry
         )
+        image_config = await resolve_image_config(
+            self._session, agent, organization_id=organization_id
+        )
+        tool_schemas = apply_image_tool_schema(tool_schemas, image_config)
+        tool_schemas = await filter_integration_tool_schemas(
+            self._session, organization_id, tool_schemas
+        )
+        # The external-content note keys off the full enabled set: a deferred
+        # integration group can surface mid-run via tools.load_group.
+        external_note = has_advertised_integration_tools(tool_schemas)
+        allowed_tools = _allowed_tool_names(tool_schemas)
+        loaded_tool_groups = list(agent_session.loaded_tool_groups or [])
+        plan = plan_tool_advertisement(registry, tool_schemas, loaded_tool_groups)
+        tool_schemas = plan.tool_schemas or None
+        deferred_pool = dict(plan.deferred)
 
-        memory_context = await self._fetch_memory_context(
-            agent_id=agent_session.agent_id,
+        memory_scope = await self._resolve_memory_scope(
+            destination=SessionDestination(session_id=session_id),
+            user_id=user_id,
+            organization_id=organization_id,
+            session_kind=agent_session.kind,
+        )
+        memory_bridge = await self._resolve_memory_bridge(
+            scope_ref=memory_scope,
             user_id=user_id,
             organization_id=organization_id,
         )
-
-        prompt_content = await fetch_agent_prompt(
-            self._session,
-            agent_id=agent.id,
-            prompt_id=agent.prompt_id,
+        memory_context = await self._build_memory_context(
+            agent_id=agent_session.agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            bridge_ref=memory_bridge,
         )
 
         system_prompt = build_system_prompt(
@@ -492,24 +569,17 @@ class RuntimeOperations:
             org_name=org.name,
             user_name=user.full_name or user.username,
             user_role=user_role,
-            enabled_tools=enabled_tools,
+            deferred_tools=plan.deferred_names() or None,
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
-            memory_context=memory_context or None,
-            prompt_content=prompt_content,
+            memory_context=memory_context,
             user_timezone=user_timezone,
+            external_content_note=external_note,
         )
 
-        # 8. Resolve model (needed for compaction)
-        model = await resolve_model(
-            session_model_override=agent_session.model_override,
-            agent_primary_model=agent.primary_model,
-            agent_fallback_models=agent.fallback_models or [],
-            provider=provider,
-        )
         request_params = resolve_request_params(
             agent.model_params,
-            agent_session.model_params_override,
+            None,
             provider.name,
             model,
         )
@@ -563,6 +633,19 @@ class RuntimeOperations:
         # 11b. Resolve any content blocks that need S3 downloads
         await _resolve_pending_content_blocks(llm_messages)
 
+        # 11c. Ephemeral query-conditioned recall on the trigger turn: rides
+        # only llm_messages, never the stored row, so no turn re-quotes it.
+        recall_block = await self._build_memory_recall_block(
+            agent_id=agent_session.agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            context_messages=context_messages,
+            content=content,
+        )
+        recall_promoted = bool(
+            recall_block and attach_recall_block(llm_messages, recall_block)
+        )
+
         # 12. Store user message with enriched content (file text baked in
         # so the LLM retains file context on subsequent turns).
         stored_content = _build_stored_content(content, files)
@@ -602,6 +685,19 @@ class RuntimeOperations:
                     agent_id=agent_session.agent_id,
                     session_id=session_id,
                     user_timezone=user_timezone,
+                    memory_scope=memory_scope,
+                    memory_bridge_scope=memory_bridge,
+                    memory_recall_promoted=recall_promoted,
+                    is_test_session=agent_session.is_test,
+                    image_params=image_config.params if image_config else {},
+                    image_max_resolution=(
+                        image_config.max_resolution if image_config else None
+                    ),
+                    image_max_quality=image_config.max_quality if image_config else None,
+                    integration_connections=agent.integration_connections or {},
+                    deferred_tool_groups=plan.deferred_names(),
+                    loaded_tool_groups=loaded_tool_groups,
+                    allowed_tools=allowed_tools,
                 )
                 executor = ToolExecutor(registry, tool_ctx)
 
@@ -619,6 +715,7 @@ class RuntimeOperations:
                     executor=executor,
                     run_tool_calls=run_tool_calls,
                     model_params=request_params,
+                    deferred_pool=deferred_pool,
                 )
                 tool_iterations = len(run_tool_calls)
 
@@ -693,6 +790,7 @@ class RuntimeOperations:
         executor: ToolExecutor,
         run_tool_calls: list[dict] | None = None,
         model_params: dict | None = None,
+        deferred_pool: dict[str, list[dict]] | None = None,
     ) -> CompletionResult:
         """Run the tool-use loop until the LLM produces a final response.
 
@@ -736,10 +834,20 @@ class RuntimeOperations:
             If the loop exceeds MAX_TOOL_ITERATIONS.
 
         """
-        for iteration in range(MAX_TOOL_ITERATIONS):
+        work_iterations = 0
+        load_iterations = 0
+        while True:
+            if _is_load_only_turn(result.tool_calls):
+                load_iterations += 1
+            else:
+                work_iterations += 1
+            if work_iterations > MAX_TOOL_ITERATIONS or (
+                load_iterations > MAX_LOAD_ONLY_ITERATIONS
+            ):
+                break
             logger.debug(
                 "Tool loop iteration",
-                iteration=iteration + 1,
+                iteration=work_iterations,
                 tool_calls=len(result.tool_calls),
             )
 
@@ -830,6 +938,8 @@ class RuntimeOperations:
                 "role": "user",
                 "content": tool_result_blocks,
             })
+
+            _expand_loaded_schemas(tool_schemas, deferred_pool, tool_results)
 
             # Re-invoke LLM with updated conversation
             result = await provider.chat_completion(
@@ -1088,6 +1198,7 @@ class RuntimeOperations:
         agent_session = None
         model_override: str | None = None
         params_override: dict | None = None
+        image_params_override: dict | None = None
 
         channel_id: UUID | None = None
         if isinstance(destination, SessionDestination):
@@ -1123,9 +1234,10 @@ class RuntimeOperations:
             )
             agent_id = agent_session.agent_id
             model_override = agent_session.model_override
-            params_override = agent_session.model_params_override
+            loaded_tool_groups = list(agent_session.loaded_tool_groups or [])
         else:
             agent_id = destination.agent_id
+            loaded_tool_groups = []
             binding = (
                 await self._session.execute(
                     select(AgentChannelBinding).where(
@@ -1137,6 +1249,8 @@ class RuntimeOperations:
             if binding is not None:
                 model_override = binding.model_override
                 params_override = binding.model_params_override
+                image_params_override = binding.image_params_override
+                loaded_tool_groups = list(binding.loaded_tool_groups or [])
 
         agent = await self._agent_ops.get_for_runtime(
             user_id,
@@ -1149,27 +1263,13 @@ class RuntimeOperations:
         role = membership.role
         user_role = role.value if hasattr(role, "value") else str(role)
 
-        target_model = model_override or agent.primary_model
-        provider_key_id: UUID | None = None
-
-        if agent.primary_provider_key_id:
-            provider, pk = await self._provider_ops.get_provider_for_key(
-                organization_id=organization_id,
-                key_id=agent.primary_provider_key_id,
-            )
-            provider_key_id = pk.id
-        else:
-            resolved = await self._provider_ops.get_key_and_provider_for_model(
-                organization_id=organization_id,
-                model_id=target_model,
-            )
-            if resolved is None:
-                raise NotFoundError(
-                    "ProviderKey",
-                    f"No configured provider has model '{target_model}' available",
-                )
-            provider, pk = resolved
-            provider_key_id = pk.id
+        provider, provider_key_id, model = await resolve_provider_and_model(
+            self._session,
+            self._provider_ops,
+            organization_id=organization_id,
+            agent=agent,
+            model_override=model_override,
+        )
 
         enabled_tools: list[str] = agent.enabled_tools or []
         registry = get_tool_registry()
@@ -1206,17 +1306,40 @@ class RuntimeOperations:
         tool_schemas = _resolve_tool_schemas(
             registry, enabled_tools, skill_entries, invoked_entry
         )
+        image_config = await resolve_image_config(
+            self._session,
+            agent,
+            organization_id=organization_id,
+            override_params=image_params_override,
+        )
+        tool_schemas = apply_image_tool_schema(tool_schemas, image_config)
+        tool_schemas = await filter_integration_tool_schemas(
+            self._session, organization_id, tool_schemas
+        )
+        # The external-content note keys off the full enabled set: a deferred
+        # integration group can surface mid-run via tools.load_group.
+        external_note = has_advertised_integration_tools(tool_schemas)
+        allowed_tools = _allowed_tool_names(tool_schemas)
+        plan = plan_tool_advertisement(registry, tool_schemas, loaded_tool_groups)
+        tool_schemas = plan.tool_schemas or None
+        deferred_pool = dict(plan.deferred)
 
-        memory_context = await self._fetch_memory_context(
-            agent_id=agent_id,
+        memory_scope = await self._resolve_memory_scope(
+            destination=destination,
+            user_id=user_id,
+            organization_id=organization_id,
+            session_kind=agent_session.kind if agent_session else None,
+        )
+        memory_bridge = await self._resolve_memory_bridge(
+            scope_ref=memory_scope,
             user_id=user_id,
             organization_id=organization_id,
         )
-
-        prompt_content = await fetch_agent_prompt(
-            self._session,
-            agent_id=agent.id,
-            prompt_id=agent.prompt_id,
+        memory_context = await self._build_memory_context(
+            agent_id=agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            bridge_ref=memory_bridge,
         )
 
         chat_context_block: str | None = None
@@ -1233,21 +1356,15 @@ class RuntimeOperations:
             org_name=org.name,
             user_name=user.full_name or user.username,
             user_role=user_role,
-            enabled_tools=enabled_tools,
+            deferred_tools=plan.deferred_names() or None,
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
-            memory_context=memory_context or None,
-            prompt_content=prompt_content,
+            memory_context=memory_context,
             user_timezone=user_timezone,
             chat_context=chat_context_block,
+            external_content_note=external_note,
         )
 
-        model = await resolve_model(
-            session_model_override=model_override,
-            agent_primary_model=agent.primary_model,
-            agent_fallback_models=agent.fallback_models or [],
-            provider=provider,
-        )
         request_params = resolve_request_params(
             agent.model_params,
             params_override,
@@ -1309,6 +1426,21 @@ class RuntimeOperations:
 
         # Resolve any content blocks that need S3 downloads
         await _resolve_pending_content_blocks(llm_messages)
+
+        # Ephemeral query-conditioned recall on the trigger turn: rides only
+        # llm_messages, never a stored row and never the client stream. On the
+        # rerun path the anchor is the newest user turn in context, so the
+        # block lands on it via the same attach.
+        recall_block = await self._build_memory_recall_block(
+            agent_id=agent_id,
+            organization_id=organization_id,
+            scope_ref=memory_scope,
+            context_messages=context_messages,
+            content=content,
+        )
+        recall_promoted = bool(
+            recall_block and attach_recall_block(llm_messages, recall_block)
+        )
 
         if rerun_anchor is None:
             # 11. Store user message with enriched content (file text baked in
@@ -1423,6 +1555,20 @@ class RuntimeOperations:
                 agent_id=agent_id,
                 session_id=session_id,
                 user_timezone=user_timezone,
+                memory_scope=memory_scope,
+                memory_bridge_scope=memory_bridge,
+                memory_recall_promoted=recall_promoted,
+                is_test_session=agent_session.is_test if agent_session else False,
+                image_params=image_config.params if image_config else {},
+                image_max_resolution=(
+                    image_config.max_resolution if image_config else None
+                ),
+                image_max_quality=image_config.max_quality if image_config else None,
+                integration_connections=agent.integration_connections or {},
+                channel_id=channel_id,
+                deferred_tool_groups=plan.deferred_names(),
+                loaded_tool_groups=loaded_tool_groups,
+                allowed_tools=allowed_tools,
             )
             executor = ToolExecutor(registry, tool_ctx)
 
@@ -1443,6 +1589,7 @@ class RuntimeOperations:
                     else None
                 ),
                 model_params=request_params,
+                deferred_pool=deferred_pool,
             ):
                 if event.type is EventType.DONE:
                     # The tool loop yielded a done event with the final result;
@@ -1543,6 +1690,7 @@ class RuntimeOperations:
         run_tool_calls: list[dict] | None = None,
         pending_thinking: list[dict] | None = None,
         model_params: dict | None = None,
+        deferred_pool: dict[str, list[dict]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the streaming tool-use loop until the LLM produces a final response.
 
@@ -1580,10 +1728,20 @@ class RuntimeOperations:
             If the loop exceeds MAX_TOOL_ITERATIONS.
 
         """
-        for iteration in range(MAX_TOOL_ITERATIONS):
+        work_iterations = 0
+        load_iterations = 0
+        while True:
+            if _is_load_only_turn(result.tool_calls):
+                load_iterations += 1
+            else:
+                work_iterations += 1
+            if work_iterations > MAX_TOOL_ITERATIONS or (
+                load_iterations > MAX_LOAD_ONLY_ITERATIONS
+            ):
+                break
             logger.debug(
                 "Stream tool loop iteration",
-                iteration=iteration + 1,
+                iteration=work_iterations,
                 tool_calls=len(result.tool_calls),
             )
 
@@ -1654,6 +1812,7 @@ class RuntimeOperations:
 
             results_content: dict[str, str] = {}
             results_success: dict[str, bool] = {}
+            turn_tool_results: dict[str, ToolResult] = dict(read_results)
 
             for tc in read_calls:
                 res = read_results[tc.id]
@@ -1664,6 +1823,7 @@ class RuntimeOperations:
                     tool_name=tc.name,
                     tool_call_id=tc.id,
                     tool_result=content,
+                    tool_metadata=res.metadata,
                 )
                 yield StreamEvent(
                     type=EventType.TOOL_RESULT_END,
@@ -1724,6 +1884,7 @@ class RuntimeOperations:
                         continue
 
                 tool_result = await executor.execute(tc)
+                turn_tool_results[tc.id] = tool_result
                 content = (
                     tool_result.data if tool_result.success
                     else f"Error: {tool_result.error}"
@@ -1734,6 +1895,7 @@ class RuntimeOperations:
                     tool_name=tc.name,
                     tool_call_id=tc.id,
                     tool_result=content,
+                    tool_metadata=tool_result.metadata,
                 )
                 yield StreamEvent(
                     type=EventType.TOOL_RESULT_END,
@@ -1764,6 +1926,8 @@ class RuntimeOperations:
                 "role": "user",
                 "content": tool_result_blocks,
             })
+
+            _expand_loaded_schemas(tool_schemas, deferred_pool, turn_tool_results)
 
             # Re-invoke LLM with streaming
             stream_iter = await provider.chat_completion(
@@ -1975,56 +2139,144 @@ class RuntimeOperations:
         )
         return to_skill_prompt_entry(match)
 
-    async def _fetch_memory_context(
+    async def _resolve_memory_scope(
+        self,
+        *,
+        destination: RuntimeDestination,
+        user_id: UUID,
+        organization_id: UUID,
+        session_kind: str | None = None,
+    ) -> MemoryScopeRef:
+        """Route the run to its audience scope; the whole memory model hangs on this.
+
+        Personal scope is granted only when the surface audience is exactly
+        the trigger user: direct/cron sessions and 1:1 agent DMs. Everything
+        else is shared space and gets the shared subject's scope.
+        """
+        if isinstance(destination, SessionDestination):
+            if session_kind in ("group", "global"):
+                return MemoryScopeRef.session(destination.session_id)
+            return MemoryScopeRef.user(user_id)
+
+        from uniffy.domains.chat.cache import get_or_load_channel
+
+        channel = await get_or_load_channel(
+            self._session, destination.channel_id, organization_id
+        )
+        if (
+            channel is not None
+            and channel.is_agent_dm
+            and channel.channel_type == ChannelType.DIRECT
+        ):
+            return MemoryScopeRef.user(user_id)
+        return MemoryScopeRef.channel(destination.channel_id)
+
+    _MEMORY_SCOPE_LABELS = {
+        MemoryScope.USER: (
+            "Personal memory for this user (private to them; kept with every "
+            "assistant they talk to)"
+        ),
+        MemoryScope.CHANNEL: "Channel memory (shared with all members of this channel)",
+        MemoryScope.SESSION: "Session memory (shared with participants of this session)",
+        MemoryScope.ORG: (
+            "Organization memory (curated by agent managers; visible to all members)"
+        ),
+    }
+    _MEMORY_AGENT_ORG_LABEL = (
+        "Organization memory kept for you specifically (curated by agent managers)"
+    )
+    _MEMORY_BRIDGE_LABEL = (
+        "Personal memory of the user who triggered this run (they opted in to "
+        "using it in shared spaces; replies here are visible to others and may "
+        "draw on it)"
+    )
+
+    async def _resolve_memory_bridge(
+        self,
+        *,
+        scope_ref: MemoryScopeRef,
+        user_id: UUID,
+        organization_id: UUID,
+    ) -> MemoryScopeRef | None:
+        """Read-only widening of a shared-space run with the trigger user's
+        personal memory; requires both the org gate and the user's opt-in."""
+        if scope_ref.scope not in (MemoryScope.CHANNEL, MemoryScope.SESSION):
+            return None
+        try:
+            settings = await get_runtime_settings(self._session, organization_id)
+            if not settings.personal_memory_bridge_enabled:
+                return None
+            if not await is_personal_bridge_enabled(
+                self._session, user_id=user_id, organization_id=organization_id
+            ):
+                return None
+        except Exception:
+            logger.opt(exception=True).warning("Memory bridge resolution failed")
+            return None
+        return MemoryScopeRef.user(user_id)
+
+    async def _build_memory_context(
         self,
         *,
         agent_id: UUID,
-        user_id: UUID,
         organization_id: UUID,
-        limit: int = 10,
-    ) -> list[str]:
-        """Fetch relevant memories to include in the system prompt.
-
-        Returns the most important memories for the given agent-user pair,
-        formatted as strings for inclusion in the prompt.
-
-        Parameters
-        ----------
-        agent_id : UUID
-            Agent ID to fetch memories for.
-        user_id : UUID
-            User ID to fetch memories for.
-        organization_id : UUID
-            Organization context.
-        limit : int
-            Maximum number of memories to include.
-
-        Returns
-        -------
-        list[str]
-            Formatted memory strings.
-
-        """
+        scope_ref: MemoryScopeRef,
+        bridge_ref: MemoryScopeRef | None = None,
+    ) -> str | None:
+        """Assemble the org tiers + surface (+ opted-in personal) memory blocks."""
         try:
-            result = await self._session.execute(
-                select(AgentMemory)
-                .where(
-                    AgentMemory.agent_id == agent_id,
-                    AgentMemory.user_id == user_id,
-                    AgentMemory.organization_id == organization_id,
+            refs: list[tuple[MemoryScopeRef, str]] = [
+                (MemoryScopeRef.org(), self._MEMORY_SCOPE_LABELS[MemoryScope.ORG]),
+                (MemoryScopeRef.org(agent_id), self._MEMORY_AGENT_ORG_LABEL),
+                (scope_ref, self._MEMORY_SCOPE_LABELS[scope_ref.scope]),
+            ]
+            if bridge_ref is not None:
+                refs.append((bridge_ref, self._MEMORY_BRIDGE_LABEL))
+            blocks: list[MemoryScopeBlock] = []
+            for ref, label in refs:
+                payload = await fetch_memory_index(
+                    self._session,
+                    organization_id=organization_id,
+                    scope_ref=ref,
                 )
-                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
-                .limit(limit)
-            )
-            memories = list(result.scalars().all())
-
-            if not memories:
-                return []
-
-            return [f"[{m.category}] {m.key}: {m.content}" for m in memories]
+                blocks.append(
+                    MemoryScopeBlock(
+                        label=label,
+                        pinned=payload.get("pinned") or [],
+                        index=payload.get("index") or [],
+                        total=int(payload.get("total") or 0),
+                    )
+                )
+            return build_memory_block(blocks)
         except Exception:
-            logger.opt(exception=True).warning("Failed to fetch memory context")
-            return []
+            logger.opt(exception=True).warning("Failed to build memory context")
+            return None
+
+    async def _build_memory_recall_block(
+        self,
+        *,
+        agent_id: UUID,
+        organization_id: UUID,
+        scope_ref: MemoryScopeRef,
+        context_messages: list,
+        content: str,
+    ) -> str | None:
+        """Dynamic recall for the trigger turn: surface bucket + both org
+        tiers, NEVER the bridge bucket (personal memory stays pull-only in
+        shared spaces). Returns the rendered block or None.
+        """
+        query = build_recall_query(context_messages, content)
+        if not query:
+            return None
+        recall = await build_memory_recall(
+            self._session,
+            organization_id=organization_id,
+            refs=[scope_ref, MemoryScopeRef.org(), MemoryScopeRef.org(agent_id)],
+            query=query,
+        )
+        if recall is None:
+            return None
+        return render_recall_block(recall)
 
     async def _build_chat_context_for_destination(
         self,

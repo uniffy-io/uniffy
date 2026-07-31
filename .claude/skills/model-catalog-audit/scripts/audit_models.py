@@ -2,7 +2,7 @@
 
 Loads provider API keys from ``.env``, lists the live models from Anthropic,
 OpenAI, Google, OpenRouter, and xAI, and diffs them against
-``src/uniffy/domains/agents/providers/catalog/catalog.json`` via the catalog
+``src/uniffy/data/models/catalog.json`` via the catalog
 loader (so aliases / dated snapshots resolve, not just exact ids). Keyed
 providers report:
 

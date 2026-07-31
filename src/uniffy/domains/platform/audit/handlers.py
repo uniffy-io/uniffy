@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -35,12 +34,6 @@ def _parse_optional_uuid(value: str, field: str) -> UUID | None:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"{field} is not a valid UUID") from exc
-
-
-def _ts_to_datetime(ts) -> datetime | None:
-    if ts is None or (ts.seconds == 0 and ts.nanos == 0):
-        return None
-    return ts.ToDatetime(tzinfo=None).replace(tzinfo=None) if hasattr(ts, "ToDatetime") else None
 
 
 def _map_domain_error(exc: Exception) -> ConnectError:

@@ -15,8 +15,7 @@ class XAIProvider(OpenAIProvider):
 
     _use_responses_api = False
 
-    def __init__(self, credential: str, credential_type: str = "api_key") -> None:
-        self._credential_type = credential_type
+    def __init__(self, credential: str) -> None:
         self._client = openai.AsyncOpenAI(
             api_key=credential,
             base_url="https://api.x.ai/v1",
@@ -27,11 +26,7 @@ class XAIProvider(OpenAIProvider):
         """Catalog provider key, used for pricing lookups."""
         return "xai"
 
-    async def get_available_models(
-        self,
-        *,
-        force_refresh: bool = False,
-    ) -> list[ModelInfo]:
+    async def get_available_models(self) -> list[ModelInfo]:
         return model_infos_for_provider("xai")
 
     def _apply_reasoning(self, kwargs: dict, effort: str) -> None:

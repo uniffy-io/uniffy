@@ -10,18 +10,25 @@ import {
   PaperPlaneRight,
   ArrowBendUpLeft,
   Pencil,
+  Lightning,
   X,
 } from '@phosphor-icons/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { cn } from '@/shared/utils/cn';
-import { useAppSelector } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { ChatMentionPopup } from '@/features/agents/components/chat/ChatMentionPopup';
+import { SkillSlashPopup } from '@/features/agents/components/chat/SkillSlashPopup';
+import { computeSlashToken, matchLeadingSkillCommand } from '@/features/agents/utils/slashCommands';
+import { fetchRunnableSkills, type SerializedRunnableSkill } from '@/features/agents/store/agentRunnableSkillsThunks';
+import { selectRunnableSkillsForAgent } from '@/features/agents/store/agentRunnableSkillsSlice';
 import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { getInitials } from '@/components/subject/utils';
 import { useKeybinding, matchesShortcut } from '@/features/settings';
 import { EmojiPicker } from '@/features/chat/components/compose/EmojiPicker';
 import { AgentModelPicker } from '@/features/chat/components/compose/AgentModelPicker';
+import { AgentParamsPopover } from '@/features/chat/components/compose/AgentParamsPopover';
+import { useChannelAgentConfig } from '@/features/chat/hooks/useChannelAgentConfig';
 import { AttachmentPreviewBar } from '@/features/chat/components/compose/AttachmentPreviewBar';
 import { uploadService } from '@/features/files/upload';
 import { attachmentsApi } from '@/features/files/api/attachmentsApi';
@@ -43,7 +50,7 @@ interface MessageComposeProps {
   channelId?: string;
   placeholder?: string;
   organizationId?: string;
-  onSend?: (content: string, fileIds: string[]) => void;
+  onSend?: (content: string, fileIds: string[], metadata?: Record<string, string>) => void;
   onTyping?: () => void;
   replyTo?: {
     id: string;
@@ -199,6 +206,7 @@ function hydrateFromMarkdown(container: HTMLDivElement, markdown: string): void 
 }
 
 export function MessageCompose({ channelName, channelId, placeholder, organizationId, onSend, onTyping, replyTo, onCancelReply, editingMessage, onSaveEdit, onCancelEdit, onEditLast, initialDraft, remoteDraft, onDraftChange, variant = 'bar' }: MessageComposeProps) {
+  const dispatch = useAppDispatch();
   const channel = useAppSelector((state) =>
     channelId ? state.chatChannels.byId[channelId] : undefined,
   );
@@ -206,6 +214,9 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
   const agentDmAgent = useAppSelector((state) =>
     agentDmAgentId ? state.agents.agents[agentDmAgentId] ?? null : null,
   );
+  // One shared config so a model switch in the picker immediately drives the
+  // params popover's schema; the hook no-ops for non-agent channels.
+  const agentConfig = useChannelAgentConfig(channelId, agentDmAgentId);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
@@ -218,6 +229,22 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
   const mentionStartOffsetRef = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const editLastBinding = useKeybinding('chat.editLast');
+  // "/skill" typeahead, agent DMs only. The composer is a contentEditable, so
+  // the token is tracked against the caret's text node like @-mentions rather
+  // than through the textarea-bound hook the session chat uses.
+  const [slashActive, setSlashActive] = useState(false);
+  const [slashQuery, setSlashQuery] = useState('');
+  const slashStartNodeRef = useRef<Node | null>(null);
+  const slashStartOffsetRef = useRef(0);
+  const slashEndOffsetRef = useRef(0);
+  const [pendingInvokedSkill, setPendingInvokedSkill] = useState<{ id: string; name: string } | null>(null);
+  const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(agentDmAgentId));
+
+  useEffect(() => {
+    if (agentDmAgentId) {
+      dispatch(fetchRunnableSkills({ agentId: agentDmAgentId }));
+    }
+  }, [agentDmAgentId, dispatch]);
 
   const uploadFile = useCallback(async (file: File, pendingId: string) => {
     if (!organizationId) return;
@@ -394,6 +421,12 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     updateState();
   }, [remoteDraft, editingMessage, updateState]);
 
+  const closeSlash = useCallback(() => {
+    setSlashActive(false);
+    setSlashQuery('');
+    slashStartNodeRef.current = null;
+  }, []);
+
   const handleInput = useCallback(() => {
     updateState();
     emitDraftChange();
@@ -402,30 +435,47 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     if (mentionActive) return;
 
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-
-    const range = sel.getRangeAt(0);
-    const node = range.startContainer;
-    if (node.nodeType !== Node.TEXT_NODE) return;
+    const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    const node = range?.startContainer;
+    if (!range || !node || node.nodeType !== Node.TEXT_NODE) {
+      if (slashActive) closeSlash();
+      return;
+    }
 
     const text = node.textContent ?? '';
     const offset = range.startOffset;
     const textBefore = text.slice(0, offset);
 
+    // @ must be at start or after whitespace; the query is a single token.
     const atIndex = textBefore.lastIndexOf('@');
-    if (atIndex === -1) return;
+    if (
+      atIndex !== -1
+      && (atIndex === 0 || textBefore[atIndex - 1] === ' ' || textBefore[atIndex - 1] === '\n')
+    ) {
+      const query = textBefore.slice(atIndex + 1);
+      if (!query.includes('\n') && !query.includes(' ')) {
+        mentionStartNodeRef.current = node;
+        mentionStartOffsetRef.current = atIndex;
+        setMentionQuery(query);
+        setMentionActive(true);
+        if (slashActive) closeSlash();
+        return;
+      }
+    }
 
-    // @ must be at start or after whitespace.
-    if (atIndex > 0 && textBefore[atIndex - 1] !== ' ' && textBefore[atIndex - 1] !== '\n') return;
+    if (!agentDmAgentId) return;
 
-    const query = textBefore.slice(atIndex + 1);
-    if (query.includes('\n') || query.includes(' ')) return;
-
-    mentionStartNodeRef.current = node;
-    mentionStartOffsetRef.current = atIndex;
-    setMentionQuery(query);
-    setMentionActive(true);
-  }, [updateState, emitDraftChange, mentionActive, onTyping]);
+    const token = computeSlashToken(textBefore);
+    if (!token) {
+      if (slashActive) closeSlash();
+      return;
+    }
+    slashStartNodeRef.current = node;
+    slashStartOffsetRef.current = token.start;
+    slashEndOffsetRef.current = offset;
+    setSlashQuery(token.query);
+    setSlashActive(true);
+  }, [updateState, emitDraftChange, mentionActive, onTyping, agentDmAgentId, slashActive, closeSlash]);
 
   const handleMentionSelect = useCallback((result: SearchResultItem) => {
     const el = editorRef.current;
@@ -485,6 +535,39 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     editorRef.current?.focus();
   }, []);
 
+  // Remove the typed "/query" text; the chosen skill surfaces as a chip instead.
+  const handleSlashSelect = useCallback((skill: SerializedRunnableSkill) => {
+    const node = slashStartNodeRef.current;
+    if (node) {
+      const text = node.textContent ?? '';
+      const start = slashStartOffsetRef.current;
+      const sel = window.getSelection();
+      let end = slashEndOffsetRef.current;
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (range.startContainer === node) {
+          end = range.startOffset;
+        }
+      }
+      node.textContent = text.slice(0, start) + text.slice(end);
+      const newRange = document.createRange();
+      newRange.setStart(node, Math.min(start, node.textContent.length));
+      newRange.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(newRange);
+    }
+    setPendingInvokedSkill({ id: skill.id, name: skill.name });
+    closeSlash();
+    updateState();
+    emitDraftChange();
+    editorRef.current?.focus();
+  }, [closeSlash, updateState, emitDraftChange]);
+
+  const handleSlashClose = useCallback(() => {
+    closeSlash();
+    editorRef.current?.focus();
+  }, [closeSlash]);
+
   const handleSend = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -505,25 +588,43 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
 
     const fileIds = pendingFiles.filter((f) => f.fileId).map((f) => f.fileId!);
 
-    if (!trimmed && fileIds.length === 0) return;
+    // A leading "/name" the popup never got to resolve still invokes the skill.
+    // Everything after it stays the user's own turn: the skill body rides the
+    // system prompt, user text must not.
+    const leadingCommand = pendingInvokedSkill
+      ? null
+      : matchLeadingSkillCommand(trimmed, runnableSkills);
+    const invokedSkill = pendingInvokedSkill ?? leadingCommand?.skill ?? null;
+    const body = leadingCommand ? leadingCommand.rest : trimmed;
+
+    if (!body && fileIds.length === 0 && !invokedSkill) return;
 
     // Attached files become inline mentions so they render as chips and the agent
     // receives the file URN, not just the raw attachment. Skip any already mentioned.
     const attachmentMentions = pendingFiles
-      .filter((f) => Boolean(f.fileId) && !trimmed.includes(f.fileId!))
+      .filter((f) => Boolean(f.fileId) && !body.includes(f.fileId!))
       .map((f) => `[[[${f.name}|urn:uniffy:content:FILE:${f.fileId!}]]]`)
       .join(' ');
     const content = attachmentMentions
-      ? trimmed
-        ? `${trimmed} ${attachmentMentions}`
+      ? body
+        ? `${body} ${attachmentMentions}`
         : attachmentMentions
-      : trimmed;
+      : body;
 
-    onSend?.(content, fileIds);
+    const metadata = invokedSkill
+      ? {
+          invoked_skill_id: invokedSkill.id,
+          invoked_skill_name: invokedSkill.name,
+        }
+      : undefined;
+
+    onSend?.(content, fileIds, metadata);
     el.innerHTML = '';
     setPendingFiles([]);
+    setPendingInvokedSkill(null);
+    closeSlash();
     updateState();
-  }, [onSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit]);
+  }, [onSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit, pendingInvokedSkill, runnableSkills, closeSlash]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     // Backspace after a chip deletes it; contentEditable=false elements aren't auto-removed.
@@ -581,9 +682,19 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
       return;
     }
 
+    // The slash popup's own document listener turns Enter into a selection and
+    // Escape into a close; the composer only has to not send / not cancel.
+    if (slashActive && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      return;
+    }
+
     if (e.key === 'Escape') {
       if (mentionActive) {
         handleMentionClose();
+        return;
+      }
+      if (slashActive) {
         return;
       }
       if (editingMessage) {
@@ -627,7 +738,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
         emitDraftChange();
       }
     }
-  }, [mentionActive, handleSend, handleMentionClose, updateState, emitDraftChange, replyTo, onCancelReply, editingMessage, onCancelEdit, isEmpty, pendingFiles.length, onEditLast, editLastBinding]);
+  }, [mentionActive, slashActive, handleSend, handleMentionClose, updateState, emitDraftChange, replyTo, onCancelReply, editingMessage, onCancelEdit, isEmpty, pendingFiles.length, onEditLast, editLastBinding]);
 
   const handleAtButtonClick = useCallback(() => {
     const el = editorRef.current;
@@ -765,7 +876,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
       />
       <div
         className={cn(
-          'border border-border/70 bg-card/75 backdrop-blur-xl dark:bg-card/60',
+          'relative border border-border/70 bg-card/75 backdrop-blur-xl dark:bg-card/60',
           'focus-within:ring-1 focus-within:ring-ring focus-within:border-transparent transition-all',
           variant === 'hero'
             ? 'rounded-2xl shadow-[0_24px_80px_-20px_rgba(105,74,255,0.35)]'
@@ -777,6 +888,14 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
         data-mode={editingMessage ? 'edit' : replyTo ? 'reply' : 'normal'}
         data-variant={variant}
       >
+        {slashActive && !!agentDmAgentId && (
+          <SkillSlashPopup
+            skills={runnableSkills}
+            query={slashQuery}
+            onSelect={handleSlashSelect}
+            onClose={handleSlashClose}
+          />
+        )}
         {editingMessage && (
           <div
             className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border/50 bg-primary/5 rounded-t-xl"
@@ -817,6 +936,24 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
             >
               <X size={14} />
             </button>
+          </div>
+        )}
+
+        {pendingInvokedSkill && !editingMessage && (
+          <div className="px-4 pt-2" data-testid="chat-compose-skill-chip">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 border border-primary/30 pl-2 pr-1 py-1 text-xs">
+              <Lightning size={12} weight="fill" className="text-primary" />
+              <span className="font-mono text-foreground">/{pendingInvokedSkill.name}</span>
+              <button
+                type="button"
+                onClick={() => setPendingInvokedSkill(null)}
+                className="p-0.5 rounded hover:bg-primary/20 transition-colors"
+                title="Remove skill"
+                data-testid="chat-compose-skill-chip-remove"
+              >
+                <X size={12} className="text-muted-foreground" />
+              </button>
+            </span>
           </div>
         )}
 
@@ -906,7 +1043,21 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
               </button>
             )}
             {channelId && agentDmAgent && (
-              <AgentModelPicker channelId={channelId} agent={agentDmAgent} />
+              <>
+                <AgentModelPicker
+                  channelId={channelId}
+                  agent={agentDmAgent}
+                  config={agentConfig.config}
+                  updating={agentConfig.updating}
+                  update={agentConfig.update}
+                />
+                <AgentParamsPopover
+                  agent={agentDmAgent}
+                  config={agentConfig.config}
+                  updating={agentConfig.updating}
+                  update={agentConfig.update}
+                />
+              </>
             )}
           </div>
 

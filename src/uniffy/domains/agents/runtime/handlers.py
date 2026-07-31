@@ -11,6 +11,7 @@ itself - the worker drives that turn.
 """
 
 import asyncio
+import json
 import os
 import time
 from collections.abc import AsyncIterator
@@ -21,13 +22,14 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from sqlalchemy import select
 from uniffy_proto.agents.v1.runtime_pb2 import (
     AgentStreamEvent,
     CancelStreamRequest,
     CancelStreamResponse,
     GetUsageStatsRequest,
     GetUsageStatsResponse,
+    RegenerateImageRequest,
+    RegenerateImageResponse,
     RerunFromMessageRequest,
     RerunFromMessageResponse,
     RespondToConfirmationRequest,
@@ -48,7 +50,6 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.models.login.organization_member import OrganizationRole
-from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.core.valkey.queue import get_queue
 from uniffy.core.valkey.rate_limit import check_agent_message_limits
@@ -74,6 +75,7 @@ from uniffy.domains.agents.runtime.file_loader import (
     _file_contexts_to_payload,
     _load_files,
 )
+from uniffy.domains.agents.runtime.image_regenerate import regenerate_image
 from uniffy.domains.agents.runtime.usage import UsageOperations
 from uniffy.domains.agents.sessions.operations import SessionOperations
 from uniffy.domains.auth.context import get_user_id_from_context
@@ -703,17 +705,15 @@ class RuntimeHandlers:
                 org_ops = OrganizationOperations(session)
                 membership = await org_ops.require_org_member(user_id, org_id)
 
-                user_result = await session.execute(
-                    select(User.is_system_admin).where(User.id == user_id)
-                )
-                is_sys_admin = user_result.scalar_one_or_none() or False
-
+                # Org-wide usage follows the org role only. A platform operator
+                # holding a plain member seat gets their own rows like anyone
+                # else; cross-tenant reach requires a SupportSession.
                 is_org_admin = membership.role in (
                     OrganizationRole.ADMIN,
                     OrganizationRole.OWNER,
                 )
 
-                scoped_user_id = None if (is_org_admin or is_sys_admin) else user_id
+                scoped_user_id = None if is_org_admin else user_id
 
                 ops = UsageOperations(session)
                 stats = await ops.get_usage_stats(
@@ -730,4 +730,57 @@ class RuntimeHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error in get_usage_stats: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def regenerate_image(
+        self,
+        request: RegenerateImageRequest,
+        ctx: RequestContext,
+    ) -> RegenerateImageResponse:
+        """Re-run a generated image with adjusted parameters."""
+        user_id = get_user_id_from_context(ctx)
+        try:
+            org_id = UUID(request.organization_id)
+            channel_id = UUID(request.channel_id)
+            message_id = UUID(request.message_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid id format")
+
+        patch: dict = {}
+        if request.params_patch.strip():
+            try:
+                patch = json.loads(request.params_patch)
+            except json.JSONDecodeError as exc:
+                raise ConnectError(
+                    Code.INVALID_ARGUMENT, "params_patch is not valid JSON"
+                ) from exc
+            if not isinstance(patch, dict):
+                raise ConnectError(
+                    Code.INVALID_ARGUMENT, "params_patch must be a JSON object"
+                )
+
+        try:
+            new_id, metadata = await regenerate_image(
+                user_id=user_id,
+                organization_id=org_id,
+                channel_id=channel_id,
+                message_id=message_id,
+                params_patch=patch,
+            )
+            return RegenerateImageResponse(
+                message_id=str(new_id),
+                result_metadata=json.dumps(metadata),
+            )
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
+        except (ValidationError, BudgetExceededError) as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except ConnectError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error in regenerate_image: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

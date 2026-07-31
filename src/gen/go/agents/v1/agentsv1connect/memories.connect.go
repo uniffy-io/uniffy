@@ -45,18 +45,33 @@ const (
 	// MemoriesServiceDeleteMemoryProcedure is the fully-qualified name of the MemoriesService's
 	// DeleteMemory RPC.
 	MemoriesServiceDeleteMemoryProcedure = "/agents.v1.MemoriesService/DeleteMemory"
+	// MemoriesServiceSetMemoryPinnedProcedure is the fully-qualified name of the MemoriesService's
+	// SetMemoryPinned RPC.
+	MemoriesServiceSetMemoryPinnedProcedure = "/agents.v1.MemoriesService/SetMemoryPinned"
+	// MemoriesServiceGetMemorySharingProcedure is the fully-qualified name of the MemoriesService's
+	// GetMemorySharing RPC.
+	MemoriesServiceGetMemorySharingProcedure = "/agents.v1.MemoriesService/GetMemorySharing"
+	// MemoriesServiceSetMemorySharingProcedure is the fully-qualified name of the MemoriesService's
+	// SetMemorySharing RPC.
+	MemoriesServiceSetMemorySharingProcedure = "/agents.v1.MemoriesService/SetMemorySharing"
 )
 
 // MemoriesServiceClient is a client for the agents.v1.MemoriesService service.
 type MemoriesServiceClient interface {
-	// List memories for a specific agent (scoped to current user)
+	// List memories for an agent within one scope the caller can see
 	ListMemories(context.Context, *connect.Request[v1.ListMemoriesRequest]) (*connect.Response[v1.ListMemoriesResponse], error)
 	// Create a new memory entry
 	CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.CreateMemoryResponse], error)
-	// Update a memory entry (content, category, importance)
+	// Update a memory entry (description, content, category, importance)
 	UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.UpdateMemoryResponse], error)
 	// Delete a memory entry
 	DeleteMemory(context.Context, *connect.Request[v1.DeleteMemoryRequest]) (*connect.Response[v1.DeleteMemoryResponse], error)
+	// Pin or unpin a memory entry (pinned entries inject in full)
+	SetMemoryPinned(context.Context, *connect.Request[v1.SetMemoryPinnedRequest]) (*connect.Response[v1.SetMemoryPinnedResponse], error)
+	// Read the caller's personal-memory sharing preference (shared-space bridge)
+	GetMemorySharing(context.Context, *connect.Request[v1.GetMemorySharingRequest]) (*connect.Response[v1.GetMemorySharingResponse], error)
+	// Set the caller's personal-memory sharing preference
+	SetMemorySharing(context.Context, *connect.Request[v1.SetMemorySharingRequest]) (*connect.Response[v1.SetMemorySharingResponse], error)
 }
 
 // NewMemoriesServiceClient constructs a client for the agents.v1.MemoriesService service. By
@@ -94,15 +109,36 @@ func NewMemoriesServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(memoriesServiceMethods.ByName("DeleteMemory")),
 			connect.WithClientOptions(opts...),
 		),
+		setMemoryPinned: connect.NewClient[v1.SetMemoryPinnedRequest, v1.SetMemoryPinnedResponse](
+			httpClient,
+			baseURL+MemoriesServiceSetMemoryPinnedProcedure,
+			connect.WithSchema(memoriesServiceMethods.ByName("SetMemoryPinned")),
+			connect.WithClientOptions(opts...),
+		),
+		getMemorySharing: connect.NewClient[v1.GetMemorySharingRequest, v1.GetMemorySharingResponse](
+			httpClient,
+			baseURL+MemoriesServiceGetMemorySharingProcedure,
+			connect.WithSchema(memoriesServiceMethods.ByName("GetMemorySharing")),
+			connect.WithClientOptions(opts...),
+		),
+		setMemorySharing: connect.NewClient[v1.SetMemorySharingRequest, v1.SetMemorySharingResponse](
+			httpClient,
+			baseURL+MemoriesServiceSetMemorySharingProcedure,
+			connect.WithSchema(memoriesServiceMethods.ByName("SetMemorySharing")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // memoriesServiceClient implements MemoriesServiceClient.
 type memoriesServiceClient struct {
-	listMemories *connect.Client[v1.ListMemoriesRequest, v1.ListMemoriesResponse]
-	createMemory *connect.Client[v1.CreateMemoryRequest, v1.CreateMemoryResponse]
-	updateMemory *connect.Client[v1.UpdateMemoryRequest, v1.UpdateMemoryResponse]
-	deleteMemory *connect.Client[v1.DeleteMemoryRequest, v1.DeleteMemoryResponse]
+	listMemories     *connect.Client[v1.ListMemoriesRequest, v1.ListMemoriesResponse]
+	createMemory     *connect.Client[v1.CreateMemoryRequest, v1.CreateMemoryResponse]
+	updateMemory     *connect.Client[v1.UpdateMemoryRequest, v1.UpdateMemoryResponse]
+	deleteMemory     *connect.Client[v1.DeleteMemoryRequest, v1.DeleteMemoryResponse]
+	setMemoryPinned  *connect.Client[v1.SetMemoryPinnedRequest, v1.SetMemoryPinnedResponse]
+	getMemorySharing *connect.Client[v1.GetMemorySharingRequest, v1.GetMemorySharingResponse]
+	setMemorySharing *connect.Client[v1.SetMemorySharingRequest, v1.SetMemorySharingResponse]
 }
 
 // ListMemories calls agents.v1.MemoriesService.ListMemories.
@@ -125,16 +161,37 @@ func (c *memoriesServiceClient) DeleteMemory(ctx context.Context, req *connect.R
 	return c.deleteMemory.CallUnary(ctx, req)
 }
 
+// SetMemoryPinned calls agents.v1.MemoriesService.SetMemoryPinned.
+func (c *memoriesServiceClient) SetMemoryPinned(ctx context.Context, req *connect.Request[v1.SetMemoryPinnedRequest]) (*connect.Response[v1.SetMemoryPinnedResponse], error) {
+	return c.setMemoryPinned.CallUnary(ctx, req)
+}
+
+// GetMemorySharing calls agents.v1.MemoriesService.GetMemorySharing.
+func (c *memoriesServiceClient) GetMemorySharing(ctx context.Context, req *connect.Request[v1.GetMemorySharingRequest]) (*connect.Response[v1.GetMemorySharingResponse], error) {
+	return c.getMemorySharing.CallUnary(ctx, req)
+}
+
+// SetMemorySharing calls agents.v1.MemoriesService.SetMemorySharing.
+func (c *memoriesServiceClient) SetMemorySharing(ctx context.Context, req *connect.Request[v1.SetMemorySharingRequest]) (*connect.Response[v1.SetMemorySharingResponse], error) {
+	return c.setMemorySharing.CallUnary(ctx, req)
+}
+
 // MemoriesServiceHandler is an implementation of the agents.v1.MemoriesService service.
 type MemoriesServiceHandler interface {
-	// List memories for a specific agent (scoped to current user)
+	// List memories for an agent within one scope the caller can see
 	ListMemories(context.Context, *connect.Request[v1.ListMemoriesRequest]) (*connect.Response[v1.ListMemoriesResponse], error)
 	// Create a new memory entry
 	CreateMemory(context.Context, *connect.Request[v1.CreateMemoryRequest]) (*connect.Response[v1.CreateMemoryResponse], error)
-	// Update a memory entry (content, category, importance)
+	// Update a memory entry (description, content, category, importance)
 	UpdateMemory(context.Context, *connect.Request[v1.UpdateMemoryRequest]) (*connect.Response[v1.UpdateMemoryResponse], error)
 	// Delete a memory entry
 	DeleteMemory(context.Context, *connect.Request[v1.DeleteMemoryRequest]) (*connect.Response[v1.DeleteMemoryResponse], error)
+	// Pin or unpin a memory entry (pinned entries inject in full)
+	SetMemoryPinned(context.Context, *connect.Request[v1.SetMemoryPinnedRequest]) (*connect.Response[v1.SetMemoryPinnedResponse], error)
+	// Read the caller's personal-memory sharing preference (shared-space bridge)
+	GetMemorySharing(context.Context, *connect.Request[v1.GetMemorySharingRequest]) (*connect.Response[v1.GetMemorySharingResponse], error)
+	// Set the caller's personal-memory sharing preference
+	SetMemorySharing(context.Context, *connect.Request[v1.SetMemorySharingRequest]) (*connect.Response[v1.SetMemorySharingResponse], error)
 }
 
 // NewMemoriesServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -168,6 +225,24 @@ func NewMemoriesServiceHandler(svc MemoriesServiceHandler, opts ...connect.Handl
 		connect.WithSchema(memoriesServiceMethods.ByName("DeleteMemory")),
 		connect.WithHandlerOptions(opts...),
 	)
+	memoriesServiceSetMemoryPinnedHandler := connect.NewUnaryHandler(
+		MemoriesServiceSetMemoryPinnedProcedure,
+		svc.SetMemoryPinned,
+		connect.WithSchema(memoriesServiceMethods.ByName("SetMemoryPinned")),
+		connect.WithHandlerOptions(opts...),
+	)
+	memoriesServiceGetMemorySharingHandler := connect.NewUnaryHandler(
+		MemoriesServiceGetMemorySharingProcedure,
+		svc.GetMemorySharing,
+		connect.WithSchema(memoriesServiceMethods.ByName("GetMemorySharing")),
+		connect.WithHandlerOptions(opts...),
+	)
+	memoriesServiceSetMemorySharingHandler := connect.NewUnaryHandler(
+		MemoriesServiceSetMemorySharingProcedure,
+		svc.SetMemorySharing,
+		connect.WithSchema(memoriesServiceMethods.ByName("SetMemorySharing")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.MemoriesService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case MemoriesServiceListMemoriesProcedure:
@@ -178,6 +253,12 @@ func NewMemoriesServiceHandler(svc MemoriesServiceHandler, opts ...connect.Handl
 			memoriesServiceUpdateMemoryHandler.ServeHTTP(w, r)
 		case MemoriesServiceDeleteMemoryProcedure:
 			memoriesServiceDeleteMemoryHandler.ServeHTTP(w, r)
+		case MemoriesServiceSetMemoryPinnedProcedure:
+			memoriesServiceSetMemoryPinnedHandler.ServeHTTP(w, r)
+		case MemoriesServiceGetMemorySharingProcedure:
+			memoriesServiceGetMemorySharingHandler.ServeHTTP(w, r)
+		case MemoriesServiceSetMemorySharingProcedure:
+			memoriesServiceSetMemorySharingHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -201,4 +282,16 @@ func (UnimplementedMemoriesServiceHandler) UpdateMemory(context.Context, *connec
 
 func (UnimplementedMemoriesServiceHandler) DeleteMemory(context.Context, *connect.Request[v1.DeleteMemoryRequest]) (*connect.Response[v1.DeleteMemoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.MemoriesService.DeleteMemory is not implemented"))
+}
+
+func (UnimplementedMemoriesServiceHandler) SetMemoryPinned(context.Context, *connect.Request[v1.SetMemoryPinnedRequest]) (*connect.Response[v1.SetMemoryPinnedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.MemoriesService.SetMemoryPinned is not implemented"))
+}
+
+func (UnimplementedMemoriesServiceHandler) GetMemorySharing(context.Context, *connect.Request[v1.GetMemorySharingRequest]) (*connect.Response[v1.GetMemorySharingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.MemoriesService.GetMemorySharing is not implemented"))
+}
+
+func (UnimplementedMemoriesServiceHandler) SetMemorySharing(context.Context, *connect.Request[v1.SetMemorySharingRequest]) (*connect.Response[v1.SetMemorySharingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.MemoriesService.SetMemorySharing is not implemented"))
 }

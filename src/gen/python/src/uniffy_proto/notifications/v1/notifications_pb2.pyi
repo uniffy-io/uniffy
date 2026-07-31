@@ -51,7 +51,14 @@ NOTIFICATION_TYPE_CHAT_CHANNEL_REMOVED: NotificationType
 NOTIFICATION_TYPE_CHAT_THREAD_REPLY: NotificationType
 
 class Notification(_message.Message):
-    __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at", "actor_name", "actor_avatar_url")
+    __slots__ = ("id", "organization_id", "user_id", "notification_type", "title", "body", "source_urn", "actor_id", "is_read", "read_at", "created_at", "expires_at", "actor_name", "actor_avatar_url", "metadata")
+    class MetadataEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
@@ -66,6 +73,7 @@ class Notification(_message.Message):
     EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
     ACTOR_NAME_FIELD_NUMBER: _ClassVar[int]
     ACTOR_AVATAR_URL_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     user_id: str
@@ -80,7 +88,8 @@ class Notification(_message.Message):
     expires_at: _timestamp_pb2.Timestamp
     actor_name: str
     actor_avatar_url: str
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., notification_type: _Optional[_Union[NotificationType, str]] = ..., title: _Optional[str] = ..., body: _Optional[str] = ..., source_urn: _Optional[str] = ..., actor_id: _Optional[str] = ..., is_read: _Optional[bool] = ..., read_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., actor_name: _Optional[str] = ..., actor_avatar_url: _Optional[str] = ...) -> None: ...
+    metadata: _containers.ScalarMap[str, str]
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., user_id: _Optional[str] = ..., notification_type: _Optional[_Union[NotificationType, str]] = ..., title: _Optional[str] = ..., body: _Optional[str] = ..., source_urn: _Optional[str] = ..., actor_id: _Optional[str] = ..., is_read: _Optional[bool] = ..., read_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., actor_name: _Optional[str] = ..., actor_avatar_url: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ListNotificationsRequest(_message.Message):
     __slots__ = ("organization_id", "page", "page_size", "is_read", "notification_types")

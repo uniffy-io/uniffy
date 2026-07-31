@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/sessions.proto.
  */
 export const file_agents_v1_sessions: GenFile = /*@__PURE__*/
-  fileDesc("ChhhZ2VudHMvdjEvc2Vzc2lvbnMucHJvdG8SCWFnZW50cy52MSKMBAoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCGFnZW50X2lkGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSJAoEa2luZBgFIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBiABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgHIAEoCUgBiAEBEhoKEnRvdGFsX2lucHV0X3Rva2VucxgIIAEoAxIbChN0b3RhbF9vdXRwdXRfdG9rZW5zGAkgASgDEhUKDW1lc3NhZ2VfY291bnQYCiABKAUSHAoPbGFzdF9tb2RlbF91c2VkGAsgASgJSAKIAQESEwoLaXNfYXJjaGl2ZWQYDCABKAgSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASIgoVbW9kZWxfcGFyYW1zX292ZXJyaWRlGA8gASgJSAOIAQFCDwoNX2Rpc3BsYXlfbmFtZUIRCg9fbW9kZWxfb3ZlcnJpZGVCEgoQX2xhc3RfbW9kZWxfdXNlZEIYChZfbW9kZWxfcGFyYW1zX292ZXJyaWRlIsoFCgtNZXNzYWdlSW5mbxIKCgJpZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEiQKBHJvbGUYAyABKA4yFi5hZ2VudHMudjEuTWVzc2FnZVJvbGUSFAoHY29udGVudBgEIAEoCUgAiAEBEhQKDGlucHV0X3Rva2VucxgFIAEoBRIVCg1vdXRwdXRfdG9rZW5zGAYgASgFEhIKBW1vZGVsGAcgASgJSAGIAQESFgoJdG9vbF9uYW1lGAggASgJSAKIAQESGQoMdG9vbF9jYWxsX2lkGAkgASgJSAOIAQESGwoOdG9vbF9hcmdzX2pzb24YCiABKAlIBIgBARIYCgt0b29sX3Jlc3VsdBgLIAEoCUgFiAEBEhMKC2lzX3RoaW5raW5nGAwgASgIEhQKDGlzX2NvbXBhY3RlZBgNIAEoCBIuCgpjcmVhdGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghmaWxlX2lkcxgPIAMoCRIWCg5pc19pbnZhbGlkYXRlZBgQIAEoCBIyCgllZGl0ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAaIAQESHQoQcHJldmlvdXNfY29udGVudBgSIAEoCUgHiAEBEhUKDXdhc19jYW5jZWxsZWQYEyABKAgSFwoPZmVlZGJhY2tfcmF0aW5nGBQgASgJEhoKEmludm9rZWRfc2tpbGxfbmFtZRgVIAEoCRIVCg10aGlua2luZ19qc29uGBYgASgJQgoKCF9jb250ZW50QggKBl9tb2RlbEIMCgpfdG9vbF9uYW1lQg8KDV90b29sX2NhbGxfaWRCEQoPX3Rvb2xfYXJnc19qc29uQg4KDF90b29sX3Jlc3VsdEIMCgpfZWRpdGVkX2F0QhMKEV9wcmV2aW91c19jb250ZW50IoECChRDcmVhdGVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSJAoEa2luZBgDIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBCABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgFIAEoCUgBiAEBEiIKFW1vZGVsX3BhcmFtc19vdmVycmlkZRgGIAEoCUgCiAEBQg8KDV9kaXNwbGF5X25hbWVCEQoPX21vZGVsX292ZXJyaWRlQhgKFl9tb2RlbF9wYXJhbXNfb3ZlcnJpZGUiQAoVQ3JlYXRlU2Vzc2lvblJlc3BvbnNlEicKB3Nlc3Npb24YASABKAsyFi5hZ2VudHMudjEuU2Vzc2lvbkluZm8iPQoSR2V0U2Vzc2lvblJlc3BvbnNlEicKB3Nlc3Npb24YASABKAsyFi5hZ2VudHMudjEuU2Vzc2lvbkluZm8iQAoVVXBkYXRlU2Vzc2lvblJlc3BvbnNlEicKB3Nlc3Npb24YASABKAsyFi5hZ2VudHMudjEuU2Vzc2lvbkluZm8iQAoRR2V0U2Vzc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAki9gEKE0xpc3RTZXNzaW9uc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEjUKCnBhZ2luYXRpb24YAiABKAsyHC5jb21tb24udjEuUGFnaW5hdGlvblJlcXVlc3RIAIgBARIVCghhZ2VudF9pZBgDIAEoCUgBiAEBEikKBGtpbmQYBCABKA4yFi5hZ2VudHMudjEuU2Vzc2lvbktpbmRIAogBARIYCgtpc19hcmNoaXZlZBgFIAEoCEgDiAEBQg0KC19wYWdpbmF0aW9uQgsKCV9hZ2VudF9pZEIHCgVfa2luZEIOCgxfaXNfYXJjaGl2ZWQicwoUTGlzdFNlc3Npb25zUmVzcG9uc2USKAoIc2Vzc2lvbnMYASADKAsyFi5hZ2VudHMudjEuU2Vzc2lvbkluZm8SMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2Ui3QEKFFVwZGF0ZVNlc3Npb25SZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEhkKDGRpc3BsYXlfbmFtZRgDIAEoCUgAiAEBEhsKDm1vZGVsX292ZXJyaWRlGAQgASgJSAGIAQESIgoVbW9kZWxfcGFyYW1zX292ZXJyaWRlGAUgASgJSAKIAQFCDwoNX2Rpc3BsYXlfbmFtZUIRCg9fbW9kZWxfb3ZlcnJpZGVCGAoWX21vZGVsX3BhcmFtc19vdmVycmlkZSJEChVBcmNoaXZlU2Vzc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkiKQoWQXJjaGl2ZVNlc3Npb25SZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIpQDChFBZGRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIkCgRyb2xlGAMgASgOMhYuYWdlbnRzLnYxLk1lc3NhZ2VSb2xlEhQKB2NvbnRlbnQYBCABKAlIAIgBARIUCgxpbnB1dF90b2tlbnMYBSABKAUSFQoNb3V0cHV0X3Rva2VucxgGIAEoBRISCgVtb2RlbBgHIAEoCUgBiAEBEhYKCXRvb2xfbmFtZRgIIAEoCUgCiAEBEhkKDHRvb2xfY2FsbF9pZBgJIAEoCUgDiAEBEhsKDnRvb2xfYXJnc19qc29uGAogASgJSASIAQESGAoLdG9vbF9yZXN1bHQYCyABKAlIBYgBARITCgtpc190aGlua2luZxgMIAEoCEIKCghfY29udGVudEIICgZfbW9kZWxCDAoKX3Rvb2xfbmFtZUIPCg1fdG9vbF9jYWxsX2lkQhEKD190b29sX2FyZ3NfanNvbkIOCgxfdG9vbF9yZXN1bHQiPQoSQWRkTWVzc2FnZVJlc3BvbnNlEicKB21lc3NhZ2UYASABKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8ivgEKE0xpc3RNZXNzYWdlc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSNQoKcGFnaW5hdGlvbhgDIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBEh4KEWluY2x1ZGVfY29tcGFjdGVkGAQgASgISAGIAQFCDQoLX3BhZ2luYXRpb25CFAoSX2luY2x1ZGVfY29tcGFjdGVkInMKFExpc3RNZXNzYWdlc1Jlc3BvbnNlEigKCG1lc3NhZ2VzGAEgAygLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlIkcKGEdldFNlc3Npb25Db250ZXh0UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSJdChlHZXRTZXNzaW9uQ29udGV4dFJlc3BvbnNlEigKCG1lc3NhZ2VzGAEgAygLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEhYKDnRvdGFsX21lc3NhZ2VzGAIgASgFIkwKHUdldFNlc3Npb25Db250ZXh0U3RhdHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJIsgCCh5HZXRTZXNzaW9uQ29udGV4dFN0YXRzUmVzcG9uc2USFgoOdG90YWxfbWVzc2FnZXMYASABKAUSFwoPYWN0aXZlX21lc3NhZ2VzGAIgASgFEhoKEmNvbXBhY3RlZF9tZXNzYWdlcxgDIAEoBRIVCg1zdW1tYXJ5X2NvdW50GAQgASgFEhUKDWFjdGl2ZV90b2tlbnMYBSABKAUSFAoMdG9rZW5fYnVkZ2V0GAYgASgFEh8KF3Rva2Vuc191bnRpbF9jb21wYWN0aW9uGAcgASgFEh0KFWNvbnRleHRfd2luZG93X3Rva2VucxgIIAEoBRIZChFsYXN0X2lucHV0X3Rva2VucxgJIAEoBRIaChJsYXN0X291dHB1dF90b2tlbnMYCiABKAUSHgoWbGFzdF9jYWNoZV9yZWFkX3Rva2VucxgLIAEoBSJEChVDb21wYWN0U2Vzc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAki3AEKFkNvbXBhY3RTZXNzaW9uUmVzcG9uc2USEQoJY29tcGFjdGVkGAEgASgIEjgKBXN0YXRzGAIgASgLMikuYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXNwb25zZRIaChJtZXNzYWdlc19jb21wYWN0ZWQYAyABKAUSFQoNdG9rZW5zX2JlZm9yZRgEIAEoBRIUCgx0b2tlbnNfYWZ0ZXIYBSABKAUSFAoMdG9rZW5zX3NhdmVkGAYgASgFEhYKDnN1bW1hcnlfdG9rZW5zGAcgASgFIlYKEkVkaXRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRITCgtuZXdfY29udGVudBgDIAEoCSJeChNFZGl0TWVzc2FnZVJlc3BvbnNlEicKB21lc3NhZ2UYASABKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SHgoWZG93bnN0cmVhbV9pbnZhbGlkYXRlZBgCIAEoBSJDChREZWxldGVNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCSIyChVEZWxldGVNZXNzYWdlUmVzcG9uc2USGQoRaW52YWxpZGF0ZWRfY291bnQYASABKAUiQgoTUmV0cnlNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCSI5ChRSZXRyeU1lc3NhZ2VSZXNwb25zZRIPCgdjb250ZW50GAEgASgJEhAKCGZpbGVfaWRzGAIgAygJInYKD01lc3NhZ2VGZWVkYmFjaxISCgptZXNzYWdlX2lkGAEgASgJEg4KBnJhdGluZxgCIAEoCRIPCgdjb21tZW50GAMgASgJEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIn0KHFN1Ym1pdE1lc3NhZ2VGZWVkYmFja1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSDgoGcmF0aW5nGAMgASgJEhQKB2NvbW1lbnQYBCABKAlIAIgBAUIKCghfY29tbWVudCJfCh1TdWJtaXRNZXNzYWdlRmVlZGJhY2tSZXNwb25zZRIxCghmZWVkYmFjaxgBIAEoCzIaLmFnZW50cy52MS5NZXNzYWdlRmVlZGJhY2tIAIgBAUILCglfZmVlZGJhY2sqdQoLU2Vzc2lvbktpbmQSHAoYU0VTU0lPTl9LSU5EX1VOU1BFQ0lGSUVEEAASFwoTU0VTU0lPTl9LSU5EX0RJUkVDVBABEhYKElNFU1NJT05fS0lORF9HUk9VUBACEhcKE1NFU1NJT05fS0lORF9HTE9CQUwQAyqoAQoLTWVzc2FnZVJvbGUSHAoYTUVTU0FHRV9ST0xFX1VOU1BFQ0lGSUVEEAASFQoRTUVTU0FHRV9ST0xFX1VTRVIQARIaChZNRVNTQUdFX1JPTEVfQVNTSVNUQU5UEAISFQoRTUVTU0FHRV9ST0xFX1RPT0wQAxIXChNNRVNTQUdFX1JPTEVfU1lTVEVNEAQSGAoUTUVTU0FHRV9ST0xFX1NVTU1BUlkQBTLpCQoPU2Vzc2lvbnNTZXJ2aWNlElQKDUNyZWF0ZVNlc3Npb24SHy5hZ2VudHMudjEuQ3JlYXRlU2Vzc2lvblJlcXVlc3QaIC5hZ2VudHMudjEuQ3JlYXRlU2Vzc2lvblJlc3BvbnNlIgASSwoKR2V0U2Vzc2lvbhIcLmFnZW50cy52MS5HZXRTZXNzaW9uUmVxdWVzdBodLmFnZW50cy52MS5HZXRTZXNzaW9uUmVzcG9uc2UiABJRCgxMaXN0U2Vzc2lvbnMSHi5hZ2VudHMudjEuTGlzdFNlc3Npb25zUmVxdWVzdBofLmFnZW50cy52MS5MaXN0U2Vzc2lvbnNSZXNwb25zZSIAElQKDVVwZGF0ZVNlc3Npb24SHy5hZ2VudHMudjEuVXBkYXRlU2Vzc2lvblJlcXVlc3QaIC5hZ2VudHMudjEuVXBkYXRlU2Vzc2lvblJlc3BvbnNlIgASVwoOQXJjaGl2ZVNlc3Npb24SIC5hZ2VudHMudjEuQXJjaGl2ZVNlc3Npb25SZXF1ZXN0GiEuYWdlbnRzLnYxLkFyY2hpdmVTZXNzaW9uUmVzcG9uc2UiABJLCgpBZGRNZXNzYWdlEhwuYWdlbnRzLnYxLkFkZE1lc3NhZ2VSZXF1ZXN0Gh0uYWdlbnRzLnYxLkFkZE1lc3NhZ2VSZXNwb25zZSIAElEKDExpc3RNZXNzYWdlcxIeLmFnZW50cy52MS5MaXN0TWVzc2FnZXNSZXF1ZXN0Gh8uYWdlbnRzLnYxLkxpc3RNZXNzYWdlc1Jlc3BvbnNlIgASYAoRR2V0U2Vzc2lvbkNvbnRleHQSIy5hZ2VudHMudjEuR2V0U2Vzc2lvbkNvbnRleHRSZXF1ZXN0GiQuYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0UmVzcG9uc2UiABJvChZHZXRTZXNzaW9uQ29udGV4dFN0YXRzEiguYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXF1ZXN0GikuYWdlbnRzLnYxLkdldFNlc3Npb25Db250ZXh0U3RhdHNSZXNwb25zZSIAElcKDkNvbXBhY3RTZXNzaW9uEiAuYWdlbnRzLnYxLkNvbXBhY3RTZXNzaW9uUmVxdWVzdBohLmFnZW50cy52MS5Db21wYWN0U2Vzc2lvblJlc3BvbnNlIgASTgoLRWRpdE1lc3NhZ2USHS5hZ2VudHMudjEuRWRpdE1lc3NhZ2VSZXF1ZXN0Gh4uYWdlbnRzLnYxLkVkaXRNZXNzYWdlUmVzcG9uc2UiABJUCg1EZWxldGVNZXNzYWdlEh8uYWdlbnRzLnYxLkRlbGV0ZU1lc3NhZ2VSZXF1ZXN0GiAuYWdlbnRzLnYxLkRlbGV0ZU1lc3NhZ2VSZXNwb25zZSIAElEKDFJldHJ5TWVzc2FnZRIeLmFnZW50cy52MS5SZXRyeU1lc3NhZ2VSZXF1ZXN0Gh8uYWdlbnRzLnYxLlJldHJ5TWVzc2FnZVJlc3BvbnNlIgASbAoVU3VibWl0TWVzc2FnZUZlZWRiYWNrEicuYWdlbnRzLnYxLlN1Ym1pdE1lc3NhZ2VGZWVkYmFja1JlcXVlc3QaKC5hZ2VudHMudjEuU3VibWl0TWVzc2FnZUZlZWRiYWNrUmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChhhZ2VudHMvdjEvc2Vzc2lvbnMucHJvdG8SCWFnZW50cy52MSLfAwoLU2Vzc2lvbkluZm8SCgoCaWQYASABKAkSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgJEhAKCGFnZW50X2lkGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSJAoEa2luZBgFIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBiABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgHIAEoCUgBiAEBEhoKEnRvdGFsX2lucHV0X3Rva2VucxgIIAEoAxIbChN0b3RhbF9vdXRwdXRfdG9rZW5zGAkgASgDEhUKDW1lc3NhZ2VfY291bnQYCiABKAUSHAoPbGFzdF9tb2RlbF91c2VkGAsgASgJSAKIAQESEwoLaXNfYXJjaGl2ZWQYDCABKAgSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHaXNfdGVzdBgPIAEoCEIPCg1fZGlzcGxheV9uYW1lQhEKD19tb2RlbF9vdmVycmlkZUISChBfbGFzdF9tb2RlbF91c2VkIsoFCgtNZXNzYWdlSW5mbxIKCgJpZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEiQKBHJvbGUYAyABKA4yFi5hZ2VudHMudjEuTWVzc2FnZVJvbGUSFAoHY29udGVudBgEIAEoCUgAiAEBEhQKDGlucHV0X3Rva2VucxgFIAEoBRIVCg1vdXRwdXRfdG9rZW5zGAYgASgFEhIKBW1vZGVsGAcgASgJSAGIAQESFgoJdG9vbF9uYW1lGAggASgJSAKIAQESGQoMdG9vbF9jYWxsX2lkGAkgASgJSAOIAQESGwoOdG9vbF9hcmdzX2pzb24YCiABKAlIBIgBARIYCgt0b29sX3Jlc3VsdBgLIAEoCUgFiAEBEhMKC2lzX3RoaW5raW5nGAwgASgIEhQKDGlzX2NvbXBhY3RlZBgNIAEoCBIuCgpjcmVhdGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghmaWxlX2lkcxgPIAMoCRIWCg5pc19pbnZhbGlkYXRlZBgQIAEoCBIyCgllZGl0ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAaIAQESHQoQcHJldmlvdXNfY29udGVudBgSIAEoCUgHiAEBEhUKDXdhc19jYW5jZWxsZWQYEyABKAgSFwoPZmVlZGJhY2tfcmF0aW5nGBQgASgJEhoKEmludm9rZWRfc2tpbGxfbmFtZRgVIAEoCRIVCg10aGlua2luZ19qc29uGBYgASgJQgoKCF9jb250ZW50QggKBl9tb2RlbEIMCgpfdG9vbF9uYW1lQg8KDV90b29sX2NhbGxfaWRCEQoPX3Rvb2xfYXJnc19qc29uQg4KDF90b29sX3Jlc3VsdEIMCgpfZWRpdGVkX2F0QhMKEV9wcmV2aW91c19jb250ZW50ItQBChRDcmVhdGVTZXNzaW9uUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSJAoEa2luZBgDIAEoDjIWLmFnZW50cy52MS5TZXNzaW9uS2luZBIZCgxkaXNwbGF5X25hbWUYBCABKAlIAIgBARIbCg5tb2RlbF9vdmVycmlkZRgFIAEoCUgBiAEBEg8KB2lzX3Rlc3QYBiABKAhCDwoNX2Rpc3BsYXlfbmFtZUIRCg9fbW9kZWxfb3ZlcnJpZGUiQAoVQ3JlYXRlU2Vzc2lvblJlc3BvbnNlEicKB3Nlc3Npb24YASABKAsyFi5hZ2VudHMudjEuU2Vzc2lvbkluZm8iPQoSR2V0U2Vzc2lvblJlc3BvbnNlEicKB3Nlc3Npb24YASABKAsyFi5hZ2VudHMudjEuU2Vzc2lvbkluZm8iQAoRR2V0U2Vzc2lvblJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkivgEKE0xpc3RNZXNzYWdlc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSNQoKcGFnaW5hdGlvbhgDIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBEh4KEWluY2x1ZGVfY29tcGFjdGVkGAQgASgISAGIAQFCDQoLX3BhZ2luYXRpb25CFAoSX2luY2x1ZGVfY29tcGFjdGVkInMKFExpc3RNZXNzYWdlc1Jlc3BvbnNlEigKCG1lc3NhZ2VzGAEgAygLMhYuYWdlbnRzLnYxLk1lc3NhZ2VJbmZvEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlIlYKEkVkaXRNZXNzYWdlUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKbWVzc2FnZV9pZBgCIAEoCRITCgtuZXdfY29udGVudBgDIAEoCSJeChNFZGl0TWVzc2FnZVJlc3BvbnNlEicKB21lc3NhZ2UYASABKAsyFi5hZ2VudHMudjEuTWVzc2FnZUluZm8SHgoWZG93bnN0cmVhbV9pbnZhbGlkYXRlZBgCIAEoBSJCChNSZXRyeU1lc3NhZ2VSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJIjkKFFJldHJ5TWVzc2FnZVJlc3BvbnNlEg8KB2NvbnRlbnQYASABKAkSEAoIZmlsZV9pZHMYAiADKAkidgoPTWVzc2FnZUZlZWRiYWNrEhIKCm1lc3NhZ2VfaWQYASABKAkSDgoGcmF0aW5nGAIgASgJEg8KB2NvbW1lbnQYAyABKAkSLgoKY3JlYXRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAilgEKHFN1Ym1pdE1lc3NhZ2VGZWVkYmFja1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSDgoGcmF0aW5nGAMgASgJEhQKB2NvbW1lbnQYBCABKAlIAIgBARIXCg9jaGF0X21lc3NhZ2VfaWQYBSABKAlCCgoIX2NvbW1lbnQiXwodU3VibWl0TWVzc2FnZUZlZWRiYWNrUmVzcG9uc2USMQoIZmVlZGJhY2sYASABKAsyGi5hZ2VudHMudjEuTWVzc2FnZUZlZWRiYWNrSACIAQFCCwoJX2ZlZWRiYWNrKnUKC1Nlc3Npb25LaW5kEhwKGFNFU1NJT05fS0lORF9VTlNQRUNJRklFRBAAEhcKE1NFU1NJT05fS0lORF9ESVJFQ1QQARIWChJTRVNTSU9OX0tJTkRfR1JPVVAQAhIXChNTRVNTSU9OX0tJTkRfR0xPQkFMEAMqqAEKC01lc3NhZ2VSb2xlEhwKGE1FU1NBR0VfUk9MRV9VTlNQRUNJRklFRBAAEhUKEU1FU1NBR0VfUk9MRV9VU0VSEAESGgoWTUVTU0FHRV9ST0xFX0FTU0lTVEFOVBACEhUKEU1FU1NBR0VfUk9MRV9UT09MEAMSFwoTTUVTU0FHRV9ST0xFX1NZU1RFTRAEEhgKFE1FU1NBR0VfUk9MRV9TVU1NQVJZEAUymAQKD1Nlc3Npb25zU2VydmljZRJUCg1DcmVhdGVTZXNzaW9uEh8uYWdlbnRzLnYxLkNyZWF0ZVNlc3Npb25SZXF1ZXN0GiAuYWdlbnRzLnYxLkNyZWF0ZVNlc3Npb25SZXNwb25zZSIAEksKCkdldFNlc3Npb24SHC5hZ2VudHMudjEuR2V0U2Vzc2lvblJlcXVlc3QaHS5hZ2VudHMudjEuR2V0U2Vzc2lvblJlc3BvbnNlIgASUQoMTGlzdE1lc3NhZ2VzEh4uYWdlbnRzLnYxLkxpc3RNZXNzYWdlc1JlcXVlc3QaHy5hZ2VudHMudjEuTGlzdE1lc3NhZ2VzUmVzcG9uc2UiABJOCgtFZGl0TWVzc2FnZRIdLmFnZW50cy52MS5FZGl0TWVzc2FnZVJlcXVlc3QaHi5hZ2VudHMudjEuRWRpdE1lc3NhZ2VSZXNwb25zZSIAElEKDFJldHJ5TWVzc2FnZRIeLmFnZW50cy52MS5SZXRyeU1lc3NhZ2VSZXF1ZXN0Gh8uYWdlbnRzLnYxLlJldHJ5TWVzc2FnZVJlc3BvbnNlIgASbAoVU3VibWl0TWVzc2FnZUZlZWRiYWNrEicuYWdlbnRzLnYxLlN1Ym1pdE1lc3NhZ2VGZWVkYmFja1JlcXVlc3QaKC5hZ2VudHMudjEuU3VibWl0TWVzc2FnZUZlZWRiYWNrUmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * Session info returned to clients
@@ -93,12 +93,12 @@ export type SessionInfo = Message<"agents.v1.SessionInfo"> & {
   updatedAt?: Timestamp | undefined;
 
   /**
-   * JSON object of model-parameter overrides for this session only;
-   * resolved over the agent's stored model_params
+   * True for test-drawer sessions: hidden from every session listing and
+   * memory writes are disabled during their runs.
    *
-   * @generated from field: optional string model_params_override = 15;
+   * @generated from field: bool is_test = 15;
    */
-  modelParamsOverride?: string | undefined;
+  isTest: boolean;
 };
 
 /**
@@ -284,11 +284,11 @@ export type CreateSessionRequest = Message<"agents.v1.CreateSessionRequest"> & {
   modelOverride?: string | undefined;
 
   /**
-   * JSON object of model-parameter overrides for this session only
+   * Create as a test session (hidden from listings, memory writes disabled).
    *
-   * @generated from field: optional string model_params_override = 6;
+   * @generated from field: bool is_test = 6;
    */
-  modelParamsOverride?: string | undefined;
+  isTest: boolean;
 };
 
 /**
@@ -333,23 +333,6 @@ export const GetSessionResponseSchema: GenMessage<GetSessionResponse> = /*@__PUR
   messageDesc(file_agents_v1_sessions, 4);
 
 /**
- * @generated from message agents.v1.UpdateSessionResponse
- */
-export type UpdateSessionResponse = Message<"agents.v1.UpdateSessionResponse"> & {
-  /**
-   * @generated from field: agents.v1.SessionInfo session = 1;
-   */
-  session?: SessionInfo | undefined;
-};
-
-/**
- * Describes the message agents.v1.UpdateSessionResponse.
- * Use `create(UpdateSessionResponseSchema)` to create a new message.
- */
-export const UpdateSessionResponseSchema: GenMessage<UpdateSessionResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 5);
-
-/**
  * @generated from message agents.v1.GetSessionRequest
  */
 export type GetSessionRequest = Message<"agents.v1.GetSessionRequest"> & {
@@ -369,233 +352,7 @@ export type GetSessionRequest = Message<"agents.v1.GetSessionRequest"> & {
  * Use `create(GetSessionRequestSchema)` to create a new message.
  */
 export const GetSessionRequestSchema: GenMessage<GetSessionRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 6);
-
-/**
- * @generated from message agents.v1.ListSessionsRequest
- */
-export type ListSessionsRequest = Message<"agents.v1.ListSessionsRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: optional common.v1.PaginationRequest pagination = 2;
-   */
-  pagination?: PaginationRequest | undefined;
-
-  /**
-   * @generated from field: optional string agent_id = 3;
-   */
-  agentId?: string | undefined;
-
-  /**
-   * @generated from field: optional agents.v1.SessionKind kind = 4;
-   */
-  kind?: SessionKind | undefined;
-
-  /**
-   * @generated from field: optional bool is_archived = 5;
-   */
-  isArchived?: boolean | undefined;
-};
-
-/**
- * Describes the message agents.v1.ListSessionsRequest.
- * Use `create(ListSessionsRequestSchema)` to create a new message.
- */
-export const ListSessionsRequestSchema: GenMessage<ListSessionsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 7);
-
-/**
- * @generated from message agents.v1.ListSessionsResponse
- */
-export type ListSessionsResponse = Message<"agents.v1.ListSessionsResponse"> & {
-  /**
-   * @generated from field: repeated agents.v1.SessionInfo sessions = 1;
-   */
-  sessions: SessionInfo[];
-
-  /**
-   * @generated from field: common.v1.PaginationResponse pagination = 2;
-   */
-  pagination?: PaginationResponse | undefined;
-};
-
-/**
- * Describes the message agents.v1.ListSessionsResponse.
- * Use `create(ListSessionsResponseSchema)` to create a new message.
- */
-export const ListSessionsResponseSchema: GenMessage<ListSessionsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 8);
-
-/**
- * @generated from message agents.v1.UpdateSessionRequest
- */
-export type UpdateSessionRequest = Message<"agents.v1.UpdateSessionRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string session_id = 2;
-   */
-  sessionId: string;
-
-  /**
-   * @generated from field: optional string display_name = 3;
-   */
-  displayName?: string | undefined;
-
-  /**
-   * @generated from field: optional string model_override = 4;
-   */
-  modelOverride?: string | undefined;
-
-  /**
-   * JSON object of model-parameter overrides; "{}" clears them
-   *
-   * @generated from field: optional string model_params_override = 5;
-   */
-  modelParamsOverride?: string | undefined;
-};
-
-/**
- * Describes the message agents.v1.UpdateSessionRequest.
- * Use `create(UpdateSessionRequestSchema)` to create a new message.
- */
-export const UpdateSessionRequestSchema: GenMessage<UpdateSessionRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 9);
-
-/**
- * @generated from message agents.v1.ArchiveSessionRequest
- */
-export type ArchiveSessionRequest = Message<"agents.v1.ArchiveSessionRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string session_id = 2;
-   */
-  sessionId: string;
-};
-
-/**
- * Describes the message agents.v1.ArchiveSessionRequest.
- * Use `create(ArchiveSessionRequestSchema)` to create a new message.
- */
-export const ArchiveSessionRequestSchema: GenMessage<ArchiveSessionRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 10);
-
-/**
- * @generated from message agents.v1.ArchiveSessionResponse
- */
-export type ArchiveSessionResponse = Message<"agents.v1.ArchiveSessionResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
-};
-
-/**
- * Describes the message agents.v1.ArchiveSessionResponse.
- * Use `create(ArchiveSessionResponseSchema)` to create a new message.
- */
-export const ArchiveSessionResponseSchema: GenMessage<ArchiveSessionResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 11);
-
-/**
- * @generated from message agents.v1.AddMessageRequest
- */
-export type AddMessageRequest = Message<"agents.v1.AddMessageRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string session_id = 2;
-   */
-  sessionId: string;
-
-  /**
-   * @generated from field: agents.v1.MessageRole role = 3;
-   */
-  role: MessageRole;
-
-  /**
-   * @generated from field: optional string content = 4;
-   */
-  content?: string | undefined;
-
-  /**
-   * @generated from field: int32 input_tokens = 5;
-   */
-  inputTokens: number;
-
-  /**
-   * @generated from field: int32 output_tokens = 6;
-   */
-  outputTokens: number;
-
-  /**
-   * @generated from field: optional string model = 7;
-   */
-  model?: string | undefined;
-
-  /**
-   * @generated from field: optional string tool_name = 8;
-   */
-  toolName?: string | undefined;
-
-  /**
-   * @generated from field: optional string tool_call_id = 9;
-   */
-  toolCallId?: string | undefined;
-
-  /**
-   * @generated from field: optional string tool_args_json = 10;
-   */
-  toolArgsJson?: string | undefined;
-
-  /**
-   * @generated from field: optional string tool_result = 11;
-   */
-  toolResult?: string | undefined;
-
-  /**
-   * @generated from field: bool is_thinking = 12;
-   */
-  isThinking: boolean;
-};
-
-/**
- * Describes the message agents.v1.AddMessageRequest.
- * Use `create(AddMessageRequestSchema)` to create a new message.
- */
-export const AddMessageRequestSchema: GenMessage<AddMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 12);
-
-/**
- * @generated from message agents.v1.AddMessageResponse
- */
-export type AddMessageResponse = Message<"agents.v1.AddMessageResponse"> & {
-  /**
-   * @generated from field: agents.v1.MessageInfo message = 1;
-   */
-  message?: MessageInfo | undefined;
-};
-
-/**
- * Describes the message agents.v1.AddMessageResponse.
- * Use `create(AddMessageResponseSchema)` to create a new message.
- */
-export const AddMessageResponseSchema: GenMessage<AddMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 13);
+  messageDesc(file_agents_v1_sessions, 5);
 
 /**
  * @generated from message agents.v1.ListMessagesRequest
@@ -627,7 +384,7 @@ export type ListMessagesRequest = Message<"agents.v1.ListMessagesRequest"> & {
  * Use `create(ListMessagesRequestSchema)` to create a new message.
  */
 export const ListMessagesRequestSchema: GenMessage<ListMessagesRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 14);
+  messageDesc(file_agents_v1_sessions, 6);
 
 /**
  * @generated from message agents.v1.ListMessagesResponse
@@ -649,241 +406,7 @@ export type ListMessagesResponse = Message<"agents.v1.ListMessagesResponse"> & {
  * Use `create(ListMessagesResponseSchema)` to create a new message.
  */
 export const ListMessagesResponseSchema: GenMessage<ListMessagesResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 15);
-
-/**
- * @generated from message agents.v1.GetSessionContextRequest
- */
-export type GetSessionContextRequest = Message<"agents.v1.GetSessionContextRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string session_id = 2;
-   */
-  sessionId: string;
-};
-
-/**
- * Describes the message agents.v1.GetSessionContextRequest.
- * Use `create(GetSessionContextRequestSchema)` to create a new message.
- */
-export const GetSessionContextRequestSchema: GenMessage<GetSessionContextRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 16);
-
-/**
- * @generated from message agents.v1.GetSessionContextResponse
- */
-export type GetSessionContextResponse = Message<"agents.v1.GetSessionContextResponse"> & {
-  /**
-   * @generated from field: repeated agents.v1.MessageInfo messages = 1;
-   */
-  messages: MessageInfo[];
-
-  /**
-   * @generated from field: int32 total_messages = 2;
-   */
-  totalMessages: number;
-};
-
-/**
- * Describes the message agents.v1.GetSessionContextResponse.
- * Use `create(GetSessionContextResponseSchema)` to create a new message.
- */
-export const GetSessionContextResponseSchema: GenMessage<GetSessionContextResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 17);
-
-/**
- * @generated from message agents.v1.GetSessionContextStatsRequest
- */
-export type GetSessionContextStatsRequest = Message<"agents.v1.GetSessionContextStatsRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string session_id = 2;
-   */
-  sessionId: string;
-};
-
-/**
- * Describes the message agents.v1.GetSessionContextStatsRequest.
- * Use `create(GetSessionContextStatsRequestSchema)` to create a new message.
- */
-export const GetSessionContextStatsRequestSchema: GenMessage<GetSessionContextStatsRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 18);
-
-/**
- * @generated from message agents.v1.GetSessionContextStatsResponse
- */
-export type GetSessionContextStatsResponse = Message<"agents.v1.GetSessionContextStatsResponse"> & {
-  /**
-   * Total messages ever created in this session (including compacted)
-   *
-   * @generated from field: int32 total_messages = 1;
-   */
-  totalMessages: number;
-
-  /**
-   * Messages currently active (not compacted)
-   *
-   * @generated from field: int32 active_messages = 2;
-   */
-  activeMessages: number;
-
-  /**
-   * Messages that have been compacted
-   *
-   * @generated from field: int32 compacted_messages = 3;
-   */
-  compactedMessages: number;
-
-  /**
-   * Number of summary messages currently in the context window
-   *
-   * @generated from field: int32 summary_count = 4;
-   */
-  summaryCount: number;
-
-  /**
-   * Provider-reported prompt + completion size of the most recent
-   * assistant turn (last_input_tokens + last_output_tokens). Zero
-   * before the first reply.
-   *
-   * @generated from field: int32 active_tokens = 5;
-   */
-  activeTokens: number;
-
-  /**
-   * Token budget for conversation history (65% of context window)
-   *
-   * @generated from field: int32 token_budget = 6;
-   */
-  tokenBudget: number;
-
-  /**
-   * Tokens remaining before compaction triggers
-   *
-   * @generated from field: int32 tokens_until_compaction = 7;
-   */
-  tokensUntilCompaction: number;
-
-  /**
-   * Model context window size in tokens
-   *
-   * @generated from field: int32 context_window_tokens = 8;
-   */
-  contextWindowTokens: number;
-
-  /**
-   * Full prompt size of the most recent assistant turn -- uncached
-   * input plus tokens served from the prompt cache. Zero pre-first-turn.
-   *
-   * @generated from field: int32 last_input_tokens = 9;
-   */
-  lastInputTokens: number;
-
-  /**
-   * Provider-reported output_tokens of the most recent assistant turn
-   * (the assistant's reply). Zero pre-first-turn.
-   *
-   * @generated from field: int32 last_output_tokens = 10;
-   */
-  lastOutputTokens: number;
-
-  /**
-   * Tokens served from Anthropic's prompt cache on the last turn
-   * (`cache_read_input_tokens`). Counted toward last_input_tokens but
-   * billed at ~10% of the base input price -- the savings signal.
-   *
-   * @generated from field: int32 last_cache_read_tokens = 11;
-   */
-  lastCacheReadTokens: number;
-};
-
-/**
- * Describes the message agents.v1.GetSessionContextStatsResponse.
- * Use `create(GetSessionContextStatsResponseSchema)` to create a new message.
- */
-export const GetSessionContextStatsResponseSchema: GenMessage<GetSessionContextStatsResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 19);
-
-/**
- * @generated from message agents.v1.CompactSessionRequest
- */
-export type CompactSessionRequest = Message<"agents.v1.CompactSessionRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string session_id = 2;
-   */
-  sessionId: string;
-};
-
-/**
- * Describes the message agents.v1.CompactSessionRequest.
- * Use `create(CompactSessionRequestSchema)` to create a new message.
- */
-export const CompactSessionRequestSchema: GenMessage<CompactSessionRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 20);
-
-/**
- * @generated from message agents.v1.CompactSessionResponse
- */
-export type CompactSessionResponse = Message<"agents.v1.CompactSessionResponse"> & {
-  /**
-   * @generated from field: bool compacted = 1;
-   */
-  compacted: boolean;
-
-  /**
-   * Updated stats after compaction
-   *
-   * @generated from field: agents.v1.GetSessionContextStatsResponse stats = 2;
-   */
-  stats?: GetSessionContextStatsResponse | undefined;
-
-  /**
-   * Compaction-specific results
-   *
-   * @generated from field: int32 messages_compacted = 3;
-   */
-  messagesCompacted: number;
-
-  /**
-   * @generated from field: int32 tokens_before = 4;
-   */
-  tokensBefore: number;
-
-  /**
-   * @generated from field: int32 tokens_after = 5;
-   */
-  tokensAfter: number;
-
-  /**
-   * @generated from field: int32 tokens_saved = 6;
-   */
-  tokensSaved: number;
-
-  /**
-   * @generated from field: int32 summary_tokens = 7;
-   */
-  summaryTokens: number;
-};
-
-/**
- * Describes the message agents.v1.CompactSessionResponse.
- * Use `create(CompactSessionResponseSchema)` to create a new message.
- */
-export const CompactSessionResponseSchema: GenMessage<CompactSessionResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 21);
+  messageDesc(file_agents_v1_sessions, 7);
 
 /**
  * @generated from message agents.v1.EditMessageRequest
@@ -910,7 +433,7 @@ export type EditMessageRequest = Message<"agents.v1.EditMessageRequest"> & {
  * Use `create(EditMessageRequestSchema)` to create a new message.
  */
 export const EditMessageRequestSchema: GenMessage<EditMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 22);
+  messageDesc(file_agents_v1_sessions, 8);
 
 /**
  * @generated from message agents.v1.EditMessageResponse
@@ -934,49 +457,7 @@ export type EditMessageResponse = Message<"agents.v1.EditMessageResponse"> & {
  * Use `create(EditMessageResponseSchema)` to create a new message.
  */
 export const EditMessageResponseSchema: GenMessage<EditMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 23);
-
-/**
- * @generated from message agents.v1.DeleteMessageRequest
- */
-export type DeleteMessageRequest = Message<"agents.v1.DeleteMessageRequest"> & {
-  /**
-   * @generated from field: string organization_id = 1;
-   */
-  organizationId: string;
-
-  /**
-   * @generated from field: string message_id = 2;
-   */
-  messageId: string;
-};
-
-/**
- * Describes the message agents.v1.DeleteMessageRequest.
- * Use `create(DeleteMessageRequestSchema)` to create a new message.
- */
-export const DeleteMessageRequestSchema: GenMessage<DeleteMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 24);
-
-/**
- * @generated from message agents.v1.DeleteMessageResponse
- */
-export type DeleteMessageResponse = Message<"agents.v1.DeleteMessageResponse"> & {
-  /**
-   * Total rows marked invalidated (the deleted message + every later
-   * message in the session).
-   *
-   * @generated from field: int32 invalidated_count = 1;
-   */
-  invalidatedCount: number;
-};
-
-/**
- * Describes the message agents.v1.DeleteMessageResponse.
- * Use `create(DeleteMessageResponseSchema)` to create a new message.
- */
-export const DeleteMessageResponseSchema: GenMessage<DeleteMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 25);
+  messageDesc(file_agents_v1_sessions, 9);
 
 /**
  * @generated from message agents.v1.RetryMessageRequest
@@ -998,7 +479,7 @@ export type RetryMessageRequest = Message<"agents.v1.RetryMessageRequest"> & {
  * Use `create(RetryMessageRequestSchema)` to create a new message.
  */
 export const RetryMessageRequestSchema: GenMessage<RetryMessageRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 26);
+  messageDesc(file_agents_v1_sessions, 10);
 
 /**
  * @generated from message agents.v1.RetryMessageResponse
@@ -1024,7 +505,7 @@ export type RetryMessageResponse = Message<"agents.v1.RetryMessageResponse"> & {
  * Use `create(RetryMessageResponseSchema)` to create a new message.
  */
 export const RetryMessageResponseSchema: GenMessage<RetryMessageResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 27);
+  messageDesc(file_agents_v1_sessions, 11);
 
 /**
  * One user's thumbs rating on an agent message.
@@ -1060,7 +541,7 @@ export type MessageFeedback = Message<"agents.v1.MessageFeedback"> & {
  * Use `create(MessageFeedbackSchema)` to create a new message.
  */
 export const MessageFeedbackSchema: GenMessage<MessageFeedback> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 28);
+  messageDesc(file_agents_v1_sessions, 12);
 
 /**
  * @generated from message agents.v1.SubmitMessageFeedbackRequest
@@ -1072,6 +553,9 @@ export type SubmitMessageFeedbackRequest = Message<"agents.v1.SubmitMessageFeedb
   organizationId: string;
 
   /**
+   * Session-message target (agents_messages id). Exactly one of message_id
+   * and chat_message_id must be set.
+   *
    * @generated from field: string message_id = 2;
    */
   messageId: string;
@@ -1087,6 +571,13 @@ export type SubmitMessageFeedbackRequest = Message<"agents.v1.SubmitMessageFeedb
    * @generated from field: optional string comment = 4;
    */
   comment?: string | undefined;
+
+  /**
+   * Chat target: an agent reply's chat_messages id.
+   *
+   * @generated from field: string chat_message_id = 5;
+   */
+  chatMessageId: string;
 };
 
 /**
@@ -1094,7 +585,7 @@ export type SubmitMessageFeedbackRequest = Message<"agents.v1.SubmitMessageFeedb
  * Use `create(SubmitMessageFeedbackRequestSchema)` to create a new message.
  */
 export const SubmitMessageFeedbackRequestSchema: GenMessage<SubmitMessageFeedbackRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 29);
+  messageDesc(file_agents_v1_sessions, 13);
 
 /**
  * @generated from message agents.v1.SubmitMessageFeedbackResponse
@@ -1113,7 +604,7 @@ export type SubmitMessageFeedbackResponse = Message<"agents.v1.SubmitMessageFeed
  * Use `create(SubmitMessageFeedbackResponseSchema)` to create a new message.
  */
 export const SubmitMessageFeedbackResponseSchema: GenMessage<SubmitMessageFeedbackResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_sessions, 30);
+  messageDesc(file_agents_v1_sessions, 14);
 
 /**
  * Kind of session
@@ -1200,7 +691,8 @@ export const MessageRoleSchema: GenEnum<MessageRole> = /*@__PURE__*/
   enumDesc(file_agents_v1_sessions, 1);
 
 /**
- * SessionsService manages conversation sessions between users and agents.
+ * SessionsService manages agent sessions: test-drawer conversations plus the
+ * internal session store the runtime, AI Builder, and cron runs write into.
  *
  * @generated from service agents.v1.SessionsService
  */
@@ -1226,46 +718,6 @@ export const SessionsService: GenService<{
     output: typeof GetSessionResponseSchema;
   },
   /**
-   * List sessions for the user in an organization
-   *
-   * @generated from rpc agents.v1.SessionsService.ListSessions
-   */
-  listSessions: {
-    methodKind: "unary";
-    input: typeof ListSessionsRequestSchema;
-    output: typeof ListSessionsResponseSchema;
-  },
-  /**
-   * Update session settings (display name, model override)
-   *
-   * @generated from rpc agents.v1.SessionsService.UpdateSession
-   */
-  updateSession: {
-    methodKind: "unary";
-    input: typeof UpdateSessionRequestSchema;
-    output: typeof UpdateSessionResponseSchema;
-  },
-  /**
-   * Archive a session (soft delete)
-   *
-   * @generated from rpc agents.v1.SessionsService.ArchiveSession
-   */
-  archiveSession: {
-    methodKind: "unary";
-    input: typeof ArchiveSessionRequestSchema;
-    output: typeof ArchiveSessionResponseSchema;
-  },
-  /**
-   * Add a message to a session
-   *
-   * @generated from rpc agents.v1.SessionsService.AddMessage
-   */
-  addMessage: {
-    methodKind: "unary";
-    input: typeof AddMessageRequestSchema;
-    output: typeof AddMessageResponseSchema;
-  },
-  /**
    * List messages in a session
    *
    * @generated from rpc agents.v1.SessionsService.ListMessages
@@ -1274,36 +726,6 @@ export const SessionsService: GenService<{
     methodKind: "unary";
     input: typeof ListMessagesRequestSchema;
     output: typeof ListMessagesResponseSchema;
-  },
-  /**
-   * Get recent messages for LLM context assembly
-   *
-   * @generated from rpc agents.v1.SessionsService.GetSessionContext
-   */
-  getSessionContext: {
-    methodKind: "unary";
-    input: typeof GetSessionContextRequestSchema;
-    output: typeof GetSessionContextResponseSchema;
-  },
-  /**
-   * Get session context statistics (message counts, compaction info)
-   *
-   * @generated from rpc agents.v1.SessionsService.GetSessionContextStats
-   */
-  getSessionContextStats: {
-    methodKind: "unary";
-    input: typeof GetSessionContextStatsRequestSchema;
-    output: typeof GetSessionContextStatsResponseSchema;
-  },
-  /**
-   * Manually trigger session compaction
-   *
-   * @generated from rpc agents.v1.SessionsService.CompactSession
-   */
-  compactSession: {
-    methodKind: "unary";
-    input: typeof CompactSessionRequestSchema;
-    output: typeof CompactSessionResponseSchema;
   },
   /**
    * Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
@@ -1317,18 +739,6 @@ export const SessionsService: GenService<{
     methodKind: "unary";
     input: typeof EditMessageRequestSchema;
     output: typeof EditMessageResponseSchema;
-  },
-  /**
-   * Soft-delete a user message. The message itself and every later
-   * message in the session are marked `is_invalidated=true` so the
-   * context loader skips them. Refused if a run is currently in flight.
-   *
-   * @generated from rpc agents.v1.SessionsService.DeleteMessage
-   */
-  deleteMessage: {
-    methodKind: "unary";
-    input: typeof DeleteMessageRequestSchema;
-    output: typeof DeleteMessageResponseSchema;
   },
   /**
    * Retry from a message. For a user message, returns its content +
@@ -1345,8 +755,9 @@ export const SessionsService: GenService<{
     output: typeof RetryMessageResponseSchema;
   },
   /**
-   * Record (or clear) the caller's thumbs up/down on an agent message. The
-   * signal feeds the skill-evolution analyzer; an empty rating clears it.
+   * Record (or clear) the caller's thumbs up/down on an agent reply, by
+   * session message id or by chat message id. The signal feeds the
+   * skill-evolution analyzer; an empty rating clears it.
    *
    * @generated from rpc agents.v1.SessionsService.SubmitMessageFeedback
    */

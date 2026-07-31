@@ -70,8 +70,6 @@ TYPE_KEYWORD_MAP: dict[str, str] = {
     "tasks": "task",
     "agent": "agent",
     "agents": "agent",
-    "prompt": "prompt",
-    "prompts": "prompt",
     "room": "room",
     "rooms": "room",
     "tagentity": "tag",

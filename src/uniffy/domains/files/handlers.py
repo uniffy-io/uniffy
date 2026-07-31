@@ -1,7 +1,6 @@
 """Files RPC handlers."""
 
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -66,8 +65,6 @@ from uniffy_proto.files.v1.files_pb2 import (
     UploadChunksResponse,
 )
 
-from uniffy.core.audit import write_audit_event
-from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import resolve_access_policy, resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.members import ContentMembersOperations
@@ -417,14 +414,16 @@ class FilesHandlers:
         except ValueError:
             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid upload_id")
 
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
 
         try:
             async with open_session() as session:
                 ops = FileOperations(session)
                 upload = await ops.get_upload_status(upload_id)
 
-                if not upload:
+                # Same not-found shape for a foreign upload as for a missing one,
+                # so the id space is not probeable.
+                if not upload or upload.user_id != user_id:
                     raise ConnectError(Code.NOT_FOUND, "Upload not found")
 
                 completed_chunks = await ops.list_completed_part_numbers(upload_id)
@@ -1523,31 +1522,16 @@ class FilesHandlers:
                             )
 
                     if target_folder_id is not None or request.HasField("target_folder_id"):
-                        file = await file_ops._fetch_by_id(file_id, organization_id)
-                        if file is not None and file.folder_id != target_folder_id:
-                            previous_folder_id = file.folder_id
-                            file.folder_id = target_folder_id
-                            file.updated_at = datetime.now(UTC)
-                            await write_audit_event(
-                                session,
+                        try:
+                            await file_ops.move_file(
+                                user_id=user_id,
                                 organization_id=organization_id,
-                                actor_user_id=user_id,
-                                action=Action.FILE_MOVED,
-                                resource_type=ContentType.FILE.value,
-                                resource_id=file_id,
-                                details={
-                                    "previous_folder_id": (
-                                        str(previous_folder_id)
-                                        if previous_folder_id
-                                        else None
-                                    ),
-                                    "new_folder_id": (
-                                        str(target_folder_id)
-                                        if target_folder_id
-                                        else None
-                                    ),
-                                },
+                                file_id=file_id,
+                                folder_id=target_folder_id,
                             )
+                        except PermissionDeniedError:
+                            # One unmovable item does not sink the batch.
+                            continue
 
                     await session.commit()
                     files_moved += 1
@@ -1579,10 +1563,15 @@ class FilesHandlers:
                             )
 
                     if target_folder_id is not None or request.HasField("target_folder_id"):
-                        folder = await folder_ops.get_by_id(folder_id, organization_id)
-                        if folder is not None:
-                            folder.parent_id = target_folder_id
-                            folder.updated_at = datetime.now(UTC)
+                        try:
+                            await folder_ops.update(
+                                user_id=user_id,
+                                organization_id=organization_id,
+                                folder_id=folder_id,
+                                parent_id=target_folder_id if target_folder_id else "",
+                            )
+                        except PermissionDeniedError:
+                            continue
 
                     await session.commit()
                     folders_moved += 1

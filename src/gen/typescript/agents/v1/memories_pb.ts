@@ -14,10 +14,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/memories.proto.
  */
 export const file_agents_v1_memories: GenFile = /*@__PURE__*/
-  fileDesc("ChhhZ2VudHMvdjEvbWVtb3JpZXMucHJvdG8SCWFnZW50cy52MSL/AQoKTWVtb3J5SW5mbxIKCgJpZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRILCgNrZXkYAyABKAkSDwoHY29udGVudBgEIAEoCRIrCghjYXRlZ29yeRgFIAEoDjIZLmFnZW50cy52MS5NZW1vcnlDYXRlZ29yeRISCgppbXBvcnRhbmNlGAYgASgCEhQKDGFjY2Vzc19jb3VudBgHIAEoBRIuCgpjcmVhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLlAQoTTGlzdE1lbW9yaWVzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSMAoIY2F0ZWdvcnkYAyABKA4yGS5hZ2VudHMudjEuTWVtb3J5Q2F0ZWdvcnlIAIgBARITCgZzZWFyY2gYBCABKAlIAYgBARI1CgpwYWdpbmF0aW9uGAUgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SAKIAQFCCwoJX2NhdGVnb3J5QgkKB19zZWFyY2hCDQoLX3BhZ2luYXRpb24icgoUTGlzdE1lbW9yaWVzUmVzcG9uc2USJwoIbWVtb3JpZXMYASADKAsyFS5hZ2VudHMudjEuTWVtb3J5SW5mbxIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZSKzAQoTQ3JlYXRlTWVtb3J5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSCwoDa2V5GAMgASgJEg8KB2NvbnRlbnQYBCABKAkSKwoIY2F0ZWdvcnkYBSABKA4yGS5hZ2VudHMudjEuTWVtb3J5Q2F0ZWdvcnkSFwoKaW1wb3J0YW5jZRgGIAEoAkgAiAEBQg0KC19pbXBvcnRhbmNlIsoBChNVcGRhdGVNZW1vcnlSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIRCgltZW1vcnlfaWQYAiABKAkSFAoHY29udGVudBgDIAEoCUgAiAEBEjAKCGNhdGVnb3J5GAQgASgOMhkuYWdlbnRzLnYxLk1lbW9yeUNhdGVnb3J5SAGIAQESFwoKaW1wb3J0YW5jZRgFIAEoAkgCiAEBQgoKCF9jb250ZW50QgsKCV9jYXRlZ29yeUINCgtfaW1wb3J0YW5jZSI9ChRDcmVhdGVNZW1vcnlSZXNwb25zZRIlCgZtZW1vcnkYASABKAsyFS5hZ2VudHMudjEuTWVtb3J5SW5mbyI9ChRVcGRhdGVNZW1vcnlSZXNwb25zZRIlCgZtZW1vcnkYASABKAsyFS5hZ2VudHMudjEuTWVtb3J5SW5mbyJBChNEZWxldGVNZW1vcnlSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIRCgltZW1vcnlfaWQYAiABKAkiJwoURGVsZXRlTWVtb3J5UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCqsAQoOTWVtb3J5Q2F0ZWdvcnkSHwobTUVNT1JZX0NBVEVHT1JZX1VOU1BFQ0lGSUVEEAASHwobTUVNT1JZX0NBVEVHT1JZX1BSRUZFUkVOQ0VTEAESGQoVTUVNT1JZX0NBVEVHT1JZX0ZBQ1RTEAISGwoXTUVNT1JZX0NBVEVHT1JZX0NPTlRFWFQQAxIgChxNRU1PUllfQ0FURUdPUllfSU5TVFJVQ1RJT05TEAQy3QIKD01lbW9yaWVzU2VydmljZRJRCgxMaXN0TWVtb3JpZXMSHi5hZ2VudHMudjEuTGlzdE1lbW9yaWVzUmVxdWVzdBofLmFnZW50cy52MS5MaXN0TWVtb3JpZXNSZXNwb25zZSIAElEKDENyZWF0ZU1lbW9yeRIeLmFnZW50cy52MS5DcmVhdGVNZW1vcnlSZXF1ZXN0Gh8uYWdlbnRzLnYxLkNyZWF0ZU1lbW9yeVJlc3BvbnNlIgASUQoMVXBkYXRlTWVtb3J5Eh4uYWdlbnRzLnYxLlVwZGF0ZU1lbW9yeVJlcXVlc3QaHy5hZ2VudHMudjEuVXBkYXRlTWVtb3J5UmVzcG9uc2UiABJRCgxEZWxldGVNZW1vcnkSHi5hZ2VudHMudjEuRGVsZXRlTWVtb3J5UmVxdWVzdBofLmFnZW50cy52MS5EZWxldGVNZW1vcnlSZXNwb25zZSIAQjlaN2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9hZ2VudHMvdjE7YWdlbnRzdjFiBnByb3RvMw", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChhhZ2VudHMvdjEvbWVtb3JpZXMucHJvdG8SCWFnZW50cy52MSLkBAoKTWVtb3J5SW5mbxIKCgJpZBgBIAEoCRIVCghhZ2VudF9pZBgCIAEoCUgAiAEBEgsKA2tleRgDIAEoCRIPCgdjb250ZW50GAQgASgJEisKCGNhdGVnb3J5GAUgASgOMhkuYWdlbnRzLnYxLk1lbW9yeUNhdGVnb3J5EhIKCmltcG9ydGFuY2UYBiABKAISFAoMYWNjZXNzX2NvdW50GAcgASgFEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiUKBXNjb3BlGAogASgOMhYuYWdlbnRzLnYxLk1lbW9yeVNjb3BlEhMKC2Rlc2NyaXB0aW9uGAsgASgJEg4KBnBpbm5lZBgMIAEoCBInCgZzb3VyY2UYDSABKA4yFy5hZ2VudHMudjEuTWVtb3J5U291cmNlEhoKEmNyZWF0ZWRfYnlfdXNlcl9pZBgOIAEoCRIXCg9jcmVhdGVkX2J5X25hbWUYDyABKAkSFwoKY2hhbm5lbF9pZBgQIAEoCUgBiAEBEhcKCnNlc3Npb25faWQYESABKAlIAogBARIgChNjcmVhdGVkX2J5X2FnZW50X2lkGBIgASgJSAOIAQESHQoVY3JlYXRlZF9ieV9hZ2VudF9uYW1lGBMgASgJQgsKCV9hZ2VudF9pZEINCgtfY2hhbm5lbF9pZEINCgtfc2Vzc2lvbl9pZEIWChRfY3JlYXRlZF9ieV9hZ2VudF9pZCLuAgoTTGlzdE1lbW9yaWVzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFQoIYWdlbnRfaWQYAiABKAlIAIgBARIwCghjYXRlZ29yeRgDIAEoDjIZLmFnZW50cy52MS5NZW1vcnlDYXRlZ29yeUgBiAEBEhMKBnNlYXJjaBgEIAEoCUgCiAEBEjUKCnBhZ2luYXRpb24YBSABKAsyHC5jb21tb24udjEuUGFnaW5hdGlvblJlcXVlc3RIA4gBARIlCgVzY29wZRgGIAEoDjIWLmFnZW50cy52MS5NZW1vcnlTY29wZRIXCgpjaGFubmVsX2lkGAcgASgJSASIAQESFwoKc2Vzc2lvbl9pZBgIIAEoCUgFiAEBQgsKCV9hZ2VudF9pZEILCglfY2F0ZWdvcnlCCQoHX3NlYXJjaEINCgtfcGFnaW5hdGlvbkINCgtfY2hhbm5lbF9pZEINCgtfc2Vzc2lvbl9pZCJyChRMaXN0TWVtb3JpZXNSZXNwb25zZRInCghtZW1vcmllcxgBIAMoCzIVLmFnZW50cy52MS5NZW1vcnlJbmZvEjEKCnBhZ2luYXRpb24YAiABKAsyHS5jb21tb24udjEuUGFnaW5hdGlvblJlc3BvbnNlItECChNDcmVhdGVNZW1vcnlSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIVCghhZ2VudF9pZBgCIAEoCUgAiAEBEgsKA2tleRgDIAEoCRIPCgdjb250ZW50GAQgASgJEisKCGNhdGVnb3J5GAUgASgOMhkuYWdlbnRzLnYxLk1lbW9yeUNhdGVnb3J5EhcKCmltcG9ydGFuY2UYBiABKAJIAYgBARIlCgVzY29wZRgHIAEoDjIWLmFnZW50cy52MS5NZW1vcnlTY29wZRIXCgpjaGFubmVsX2lkGAggASgJSAKIAQESFwoKc2Vzc2lvbl9pZBgJIAEoCUgDiAEBEhMKC2Rlc2NyaXB0aW9uGAogASgJQgsKCV9hZ2VudF9pZEINCgtfaW1wb3J0YW5jZUINCgtfY2hhbm5lbF9pZEINCgtfc2Vzc2lvbl9pZCL0AQoTVXBkYXRlTWVtb3J5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEQoJbWVtb3J5X2lkGAIgASgJEhQKB2NvbnRlbnQYAyABKAlIAIgBARIwCghjYXRlZ29yeRgEIAEoDjIZLmFnZW50cy52MS5NZW1vcnlDYXRlZ29yeUgBiAEBEhcKCmltcG9ydGFuY2UYBSABKAJIAogBARIYCgtkZXNjcmlwdGlvbhgGIAEoCUgDiAEBQgoKCF9jb250ZW50QgsKCV9jYXRlZ29yeUINCgtfaW1wb3J0YW5jZUIOCgxfZGVzY3JpcHRpb24iPQoUQ3JlYXRlTWVtb3J5UmVzcG9uc2USJQoGbWVtb3J5GAEgASgLMhUuYWdlbnRzLnYxLk1lbW9yeUluZm8iPQoUVXBkYXRlTWVtb3J5UmVzcG9uc2USJQoGbWVtb3J5GAEgASgLMhUuYWdlbnRzLnYxLk1lbW9yeUluZm8iQQoTRGVsZXRlTWVtb3J5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEQoJbWVtb3J5X2lkGAIgASgJIicKFERlbGV0ZU1lbW9yeVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiVAoWU2V0TWVtb3J5UGlubmVkUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEQoJbWVtb3J5X2lkGAIgASgJEg4KBnBpbm5lZBgDIAEoCCJAChdTZXRNZW1vcnlQaW5uZWRSZXNwb25zZRIlCgZtZW1vcnkYASABKAsyFS5hZ2VudHMudjEuTWVtb3J5SW5mbyIyChdHZXRNZW1vcnlTaGFyaW5nUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkiTAoYR2V0TWVtb3J5U2hhcmluZ1Jlc3BvbnNlEhwKFHVzZV9pbl9zaGFyZWRfc3BhY2VzGAEgASgIEhIKCm9yZ19hbGxvd3MYAiABKAgiUAoXU2V0TWVtb3J5U2hhcmluZ1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhwKFHVzZV9pbl9zaGFyZWRfc3BhY2VzGAIgASgIIkwKGFNldE1lbW9yeVNoYXJpbmdSZXNwb25zZRIcChR1c2VfaW5fc2hhcmVkX3NwYWNlcxgBIAEoCBISCgpvcmdfYWxsb3dzGAIgASgIKqwBCg5NZW1vcnlDYXRlZ29yeRIfChtNRU1PUllfQ0FURUdPUllfVU5TUEVDSUZJRUQQABIfChtNRU1PUllfQ0FURUdPUllfUFJFRkVSRU5DRVMQARIZChVNRU1PUllfQ0FURUdPUllfRkFDVFMQAhIbChdNRU1PUllfQ0FURUdPUllfQ09OVEVYVBADEiAKHE1FTU9SWV9DQVRFR09SWV9JTlNUUlVDVElPTlMQBCqMAQoLTWVtb3J5U2NvcGUSHAoYTUVNT1JZX1NDT1BFX1VOU1BFQ0lGSUVEEAASFQoRTUVNT1JZX1NDT1BFX1VTRVIQARIYChRNRU1PUllfU0NPUEVfQ0hBTk5FTBACEhgKFE1FTU9SWV9TQ09QRV9TRVNTSU9OEAMSFAoQTUVNT1JZX1NDT1BFX09SRxAEKl8KDE1lbW9yeVNvdXJjZRIdChlNRU1PUllfU09VUkNFX1VOU1BFQ0lGSUVEEAASFgoSTUVNT1JZX1NPVVJDRV9UT09MEAESGAoUTUVNT1JZX1NPVVJDRV9NQU5VQUwQAjL3BAoPTWVtb3JpZXNTZXJ2aWNlElEKDExpc3RNZW1vcmllcxIeLmFnZW50cy52MS5MaXN0TWVtb3JpZXNSZXF1ZXN0Gh8uYWdlbnRzLnYxLkxpc3RNZW1vcmllc1Jlc3BvbnNlIgASUQoMQ3JlYXRlTWVtb3J5Eh4uYWdlbnRzLnYxLkNyZWF0ZU1lbW9yeVJlcXVlc3QaHy5hZ2VudHMudjEuQ3JlYXRlTWVtb3J5UmVzcG9uc2UiABJRCgxVcGRhdGVNZW1vcnkSHi5hZ2VudHMudjEuVXBkYXRlTWVtb3J5UmVxdWVzdBofLmFnZW50cy52MS5VcGRhdGVNZW1vcnlSZXNwb25zZSIAElEKDERlbGV0ZU1lbW9yeRIeLmFnZW50cy52MS5EZWxldGVNZW1vcnlSZXF1ZXN0Gh8uYWdlbnRzLnYxLkRlbGV0ZU1lbW9yeVJlc3BvbnNlIgASWgoPU2V0TWVtb3J5UGlubmVkEiEuYWdlbnRzLnYxLlNldE1lbW9yeVBpbm5lZFJlcXVlc3QaIi5hZ2VudHMudjEuU2V0TWVtb3J5UGlubmVkUmVzcG9uc2UiABJdChBHZXRNZW1vcnlTaGFyaW5nEiIuYWdlbnRzLnYxLkdldE1lbW9yeVNoYXJpbmdSZXF1ZXN0GiMuYWdlbnRzLnYxLkdldE1lbW9yeVNoYXJpbmdSZXNwb25zZSIAEl0KEFNldE1lbW9yeVNoYXJpbmcSIi5hZ2VudHMudjEuU2V0TWVtb3J5U2hhcmluZ1JlcXVlc3QaIy5hZ2VudHMudjEuU2V0TWVtb3J5U2hhcmluZ1Jlc3BvbnNlIgBCOVo3Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2FnZW50cy92MTthZ2VudHN2MWIGcHJvdG8z", [file_common_v1_common, file_google_protobuf_timestamp]);
 
 /**
- * Memory info returned to clients
+ * Memory info returned to clients.
+ * agent_id is set only on organization entries bound to one agent; absent means
+ * every agent in the bucket reads it. created_by_agent_id is provenance.
  *
  * @generated from message agents.v1.MemoryInfo
  */
@@ -28,9 +30,9 @@ export type MemoryInfo = Message<"agents.v1.MemoryInfo"> & {
   id: string;
 
   /**
-   * @generated from field: string agent_id = 2;
+   * @generated from field: optional string agent_id = 2;
    */
-  agentId: string;
+  agentId?: string | undefined;
 
   /**
    * @generated from field: string key = 3;
@@ -66,6 +68,56 @@ export type MemoryInfo = Message<"agents.v1.MemoryInfo"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 9;
    */
   updatedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: agents.v1.MemoryScope scope = 10;
+   */
+  scope: MemoryScope;
+
+  /**
+   * @generated from field: string description = 11;
+   */
+  description: string;
+
+  /**
+   * @generated from field: bool pinned = 12;
+   */
+  pinned: boolean;
+
+  /**
+   * @generated from field: agents.v1.MemorySource source = 13;
+   */
+  source: MemorySource;
+
+  /**
+   * @generated from field: string created_by_user_id = 14;
+   */
+  createdByUserId: string;
+
+  /**
+   * @generated from field: string created_by_name = 15;
+   */
+  createdByName: string;
+
+  /**
+   * @generated from field: optional string channel_id = 16;
+   */
+  channelId?: string | undefined;
+
+  /**
+   * @generated from field: optional string session_id = 17;
+   */
+  sessionId?: string | undefined;
+
+  /**
+   * @generated from field: optional string created_by_agent_id = 18;
+   */
+  createdByAgentId?: string | undefined;
+
+  /**
+   * @generated from field: string created_by_agent_name = 19;
+   */
+  createdByAgentName: string;
 };
 
 /**
@@ -76,6 +128,11 @@ export const MemoryInfoSchema: GenMessage<MemoryInfo> = /*@__PURE__*/
   messageDesc(file_agents_v1_memories, 0);
 
 /**
+ * Scope defaults to MEMORY_SCOPE_USER (the caller's own entries).
+ * channel_id / session_id are required subject ids for their scopes.
+ * agent_id narrows to one agent's organization entries and is rejected on
+ * every other scope, where memory is shared by all agents.
+ *
  * @generated from message agents.v1.ListMemoriesRequest
  */
 export type ListMemoriesRequest = Message<"agents.v1.ListMemoriesRequest"> & {
@@ -85,9 +142,9 @@ export type ListMemoriesRequest = Message<"agents.v1.ListMemoriesRequest"> & {
   organizationId: string;
 
   /**
-   * @generated from field: string agent_id = 2;
+   * @generated from field: optional string agent_id = 2;
    */
-  agentId: string;
+  agentId?: string | undefined;
 
   /**
    * @generated from field: optional agents.v1.MemoryCategory category = 3;
@@ -103,6 +160,21 @@ export type ListMemoriesRequest = Message<"agents.v1.ListMemoriesRequest"> & {
    * @generated from field: optional common.v1.PaginationRequest pagination = 5;
    */
   pagination?: PaginationRequest | undefined;
+
+  /**
+   * @generated from field: agents.v1.MemoryScope scope = 6;
+   */
+  scope: MemoryScope;
+
+  /**
+   * @generated from field: optional string channel_id = 7;
+   */
+  channelId?: string | undefined;
+
+  /**
+   * @generated from field: optional string session_id = 8;
+   */
+  sessionId?: string | undefined;
 };
 
 /**
@@ -144,9 +216,9 @@ export type CreateMemoryRequest = Message<"agents.v1.CreateMemoryRequest"> & {
   organizationId: string;
 
   /**
-   * @generated from field: string agent_id = 2;
+   * @generated from field: optional string agent_id = 2;
    */
-  agentId: string;
+  agentId?: string | undefined;
 
   /**
    * @generated from field: string key = 3;
@@ -167,6 +239,26 @@ export type CreateMemoryRequest = Message<"agents.v1.CreateMemoryRequest"> & {
    * @generated from field: optional float importance = 6;
    */
   importance?: number | undefined;
+
+  /**
+   * @generated from field: agents.v1.MemoryScope scope = 7;
+   */
+  scope: MemoryScope;
+
+  /**
+   * @generated from field: optional string channel_id = 8;
+   */
+  channelId?: string | undefined;
+
+  /**
+   * @generated from field: optional string session_id = 9;
+   */
+  sessionId?: string | undefined;
+
+  /**
+   * @generated from field: string description = 10;
+   */
+  description: string;
 };
 
 /**
@@ -204,6 +296,11 @@ export type UpdateMemoryRequest = Message<"agents.v1.UpdateMemoryRequest"> & {
    * @generated from field: optional float importance = 5;
    */
   importance?: number | undefined;
+
+  /**
+   * @generated from field: optional string description = 6;
+   */
+  description?: string | undefined;
 };
 
 /**
@@ -287,6 +384,133 @@ export const DeleteMemoryResponseSchema: GenMessage<DeleteMemoryResponse> = /*@_
   messageDesc(file_agents_v1_memories, 8);
 
 /**
+ * @generated from message agents.v1.SetMemoryPinnedRequest
+ */
+export type SetMemoryPinnedRequest = Message<"agents.v1.SetMemoryPinnedRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string memory_id = 2;
+   */
+  memoryId: string;
+
+  /**
+   * @generated from field: bool pinned = 3;
+   */
+  pinned: boolean;
+};
+
+/**
+ * Describes the message agents.v1.SetMemoryPinnedRequest.
+ * Use `create(SetMemoryPinnedRequestSchema)` to create a new message.
+ */
+export const SetMemoryPinnedRequestSchema: GenMessage<SetMemoryPinnedRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_memories, 9);
+
+/**
+ * @generated from message agents.v1.SetMemoryPinnedResponse
+ */
+export type SetMemoryPinnedResponse = Message<"agents.v1.SetMemoryPinnedResponse"> & {
+  /**
+   * @generated from field: agents.v1.MemoryInfo memory = 1;
+   */
+  memory?: MemoryInfo | undefined;
+};
+
+/**
+ * Describes the message agents.v1.SetMemoryPinnedResponse.
+ * Use `create(SetMemoryPinnedResponseSchema)` to create a new message.
+ */
+export const SetMemoryPinnedResponseSchema: GenMessage<SetMemoryPinnedResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_memories, 10);
+
+/**
+ * @generated from message agents.v1.GetMemorySharingRequest
+ */
+export type GetMemorySharingRequest = Message<"agents.v1.GetMemorySharingRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * Describes the message agents.v1.GetMemorySharingRequest.
+ * Use `create(GetMemorySharingRequestSchema)` to create a new message.
+ */
+export const GetMemorySharingRequestSchema: GenMessage<GetMemorySharingRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_memories, 11);
+
+/**
+ * @generated from message agents.v1.GetMemorySharingResponse
+ */
+export type GetMemorySharingResponse = Message<"agents.v1.GetMemorySharingResponse"> & {
+  /**
+   * @generated from field: bool use_in_shared_spaces = 1;
+   */
+  useInSharedSpaces: boolean;
+
+  /**
+   * @generated from field: bool org_allows = 2;
+   */
+  orgAllows: boolean;
+};
+
+/**
+ * Describes the message agents.v1.GetMemorySharingResponse.
+ * Use `create(GetMemorySharingResponseSchema)` to create a new message.
+ */
+export const GetMemorySharingResponseSchema: GenMessage<GetMemorySharingResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_memories, 12);
+
+/**
+ * @generated from message agents.v1.SetMemorySharingRequest
+ */
+export type SetMemorySharingRequest = Message<"agents.v1.SetMemorySharingRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: bool use_in_shared_spaces = 2;
+   */
+  useInSharedSpaces: boolean;
+};
+
+/**
+ * Describes the message agents.v1.SetMemorySharingRequest.
+ * Use `create(SetMemorySharingRequestSchema)` to create a new message.
+ */
+export const SetMemorySharingRequestSchema: GenMessage<SetMemorySharingRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_memories, 13);
+
+/**
+ * @generated from message agents.v1.SetMemorySharingResponse
+ */
+export type SetMemorySharingResponse = Message<"agents.v1.SetMemorySharingResponse"> & {
+  /**
+   * @generated from field: bool use_in_shared_spaces = 1;
+   */
+  useInSharedSpaces: boolean;
+
+  /**
+   * @generated from field: bool org_allows = 2;
+   */
+  orgAllows: boolean;
+};
+
+/**
+ * Describes the message agents.v1.SetMemorySharingResponse.
+ * Use `create(SetMemorySharingResponseSchema)` to create a new message.
+ */
+export const SetMemorySharingResponseSchema: GenMessage<SetMemorySharingResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_memories, 14);
+
+/**
  * Memory category
  *
  * @generated from enum agents.v1.MemoryCategory
@@ -325,13 +549,79 @@ export const MemoryCategorySchema: GenEnum<MemoryCategory> = /*@__PURE__*/
   enumDesc(file_agents_v1_memories, 0);
 
 /**
- * MemoriesService manages agent memory entries for users.
+ * Audience scope of a memory entry
+ *
+ * @generated from enum agents.v1.MemoryScope
+ */
+export enum MemoryScope {
+  /**
+   * @generated from enum value: MEMORY_SCOPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: MEMORY_SCOPE_USER = 1;
+   */
+  USER = 1,
+
+  /**
+   * @generated from enum value: MEMORY_SCOPE_CHANNEL = 2;
+   */
+  CHANNEL = 2,
+
+  /**
+   * @generated from enum value: MEMORY_SCOPE_SESSION = 3;
+   */
+  SESSION = 3,
+
+  /**
+   * @generated from enum value: MEMORY_SCOPE_ORG = 4;
+   */
+  ORG = 4,
+}
+
+/**
+ * Describes the enum agents.v1.MemoryScope.
+ */
+export const MemoryScopeSchema: GenEnum<MemoryScope> = /*@__PURE__*/
+  enumDesc(file_agents_v1_memories, 1);
+
+/**
+ * How a memory entry was created
+ *
+ * @generated from enum agents.v1.MemorySource
+ */
+export enum MemorySource {
+  /**
+   * @generated from enum value: MEMORY_SOURCE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: MEMORY_SOURCE_TOOL = 1;
+   */
+  TOOL = 1,
+
+  /**
+   * @generated from enum value: MEMORY_SOURCE_MANUAL = 2;
+   */
+  MANUAL = 2,
+}
+
+/**
+ * Describes the enum agents.v1.MemorySource.
+ */
+export const MemorySourceSchema: GenEnum<MemorySource> = /*@__PURE__*/
+  enumDesc(file_agents_v1_memories, 2);
+
+/**
+ * MemoriesService manages audience-scoped agent memory entries.
  *
  * @generated from service agents.v1.MemoriesService
  */
 export const MemoriesService: GenService<{
   /**
-   * List memories for a specific agent (scoped to current user)
+   * List memories for an agent within one scope the caller can see
    *
    * @generated from rpc agents.v1.MemoriesService.ListMemories
    */
@@ -351,7 +641,7 @@ export const MemoriesService: GenService<{
     output: typeof CreateMemoryResponseSchema;
   },
   /**
-   * Update a memory entry (content, category, importance)
+   * Update a memory entry (description, content, category, importance)
    *
    * @generated from rpc agents.v1.MemoriesService.UpdateMemory
    */
@@ -369,6 +659,36 @@ export const MemoriesService: GenService<{
     methodKind: "unary";
     input: typeof DeleteMemoryRequestSchema;
     output: typeof DeleteMemoryResponseSchema;
+  },
+  /**
+   * Pin or unpin a memory entry (pinned entries inject in full)
+   *
+   * @generated from rpc agents.v1.MemoriesService.SetMemoryPinned
+   */
+  setMemoryPinned: {
+    methodKind: "unary";
+    input: typeof SetMemoryPinnedRequestSchema;
+    output: typeof SetMemoryPinnedResponseSchema;
+  },
+  /**
+   * Read the caller's personal-memory sharing preference (shared-space bridge)
+   *
+   * @generated from rpc agents.v1.MemoriesService.GetMemorySharing
+   */
+  getMemorySharing: {
+    methodKind: "unary";
+    input: typeof GetMemorySharingRequestSchema;
+    output: typeof GetMemorySharingResponseSchema;
+  },
+  /**
+   * Set the caller's personal-memory sharing preference
+   *
+   * @generated from rpc agents.v1.MemoriesService.SetMemorySharing
+   */
+  setMemorySharing: {
+    methodKind: "unary";
+    input: typeof SetMemorySharingRequestSchema;
+    output: typeof SetMemorySharingResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_memories, 0);

@@ -1,9 +1,9 @@
 """Agents-domain Valkey cache helpers.
 
-Caches the read-heavy runtime pre-flight rows (agent, skills, prompt,
-provider-key metadata). Reverse-index sets `tag:skill:{id}` and
-`tag:prompt:{id}` hold agent ids that depend on each shared row so a
-mutation can SMEMBERS + bulk-DEL the dependent agent caches.
+Caches the read-heavy runtime pre-flight rows (agent, skills,
+provider-key metadata). Reverse-index sets `tag:skill:{id}` hold agent
+ids that depend on each shared row so a mutation can SMEMBERS +
+bulk-DEL the dependent agent caches.
 
 Provider-key entries hold non-secret routing metadata only; decrypted
 credentials live in the in-process provider-client LRU. The pubsub
@@ -24,9 +24,7 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.core.valkey.cache import (
-    CACHE_MISS,
     cache_delete,
-    cache_get,
     cache_get_or_set_locked,
     cache_invalidate_by_tag,
     cache_invalidate_many,
@@ -38,7 +36,6 @@ logger = logger.bind(component="cache")
 
 _AGENT_TTL_SECONDS = 900
 _SKILLS_TTL_SECONDS = 900
-_PROMPT_TTL_SECONDS = 900
 
 
 def _agent_key(agent_id: UUID) -> str:
@@ -49,16 +46,8 @@ def _agent_skills_key(agent_id: UUID) -> str:
     return f"agent:{agent_id}:skills"
 
 
-def _agent_prompt_key(agent_id: UUID) -> str:
-    return f"agent:{agent_id}:prompt"
-
-
 def _skill_tag_key(skill_id: UUID) -> str:
     return f"tag:skill:{skill_id}"
-
-
-def _prompt_tag_key(prompt_id: UUID) -> str:
-    return f"tag:prompt:{prompt_id}"
 
 
 def _org_skills_tag(organization_id: UUID) -> str:
@@ -81,6 +70,8 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
         "fallback_models": list(agent.fallback_models or []),
         "model_params": dict(agent.model_params or {}),
         "image_model": agent.image_model,
+        "image_params": dict(agent.image_params or {}),
+        "image_style_prompt": agent.image_style_prompt,
         "primary_provider_key_id": (
             str(agent.primary_provider_key_id)
             if agent.primary_provider_key_id
@@ -91,9 +82,9 @@ def _serialize_agent(agent: Agent) -> dict[str, Any]:
             if agent.image_provider_key_id
             else None
         ),
-        "prompt_id": str(agent.prompt_id) if agent.prompt_id else None,
         "enabled_tools": list(agent.enabled_tools or []),
         "enabled_skills": list(agent.enabled_skills or []),
+        "integration_connections": dict(agent.integration_connections or {}),
         "avatar_emoji": agent.avatar_emoji,
         "avatar_key": agent.avatar_key,
         "theme_color": agent.theme_color,
@@ -129,6 +120,8 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
         fallback_models=payload.get("fallback_models") or [],
         model_params=payload.get("model_params") or {},
         image_model=payload.get("image_model", ""),
+        image_params=payload.get("image_params") or {},
+        image_style_prompt=payload.get("image_style_prompt", ""),
         primary_provider_key_id=(
             UUID(payload["primary_provider_key_id"])
             if payload.get("primary_provider_key_id")
@@ -139,11 +132,9 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
             if payload.get("image_provider_key_id")
             else None
         ),
-        prompt_id=(
-            UUID(payload["prompt_id"]) if payload.get("prompt_id") else None
-        ),
         enabled_tools=payload.get("enabled_tools") or [],
         enabled_skills=payload.get("enabled_skills") or [],
+        integration_connections=payload.get("integration_connections") or {},
         avatar_emoji=payload.get("avatar_emoji", ""),
         avatar_key=payload.get("avatar_key"),
         theme_color=payload.get("theme_color", ""),
@@ -175,14 +166,6 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
             else None
         ),
     )
-
-
-async def get_cached_agent(agent_id: UUID) -> Agent | None:
-    """Return a transient ``Agent`` from cache, or ``None`` on miss."""
-    cached = await cache_get(_agent_key(agent_id))
-    if cached is CACHE_MISS or cached is None:
-        return None
-    return _deserialize_agent(cached)
 
 
 async def set_cached_agent(agent: Agent) -> None:
@@ -269,33 +252,6 @@ def _deserialize_skill(payload: dict[str, Any]) -> AgentSkill:
     )
 
 
-async def get_cached_agent_skills(
-    agent_id: UUID,
-) -> list[AgentSkill] | None:
-    """Return cached, ordered skills for an agent or ``None`` on miss."""
-    cached = await cache_get(_agent_skills_key(agent_id))
-    if cached is CACHE_MISS or cached is None:
-        return None
-    skills = cached.get("skills") if isinstance(cached, dict) else None
-    if not isinstance(skills, list):
-        return None
-    return [_deserialize_skill(s) for s in skills]
-
-
-async def set_cached_agent_skills(
-    agent_id: UUID,
-    organization_id: UUID,
-    skills: list[AgentSkill],
-) -> None:
-    payload = {"skills": [_serialize_skill(s) for s in skills]}
-    await cache_set(
-        _agent_skills_key(agent_id),
-        payload,
-        ttl=_SKILLS_TTL_SECONDS,
-        tags=[_org_skills_tag(organization_id)],
-    )
-
-
 async def invalidate_cached_agent_skills(agent_id: UUID) -> None:
     await cache_delete(_agent_skills_key(agent_id))
 
@@ -328,68 +284,6 @@ async def fetch_agent_skills(
     if not isinstance(raw, list):
         return []
     return [_deserialize_skill(s) for s in raw]
-
-
-async def get_cached_agent_prompt(agent_id: UUID) -> str | None:
-    """Return cached resolved prompt content, or `None` on miss/no-prompt."""
-    cached = await cache_get(_agent_prompt_key(agent_id))
-    if cached is CACHE_MISS:
-        return None
-    if cached is None:
-        return None
-    content = cached.get("content")
-    return content if isinstance(content, str) else None
-
-
-async def set_cached_agent_prompt(
-    agent_id: UUID,
-    content: str | None,
-) -> None:
-    payload: dict[str, Any] | None
-    payload = {"content": content} if content is not None else None
-    await cache_set(
-        _agent_prompt_key(agent_id),
-        payload,
-        ttl=_PROMPT_TTL_SECONDS,
-    )
-
-
-async def invalidate_cached_agent_prompt(agent_id: UUID) -> None:
-    await cache_delete(_agent_prompt_key(agent_id))
-
-
-async def fetch_agent_prompt(
-    session: AsyncSession,
-    *,
-    agent_id: UUID,
-    prompt_id: UUID | None,
-) -> str | None:
-    """Stampede-protected cache-or-load for the resolved prompt."""
-    if prompt_id is None:
-        return None
-
-    async def _load() -> dict[str, Any] | None:
-        from uniffy.domains.agents.prompts.operations import PromptOperations
-
-        try:
-            prompt_ops = PromptOperations(session)
-            prompt = await prompt_ops.get_prompt_by_id(prompt_id)
-        except Exception:
-            logger.opt(exception=True).warning("Failed to resolve prompt template")
-            return None
-        if not prompt or not prompt.content:
-            return None
-        return {"content": prompt.content}
-
-    payload = await cache_get_or_set_locked(
-        _agent_prompt_key(agent_id),
-        _load,
-        ttl=_PROMPT_TTL_SECONDS,
-    )
-    if payload is None:
-        return None
-    content = payload.get("content") if isinstance(payload, dict) else None
-    return content if isinstance(content, str) else None
 
 
 async def _set_add(set_key: str, member: str, ttl: int) -> None:
@@ -458,25 +352,6 @@ async def track_agent_skill_refs(
             await _set_remove(_skill_tag_key(sid), str(agent_id))
 
 
-async def track_agent_prompt_ref(
-    agent_id: UUID,
-    *,
-    old_prompt_id: UUID | None,
-    new_prompt_id: UUID | None,
-) -> None:
-    """Update the `tag:prompt:{pid}` reverse-index; idempotent on no-op."""
-    if old_prompt_id == new_prompt_id:
-        return
-    if old_prompt_id is not None:
-        await _set_remove(_prompt_tag_key(old_prompt_id), str(agent_id))
-    if new_prompt_id is not None:
-        await _set_add(
-            _prompt_tag_key(new_prompt_id),
-            str(agent_id),
-            _PROMPT_TTL_SECONDS,
-        )
-
-
 async def invalidate_agents_using_skill(
     skill_id: UUID,
     *,
@@ -515,38 +390,93 @@ async def invalidate_org_always_active_skills(organization_id: UUID) -> None:
     await cache_invalidate_by_tag(_org_skills_tag(organization_id))
 
 
-async def invalidate_agents_using_prompt(
-    prompt_id: UUID,
-    *,
-    drop_tag_set: bool = False,
-) -> None:
-    """Invalidate the prompt cache for every agent referencing `prompt_id`."""
-    set_key = _prompt_tag_key(prompt_id)
-    members = await _set_members(set_key)
-    if members:
-        keys = [
-            _agent_prompt_key(UUID(aid)) for aid in members if _is_uuid(aid)
-        ]
-        if keys:
-            await cache_invalidate_many(*keys)
-    if drop_tag_set:
-        client = _get_ops_client()
-        if client is not None:
-            try:
-                await client.delete(set_key)
-            except Exception:
-                logger.warning(
-                    f"Cache reverse-index DEL failed for {set_key}",
-                    component="cache",
-                )
-
-
 def _is_uuid(value: str) -> bool:
     try:
         UUID(value)
     except (ValueError, AttributeError):
         return False
     return True
+
+
+_MEMORY_INDEX_TTL_SECONDS = 300
+MEMORY_INDEX_LIMIT = 50
+
+
+def _memory_index_key(organization_id: UUID, scope_ref) -> str:
+    """One entry per bucket; the agent segment is `all` for shared buckets."""
+    return (
+        f"agentmem:{organization_id}:{scope_ref.scope.value}:"
+        f"{scope_ref.cache_subject}:{scope_ref.cache_agent}"
+    )
+
+
+async def fetch_memory_index(
+    session: AsyncSession,
+    *,
+    organization_id: UUID,
+    scope_ref,
+) -> dict[str, Any]:
+    """Stampede-protected cache-or-load of one bucket's rendered memory index.
+
+    Payload: pinned entries carry full content (they inject verbatim);
+    index entries carry key/category/description only, capped at
+    MEMORY_INDEX_LIMIT with `total` preserving the real row count.
+    """
+    from sqlalchemy import func
+
+    from uniffy.core.models.agents.memory import AgentMemory
+    from uniffy.domains.agents.memories.scope import scope_filters
+
+    async def _load() -> dict[str, Any]:
+        filters = scope_filters(organization_id, scope_ref)
+        pinned_rows = (
+            await session.execute(
+                select(
+                    AgentMemory.key, AgentMemory.category, AgentMemory.content
+                )
+                .where(*filters, AgentMemory.pinned.is_(True))  # type: ignore[union-attr]
+                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
+            )
+        ).all()
+        index_rows = (
+            await session.execute(
+                select(
+                    AgentMemory.key, AgentMemory.category, AgentMemory.description
+                )
+                .where(*filters, AgentMemory.pinned.is_(False))  # type: ignore[union-attr]
+                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
+                .limit(MEMORY_INDEX_LIMIT)
+            )
+        ).all()
+        total = (
+            await session.execute(
+                select(func.count()).select_from(AgentMemory).where(*filters)
+            )
+        ).scalar() or 0
+        return {
+            "pinned": [
+                {"key": k, "category": c, "content": body}
+                for k, c, body in pinned_rows
+            ],
+            "index": [
+                {"key": k, "category": c, "description": d}
+                for k, c, d in index_rows
+            ],
+            "total": int(total),
+        }
+
+    payload = await cache_get_or_set_locked(
+        _memory_index_key(organization_id, scope_ref),
+        _load,
+        ttl=_MEMORY_INDEX_TTL_SECONDS,
+    )
+    if not isinstance(payload, dict):
+        return {"pinned": [], "index": [], "total": 0}
+    return payload
+
+
+async def invalidate_memory_index(organization_id: UUID, scope_ref) -> None:
+    await cache_delete(_memory_index_key(organization_id, scope_ref))
 
 
 async def publish_provider_key_invalidation(key_id: UUID) -> None:

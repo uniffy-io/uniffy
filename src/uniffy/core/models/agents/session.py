@@ -3,8 +3,8 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, String
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, DateTime, String, text
+from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -30,12 +30,6 @@ class AgentSession(SQLModel, table=True):
         default=None,
         sa_column=Column(String(100), nullable=True),
     )
-    # Per-session model-parameter overrides, resolved over the agent's
-    # stored model_params. NULL = no overrides.
-    model_params_override: dict | None = Field(
-        default=None,
-        sa_column=Column(JSONB, nullable=True),
-    )
     total_input_tokens: int = Field(default=0, nullable=False)
     total_output_tokens: int = Field(default=0, nullable=False)
     message_count: int = Field(default=0, nullable=False)
@@ -44,6 +38,15 @@ class AgentSession(SQLModel, table=True):
         sa_column=Column(String(100), nullable=True),
     )
     is_archived: bool = Field(default=False, nullable=False)
+    is_test: bool = Field(default=False, nullable=False)
+    loaded_tool_groups: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(
+            PG_JSONB,
+            nullable=False,
+            server_default=text("'[]'::jsonb"),
+        ),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

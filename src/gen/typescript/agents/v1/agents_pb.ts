@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/agents.proto.
  */
 export const file_agents_v1_agents: GenFile = /*@__PURE__*/
-  fileDesc("ChZhZ2VudHMvdjEvYWdlbnRzLnByb3RvEglhZ2VudHMudjEiwQUKCUFnZW50SW5mbxIKCgJpZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkSEAoIb3duZXJfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRITCgtzb3VsX3Byb21wdBgFIAEoCRIVCg1wcmltYXJ5X21vZGVsGAYgASgJEhcKD2ZhbGxiYWNrX21vZGVscxgHIAMoCRIVCg1lbmFibGVkX3Rvb2xzGAggAygJEhQKDGF2YXRhcl9lbW9qaRgJIAEoCRITCgt0aGVtZV9jb2xvchgKIAEoCRISCgppc19kZWZhdWx0GAsgASgIEi4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmVuYWJsZWRfc2tpbGxzGA4gAygJEioKC2FjY2Vzc19tb2RlGA8gASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGUSEgoKYXZhdGFyX2tleRgQIAEoCRITCgtpbWFnZV9tb2RlbBgRIAEoCRIfChdwcmltYXJ5X3Byb3ZpZGVyX2tleV9pZBgSIAEoCRIdChVpbWFnZV9wcm92aWRlcl9rZXlfaWQYEyABKAkSEQoJcHJvbXB0X2lkGBQgASgJEjIKDWJhc2VsaW5lX3JvbGUYFSABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAIgBARIuCgl1c2VyX3JvbGUYFiABKA4yFi5jb21tb24udjEuQ29udGVudFJvbGVIAYgBARIaCgR0YWdzGBcgAygLMgwudGFncy52MS5UYWcSFAoMbW9kZWxfcGFyYW1zGBggASgJQhAKDl9iYXNlbGluZV9yb2xlQgwKCl91c2VyX3JvbGUi6QUKEkNyZWF0ZUFnZW50UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDAoEbmFtZRgCIAEoCRIYCgtzb3VsX3Byb21wdBgDIAEoCUgAiAEBEhoKDXByaW1hcnlfbW9kZWwYBCABKAlIAYgBARIXCg9mYWxsYmFja19tb2RlbHMYBSADKAkSGQoMYXZhdGFyX2Vtb2ppGAYgASgJSAKIAQESGAoLdGhlbWVfY29sb3IYByABKAlIA4gBARIXCgppc19kZWZhdWx0GAggASgISASIAQESFgoOZW5hYmxlZF9za2lsbHMYCSADKAkSLwoLYWNjZXNzX21vZGUYCiABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZUgFiAEBEhEKCWdyb3VwX2lkcxgLIAMoCRIYCgtpbWFnZV9tb2RlbBgMIAEoCUgGiAEBEiQKF3ByaW1hcnlfcHJvdmlkZXJfa2V5X2lkGA0gASgJSAeIAQESIgoVaW1hZ2VfcHJvdmlkZXJfa2V5X2lkGA4gASgJSAiIAQESFgoJcHJvbXB0X2lkGA8gASgJSAmIAQESMgoNYmFzZWxpbmVfcm9sZRgQIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgKiAEBEg8KB3RhZ19pZHMYESADKAkSGQoMbW9kZWxfcGFyYW1zGBIgASgJSAuIAQFCDgoMX3NvdWxfcHJvbXB0QhAKDl9wcmltYXJ5X21vZGVsQg8KDV9hdmF0YXJfZW1vamlCDgoMX3RoZW1lX2NvbG9yQg0KC19pc19kZWZhdWx0Qg4KDF9hY2Nlc3NfbW9kZUIOCgxfaW1hZ2VfbW9kZWxCGgoYX3ByaW1hcnlfcHJvdmlkZXJfa2V5X2lkQhgKFl9pbWFnZV9wcm92aWRlcl9rZXlfaWRCDAoKX3Byb21wdF9pZEIQCg5fYmFzZWxpbmVfcm9sZUIPCg1fbW9kZWxfcGFyYW1zIjoKE0NyZWF0ZUFnZW50UmVzcG9uc2USIwoFYWdlbnQYASABKAsyFC5hZ2VudHMudjEuQWdlbnRJbmZvIjcKEEdldEFnZW50UmVzcG9uc2USIwoFYWdlbnQYASABKAsyFC5hZ2VudHMudjEuQWdlbnRJbmZvIjoKE1VwZGF0ZUFnZW50UmVzcG9uc2USIwoFYWdlbnQYASABKAsyFC5hZ2VudHMudjEuQWdlbnRJbmZvIkAKGVVwbG9hZEFnZW50QXZhdGFyUmVzcG9uc2USIwoFYWdlbnQYASABKAsyFC5hZ2VudHMudjEuQWdlbnRJbmZvIkAKGURlbGV0ZUFnZW50QXZhdGFyUmVzcG9uc2USIwoFYWdlbnQYASABKAsyFC5hZ2VudHMudjEuQWdlbnRJbmZvIjwKD0dldEFnZW50UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkilgIKEUxpc3RBZ2VudHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRI1CgpwYWdpbmF0aW9uGAIgASgLMhwuY29tbW9uLnYxLlBhZ2luYXRpb25SZXF1ZXN0SACIAQESLwoLYWNjZXNzX21vZGUYAyABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZUgBiAEBEhoKDXBlcnNvbmFsX29ubHkYBCABKAhIAogBARIVCghncm91cF9pZBgFIAEoCUgDiAEBEg8KB3RhZ19pZHMYBiADKAlCDQoLX3BhZ2luYXRpb25CDgoMX2FjY2Vzc19tb2RlQhAKDl9wZXJzb25hbF9vbmx5QgsKCV9ncm91cF9pZCJtChJMaXN0QWdlbnRzUmVzcG9uc2USJAoGYWdlbnRzGAEgAygLMhQuYWdlbnRzLnYxLkFnZW50SW5mbxIxCgpwYWdpbmF0aW9uGAIgASgLMh0uY29tbW9uLnYxLlBhZ2luYXRpb25SZXNwb25zZSL1BgoSVXBkYXRlQWdlbnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESGAoLc291bF9wcm9tcHQYBCABKAlIAYgBARIaCg1wcmltYXJ5X21vZGVsGAUgASgJSAKIAQESFwoPZmFsbGJhY2tfbW9kZWxzGAYgAygJEhkKDGF2YXRhcl9lbW9qaRgHIAEoCUgDiAEBEhgKC3RoZW1lX2NvbG9yGAggASgJSASIAQESFwoKaXNfZGVmYXVsdBgJIAEoCEgFiAEBEhYKDmVuYWJsZWRfc2tpbGxzGAogAygJEi8KC2FjY2Vzc19tb2RlGAsgASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIBogBARIRCglncm91cF9pZHMYDCADKAkSFQoNZW5hYmxlZF90b29scxgNIAMoCRIYCgtpbWFnZV9tb2RlbBgOIAEoCUgHiAEBEiQKF3ByaW1hcnlfcHJvdmlkZXJfa2V5X2lkGA8gASgJSAiIAQESIgoVaW1hZ2VfcHJvdmlkZXJfa2V5X2lkGBAgASgJSAmIAQESFgoJcHJvbXB0X2lkGBEgASgJSAqIAQESGQoMY2xlYXJfcHJvbXB0GBIgASgISAuIAQESMgoNYmFzZWxpbmVfcm9sZRgTIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgMiAEBEiwKB3RhZ19pZHMYFCABKAsyFi5hZ2VudHMudjEuQWdlbnRUYWdJZHNIDYgBARIZCgxtb2RlbF9wYXJhbXMYFSABKAlIDogBAUIHCgVfbmFtZUIOCgxfc291bF9wcm9tcHRCEAoOX3ByaW1hcnlfbW9kZWxCDwoNX2F2YXRhcl9lbW9qaUIOCgxfdGhlbWVfY29sb3JCDQoLX2lzX2RlZmF1bHRCDgoMX2FjY2Vzc19tb2RlQg4KDF9pbWFnZV9tb2RlbEIaChhfcHJpbWFyeV9wcm92aWRlcl9rZXlfaWRCGAoWX2ltYWdlX3Byb3ZpZGVyX2tleV9pZEIMCgpfcHJvbXB0X2lkQg8KDV9jbGVhcl9wcm9tcHRCEAoOX2Jhc2VsaW5lX3JvbGVCCgoIX3RhZ19pZHNCDwoNX21vZGVsX3BhcmFtcyIaCgtBZ2VudFRhZ0lkcxILCgNpZHMYASADKAkiPwoSRGVsZXRlQWdlbnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCSImChNEZWxldGVBZ2VudFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiawoYVXBsb2FkQWdlbnRBdmF0YXJSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRISCgppbWFnZV9kYXRhGAMgASgMEhAKCGZpbGVuYW1lGAQgASgJIkUKGERlbGV0ZUFnZW50QXZhdGFyUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkiRwoaUHJldmlld1N5c3RlbVByb21wdFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGFnZW50X2lkGAIgASgJIjQKG1ByZXZpZXdTeXN0ZW1Qcm9tcHRSZXNwb25zZRIVCg1zeXN0ZW1fcHJvbXB0GAEgASgJMr8FCg1BZ2VudHNTZXJ2aWNlEk4KC0NyZWF0ZUFnZW50Eh0uYWdlbnRzLnYxLkNyZWF0ZUFnZW50UmVxdWVzdBoeLmFnZW50cy52MS5DcmVhdGVBZ2VudFJlc3BvbnNlIgASRQoIR2V0QWdlbnQSGi5hZ2VudHMudjEuR2V0QWdlbnRSZXF1ZXN0GhsuYWdlbnRzLnYxLkdldEFnZW50UmVzcG9uc2UiABJLCgpMaXN0QWdlbnRzEhwuYWdlbnRzLnYxLkxpc3RBZ2VudHNSZXF1ZXN0Gh0uYWdlbnRzLnYxLkxpc3RBZ2VudHNSZXNwb25zZSIAEk4KC1VwZGF0ZUFnZW50Eh0uYWdlbnRzLnYxLlVwZGF0ZUFnZW50UmVxdWVzdBoeLmFnZW50cy52MS5VcGRhdGVBZ2VudFJlc3BvbnNlIgASTgoLRGVsZXRlQWdlbnQSHS5hZ2VudHMudjEuRGVsZXRlQWdlbnRSZXF1ZXN0Gh4uYWdlbnRzLnYxLkRlbGV0ZUFnZW50UmVzcG9uc2UiABJgChFVcGxvYWRBZ2VudEF2YXRhchIjLmFnZW50cy52MS5VcGxvYWRBZ2VudEF2YXRhclJlcXVlc3QaJC5hZ2VudHMudjEuVXBsb2FkQWdlbnRBdmF0YXJSZXNwb25zZSIAEmAKEURlbGV0ZUFnZW50QXZhdGFyEiMuYWdlbnRzLnYxLkRlbGV0ZUFnZW50QXZhdGFyUmVxdWVzdBokLmFnZW50cy52MS5EZWxldGVBZ2VudEF2YXRhclJlc3BvbnNlIgASZgoTUHJldmlld1N5c3RlbVByb21wdBIlLmFnZW50cy52MS5QcmV2aWV3U3lzdGVtUHJvbXB0UmVxdWVzdBomLmFnZW50cy52MS5QcmV2aWV3U3lzdGVtUHJvbXB0UmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp, file_tags_v1_tags]);
+  fileDesc("ChZhZ2VudHMvdjEvYWdlbnRzLnByb3RvEglhZ2VudHMudjEi2QYKCUFnZW50SW5mbxIKCgJpZBgBIAEoCRIXCg9vcmdhbml6YXRpb25faWQYAiABKAkSEAoIb3duZXJfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRITCgtzb3VsX3Byb21wdBgFIAEoCRIVCg1wcmltYXJ5X21vZGVsGAYgASgJEhcKD2ZhbGxiYWNrX21vZGVscxgHIAMoCRIVCg1lbmFibGVkX3Rvb2xzGAggAygJEhQKDGF2YXRhcl9lbW9qaRgJIAEoCRITCgt0aGVtZV9jb2xvchgKIAEoCRISCgppc19kZWZhdWx0GAsgASgIEi4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmVuYWJsZWRfc2tpbGxzGA4gAygJEioKC2FjY2Vzc19tb2RlGA8gASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGUSEgoKYXZhdGFyX2tleRgQIAEoCRITCgtpbWFnZV9tb2RlbBgRIAEoCRIfChdwcmltYXJ5X3Byb3ZpZGVyX2tleV9pZBgSIAEoCRIdChVpbWFnZV9wcm92aWRlcl9rZXlfaWQYEyABKAkSMgoNYmFzZWxpbmVfcm9sZRgUIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgAiAEBEi4KCXVzZXJfcm9sZRgVIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgBiAEBEhoKBHRhZ3MYFiADKAsyDC50YWdzLnYxLlRhZxIUCgxtb2RlbF9wYXJhbXMYFyABKAkSFAoMaW1hZ2VfcGFyYW1zGBggASgJEhoKEmltYWdlX3N0eWxlX3Byb21wdBgZIAEoCRISCgppc19kZWxldGVkGBogASgIEjMKCmRlbGV0ZWRfYXQYGyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAKIAQESHwoXaW50ZWdyYXRpb25fY29ubmVjdGlvbnMYHCABKAlCEAoOX2Jhc2VsaW5lX3JvbGVCDAoKX3VzZXJfcm9sZUINCgtfZGVsZXRlZF9hdCLpBgoSQ3JlYXRlQWdlbnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhgKC3NvdWxfcHJvbXB0GAMgASgJSACIAQESGgoNcHJpbWFyeV9tb2RlbBgEIAEoCUgBiAEBEhcKD2ZhbGxiYWNrX21vZGVscxgFIAMoCRIZCgxhdmF0YXJfZW1vamkYBiABKAlIAogBARIYCgt0aGVtZV9jb2xvchgHIAEoCUgDiAEBEhcKCmlzX2RlZmF1bHQYCCABKAhIBIgBARIWCg5lbmFibGVkX3NraWxscxgJIAMoCRIvCgthY2Nlc3NfbW9kZRgKIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlSAWIAQESEQoJZ3JvdXBfaWRzGAsgAygJEhgKC2ltYWdlX21vZGVsGAwgASgJSAaIAQESJAoXcHJpbWFyeV9wcm92aWRlcl9rZXlfaWQYDSABKAlIB4gBARIiChVpbWFnZV9wcm92aWRlcl9rZXlfaWQYDiABKAlICIgBARIyCg1iYXNlbGluZV9yb2xlGA8gASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAmIAQESDwoHdGFnX2lkcxgQIAMoCRIZCgxtb2RlbF9wYXJhbXMYESABKAlICogBARIZCgxpbWFnZV9wYXJhbXMYEiABKAlIC4gBARIfChJpbWFnZV9zdHlsZV9wcm9tcHQYEyABKAlIDIgBARIkChdpbnRlZ3JhdGlvbl9jb25uZWN0aW9ucxgUIAEoCUgNiAEBQg4KDF9zb3VsX3Byb21wdEIQCg5fcHJpbWFyeV9tb2RlbEIPCg1fYXZhdGFyX2Vtb2ppQg4KDF90aGVtZV9jb2xvckINCgtfaXNfZGVmYXVsdEIOCgxfYWNjZXNzX21vZGVCDgoMX2ltYWdlX21vZGVsQhoKGF9wcmltYXJ5X3Byb3ZpZGVyX2tleV9pZEIYChZfaW1hZ2VfcHJvdmlkZXJfa2V5X2lkQhAKDl9iYXNlbGluZV9yb2xlQg8KDV9tb2RlbF9wYXJhbXNCDwoNX2ltYWdlX3BhcmFtc0IVChNfaW1hZ2Vfc3R5bGVfcHJvbXB0QhoKGF9pbnRlZ3JhdGlvbl9jb25uZWN0aW9ucyI6ChNDcmVhdGVBZ2VudFJlc3BvbnNlEiMKBWFnZW50GAEgASgLMhQuYWdlbnRzLnYxLkFnZW50SW5mbyI3ChBHZXRBZ2VudFJlc3BvbnNlEiMKBWFnZW50GAEgASgLMhQuYWdlbnRzLnYxLkFnZW50SW5mbyI6ChNVcGRhdGVBZ2VudFJlc3BvbnNlEiMKBWFnZW50GAEgASgLMhQuYWdlbnRzLnYxLkFnZW50SW5mbyJAChlVcGxvYWRBZ2VudEF2YXRhclJlc3BvbnNlEiMKBWFnZW50GAEgASgLMhQuYWdlbnRzLnYxLkFnZW50SW5mbyJAChlEZWxldGVBZ2VudEF2YXRhclJlc3BvbnNlEiMKBWFnZW50GAEgASgLMhQuYWdlbnRzLnYxLkFnZW50SW5mbyI8Cg9HZXRBZ2VudFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGFnZW50X2lkGAIgASgJIv4BChFMaXN0QWdlbnRzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSNQoKcGFnaW5hdGlvbhgCIAEoCzIcLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVxdWVzdEgAiAEBEi8KC2FjY2Vzc19tb2RlGAMgASgOMhUuY29tbW9uLnYxLkFjY2Vzc01vZGVIAYgBARIVCghncm91cF9pZBgEIAEoCUgCiAEBEg8KB3RhZ19pZHMYBSADKAkSFAoMZGVsZXRlZF9vbmx5GAYgASgIQg0KC19wYWdpbmF0aW9uQg4KDF9hY2Nlc3NfbW9kZUILCglfZ3JvdXBfaWQibQoSTGlzdEFnZW50c1Jlc3BvbnNlEiQKBmFnZW50cxgBIAMoCzIULmFnZW50cy52MS5BZ2VudEluZm8SMQoKcGFnaW5hdGlvbhgCIAEoCzIdLmNvbW1vbi52MS5QYWdpbmF0aW9uUmVzcG9uc2UirwYKElVwZGF0ZUFnZW50UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEhgKC3NvdWxfcHJvbXB0GAQgASgJSAGIAQESGgoNcHJpbWFyeV9tb2RlbBgFIAEoCUgCiAEBEhcKD2ZhbGxiYWNrX21vZGVscxgGIAMoCRIZCgxhdmF0YXJfZW1vamkYByABKAlIA4gBARIYCgt0aGVtZV9jb2xvchgIIAEoCUgEiAEBEhcKCmlzX2RlZmF1bHQYCSABKAhIBYgBARIWCg5lbmFibGVkX3NraWxscxgKIAMoCRIVCg1lbmFibGVkX3Rvb2xzGAsgAygJEhgKC2ltYWdlX21vZGVsGAwgASgJSAaIAQESJAoXcHJpbWFyeV9wcm92aWRlcl9rZXlfaWQYDSABKAlIB4gBARIiChVpbWFnZV9wcm92aWRlcl9rZXlfaWQYDiABKAlICIgBARIsCgd0YWdfaWRzGA8gASgLMhYuYWdlbnRzLnYxLkFnZW50VGFnSWRzSAmIAQESGQoMbW9kZWxfcGFyYW1zGBAgASgJSAqIAQESGQoMaW1hZ2VfcGFyYW1zGBEgASgJSAuIAQESHwoSaW1hZ2Vfc3R5bGVfcHJvbXB0GBIgASgJSAyIAQESJAoXaW50ZWdyYXRpb25fY29ubmVjdGlvbnMYEyABKAlIDYgBAUIHCgVfbmFtZUIOCgxfc291bF9wcm9tcHRCEAoOX3ByaW1hcnlfbW9kZWxCDwoNX2F2YXRhcl9lbW9qaUIOCgxfdGhlbWVfY29sb3JCDQoLX2lzX2RlZmF1bHRCDgoMX2ltYWdlX21vZGVsQhoKGF9wcmltYXJ5X3Byb3ZpZGVyX2tleV9pZEIYChZfaW1hZ2VfcHJvdmlkZXJfa2V5X2lkQgoKCF90YWdfaWRzQg8KDV9tb2RlbF9wYXJhbXNCDwoNX2ltYWdlX3BhcmFtc0IVChNfaW1hZ2Vfc3R5bGVfcHJvbXB0QhoKGF9pbnRlZ3JhdGlvbl9jb25uZWN0aW9ucyIaCgtBZ2VudFRhZ0lkcxILCgNpZHMYASADKAkiPwoSRGVsZXRlQWdlbnRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCSImChNEZWxldGVBZ2VudFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiQAoTUmVzdG9yZUFnZW50UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkiOwoUUmVzdG9yZUFnZW50UmVzcG9uc2USIwoFYWdlbnQYASABKAsyFC5hZ2VudHMudjEuQWdlbnRJbmZvImsKGFVwbG9hZEFnZW50QXZhdGFyUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSEgoKaW1hZ2VfZGF0YRgDIAEoDBIQCghmaWxlbmFtZRgEIAEoCSJFChhEZWxldGVBZ2VudEF2YXRhclJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCGFnZW50X2lkGAIgASgJIkcKGlByZXZpZXdTeXN0ZW1Qcm9tcHRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCSI0ChtQcmV2aWV3U3lzdGVtUHJvbXB0UmVzcG9uc2USFQoNc3lzdGVtX3Byb21wdBgBIAEoCSLRAQoNQWdlbnRUZW1wbGF0ZRILCgNrZXkYASABKAkSDAoEbmFtZRgCIAEoCRINCgVlbW9qaRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRITCgtzb3VsX3Byb21wdBgFIAEoCRIVCg1lbmFibGVkX3Rvb2xzGAYgAygJEhkKEWVuYWJsZWRfc2tpbGxfaWRzGAcgAygJEhkKEXJlY29tbWVuZGVkX21vZGVsGAggASgJEh8KF3JlY29tbWVuZGVkX2ltYWdlX21vZGVsGAkgASgJIjQKGUxpc3RBZ2VudFRlbXBsYXRlc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIkkKGkxpc3RBZ2VudFRlbXBsYXRlc1Jlc3BvbnNlEisKCXRlbXBsYXRlcxgBIAMoCzIYLmFnZW50cy52MS5BZ2VudFRlbXBsYXRlIpYBCghUb29sSW5mbxIMCgRuYW1lGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRINCgVncm91cBgEIAEoCRIQCghjYXRlZ29yeRgFIAEoCRITCgtkZXN0cnVjdGl2ZRgGIAEoCBIbChNyZXF1aXJlc19jb25uZWN0aW9uGAcgASgJIisKEExpc3RUb29sc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIjcKEUxpc3RUb29sc1Jlc3BvbnNlEiIKBXRvb2xzGAEgAygLMhMuYWdlbnRzLnYxLlRvb2xJbmZvMsEHCg1BZ2VudHNTZXJ2aWNlEk4KC0NyZWF0ZUFnZW50Eh0uYWdlbnRzLnYxLkNyZWF0ZUFnZW50UmVxdWVzdBoeLmFnZW50cy52MS5DcmVhdGVBZ2VudFJlc3BvbnNlIgASRQoIR2V0QWdlbnQSGi5hZ2VudHMudjEuR2V0QWdlbnRSZXF1ZXN0GhsuYWdlbnRzLnYxLkdldEFnZW50UmVzcG9uc2UiABJLCgpMaXN0QWdlbnRzEhwuYWdlbnRzLnYxLkxpc3RBZ2VudHNSZXF1ZXN0Gh0uYWdlbnRzLnYxLkxpc3RBZ2VudHNSZXNwb25zZSIAEk4KC1VwZGF0ZUFnZW50Eh0uYWdlbnRzLnYxLlVwZGF0ZUFnZW50UmVxdWVzdBoeLmFnZW50cy52MS5VcGRhdGVBZ2VudFJlc3BvbnNlIgASTgoLRGVsZXRlQWdlbnQSHS5hZ2VudHMudjEuRGVsZXRlQWdlbnRSZXF1ZXN0Gh4uYWdlbnRzLnYxLkRlbGV0ZUFnZW50UmVzcG9uc2UiABJRCgxSZXN0b3JlQWdlbnQSHi5hZ2VudHMudjEuUmVzdG9yZUFnZW50UmVxdWVzdBofLmFnZW50cy52MS5SZXN0b3JlQWdlbnRSZXNwb25zZSIAEmAKEVVwbG9hZEFnZW50QXZhdGFyEiMuYWdlbnRzLnYxLlVwbG9hZEFnZW50QXZhdGFyUmVxdWVzdBokLmFnZW50cy52MS5VcGxvYWRBZ2VudEF2YXRhclJlc3BvbnNlIgASYAoRRGVsZXRlQWdlbnRBdmF0YXISIy5hZ2VudHMudjEuRGVsZXRlQWdlbnRBdmF0YXJSZXF1ZXN0GiQuYWdlbnRzLnYxLkRlbGV0ZUFnZW50QXZhdGFyUmVzcG9uc2UiABJmChNQcmV2aWV3U3lzdGVtUHJvbXB0EiUuYWdlbnRzLnYxLlByZXZpZXdTeXN0ZW1Qcm9tcHRSZXF1ZXN0GiYuYWdlbnRzLnYxLlByZXZpZXdTeXN0ZW1Qcm9tcHRSZXNwb25zZSIAEmMKEkxpc3RBZ2VudFRlbXBsYXRlcxIkLmFnZW50cy52MS5MaXN0QWdlbnRUZW1wbGF0ZXNSZXF1ZXN0GiUuYWdlbnRzLnYxLkxpc3RBZ2VudFRlbXBsYXRlc1Jlc3BvbnNlIgASSAoJTGlzdFRvb2xzEhsuYWdlbnRzLnYxLkxpc3RUb29sc1JlcXVlc3QaHC5hZ2VudHMudjEuTGlzdFRvb2xzUmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp, file_tags_v1_tags]);
 
 /**
  * Agent configuration info returned to clients
@@ -128,16 +128,9 @@ export type AgentInfo = Message<"agents.v1.AgentInfo"> & {
   imageProviderKeyId: string;
 
   /**
-   * Prompt template ID (empty = no template, uses soul_prompt directly)
-   *
-   * @generated from field: string prompt_id = 20;
-   */
-  promptId: string;
-
-  /**
    * Baseline role granted by access mode (when applicable)
    *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 21;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 20;
    */
   baselineRole?: ContentRole | undefined;
 
@@ -146,7 +139,7 @@ export type AgentInfo = Message<"agents.v1.AgentInfo"> & {
    * Set by the server so the UI can render edit/share affordances
    * without re-resolving permissions client-side.
    *
-   * @generated from field: optional common.v1.ContentRole user_role = 22;
+   * @generated from field: optional common.v1.ContentRole user_role = 21;
    */
   userRole?: ContentRole | undefined;
 
@@ -154,7 +147,7 @@ export type AgentInfo = Message<"agents.v1.AgentInfo"> & {
    * Hydrated unified-tag rows assigned to this agent. Server-populated
    * via ``TagOperations.get_for_urns``; clients should treat as read-only.
    *
-   * @generated from field: repeated tags.v1.Tag tags = 23;
+   * @generated from field: repeated tags.v1.Tag tags = 22;
    */
   tags: Tag[];
 
@@ -162,9 +155,45 @@ export type AgentInfo = Message<"agents.v1.AgentInfo"> & {
    * JSON object of tuned model parameters (knob -> value), validated
    * against the model's parameter schema. "{}" = provider defaults.
    *
-   * @generated from field: string model_params = 24;
+   * @generated from field: string model_params = 23;
    */
   modelParams: string;
+
+  /**
+   * JSON object of image-generation defaults (knob -> value), validated
+   * against the image model's schema. "{}" = provider defaults.
+   *
+   * @generated from field: string image_params = 24;
+   */
+  imageParams: string;
+
+  /**
+   * House style folded into every generated-image prompt.
+   *
+   * @generated from field: string image_style_prompt = 25;
+   */
+  imageStylePrompt: string;
+
+  /**
+   * Deleted agents are returned only when a listing asks for them. They cannot
+   * act: no chat replies, no automation runs.
+   *
+   * @generated from field: bool is_deleted = 26;
+   */
+  isDeleted: boolean;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp deleted_at = 27;
+   */
+  deletedAt?: Timestamp | undefined;
+
+  /**
+   * JSON object pinning an integration provider to one org connection
+   * (provider id -> connection id). "{}" = automatic resolution.
+   *
+   * @generated from field: string integration_connections = 28;
+   */
+  integrationConnections: string;
 };
 
 /**
@@ -255,30 +284,42 @@ export type CreateAgentRequest = Message<"agents.v1.CreateAgentRequest"> & {
   imageProviderKeyId?: string | undefined;
 
   /**
-   * Prompt template ID
-   *
-   * @generated from field: optional string prompt_id = 15;
-   */
-  promptId?: string | undefined;
-
-  /**
-   * @generated from field: optional common.v1.ContentRole baseline_role = 16;
+   * @generated from field: optional common.v1.ContentRole baseline_role = 15;
    */
   baselineRole?: ContentRole | undefined;
 
   /**
    * Optional unified-tag ids to assign on create.
    *
-   * @generated from field: repeated string tag_ids = 17;
+   * @generated from field: repeated string tag_ids = 16;
    */
   tagIds: string[];
 
   /**
    * JSON object of tuned model parameters (knob -> value)
    *
-   * @generated from field: optional string model_params = 18;
+   * @generated from field: optional string model_params = 17;
    */
   modelParams?: string | undefined;
+
+  /**
+   * JSON object of image-generation defaults (knob -> value)
+   *
+   * @generated from field: optional string image_params = 18;
+   */
+  imageParams?: string | undefined;
+
+  /**
+   * @generated from field: optional string image_style_prompt = 19;
+   */
+  imageStylePrompt?: string | undefined;
+
+  /**
+   * JSON object pinning integration providers to org connections
+   *
+   * @generated from field: optional string integration_connections = 20;
+   */
+  integrationConnections?: string | undefined;
 };
 
 /**
@@ -415,12 +456,7 @@ export type ListAgentsRequest = Message<"agents.v1.ListAgentsRequest"> & {
   accessMode?: AccessMode | undefined;
 
   /**
-   * @generated from field: optional bool personal_only = 4;
-   */
-  personalOnly?: boolean | undefined;
-
-  /**
-   * @generated from field: optional string group_id = 5;
+   * @generated from field: optional string group_id = 4;
    */
   groupId?: string | undefined;
 
@@ -428,9 +464,17 @@ export type ListAgentsRequest = Message<"agents.v1.ListAgentsRequest"> & {
    * Filter agents that carry every tag id in this list (logical AND).
    * Empty = no tag filter.
    *
-   * @generated from field: repeated string tag_ids = 6;
+   * @generated from field: repeated string tag_ids = 5;
    */
   tagIds: string[];
+
+  /**
+   * Return deleted agents INSTEAD of live ones, for the builder's deleted
+   * group. Builder-gated.
+   *
+   * @generated from field: bool deleted_only = 6;
+   */
+  deletedOnly: boolean;
 };
 
 /**
@@ -467,6 +511,9 @@ export const ListAgentsResponseSchema: GenMessage<ListAgentsResponse> = /*@__PUR
  */
 export type UpdateAgentRequest = Message<"agents.v1.UpdateAgentRequest"> & {
   /**
+   * Access-policy changes (access mode, baseline role, group grants) go
+   * through permissions.v1.MembersService, never this request.
+   *
    * @generated from field: string organization_id = 1;
    */
   organizationId: string;
@@ -517,59 +564,30 @@ export type UpdateAgentRequest = Message<"agents.v1.UpdateAgentRequest"> & {
   enabledSkills: string[];
 
   /**
-   * @generated from field: optional common.v1.AccessMode access_mode = 11;
-   */
-  accessMode?: AccessMode | undefined;
-
-  /**
-   * @generated from field: repeated string group_ids = 12;
-   */
-  groupIds: string[];
-
-  /**
-   * @generated from field: repeated string enabled_tools = 13;
+   * @generated from field: repeated string enabled_tools = 11;
    */
   enabledTools: string[];
 
   /**
    * Image generation model (empty string = disabled)
    *
-   * @generated from field: optional string image_model = 14;
+   * @generated from field: optional string image_model = 12;
    */
   imageModel?: string | undefined;
 
   /**
    * Provider key ID for the primary model
    *
-   * @generated from field: optional string primary_provider_key_id = 15;
+   * @generated from field: optional string primary_provider_key_id = 13;
    */
   primaryProviderKeyId?: string | undefined;
 
   /**
    * Provider key ID for the image model
    *
-   * @generated from field: optional string image_provider_key_id = 16;
+   * @generated from field: optional string image_provider_key_id = 14;
    */
   imageProviderKeyId?: string | undefined;
-
-  /**
-   * Prompt template ID
-   *
-   * @generated from field: optional string prompt_id = 17;
-   */
-  promptId?: string | undefined;
-
-  /**
-   * Clear the prompt template (set to null)
-   *
-   * @generated from field: optional bool clear_prompt = 18;
-   */
-  clearPrompt?: boolean | undefined;
-
-  /**
-   * @generated from field: optional common.v1.ContentRole baseline_role = 19;
-   */
-  baselineRole?: ContentRole | undefined;
 
   /**
    * Replacement set of unified-tag ids. Empty list clears all manual
@@ -577,7 +595,7 @@ export type UpdateAgentRequest = Message<"agents.v1.UpdateAgentRequest"> & {
    * the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
    * pattern.
    *
-   * @generated from field: optional agents.v1.AgentTagIds tag_ids = 20;
+   * @generated from field: optional agents.v1.AgentTagIds tag_ids = 15;
    */
   tagIds?: AgentTagIds | undefined;
 
@@ -585,9 +603,30 @@ export type UpdateAgentRequest = Message<"agents.v1.UpdateAgentRequest"> & {
    * JSON object of tuned model parameters (knob -> value); replaces the
    * stored object wholesale ("{}" resets to provider defaults)
    *
-   * @generated from field: optional string model_params = 21;
+   * @generated from field: optional string model_params = 16;
    */
   modelParams?: string | undefined;
+
+  /**
+   * JSON object of image-generation defaults; replaces the stored object
+   * wholesale ("{}" resets to provider defaults)
+   *
+   * @generated from field: optional string image_params = 17;
+   */
+  imageParams?: string | undefined;
+
+  /**
+   * @generated from field: optional string image_style_prompt = 18;
+   */
+  imageStylePrompt?: string | undefined;
+
+  /**
+   * JSON object pinning integration providers to org connections; replaces
+   * the stored object wholesale ("{}" resets to automatic resolution)
+   *
+   * @generated from field: optional string integration_connections = 19;
+   */
+  integrationConnections?: string | undefined;
 };
 
 /**
@@ -657,6 +696,45 @@ export const DeleteAgentResponseSchema: GenMessage<DeleteAgentResponse> = /*@__P
   messageDesc(file_agents_v1_agents, 13);
 
 /**
+ * @generated from message agents.v1.RestoreAgentRequest
+ */
+export type RestoreAgentRequest = Message<"agents.v1.RestoreAgentRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string agent_id = 2;
+   */
+  agentId: string;
+};
+
+/**
+ * Describes the message agents.v1.RestoreAgentRequest.
+ * Use `create(RestoreAgentRequestSchema)` to create a new message.
+ */
+export const RestoreAgentRequestSchema: GenMessage<RestoreAgentRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 14);
+
+/**
+ * @generated from message agents.v1.RestoreAgentResponse
+ */
+export type RestoreAgentResponse = Message<"agents.v1.RestoreAgentResponse"> & {
+  /**
+   * @generated from field: agents.v1.AgentInfo agent = 1;
+   */
+  agent?: AgentInfo | undefined;
+};
+
+/**
+ * Describes the message agents.v1.RestoreAgentResponse.
+ * Use `create(RestoreAgentResponseSchema)` to create a new message.
+ */
+export const RestoreAgentResponseSchema: GenMessage<RestoreAgentResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 15);
+
+/**
  * @generated from message agents.v1.UploadAgentAvatarRequest
  */
 export type UploadAgentAvatarRequest = Message<"agents.v1.UploadAgentAvatarRequest"> & {
@@ -686,7 +764,7 @@ export type UploadAgentAvatarRequest = Message<"agents.v1.UploadAgentAvatarReque
  * Use `create(UploadAgentAvatarRequestSchema)` to create a new message.
  */
 export const UploadAgentAvatarRequestSchema: GenMessage<UploadAgentAvatarRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_agents, 14);
+  messageDesc(file_agents_v1_agents, 16);
 
 /**
  * @generated from message agents.v1.DeleteAgentAvatarRequest
@@ -708,7 +786,7 @@ export type DeleteAgentAvatarRequest = Message<"agents.v1.DeleteAgentAvatarReque
  * Use `create(DeleteAgentAvatarRequestSchema)` to create a new message.
  */
 export const DeleteAgentAvatarRequestSchema: GenMessage<DeleteAgentAvatarRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_agents, 15);
+  messageDesc(file_agents_v1_agents, 17);
 
 /**
  * @generated from message agents.v1.PreviewSystemPromptRequest
@@ -730,7 +808,7 @@ export type PreviewSystemPromptRequest = Message<"agents.v1.PreviewSystemPromptR
  * Use `create(PreviewSystemPromptRequestSchema)` to create a new message.
  */
 export const PreviewSystemPromptRequestSchema: GenMessage<PreviewSystemPromptRequest> = /*@__PURE__*/
-  messageDesc(file_agents_v1_agents, 16);
+  messageDesc(file_agents_v1_agents, 18);
 
 /**
  * @generated from message agents.v1.PreviewSystemPromptResponse
@@ -747,7 +825,201 @@ export type PreviewSystemPromptResponse = Message<"agents.v1.PreviewSystemPrompt
  * Use `create(PreviewSystemPromptResponseSchema)` to create a new message.
  */
 export const PreviewSystemPromptResponseSchema: GenMessage<PreviewSystemPromptResponse> = /*@__PURE__*/
-  messageDesc(file_agents_v1_agents, 17);
+  messageDesc(file_agents_v1_agents, 19);
+
+/**
+ * A shipped starting point for a new agent. Prefill only - a created agent is
+ * an ordinary row with no link back to its template.
+ *
+ * @generated from message agents.v1.AgentTemplate
+ */
+export type AgentTemplate = Message<"agents.v1.AgentTemplate"> & {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string emoji = 3;
+   */
+  emoji: string;
+
+  /**
+   * @generated from field: string description = 4;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string soul_prompt = 5;
+   */
+  soulPrompt: string;
+
+  /**
+   * @generated from field: repeated string enabled_tools = 6;
+   */
+  enabledTools: string[];
+
+  /**
+   * Bundled skill rows resolved by the server; empty when a skill is unseeded.
+   *
+   * @generated from field: repeated string enabled_skill_ids = 7;
+   */
+  enabledSkillIds: string[];
+
+  /**
+   * Model ids the template works best on; empty when the template has no
+   * recommendation. Prefill only - clients apply them when the org serves them.
+   *
+   * @generated from field: string recommended_model = 8;
+   */
+  recommendedModel: string;
+
+  /**
+   * @generated from field: string recommended_image_model = 9;
+   */
+  recommendedImageModel: string;
+};
+
+/**
+ * Describes the message agents.v1.AgentTemplate.
+ * Use `create(AgentTemplateSchema)` to create a new message.
+ */
+export const AgentTemplateSchema: GenMessage<AgentTemplate> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 20);
+
+/**
+ * @generated from message agents.v1.ListAgentTemplatesRequest
+ */
+export type ListAgentTemplatesRequest = Message<"agents.v1.ListAgentTemplatesRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * Describes the message agents.v1.ListAgentTemplatesRequest.
+ * Use `create(ListAgentTemplatesRequestSchema)` to create a new message.
+ */
+export const ListAgentTemplatesRequestSchema: GenMessage<ListAgentTemplatesRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 21);
+
+/**
+ * @generated from message agents.v1.ListAgentTemplatesResponse
+ */
+export type ListAgentTemplatesResponse = Message<"agents.v1.ListAgentTemplatesResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.AgentTemplate templates = 1;
+   */
+  templates: AgentTemplate[];
+};
+
+/**
+ * Describes the message agents.v1.ListAgentTemplatesResponse.
+ * Use `create(ListAgentTemplatesResponseSchema)` to create a new message.
+ */
+export const ListAgentTemplatesResponseSchema: GenMessage<ListAgentTemplatesResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 22);
+
+/**
+ * One selectable capability in the agent builder. The server owns this copy;
+ * clients render what they receive instead of keeping their own tool list.
+ *
+ * @generated from message agents.v1.ToolInfo
+ */
+export type ToolInfo = Message<"agents.v1.ToolInfo"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string description = 3;
+   */
+  description: string;
+
+  /**
+   * Builder grouping label, e.g. "Notes" or "GitHub".
+   *
+   * @generated from field: string group = 4;
+   */
+  group: string;
+
+  /**
+   * "platform" for tools that run against this deployment, "external" for
+   * tools that call a third-party API.
+   *
+   * @generated from field: string category = 5;
+   */
+  category: string;
+
+  /**
+   * @generated from field: bool destructive = 6;
+   */
+  destructive: boolean;
+
+  /**
+   * Integration provider id whose org connection this tool calls through;
+   * empty for platform tools.
+   *
+   * @generated from field: string requires_connection = 7;
+   */
+  requiresConnection: string;
+};
+
+/**
+ * Describes the message agents.v1.ToolInfo.
+ * Use `create(ToolInfoSchema)` to create a new message.
+ */
+export const ToolInfoSchema: GenMessage<ToolInfo> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 23);
+
+/**
+ * @generated from message agents.v1.ListToolsRequest
+ */
+export type ListToolsRequest = Message<"agents.v1.ListToolsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+};
+
+/**
+ * Describes the message agents.v1.ListToolsRequest.
+ * Use `create(ListToolsRequestSchema)` to create a new message.
+ */
+export const ListToolsRequestSchema: GenMessage<ListToolsRequest> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 24);
+
+/**
+ * Ordered as the builder renders them: category, then group, then registration
+ * order within the group.
+ *
+ * @generated from message agents.v1.ListToolsResponse
+ */
+export type ListToolsResponse = Message<"agents.v1.ListToolsResponse"> & {
+  /**
+   * @generated from field: repeated agents.v1.ToolInfo tools = 1;
+   */
+  tools: ToolInfo[];
+};
+
+/**
+ * Describes the message agents.v1.ListToolsResponse.
+ * Use `create(ListToolsResponseSchema)` to create a new message.
+ */
+export const ListToolsResponseSchema: GenMessage<ListToolsResponse> = /*@__PURE__*/
+  messageDesc(file_agents_v1_agents, 25);
 
 /**
  * AgentsService manages agent configurations for an organization.
@@ -796,7 +1068,8 @@ export const AgentsService: GenService<{
     output: typeof UpdateAgentResponseSchema;
   },
   /**
-   * Delete an agent
+   * Delete an agent. The row survives so its past chat messages keep
+   * resolving a name and avatar; everything that would keep it acting stops.
    *
    * @generated from rpc agents.v1.AgentsService.DeleteAgent
    */
@@ -804,6 +1077,16 @@ export const AgentsService: GenService<{
     methodKind: "unary";
     input: typeof DeleteAgentRequestSchema;
     output: typeof DeleteAgentResponseSchema;
+  },
+  /**
+   * Bring a deleted agent back. Its automations stay disabled.
+   *
+   * @generated from rpc agents.v1.AgentsService.RestoreAgent
+   */
+  restoreAgent: {
+    methodKind: "unary";
+    input: typeof RestoreAgentRequestSchema;
+    output: typeof RestoreAgentResponseSchema;
   },
   /**
    * Upload agent avatar image (synchronous processing)
@@ -834,6 +1117,26 @@ export const AgentsService: GenService<{
     methodKind: "unary";
     input: typeof PreviewSystemPromptRequestSchema;
     output: typeof PreviewSystemPromptResponseSchema;
+  },
+  /**
+   * List the shipped agent templates that prefill the create flow
+   *
+   * @generated from rpc agents.v1.AgentsService.ListAgentTemplates
+   */
+  listAgentTemplates: {
+    methodKind: "unary";
+    input: typeof ListAgentTemplatesRequestSchema;
+    output: typeof ListAgentTemplatesResponseSchema;
+  },
+  /**
+   * List the tools an agent can be given, as the builder groups them
+   *
+   * @generated from rpc agents.v1.AgentsService.ListTools
+   */
+  listTools: {
+    methodKind: "unary";
+    input: typeof ListToolsRequestSchema;
+    output: typeof ListToolsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agents_v1_agents, 0);

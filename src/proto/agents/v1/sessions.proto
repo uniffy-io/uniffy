@@ -7,7 +7,8 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1";
 
-// SessionsService manages conversation sessions between users and agents.
+// SessionsService manages agent sessions: test-drawer conversations plus the
+// internal session store the runtime, AI Builder, and cron runs write into.
 service SessionsService {
   // Create a new session (find-or-create for DIRECT kind)
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {}
@@ -15,40 +16,14 @@ service SessionsService {
   // Get a session by ID
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {}
 
-  // List sessions for the user in an organization
-  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {}
-
-  // Update session settings (display name, model override)
-  rpc UpdateSession(UpdateSessionRequest) returns (UpdateSessionResponse) {}
-
-  // Archive a session (soft delete)
-  rpc ArchiveSession(ArchiveSessionRequest) returns (ArchiveSessionResponse) {}
-
-  // Add a message to a session
-  rpc AddMessage(AddMessageRequest) returns (AddMessageResponse) {}
-
   // List messages in a session
   rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {}
-
-  // Get recent messages for LLM context assembly
-  rpc GetSessionContext(GetSessionContextRequest) returns (GetSessionContextResponse) {}
-
-  // Get session context statistics (message counts, compaction info)
-  rpc GetSessionContextStats(GetSessionContextStatsRequest) returns (GetSessionContextStatsResponse) {}
-
-  // Manually trigger session compaction
-  rpc CompactSession(CompactSessionRequest) returns (CompactSessionResponse) {}
 
   // Edit a user message within EDIT_WINDOW_SECONDS. Sets `previous_content`
   // and `edited_at`, then soft-invalidates every later message in the
   // session so the client can re-run the conversation from the edit
   // point. Refused if a run is currently in flight on this session.
   rpc EditMessage(EditMessageRequest) returns (EditMessageResponse) {}
-
-  // Soft-delete a user message. The message itself and every later
-  // message in the session are marked `is_invalidated=true` so the
-  // context loader skips them. Refused if a run is currently in flight.
-  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {}
 
   // Retry from a message. For a user message, returns its content +
   // file_ids and invalidates every later message so the caller can
@@ -57,8 +32,9 @@ service SessionsService {
   // currently in flight on this session.
   rpc RetryMessage(RetryMessageRequest) returns (RetryMessageResponse) {}
 
-  // Record (or clear) the caller's thumbs up/down on an agent message. The
-  // signal feeds the skill-evolution analyzer; an empty rating clears it.
+  // Record (or clear) the caller's thumbs up/down on an agent reply, by
+  // session message id or by chat message id. The signal feeds the
+  // skill-evolution analyzer; an empty rating clears it.
   rpc SubmitMessageFeedback(SubmitMessageFeedbackRequest) returns (SubmitMessageFeedbackResponse) {}
 }
 
@@ -96,9 +72,9 @@ message SessionInfo {
   bool is_archived = 12;
   google.protobuf.Timestamp created_at = 13;
   google.protobuf.Timestamp updated_at = 14;
-  // JSON object of model-parameter overrides for this session only;
-  // resolved over the agent's stored model_params
-  optional string model_params_override = 15;
+  // True for test-drawer sessions: hidden from every session listing and
+  // memory writes are disabled during their runs.
+  bool is_test = 15;
 }
 
 // Message info returned to clients
@@ -147,8 +123,8 @@ message CreateSessionRequest {
   SessionKind kind = 3;
   optional string display_name = 4;
   optional string model_override = 5;
-  // JSON object of model-parameter overrides for this session only
-  optional string model_params_override = 6;
+  // Create as a test session (hidden from listings, memory writes disabled).
+  bool is_test = 6;
 }
 
 message CreateSessionResponse {
@@ -159,63 +135,9 @@ message GetSessionResponse {
   SessionInfo session = 1;
 }
 
-message UpdateSessionResponse {
-  SessionInfo session = 1;
-}
-
 message GetSessionRequest {
   string organization_id = 1;
   string session_id = 2;
-}
-
-message ListSessionsRequest {
-  string organization_id = 1;
-  optional common.v1.PaginationRequest pagination = 2;
-  optional string agent_id = 3;
-  optional SessionKind kind = 4;
-  optional bool is_archived = 5;
-}
-
-message ListSessionsResponse {
-  repeated SessionInfo sessions = 1;
-  common.v1.PaginationResponse pagination = 2;
-}
-
-message UpdateSessionRequest {
-  string organization_id = 1;
-  string session_id = 2;
-  optional string display_name = 3;
-  optional string model_override = 4;
-  // JSON object of model-parameter overrides; "{}" clears them
-  optional string model_params_override = 5;
-}
-
-message ArchiveSessionRequest {
-  string organization_id = 1;
-  string session_id = 2;
-}
-
-message ArchiveSessionResponse {
-  bool success = 1;
-}
-
-message AddMessageRequest {
-  string organization_id = 1;
-  string session_id = 2;
-  MessageRole role = 3;
-  optional string content = 4;
-  int32 input_tokens = 5;
-  int32 output_tokens = 6;
-  optional string model = 7;
-  optional string tool_name = 8;
-  optional string tool_call_id = 9;
-  optional string tool_args_json = 10;
-  optional string tool_result = 11;
-  bool is_thinking = 12;
-}
-
-message AddMessageResponse {
-  MessageInfo message = 1;
 }
 
 message ListMessagesRequest {
@@ -230,69 +152,6 @@ message ListMessagesResponse {
   common.v1.PaginationResponse pagination = 2;
 }
 
-message GetSessionContextRequest {
-  string organization_id = 1;
-  string session_id = 2;
-}
-
-message GetSessionContextResponse {
-  repeated MessageInfo messages = 1;
-  int32 total_messages = 2;
-}
-
-message GetSessionContextStatsRequest {
-  string organization_id = 1;
-  string session_id = 2;
-}
-
-message GetSessionContextStatsResponse {
-  // Total messages ever created in this session (including compacted)
-  int32 total_messages = 1;
-  // Messages currently active (not compacted)
-  int32 active_messages = 2;
-  // Messages that have been compacted
-  int32 compacted_messages = 3;
-  // Number of summary messages currently in the context window
-  int32 summary_count = 4;
-  // Provider-reported prompt + completion size of the most recent
-  // assistant turn (last_input_tokens + last_output_tokens). Zero
-  // before the first reply.
-  int32 active_tokens = 5;
-  // Token budget for conversation history (65% of context window)
-  int32 token_budget = 6;
-  // Tokens remaining before compaction triggers
-  int32 tokens_until_compaction = 7;
-  // Model context window size in tokens
-  int32 context_window_tokens = 8;
-  // Full prompt size of the most recent assistant turn -- uncached
-  // input plus tokens served from the prompt cache. Zero pre-first-turn.
-  int32 last_input_tokens = 9;
-  // Provider-reported output_tokens of the most recent assistant turn
-  // (the assistant's reply). Zero pre-first-turn.
-  int32 last_output_tokens = 10;
-  // Tokens served from Anthropic's prompt cache on the last turn
-  // (`cache_read_input_tokens`). Counted toward last_input_tokens but
-  // billed at ~10% of the base input price -- the savings signal.
-  int32 last_cache_read_tokens = 11;
-}
-
-message CompactSessionRequest {
-  string organization_id = 1;
-  string session_id = 2;
-}
-
-message CompactSessionResponse {
-  bool compacted = 1;
-  // Updated stats after compaction
-  GetSessionContextStatsResponse stats = 2;
-  // Compaction-specific results
-  int32 messages_compacted = 3;
-  int32 tokens_before = 4;
-  int32 tokens_after = 5;
-  int32 tokens_saved = 6;
-  int32 summary_tokens = 7;
-}
-
 message EditMessageRequest {
   string organization_id = 1;
   string message_id = 2;
@@ -303,17 +162,6 @@ message EditMessageResponse {
   MessageInfo message = 1;
   // Number of later messages marked invalidated as a result.
   int32 downstream_invalidated = 2;
-}
-
-message DeleteMessageRequest {
-  string organization_id = 1;
-  string message_id = 2;
-}
-
-message DeleteMessageResponse {
-  // Total rows marked invalidated (the deleted message + every later
-  // message in the session).
-  int32 invalidated_count = 1;
 }
 
 message RetryMessageRequest {
@@ -338,9 +186,13 @@ message MessageFeedback {
 
 message SubmitMessageFeedbackRequest {
   string organization_id = 1;
+  // Session-message target (agents_messages id). Exactly one of message_id
+  // and chat_message_id must be set.
   string message_id = 2;
   string rating = 3; // up | down, or "" to clear
   optional string comment = 4;
+  // Chat target: an agent reply's chat_messages id.
+  string chat_message_id = 5;
 }
 
 message SubmitMessageFeedbackResponse {

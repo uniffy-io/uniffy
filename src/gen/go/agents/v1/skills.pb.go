@@ -29,8 +29,7 @@ type SkillSource int32
 const (
 	SkillSource_SKILL_SOURCE_UNSPECIFIED  SkillSource = 0
 	SkillSource_SKILL_SOURCE_BUNDLED      SkillSource = 1 // shipped with the app, org_id is null
-	SkillSource_SKILL_SOURCE_ORGANIZATION SkillSource = 2 // created by an org admin
-	SkillSource_SKILL_SOURCE_PERSONAL     SkillSource = 3 // created by a user for personal use
+	SkillSource_SKILL_SOURCE_ORGANIZATION SkillSource = 2 // created by a builder
 )
 
 // Enum value maps for SkillSource.
@@ -39,13 +38,11 @@ var (
 		0: "SKILL_SOURCE_UNSPECIFIED",
 		1: "SKILL_SOURCE_BUNDLED",
 		2: "SKILL_SOURCE_ORGANIZATION",
-		3: "SKILL_SOURCE_PERSONAL",
 	}
 	SkillSource_value = map[string]int32{
 		"SKILL_SOURCE_UNSPECIFIED":  0,
 		"SKILL_SOURCE_BUNDLED":      1,
 		"SKILL_SOURCE_ORGANIZATION": 2,
-		"SKILL_SOURCE_PERSONAL":     3,
 	}
 )
 
@@ -89,21 +86,19 @@ type SkillInfo struct {
 	AlwaysActive   bool                   `protobuf:"varint,8,opt,name=always_active,json=alwaysActive,proto3" json:"always_active,omitempty"` // injected regardless of agent config
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// Owner user ID for personal skills (null for org/bundled skills)
-	OwnerId *string `protobuf:"bytes,11,opt,name=owner_id,json=ownerId,proto3,oneof" json:"owner_id,omitempty"`
 	// Short trigger guidance shown in the progressive-disclosure metadata index.
-	WhenToUse string `protobuf:"bytes,12,opt,name=when_to_use,json=whenToUse,proto3" json:"when_to_use,omitempty"`
+	WhenToUse string `protobuf:"bytes,11,opt,name=when_to_use,json=whenToUse,proto3" json:"when_to_use,omitempty"`
 	// Tool names that must be enabled for the skill to appear (conditional activation).
-	RequiresTools []string `protobuf:"bytes,13,rep,name=requires_tools,json=requiresTools,proto3" json:"requires_tools,omitempty"`
+	RequiresTools []string `protobuf:"bytes,12,rep,name=requires_tools,json=requiresTools,proto3" json:"requires_tools,omitempty"`
 	// Optional surface/content-type gates for conditional activation.
-	RequiresContext     []string `protobuf:"bytes,14,rep,name=requires_context,json=requiresContext,proto3" json:"requires_context,omitempty"`
-	Status              string   `protobuf:"bytes,15,opt,name=status,proto3" json:"status,omitempty"` // active | archived
-	Origin              string   `protobuf:"bytes,16,opt,name=origin,proto3" json:"origin,omitempty"` // user | agent_proposed | agent_evolved | bundled
-	LatestVersionNumber int32    `protobuf:"varint,17,opt,name=latest_version_number,json=latestVersionNumber,proto3" json:"latest_version_number,omitempty"`
+	RequiresContext     []string `protobuf:"bytes,13,rep,name=requires_context,json=requiresContext,proto3" json:"requires_context,omitempty"`
+	Status              string   `protobuf:"bytes,14,opt,name=status,proto3" json:"status,omitempty"` // active | archived
+	Origin              string   `protobuf:"bytes,15,opt,name=origin,proto3" json:"origin,omitempty"` // user | agent_proposed | agent_evolved | bundled
+	LatestVersionNumber int32    `protobuf:"varint,16,opt,name=latest_version_number,json=latestVersionNumber,proto3" json:"latest_version_number,omitempty"`
 	// The version the agent actually uses (the main version). Defaults to the
 	// latest until the user pins one.
-	ActiveVersionNumber int32 `protobuf:"varint,18,opt,name=active_version_number,json=activeVersionNumber,proto3" json:"active_version_number,omitempty"`
-	ActiveVersionPinned bool  `protobuf:"varint,19,opt,name=active_version_pinned,json=activeVersionPinned,proto3" json:"active_version_pinned,omitempty"`
+	ActiveVersionNumber int32 `protobuf:"varint,17,opt,name=active_version_number,json=activeVersionNumber,proto3" json:"active_version_number,omitempty"`
+	ActiveVersionPinned bool  `protobuf:"varint,18,opt,name=active_version_pinned,json=activeVersionPinned,proto3" json:"active_version_pinned,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -206,13 +201,6 @@ func (x *SkillInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
-}
-
-func (x *SkillInfo) GetOwnerId() string {
-	if x != nil && x.OwnerId != nil {
-		return *x.OwnerId
-	}
-	return ""
 }
 
 func (x *SkillInfo) GetWhenToUse() string {
@@ -450,11 +438,10 @@ type SkillDraft struct {
 	WhenToUse             string                 `protobuf:"bytes,16,opt,name=when_to_use,json=whenToUse,proto3" json:"when_to_use,omitempty"`
 	RequiresTools         []string               `protobuf:"bytes,17,rep,name=requires_tools,json=requiresTools,proto3" json:"requires_tools,omitempty"`
 	RequiresContext       []string               `protobuf:"bytes,18,rep,name=requires_context,json=requiresContext,proto3" json:"requires_context,omitempty"`
-	SuggestedScope        string                 `protobuf:"bytes,19,opt,name=suggested_scope,json=suggestedScope,proto3" json:"suggested_scope,omitempty"` // personal | organization
-	SuggestedAlwaysActive bool                   `protobuf:"varint,20,opt,name=suggested_always_active,json=suggestedAlwaysActive,proto3" json:"suggested_always_active,omitempty"`
-	Status                string                 `protobuf:"bytes,21,opt,name=status,proto3" json:"status,omitempty"` // pending | saved | discarded
-	CreatedAt             *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt             *timestamppb.Timestamp `protobuf:"bytes,23,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	SuggestedAlwaysActive bool                   `protobuf:"varint,19,opt,name=suggested_always_active,json=suggestedAlwaysActive,proto3" json:"suggested_always_active,omitempty"`
+	Status                string                 `protobuf:"bytes,20,opt,name=status,proto3" json:"status,omitempty"` // pending | saved | discarded
+	CreatedAt             *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt             *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -615,13 +602,6 @@ func (x *SkillDraft) GetRequiresContext() []string {
 	return nil
 }
 
-func (x *SkillDraft) GetSuggestedScope() string {
-	if x != nil {
-		return x.SuggestedScope
-	}
-	return ""
-}
-
 func (x *SkillDraft) GetSuggestedAlwaysActive() bool {
 	if x != nil {
 		return x.SuggestedAlwaysActive
@@ -658,10 +638,8 @@ type CreateSkillRequest struct {
 	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	Content        string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
 	AlwaysActive   *bool                  `protobuf:"varint,6,opt,name=always_active,json=alwaysActive,proto3,oneof" json:"always_active,omitempty"`
-	// Owner user ID for personal skills
-	OwnerId       *string `protobuf:"bytes,7,opt,name=owner_id,json=ownerId,proto3,oneof" json:"owner_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CreateSkillRequest) Reset() {
@@ -734,13 +712,6 @@ func (x *CreateSkillRequest) GetAlwaysActive() bool {
 		return *x.AlwaysActive
 	}
 	return false
-}
-
-func (x *CreateSkillRequest) GetOwnerId() string {
-	if x != nil && x.OwnerId != nil {
-		return *x.OwnerId
-	}
-	return ""
 }
 
 type CreateSkillResponse struct {
@@ -1035,13 +1006,16 @@ type UpdateSkillRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	SkillId        string                 `protobuf:"bytes,2,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
-	Name           *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	DisplayName    *string                `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
-	Description    *string                `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Content        *string                `protobuf:"bytes,6,opt,name=content,proto3,oneof" json:"content,omitempty"`
-	AlwaysActive   *bool                  `protobuf:"varint,7,opt,name=always_active,json=alwaysActive,proto3,oneof" json:"always_active,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// The slug is the stable identifier: it is set at creation and rejected on
+	// update. The field stays so a caller resending the current value is a no-op.
+	Name          *string `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	DisplayName   *string `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	Description   *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Content       *string `protobuf:"bytes,6,opt,name=content,proto3,oneof" json:"content,omitempty"`
+	AlwaysActive  *bool   `protobuf:"varint,7,opt,name=always_active,json=alwaysActive,proto3,oneof" json:"always_active,omitempty"`
+	WhenToUse     *string `protobuf:"bytes,8,opt,name=when_to_use,json=whenToUse,proto3,oneof" json:"when_to_use,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateSkillRequest) Reset() {
@@ -1121,6 +1095,13 @@ func (x *UpdateSkillRequest) GetAlwaysActive() bool {
 		return *x.AlwaysActive
 	}
 	return false
+}
+
+func (x *UpdateSkillRequest) GetWhenToUse() string {
+	if x != nil && x.WhenToUse != nil {
+		return *x.WhenToUse
+	}
+	return ""
 }
 
 type DeleteSkillRequest struct {
@@ -1405,9 +1386,8 @@ type CreateSkillDraftRequest struct {
 	WhenToUse             string                 `protobuf:"bytes,8,opt,name=when_to_use,json=whenToUse,proto3" json:"when_to_use,omitempty"`
 	RequiresTools         []string               `protobuf:"bytes,9,rep,name=requires_tools,json=requiresTools,proto3" json:"requires_tools,omitempty"`
 	RequiresContext       []string               `protobuf:"bytes,10,rep,name=requires_context,json=requiresContext,proto3" json:"requires_context,omitempty"`
-	SuggestedScope        string                 `protobuf:"bytes,11,opt,name=suggested_scope,json=suggestedScope,proto3" json:"suggested_scope,omitempty"` // personal | organization
-	SuggestedAlwaysActive bool                   `protobuf:"varint,12,opt,name=suggested_always_active,json=suggestedAlwaysActive,proto3" json:"suggested_always_active,omitempty"`
-	Rationale             string                 `protobuf:"bytes,13,opt,name=rationale,proto3" json:"rationale,omitempty"`
+	SuggestedAlwaysActive bool                   `protobuf:"varint,11,opt,name=suggested_always_active,json=suggestedAlwaysActive,proto3" json:"suggested_always_active,omitempty"`
+	Rationale             string                 `protobuf:"bytes,12,opt,name=rationale,proto3" json:"rationale,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -1510,13 +1490,6 @@ func (x *CreateSkillDraftRequest) GetRequiresContext() []string {
 		return x.RequiresContext
 	}
 	return nil
-}
-
-func (x *CreateSkillDraftRequest) GetSuggestedScope() string {
-	if x != nil {
-		return x.SuggestedScope
-	}
-	return ""
 }
 
 func (x *CreateSkillDraftRequest) GetSuggestedAlwaysActive() bool {
@@ -1798,11 +1771,12 @@ type SaveSkillDraftRequest struct {
 	WhenToUse             string                 `protobuf:"bytes,7,opt,name=when_to_use,json=whenToUse,proto3" json:"when_to_use,omitempty"`
 	RequiresTools         []string               `protobuf:"bytes,8,rep,name=requires_tools,json=requiresTools,proto3" json:"requires_tools,omitempty"`
 	RequiresContext       []string               `protobuf:"bytes,9,rep,name=requires_context,json=requiresContext,proto3" json:"requires_context,omitempty"`
-	SuggestedScope        string                 `protobuf:"bytes,10,opt,name=suggested_scope,json=suggestedScope,proto3" json:"suggested_scope,omitempty"` // personal | organization
-	SuggestedAlwaysActive bool                   `protobuf:"varint,11,opt,name=suggested_always_active,json=suggestedAlwaysActive,proto3" json:"suggested_always_active,omitempty"`
-	ChangeSummary         string                 `protobuf:"bytes,12,opt,name=change_summary,json=changeSummary,proto3" json:"change_summary,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	SuggestedAlwaysActive bool                   `protobuf:"varint,10,opt,name=suggested_always_active,json=suggestedAlwaysActive,proto3" json:"suggested_always_active,omitempty"`
+	ChangeSummary         string                 `protobuf:"bytes,11,opt,name=change_summary,json=changeSummary,proto3" json:"change_summary,omitempty"`
+	// Acknowledges that saving replaces an existing skill of the same name.
+	AllowReplace  bool `protobuf:"varint,12,opt,name=allow_replace,json=allowReplace,proto3" json:"allow_replace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SaveSkillDraftRequest) Reset() {
@@ -1898,13 +1872,6 @@ func (x *SaveSkillDraftRequest) GetRequiresContext() []string {
 	return nil
 }
 
-func (x *SaveSkillDraftRequest) GetSuggestedScope() string {
-	if x != nil {
-		return x.SuggestedScope
-	}
-	return ""
-}
-
 func (x *SaveSkillDraftRequest) GetSuggestedAlwaysActive() bool {
 	if x != nil {
 		return x.SuggestedAlwaysActive
@@ -1917,6 +1884,13 @@ func (x *SaveSkillDraftRequest) GetChangeSummary() string {
 		return x.ChangeSummary
 	}
 	return ""
+}
+
+func (x *SaveSkillDraftRequest) GetAllowReplace() bool {
+	if x != nil {
+		return x.AllowReplace
+	}
+	return false
 }
 
 type SaveSkillDraftResponse struct {
@@ -2738,7 +2712,7 @@ var File_agents_v1_skills_proto protoreflect.FileDescriptor
 
 const file_agents_v1_skills_proto_rawDesc = "" +
 	"\n" +
-	"\x16agents/v1/skills.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x86\x06\n" +
+	"\x16agents/v1/skills.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd9\x05\n" +
 	"\tSkillInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x0forganization_id\x18\x02 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x12\x12\n" +
@@ -2753,17 +2727,15 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1e\n" +
-	"\bowner_id\x18\v \x01(\tH\x01R\aownerId\x88\x01\x01\x12\x1e\n" +
-	"\vwhen_to_use\x18\f \x01(\tR\twhenToUse\x12%\n" +
-	"\x0erequires_tools\x18\r \x03(\tR\rrequiresTools\x12)\n" +
-	"\x10requires_context\x18\x0e \x03(\tR\x0frequiresContext\x12\x16\n" +
-	"\x06status\x18\x0f \x01(\tR\x06status\x12\x16\n" +
-	"\x06origin\x18\x10 \x01(\tR\x06origin\x122\n" +
-	"\x15latest_version_number\x18\x11 \x01(\x05R\x13latestVersionNumber\x122\n" +
-	"\x15active_version_number\x18\x12 \x01(\x05R\x13activeVersionNumber\x122\n" +
-	"\x15active_version_pinned\x18\x13 \x01(\bR\x13activeVersionPinnedB\x12\n" +
-	"\x10_organization_idB\v\n" +
-	"\t_owner_id\"\xbf\x04\n" +
+	"\vwhen_to_use\x18\v \x01(\tR\twhenToUse\x12%\n" +
+	"\x0erequires_tools\x18\f \x03(\tR\rrequiresTools\x12)\n" +
+	"\x10requires_context\x18\r \x03(\tR\x0frequiresContext\x12\x16\n" +
+	"\x06status\x18\x0e \x01(\tR\x06status\x12\x16\n" +
+	"\x06origin\x18\x0f \x01(\tR\x06origin\x122\n" +
+	"\x15latest_version_number\x18\x10 \x01(\x05R\x13latestVersionNumber\x122\n" +
+	"\x15active_version_number\x18\x11 \x01(\x05R\x13activeVersionNumber\x122\n" +
+	"\x15active_version_pinned\x18\x12 \x01(\bR\x13activeVersionPinnedB\x12\n" +
+	"\x10_organization_id\"\xbf\x04\n" +
 	"\fSkillVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bskill_id\x18\x02 \x01(\tR\askillId\x12%\n" +
@@ -2785,7 +2757,7 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\f\n" +
 	"\n" +
 	"_author_idB\x14\n" +
-	"\x12_parent_version_id\"\xe3\a\n" +
+	"\x12_parent_version_id\"\xba\a\n" +
 	"\n" +
 	"SkillDraft\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
@@ -2808,29 +2780,26 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\acontent\x18\x0f \x01(\tR\acontent\x12\x1e\n" +
 	"\vwhen_to_use\x18\x10 \x01(\tR\twhenToUse\x12%\n" +
 	"\x0erequires_tools\x18\x11 \x03(\tR\rrequiresTools\x12)\n" +
-	"\x10requires_context\x18\x12 \x03(\tR\x0frequiresContext\x12'\n" +
-	"\x0fsuggested_scope\x18\x13 \x01(\tR\x0esuggestedScope\x126\n" +
-	"\x17suggested_always_active\x18\x14 \x01(\bR\x15suggestedAlwaysActive\x12\x16\n" +
-	"\x06status\x18\x15 \x01(\tR\x06status\x129\n" +
+	"\x10requires_context\x18\x12 \x03(\tR\x0frequiresContext\x126\n" +
+	"\x17suggested_always_active\x18\x13 \x01(\bR\x15suggestedAlwaysActive\x12\x16\n" +
+	"\x06status\x18\x14 \x01(\tR\x06status\x129\n" +
 	"\n" +
-	"created_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x12\n" +
+	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x12\n" +
 	"\x10_target_skill_idB\x17\n" +
 	"\x15_proposed_by_agent_idB\r\n" +
 	"\v_session_idB\r\n" +
 	"\v_channel_idB\x19\n" +
-	"\x17_origin_chat_message_id\"\x99\x02\n" +
+	"\x17_origin_chat_message_id\"\xec\x01\n" +
 	"\x12CreateSkillRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12 \n" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x18\n" +
 	"\acontent\x18\x05 \x01(\tR\acontent\x12(\n" +
-	"\ralways_active\x18\x06 \x01(\bH\x00R\falwaysActive\x88\x01\x01\x12\x1e\n" +
-	"\bowner_id\x18\a \x01(\tH\x01R\aownerId\x88\x01\x01B\x10\n" +
-	"\x0e_always_activeB\v\n" +
-	"\t_owner_id\"A\n" +
+	"\ralways_active\x18\x06 \x01(\bH\x00R\falwaysActive\x88\x01\x01B\x10\n" +
+	"\x0e_always_active\"A\n" +
 	"\x13CreateSkillResponse\x12*\n" +
 	"\x05skill\x18\x01 \x01(\v2\x14.agents.v1.SkillInfoR\x05skill\">\n" +
 	"\x10GetSkillResponse\x12*\n" +
@@ -2850,7 +2819,7 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\x06skills\x18\x01 \x03(\v2\x14.agents.v1.SkillInfoR\x06skills\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xd1\x02\n" +
+	"pagination\"\x86\x03\n" +
 	"\x12UpdateSkillRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bskill_id\x18\x02 \x01(\tR\askillId\x12\x17\n" +
@@ -2858,13 +2827,15 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x04 \x01(\tH\x01R\vdisplayName\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x05 \x01(\tH\x02R\vdescription\x88\x01\x01\x12\x1d\n" +
 	"\acontent\x18\x06 \x01(\tH\x03R\acontent\x88\x01\x01\x12(\n" +
-	"\ralways_active\x18\a \x01(\bH\x04R\falwaysActive\x88\x01\x01B\a\n" +
+	"\ralways_active\x18\a \x01(\bH\x04R\falwaysActive\x88\x01\x01\x12#\n" +
+	"\vwhen_to_use\x18\b \x01(\tH\x05R\twhenToUse\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0f\n" +
 	"\r_display_nameB\x0e\n" +
 	"\f_descriptionB\n" +
 	"\n" +
 	"\b_contentB\x10\n" +
-	"\x0e_always_active\"X\n" +
+	"\x0e_always_activeB\x0e\n" +
+	"\f_when_to_use\"X\n" +
 	"\x12DeleteSkillRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bskill_id\x18\x02 \x01(\tR\askillId\"/\n" +
@@ -2880,7 +2851,7 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\"N\n" +
 	"\x1aListRunnableSkillsResponse\x120\n" +
-	"\x06skills\x18\x01 \x03(\v2\x18.agents.v1.RunnableSkillR\x06skills\"\xfb\x03\n" +
+	"\x06skills\x18\x01 \x03(\v2\x18.agents.v1.RunnableSkillR\x06skills\"\xd2\x03\n" +
 	"\x17CreateSkillDraftRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12+\n" +
@@ -2892,10 +2863,9 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\vwhen_to_use\x18\b \x01(\tR\twhenToUse\x12%\n" +
 	"\x0erequires_tools\x18\t \x03(\tR\rrequiresTools\x12)\n" +
 	"\x10requires_context\x18\n" +
-	" \x03(\tR\x0frequiresContext\x12'\n" +
-	"\x0fsuggested_scope\x18\v \x01(\tR\x0esuggestedScope\x126\n" +
-	"\x17suggested_always_active\x18\f \x01(\bR\x15suggestedAlwaysActive\x12\x1c\n" +
-	"\trationale\x18\r \x01(\tR\trationaleB\x12\n" +
+	" \x03(\tR\x0frequiresContext\x126\n" +
+	"\x17suggested_always_active\x18\v \x01(\bR\x15suggestedAlwaysActive\x12\x1c\n" +
+	"\trationale\x18\f \x01(\tR\trationaleB\x12\n" +
 	"\x10_target_skill_id\"G\n" +
 	"\x18CreateSkillDraftResponse\x12+\n" +
 	"\x05draft\x18\x01 \x01(\v2\x15.agents.v1.SkillDraftR\x05draft\"Z\n" +
@@ -2916,7 +2886,7 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\x06drafts\x18\x01 \x03(\v2\x15.agents.v1.SkillDraftR\x06drafts\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xc8\x03\n" +
+	"pagination\"\xc4\x03\n" +
 	"\x15SaveSkillDraftRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12\x12\n" +
@@ -2926,11 +2896,11 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\acontent\x18\x06 \x01(\tR\acontent\x12\x1e\n" +
 	"\vwhen_to_use\x18\a \x01(\tR\twhenToUse\x12%\n" +
 	"\x0erequires_tools\x18\b \x03(\tR\rrequiresTools\x12)\n" +
-	"\x10requires_context\x18\t \x03(\tR\x0frequiresContext\x12'\n" +
-	"\x0fsuggested_scope\x18\n" +
-	" \x01(\tR\x0esuggestedScope\x126\n" +
-	"\x17suggested_always_active\x18\v \x01(\bR\x15suggestedAlwaysActive\x12%\n" +
-	"\x0echange_summary\x18\f \x01(\tR\rchangeSummary\"w\n" +
+	"\x10requires_context\x18\t \x03(\tR\x0frequiresContext\x126\n" +
+	"\x17suggested_always_active\x18\n" +
+	" \x01(\bR\x15suggestedAlwaysActive\x12%\n" +
+	"\x0echange_summary\x18\v \x01(\tR\rchangeSummary\x12#\n" +
+	"\rallow_replace\x18\f \x01(\bR\fallowReplace\"w\n" +
 	"\x16SaveSkillDraftResponse\x12*\n" +
 	"\x05skill\x18\x01 \x01(\v2\x14.agents.v1.SkillInfoR\x05skill\x121\n" +
 	"\aversion\x18\x02 \x01(\v2\x17.agents.v1.SkillVersionR\aversion\"^\n" +
@@ -2988,12 +2958,11 @@ const file_agents_v1_skills_proto_rawDesc = "" +
 	"\ametrics\x18\x01 \x03(\v2\x16.agents.v1.SkillMetricR\ametrics\x126\n" +
 	"\x17positive_feedback_count\x18\x02 \x01(\x05R\x15positiveFeedbackCount\x126\n" +
 	"\x17negative_feedback_count\x18\x03 \x01(\x05R\x15negativeFeedbackCount\x120\n" +
-	"\x14pending_agent_drafts\x18\x04 \x01(\x05R\x12pendingAgentDrafts*\x7f\n" +
+	"\x14pending_agent_drafts\x18\x04 \x01(\x05R\x12pendingAgentDrafts*d\n" +
 	"\vSkillSource\x12\x1c\n" +
 	"\x18SKILL_SOURCE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14SKILL_SOURCE_BUNDLED\x10\x01\x12\x1d\n" +
-	"\x19SKILL_SOURCE_ORGANIZATION\x10\x02\x12\x19\n" +
-	"\x15SKILL_SOURCE_PERSONAL\x10\x032\x96\v\n" +
+	"\x19SKILL_SOURCE_ORGANIZATION\x10\x022\x96\v\n" +
 	"\rSkillsService\x12N\n" +
 	"\vCreateSkill\x12\x1d.agents.v1.CreateSkillRequest\x1a\x1e.agents.v1.CreateSkillResponse\"\x00\x12E\n" +
 	"\bGetSkill\x12\x1a.agents.v1.GetSkillRequest\x1a\x1b.agents.v1.GetSkillResponse\"\x00\x12K\n" +

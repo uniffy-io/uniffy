@@ -189,8 +189,8 @@ class SkillEvolutionAnalyzer:
 
         negative = (
             await self._session.execute(
-                select(AgentMessageFeedback.message_id)
-                .join(AgentMessage, AgentMessage.id == AgentMessageFeedback.message_id)
+                select(AgentMessageFeedback.agents_message_id)
+                .join(AgentMessage, AgentMessage.id == AgentMessageFeedback.agents_message_id)
                 .where(
                     AgentMessage.session_id == session_id,
                     AgentMessageFeedback.rating == "down",
@@ -278,9 +278,7 @@ class SkillEvolutionAnalyzer:
             name_index[s.name.lower()] = s.skill_id
             name_index[s.display_name.lower()] = s.skill_id
 
-        existing = await self._suppressed_draft_keys(
-            user_id=user_id, organization_id=organization_id
-        )
+        existing = await self._suppressed_draft_keys(organization_id=organization_id)
         created: list[AgentSkillDraft] = []
         for proposal in proposals[:_MAX_PROPOSALS]:
             prepared = self._prepare(proposal, name_index)
@@ -346,9 +344,13 @@ class SkillEvolutionAnalyzer:
         return kind, target_id, name, display_name
 
     async def _suppressed_draft_keys(
-        self, *, user_id: UUID, organization_id: UUID
+        self, *, organization_id: UUID
     ) -> set[tuple[str, str, str]]:
-        """Keys to skip: still-open pending drafts plus recently-discarded ones."""
+        """Keys to skip: still-open pending drafts plus recently-discarded ones.
+
+        Org-wide, matching the builder review inbox: a draft anyone already
+        raised suppresses duplicates from other users' feedback.
+        """
         cutoff = datetime.now(UTC) - timedelta(days=_RECENTLY_RESOLVED_DAYS)
         rows = (
             await self._session.execute(
@@ -358,7 +360,6 @@ class SkillEvolutionAnalyzer:
                     AgentSkillDraft.name,
                 ).where(
                     AgentSkillDraft.organization_id == organization_id,
-                    AgentSkillDraft.owner_id == user_id,
                     AgentSkillDraft.is_deleted == False,  # noqa: E712
                     or_(
                         AgentSkillDraft.status == "pending",

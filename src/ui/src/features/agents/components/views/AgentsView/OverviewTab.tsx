@@ -1,101 +1,52 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-    Brain,
-    ImageSquare,
-    Lightning,
-    Wrench,
-    Star,
-    Textbox,
-    SmileySticker,
-    ArrowsDownUp,
-    Key,
     ArrowRight,
+    CaretDown,
+    CaretRight,
+    Key,
+    Sparkle,
+    X,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
-import { selectProviderKeys, selectModelsForKey } from "@/features/agents/store/agentProvidersSlice";
+import {
+    selectProviderKeys,
+    selectModelsByProvider,
+    selectModelsForKey,
+    selectModelsLoadingForKey,
+    selectUsableProviderKeys,
+} from "@/features/agents/store/agentProvidersSlice";
 import { fetchModelsForKey } from "@/features/agents/store/agentProvidersThunks";
 import { updateAgent, uploadAgentAvatar, deleteAgentAvatar } from "@/features/agents/store/agentsThunks";
 import type { SerializedAgent } from "@/features/agents/store/agentsThunks";
-import { Tag as TagIcon } from "@phosphor-icons/react";
 import { TagPicker } from "@/features/tags";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { ModelParamsSection } from "@/features/agents/components/ModelParamsSection";
+import { ImageCostHint } from "@/features/agents/components/ImageCostHint";
+import { parseImagePriceEstimates } from "@/features/agents/utils/imageParams";
+import { IMAGE_GENERATION_TOOL } from "@/features/agents/config/toolCatalog";
+import { ProviderLogo } from "@/features/agents/components/ProviderLogo";
 import {
     parseModelParamsSchema,
     parseModelParamValues,
     stripInvalidParams,
     type ModelParamValues,
 } from "@/features/agents/utils/modelParamsSchema";
+import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
 import { useMyContentRole } from "@/features/permissions";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { roleCanEdit } from "@/shared/utils/contentRoles";
 
-function SectionHeader({
-    icon: Icon,
-    title,
-    subtitle,
-}: {
-    icon: React.ElementType;
-    title: string;
-    subtitle?: string;
-}) {
+function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <Icon size={18} weight="duotone" className="text-primary" />
-            </div>
-            <div>
-                <h3 className="text-sm font-semibold text-foreground tracking-tight">
-                    {title}
-                </h3>
-                {subtitle && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        {subtitle}
-                    </p>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function StatCard({
-    icon: Icon,
-    label,
-    value,
-    accentClass,
-}: {
-    icon: React.ElementType;
-    label: string;
-    value: string | number;
-    accentClass: string;
-}) {
-    return (
-        <div className="group relative bg-card border border-border rounded-xl p-4 overflow-hidden transition-colors hover:border-border/80">
-            <div className={cn(
-                "absolute top-0 left-0 w-full h-0.5",
-                accentClass,
-            )} />
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                    accentClass.replace("bg-", "bg-").replace("/80", "/10"),
-                    "bg-muted",
-                )}>
-                    <Icon size={16} weight="duotone" className="text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">{label}</p>
-                    <p className="text-lg font-semibold text-foreground tabular-nums leading-tight">
-                        {value}
-                    </p>
-                </div>
-            </div>
-        </div>
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+            {children}
+        </h3>
     );
 }
 
@@ -110,16 +61,42 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
     const providerKeys = useAppSelector(selectProviderKeys);
+    const modelsByProvider = useAppSelector(selectModelsByProvider);
+    const { isOrgAdmin } = useAgentsBuilderAccess();
 
     const myRole = useMyContentRole(ContentType.AGENT, agent.id, agent.userRole);
-    const canEdit = roleCanEdit(myRole);
+    // A deleted agent is a historical record: readable, never editable.
+    const canEdit = roleCanEdit(myRole) && !agent.isDeleted;
+
+    // Read once: the effect below strips the history entry, and the guidance has
+    // to outlive that so it does not vanish on the next render.
+    const [arrivedFromCreate] = useState(
+        () => (location.state as { needsModelSetup?: boolean } | null)?.needsModelSetup === true,
+    );
+    const [modelSettingsOpen, setModelSettingsOpen] = useState(arrivedFromCreate);
+    const modelSectionRef = useRef<HTMLElement | null>(null);
+
+    useEffect(() => {
+        if (!arrivedFromCreate) return;
+        navigate(location.pathname, { replace: true, state: null });
+        modelSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- one shot on arrival; navigate() here would otherwise loop
+    }, []);
+
+    // Pinned to the agent we landed on: this component stays mounted while the
+    // sidebar switches agents, and the guidance must not follow along.
+    const [createdAgentId] = useState(() => (arrivedFromCreate ? agent.id : null));
+    const [setupDismissed, setSetupDismissed] = useState(false);
 
     const primaryKeyId = agent.primaryProviderKeyId || "";
     const imageKeyId = agent.imageProviderKeyId || "";
 
     const primaryKeyModels = useAppSelector(selectModelsForKey(primaryKeyId));
     const imageKeyModels = useAppSelector(selectModelsForKey(imageKeyId));
+    const primaryModelsLoading = useAppSelector(selectModelsLoadingForKey(primaryKeyId));
+    const imageModelsLoading = useAppSelector(selectModelsLoadingForKey(imageKeyId));
 
     useEffect(() => {
         if (primaryKeyId) {
@@ -133,21 +110,73 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         }
     }, [dispatch, imageKeyId]);
 
-    const enabledKeys = useMemo(
-        () => Object.values(providerKeys).filter((k) => k.isValid && k.isEnabled),
-        [providerKeys],
-    );
+    const enabledKeys = useAppSelector(selectUsableProviderKeys);
 
     const allKeys = useMemo(() => Object.values(providerKeys), [providerKeys]);
     const hasAnyKeys = allKeys.length > 0;
 
-    const keyOptions: SelectOption<string>[] = useMemo(() => [
-        { value: "", label: "No key assigned" },
-        ...enabledKeys.map((k) => ({
-            value: k.id,
-            label: `${k.label} (${k.provider})`,
-        })),
-    ], [enabledKeys]);
+    const keyChoices = useMemo(
+        () =>
+            enabledKeys.map((k) => ({
+                value: k.id,
+                label: `${k.label} (${k.provider})`,
+                icon: <ProviderLogo provider={k.provider} size="sm" />,
+            })),
+        [enabledKeys],
+    );
+
+    // An unset key/model means the backend resolves the org default at run
+    // time; members cannot read which model that is, so the label stays generic.
+    const chatKeyOptions: SelectOption<string>[] = useMemo(
+        () => [{ value: "", label: "Organization default" }, ...keyChoices],
+        [keyChoices],
+    );
+
+    // Catalog-derived, so this costs no extra request: providers whose catalog
+    // carries at least one image model.
+    const imageCapableProviders = useMemo(() => {
+        const providers = new Set<string>();
+        for (const [provider, models] of Object.entries(modelsByProvider)) {
+            if (models.some((m) => m.supportsImageGeneration)) {
+                providers.add(provider);
+            }
+        }
+        return providers;
+    }, [modelsByProvider]);
+
+    // Offering a text-only key here just leads to an empty model list. The
+    // already-assigned key stays listed so an existing config is never dropped
+    // silently, and an unloaded catalog falls back to showing everything rather
+    // than hiding keys that are actually fine.
+    const imageKeyOptions: SelectOption<string>[] = useMemo(() => {
+        const catalogKnown = imageCapableProviders.size > 0;
+        const choices = enabledKeys
+            .filter(
+                (k) =>
+                    !catalogKnown || imageCapableProviders.has(k.provider) || k.id === imageKeyId,
+            )
+            .map((k) => ({
+                value: k.id,
+                label: `${k.label} (${k.provider})`,
+                icon: <ProviderLogo provider={k.provider} size="sm" />,
+            }));
+        return [{ value: "", label: "No key assigned" }, ...choices];
+    }, [enabledKeys, imageCapableProviders, imageKeyId]);
+
+    // Walk the picker chain forward: a key has to be chosen before its model
+    // list exists, so only one control is ever ringed at a time per column.
+    const wantsImageModel = agent.enabledTools.includes(IMAGE_GENERATION_TOOL);
+    // Nothing to point at when the org holds no image-capable key.
+    const canPickImageModel = imageKeyOptions.length > 1;
+    const guideImage = wantsImageModel && canPickImageModel;
+    const guiding = createdAgentId === agent.id && !setupDismissed && hasAnyKeys;
+    const needsChatKey = guiding && !primaryKeyId;
+    const needsChatModel = guiding && !!primaryKeyId && !agent.primaryModel;
+    const needsImageKey = guiding && guideImage && !imageKeyId;
+    const needsImageModel = guiding && guideImage && !!imageKeyId && !agent.imageModel;
+    const guidanceActive = needsChatKey || needsChatModel || needsImageKey || needsImageModel;
+
+    const attentionRing = (active: boolean) => (active ? "uniffy-attention-ring" : undefined);
 
     // Only curated catalog chat models are selectable - keeps live-API noise
     // (whisper, realtime, embeddings, image-only) out of the chat pickers.
@@ -164,6 +193,7 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         if (agent.primaryModel && !chatModels.some((m) => m.id === agent.primaryModel)) {
             opts.unshift({ value: agent.primaryModel, label: agent.primaryModel });
         }
+        opts.unshift({ value: "", label: "Organization default" });
         return opts;
     }, [chatModels, agent.primaryModel]);
 
@@ -219,6 +249,39 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         handleUpdate({ modelParams: JSON.stringify(next) });
     };
 
+    const imageParamValues = useMemo(
+        () => parseModelParamValues(agent.imageParams),
+        [agent.imageParams],
+    );
+
+    const imageModelSchemaJson = useMemo(
+        () =>
+            imageKeyModels.find((m) => m.id === agent.imageModel)?.imageParameterSchemaJson ?? "",
+        [imageKeyModels, agent.imageModel],
+    );
+
+    const imagePriceEstimates = useMemo(
+        () => parseImagePriceEstimates(
+            imageKeyModels.find((m) => m.id === agent.imageModel)?.imagePriceEstimatesJson ?? "",
+        ),
+        [imageKeyModels, agent.imageModel],
+    );
+
+    const handleImageModelChange = (value: string) => {
+        const fields: { imageModel: string; imageParams?: string } = { imageModel: value };
+        if (Object.keys(imageParamValues).length > 0) {
+            const nextSchema = parseModelParamsSchema(
+                imageKeyModels.find((m) => m.id === value)?.imageParameterSchemaJson ?? "",
+            );
+            fields.imageParams = JSON.stringify(stripInvalidParams(nextSchema, imageParamValues));
+        }
+        handleUpdate(fields);
+    };
+
+    const handleImageParamsChange = (next: ModelParamValues) => {
+        handleUpdate({ imageParams: JSON.stringify(next) });
+    };
+
     const handleAvatarUpload = useCallback(
         async (file: File) => {
             const buffer = await file.arrayBuffer();
@@ -235,6 +298,21 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
         await dispatch(deleteAgentAvatar(agent.id));
     }, [dispatch, agent.id]);
 
+    // Buffered like the name field: a per-keystroke update RPC round-trips the
+    // stored value back over the input and eats characters.
+    const [styleState, setStyleState] = useState({
+        id: agent.id,
+        value: agent.imageStylePrompt,
+    });
+    if (styleState.id !== agent.id) {
+        setStyleState({ id: agent.id, value: agent.imageStylePrompt });
+    }
+    const styleChanged = styleState.value !== agent.imageStylePrompt;
+
+    const handleSaveStylePrompt = () => {
+        if (styleChanged) handleUpdate({ imageStylePrompt: styleState.value });
+    };
+
     const [nameState, setNameState] = useState({ id: agent.id, value: agent.name });
     if (nameState.id !== agent.id) {
         setNameState({ id: agent.id, value: agent.name });
@@ -250,151 +328,165 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
-            {/* --- Identity Hero --- */}
-            <div className="relative bg-card border border-border rounded-xl overflow-hidden">
-                {/* Decorative top gradient bar */}
-                <div className="h-1 bg-gradient-to-r from-primary/80 via-primary/40 to-transparent" />
+        <div className="max-w-4xl mx-auto divide-y divide-border animate-in fade-in duration-300">
+            <section className="pb-6 space-y-4">
+                <SectionLabel>Identity</SectionLabel>
+                <div className="flex items-start gap-6">
+                    <div className="shrink-0">
+                        <AvatarUpload
+                            imageUrl={agent.avatarKey || undefined}
+                            fallback={agent.avatarEmoji || agent.name.charAt(0)}
+                            size="lg"
+                            onUpload={handleAvatarUpload}
+                            onDelete={handleAvatarDelete}
+                            disabled={!canEdit}
+                        />
+                    </div>
 
-                <div className="p-6">
-                    <div className="flex items-start gap-6">
-                        {/* Avatar column */}
-                        <div className="shrink-0">
-                            <AvatarUpload
-                                imageUrl={agent.avatarKey || undefined}
-                                fallback={agent.avatarEmoji || agent.name.charAt(0)}
-                                size="lg"
-                                onUpload={handleAvatarUpload}
-                                onDelete={handleAvatarDelete}
+                    <div className="flex-1 min-w-0 space-y-4">
+                        <div>
+                            <FieldLabel>Name</FieldLabel>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    className={cn(
+                                        "flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground",
+                                        "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring",
+                                        "transition-all placeholder:text-muted-foreground",
+                                        !canEdit && "opacity-50 cursor-not-allowed",
+                                    )}
+                                    value={nameValue}
+                                    onChange={(e) => setNameState({ id: agent.id, value: e.target.value })}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && nameChanged) {
+                                            handleSaveName();
+                                        }
+                                    }}
+                                    placeholder="Agent name"
+                                    disabled={!canEdit}
+                                />
+                                {nameChanged && (
+                                    <Button size="md" onClick={handleSaveName}>
+                                        Save
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        <div>
+                            <FieldLabel>Tags</FieldLabel>
+                            <TagPicker
+                                selectedTagIds={agent.tagIds ?? []}
+                                onChange={(ids) => handleUpdate({ tagIds: ids })}
                                 disabled={!canEdit}
+                                placeholder="Add a tag"
                             />
                         </div>
-
-                        {/* Identity fields */}
-                        <div className="flex-1 min-w-0 space-y-4">
+                        <div className="flex items-end gap-4">
                             <div>
-                                <FieldLabel>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Textbox size={12} weight="bold" />
-                                        Name
-                                    </span>
-                                </FieldLabel>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        className={cn(
-                                            "flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground",
-                                            "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring",
-                                            "transition-all placeholder:text-muted-foreground",
-                                            !canEdit && "opacity-50 cursor-not-allowed",
-                                        )}
-                                        value={nameValue}
-                                        onChange={(e) => setNameState({ id: agent.id, value: e.target.value })}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" && nameChanged) {
-                                                handleSaveName();
-                                            }
-                                        }}
-                                        placeholder="Agent name"
-                                        disabled={!canEdit}
-                                    />
-                                    {nameChanged && (
-                                        <Button size="md" onClick={handleSaveName}>
-                                            Save
-                                        </Button>
+                                <FieldLabel>Fallback Emoji</FieldLabel>
+                                <input
+                                    type="text"
+                                    className={cn(
+                                        "w-16 bg-muted/50 border border-border rounded-lg px-3 py-2 text-center text-base text-foreground",
+                                        "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
+                                        !canEdit && "opacity-50 cursor-not-allowed",
                                     )}
-                                </div>
-                            </div>
-                            <div>
-                                <FieldLabel>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <TagIcon size={12} weight="bold" />
-                                        Tags
-                                    </span>
-                                </FieldLabel>
-                                <TagPicker
-                                    selectedTagIds={agent.tagIds ?? []}
-                                    onChange={(ids) => handleUpdate({ tagIds: ids })}
+                                    value={agent.avatarEmoji}
+                                    maxLength={2}
+                                    onChange={(e) => handleUpdate({ avatarEmoji: e.target.value })}
+                                    placeholder="AI"
                                     disabled={!canEdit}
-                                    placeholder="Add a tag"
                                 />
                             </div>
-                            <div className="flex items-end gap-4">
-                                <div>
-                                    <FieldLabel>
-                                        <span className="inline-flex items-center gap-1.5">
-                                            <SmileySticker size={12} weight="bold" />
-                                            Fallback Emoji
-                                        </span>
-                                    </FieldLabel>
-                                    <input
-                                        type="text"
-                                        className={cn(
-                                            "w-16 bg-muted/50 border border-border rounded-lg px-3 py-2 text-center text-base text-foreground",
-                                            "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
-                                            !canEdit && "opacity-50 cursor-not-allowed",
-                                        )}
-                                        value={agent.avatarEmoji}
-                                        maxLength={2}
-                                        onChange={(e) => handleUpdate({ avatarEmoji: e.target.value })}
-                                        placeholder="AI"
-                                        disabled={!canEdit}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground pb-2.5">
-                                    Displayed when no avatar image is uploaded
-                                </p>
-                            </div>
+                            <p className="text-xs text-muted-foreground pb-2.5">
+                                Displayed when no avatar image is uploaded
+                            </p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* --- Model Configuration (unified two-column) --- */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="p-6 pb-5">
-                    <SectionHeader
-                        icon={Brain}
-                        title="Model Configuration"
-                        subtitle="Configure the LLM providers and models this agent uses"
-                    />
-
+            {canEdit && (
+            <section className="py-6" ref={modelSectionRef}>
+                <button
+                    type="button"
+                    onClick={() => setModelSettingsOpen(!modelSettingsOpen)}
+                    className="w-full flex items-center justify-between gap-3 text-left cursor-pointer"
+                    data-testid="agent-model-settings-toggle"
+                    data-state={modelSettingsOpen ? "open" : "closed"}
+                >
+                    <div>
+                        <SectionLabel>Model settings</SectionLabel>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Configure the LLM providers and models this agent uses
+                        </p>
+                    </div>
+                    {modelSettingsOpen ? (
+                        <CaretDown size={16} className="text-muted-foreground shrink-0" />
+                    ) : (
+                        <CaretRight size={16} className="text-muted-foreground shrink-0" />
+                    )}
+                </button>
+                {guidanceActive && modelSettingsOpen && (
+                    <div
+                        className="mt-4 flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-500"
+                        data-testid="agent-model-setup-hint"
+                    >
+                        <Sparkle size={16} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                                Pick a model to finish setting up {agent.name}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                {guideImage
+                                    ? "Choose a provider key and chat model. This agent can also generate images, so give it an image model too."
+                                    : "Choose a provider key, then the chat model this agent runs on."}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setSetupDismissed(true)}
+                            title="Dismiss"
+                            aria-label="Dismiss model setup hint"
+                            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                            data-testid="agent-model-setup-hint-dismiss"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+                {modelSettingsOpen && (
+                <div className="mt-5">
                     {!hasAnyKeys ? (
-                        /* Empty state: no provider keys configured */
-                        <div className="relative border border-dashed border-border rounded-xl p-8 text-center overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3 pointer-events-none" />
-                            <div className="relative">
-                                <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
-                                    <Key size={28} weight="duotone" className="text-primary" />
-                                </div>
-                                <h4 className="text-sm font-semibold text-foreground mb-1.5">
-                                    No provider keys configured
-                                </h4>
-                                <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-5">
-                                    Add a provider API key to start using this agent.
-                                    Provider keys are managed in the Config tab.
-                                </p>
+                        <div className="border border-dashed border-border rounded-lg p-8 text-center">
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                                <Key size={24} className="text-primary" />
+                            </div>
+                            <h4 className="text-sm font-medium text-foreground mb-1.5">
+                                No provider keys configured
+                            </h4>
+                            <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-5">
+                                Add a provider API key to start using this agent.
+                                Organization keys and defaults are managed on the
+                                admin agents page.
+                                {!isOrgAdmin && " Only an organization admin can add one."}
+                            </p>
+                            {isOrgAdmin && (
                                 <Button
                                     size="md"
-                                    onClick={() => navigate("/agents/config")}
+                                    onClick={() => navigate("/admin/agents?tab=keys")}
                                 >
                                     <Key size={16} weight="bold" />
                                     Add Provider Key
                                     <ArrowRight size={14} />
                                 </Button>
-                            </div>
+                            )}
                         </div>
                     ) : (
                         <>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {/* Primary Model column */}
-                                <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-4">
-                                    <div className="flex items-center gap-2 pb-2 border-b border-border">
-                                        <Brain size={16} weight="duotone" className="text-primary" />
-                                        <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                                            Chat Model
-                                        </span>
-                                    </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <SectionLabel>Chat Model</SectionLabel>
                                     <div>
                                         <FieldLabel>Provider Key</FieldLabel>
                                         <Select
@@ -402,10 +494,11 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             onChange={(value) => handleUpdate({
                                                 primaryProviderKeyId: value,
                                             })}
-                                            options={keyOptions}
+                                            options={chatKeyOptions}
                                             placeholder="Select provider key..."
                                             disabled={!canEdit}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsChatKey)}
                                         />
                                     </div>
                                     <div>
@@ -414,9 +507,16 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             value={agent.primaryModel}
                                             onChange={handlePrimaryModelChange}
                                             options={primaryModelOptions}
-                                            placeholder={primaryKeyId ? "Select model..." : "Select a provider key first"}
+                                            placeholder={
+                                                !primaryKeyId
+                                                    ? "Select a provider key first"
+                                                    : primaryModelsLoading
+                                                        ? "Loading models..."
+                                                        : "Select model..."
+                                            }
                                             disabled={!canEdit || !primaryKeyId}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsChatModel)}
                                         />
                                     </div>
                                     <ModelParamsSection
@@ -427,14 +527,8 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                     />
                                 </div>
 
-                                {/* Image Generation column */}
-                                <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-4">
-                                    <div className="flex items-center gap-2 pb-2 border-b border-border">
-                                        <ImageSquare size={16} weight="duotone" className="text-primary" />
-                                        <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                                            Image Model
-                                        </span>
-                                    </div>
+                                <div className="space-y-4">
+                                    <SectionLabel>Image Model</SectionLabel>
                                     <div>
                                         <FieldLabel>Provider Key</FieldLabel>
                                         <Select
@@ -442,37 +536,95 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                             onChange={(value) => handleUpdate({
                                                 imageProviderKeyId: value,
                                             })}
-                                            options={keyOptions}
+                                            options={imageKeyOptions}
                                             placeholder="Select provider key..."
                                             disabled={!canEdit}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsImageKey)}
                                         />
                                     </div>
                                     <div>
                                         <FieldLabel>Model</FieldLabel>
                                         <Select
                                             value={agent.imageModel}
-                                            onChange={(value) => handleUpdate({ imageModel: value })}
+                                            onChange={handleImageModelChange}
                                             options={imageModelOptions}
-                                            placeholder={imageKeyId ? "Select model..." : "Select a provider key first"}
+                                            placeholder={
+                                                !imageKeyId
+                                                    ? "Select a provider key first"
+                                                    : imageModelsLoading
+                                                        ? "Loading models..."
+                                                        : "Select model..."
+                                            }
                                             disabled={!canEdit || !imageKeyId}
                                             className="w-full"
+                                            triggerClassName={attentionRing(needsImageModel)}
                                         />
                                         <p className="text-xs text-muted-foreground mt-1.5">
-                                            Used for the image generation tool
+                                            {!canPickImageModel
+                                                ? "No organization key has an image model available"
+                                                : wantsImageModel
+                                                    ? "This agent has the image generation tool enabled"
+                                                    : "Used for the image generation tool"}
                                         </p>
                                     </div>
+                                    {agent.imageModel && (
+                                        <>
+                                            <ModelParamsSection
+                                                title="Image Defaults"
+                                                schemaJson={imageModelSchemaJson}
+                                                values={imageParamValues}
+                                                onChange={handleImageParamsChange}
+                                                disabled={!canEdit}
+                                                renderRowSuffix={(key) =>
+                                                    key === "resolution" || key === "quality" ? (
+                                                        <ImageCostHint
+                                                            estimates={imagePriceEstimates}
+                                                            values={imageParamValues}
+                                                        />
+                                                    ) : null
+                                                }
+                                            />
+                                            <div>
+                                                <FieldLabel>Style Preset</FieldLabel>
+                                                <textarea
+                                                    value={styleState.value}
+                                                    onChange={(e) =>
+                                                        setStyleState({
+                                                            id: agent.id,
+                                                            value: e.target.value,
+                                                        })
+                                                    }
+                                                    onBlur={handleSaveStylePrompt}
+                                                    rows={3}
+                                                    disabled={!canEdit}
+                                                    placeholder="e.g. flat vector illustration, muted palette, no text"
+                                                    className={cn(
+                                                        "w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground",
+                                                        "focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all",
+                                                        "placeholder:text-muted-foreground resize-y",
+                                                        !canEdit && "opacity-50 cursor-not-allowed",
+                                                    )}
+                                                />
+                                                <div className="mt-1.5 flex items-start justify-between gap-3">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Appended to every image prompt. Providers dropped
+                                                        their style parameter, so house style lives here.
+                                                    </p>
+                                                    {styleChanged && (
+                                                        <Button size="sm" onClick={handleSaveStylePrompt}>
+                                                            Save
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Fallback models - full width below the grid */}
-                            <div className="mt-5 bg-muted/30 border border-border rounded-xl p-4">
-                                <div className="flex items-center gap-2 pb-2 mb-3 border-b border-border">
-                                    <ArrowsDownUp size={16} weight="duotone" className="text-muted-foreground" />
-                                    <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                                        Fallback Models
-                                    </span>
-                                </div>
+                            <div className="mt-8 space-y-3">
+                                <SectionLabel>Fallback Models</SectionLabel>
                                 <MultiSelect
                                     value={agent.fallbackModels}
                                     onChange={(models) => handleUpdate({ fallbackModels: models })}
@@ -480,75 +632,48 @@ export function OverviewTab({ agent }: { agent: SerializedAgent }) {
                                     placeholder={primaryKeyId ? "Select fallback models..." : "Select a primary key first"}
                                     disabled={!canEdit || !primaryKeyId}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1.5">
+                                <p className="text-xs text-muted-foreground">
                                     Used automatically when the primary chat model is unavailable
                                 </p>
                             </div>
                         </>
                     )}
                 </div>
-            </div>
+                )}
+            </section>
+            )}
 
-            {/* --- Agent Settings --- */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="p-6">
-                    <SectionHeader
-                        icon={Star}
-                        title="Agent Settings"
-                        subtitle="General configuration and capability overview"
+            <section className="py-6 space-y-3">
+                <SectionLabel>Agent Settings</SectionLabel>
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-border/60">
+                    <div className="min-w-0">
+                        <span className="text-sm font-medium text-foreground">
+                            Default Agent
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                            Used when creating new sessions without specifying an agent
+                        </p>
+                    </div>
+                    <ToggleSwitch
+                        size="sm"
+                        enabled={agent.isDefault}
+                        disabled={!canEdit}
+                        onChange={() => handleUpdate({ isDefault: !agent.isDefault })}
                     />
-
-                    {/* Default agent toggle */}
-                    <div className="flex items-center justify-between bg-muted/30 border border-border rounded-xl p-4 mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Star size={16} weight="duotone" className="text-primary" />
-                            </div>
-                            <div>
-                                <span className="text-sm font-medium text-foreground">
-                                    Default Agent
-                                </span>
-                                <p className="text-xs text-muted-foreground">
-                                    Used when creating new sessions without specifying an agent
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => handleUpdate({ isDefault: !agent.isDefault })}
-                            disabled={!canEdit}
-                            className={cn(
-                                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0",
-                                agent.isDefault ? "bg-primary" : "bg-muted border border-border",
-                                !canEdit && "opacity-50 cursor-not-allowed"
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                                    agent.isDefault ? "translate-x-6" : "translate-x-1"
-                                )}
-                            />
-                        </button>
-                    </div>
-
-                    {/* Stats grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatCard
-                            icon={Lightning}
-                            label="Skills Enabled"
-                            value={agent.enabledSkills.length}
-                            accentClass="bg-amber-500/80"
-                        />
-                        <StatCard
-                            icon={Wrench}
-                            label="Tools Enabled"
-                            value={agent.enabledTools.length}
-                            accentClass="bg-blue-500/80"
-                        />
-                    </div>
                 </div>
-            </div>
+                <div className="flex items-center justify-between py-2 border-b border-border/60 text-sm">
+                    <span className="text-foreground">Skills Enabled</span>
+                    <span className="text-muted-foreground tabular-nums">
+                        {agent.enabledSkills.length}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between py-2 text-sm">
+                    <span className="text-foreground">Tools Enabled</span>
+                    <span className="text-muted-foreground tabular-nums">
+                        {agent.enabledTools.length}
+                    </span>
+                </div>
+            </section>
         </div>
     );
 }

@@ -4,6 +4,7 @@ import { agentsApi } from '@/features/agents/api/agentsApi';
 import type { RootState } from '@/app/store';
 import type { AgentInfo } from '@uniffy/proto/agents/v1/agents_pb';
 import { bulkUpsertTags, tagToPlain } from '@/features/tags';
+import { parseIntegrationConnections } from '@/features/agents/utils/integrationConnections';
 
 const getOrganizationId = (state: RootState): string => {
     const orgId = state.auth.currentOrganizationId;
@@ -38,10 +39,14 @@ export const agentToPlain = (agent: AgentInfo) => ({
     userRole: agent.userRole,
     imageModel: agent.imageModel,
     modelParams: agent.modelParams,
-    promptId: agent.promptId || "",
+    imageParams: agent.imageParams,
+    imageStylePrompt: agent.imageStylePrompt,
+    integrationConnections: parseIntegrationConnections(agent.integrationConnections),
     primaryProviderKeyId: agent.primaryProviderKeyId || "",
     imageProviderKeyId: agent.imageProviderKeyId || "",
     tagIds: agent.tags.map((t) => t.id),
+    isDeleted: agent.isDeleted,
+    deletedAt: timestampToPlain(agent.deletedAt),
     createdAt: timestampToPlain(agent.createdAt),
     updatedAt: timestampToPlain(agent.updatedAt),
 });
@@ -57,7 +62,7 @@ export type SerializedAgent = ReturnType<typeof agentToPlain>;
 
 export const fetchAgents = createAsyncThunk<
     SerializedAgent[],
-    { accessMode?: number; personalOnly?: boolean; groupId?: string } | void,
+    { accessMode?: number; groupId?: string } | void,
     { state: RootState; rejectValue: string }
 >('agents/fetchAgents', async (params, { getState, dispatch, rejectWithValue }) => {
     try {
@@ -65,7 +70,6 @@ export const fetchAgents = createAsyncThunk<
         const response = await agentsApi.listAgents({
             organizationId,
             accessMode: params?.accessMode,
-            personalOnly: params?.personalOnly,
             groupId: params?.groupId,
         });
         hydrateAgentTags(dispatch, response.agents);
@@ -75,21 +79,43 @@ export const fetchAgents = createAsyncThunk<
     }
 });
 
+/** The builder's deleted group. Server refuses this to non-builders. */
+export const fetchDeletedAgents = createAsyncThunk<
+    SerializedAgent[],
+    void,
+    { state: RootState; rejectValue: string }
+>('agents/fetchDeletedAgents', async (_, { getState, dispatch, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await agentsApi.listAgents({ organizationId, deletedOnly: true });
+        hydrateAgentTags(dispatch, response.agents);
+        return response.agents.map(agentToPlain);
+    } catch (error) {
+        return rejectWithValue(
+            error instanceof Error ? error.message : 'Failed to fetch deleted agents',
+        );
+    }
+});
+
 export const createAgent = createAsyncThunk<
     SerializedAgent,
     {
         name: string;
         primaryModel?: string;
         soulPrompt?: string;
+        avatarEmoji?: string;
+        enabledSkills?: string[];
         accessMode?: number;
         baselineRole?: number;
         groupIds?: string[];
         imageModel?: string;
         primaryProviderKeyId?: string;
         imageProviderKeyId?: string;
-        promptId?: string;
         tagIds?: string[];
         modelParams?: string;
+        imageParams?: string;
+        imageStylePrompt?: string;
+        integrationConnections?: Record<string, string>;
     },
     { state: RootState; rejectValue: string }
 >('agents/createAgent', async (params, { getState, dispatch, rejectWithValue }) => {
@@ -100,15 +126,22 @@ export const createAgent = createAsyncThunk<
             name: params.name,
             primaryModel: params.primaryModel,
             soulPrompt: params.soulPrompt,
+            avatarEmoji: params.avatarEmoji,
+            enabledSkills: params.enabledSkills ?? [],
             accessMode: params.accessMode,
             baselineRole: params.baselineRole,
             groupIds: params.groupIds ?? [],
             imageModel: params.imageModel,
             primaryProviderKeyId: params.primaryProviderKeyId,
             imageProviderKeyId: params.imageProviderKeyId,
-            promptId: params.promptId,
             tagIds: params.tagIds ?? [],
             modelParams: params.modelParams,
+            imageParams: params.imageParams,
+            imageStylePrompt: params.imageStylePrompt,
+            integrationConnections:
+                params.integrationConnections !== undefined
+                    ? JSON.stringify(params.integrationConnections)
+                    : undefined,
         });
         if (!response.agent) throw new Error('No agent in response');
         hydrateAgentTags(dispatch, [response.agent]);
@@ -130,25 +163,25 @@ export const updateAgent = createAsyncThunk<
         soulPrompt?: string;
         avatarEmoji?: string;
         isDefault?: boolean;
-        accessMode?: number;
-        baselineRole?: number;
-        groupIds?: string[];
         imageModel?: string;
         primaryProviderKeyId?: string;
         imageProviderKeyId?: string;
-        promptId?: string;
-        clearPrompt?: boolean;
         // Replace the agent's manual tag set; empty array clears tags; omit to leave untouched.
         tagIds?: string[];
         // Replaces the stored params object wholesale; "{}" resets to provider defaults.
         modelParams?: string;
+        // Same contract for the image-generation knobs.
+        imageParams?: string;
+        imageStylePrompt?: string;
+        // Replaces the provider-to-connection pin map wholesale; {} resets to automatic.
+        integrationConnections?: Record<string, string>;
     },
     { state: RootState; rejectValue: string }
 >('agents/updateAgent', async (params, { getState, dispatch, rejectWithValue }) => {
     try {
         const state = getState();
         const organizationId = getOrganizationId(state);
-        const { agentId, tagIds, ...fields } = params;
+        const { agentId, tagIds, integrationConnections, ...fields } = params;
         // Proto3 repeated fields cannot distinguish unset from empty, so resend the current
         // Redux value for every repeated field; caller-provided values override.
         const current = state.agents.agents[agentId];
@@ -160,6 +193,10 @@ export const updateAgent = createAsyncThunk<
             enabledSkills: fields.enabledSkills ?? current?.enabledSkills ?? [],
             fallbackModels: fields.fallbackModels ?? current?.fallbackModels ?? [],
             tagIds: tagIds !== undefined ? { ids: tagIds } : undefined,
+            integrationConnections:
+                integrationConnections !== undefined
+                    ? JSON.stringify(integrationConnections)
+                    : undefined,
         });
         if (!response.agent) throw new Error('No agent in response');
         hydrateAgentTags(dispatch, [response.agent]);
@@ -195,6 +232,13 @@ export const cloneAgent = createAsyncThunk<
             imageProviderKeyId: source.imageProviderKeyId || undefined,
             modelParams:
                 source.modelParams && source.modelParams !== '{}' ? source.modelParams : undefined,
+            imageParams:
+                source.imageParams && source.imageParams !== '{}' ? source.imageParams : undefined,
+            imageStylePrompt: source.imageStylePrompt || undefined,
+            integrationConnections:
+                Object.keys(source.integrationConnections).length > 0
+                    ? JSON.stringify(source.integrationConnections)
+                    : undefined,
         });
         if (!createResponse.agent) throw new Error('No agent in response');
         if (source.enabledTools.length > 0) {
@@ -225,6 +269,21 @@ export const deleteAgent = createAsyncThunk<
         return agentId;
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete agent');
+    }
+});
+
+export const restoreAgent = createAsyncThunk<
+    SerializedAgent,
+    string,
+    { state: RootState; rejectValue: string }
+>('agents/restoreAgent', async (agentId, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const response = await agentsApi.restoreAgent({ organizationId, agentId });
+        if (!response.agent) throw new Error('No agent in response');
+        return agentToPlain(response.agent);
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to restore agent');
     }
 });
 

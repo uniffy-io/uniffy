@@ -10,7 +10,7 @@ paths:
 | Technology | Purpose |
 |------------|---------|
 | Python 3.13+ | Backend language |
-| FastAPI | Web framework (async only) |
+| FastAPI + Granian | Web framework (async only) |
 | SQLModel + asyncpg | ORM and async database driver |
 | PostgreSQL 18 | Primary database |
 | Meilisearch | Typo-tolerant full-text search |
@@ -54,7 +54,8 @@ uniffy/
 │   ├── uniffy/           # Python backend (Granian + FastAPI + ConnectRPC)
 │   │   ├── core/         # Core models, auth, search, types, errors
 │   │   ├── domains/      # Domain modules (vertical slices)
-│   │   ├── db/           # Database session, migrations, seed data
+│   │   ├── data/         # Shipped content: agent templates, skills, prompts, model catalog, assets
+│   │   ├── db/           # Database session, migrations, seeding
 │   │   ├── workers/      # Background task workers (ARQ)
 │   │   └── factory.py    # App factory mounting services
 │   ├── ui/               # React frontend (TypeScript + Vite)

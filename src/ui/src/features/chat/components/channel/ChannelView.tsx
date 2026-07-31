@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Hash } from '@phosphor-icons/react';
+import { Hash, Trash } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { ChannelHeader } from '@/features/chat/components/channel/ChannelHeader';
@@ -79,7 +79,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
   );
 
   const handleSend = useCallback(
-    async (content: string, fileIds: string[]) => {
+    async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
       if (!activeChannel || !effectiveChannelId) return;
       flushOnSend();
       const result = await dispatch(sendMessage({
@@ -87,6 +87,7 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
         content: content || '',
         replyToId: replyToMessage?.id,
         attachmentFileIds: fileIds,
+        metadata,
       })).unwrap();
       dispatch(clearReplyToMessage());
 
@@ -177,7 +178,24 @@ export function ChannelView({ channelId: channelIdProp, onFocus, showCloseButton
       ? resolvedName
       : `#${resolvedName}`;
 
-  const compose = (
+  // A deleted agent's DM is frozen: the history is the user's own work, but
+  // there is nobody left to answer, so the composer gives way to a notice.
+  const agentRetired = !!activeChannel.isAgentDm && !!activeChannel.agentIsRetired;
+
+  const retiredNotice = (
+    <div
+      className="mx-4 mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground"
+      data-testid="chat-agent-retired-notice"
+    >
+      <Trash size={14} className="shrink-0" />
+      <span>
+        {resolvedName} was deleted. This conversation stays readable, but no new messages can be
+        sent.
+      </span>
+    </div>
+  );
+
+  const compose = agentRetired ? retiredNotice : (
     <MessageCompose
       // Remount per channel: the contentEditable DOM would otherwise carry
       // one channel's text into another and corrupt its draft.

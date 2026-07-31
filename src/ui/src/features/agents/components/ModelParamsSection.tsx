@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ArrowCounterClockwise, CaretRight, Faders } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { Select, type SelectOption } from '@/components/ui/select';
@@ -19,6 +19,13 @@ const PARAM_LABELS: Record<string, string> = {
     top_k: 'Top K',
     max_tokens: 'Max tokens',
     reasoning_effort: 'Reasoning effort',
+    aspect_ratio: 'Aspect ratio',
+    resolution: 'Resolution',
+    quality: 'Quality',
+    background: 'Background',
+    output_format: 'File format',
+    moderation: 'Moderation',
+    person_generation: 'People in images',
 };
 
 const paramLabel = (key: string): string => {
@@ -36,6 +43,13 @@ const PARAM_HELP: Record<string, string> = {
     reasoning_effort:
         'How much the model thinks before answering. Thinking spends from the same output token limit on most models.',
     parallel_tool_calls: 'Lets the model request several tool calls in a single turn.',
+    aspect_ratio: 'Shape of generated images.',
+    resolution: 'Output size. Higher tiers cost several times more per image.',
+    quality: 'Rendering effort. High costs substantially more than low.',
+    background: 'Transparent produces a cut-out with no backdrop.',
+    output_format: 'File type the image is stored as.',
+    moderation: 'Content-filter strictness the provider applies.',
+    person_generation: 'Whether the provider may render people.',
 };
 
 const paramHelp = (key: string): string | undefined => PARAM_HELP[key];
@@ -43,6 +57,26 @@ const paramHelp = (key: string): string | undefined => PARAM_HELP[key];
 const scalarValue = (
     value: ParamValue | Record<string, ParamValue> | undefined,
 ): ParamValue | undefined => (typeof value === 'object' ? undefined : value);
+
+/**
+ * Retarget a spec's `default` at the value this form inherits when a knob is
+ * unset. The controls render `default` as their placeholder, so an override
+ * form shows the layer it sits on (the agent's own setting) rather than the
+ * provider default the agent already moved away from.
+ */
+const withInherited = (spec: ParamSpec, inherited: ParamValue | undefined): ParamSpec => {
+    if (inherited === undefined) return spec;
+    switch (spec.type) {
+        case 'enum':
+            return typeof inherited === 'string' && spec.enum.includes(inherited)
+                ? { ...spec, default: inherited }
+                : spec;
+        case 'boolean':
+            return typeof inherited === 'boolean' ? { ...spec, default: inherited } : spec;
+        default:
+            return typeof inherited === 'number' ? { ...spec, default: inherited } : spec;
+    }
+};
 
 const enumOptionLabel = (key: string, member: string, members: string[]): string => {
     if (key === 'reasoning_effort') {
@@ -348,18 +382,30 @@ export function ModelParamsSection({
     values,
     onChange,
     disabled = false,
+    title = 'Model Parameters',
+    audience = 'builder',
+    inheritedValues,
+    renderRowSuffix,
 }: {
     schemaJson: string;
     values: ModelParamValues;
     onChange: (values: ModelParamValues) => void;
     disabled?: boolean;
+    title?: string;
+    /** 'user' hides knobs the catalog reserves for the agent builder. */
+    audience?: 'user' | 'builder';
+    /** What an unset knob falls back to, when that is not the provider default. */
+    inheritedValues?: ModelParamValues;
+    renderRowSuffix?: (key: string) => ReactNode;
 }) {
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const schema = useMemo(() => parseModelParamsSchema(schemaJson), [schemaJson]);
 
     if (!schema) return null;
 
-    const paramKeys = Object.keys(schema.params);
+    const paramKeys = Object.keys(schema.params).filter(
+        (key) => audience === 'builder' || schema.params[key].audience !== 'builder',
+    );
     const orderedKeys = paramKeys.includes('reasoning_effort')
         ? ['reasoning_effort', ...paramKeys.filter((k) => k !== 'reasoning_effort')]
         : paramKeys;
@@ -395,7 +441,7 @@ export function ModelParamsSection({
             <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <Faders size={14} weight="duotone" className="text-muted-foreground" />
-                    Model Parameters
+                    {title}
                 </span>
                 {hasAnyValue && (
                     <button
@@ -414,15 +460,20 @@ export function ModelParamsSection({
                 )}
             </div>
             {orderedKeys.map((key) => (
-                <ParamControl
-                    key={key}
-                    paramKey={key}
-                    spec={schema.params[key]}
-                    value={scalarValue(values[key])}
-                    disabled={disabled}
-                    onCommit={(value) => setParam(key, value)}
-                    onReset={() => resetParam(key)}
-                />
+                <div key={key}>
+                    <ParamControl
+                        paramKey={key}
+                        spec={withInherited(
+                            schema.params[key],
+                            scalarValue(inheritedValues?.[key]),
+                        )}
+                        value={scalarValue(values[key])}
+                        disabled={disabled}
+                        onCommit={(value) => setParam(key, value)}
+                        onReset={() => resetParam(key)}
+                    />
+                    {renderRowSuffix?.(key)}
+                </div>
             ))}
             {providerOptionKeys.length > 0 && (
                 <div>
@@ -444,7 +495,10 @@ export function ModelParamsSection({
                                 <ParamControl
                                     key={key}
                                     paramKey={key}
-                                    spec={schema.providerOptions[key]}
+                                    spec={withInherited(
+                                        schema.providerOptions[key],
+                                        inheritedValues?.provider_options?.[key],
+                                    )}
                                     value={providerOptionValues[key]}
                                     disabled={disabled}
                                     onCommit={(value) => setProviderOption(key, value)}

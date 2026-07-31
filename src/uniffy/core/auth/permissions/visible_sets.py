@@ -160,7 +160,7 @@ async def compute_visible_tag_ids(
 
     for ct in _TAGGABLE_ACCESS_MODE_TYPES:
         model, id_col, owner_col, am_col, baseline_col, org_col = _content_columns(ct)
-        access_filter = access_query.build_accessible_filter(
+        access_filter = await access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ct,
@@ -180,7 +180,7 @@ async def compute_visible_tag_ids(
             .distinct()
         )
 
-    branches.append(_task_branch(access_query, user_id, organization_id))
+    branches.append(await _task_branch(access_query, user_id, organization_id))
     branches.append(_chat_branch(user_id, organization_id, chat_moderator))
 
     union_q = union_all(*branches).subquery()
@@ -218,7 +218,7 @@ async def compute_visible_content_ids_by_type(
 
     access_query = ContentAccessQuery(session)
     _model, id_col, owner_col, am_col, baseline_col, org_col = _content_columns(content_type)
-    access_filter = access_query.build_accessible_filter(
+    access_filter = await access_query.build_accessible_filter(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
@@ -360,7 +360,7 @@ def _content_id_from_urn_expr():
     )
 
 
-def _task_branch(
+async def _task_branch(
     access_query: ContentAccessQuery,
     user_id: UUID,
     organization_id: UUID,
@@ -370,7 +370,7 @@ def _task_branch(
     from uniffy.core.models.projects.task import Task
     from uniffy.core.models.tags.tag import TagAssignment
 
-    project_filter = access_query.build_accessible_filter(
+    project_filter = await access_query.build_accessible_filter(
         user_id=user_id,
         organization_id=organization_id,
         content_type=ContentType.PROJECT,

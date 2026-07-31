@@ -30,6 +30,15 @@ class MemoriesService(Protocol):
     async def delete_memory(self, request: agents_dot_v1_dot_memories__pb2.DeleteMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.DeleteMemoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def set_memory_pinned(self, request: agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def get_memory_sharing(self, request: agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
+    async def set_memory_sharing(self, request: agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class MemoriesServiceASGIApplication(ConnectASGIApplication[MemoriesService]):
     def __init__(self, service: MemoriesService | AsyncGenerator[MemoriesService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None, codecs: Iterable[Codec] | None = None) -> None:
@@ -75,6 +84,36 @@ class MemoriesServiceASGIApplication(ConnectASGIApplication[MemoriesService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.delete_memory,
+                ),
+                "/agents.v1.MemoriesService/SetMemoryPinned": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetMemoryPinned",
+                        service_name="agents.v1.MemoriesService",
+                        input=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest,
+                        output=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_memory_pinned,
+                ),
+                "/agents.v1.MemoriesService/GetMemorySharing": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetMemorySharing",
+                        service_name="agents.v1.MemoriesService",
+                        input=agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest,
+                        output=agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_memory_sharing,
+                ),
+                "/agents.v1.MemoriesService/SetMemorySharing": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetMemorySharing",
+                        service_name="agents.v1.MemoriesService",
+                        input=agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest,
+                        output=agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_memory_sharing,
                 ),
             },
             interceptors=interceptors,
@@ -170,6 +209,66 @@ class MemoriesServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def set_memory_pinned(
+        self,
+        request: agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMemoryPinned",
+                service_name="agents.v1.MemoriesService",
+                input=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest,
+                output=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_memory_sharing(
+        self,
+        request: agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMemorySharing",
+                service_name="agents.v1.MemoriesService",
+                input=agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest,
+                output=agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_memory_sharing(
+        self,
+        request: agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMemorySharing",
+                service_name="agents.v1.MemoriesService",
+                input=agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest,
+                output=agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 
 
@@ -182,6 +281,12 @@ class MemoriesServiceSync(Protocol):
     def update_memory(self, request: agents_dot_v1_dot_memories__pb2.UpdateMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.UpdateMemoryResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_memory(self, request: agents_dot_v1_dot_memories__pb2.DeleteMemoryRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.DeleteMemoryResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_memory_pinned(self, request: agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_memory_sharing(self, request: agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def set_memory_sharing(self, request: agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest, ctx: RequestContext) -> agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -228,6 +333,36 @@ class MemoriesServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.delete_memory,
+                ),
+                "/agents.v1.MemoriesService/SetMemoryPinned": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetMemoryPinned",
+                        service_name="agents.v1.MemoriesService",
+                        input=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest,
+                        output=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_memory_pinned,
+                ),
+                "/agents.v1.MemoriesService/GetMemorySharing": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetMemorySharing",
+                        service_name="agents.v1.MemoriesService",
+                        input=agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest,
+                        output=agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_memory_sharing,
+                ),
+                "/agents.v1.MemoriesService/SetMemorySharing": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetMemorySharing",
+                        service_name="agents.v1.MemoriesService",
+                        input=agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest,
+                        output=agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_memory_sharing,
                 ),
             },
             interceptors=interceptors,
@@ -317,6 +452,66 @@ class MemoriesServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.MemoriesService",
                 input=agents_dot_v1_dot_memories__pb2.DeleteMemoryRequest,
                 output=agents_dot_v1_dot_memories__pb2.DeleteMemoryResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_memory_pinned(
+        self,
+        request: agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMemoryPinned",
+                service_name="agents.v1.MemoriesService",
+                input=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedRequest,
+                output=agents_dot_v1_dot_memories__pb2.SetMemoryPinnedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_memory_sharing(
+        self,
+        request: agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetMemorySharing",
+                service_name="agents.v1.MemoriesService",
+                input=agents_dot_v1_dot_memories__pb2.GetMemorySharingRequest,
+                output=agents_dot_v1_dot_memories__pb2.GetMemorySharingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_memory_sharing(
+        self,
+        request: agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetMemorySharing",
+                service_name="agents.v1.MemoriesService",
+                input=agents_dot_v1_dot_memories__pb2.SetMemorySharingRequest,
+                output=agents_dot_v1_dot_memories__pb2.SetMemorySharingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

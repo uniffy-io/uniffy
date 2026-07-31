@@ -23,9 +23,16 @@ from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.types import SubjectType
 from uniffy.domains.agents.cache import fetch_agent_row
+from uniffy.domains.agents.providers.catalog import (
+    provider_for_model,
+    validate_image_params,
+    validate_model_params,
+)
 from uniffy.domains.agents.providers.operations import ProviderOperations
 from uniffy.domains.agents.runtime.compactor import summarise_conversation
-from uniffy.domains.agents.runtime.model_resolver import resolve_model
+from uniffy.domains.agents.runtime.model_resolver import (
+    resolve_provider_and_model,
+)
 from uniffy.domains.agents.runtime.operations import _get_model_context_window
 from uniffy.domains.agents.sessions.operations import (
     DEFAULT_CONTEXT_TOKEN_BUDGET_RATIO,
@@ -210,22 +217,87 @@ class ChatAgentContextOperations:
         agent_id: UUID,
         model_override: str | None = None,
         model_params_override: dict | None = None,
+        image_params_override: dict | None = None,
     ) -> AgentChannelBinding:
         """`None` arguments leave the field unchanged; empty values clear it."""
-        channel, _agent, binding = await self._load_triple(
+        channel, agent, binding = await self._load_triple(
             organization_id, channel_id, agent_id
         )
         await self._require_mutate(user_id, organization_id, channel)
 
+        model_changed = False
         if model_override is not None:
-            binding.model_override = model_override.strip() or None
+            next_model = model_override.strip() or None
+            model_changed = next_model != binding.model_override
+            binding.model_override = next_model
 
         if model_params_override is not None:
-            binding.model_params_override = model_params_override or None
+            next_params = model_params_override or None
+            if next_params:
+                provider, target = await self._resolve_provider_and_model(
+                    organization_id, agent, binding
+                )
+                try:
+                    validate_model_params(provider.name, target, next_params)
+                except ValueError as exc:
+                    raise ValidationError("model_params_override", str(exc)) from exc
+            binding.model_params_override = next_params
+        elif model_changed and binding.model_params_override:
+            binding.model_params_override = await self._strip_params_for_binding(
+                organization_id, agent, binding
+            )
+
+        if image_params_override is not None:
+            next_image = image_params_override or None
+            if next_image:
+                # A member tuning their own conversation may not touch knobs the
+                # builder owns (moderation, output format).
+                try:
+                    validate_image_params(
+                        provider_for_model(agent.image_model) or "",
+                        agent.image_model,
+                        next_image,
+                        audience="user",
+                    )
+                except ValueError as exc:
+                    raise ValidationError("image_params_override", str(exc)) from exc
+            binding.image_params_override = next_image
 
         await self._session.commit()
         await self._session.refresh(binding)
         return binding
+
+    async def _strip_params_for_binding(
+        self,
+        organization_id: UUID,
+        agent: Agent,
+        binding: AgentChannelBinding,
+    ) -> dict | None:
+        """Drop stored knobs the binding's new effective model rejects."""
+        params: dict = binding.model_params_override or {}
+        try:
+            provider, target = await self._resolve_provider_and_model(
+                organization_id, agent, binding
+            )
+        except (NotFoundError, ValidationError):
+            # No resolvable target; the send path strips per-request anyway.
+            return params or None
+        kept: dict = {}
+        for knob, value in params.items():
+            try:
+                validate_model_params(provider.name, target, {knob: value})
+            except ValueError:
+                continue
+            kept[knob] = value
+        if kept != params:
+            logger.warning(
+                "Dropped binding params invalid for the new effective model",
+                channel_id=str(binding.channel_id),
+                agent_id=str(binding.agent_id),
+                model=target,
+                dropped=sorted(set(params) - set(kept)),
+            )
+        return kept or None
 
     async def _fetch_bindings(
         self,
@@ -509,24 +581,12 @@ class ChatAgentContextOperations:
         agent: Agent,
         binding: AgentChannelBinding,
     ) -> tuple[object, str]:
-        provider_ops = ProviderOperations(self._session)
-        if agent.primary_provider_key_id:
-            provider, _pk = await provider_ops.get_provider_for_key(
-                organization_id=organization_id,
-                key_id=agent.primary_provider_key_id,
-            )
-        else:
-            # The override may live on a different provider than the agent's
-            # primary model; resolve from the effective model.
-            provider = await provider_ops.get_provider_for_model(
-                organization_id=organization_id,
-                model_id=binding.model_override or agent.primary_model,
-            )
-        model_id = await resolve_model(
-            session_model_override=binding.model_override,
-            agent_primary_model=agent.primary_model,
-            agent_fallback_models=list(agent.fallback_models or []),
-            provider=provider,
+        provider, _key_id, model_id = await resolve_provider_and_model(
+            self._session,
+            ProviderOperations(self._session),
+            organization_id=organization_id,
+            agent=agent,
+            model_override=binding.model_override,
         )
         return provider, model_id
 

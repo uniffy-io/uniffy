@@ -7,8 +7,8 @@
 package calv1
 
 import (
-	v1 "github.com/uniffy-io/uniffy-proto-go/common/v1"
-	v11 "github.com/uniffy-io/uniffy-proto-go/tags/v1"
+	v11 "github.com/uniffy-io/uniffy-proto-go/common/v1"
+	v1 "github.com/uniffy-io/uniffy-proto-go/tags/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -459,8 +459,6 @@ type CalendarEvent struct {
 	IsFocusTime bool `protobuf:"varint,16,opt,name=is_focus_time,json=isFocusTime,proto3" json:"is_focus_time,omitempty"`
 	// Linked resources (notes, files, chats)
 	LinkedResources []*LinkedResource `protobuf:"bytes,17,rep,name=linked_resources,json=linkedResources,proto3" json:"linked_resources,omitempty"`
-	// Access mode
-	AccessMode v1.AccessMode `protobuf:"varint,18,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	// Is deleted flag (soft delete)
 	IsDeleted bool `protobuf:"varint,19,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
 	// URNs referenced in this event's description (outgoing links)
@@ -485,10 +483,8 @@ type CalendarEvent struct {
 	RoomLocation  *string  `protobuf:"bytes,30,opt,name=room_location,json=roomLocation,proto3,oneof" json:"room_location,omitempty"`
 	RoomCapacity  *int32   `protobuf:"varint,31,opt,name=room_capacity,json=roomCapacity,proto3,oneof" json:"room_capacity,omitempty"`
 	RoomAmenities []string `protobuf:"bytes,32,rep,name=room_amenities,json=roomAmenities,proto3" json:"room_amenities,omitempty"`
-	// Baseline role granted by access mode (when applicable)
-	BaselineRole *v1.ContentRole `protobuf:"varint,33,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Hydrated tags applied to this event (server-side from TagOperations).
-	Tags []*v11.Tag `protobuf:"bytes,34,rep,name=tags,proto3" json:"tags,omitempty"`
+	Tags []*v1.Tag `protobuf:"bytes,34,rep,name=tags,proto3" json:"tags,omitempty"`
 	// Bound chat channel for a Uniffy online meeting. When set, this event is a
 	// Uniffy meeting and join resolves to this channel's call. Mutually exclusive
 	// with meeting_url.
@@ -648,13 +644,6 @@ func (x *CalendarEvent) GetLinkedResources() []*LinkedResource {
 	return nil
 }
 
-func (x *CalendarEvent) GetAccessMode() v1.AccessMode {
-	if x != nil {
-		return x.AccessMode
-	}
-	return v1.AccessMode(0)
-}
-
 func (x *CalendarEvent) GetIsDeleted() bool {
 	if x != nil {
 		return x.IsDeleted
@@ -753,14 +742,7 @@ func (x *CalendarEvent) GetRoomAmenities() []string {
 	return nil
 }
 
-func (x *CalendarEvent) GetBaselineRole() v1.ContentRole {
-	if x != nil && x.BaselineRole != nil {
-		return *x.BaselineRole
-	}
-	return v1.ContentRole(0)
-}
-
-func (x *CalendarEvent) GetTags() []*v11.Tag {
+func (x *CalendarEvent) GetTags() []*v1.Tag {
 	if x != nil {
 		return x.Tags
 	}
@@ -1087,14 +1069,10 @@ type CreateEventRequest struct {
 	IsFocusTime bool `protobuf:"varint,14,opt,name=is_focus_time,json=isFocusTime,proto3" json:"is_focus_time,omitempty"`
 	// Linked resource URNs
 	LinkedResourceUrns []string `protobuf:"bytes,15,rep,name=linked_resource_urns,json=linkedResourceUrns,proto3" json:"linked_resource_urns,omitempty"`
-	// Access mode (defaults to OWNER_ONLY)
-	AccessMode *v1.AccessMode `protobuf:"varint,16,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	// Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
 	Reminders []int32 `protobuf:"varint,17,rep,packed,name=reminders,proto3" json:"reminders,omitempty"`
 	// Optional room ID to book alongside the event
 	RoomId *string `protobuf:"bytes,18,opt,name=room_id,json=roomId,proto3,oneof" json:"room_id,omitempty"`
-	// Baseline role granted by access mode (when applicable)
-	BaselineRole *v1.ContentRole `protobuf:"varint,19,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Optional unified-tag ids to assign on create
 	TagIds []string `protobuf:"bytes,20,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
 	// Optional channel to bind as a Uniffy online meeting. Mutually exclusive
@@ -1241,13 +1219,6 @@ func (x *CreateEventRequest) GetLinkedResourceUrns() []string {
 	return nil
 }
 
-func (x *CreateEventRequest) GetAccessMode() v1.AccessMode {
-	if x != nil && x.AccessMode != nil {
-		return *x.AccessMode
-	}
-	return v1.AccessMode(0)
-}
-
 func (x *CreateEventRequest) GetReminders() []int32 {
 	if x != nil {
 		return x.Reminders
@@ -1260,13 +1231,6 @@ func (x *CreateEventRequest) GetRoomId() string {
 		return *x.RoomId
 	}
 	return ""
-}
-
-func (x *CreateEventRequest) GetBaselineRole() v1.ContentRole {
-	if x != nil && x.BaselineRole != nil {
-		return *x.BaselineRole
-	}
-	return v1.ContentRole(0)
 }
 
 func (x *CreateEventRequest) GetTagIds() []string {
@@ -1378,8 +1342,6 @@ type UpdateEventRequest struct {
 	IsFocusTime *bool `protobuf:"varint,14,opt,name=is_focus_time,json=isFocusTime,proto3,oneof" json:"is_focus_time,omitempty"`
 	// Updated linked resource URNs (replaces existing)
 	LinkedResourceUrns []string `protobuf:"bytes,15,rep,name=linked_resource_urns,json=linkedResourceUrns,proto3" json:"linked_resource_urns,omitempty"`
-	// Updated access mode
-	AccessMode *v1.AccessMode `protobuf:"varint,16,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
 	// Updated attendee IDs (replaces existing list)
 	AttendeeIds []string `protobuf:"bytes,17,rep,name=attendee_ids,json=attendeeIds,proto3" json:"attendee_ids,omitempty"`
 	// Updated reminder intervals in minutes before event
@@ -1390,8 +1352,6 @@ type UpdateEventRequest struct {
 	OccurrenceDate *string `protobuf:"bytes,20,opt,name=occurrence_date,json=occurrenceDate,proto3,oneof" json:"occurrence_date,omitempty"`
 	// Optional room ID to book/change for this event
 	RoomId *string `protobuf:"bytes,21,opt,name=room_id,json=roomId,proto3,oneof" json:"room_id,omitempty"`
-	// Updated baseline role granted by access mode
-	BaselineRole *v1.ContentRole `protobuf:"varint,22,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Replacement set of unified-tag ids. Empty list clears all manual tags.
 	// Field is unset (HasField=false) to leave manual tags untouched.
 	TagIds *EventTagIds `protobuf:"bytes,23,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
@@ -1540,13 +1500,6 @@ func (x *UpdateEventRequest) GetLinkedResourceUrns() []string {
 	return nil
 }
 
-func (x *UpdateEventRequest) GetAccessMode() v1.AccessMode {
-	if x != nil && x.AccessMode != nil {
-		return *x.AccessMode
-	}
-	return v1.AccessMode(0)
-}
-
 func (x *UpdateEventRequest) GetAttendeeIds() []string {
 	if x != nil {
 		return x.AttendeeIds
@@ -1580,13 +1533,6 @@ func (x *UpdateEventRequest) GetRoomId() string {
 		return *x.RoomId
 	}
 	return ""
-}
-
-func (x *UpdateEventRequest) GetBaselineRole() v1.ContentRole {
-	if x != nil && x.BaselineRole != nil {
-		return *x.BaselineRole
-	}
-	return v1.ContentRole(0)
 }
 
 func (x *UpdateEventRequest) GetTagIds() *EventTagIds {
@@ -4011,7 +3957,7 @@ type EventTemplate struct {
 	// Tags
 	Tags []string `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`
 	// Access mode
-	AccessMode v1.AccessMode `protobuf:"varint,10,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	AccessMode v11.AccessMode `protobuf:"varint,10,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
 	// Creator ID
 	CreatedBy string `protobuf:"bytes,11,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	// Created timestamp
@@ -4019,7 +3965,7 @@ type EventTemplate struct {
 	// Updated timestamp
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Baseline role granted by access mode (when applicable)
-	BaselineRole  *v1.ContentRole `protobuf:"varint,14,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	BaselineRole  *v11.ContentRole `protobuf:"varint,14,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4117,11 +4063,11 @@ func (x *EventTemplate) GetTags() []string {
 	return nil
 }
 
-func (x *EventTemplate) GetAccessMode() v1.AccessMode {
+func (x *EventTemplate) GetAccessMode() v11.AccessMode {
 	if x != nil {
 		return x.AccessMode
 	}
-	return v1.AccessMode(0)
+	return v11.AccessMode(0)
 }
 
 func (x *EventTemplate) GetCreatedBy() string {
@@ -4145,11 +4091,11 @@ func (x *EventTemplate) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *EventTemplate) GetBaselineRole() v1.ContentRole {
+func (x *EventTemplate) GetBaselineRole() v11.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
 	}
-	return v1.ContentRole(0)
+	return v11.ContentRole(0)
 }
 
 type CreateEventTemplateRequest struct {
@@ -4162,8 +4108,8 @@ type CreateEventTemplateRequest struct {
 	MeetingUrl      string                 `protobuf:"bytes,6,opt,name=meeting_url,json=meetingUrl,proto3" json:"meeting_url,omitempty"`
 	CategoryId      string                 `protobuf:"bytes,7,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	Tags            []string               `protobuf:"bytes,8,rep,name=tags,proto3" json:"tags,omitempty"`
-	AccessMode      v1.AccessMode          `protobuf:"varint,9,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
-	BaselineRole    *v1.ContentRole        `protobuf:"varint,10,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	AccessMode      v11.AccessMode         `protobuf:"varint,9,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode" json:"access_mode,omitempty"`
+	BaselineRole    *v11.ContentRole       `protobuf:"varint,10,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -4254,18 +4200,18 @@ func (x *CreateEventTemplateRequest) GetTags() []string {
 	return nil
 }
 
-func (x *CreateEventTemplateRequest) GetAccessMode() v1.AccessMode {
+func (x *CreateEventTemplateRequest) GetAccessMode() v11.AccessMode {
 	if x != nil {
 		return x.AccessMode
 	}
-	return v1.AccessMode(0)
+	return v11.AccessMode(0)
 }
 
-func (x *CreateEventTemplateRequest) GetBaselineRole() v1.ContentRole {
+func (x *CreateEventTemplateRequest) GetBaselineRole() v11.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
 	}
-	return v1.ContentRole(0)
+	return v11.ContentRole(0)
 }
 
 type GetEventTemplateRequest struct {
@@ -4331,8 +4277,8 @@ type UpdateEventTemplateRequest struct {
 	MeetingUrl      *string                `protobuf:"bytes,7,opt,name=meeting_url,json=meetingUrl,proto3,oneof" json:"meeting_url,omitempty"`
 	CategoryId      *string                `protobuf:"bytes,8,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	Tags            []string               `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`
-	AccessMode      *v1.AccessMode         `protobuf:"varint,10,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
-	BaselineRole    *v1.ContentRole        `protobuf:"varint,11,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	AccessMode      *v11.AccessMode        `protobuf:"varint,10,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
+	BaselineRole    *v11.ContentRole       `protobuf:"varint,11,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -4430,18 +4376,18 @@ func (x *UpdateEventTemplateRequest) GetTags() []string {
 	return nil
 }
 
-func (x *UpdateEventTemplateRequest) GetAccessMode() v1.AccessMode {
+func (x *UpdateEventTemplateRequest) GetAccessMode() v11.AccessMode {
 	if x != nil && x.AccessMode != nil {
 		return *x.AccessMode
 	}
-	return v1.AccessMode(0)
+	return v11.AccessMode(0)
 }
 
-func (x *UpdateEventTemplateRequest) GetBaselineRole() v1.ContentRole {
+func (x *UpdateEventTemplateRequest) GetBaselineRole() v11.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
 	}
-	return v1.ContentRole(0)
+	return v11.ContentRole(0)
 }
 
 type DeleteEventTemplateRequest struct {
@@ -4772,7 +4718,7 @@ var File_cal_v1_calendar_proto protoreflect.FileDescriptor
 
 const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
-	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xa8\r\n" +
+	"\x15cal/v1/calendar.proto\x12\x06cal.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\x9c\f\n" +
 	"\rCalendarEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n" +
@@ -4798,9 +4744,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"recurrence\x18\x0f \x01(\v2\x18.cal.v1.RecurrenceConfigH\x01R\n" +
 	"recurrence\x88\x01\x01\x12\"\n" +
 	"\ris_focus_time\x18\x10 \x01(\bR\visFocusTime\x12A\n" +
-	"\x10linked_resources\x18\x11 \x03(\v2\x16.cal.v1.LinkedResourceR\x0flinkedResources\x126\n" +
-	"\vaccess_mode\x18\x12 \x01(\x0e2\x15.common.v1.AccessModeR\n" +
-	"accessMode\x12\x1d\n" +
+	"\x10linked_resources\x18\x11 \x03(\v2\x16.cal.v1.LinkedResourceR\x0flinkedResources\x12\x1d\n" +
 	"\n" +
 	"is_deleted\x18\x13 \x01(\bR\tisDeleted\x12/\n" +
 	"\x13outgoing_references\x18\x14 \x03(\tR\x12outgoingReferences\x129\n" +
@@ -4818,12 +4762,10 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\troom_name\x18\x1d \x01(\tH\x06R\broomName\x88\x01\x01\x12(\n" +
 	"\rroom_location\x18\x1e \x01(\tH\aR\froomLocation\x88\x01\x01\x12(\n" +
 	"\rroom_capacity\x18\x1f \x01(\x05H\bR\froomCapacity\x88\x01\x01\x12%\n" +
-	"\x0eroom_amenities\x18  \x03(\tR\rroomAmenities\x12@\n" +
-	"\rbaseline_role\x18! \x01(\x0e2\x16.common.v1.ContentRoleH\tR\fbaselineRole\x88\x01\x01\x12 \n" +
+	"\x0eroom_amenities\x18  \x03(\tR\rroomAmenities\x12 \n" +
 	"\x04tags\x18\" \x03(\v2\f.tags.v1.TagR\x04tags\x12\"\n" +
 	"\n" +
-	"channel_id\x18# \x01(\tH\n" +
-	"R\tchannelId\x88\x01\x01\x120\n" +
+	"channel_id\x18# \x01(\tH\tR\tchannelId\x88\x01\x01\x120\n" +
 	"\x14channel_auto_created\x18$ \x01(\bR\x12channelAutoCreatedB\x0e\n" +
 	"\f_meeting_urlB\r\n" +
 	"\v_recurrenceB\r\n" +
@@ -4835,8 +4777,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\n" +
 	"_room_nameB\x10\n" +
 	"\x0e_room_locationB\x10\n" +
-	"\x0e_room_capacityB\x10\n" +
-	"\x0e_baseline_roleB\r\n" +
+	"\x0e_room_capacityB\r\n" +
 	"\v_channel_id\"\x9b\x02\n" +
 	"\bAttendee\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -4867,7 +4808,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\x0e2\x14.cal.v1.ResourceTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x15\n" +
 	"\x03url\x18\x04 \x01(\tH\x00R\x03url\x88\x01\x01B\x06\n" +
-	"\x04_url\"\xcf\b\n" +
+	"\x04_url\"\xae\a\n" +
 	"\x12CreateEventRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -4891,32 +4832,27 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"recurrence\x18\r \x01(\v2\x18.cal.v1.RecurrenceConfigH\x05R\n" +
 	"recurrence\x88\x01\x01\x12\"\n" +
 	"\ris_focus_time\x18\x0e \x01(\bR\visFocusTime\x120\n" +
-	"\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12;\n" +
-	"\vaccess_mode\x18\x10 \x01(\x0e2\x15.common.v1.AccessModeH\x06R\n" +
-	"accessMode\x88\x01\x01\x12\x1c\n" +
+	"\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12\x1c\n" +
 	"\treminders\x18\x11 \x03(\x05R\treminders\x12\x1c\n" +
-	"\aroom_id\x18\x12 \x01(\tH\aR\x06roomId\x88\x01\x01\x12@\n" +
-	"\rbaseline_role\x18\x13 \x01(\x0e2\x16.common.v1.ContentRoleH\bR\fbaselineRole\x88\x01\x01\x12\x17\n" +
+	"\aroom_id\x18\x12 \x01(\tH\x06R\x06roomId\x88\x01\x01\x12\x17\n" +
 	"\atag_ids\x18\x14 \x03(\tR\x06tagIds\x12\"\n" +
 	"\n" +
-	"channel_id\x18\x15 \x01(\tH\tR\tchannelId\x88\x01\x01\x125\n" +
-	"\x14channel_auto_created\x18\x16 \x01(\bH\n" +
-	"R\x12channelAutoCreated\x88\x01\x01B\x0e\n" +
+	"channel_id\x18\x15 \x01(\tH\aR\tchannelId\x88\x01\x01\x125\n" +
+	"\x14channel_auto_created\x18\x16 \x01(\bH\bR\x12channelAutoCreated\x88\x01\x01B\x0e\n" +
 	"\f_descriptionB\v\n" +
 	"\t_timezoneB\v\n" +
 	"\t_locationB\x0e\n" +
 	"\f_meeting_urlB\x0e\n" +
 	"\f_category_idB\r\n" +
-	"\v_recurrenceB\x0e\n" +
-	"\f_access_modeB\n" +
+	"\v_recurrenceB\n" +
 	"\n" +
-	"\b_room_idB\x10\n" +
-	"\x0e_baseline_roleB\r\n" +
+	"\b_room_idB\r\n" +
 	"\v_channel_idB\x17\n" +
 	"\x15_channel_auto_created\"U\n" +
 	"\x0fGetEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xb7\v\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x96\n" +
+	"\n" +
 	"\x12UpdateEventRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -4941,19 +4877,16 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"R\n" +
 	"recurrence\x88\x01\x01\x12'\n" +
 	"\ris_focus_time\x18\x0e \x01(\bH\vR\visFocusTime\x88\x01\x01\x120\n" +
-	"\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12;\n" +
-	"\vaccess_mode\x18\x10 \x01(\x0e2\x15.common.v1.AccessModeH\fR\n" +
-	"accessMode\x88\x01\x01\x12!\n" +
+	"\x14linked_resource_urns\x18\x0f \x03(\tR\x12linkedResourceUrns\x12!\n" +
 	"\fattendee_ids\x18\x11 \x03(\tR\vattendeeIds\x12\x1c\n" +
 	"\treminders\x18\x12 \x03(\x05R\treminders\x12T\n" +
-	"\x15recurrence_edit_scope\x18\x13 \x01(\x0e2\x1b.cal.v1.RecurrenceEditScopeH\rR\x13recurrenceEditScope\x88\x01\x01\x12,\n" +
-	"\x0foccurrence_date\x18\x14 \x01(\tH\x0eR\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n" +
-	"\aroom_id\x18\x15 \x01(\tH\x0fR\x06roomId\x88\x01\x01\x12@\n" +
-	"\rbaseline_role\x18\x16 \x01(\x0e2\x16.common.v1.ContentRoleH\x10R\fbaselineRole\x88\x01\x01\x121\n" +
-	"\atag_ids\x18\x17 \x01(\v2\x13.cal.v1.EventTagIdsH\x11R\x06tagIds\x88\x01\x01\x12\"\n" +
+	"\x15recurrence_edit_scope\x18\x13 \x01(\x0e2\x1b.cal.v1.RecurrenceEditScopeH\fR\x13recurrenceEditScope\x88\x01\x01\x12,\n" +
+	"\x0foccurrence_date\x18\x14 \x01(\tH\rR\x0eoccurrenceDate\x88\x01\x01\x12\x1c\n" +
+	"\aroom_id\x18\x15 \x01(\tH\x0eR\x06roomId\x88\x01\x01\x121\n" +
+	"\atag_ids\x18\x17 \x01(\v2\x13.cal.v1.EventTagIdsH\x0fR\x06tagIds\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"channel_id\x18\x18 \x01(\tH\x12R\tchannelId\x88\x01\x01\x125\n" +
-	"\x14channel_auto_created\x18\x19 \x01(\bH\x13R\x12channelAutoCreated\x88\x01\x01B\b\n" +
+	"channel_id\x18\x18 \x01(\tH\x10R\tchannelId\x88\x01\x01\x125\n" +
+	"\x14channel_auto_created\x18\x19 \x01(\bH\x11R\x12channelAutoCreated\x88\x01\x01B\b\n" +
 	"\x06_titleB\x0e\n" +
 	"\f_descriptionB\r\n" +
 	"\v_start_timeB\v\n" +
@@ -4965,13 +4898,11 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\f_calendar_idB\x0e\n" +
 	"\f_category_idB\r\n" +
 	"\v_recurrenceB\x10\n" +
-	"\x0e_is_focus_timeB\x0e\n" +
-	"\f_access_modeB\x18\n" +
+	"\x0e_is_focus_timeB\x18\n" +
 	"\x16_recurrence_edit_scopeB\x12\n" +
 	"\x10_occurrence_dateB\n" +
 	"\n" +
-	"\b_room_idB\x10\n" +
-	"\x0e_baseline_roleB\n" +
+	"\b_room_idB\n" +
 	"\n" +
 	"\b_tag_idsB\r\n" +
 	"\v_channel_idB\x17\n" +
@@ -5408,9 +5339,9 @@ var file_cal_v1_calendar_proto_goTypes = []any{
 	(*ListEventTemplatesRequest)(nil),    // 61: cal.v1.ListEventTemplatesRequest
 	(*ListEventTemplatesResponse)(nil),   // 62: cal.v1.ListEventTemplatesResponse
 	(*timestamppb.Timestamp)(nil),        // 63: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                   // 64: common.v1.AccessMode
-	(v1.ContentRole)(0),                  // 65: common.v1.ContentRole
-	(*v11.Tag)(nil),                      // 66: tags.v1.Tag
+	(*v1.Tag)(nil),                       // 64: tags.v1.Tag
+	(v11.AccessMode)(0),                  // 65: common.v1.AccessMode
+	(v11.ContentRole)(0),                 // 66: common.v1.ContentRole
 }
 var file_cal_v1_calendar_proto_depIdxs = []int32{
 	63, // 0: cal.v1.CalendarEvent.start_time:type_name -> google.protobuf.Timestamp
@@ -5418,124 +5349,118 @@ var file_cal_v1_calendar_proto_depIdxs = []int32{
 	8,  // 2: cal.v1.CalendarEvent.attendees:type_name -> cal.v1.Attendee
 	9,  // 3: cal.v1.CalendarEvent.recurrence:type_name -> cal.v1.RecurrenceConfig
 	10, // 4: cal.v1.CalendarEvent.linked_resources:type_name -> cal.v1.LinkedResource
-	64, // 5: cal.v1.CalendarEvent.access_mode:type_name -> common.v1.AccessMode
-	63, // 6: cal.v1.CalendarEvent.created_at:type_name -> google.protobuf.Timestamp
-	63, // 7: cal.v1.CalendarEvent.updated_at:type_name -> google.protobuf.Timestamp
-	63, // 8: cal.v1.CalendarEvent.deleted_at:type_name -> google.protobuf.Timestamp
-	65, // 9: cal.v1.CalendarEvent.baseline_role:type_name -> common.v1.ContentRole
-	66, // 10: cal.v1.CalendarEvent.tags:type_name -> tags.v1.Tag
-	2,  // 11: cal.v1.Attendee.status:type_name -> cal.v1.AttendeeStatus
-	3,  // 12: cal.v1.Attendee.role:type_name -> cal.v1.AttendeeRole
-	0,  // 13: cal.v1.RecurrenceConfig.pattern:type_name -> cal.v1.RecurrencePattern
-	1,  // 14: cal.v1.RecurrenceConfig.days_of_week:type_name -> cal.v1.DayOfWeek
-	63, // 15: cal.v1.RecurrenceConfig.end_date:type_name -> google.protobuf.Timestamp
-	5,  // 16: cal.v1.LinkedResource.type:type_name -> cal.v1.ResourceType
-	63, // 17: cal.v1.CreateEventRequest.start_time:type_name -> google.protobuf.Timestamp
-	63, // 18: cal.v1.CreateEventRequest.end_time:type_name -> google.protobuf.Timestamp
-	9,  // 19: cal.v1.CreateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
-	64, // 20: cal.v1.CreateEventRequest.access_mode:type_name -> common.v1.AccessMode
-	65, // 21: cal.v1.CreateEventRequest.baseline_role:type_name -> common.v1.ContentRole
-	63, // 22: cal.v1.UpdateEventRequest.start_time:type_name -> google.protobuf.Timestamp
-	63, // 23: cal.v1.UpdateEventRequest.end_time:type_name -> google.protobuf.Timestamp
-	9,  // 24: cal.v1.UpdateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
-	64, // 25: cal.v1.UpdateEventRequest.access_mode:type_name -> common.v1.AccessMode
-	6,  // 26: cal.v1.UpdateEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
-	65, // 27: cal.v1.UpdateEventRequest.baseline_role:type_name -> common.v1.ContentRole
-	14, // 28: cal.v1.UpdateEventRequest.tag_ids:type_name -> cal.v1.EventTagIds
-	6,  // 29: cal.v1.DeleteEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
-	7,  // 30: cal.v1.CreateEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 31: cal.v1.GetEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 32: cal.v1.UpdateEventResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 33: cal.v1.AddAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
-	7,  // 34: cal.v1.RemoveAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
-	63, // 35: cal.v1.ListEventsRequest.start_date:type_name -> google.protobuf.Timestamp
-	63, // 36: cal.v1.ListEventsRequest.end_date:type_name -> google.protobuf.Timestamp
-	7,  // 37: cal.v1.ListEventsResponse.events:type_name -> cal.v1.CalendarEvent
-	63, // 38: cal.v1.GetEventsInRangeRequest.start_date:type_name -> google.protobuf.Timestamp
-	63, // 39: cal.v1.GetEventsInRangeRequest.end_date:type_name -> google.protobuf.Timestamp
-	7,  // 40: cal.v1.GetEventsInRangeResponse.events:type_name -> cal.v1.CalendarEvent
-	4,  // 41: cal.v1.Calendar.type:type_name -> cal.v1.CalendarType
-	63, // 42: cal.v1.Calendar.created_at:type_name -> google.protobuf.Timestamp
-	63, // 43: cal.v1.Calendar.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 44: cal.v1.CreateCalendarRequest.type:type_name -> cal.v1.CalendarType
-	4,  // 45: cal.v1.UpdateCalendarRequest.type:type_name -> cal.v1.CalendarType
-	26, // 46: cal.v1.CreateCalendarResponse.calendar:type_name -> cal.v1.Calendar
-	26, // 47: cal.v1.GetCalendarResponse.calendar:type_name -> cal.v1.Calendar
-	26, // 48: cal.v1.UpdateCalendarResponse.calendar:type_name -> cal.v1.Calendar
-	26, // 49: cal.v1.ListCalendarsResponse.calendars:type_name -> cal.v1.Calendar
-	63, // 50: cal.v1.Category.created_at:type_name -> google.protobuf.Timestamp
-	63, // 51: cal.v1.Category.updated_at:type_name -> google.protobuf.Timestamp
-	37, // 52: cal.v1.CreateCategoryResponse.category:type_name -> cal.v1.Category
-	37, // 53: cal.v1.GetCategoryResponse.category:type_name -> cal.v1.Category
-	37, // 54: cal.v1.UpdateCategoryResponse.category:type_name -> cal.v1.Category
-	37, // 55: cal.v1.ListCategoriesResponse.categories:type_name -> cal.v1.Category
-	2,  // 56: cal.v1.UpdateAttendeeStatusRequest.status:type_name -> cal.v1.AttendeeStatus
-	3,  // 57: cal.v1.AddAttendeesRequest.role:type_name -> cal.v1.AttendeeRole
-	64, // 58: cal.v1.EventTemplate.access_mode:type_name -> common.v1.AccessMode
-	63, // 59: cal.v1.EventTemplate.created_at:type_name -> google.protobuf.Timestamp
-	63, // 60: cal.v1.EventTemplate.updated_at:type_name -> google.protobuf.Timestamp
-	65, // 61: cal.v1.EventTemplate.baseline_role:type_name -> common.v1.ContentRole
-	64, // 62: cal.v1.CreateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
-	65, // 63: cal.v1.CreateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
-	64, // 64: cal.v1.UpdateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
-	65, // 65: cal.v1.UpdateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
-	52, // 66: cal.v1.CreateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	52, // 67: cal.v1.GetEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	52, // 68: cal.v1.UpdateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
-	52, // 69: cal.v1.ListEventTemplatesResponse.templates:type_name -> cal.v1.EventTemplate
-	11, // 70: cal.v1.CalendarService.CreateEvent:input_type -> cal.v1.CreateEventRequest
-	12, // 71: cal.v1.CalendarService.GetEvent:input_type -> cal.v1.GetEventRequest
-	13, // 72: cal.v1.CalendarService.UpdateEvent:input_type -> cal.v1.UpdateEventRequest
-	15, // 73: cal.v1.CalendarService.DeleteEvent:input_type -> cal.v1.DeleteEventRequest
-	22, // 74: cal.v1.CalendarService.ListEvents:input_type -> cal.v1.ListEventsRequest
-	24, // 75: cal.v1.CalendarService.GetEventsInRange:input_type -> cal.v1.GetEventsInRangeRequest
-	27, // 76: cal.v1.CalendarService.CreateCalendar:input_type -> cal.v1.CreateCalendarRequest
-	28, // 77: cal.v1.CalendarService.GetCalendar:input_type -> cal.v1.GetCalendarRequest
-	29, // 78: cal.v1.CalendarService.UpdateCalendar:input_type -> cal.v1.UpdateCalendarRequest
-	30, // 79: cal.v1.CalendarService.DeleteCalendar:input_type -> cal.v1.DeleteCalendarRequest
-	35, // 80: cal.v1.CalendarService.ListCalendars:input_type -> cal.v1.ListCalendarsRequest
-	38, // 81: cal.v1.CalendarService.CreateCategory:input_type -> cal.v1.CreateCategoryRequest
-	39, // 82: cal.v1.CalendarService.GetCategory:input_type -> cal.v1.GetCategoryRequest
-	40, // 83: cal.v1.CalendarService.UpdateCategory:input_type -> cal.v1.UpdateCategoryRequest
-	41, // 84: cal.v1.CalendarService.DeleteCategory:input_type -> cal.v1.DeleteCategoryRequest
-	46, // 85: cal.v1.CalendarService.ListCategories:input_type -> cal.v1.ListCategoriesRequest
-	48, // 86: cal.v1.CalendarService.UpdateAttendeeStatus:input_type -> cal.v1.UpdateAttendeeStatusRequest
-	50, // 87: cal.v1.CalendarService.AddAttendees:input_type -> cal.v1.AddAttendeesRequest
-	51, // 88: cal.v1.CalendarService.RemoveAttendees:input_type -> cal.v1.RemoveAttendeesRequest
-	53, // 89: cal.v1.CalendarService.CreateEventTemplate:input_type -> cal.v1.CreateEventTemplateRequest
-	54, // 90: cal.v1.CalendarService.GetEventTemplate:input_type -> cal.v1.GetEventTemplateRequest
-	55, // 91: cal.v1.CalendarService.UpdateEventTemplate:input_type -> cal.v1.UpdateEventTemplateRequest
-	56, // 92: cal.v1.CalendarService.DeleteEventTemplate:input_type -> cal.v1.DeleteEventTemplateRequest
-	61, // 93: cal.v1.CalendarService.ListEventTemplates:input_type -> cal.v1.ListEventTemplatesRequest
-	17, // 94: cal.v1.CalendarService.CreateEvent:output_type -> cal.v1.CreateEventResponse
-	18, // 95: cal.v1.CalendarService.GetEvent:output_type -> cal.v1.GetEventResponse
-	19, // 96: cal.v1.CalendarService.UpdateEvent:output_type -> cal.v1.UpdateEventResponse
-	16, // 97: cal.v1.CalendarService.DeleteEvent:output_type -> cal.v1.DeleteEventResponse
-	23, // 98: cal.v1.CalendarService.ListEvents:output_type -> cal.v1.ListEventsResponse
-	25, // 99: cal.v1.CalendarService.GetEventsInRange:output_type -> cal.v1.GetEventsInRangeResponse
-	32, // 100: cal.v1.CalendarService.CreateCalendar:output_type -> cal.v1.CreateCalendarResponse
-	33, // 101: cal.v1.CalendarService.GetCalendar:output_type -> cal.v1.GetCalendarResponse
-	34, // 102: cal.v1.CalendarService.UpdateCalendar:output_type -> cal.v1.UpdateCalendarResponse
-	31, // 103: cal.v1.CalendarService.DeleteCalendar:output_type -> cal.v1.DeleteCalendarResponse
-	36, // 104: cal.v1.CalendarService.ListCalendars:output_type -> cal.v1.ListCalendarsResponse
-	43, // 105: cal.v1.CalendarService.CreateCategory:output_type -> cal.v1.CreateCategoryResponse
-	44, // 106: cal.v1.CalendarService.GetCategory:output_type -> cal.v1.GetCategoryResponse
-	45, // 107: cal.v1.CalendarService.UpdateCategory:output_type -> cal.v1.UpdateCategoryResponse
-	42, // 108: cal.v1.CalendarService.DeleteCategory:output_type -> cal.v1.DeleteCategoryResponse
-	47, // 109: cal.v1.CalendarService.ListCategories:output_type -> cal.v1.ListCategoriesResponse
-	49, // 110: cal.v1.CalendarService.UpdateAttendeeStatus:output_type -> cal.v1.UpdateAttendeeStatusResponse
-	20, // 111: cal.v1.CalendarService.AddAttendees:output_type -> cal.v1.AddAttendeesResponse
-	21, // 112: cal.v1.CalendarService.RemoveAttendees:output_type -> cal.v1.RemoveAttendeesResponse
-	58, // 113: cal.v1.CalendarService.CreateEventTemplate:output_type -> cal.v1.CreateEventTemplateResponse
-	59, // 114: cal.v1.CalendarService.GetEventTemplate:output_type -> cal.v1.GetEventTemplateResponse
-	60, // 115: cal.v1.CalendarService.UpdateEventTemplate:output_type -> cal.v1.UpdateEventTemplateResponse
-	57, // 116: cal.v1.CalendarService.DeleteEventTemplate:output_type -> cal.v1.DeleteEventTemplateResponse
-	62, // 117: cal.v1.CalendarService.ListEventTemplates:output_type -> cal.v1.ListEventTemplatesResponse
-	94, // [94:118] is the sub-list for method output_type
-	70, // [70:94] is the sub-list for method input_type
-	70, // [70:70] is the sub-list for extension type_name
-	70, // [70:70] is the sub-list for extension extendee
-	0,  // [0:70] is the sub-list for field type_name
+	63, // 5: cal.v1.CalendarEvent.created_at:type_name -> google.protobuf.Timestamp
+	63, // 6: cal.v1.CalendarEvent.updated_at:type_name -> google.protobuf.Timestamp
+	63, // 7: cal.v1.CalendarEvent.deleted_at:type_name -> google.protobuf.Timestamp
+	64, // 8: cal.v1.CalendarEvent.tags:type_name -> tags.v1.Tag
+	2,  // 9: cal.v1.Attendee.status:type_name -> cal.v1.AttendeeStatus
+	3,  // 10: cal.v1.Attendee.role:type_name -> cal.v1.AttendeeRole
+	0,  // 11: cal.v1.RecurrenceConfig.pattern:type_name -> cal.v1.RecurrencePattern
+	1,  // 12: cal.v1.RecurrenceConfig.days_of_week:type_name -> cal.v1.DayOfWeek
+	63, // 13: cal.v1.RecurrenceConfig.end_date:type_name -> google.protobuf.Timestamp
+	5,  // 14: cal.v1.LinkedResource.type:type_name -> cal.v1.ResourceType
+	63, // 15: cal.v1.CreateEventRequest.start_time:type_name -> google.protobuf.Timestamp
+	63, // 16: cal.v1.CreateEventRequest.end_time:type_name -> google.protobuf.Timestamp
+	9,  // 17: cal.v1.CreateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
+	63, // 18: cal.v1.UpdateEventRequest.start_time:type_name -> google.protobuf.Timestamp
+	63, // 19: cal.v1.UpdateEventRequest.end_time:type_name -> google.protobuf.Timestamp
+	9,  // 20: cal.v1.UpdateEventRequest.recurrence:type_name -> cal.v1.RecurrenceConfig
+	6,  // 21: cal.v1.UpdateEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
+	14, // 22: cal.v1.UpdateEventRequest.tag_ids:type_name -> cal.v1.EventTagIds
+	6,  // 23: cal.v1.DeleteEventRequest.recurrence_edit_scope:type_name -> cal.v1.RecurrenceEditScope
+	7,  // 24: cal.v1.CreateEventResponse.event:type_name -> cal.v1.CalendarEvent
+	7,  // 25: cal.v1.GetEventResponse.event:type_name -> cal.v1.CalendarEvent
+	7,  // 26: cal.v1.UpdateEventResponse.event:type_name -> cal.v1.CalendarEvent
+	7,  // 27: cal.v1.AddAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
+	7,  // 28: cal.v1.RemoveAttendeesResponse.event:type_name -> cal.v1.CalendarEvent
+	63, // 29: cal.v1.ListEventsRequest.start_date:type_name -> google.protobuf.Timestamp
+	63, // 30: cal.v1.ListEventsRequest.end_date:type_name -> google.protobuf.Timestamp
+	7,  // 31: cal.v1.ListEventsResponse.events:type_name -> cal.v1.CalendarEvent
+	63, // 32: cal.v1.GetEventsInRangeRequest.start_date:type_name -> google.protobuf.Timestamp
+	63, // 33: cal.v1.GetEventsInRangeRequest.end_date:type_name -> google.protobuf.Timestamp
+	7,  // 34: cal.v1.GetEventsInRangeResponse.events:type_name -> cal.v1.CalendarEvent
+	4,  // 35: cal.v1.Calendar.type:type_name -> cal.v1.CalendarType
+	63, // 36: cal.v1.Calendar.created_at:type_name -> google.protobuf.Timestamp
+	63, // 37: cal.v1.Calendar.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 38: cal.v1.CreateCalendarRequest.type:type_name -> cal.v1.CalendarType
+	4,  // 39: cal.v1.UpdateCalendarRequest.type:type_name -> cal.v1.CalendarType
+	26, // 40: cal.v1.CreateCalendarResponse.calendar:type_name -> cal.v1.Calendar
+	26, // 41: cal.v1.GetCalendarResponse.calendar:type_name -> cal.v1.Calendar
+	26, // 42: cal.v1.UpdateCalendarResponse.calendar:type_name -> cal.v1.Calendar
+	26, // 43: cal.v1.ListCalendarsResponse.calendars:type_name -> cal.v1.Calendar
+	63, // 44: cal.v1.Category.created_at:type_name -> google.protobuf.Timestamp
+	63, // 45: cal.v1.Category.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 46: cal.v1.CreateCategoryResponse.category:type_name -> cal.v1.Category
+	37, // 47: cal.v1.GetCategoryResponse.category:type_name -> cal.v1.Category
+	37, // 48: cal.v1.UpdateCategoryResponse.category:type_name -> cal.v1.Category
+	37, // 49: cal.v1.ListCategoriesResponse.categories:type_name -> cal.v1.Category
+	2,  // 50: cal.v1.UpdateAttendeeStatusRequest.status:type_name -> cal.v1.AttendeeStatus
+	3,  // 51: cal.v1.AddAttendeesRequest.role:type_name -> cal.v1.AttendeeRole
+	65, // 52: cal.v1.EventTemplate.access_mode:type_name -> common.v1.AccessMode
+	63, // 53: cal.v1.EventTemplate.created_at:type_name -> google.protobuf.Timestamp
+	63, // 54: cal.v1.EventTemplate.updated_at:type_name -> google.protobuf.Timestamp
+	66, // 55: cal.v1.EventTemplate.baseline_role:type_name -> common.v1.ContentRole
+	65, // 56: cal.v1.CreateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
+	66, // 57: cal.v1.CreateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
+	65, // 58: cal.v1.UpdateEventTemplateRequest.access_mode:type_name -> common.v1.AccessMode
+	66, // 59: cal.v1.UpdateEventTemplateRequest.baseline_role:type_name -> common.v1.ContentRole
+	52, // 60: cal.v1.CreateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	52, // 61: cal.v1.GetEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	52, // 62: cal.v1.UpdateEventTemplateResponse.template:type_name -> cal.v1.EventTemplate
+	52, // 63: cal.v1.ListEventTemplatesResponse.templates:type_name -> cal.v1.EventTemplate
+	11, // 64: cal.v1.CalendarService.CreateEvent:input_type -> cal.v1.CreateEventRequest
+	12, // 65: cal.v1.CalendarService.GetEvent:input_type -> cal.v1.GetEventRequest
+	13, // 66: cal.v1.CalendarService.UpdateEvent:input_type -> cal.v1.UpdateEventRequest
+	15, // 67: cal.v1.CalendarService.DeleteEvent:input_type -> cal.v1.DeleteEventRequest
+	22, // 68: cal.v1.CalendarService.ListEvents:input_type -> cal.v1.ListEventsRequest
+	24, // 69: cal.v1.CalendarService.GetEventsInRange:input_type -> cal.v1.GetEventsInRangeRequest
+	27, // 70: cal.v1.CalendarService.CreateCalendar:input_type -> cal.v1.CreateCalendarRequest
+	28, // 71: cal.v1.CalendarService.GetCalendar:input_type -> cal.v1.GetCalendarRequest
+	29, // 72: cal.v1.CalendarService.UpdateCalendar:input_type -> cal.v1.UpdateCalendarRequest
+	30, // 73: cal.v1.CalendarService.DeleteCalendar:input_type -> cal.v1.DeleteCalendarRequest
+	35, // 74: cal.v1.CalendarService.ListCalendars:input_type -> cal.v1.ListCalendarsRequest
+	38, // 75: cal.v1.CalendarService.CreateCategory:input_type -> cal.v1.CreateCategoryRequest
+	39, // 76: cal.v1.CalendarService.GetCategory:input_type -> cal.v1.GetCategoryRequest
+	40, // 77: cal.v1.CalendarService.UpdateCategory:input_type -> cal.v1.UpdateCategoryRequest
+	41, // 78: cal.v1.CalendarService.DeleteCategory:input_type -> cal.v1.DeleteCategoryRequest
+	46, // 79: cal.v1.CalendarService.ListCategories:input_type -> cal.v1.ListCategoriesRequest
+	48, // 80: cal.v1.CalendarService.UpdateAttendeeStatus:input_type -> cal.v1.UpdateAttendeeStatusRequest
+	50, // 81: cal.v1.CalendarService.AddAttendees:input_type -> cal.v1.AddAttendeesRequest
+	51, // 82: cal.v1.CalendarService.RemoveAttendees:input_type -> cal.v1.RemoveAttendeesRequest
+	53, // 83: cal.v1.CalendarService.CreateEventTemplate:input_type -> cal.v1.CreateEventTemplateRequest
+	54, // 84: cal.v1.CalendarService.GetEventTemplate:input_type -> cal.v1.GetEventTemplateRequest
+	55, // 85: cal.v1.CalendarService.UpdateEventTemplate:input_type -> cal.v1.UpdateEventTemplateRequest
+	56, // 86: cal.v1.CalendarService.DeleteEventTemplate:input_type -> cal.v1.DeleteEventTemplateRequest
+	61, // 87: cal.v1.CalendarService.ListEventTemplates:input_type -> cal.v1.ListEventTemplatesRequest
+	17, // 88: cal.v1.CalendarService.CreateEvent:output_type -> cal.v1.CreateEventResponse
+	18, // 89: cal.v1.CalendarService.GetEvent:output_type -> cal.v1.GetEventResponse
+	19, // 90: cal.v1.CalendarService.UpdateEvent:output_type -> cal.v1.UpdateEventResponse
+	16, // 91: cal.v1.CalendarService.DeleteEvent:output_type -> cal.v1.DeleteEventResponse
+	23, // 92: cal.v1.CalendarService.ListEvents:output_type -> cal.v1.ListEventsResponse
+	25, // 93: cal.v1.CalendarService.GetEventsInRange:output_type -> cal.v1.GetEventsInRangeResponse
+	32, // 94: cal.v1.CalendarService.CreateCalendar:output_type -> cal.v1.CreateCalendarResponse
+	33, // 95: cal.v1.CalendarService.GetCalendar:output_type -> cal.v1.GetCalendarResponse
+	34, // 96: cal.v1.CalendarService.UpdateCalendar:output_type -> cal.v1.UpdateCalendarResponse
+	31, // 97: cal.v1.CalendarService.DeleteCalendar:output_type -> cal.v1.DeleteCalendarResponse
+	36, // 98: cal.v1.CalendarService.ListCalendars:output_type -> cal.v1.ListCalendarsResponse
+	43, // 99: cal.v1.CalendarService.CreateCategory:output_type -> cal.v1.CreateCategoryResponse
+	44, // 100: cal.v1.CalendarService.GetCategory:output_type -> cal.v1.GetCategoryResponse
+	45, // 101: cal.v1.CalendarService.UpdateCategory:output_type -> cal.v1.UpdateCategoryResponse
+	42, // 102: cal.v1.CalendarService.DeleteCategory:output_type -> cal.v1.DeleteCategoryResponse
+	47, // 103: cal.v1.CalendarService.ListCategories:output_type -> cal.v1.ListCategoriesResponse
+	49, // 104: cal.v1.CalendarService.UpdateAttendeeStatus:output_type -> cal.v1.UpdateAttendeeStatusResponse
+	20, // 105: cal.v1.CalendarService.AddAttendees:output_type -> cal.v1.AddAttendeesResponse
+	21, // 106: cal.v1.CalendarService.RemoveAttendees:output_type -> cal.v1.RemoveAttendeesResponse
+	58, // 107: cal.v1.CalendarService.CreateEventTemplate:output_type -> cal.v1.CreateEventTemplateResponse
+	59, // 108: cal.v1.CalendarService.GetEventTemplate:output_type -> cal.v1.GetEventTemplateResponse
+	60, // 109: cal.v1.CalendarService.UpdateEventTemplate:output_type -> cal.v1.UpdateEventTemplateResponse
+	57, // 110: cal.v1.CalendarService.DeleteEventTemplate:output_type -> cal.v1.DeleteEventTemplateResponse
+	62, // 111: cal.v1.CalendarService.ListEventTemplates:output_type -> cal.v1.ListEventTemplatesResponse
+	88, // [88:112] is the sub-list for method output_type
+	64, // [64:88] is the sub-list for method input_type
+	64, // [64:64] is the sub-list for extension type_name
+	64, // [64:64] is the sub-list for extension extendee
+	0,  // [0:64] is the sub-list for field type_name
 }
 
 func init() { file_cal_v1_calendar_proto_init() }

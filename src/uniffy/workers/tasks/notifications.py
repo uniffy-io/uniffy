@@ -7,6 +7,8 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.permissions.roles import role_can_view
 from uniffy.core.events.bus import event_from_json
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.models.login.user import User
@@ -17,7 +19,12 @@ from uniffy.db import open_session
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
 from uniffy.domains.notifications.delivery.in_app import InAppAdapter
 from uniffy.domains.notifications.delivery.push import PushAdapter
-from uniffy.observability.metrics import NOTIFICATION_DELIVERIES_TOTAL, NOTIFICATION_EVENTS_TOTAL
+from uniffy.observability.metrics import (
+    NOTIFICATION_DELIVERIES_TOTAL,
+    NOTIFICATION_EVENTS_TOTAL,
+    NOTIFICATION_RECIPIENTS_DROPPED_TOTAL,
+    NOTIFICATION_RECIPIENTS_UNFILTERED_TOTAL,
+)
 
 logger = logger.bind(component="tasks.notifications")
 
@@ -153,13 +160,148 @@ async def send_email_digest(ctx: dict[str, Any]) -> dict[str, Any]:
     return {"status": "deferred", "reason": "digest_not_configured"}
 
 
+_loaders_ready = False
+
+
+def _ensure_content_loaders() -> None:
+    """Import the modules that register content loaders.
+
+    Loaders register as a side effect of importing each domain's operations
+    module. The worker's own import chain only happens to pull in a few of
+    them, so without this the access filter below would silently treat
+    calendar events, tasks and projects as undecidable.
+    """
+    global _loaders_ready
+    if _loaders_ready:
+        return
+    from uniffy.domains.agents.agents import operations as _agents  # noqa: F401
+    from uniffy.domains.agents.cron import operations as _cron  # noqa: F401
+    from uniffy.domains.calendar import operations as _calendar  # noqa: F401
+    from uniffy.domains.files import operations as _files  # noqa: F401
+    from uniffy.domains.notes import operations as _notes  # noqa: F401
+    from uniffy.domains.projects import operations as _projects  # noqa: F401
+    from uniffy.domains.rooms import operations as _rooms  # noqa: F401
+
+    _loaders_ready = True
+
+
+def _content_target(event: NotificationEvent) -> tuple[ContentType, UUID] | None:
+    """Identify the content a notification is about.
+
+    Most producers set only ``source_urn``; the two notes producers also set
+    the explicit pair. The URN is the universal carrier, so it is the
+    fallback.
+    """
+    if event.content_type and event.content_id:
+        return event.content_type, event.content_id
+    if event.source_urn:
+        from uniffy.core.content.references import parse_urn
+
+        return parse_urn(event.source_urn)
+    return None
+
+
+async def _load_access_policy(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_type: ContentType,
+    content_id: UUID,
+) -> tuple[ContentType, UUID, object] | None:
+    """Return ``(content_type, content_id, row)`` carrying an access policy.
+
+    Child types have no ``access_mode`` of their own and resolve against
+    their parent, mirroring the ``_resolve_role`` overrides in the domain
+    operations. ``None`` means this worker cannot decide, and the caller
+    leaves the recipient set alone rather than guessing.
+    """
+    from uniffy.core.content.members import find_content_loader
+
+    _ensure_content_loaders()
+    loader = find_content_loader(content_type)
+    if loader is None:
+        return None
+
+    row = await loader(session, organization_id, content_id)
+    if row is None:
+        return None
+
+    if content_type == ContentType.TASK:
+        project_id = getattr(row, "project_id", None)
+        if project_id is None:
+            return None
+        return await _load_access_policy(
+            session, organization_id, ContentType.PROJECT, project_id
+        )
+
+    if not hasattr(row, "access_mode"):
+        return None
+    return content_type, content_id, row
+
+
+async def _filter_to_viewers(
+    session: AsyncSession,
+    event: NotificationEvent,
+    recipient_ids: list[UUID],
+) -> list[UUID]:
+    """Drop recipients who cannot view the content the notification is about.
+
+    Both recipient paths run through here. A resolved set is built from
+    ownership and bookmarks, neither of which tracks revocation; an explicit
+    set is only as gated as its producer, and the notes mention producer
+    does no check at all. Titles carry content, so delivering to a user who
+    lost access is a disclosure.
+    """
+    if not recipient_ids or event.organization_id is None:
+        return recipient_ids
+
+    target = _content_target(event)
+    if target is None:
+        return recipient_ids
+
+    policy = await _load_access_policy(session, event.organization_id, *target)
+    if policy is None:
+        # Chat channels carry their own access model and comments resolve
+        # against a parent this worker does not load. Those producers gate
+        # their own recipient lists.
+        NOTIFICATION_RECIPIENTS_UNFILTERED_TOTAL.labels(
+            content_type=target[0].value
+        ).inc()
+        return recipient_ids
+
+    resolved_type, resolved_id, row = policy
+    checker = PermissionChecker(session)
+    allowed: list[UUID] = []
+    for user_id in recipient_ids:
+        role = await checker.effective_role(
+            user_id,
+            event.organization_id,
+            resolved_type,
+            resolved_id,
+            owner_id=row.owner_id,
+            access_mode=row.access_mode,
+            baseline_role=row.baseline_role,
+        )
+        if role_can_view(role):
+            allowed.append(user_id)
+
+    dropped = len(recipient_ids) - len(allowed)
+    if dropped:
+        NOTIFICATION_RECIPIENTS_DROPPED_TOTAL.inc(dropped)
+        logger.info(
+            f"Dropped {dropped} notification recipient(s) without view access "
+            f"on {resolved_type.value}:{resolved_id}"
+        )
+    return allowed
+
+
 async def _resolve_recipients(
     session: AsyncSession,
     event: NotificationEvent,
 ) -> list[UUID]:
     """Resolve recipient user IDs for `event`, always excluding the actor."""
     if event.target_user_ids is not None:
-        return [uid for uid in event.target_user_ids if uid != event.actor_id]
+        explicit = [uid for uid in event.target_user_ids if uid != event.actor_id]
+        return await _filter_to_viewers(session, event, explicit)
 
     recipients: list[UUID] = []
 
@@ -168,7 +310,8 @@ async def _resolve_recipients(
 
         result = await session.execute(
             select(OrganizationMember.user_id).where(
-                OrganizationMember.organization_id == event.organization_id
+                OrganizationMember.organization_id == event.organization_id,
+                OrganizationMember.is_active == True,  # noqa: E712
             )
         )
         recipients = [row[0] for row in result.all()]
@@ -208,7 +351,8 @@ async def _resolve_recipients(
 
         recipients = list(recipient_set)
 
-    return [uid for uid in recipients if uid != event.actor_id]
+    resolved = [uid for uid in recipients if uid != event.actor_id]
+    return await _filter_to_viewers(session, event, resolved)
 
 
 async def _get_delivery_channels(

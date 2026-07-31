@@ -16,17 +16,17 @@ const tiers: Tier[] = [
     name: "Community",
     price: "Free",
     cadence: "forever",
-    blurb: "Up to 10 users. Self-host or cloud. ",
+    blurb: "Up to 10 users. Self host or cloud. ",
     blurbHighlight: "The full product, no feature gating.",
     ai: "bring your own provider key",
     features: [
-      "Self-host or cloud",
+      "Self host or cloud",
       "Uniffy AI Cloud · 1M tokens / month free",
+      "Bring your own AI provider keys",
       "Notes, Chat, Files, Calendar, Projects, Tasks, Diagrams, Rooms",
       "Universal @ mentions across everything",
-      "Configurable agents with permission-bound tool calling",
-      "Search across the workspace",
-      "Unlimited history when self-hosted",
+      "Configurable agents with permission bound tool calling",
+      "Unlimited history when self hosted",
       "Community support",
     ],
     cta: { label: "Start free", href: "https://cloud.uniffy.io/signup" },
@@ -36,15 +36,12 @@ const tiers: Tier[] = [
     name: "Team",
     price: "€7",
     cadence: "user / month",
-    blurb: "Uniffy Gateway, Guests, unlimited cloud history. For teams up to 50.",
+    blurb: "For teams of 11 to 50. Same software, more seats and more service.",
     ai: "Uniffy AI Cloud included",
     features: [
-      "Self-host or cloud",
+      "Everything in Community, because everything is in Community",
       "Uniffy AI Cloud · 10M tokens / user / month",
-      "Everything in Community",
-      "Multi-provider routing per agent",
-      "Guests with scoped access",
-      "Unlimited cloud history + audit log",
+      "Unlimited cloud history",
       "Email support",
     ],
     cta: { label: "Start trial", href: "https://cloud.uniffy.io/signup" },
@@ -54,16 +51,12 @@ const tiers: Tier[] = [
     name: "Business",
     price: "€15",
     cadence: "user / month",
-    blurb: "SSO, custom branding, 99.2% SLA. For organisations up to 500.",
+    blurb: "For organizations up to 500. Service levels for companies that need paper.",
     ai: "Uniffy AI Cloud included",
     features: [
-      "Self-host or cloud",
-      "Uniffy AI Cloud · 30M tokens / user / month",
       "Everything in Team",
-      "SSO (SAML / OIDC)",
-      "Custom branding",
-      "Domain admins per surface",
-      "99.2% uptime SLA",
+      "Uniffy AI Cloud · 30M tokens / user / month",
+      "99.2% uptime SLA on cloud",
       "Priority support",
     ],
     cta: { label: "Contact sales", href: "/contact" },
@@ -73,15 +66,13 @@ const tiers: Tier[] = [
     name: "Enterprise",
     price: "Custom",
     cadence: "annual",
-    blurb: "SCIM, data residency, legal hold, 99.98% SLA. Unlimited everything.",
-    ai: "self-hosted models + dedicated routing",
+    blurb: "Unlimited seats, custom contracts, dedicated people on our side.",
+    ai: "self hosted models + dedicated routing",
     features: [
-      "Self-host or cloud",
-      "Uniffy AI Cloud · pooled, custom token limits",
       "Everything in Business",
-      "SCIM provisioning",
-      "Data residency controls",
-      "Legal hold + retention policies",
+      "Uniffy AI Cloud · pooled, custom token limits",
+      "Data residency of your choice",
+      "Self hosted models + dedicated routing",
       "Dedicated support + 99.98% SLA",
       "Custom contracts",
     ],
@@ -97,9 +88,9 @@ const tiers: Tier[] = [
       Honest pricing
     </h2>
     <p class="section-intro mt-6 max-w-3xl text-base leading-relaxed text-night-soft-text sm:text-lg">
-      No AI surcharge, ever. Free for teams up to 10 users, forever. Self-host always.
-      Native AI with controlled access is included in every plan. Use your own keys,
-      Uniffy AI Cloud, or a self-hosted model on request.
+      Every plan runs the same software. Tiers price seats, hosted services, and support.
+      Never features. Free for up to 10 users, forever, self hosted or on our cloud.
+      No AI surcharge, ever. Use your own keys, Uniffy AI Cloud, or a self hosted model.
     </p>
 
     <div class="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 md:mt-16">
@@ -149,5 +140,15 @@ const tiers: Tier[] = [
         </article>
       ))}
     </div>
+
+    <p class="mt-10 max-w-3xl text-sm leading-relaxed text-night-soft-text md:mt-12">
+      SSO, SCIM, guests, custom branding, retention policies, the audit log, every agent
+      feature. Those are product features, so they are in every plan, including the free one.
+      A license key changes one number, the seat count. It is a signed file your deployment
+      verifies offline. There is no license server and your instance never calls home.
+      <a href="/docs/deployment/licensing/" class="font-medium text-accent-strong hover:underline"
+        >Read how licensing works</a
+      >.
+    </p>
   </div>
 </section>

@@ -184,55 +184,6 @@ export const editAgentMessage = createAsyncThunk<
     }
 });
 
-export const deleteAgentMessage = createAsyncThunk<
-    { sessionId: string; messageId: string; anchorCreatedAt?: { seconds: number; nanos: number } },
-    { sessionId: string; messageId: string },
-    { state: RootState; rejectValue: string }
->('agentMessages/deleteMessage', async (params, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        await sessionsApi.deleteMessage({
-            organizationId,
-            messageId: params.messageId,
-        });
-        const list = getState().agentMessages.messagesBySession[params.sessionId];
-        const anchor = list?.find((m) => m.id === params.messageId);
-        return {
-            sessionId: params.sessionId,
-            messageId: params.messageId,
-            anchorCreatedAt: anchor?.createdAt,
-        };
-    } catch (error) {
-        return rejectWithValue(
-            error instanceof Error ? error.message : 'Failed to delete message',
-        );
-    }
-});
-
-export const submitMessageFeedback = createAsyncThunk<
-    { sessionId: string; messageId: string; rating: string },
-    { sessionId: string; messageId: string; rating: string },
-    { state: RootState; rejectValue: string }
->('agentMessages/submitFeedback', async (params, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        await sessionsApi.submitMessageFeedback({
-            organizationId,
-            messageId: params.messageId,
-            rating: params.rating,
-        });
-        return {
-            sessionId: params.sessionId,
-            messageId: params.messageId,
-            rating: params.rating,
-        };
-    } catch (error) {
-        return rejectWithValue(
-            error instanceof Error ? error.message : 'Failed to submit feedback',
-        );
-    }
-});
-
 export const retryAgentMessage = createAsyncThunk<
     { sessionId: string; content: string; fileIds: string[]; anchorMessageId: string },
     { sessionId: string; messageId: string },

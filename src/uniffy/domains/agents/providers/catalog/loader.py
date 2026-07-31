@@ -8,10 +8,10 @@ and worker lifespans to surface a bad edit at boot.
 
 import re
 from decimal import Decimal
-from pathlib import Path
 
 from loguru import logger
 
+from uniffy.core.data_files import DATA_DIR
 from uniffy.domains.agents.providers.base import ModelInfo
 from uniffy.domains.agents.providers.catalog.schema import (
     REASONING_KNOB,
@@ -23,7 +23,7 @@ from uniffy.domains.agents.providers.catalog.schema import (
 
 logger = logger.bind(component="agents.providers.catalog")
 
-_CATALOG_PATH = Path(__file__).parent / "catalog.json"
+_CATALOG_PATH = DATA_DIR / "models" / "catalog.json"
 
 # Provider model ids often carry a trailing date snapshot
 # (``gpt-4o-2024-08-06``, ``claude-3-5-sonnet-20241022``). When no exact or
@@ -163,6 +163,43 @@ def merge_parameter_schema(pc: ProviderCatalog, model: Model) -> dict:
     if declared:
         schema["provider_options"] = declared
     return schema
+
+
+def get_image_parameter_schema(provider: str, model_id: str) -> dict | None:
+    """Bounded per-model image-generation schema, or ``None`` when the model
+    generates no images.
+
+    Same merge shape as ``get_parameter_schema`` so the frontend form renders
+    both from one parser: provider ``image_params_base``, minus the knobs the
+    model rejects, with per-model enum narrowing and default overrides applied.
+    """
+    pc = get_catalog().providers.get(provider)
+    model = get_model(provider, model_id)
+    if pc is None or model is None or not model.supports_image_generation:
+        return None
+    return merge_image_parameter_schema(pc, model)
+
+
+def merge_image_parameter_schema(pc: ProviderCatalog, model: Model) -> dict:
+    """The pure merge behind ``get_image_parameter_schema``."""
+    schema: dict[str, dict] = {}
+    for knob, spec in pc.image_params_base.items():
+        if knob in model.unsupported_image_params:
+            continue
+        entry = _spec_entry(spec, model.image_options.get(knob))
+        members = model.image_enums.get(knob)
+        if members:
+            entry["enum"] = list(members)
+        schema[knob] = entry
+    return schema
+
+
+def image_knob_audiences(provider: str) -> dict[str, str]:
+    """Knob -> ``"user"`` / ``"builder"`` for a provider's image knobs."""
+    pc = get_catalog().providers.get(provider)
+    if pc is None:
+        return {}
+    return {knob: spec.audience for knob, spec in pc.image_params_base.items()}
 
 
 def provider_for_model(model_id: str) -> str | None:

@@ -2,7 +2,8 @@
 
 import json
 
-from uniffy_proto.agents.v1.agents_pb2 import AgentInfo
+from uniffy_proto.agents.v1.agents_pb2 import AgentInfo, ToolInfo
+from uniffy_proto.agents.v1.agents_pb2 import AgentTemplate as AgentTemplateProto
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp
@@ -12,6 +13,8 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import AccessMode, ContentRole
+from uniffy.domains.agents.templates import AgentTemplate
+from uniffy.domains.agents.tools.catalog import ToolCatalogEntry
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
@@ -25,14 +28,8 @@ def agent_to_proto(
 ) -> AgentInfo:
     """Convert an :class:`Agent` row to its proto representation.
 
-    Parameters
-    ----------
-    agent : Agent
-        Agent row.
-    user_role : ContentRole | None
-        Effective role of the requesting user, if known. Set this when
-        the proto will travel to the frontend so the UI can render the
-        correct edit/share affordances; omit for internal callers.
+    Set ``user_role`` when the proto travels to the frontend so the UI can
+    render the correct edit/share affordances; omit for internal callers.
     """
     avatar_url = get_avatar_url(
         agent.id,
@@ -74,9 +71,15 @@ def agent_to_proto(
         image_provider_key_id=(
             str(agent.image_provider_key_id) if agent.image_provider_key_id else ""
         ),
-        prompt_id=str(agent.prompt_id) if agent.prompt_id else "",
         model_params=json.dumps(agent.model_params or {}),
+        image_params=json.dumps(agent.image_params or {}),
+        image_style_prompt=agent.image_style_prompt or "",
+        integration_connections=json.dumps(agent.integration_connections or {}),
+        is_deleted=agent.is_deleted,
     )
+
+    if agent.deleted_at is not None:
+        proto.deleted_at.CopyFrom(datetime_to_timestamp(agent.deleted_at))
 
     if resolved_baseline is not None:
         proto.baseline_role = content_role_to_proto(resolved_baseline)
@@ -87,3 +90,32 @@ def agent_to_proto(
         proto.tags.extend(tag_to_proto(t) for t in tags)
 
     return proto
+
+
+def agent_template_to_proto(
+    template: AgentTemplate,
+    enabled_skill_ids: list[str],
+) -> AgentTemplateProto:
+    return AgentTemplateProto(
+        key=template.key,
+        name=template.name,
+        emoji=template.emoji,
+        description=template.description,
+        soul_prompt=template.soul_prompt,
+        enabled_tools=list(template.enabled_tools),
+        enabled_skill_ids=enabled_skill_ids,
+        recommended_model=template.recommended_model,
+        recommended_image_model=template.recommended_image_model,
+    )
+
+
+def tool_catalog_entry_to_proto(entry: ToolCatalogEntry) -> ToolInfo:
+    return ToolInfo(
+        name=entry.name,
+        display_name=entry.display_name,
+        description=entry.description,
+        group=entry.group,
+        category=entry.category,
+        destructive=entry.destructive,
+        requires_connection=entry.requires_connection,
+    )

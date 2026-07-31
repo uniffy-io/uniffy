@@ -1,5 +1,8 @@
+export type ParamAudience = 'user' | 'builder';
+
 export interface NumberParamSpec {
     type: 'number' | 'integer';
+    audience?: ParamAudience;
     minimum?: number;
     maximum?: number;
     step?: number;
@@ -10,11 +13,13 @@ export interface EnumParamSpec {
     type: 'enum';
     enum: string[];
     default?: string;
+    audience?: ParamAudience;
 }
 
 export interface BooleanParamSpec {
     type: 'boolean';
     default?: boolean;
+    audience?: ParamAudience;
 }
 
 export type ParamSpec = NumberParamSpec | EnumParamSpec | BooleanParamSpec;
@@ -34,11 +39,15 @@ export interface ModelParamsSchema {
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const parseAudience = (raw: unknown): ParamAudience | undefined =>
+    raw === 'builder' ? 'builder' : undefined;
+
 const parseSpec = (raw: unknown): ParamSpec | null => {
     if (!isPlainObject(raw)) return null;
     if (raw.type === 'number' || raw.type === 'integer') {
         return {
             type: raw.type,
+            audience: parseAudience(raw.audience),
             minimum: typeof raw.minimum === 'number' ? raw.minimum : undefined,
             maximum: typeof raw.maximum === 'number' ? raw.maximum : undefined,
             step: typeof raw.step === 'number' ? raw.step : undefined,
@@ -52,12 +61,14 @@ const parseSpec = (raw: unknown): ParamSpec | null => {
             type: 'enum',
             enum: members,
             default: typeof raw.default === 'string' ? raw.default : undefined,
+            audience: parseAudience(raw.audience),
         };
     }
     if (raw.type === 'boolean') {
         return {
             type: 'boolean',
             default: typeof raw.default === 'boolean' ? raw.default : undefined,
+            audience: parseAudience(raw.audience),
         };
     }
     return null;

@@ -289,7 +289,7 @@ class RoomOperations(BaseContentOperations[Room]):
             Room.is_deleted == False,  # noqa: E712
         )
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
@@ -436,6 +436,11 @@ class BookingOperations:
         booking = result.scalar_one_or_none()
         if not booking:
             raise NotFoundError("RoomBooking", booking_id)
+
+        # A booking says who is where and when, so it is only readable to whoever can see the room.
+        room_ops = RoomOperations(self.session)
+        await room_ops.get_by_id(user_id, organization_id, booking.room_id)
+
         return booking
 
     async def list_bookings(
@@ -452,7 +457,7 @@ class BookingOperations:
         booker = aliased(User)
 
         room_ops = RoomOperations(self.session)
-        access_filter = room_ops.access_query.build_accessible_filter(
+        access_filter = await room_ops.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.ROOM,
@@ -496,11 +501,15 @@ class BookingOperations:
 
     async def check_availability(
         self,
+        user_id: UUID,
         organization_id: UUID,
         room_id: UUID,
         start_date: datetime,
         end_date: datetime,
     ) -> list[dict]:
+        room_ops = RoomOperations(self.session)
+        await room_ops.get_by_id(user_id, organization_id, room_id)
+
         booking_rows = await queries.get_room_bookings_in_range(
             self.session,
             room_id,
@@ -523,6 +532,7 @@ class BookingOperations:
 
     async def find_available_rooms(
         self,
+        user_id: UUID,
         organization_id: UUID,
         start_time: datetime,
         end_time: datetime,
@@ -530,11 +540,22 @@ class BookingOperations:
         amenities: list[str] | None = None,
         room_type: RoomType | None = None,
     ) -> list[Room]:
+        room_ops = RoomOperations(self.session)
+        access_filter = await room_ops.access_query.build_accessible_filter(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=ContentType.ROOM,
+            content_id_column=Room.id,
+            owner_id_column=Room.owner_id,
+            access_mode_column=Room.access_mode,
+            baseline_role_column=Room.baseline_role,
+        )
         return await queries.find_available_rooms(
             self.session,
             organization_id,
             start_time,
             end_time,
+            access_filter,
             min_capacity=min_capacity,
             amenities=amenities,
             room_type=room_type,

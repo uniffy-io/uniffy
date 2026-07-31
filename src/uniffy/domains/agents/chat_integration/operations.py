@@ -115,6 +115,11 @@ class AgentChatBridge:
         if agent is None or agent.organization_id != organization_id:
             logger.warning("Agent invocation skipped: agent missing or wrong org")
             return
+        # A deleted agent keeps its row so its past messages still render, but it
+        # must never answer again - including via an explicit invoke.
+        if agent.is_deleted:
+            logger.info(f"Agent invocation skipped: agent {agent_id} is deleted")
+            return
 
         member_ids = await self._load_user_member_ids(channel_id)
         user_id = trigger.sender_id

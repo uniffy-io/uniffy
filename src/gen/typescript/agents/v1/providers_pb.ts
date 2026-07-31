@@ -2,10 +2,8 @@
 // @generated from file agents/v1/providers.proto (package agents.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { AccessMode, ContentRole } from "../../common/v1/common_pb.js";
-import { file_common_v1_common } from "../../common/v1/common_pb.js";
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
@@ -14,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agents/v1/providers.proto.
  */
 export const file_agents_v1_providers: GenFile = /*@__PURE__*/
-  fileDesc("ChlhZ2VudHMvdjEvcHJvdmlkZXJzLnByb3RvEglhZ2VudHMudjEi0gQKD1Byb3ZpZGVyS2V5SW5mbxIKCgJpZBgBIAEoCRIQCghwcm92aWRlchgCIAEoCRIyCg9jcmVkZW50aWFsX3R5cGUYAyABKA4yGS5hZ2VudHMudjEuQ3JlZGVudGlhbFR5cGUSDQoFbGFiZWwYBCABKAkSEAoIa2V5X2hpbnQYBSABKAkSEAoIaXNfdmFsaWQYBiABKAgSOgoRbGFzdF92YWxpZGF0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESNQoMbGFzdF91c2VkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEhcKCmxhc3RfZXJyb3IYCSABKAlIAogBARIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgppc19lbmFibGVkGAwgASgIEhIKCmNyZWF0ZWRfYnkYDSABKAkSKgoLYWNjZXNzX21vZGUYDiABKA4yFS5jb21tb24udjEuQWNjZXNzTW9kZRIyCg1iYXNlbGluZV9yb2xlGA8gASgOMhYuY29tbW9uLnYxLkNvbnRlbnRSb2xlSAOIAQFCFAoSX2xhc3RfdmFsaWRhdGVkX2F0Qg8KDV9sYXN0X3VzZWRfYXRCDQoLX2xhc3RfZXJyb3JCEAoOX2Jhc2VsaW5lX3JvbGUi6wMKCU1vZGVsSW5mbxIKCgJpZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSEAoIcHJvdmlkZXIYAyABKAkSFgoOY29udGV4dF93aW5kb3cYBCABKAUSFgoOc3VwcG9ydHNfdG9vbHMYBSABKAgSFwoPc3VwcG9ydHNfdmlzaW9uGAYgASgIEhkKEXN1cHBvcnRzX3RoaW5raW5nGAcgASgIEhoKEmRlZmF1bHRfbWF4X3Rva2VucxgIIAEoBRIdChVzdXBwb3J0c19wcm9tcHRfY2FjaGUYCSABKAgSEgoKZGVwcmVjYXRlZBgKIAEoCBIYChByZWFzb25pbmdfbGV2ZWxzGAsgAygJEiAKGGRlZmF1bHRfcmVhc29uaW5nX2VmZm9ydBgMIAEoCRIUCgxpbnB1dF9wZXJfMW0YDSABKAkSFQoNb3V0cHV0X3Blcl8xbRgOIAEoCRIZChFjYWNoZV9yZWFkX3Blcl8xbRgPIAEoCRIaChJjYWNoZV93cml0ZV9wZXJfMW0YECABKAkSIQoZc3VwcG9ydHNfaW1hZ2VfZ2VuZXJhdGlvbhgRIAEoCBIVCg1jYXRhbG9nX2tub3duGBIgASgIEh0KFXBhcmFtZXRlcl9zY2hlbWFfanNvbhgTIAEoCSKgAgoVQWRkUHJvdmlkZXJLZXlSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIQCghwcm92aWRlchgCIAEoCRIyCg9jcmVkZW50aWFsX3R5cGUYAyABKA4yGS5hZ2VudHMudjEuQ3JlZGVudGlhbFR5cGUSDQoFbGFiZWwYBCABKAkSEgoKY3JlZGVudGlhbBgFIAEoCRIvCgthY2Nlc3NfbW9kZRgGIAEoDjIVLmNvbW1vbi52MS5BY2Nlc3NNb2RlSACIAQESMgoNYmFzZWxpbmVfcm9sZRgHIAEoDjIWLmNvbW1vbi52MS5Db250ZW50Um9sZUgBiAEBQg4KDF9hY2Nlc3NfbW9kZUIQCg5fYmFzZWxpbmVfcm9sZSJBChZBZGRQcm92aWRlcktleVJlc3BvbnNlEicKA2tleRgBIAEoCzIaLmFnZW50cy52MS5Qcm92aWRlcktleUluZm8iRAoZVG9nZ2xlUHJvdmlkZXJLZXlSZXNwb25zZRInCgNrZXkYASABKAsyGi5hZ2VudHMudjEuUHJvdmlkZXJLZXlJbmZvIlYKF0xpc3RQcm92aWRlcktleXNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIVCghwcm92aWRlchgCIAEoCUgAiAEBQgsKCV9wcm92aWRlciJEChhMaXN0UHJvdmlkZXJLZXlzUmVzcG9uc2USKAoEa2V5cxgBIAMoCzIaLmFnZW50cy52MS5Qcm92aWRlcktleUluZm8iQwoYUmVtb3ZlUHJvdmlkZXJLZXlSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIOCgZrZXlfaWQYAiABKAkiLAoZUmVtb3ZlUHJvdmlkZXJLZXlSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIkUKGlZhbGlkYXRlUHJvdmlkZXJLZXlSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIOCgZrZXlfaWQYAiABKAkiTQobVmFsaWRhdGVQcm92aWRlcktleVJlc3BvbnNlEhAKCGlzX3ZhbGlkGAEgASgIEhIKBWVycm9yGAIgASgJSACIAQFCCAoGX2Vycm9yInAKGkxpc3RBdmFpbGFibGVNb2RlbHNSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIVCghwcm92aWRlchgCIAEoCUgAiAEBEhUKDWZvcmNlX3JlZnJlc2gYAyABKAhCCwoJX3Byb3ZpZGVyIkMKG0xpc3RBdmFpbGFibGVNb2RlbHNSZXNwb25zZRIkCgZtb2RlbHMYASADKAsyFC5hZ2VudHMudjEuTW9kZWxJbmZvIkAKGExpc3RNb2RlbHNGb3JLZXlSZXNwb25zZRIkCgZtb2RlbHMYASADKAsyFC5hZ2VudHMudjEuTW9kZWxJbmZvIlkKF0xpc3RNb2RlbHNGb3JLZXlSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIOCgZrZXlfaWQYAiABKAkSFQoNZm9yY2VfcmVmcmVzaBgDIAEoCCJUChhUb2dnbGVQcm92aWRlcktleVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg4KBmtleV9pZBgCIAEoCRIPCgdlbmFibGVkGAMgASgIKm8KDkNyZWRlbnRpYWxUeXBlEh8KG0NSRURFTlRJQUxfVFlQRV9VTlNQRUNJRklFRBAAEhsKF0NSRURFTlRJQUxfVFlQRV9BUElfS0VZEAESHwobQ1JFREVOVElBTF9UWVBFX1NFVFVQX1RPS0VOEAIyvQUKEFByb3ZpZGVyc1NlcnZpY2USVwoOQWRkUHJvdmlkZXJLZXkSIC5hZ2VudHMudjEuQWRkUHJvdmlkZXJLZXlSZXF1ZXN0GiEuYWdlbnRzLnYxLkFkZFByb3ZpZGVyS2V5UmVzcG9uc2UiABJdChBMaXN0UHJvdmlkZXJLZXlzEiIuYWdlbnRzLnYxLkxpc3RQcm92aWRlcktleXNSZXF1ZXN0GiMuYWdlbnRzLnYxLkxpc3RQcm92aWRlcktleXNSZXNwb25zZSIAEmAKEVJlbW92ZVByb3ZpZGVyS2V5EiMuYWdlbnRzLnYxLlJlbW92ZVByb3ZpZGVyS2V5UmVxdWVzdBokLmFnZW50cy52MS5SZW1vdmVQcm92aWRlcktleVJlc3BvbnNlIgASZgoTVmFsaWRhdGVQcm92aWRlcktleRIlLmFnZW50cy52MS5WYWxpZGF0ZVByb3ZpZGVyS2V5UmVxdWVzdBomLmFnZW50cy52MS5WYWxpZGF0ZVByb3ZpZGVyS2V5UmVzcG9uc2UiABJmChNMaXN0QXZhaWxhYmxlTW9kZWxzEiUuYWdlbnRzLnYxLkxpc3RBdmFpbGFibGVNb2RlbHNSZXF1ZXN0GiYuYWdlbnRzLnYxLkxpc3RBdmFpbGFibGVNb2RlbHNSZXNwb25zZSIAEmAKEVRvZ2dsZVByb3ZpZGVyS2V5EiMuYWdlbnRzLnYxLlRvZ2dsZVByb3ZpZGVyS2V5UmVxdWVzdBokLmFnZW50cy52MS5Ub2dnbGVQcm92aWRlcktleVJlc3BvbnNlIgASXQoQTGlzdE1vZGVsc0ZvcktleRIiLmFnZW50cy52MS5MaXN0TW9kZWxzRm9yS2V5UmVxdWVzdBojLmFnZW50cy52MS5MaXN0TW9kZWxzRm9yS2V5UmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vYWdlbnRzL3YxO2FnZW50c3YxYgZwcm90bzM", [file_common_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChlhZ2VudHMvdjEvcHJvdmlkZXJzLnByb3RvEglhZ2VudHMudjEirAMKD1Byb3ZpZGVyS2V5SW5mbxIKCgJpZBgBIAEoCRIQCghwcm92aWRlchgCIAEoCRINCgVsYWJlbBgDIAEoCRIQCghrZXlfaGludBgEIAEoCRIQCghpc192YWxpZBgFIAEoCBI6ChFsYXN0X3ZhbGlkYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARI1CgxsYXN0X3VzZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESFwoKbGFzdF9lcnJvchgIIAEoCUgCiAEBEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmlzX2VuYWJsZWQYCyABKAgSEgoKY3JlYXRlZF9ieRgMIAEoCUIUChJfbGFzdF92YWxpZGF0ZWRfYXRCDwoNX2xhc3RfdXNlZF9hdEINCgtfbGFzdF9lcnJvciK0BAoJTW9kZWxJbmZvEgoKAmlkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIQCghwcm92aWRlchgDIAEoCRIWCg5jb250ZXh0X3dpbmRvdxgEIAEoBRIWCg5zdXBwb3J0c190b29scxgFIAEoCBIXCg9zdXBwb3J0c192aXNpb24YBiABKAgSGQoRc3VwcG9ydHNfdGhpbmtpbmcYByABKAgSGgoSZGVmYXVsdF9tYXhfdG9rZW5zGAggASgFEh0KFXN1cHBvcnRzX3Byb21wdF9jYWNoZRgJIAEoCBISCgpkZXByZWNhdGVkGAogASgIEhgKEHJlYXNvbmluZ19sZXZlbHMYCyADKAkSIAoYZGVmYXVsdF9yZWFzb25pbmdfZWZmb3J0GAwgASgJEhQKDGlucHV0X3Blcl8xbRgNIAEoCRIVCg1vdXRwdXRfcGVyXzFtGA4gASgJEhkKEWNhY2hlX3JlYWRfcGVyXzFtGA8gASgJEhoKEmNhY2hlX3dyaXRlX3Blcl8xbRgQIAEoCRIhChlzdXBwb3J0c19pbWFnZV9nZW5lcmF0aW9uGBEgASgIEhUKDWNhdGFsb2dfa25vd24YEiABKAgSHQoVcGFyYW1ldGVyX3NjaGVtYV9qc29uGBMgASgJEiMKG2ltYWdlX3BhcmFtZXRlcl9zY2hlbWFfanNvbhgUIAEoCRIiChppbWFnZV9wcmljZV9lc3RpbWF0ZXNfanNvbhgVIAEoCSJlChVBZGRQcm92aWRlcktleVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhAKCHByb3ZpZGVyGAIgASgJEg0KBWxhYmVsGAMgASgJEhIKCmNyZWRlbnRpYWwYBCABKAkiQQoWQWRkUHJvdmlkZXJLZXlSZXNwb25zZRInCgNrZXkYASABKAsyGi5hZ2VudHMudjEuUHJvdmlkZXJLZXlJbmZvIkQKGVRvZ2dsZVByb3ZpZGVyS2V5UmVzcG9uc2USJwoDa2V5GAEgASgLMhouYWdlbnRzLnYxLlByb3ZpZGVyS2V5SW5mbyJWChdMaXN0UHJvdmlkZXJLZXlzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFQoIcHJvdmlkZXIYAiABKAlIAIgBAUILCglfcHJvdmlkZXIiRAoYTGlzdFByb3ZpZGVyS2V5c1Jlc3BvbnNlEigKBGtleXMYASADKAsyGi5hZ2VudHMudjEuUHJvdmlkZXJLZXlJbmZvIkMKGFJlbW92ZVByb3ZpZGVyS2V5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDgoGa2V5X2lkGAIgASgJIiwKGVJlbW92ZVByb3ZpZGVyS2V5UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJFChpWYWxpZGF0ZVByb3ZpZGVyS2V5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDgoGa2V5X2lkGAIgASgJIk0KG1ZhbGlkYXRlUHJvdmlkZXJLZXlSZXNwb25zZRIQCghpc192YWxpZBgBIAEoCBISCgVlcnJvchgCIAEoCUgAiAEBQggKBl9lcnJvciJZChpMaXN0QXZhaWxhYmxlTW9kZWxzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFQoIcHJvdmlkZXIYAiABKAlIAIgBAUILCglfcHJvdmlkZXIiQwobTGlzdEF2YWlsYWJsZU1vZGVsc1Jlc3BvbnNlEiQKBm1vZGVscxgBIAMoCzIULmFnZW50cy52MS5Nb2RlbEluZm8iQAoYTGlzdE1vZGVsc0ZvcktleVJlc3BvbnNlEiQKBm1vZGVscxgBIAMoCzIULmFnZW50cy52MS5Nb2RlbEluZm8iQgoXTGlzdE1vZGVsc0ZvcktleVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg4KBmtleV9pZBgCIAEoCSJUChhUb2dnbGVQcm92aWRlcktleVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg4KBmtleV9pZBgCIAEoCRIPCgdlbmFibGVkGAMgASgIMr0FChBQcm92aWRlcnNTZXJ2aWNlElcKDkFkZFByb3ZpZGVyS2V5EiAuYWdlbnRzLnYxLkFkZFByb3ZpZGVyS2V5UmVxdWVzdBohLmFnZW50cy52MS5BZGRQcm92aWRlcktleVJlc3BvbnNlIgASXQoQTGlzdFByb3ZpZGVyS2V5cxIiLmFnZW50cy52MS5MaXN0UHJvdmlkZXJLZXlzUmVxdWVzdBojLmFnZW50cy52MS5MaXN0UHJvdmlkZXJLZXlzUmVzcG9uc2UiABJgChFSZW1vdmVQcm92aWRlcktleRIjLmFnZW50cy52MS5SZW1vdmVQcm92aWRlcktleVJlcXVlc3QaJC5hZ2VudHMudjEuUmVtb3ZlUHJvdmlkZXJLZXlSZXNwb25zZSIAEmYKE1ZhbGlkYXRlUHJvdmlkZXJLZXkSJS5hZ2VudHMudjEuVmFsaWRhdGVQcm92aWRlcktleVJlcXVlc3QaJi5hZ2VudHMudjEuVmFsaWRhdGVQcm92aWRlcktleVJlc3BvbnNlIgASZgoTTGlzdEF2YWlsYWJsZU1vZGVscxIlLmFnZW50cy52MS5MaXN0QXZhaWxhYmxlTW9kZWxzUmVxdWVzdBomLmFnZW50cy52MS5MaXN0QXZhaWxhYmxlTW9kZWxzUmVzcG9uc2UiABJgChFUb2dnbGVQcm92aWRlcktleRIjLmFnZW50cy52MS5Ub2dnbGVQcm92aWRlcktleVJlcXVlc3QaJC5hZ2VudHMudjEuVG9nZ2xlUHJvdmlkZXJLZXlSZXNwb25zZSIAEl0KEExpc3RNb2RlbHNGb3JLZXkSIi5hZ2VudHMudjEuTGlzdE1vZGVsc0ZvcktleVJlcXVlc3QaIy5hZ2VudHMudjEuTGlzdE1vZGVsc0ZvcktleVJlc3BvbnNlIgBCOVo3Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL2FnZW50cy92MTthZ2VudHN2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * Provider key info (never includes the actual credential)
@@ -37,95 +35,74 @@ export type ProviderKeyInfo = Message<"agents.v1.ProviderKeyInfo"> & {
   provider: string;
 
   /**
-   * Type of credential
-   *
-   * @generated from field: agents.v1.CredentialType credential_type = 3;
-   */
-  credentialType: CredentialType;
-
-  /**
    * User-friendly label
    *
-   * @generated from field: string label = 4;
+   * @generated from field: string label = 3;
    */
   label: string;
 
   /**
-   * Masked hint of the credential (e.g. "sk-ant-oat01-...xyz")
+   * Masked hint of the credential (e.g. "sk-ant-api03-...xyz")
    *
-   * @generated from field: string key_hint = 5;
+   * @generated from field: string key_hint = 4;
    */
   keyHint: string;
 
   /**
    * Whether the key passed its last validation
    *
-   * @generated from field: bool is_valid = 6;
+   * @generated from field: bool is_valid = 5;
    */
   isValid: boolean;
 
   /**
    * When the key was last validated
    *
-   * @generated from field: optional google.protobuf.Timestamp last_validated_at = 7;
+   * @generated from field: optional google.protobuf.Timestamp last_validated_at = 6;
    */
   lastValidatedAt?: Timestamp | undefined;
 
   /**
    * When the key was last used for an API call
    *
-   * @generated from field: optional google.protobuf.Timestamp last_used_at = 8;
+   * @generated from field: optional google.protobuf.Timestamp last_used_at = 7;
    */
   lastUsedAt?: Timestamp | undefined;
 
   /**
    * Last error message if validation failed
    *
-   * @generated from field: optional string last_error = 9;
+   * @generated from field: optional string last_error = 8;
    */
   lastError?: string | undefined;
 
   /**
    * When the key was created
    *
-   * @generated from field: google.protobuf.Timestamp created_at = 10;
+   * @generated from field: google.protobuf.Timestamp created_at = 9;
    */
   createdAt?: Timestamp | undefined;
 
   /**
    * When the key was last updated
    *
-   * @generated from field: google.protobuf.Timestamp updated_at = 11;
+   * @generated from field: google.protobuf.Timestamp updated_at = 10;
    */
   updatedAt?: Timestamp | undefined;
 
   /**
    * Whether the key is enabled for use
    *
-   * @generated from field: bool is_enabled = 12;
+   * @generated from field: bool is_enabled = 11;
    */
   isEnabled: boolean;
 
   /**
    * User who created this key
    *
-   * @generated from field: string created_by = 13;
+   * @generated from field: string created_by = 12;
    */
   createdBy: string;
-
-  /**
-   * Access mode
-   *
-   * @generated from field: common.v1.AccessMode access_mode = 14;
-   */
-  accessMode: AccessMode;
-
-  /**
-   * Baseline role granted by access mode (when applicable)
-   *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 15;
-   */
-  baselineRole?: ContentRole | undefined;
 };
 
 /**
@@ -270,6 +247,23 @@ export type ModelInfo = Message<"agents.v1.ModelInfo"> & {
    * @generated from field: string parameter_schema_json = 19;
    */
   parameterSchemaJson: string;
+
+  /**
+   * JSON object describing the model's image-generation knobs (knob ->
+   * bounded spec); "" when the model generates no images.
+   *
+   * @generated from field: string image_parameter_schema_json = 20;
+   */
+  imageParameterSchemaJson: string;
+
+  /**
+   * JSON object of per-image USD estimates keyed
+   * "{aspect_ratio}|{resolution}|{quality}"; "" when the model has no
+   * published image rates. Values are estimates for token-metered models.
+   *
+   * @generated from field: string image_price_estimates_json = 21;
+   */
+  imagePriceEstimatesJson: string;
 };
 
 /**
@@ -300,39 +294,18 @@ export type AddProviderKeyRequest = Message<"agents.v1.AddProviderKeyRequest"> &
   provider: string;
 
   /**
-   * Type of credential
-   *
-   * @generated from field: agents.v1.CredentialType credential_type = 3;
-   */
-  credentialType: CredentialType;
-
-  /**
    * User-friendly label
    *
-   * @generated from field: string label = 4;
+   * @generated from field: string label = 3;
    */
   label: string;
 
   /**
-   * The actual credential (API key or setup token)
+   * The actual credential (API key); write-only, never returned
    *
-   * @generated from field: string credential = 5;
+   * @generated from field: string credential = 4;
    */
   credential: string;
-
-  /**
-   * Access mode for the key
-   *
-   * @generated from field: optional common.v1.AccessMode access_mode = 6;
-   */
-  accessMode?: AccessMode | undefined;
-
-  /**
-   * Baseline role granted by access mode (when applicable)
-   *
-   * @generated from field: optional common.v1.ContentRole baseline_role = 7;
-   */
-  baselineRole?: ContentRole | undefined;
 };
 
 /**
@@ -555,13 +528,6 @@ export type ListAvailableModelsRequest = Message<"agents.v1.ListAvailableModelsR
    * @generated from field: optional string provider = 2;
    */
   provider?: string | undefined;
-
-  /**
-   * When true, bypasses the cached model list and fetches fresh from the provider API
-   *
-   * @generated from field: bool force_refresh = 3;
-   */
-  forceRefresh: boolean;
 };
 
 /**
@@ -632,13 +598,6 @@ export type ListModelsForKeyRequest = Message<"agents.v1.ListModelsForKeyRequest
    * @generated from field: string key_id = 2;
    */
   keyId: string;
-
-  /**
-   * When true, bypass cache and fetch fresh from provider API
-   *
-   * @generated from field: bool force_refresh = 3;
-   */
-  forceRefresh: boolean;
 };
 
 /**
@@ -684,41 +643,13 @@ export const ToggleProviderKeyRequestSchema: GenMessage<ToggleProviderKeyRequest
   messageDesc(file_agents_v1_providers, 15);
 
 /**
- * Type of credential stored for a provider
- *
- * @generated from enum agents.v1.CredentialType
- */
-export enum CredentialType {
-  /**
-   * @generated from enum value: CREDENTIAL_TYPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: CREDENTIAL_TYPE_API_KEY = 1;
-   */
-  API_KEY = 1,
-
-  /**
-   * @generated from enum value: CREDENTIAL_TYPE_SETUP_TOKEN = 2;
-   */
-  SETUP_TOKEN = 2,
-}
-
-/**
- * Describes the enum agents.v1.CredentialType.
- */
-export const CredentialTypeSchema: GenEnum<CredentialType> = /*@__PURE__*/
-  enumDesc(file_agents_v1_providers, 0);
-
-/**
  * ProvidersService manages LLM provider credentials for an organization.
  *
  * @generated from service agents.v1.ProvidersService
  */
 export const ProvidersService: GenService<{
   /**
-   * Add a new provider API key or setup token
+   * Add a new provider API key
    *
    * @generated from rpc agents.v1.ProvidersService.AddProviderKey
    */

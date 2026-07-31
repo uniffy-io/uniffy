@@ -6,6 +6,7 @@ import {
     UserCircle,
     Gear,
     ShieldCheck,
+    Robot,
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { ProfileSwitcher } from '@/features/settings/components/ProfileSwitcher';
@@ -16,6 +17,7 @@ export type SettingsSection =
     | 'notifications'
     | 'profile'
     | 'security'
+    | 'ai'
     | 'general';
 
 interface SettingsLayoutProps {
@@ -31,6 +33,7 @@ const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'profile', label: 'Account', icon: UserCircle },
     { id: 'security', label: 'Security', icon: ShieldCheck },
+    { id: 'ai', label: 'AI', icon: Robot },
     { id: 'general', label: 'General', icon: Gear },
 ];
 

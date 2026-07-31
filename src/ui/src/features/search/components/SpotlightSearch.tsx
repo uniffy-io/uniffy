@@ -9,6 +9,7 @@ import { FilterHints } from '@/features/search/components/FilterHints';
 import { useShortcutHandler, useFormattedKeybinding } from '@/features/settings';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files';
+import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
 import { createChannel } from '@/features/chat/store/chatThunks';
 import { ChannelType } from '@uniffy/proto/chat/v1/chat_pb';
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
@@ -151,6 +152,16 @@ export function SpotlightSearch() {
             }
             handleClose();
             return;
+        }
+
+        // Rooms open in the viewer modal for the same reason.
+        if (result.type === SearchResultType.ROOM) {
+            const roomId = result.urn.split(':').pop();
+            if (roomId) {
+                dispatch(openRoomViewer({ roomId }));
+                handleClose();
+                return;
+            }
         }
 
         // Users open the 1:1 DM (create_dm is idempotent for pairs) instead of a profile page.

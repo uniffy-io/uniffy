@@ -19,26 +19,35 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MemoriesService_ListMemories_FullMethodName = "/agents.v1.MemoriesService/ListMemories"
-	MemoriesService_CreateMemory_FullMethodName = "/agents.v1.MemoriesService/CreateMemory"
-	MemoriesService_UpdateMemory_FullMethodName = "/agents.v1.MemoriesService/UpdateMemory"
-	MemoriesService_DeleteMemory_FullMethodName = "/agents.v1.MemoriesService/DeleteMemory"
+	MemoriesService_ListMemories_FullMethodName     = "/agents.v1.MemoriesService/ListMemories"
+	MemoriesService_CreateMemory_FullMethodName     = "/agents.v1.MemoriesService/CreateMemory"
+	MemoriesService_UpdateMemory_FullMethodName     = "/agents.v1.MemoriesService/UpdateMemory"
+	MemoriesService_DeleteMemory_FullMethodName     = "/agents.v1.MemoriesService/DeleteMemory"
+	MemoriesService_SetMemoryPinned_FullMethodName  = "/agents.v1.MemoriesService/SetMemoryPinned"
+	MemoriesService_GetMemorySharing_FullMethodName = "/agents.v1.MemoriesService/GetMemorySharing"
+	MemoriesService_SetMemorySharing_FullMethodName = "/agents.v1.MemoriesService/SetMemorySharing"
 )
 
 // MemoriesServiceClient is the client API for MemoriesService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// MemoriesService manages agent memory entries for users.
+// MemoriesService manages audience-scoped agent memory entries.
 type MemoriesServiceClient interface {
-	// List memories for a specific agent (scoped to current user)
+	// List memories for an agent within one scope the caller can see
 	ListMemories(ctx context.Context, in *ListMemoriesRequest, opts ...grpc.CallOption) (*ListMemoriesResponse, error)
 	// Create a new memory entry
 	CreateMemory(ctx context.Context, in *CreateMemoryRequest, opts ...grpc.CallOption) (*CreateMemoryResponse, error)
-	// Update a memory entry (content, category, importance)
+	// Update a memory entry (description, content, category, importance)
 	UpdateMemory(ctx context.Context, in *UpdateMemoryRequest, opts ...grpc.CallOption) (*UpdateMemoryResponse, error)
 	// Delete a memory entry
 	DeleteMemory(ctx context.Context, in *DeleteMemoryRequest, opts ...grpc.CallOption) (*DeleteMemoryResponse, error)
+	// Pin or unpin a memory entry (pinned entries inject in full)
+	SetMemoryPinned(ctx context.Context, in *SetMemoryPinnedRequest, opts ...grpc.CallOption) (*SetMemoryPinnedResponse, error)
+	// Read the caller's personal-memory sharing preference (shared-space bridge)
+	GetMemorySharing(ctx context.Context, in *GetMemorySharingRequest, opts ...grpc.CallOption) (*GetMemorySharingResponse, error)
+	// Set the caller's personal-memory sharing preference
+	SetMemorySharing(ctx context.Context, in *SetMemorySharingRequest, opts ...grpc.CallOption) (*SetMemorySharingResponse, error)
 }
 
 type memoriesServiceClient struct {
@@ -89,20 +98,56 @@ func (c *memoriesServiceClient) DeleteMemory(ctx context.Context, in *DeleteMemo
 	return out, nil
 }
 
+func (c *memoriesServiceClient) SetMemoryPinned(ctx context.Context, in *SetMemoryPinnedRequest, opts ...grpc.CallOption) (*SetMemoryPinnedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetMemoryPinnedResponse)
+	err := c.cc.Invoke(ctx, MemoriesService_SetMemoryPinned_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *memoriesServiceClient) GetMemorySharing(ctx context.Context, in *GetMemorySharingRequest, opts ...grpc.CallOption) (*GetMemorySharingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMemorySharingResponse)
+	err := c.cc.Invoke(ctx, MemoriesService_GetMemorySharing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *memoriesServiceClient) SetMemorySharing(ctx context.Context, in *SetMemorySharingRequest, opts ...grpc.CallOption) (*SetMemorySharingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetMemorySharingResponse)
+	err := c.cc.Invoke(ctx, MemoriesService_SetMemorySharing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MemoriesServiceServer is the server API for MemoriesService service.
 // All implementations must embed UnimplementedMemoriesServiceServer
 // for forward compatibility.
 //
-// MemoriesService manages agent memory entries for users.
+// MemoriesService manages audience-scoped agent memory entries.
 type MemoriesServiceServer interface {
-	// List memories for a specific agent (scoped to current user)
+	// List memories for an agent within one scope the caller can see
 	ListMemories(context.Context, *ListMemoriesRequest) (*ListMemoriesResponse, error)
 	// Create a new memory entry
 	CreateMemory(context.Context, *CreateMemoryRequest) (*CreateMemoryResponse, error)
-	// Update a memory entry (content, category, importance)
+	// Update a memory entry (description, content, category, importance)
 	UpdateMemory(context.Context, *UpdateMemoryRequest) (*UpdateMemoryResponse, error)
 	// Delete a memory entry
 	DeleteMemory(context.Context, *DeleteMemoryRequest) (*DeleteMemoryResponse, error)
+	// Pin or unpin a memory entry (pinned entries inject in full)
+	SetMemoryPinned(context.Context, *SetMemoryPinnedRequest) (*SetMemoryPinnedResponse, error)
+	// Read the caller's personal-memory sharing preference (shared-space bridge)
+	GetMemorySharing(context.Context, *GetMemorySharingRequest) (*GetMemorySharingResponse, error)
+	// Set the caller's personal-memory sharing preference
+	SetMemorySharing(context.Context, *SetMemorySharingRequest) (*SetMemorySharingResponse, error)
 	mustEmbedUnimplementedMemoriesServiceServer()
 }
 
@@ -124,6 +169,15 @@ func (UnimplementedMemoriesServiceServer) UpdateMemory(context.Context, *UpdateM
 }
 func (UnimplementedMemoriesServiceServer) DeleteMemory(context.Context, *DeleteMemoryRequest) (*DeleteMemoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteMemory not implemented")
+}
+func (UnimplementedMemoriesServiceServer) SetMemoryPinned(context.Context, *SetMemoryPinnedRequest) (*SetMemoryPinnedResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetMemoryPinned not implemented")
+}
+func (UnimplementedMemoriesServiceServer) GetMemorySharing(context.Context, *GetMemorySharingRequest) (*GetMemorySharingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMemorySharing not implemented")
+}
+func (UnimplementedMemoriesServiceServer) SetMemorySharing(context.Context, *SetMemorySharingRequest) (*SetMemorySharingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetMemorySharing not implemented")
 }
 func (UnimplementedMemoriesServiceServer) mustEmbedUnimplementedMemoriesServiceServer() {}
 func (UnimplementedMemoriesServiceServer) testEmbeddedByValue()                         {}
@@ -218,6 +272,60 @@ func _MemoriesService_DeleteMemory_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MemoriesService_SetMemoryPinned_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetMemoryPinnedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MemoriesServiceServer).SetMemoryPinned(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MemoriesService_SetMemoryPinned_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MemoriesServiceServer).SetMemoryPinned(ctx, req.(*SetMemoryPinnedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MemoriesService_GetMemorySharing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMemorySharingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MemoriesServiceServer).GetMemorySharing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MemoriesService_GetMemorySharing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MemoriesServiceServer).GetMemorySharing(ctx, req.(*GetMemorySharingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MemoriesService_SetMemorySharing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetMemorySharingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MemoriesServiceServer).SetMemorySharing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MemoriesService_SetMemorySharing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MemoriesServiceServer).SetMemorySharing(ctx, req.(*SetMemorySharingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MemoriesService_ServiceDesc is the grpc.ServiceDesc for MemoriesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +348,18 @@ var MemoriesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteMemory",
 			Handler:    _MemoriesService_DeleteMemory_Handler,
+		},
+		{
+			MethodName: "SetMemoryPinned",
+			Handler:    _MemoriesService_SetMemoryPinned_Handler,
+		},
+		{
+			MethodName: "GetMemorySharing",
+			Handler:    _MemoriesService_GetMemorySharing_Handler,
+		},
+		{
+			MethodName: "SetMemorySharing",
+			Handler:    _MemoriesService_SetMemorySharing_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

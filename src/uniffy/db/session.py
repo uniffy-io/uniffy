@@ -23,6 +23,10 @@ logger = logger.bind(component="db.session")
 MIGRATION_LOCK_ID = 0x756E_6966_6679_4D31  # "unifyM1"
 SEED_LOCK_ID = 0x756E_6966_6679_5331  # "unifyS1"
 
+ALEMBIC_INI_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "alembic.ini"
+)
+
 
 def _build_sync_db_url() -> str:
     """Build the synchronous psycopg2 URL for tooling that cannot use asyncpg."""
@@ -103,13 +107,10 @@ def run_migrations() -> None:
     """Upgrade the database to head via Alembic (sync; asyncpg is not supported)."""
     logger.info("Running database migrations...")
 
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    alembic_cfg_path = os.path.join(base_dir, "alembic.ini")
+    if not os.path.exists(ALEMBIC_INI_PATH):
+        raise FileNotFoundError(f"alembic.ini not found at {ALEMBIC_INI_PATH}")
 
-    if not os.path.exists(alembic_cfg_path):
-        raise FileNotFoundError(f"alembic.ini not found at {alembic_cfg_path}")
-
-    alembic_cfg = Config(alembic_cfg_path)
+    alembic_cfg = Config(ALEMBIC_INI_PATH)
 
     # Skip fileConfig so loguru stays in charge.
     alembic_cfg.attributes["configure_logger"] = False

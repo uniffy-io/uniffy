@@ -3,6 +3,7 @@ import { transport } from '@/config/api';
 import {
     CancelStreamRequestSchema,
     GetUsageStatsRequestSchema,
+    RegenerateImageRequestSchema,
     RerunFromMessageRequestSchema,
     RespondToConfirmationRequestSchema,
     RuntimeService,
@@ -38,5 +39,8 @@ export const runtimeApi = {
     },
     getUsageStats: async (request: MessageInitShape<typeof GetUsageStatsRequestSchema>) => {
         return client.getUsageStats(request);
+    },
+    regenerateImage: async (request: MessageInitShape<typeof RegenerateImageRequestSchema>) => {
+        return client.regenerateImage(request);
     },
 };

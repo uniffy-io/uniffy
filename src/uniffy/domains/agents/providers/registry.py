@@ -25,12 +25,7 @@ class ProviderRegistry:
         """
         self._descriptors[descriptor.name] = descriptor
 
-    def create_provider(
-        self,
-        provider: str,
-        credential: str,
-        credential_type: str = "api_key",
-    ) -> LLMProvider:
+    def create_provider(self, provider: str, credential: str) -> LLMProvider:
         """Create an LLMProvider instance for the given provider.
 
         Parameters
@@ -39,8 +34,6 @@ class ProviderRegistry:
             Provider name (e.g. "anthropic").
         credential : str
             Decrypted credential.
-        credential_type : str
-            Credential type.
 
         Returns
         -------
@@ -56,7 +49,7 @@ class ProviderRegistry:
         descriptor = self._descriptors.get(provider)
         if not descriptor:
             raise ValidationError("provider", f"Unsupported provider: {provider}")
-        return descriptor.create(credential, credential_type)
+        return descriptor.create(credential)
 
     def get_models_for_provider(self, provider: str) -> list[ModelInfo]:
         """Return the model catalog for a given provider.
@@ -77,33 +70,15 @@ class ProviderRegistry:
             return []
         return descriptor.get_models()
 
-    def validate_credential(
-        self,
-        provider: str,
-        credential: str,
-        credential_type: str,
-    ) -> None:
-        """Validate credential format for a provider.
+    def require_known(self, provider: str) -> None:
+        """Raise when ``provider`` has no registered descriptor.
 
-        Parameters
-        ----------
-        provider : str
-            Provider name.
-        credential : str
-            Raw credential string.
-        credential_type : str
-            Credential type.
-
-        Raises
-        ------
-        ValidationError
-            If the provider is unknown or credential format is invalid.
-
+        Credential *content* is never format-checked: providers change key
+        shapes without notice, so the only trustworthy signal is the live
+        probe the caller runs after storing the key.
         """
-        descriptor = self._descriptors.get(provider)
-        if not descriptor:
+        if provider not in self._descriptors:
             raise ValidationError("provider", f"Unsupported provider: {provider}")
-        descriptor.validate_credential(credential, credential_type)
 
     def list_providers(self) -> list[ProviderDescriptor]:
         """Return all registered provider descriptors.

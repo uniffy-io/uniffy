@@ -203,9 +203,7 @@ class OrganizationsHandlers:
                 user_ops = _UserOps(session)
                 user = await user_ops.get_by_id(user_id)
                 if not user.is_system_admin:
-                    membership = await ops.get_membership(user_id, org_id)
-                    if not membership:
-                        raise PermissionDeniedError("Not a member of this organization")
+                    await ops.require_org_member(user_id, org_id)
 
                 overview = await ops.get_overview(org_id)
                 org = overview["organization"]

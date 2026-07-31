@@ -141,7 +141,7 @@ Agents ship with tools across every core Uniffy domain:
 | Files | List, read content, update, delete |
 | Projects | Create, update, list, delete |
 | Tasks | Create, update, list, move, delete |
-| Calendar | List events, create, update, delete, RSVP, manage attendees |
+| Calendar | List events, create, update, delete, RSVP, manage attendees, free/busy lookup, find meeting times |
 | Search | Universal search across all content |
 | People | List org members |
 | Memory | Save, recall, list, forget |
@@ -151,6 +151,13 @@ Agents ship with tools across every core Uniffy domain:
 Destructive tools are marked and require approval in chat (see above).
 
 Full list in **Agents > New Agent > Tools**.
+
+Enabling many tools does not bloat every conversation: an agent with a large
+tool set starts with its core groups (memory, search, people, skills, system
+time) and loads other groups on demand the first time a request needs one.
+You may see a brief `Load Group` step in the tool activity pane; after that
+the group stays loaded for the rest of that conversation. This keeps replies
+fast and context lean without changing what the agent is allowed to do.
 
 ---
 
@@ -209,12 +216,15 @@ least one provider key.
 
 | Provider | How to get a key |
 |---|---|
-| Anthropic (Claude) | [console.anthropic.com](https://console.anthropic.com/) |
-| OpenAI (GPT) | [platform.openai.com](https://platform.openai.com/) |
-| Google (Gemini) | [ai.google.dev](https://ai.google.dev/) |
+| Anthropic (Claude) | [platform.claude.com/settings/keys](https://platform.claude.com/settings/keys) |
+| OpenAI (GPT) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| Google (Gemini) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| xAI (Grok) | [console.x.ai](https://console.x.ai) |
 
-Org admins add keys at **Agents > System > Config**. Keys are Fernet-encrypted
-at rest. A key must be both **valid** and **enabled** to be used.
+Org admins add keys at **Admin > Agents > Keys**. Pick the provider, and the
+form links straight to that provider's key page and API docs. Keys are
+encrypted at rest. A key must be both **valid** and **enabled** to be used.
 
 If no provider is configured, the agent picker shows a banner with a link to
 the config page. Agents won't reply until a key is enabled.

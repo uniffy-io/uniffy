@@ -17,11 +17,12 @@ from uniffy.domains.agents.providers.base import (
     StreamEvent,
     ToolCall,
 )
-from uniffy.domains.agents.providers.catalog import model_infos_for_provider
+from uniffy.domains.agents.providers.catalog import get_model, model_infos_for_provider
 from uniffy.domains.agents.providers.openai.converters import (
     convert_messages_to_openai,
     convert_tools_to_openai,
 )
+from uniffy.domains.agents.providers.openai.images import build_request as build_image_request
 from uniffy.domains.agents.providers.openai.responses import (
     build_responses_kwargs,
     stream_completion,
@@ -29,6 +30,10 @@ from uniffy.domains.agents.providers.openai.responses import (
 )
 
 logger = logger.bind(component="agents.providers.openai.provider")
+
+PROVIDER_ID = "openai"
+
+_MIME_TYPES = {"png": "image/png", "jpeg": "image/jpeg", "webp": "image/webp"}
 
 
 def map_finish_reason(finish_reason: str | None) -> str:
@@ -41,24 +46,14 @@ def map_finish_reason(finish_reason: str | None) -> str:
 
 
 class OpenAIProvider(LLMProvider):
-    """OpenAI provider using the official Python SDK.
-
-    Parameters
-    ----------
-    credential : str
-        OpenAI API key.
-    credential_type : str
-        Must be "api_key".
-
-    """
+    """OpenAI provider using the official Python SDK."""
 
     # openai.com serves reasoning + function tools only on /v1/responses
     # (gpt-5.4+ 400s the combo on chat completions). OpenAI-compatible
     # subclasses (OpenRouter, xAI) stay on chat completions.
     _use_responses_api = True
 
-    def __init__(self, credential: str, credential_type: str = "api_key") -> None:
-        self._credential_type = credential_type
+    def __init__(self, credential: str) -> None:
         self._client = openai.AsyncOpenAI(api_key=credential)
 
     @property
@@ -96,20 +91,37 @@ class OpenAIProvider(LLMProvider):
         prompt: str,
         *,
         model: str,
-        size: str = "1024x1024",
-        quality: str = "auto",
+        params: dict | None = None,
     ) -> tuple[bytes, str]:
-        """Generate a PNG via the gpt-image API; returns (image_bytes, mime_type)."""
-        # gpt-image models always return base64 PNG and reject response_format.
+        """Generate an image via the gpt-image API; returns (image_bytes, mime_type)."""
+        catalog_model = get_model(PROVIDER_ID, model)
+        request = build_image_request(
+            model,
+            params or {},
+            supports_arbitrary_size=bool(
+                catalog_model and catalog_model.image_arbitrary_size
+            ),
+        )
+        # gpt-image models always return base64 and reject response_format.
         response = await self._client.images.generate(
             prompt=prompt,
             model=model,
-            size=size,
-            quality=quality,
+            **request,
         )
         b64_data = response.data[0].b64_json
         image_bytes = base64.b64decode(b64_data)
-        return image_bytes, "image/png"
+        return image_bytes, _MIME_TYPES.get(request.get("output_format", "png"), "image/png")
+
+    def image_billing_size(self, model: str, params: dict) -> str:
+        """The size string this generation will be billed under."""
+        catalog_model = get_model(PROVIDER_ID, model)
+        return build_image_request(
+            model,
+            params or {},
+            supports_arbitrary_size=bool(
+                catalog_model and catalog_model.image_arbitrary_size
+            ),
+        )["size"]
 
     async def chat_completion(
         self,
@@ -179,16 +191,8 @@ class OpenAIProvider(LLMProvider):
 
         return await self._sync_completion(**kwargs)
 
-    async def get_available_models(
-        self,
-        *,
-        force_refresh: bool = False,
-    ) -> list[ModelInfo]:
-        """Return OpenAI models from the catalog (the source of truth).
-
-        ``force_refresh`` is accepted for interface compatibility and ignored
-        - the catalog is local and re-read on change.
-        """
+    async def get_available_models(self) -> list[ModelInfo]:
+        """Return OpenAI models from the catalog (the source of truth)."""
         return model_infos_for_provider("openai")
 
     def _build_request_kwargs(

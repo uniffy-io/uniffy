@@ -24,34 +24,10 @@ class SessionsService(Protocol):
     async def get_session(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def list_sessions(self, request: agents_dot_v1_dot_sessions__pb2.ListSessionsRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListSessionsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def update_session(self, request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def archive_session(self, request: agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def add_message(self, request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def list_messages(self, request: agents_dot_v1_dot_sessions__pb2.ListMessagesRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListMessagesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def get_session_context(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def get_session_context_stats(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def compact_session(self, request: agents_dot_v1_dot_sessions__pb2.CompactSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.CompactSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
     async def edit_message(self, request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.EditMessageResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-
-    async def delete_message(self, request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
     async def retry_message(self, request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
@@ -86,46 +62,6 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                     ),
                     function=svc.get_session,
                 ),
-                "/agents.v1.SessionsService/ListSessions": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ListSessions",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.ListSessionsRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.ListSessionsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.list_sessions,
-                ),
-                "/agents.v1.SessionsService/UpdateSession": Endpoint.unary(
-                    method=MethodInfo(
-                        name="UpdateSession",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.update_session,
-                ),
-                "/agents.v1.SessionsService/ArchiveSession": Endpoint.unary(
-                    method=MethodInfo(
-                        name="ArchiveSession",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.archive_session,
-                ),
-                "/agents.v1.SessionsService/AddMessage": Endpoint.unary(
-                    method=MethodInfo(
-                        name="AddMessage",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.add_message,
-                ),
                 "/agents.v1.SessionsService/ListMessages": Endpoint.unary(
                     method=MethodInfo(
                         name="ListMessages",
@@ -136,36 +72,6 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                     ),
                     function=svc.list_messages,
                 ),
-                "/agents.v1.SessionsService/GetSessionContext": Endpoint.unary(
-                    method=MethodInfo(
-                        name="GetSessionContext",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.get_session_context,
-                ),
-                "/agents.v1.SessionsService/GetSessionContextStats": Endpoint.unary(
-                    method=MethodInfo(
-                        name="GetSessionContextStats",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.get_session_context_stats,
-                ),
-                "/agents.v1.SessionsService/CompactSession": Endpoint.unary(
-                    method=MethodInfo(
-                        name="CompactSession",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.CompactSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.CompactSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.compact_session,
-                ),
                 "/agents.v1.SessionsService/EditMessage": Endpoint.unary(
                     method=MethodInfo(
                         name="EditMessage",
@@ -175,16 +81,6 @@ class SessionsServiceASGIApplication(ConnectASGIApplication[SessionsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.edit_message,
-                ),
-                "/agents.v1.SessionsService/DeleteMessage": Endpoint.unary(
-                    method=MethodInfo(
-                        name="DeleteMessage",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.delete_message,
                 ),
                 "/agents.v1.SessionsService/RetryMessage": Endpoint.unary(
                     method=MethodInfo(
@@ -260,86 +156,6 @@ class SessionsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def list_sessions(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.ListSessionsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.ListSessionsResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListSessions",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.ListSessionsRequest,
-                output=agents_dot_v1_dot_sessions__pb2.ListSessionsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def update_session(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UpdateSession",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def archive_session(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ArchiveSession",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def add_message(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="AddMessage",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def list_messages(
         self,
         request: agents_dot_v1_dot_sessions__pb2.ListMessagesRequest,
@@ -360,66 +176,6 @@ class SessionsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def get_session_context(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetSessionContext",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest,
-                output=agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def get_session_context_stats(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetSessionContextStats",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest,
-                output=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def compact_session(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.CompactSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.CompactSessionResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="CompactSession",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.CompactSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.CompactSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def edit_message(
         self,
         request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
@@ -434,26 +190,6 @@ class SessionsServiceClient(ConnectClient):
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
                 output=agents_dot_v1_dot_sessions__pb2.EditMessageResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def delete_message(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteMessage",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
-                output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -509,25 +245,9 @@ class SessionsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_session(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def list_sessions(self, request: agents_dot_v1_dot_sessions__pb2.ListSessionsRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListSessionsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_session(self, request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def archive_session(self, request: agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def add_message(self, request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_messages(self, request: agents_dot_v1_dot_sessions__pb2.ListMessagesRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.ListMessagesResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_session_context(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def get_session_context_stats(self, request: agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def compact_session(self, request: agents_dot_v1_dot_sessions__pb2.CompactSessionRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.CompactSessionResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def edit_message(self, request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.EditMessageResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def delete_message(self, request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def retry_message(self, request: agents_dot_v1_dot_sessions__pb2.RetryMessageRequest, ctx: RequestContext) -> agents_dot_v1_dot_sessions__pb2.RetryMessageResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
@@ -559,46 +279,6 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.get_session,
                 ),
-                "/agents.v1.SessionsService/ListSessions": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ListSessions",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.ListSessionsRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.ListSessionsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.list_sessions,
-                ),
-                "/agents.v1.SessionsService/UpdateSession": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="UpdateSession",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.update_session,
-                ),
-                "/agents.v1.SessionsService/ArchiveSession": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="ArchiveSession",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.archive_session,
-                ),
-                "/agents.v1.SessionsService/AddMessage": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="AddMessage",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.add_message,
-                ),
                 "/agents.v1.SessionsService/ListMessages": EndpointSync.unary(
                     method=MethodInfo(
                         name="ListMessages",
@@ -609,36 +289,6 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.list_messages,
                 ),
-                "/agents.v1.SessionsService/GetSessionContext": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="GetSessionContext",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.get_session_context,
-                ),
-                "/agents.v1.SessionsService/GetSessionContextStats": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="GetSessionContextStats",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.get_session_context_stats,
-                ),
-                "/agents.v1.SessionsService/CompactSession": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="CompactSession",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.CompactSessionRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.CompactSessionResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.compact_session,
-                ),
                 "/agents.v1.SessionsService/EditMessage": EndpointSync.unary(
                     method=MethodInfo(
                         name="EditMessage",
@@ -648,16 +298,6 @@ class SessionsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.edit_message,
-                ),
-                "/agents.v1.SessionsService/DeleteMessage": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="DeleteMessage",
-                        service_name="agents.v1.SessionsService",
-                        input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
-                        output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.delete_message,
                 ),
                 "/agents.v1.SessionsService/RetryMessage": EndpointSync.unary(
                     method=MethodInfo(
@@ -733,86 +373,6 @@ class SessionsServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def list_sessions(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.ListSessionsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.ListSessionsResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ListSessions",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.ListSessionsRequest,
-                output=agents_dot_v1_dot_sessions__pb2.ListSessionsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def update_session(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="UpdateSession",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.UpdateSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.UpdateSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def archive_session(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="ArchiveSession",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.ArchiveSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.ArchiveSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def add_message(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.AddMessageResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="AddMessage",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.AddMessageRequest,
-                output=agents_dot_v1_dot_sessions__pb2.AddMessageResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     def list_messages(
         self,
         request: agents_dot_v1_dot_sessions__pb2.ListMessagesRequest,
@@ -833,66 +393,6 @@ class SessionsServiceClientSync(ConnectClientSync):
             timeout_ms=timeout_ms,
         )
 
-    def get_session_context(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetSessionContext",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.GetSessionContextRequest,
-                output=agents_dot_v1_dot_sessions__pb2.GetSessionContextResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def get_session_context_stats(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="GetSessionContextStats",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsRequest,
-                output=agents_dot_v1_dot_sessions__pb2.GetSessionContextStatsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def compact_session(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.CompactSessionRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.CompactSessionResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="CompactSession",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.CompactSessionRequest,
-                output=agents_dot_v1_dot_sessions__pb2.CompactSessionResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     def edit_message(
         self,
         request: agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
@@ -907,26 +407,6 @@ class SessionsServiceClientSync(ConnectClientSync):
                 service_name="agents.v1.SessionsService",
                 input=agents_dot_v1_dot_sessions__pb2.EditMessageRequest,
                 output=agents_dot_v1_dot_sessions__pb2.EditMessageResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    def delete_message(
-        self,
-        request: agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse:
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="DeleteMessage",
-                service_name="agents.v1.SessionsService",
-                input=agents_dot_v1_dot_sessions__pb2.DeleteMessageRequest,
-                output=agents_dot_v1_dot_sessions__pb2.DeleteMessageResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

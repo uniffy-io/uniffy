@@ -202,6 +202,14 @@ class UserOperations:
 
         await invalidate_user_profile(user_id)
 
+        if was_deactivated or was_activated:
+            # Org-admin / domain-admin / role verdicts are Valkey-cached for
+            # minutes and keyed by user tag; an activation flip only takes
+            # effect once they are dropped.
+            from uniffy.core.auth.cache import invalidate_user
+
+            await invalidate_user(user_id)
+
         if token_revoked:
             from uniffy.domains.auth.revocation import mark_token_version_revoked
 

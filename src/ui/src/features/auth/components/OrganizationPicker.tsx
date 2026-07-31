@@ -17,6 +17,8 @@ import { clearBookmarks } from "@/features/bookmarks";
 import { clearPresence } from "@/features/presence";
 import { clearPermissions } from "@/features/permissions";
 import { clearAdmin } from "@/features/admin";
+import { clearAgentProviders } from "@/features/agents/store/agentProvidersSlice";
+import { clearIntegrations } from "@/features/integrations/store/integrationsSlice";
 import {
     clearBlobCache,
     clearFiles,
@@ -208,6 +210,8 @@ export function OrganizationPicker() {
     dispatch(clearPresence());
     dispatch(clearPermissions());
     dispatch(clearAdmin());
+    dispatch(clearAgentProviders());
+    dispatch(clearIntegrations());
     dispatch(clearChatChannels());
     dispatch(clearChatMessages());
     dispatch(clearChatThreads());

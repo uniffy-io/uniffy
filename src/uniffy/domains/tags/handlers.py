@@ -44,8 +44,8 @@ from uniffy.core.types import ContentType
 from uniffy.core.valkey.queue import get_queue_safe
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
-    get_organization_id_from_context,
     get_user_id_from_context,
+    resolve_organization_id,
 )
 from uniffy.domains.tags.converters import (
     assignment_to_proto,
@@ -71,30 +71,6 @@ def _parse_uuid(value: str, field: str) -> UUID:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}") from exc
-
-
-def _resolve_org(ctx: RequestContext, request_org_id: str) -> UUID:
-    """JWT wins; request value must match when both are present.
-
-    Letting the request body override the JWT claim turns ``org_id`` into
-    a client-controlled scope: a user logged into org A could call a tag
-    operation against org B by passing it in the body, and every
-    downstream op would have to remember to verify membership. Pinning
-    to the JWT removes that footgun. The request field stays accepted
-    for pre-org-selection callers (no ``org_id`` in the token).
-    """
-    inferred = get_organization_id_from_context(ctx)
-    if request_org_id:
-        parsed = _parse_uuid(request_org_id, "organization_id")
-        if inferred is not None and inferred != parsed:
-            raise ConnectError(
-                Code.PERMISSION_DENIED,
-                "organization_id does not match the authenticated session",
-            )
-        return parsed
-    if inferred is None:
-        raise ConnectError(Code.INVALID_ARGUMENT, "organization_id is required")
-    return inferred
 
 
 def _content_types_from_proto(values: list[int]) -> list[ContentType]:
@@ -129,7 +105,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> CreateTagResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if not request.name or not request.name.strip():
             raise ConnectError(Code.INVALID_ARGUMENT, "name is required")
@@ -158,7 +134,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> UpdateTagResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         tag_id = _parse_uuid(request.tag_id, "tag_id")
 
         try:
@@ -208,7 +184,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> DeleteTagResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         tag_id = _parse_uuid(request.tag_id, "tag_id")
 
         try:
@@ -246,7 +222,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> GetTagResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if not request.tag:
             raise ConnectError(Code.INVALID_ARGUMENT, "tag is required")
@@ -273,7 +249,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> ListTagsResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
@@ -303,7 +279,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> SuggestTagsResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
@@ -330,7 +306,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> AssignTagsResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if not request.content_urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "content_urn is required")
@@ -362,8 +338,8 @@ class TagsHandlers:
         request: UnassignTagsRequest,
         ctx: RequestContext,
     ) -> UnassignTagsResponse:
-        get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if not request.content_urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "content_urn is required")
@@ -379,6 +355,7 @@ class TagsHandlers:
             async with open_session() as session:
                 ops = TagOperations(session)
                 await ops.unassign(
+                    actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=request.content_urn,
                     tag_ids=tag_ids,
@@ -397,7 +374,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> GetTagsForUrnsResponse:
         get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
@@ -428,7 +405,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> ListContentByTagResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if not request.tag:
             raise ConnectError(Code.INVALID_ARGUMENT, "tag is required")
@@ -488,7 +465,7 @@ class TagsHandlers:
         ctx: RequestContext,
     ) -> MergeTagsResponse:
         actor_id = get_user_id_from_context(ctx)
-        organization_id = _resolve_org(ctx, request.organization_id)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         source_id = _parse_uuid(request.source_tag_id, "source_tag_id")
         target_id = _parse_uuid(request.target_tag_id, "target_tag_id")
 

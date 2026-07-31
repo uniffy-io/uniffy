@@ -111,7 +111,7 @@ class SearchOperations:
         if type_filters and "note" not in type_filters:
             return [], 0
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.NOTE,

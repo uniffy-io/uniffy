@@ -40,7 +40,6 @@ interface CalendarUiState {
   editingTemplateId: string | null;
   isMobileView: boolean;
   activeMobilePanel: 'sidebar' | 'calendar' | 'detail';
-  eventScope: 'all' | 'personal' | 'organization';
 }
 
 function getDefaultCollapsedSections(): SidebarSectionId[] {
@@ -78,7 +77,6 @@ const initialState: CalendarUiState = {
   editingTemplateId: null,
   isMobileView: false,
   activeMobilePanel: 'calendar',
-  eventScope: 'all',
 };
 
 const calendarUiSlice = createSlice({
@@ -300,10 +298,6 @@ const calendarUiSlice = createSlice({
       state.activeMobilePanel = action.payload;
     },
 
-    setEventScope: (state, action: PayloadAction<'all' | 'personal' | 'organization'>) => {
-      state.eventScope = action.payload;
-    },
-
     resetCalendarUiState: () => initialState,
   },
 });
@@ -348,7 +342,6 @@ export const {
   closeCreateTemplateModal,
   setMobileView,
   setActiveMobilePanel,
-  setEventScope,
   resetCalendarUiState,
 } = calendarUiSlice.actions;
 

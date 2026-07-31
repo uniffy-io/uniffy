@@ -254,23 +254,22 @@ func (x *CronTaskInfo) GetBaselineRole() v1.ContentRole {
 	return v1.ContentRole(0)
 }
 
-// Execution log entry
+// Execution log entry, served from the shared agents_run_logs table.
 type CronRunLogInfo struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	CronTaskId     string                 `protobuf:"bytes,2,opt,name=cron_task_id,json=cronTaskId,proto3" json:"cron_task_id,omitempty"`
 	OrganizationId string                 `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	AgentRunLogId  *string                `protobuf:"bytes,4,opt,name=agent_run_log_id,json=agentRunLogId,proto3,oneof" json:"agent_run_log_id,omitempty"`
-	SessionId      string                 `protobuf:"bytes,5,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Status         string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	Error          *string                `protobuf:"bytes,7,opt,name=error,proto3,oneof" json:"error,omitempty"`
-	ResultSummary  *string                `protobuf:"bytes,8,opt,name=result_summary,json=resultSummary,proto3,oneof" json:"result_summary,omitempty"`
-	StartedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
-	CompletedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	InputTokens    int32                  `protobuf:"varint,11,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	OutputTokens   int32                  `protobuf:"varint,12,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Empty until the execution has a session (pending placeholder rows).
+	SessionId     string                 `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Error         *string                `protobuf:"bytes,6,opt,name=error,proto3,oneof" json:"error,omitempty"`
+	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	InputTokens   int32                  `protobuf:"varint,9,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens  int32                  `protobuf:"varint,10,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CronRunLogInfo) Reset() {
@@ -324,13 +323,6 @@ func (x *CronRunLogInfo) GetOrganizationId() string {
 	return ""
 }
 
-func (x *CronRunLogInfo) GetAgentRunLogId() string {
-	if x != nil && x.AgentRunLogId != nil {
-		return *x.AgentRunLogId
-	}
-	return ""
-}
-
 func (x *CronRunLogInfo) GetSessionId() string {
 	if x != nil {
 		return x.SessionId
@@ -348,13 +340,6 @@ func (x *CronRunLogInfo) GetStatus() string {
 func (x *CronRunLogInfo) GetError() string {
 	if x != nil && x.Error != nil {
 		return *x.Error
-	}
-	return ""
-}
-
-func (x *CronRunLogInfo) GetResultSummary() string {
-	if x != nil && x.ResultSummary != nil {
-		return *x.ResultSummary
 	}
 	return ""
 }
@@ -1249,27 +1234,23 @@ const file_agents_v1_cron_proto_rawDesc = "" +
 	"\x0f_last_run_errorB\r\n" +
 	"\v_updated_atB\r\n" +
 	"\v_agent_nameB\x10\n" +
-	"\x0e_baseline_role\"\xa1\x04\n" +
+	"\x0e_baseline_role\"\x9f\x03\n" +
 	"\x0eCronRunLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
 	"\fcron_task_id\x18\x02 \x01(\tR\n" +
 	"cronTaskId\x12'\n" +
-	"\x0forganization_id\x18\x03 \x01(\tR\x0eorganizationId\x12,\n" +
-	"\x10agent_run_log_id\x18\x04 \x01(\tH\x00R\ragentRunLogId\x88\x01\x01\x12\x1d\n" +
+	"\x0forganization_id\x18\x03 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x05 \x01(\tR\tsessionId\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12\x19\n" +
-	"\x05error\x18\a \x01(\tH\x01R\x05error\x88\x01\x01\x12*\n" +
-	"\x0eresult_summary\x18\b \x01(\tH\x02R\rresultSummary\x88\x01\x01\x129\n" +
+	"session_id\x18\x04 \x01(\tR\tsessionId\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x19\n" +
+	"\x05error\x18\x06 \x01(\tH\x00R\x05error\x88\x01\x01\x129\n" +
 	"\n" +
-	"started_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12B\n" +
-	"\fcompleted_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampH\x03R\vcompletedAt\x88\x01\x01\x12!\n" +
-	"\finput_tokens\x18\v \x01(\x05R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\f \x01(\x05R\foutputTokensB\x13\n" +
-	"\x11_agent_run_log_idB\b\n" +
-	"\x06_errorB\x11\n" +
-	"\x0f_result_summaryB\x0f\n" +
+	"started_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12B\n" +
+	"\fcompleted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x01R\vcompletedAt\x88\x01\x01\x12!\n" +
+	"\finput_tokens\x18\t \x01(\x05R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\n" +
+	" \x01(\x05R\foutputTokensB\b\n" +
+	"\x06_errorB\x0f\n" +
 	"\r_completed_at\"\xb6\x03\n" +
 	"\x15CreateCronTaskRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +

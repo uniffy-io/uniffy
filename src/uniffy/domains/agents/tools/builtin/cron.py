@@ -1,6 +1,7 @@
 """Built-in cron scheduling tools for agents."""
 
 import json
+from datetime import timedelta
 
 from uniffy.core.types import AccessMode
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
@@ -152,8 +153,11 @@ async def _execute_cron_delete(ctx: ToolContext, args: dict) -> ToolResult:
     task_id = UUID(task_id_str)
 
     ops = CronTaskOperations(ctx.session)
-    # get_by_id + _require_delete happen inside delete()
-    await ops.delete(ctx.user_id, ctx.organization_id, task_id)
+    await ops.delete_cron_task(
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+        task_id=task_id,
+    )
 
     return ToolResult(success=True, data="Scheduled task deleted.")
 
@@ -185,23 +189,25 @@ async def _execute_cron_get_runs(ctx: ToolContext, args: dict) -> ToolResult:
 
     lines = [f"Showing {len(logs)} of {total} executions:"]
     for log in logs:
-        started = log.started_at.strftime("%Y-%m-%d %H:%M UTC")
+        # The run log row is written when the execution settles, so created_at
+        # is the completion time; the start is derived from duration_ms.
+        started = log.created_at
+        if log.status != "pending" and log.duration_ms:
+            started = log.created_at - timedelta(milliseconds=log.duration_ms)
+        started_str = started.strftime("%Y-%m-%d %H:%M UTC")
         tokens = f"{log.input_tokens} in / {log.output_tokens} out"
-        summary = ""
-        if log.result_summary:
-            summary = f"\n  Summary: {log.result_summary[:200]}"
         error = ""
         if log.error:
             error = f"\n  Error: {log.error[:200]}"
-        lines.append(f"- [{log.status}] {started} ({tokens}){summary}{error}")
+        lines.append(f"- [{log.status}] {started_str} ({tokens}){error}")
 
     return ToolResult(success=True, data="\n".join(lines))
 
 
-# -- Tool definitions --------------------------------------------------------
-
 cron_create = ToolDefinition(
     name="cron.create",
+    display_name="Create Scheduled Task",
+    group="Scheduling",
     description=(
         "Create a recurring scheduled task. The task will execute on the "
         "specified schedule, sending the prompt to yourself (this agent) "
@@ -247,6 +253,8 @@ cron_create = ToolDefinition(
 
 cron_list = ToolDefinition(
     name="cron.list",
+    display_name="List Scheduled Tasks",
+    group="Scheduling",
     description=(
         "List all scheduled tasks. Shows name, schedule, status, "
         "next run time, and execution history summary."
@@ -266,6 +274,8 @@ cron_list = ToolDefinition(
 
 cron_update = ToolDefinition(
     name="cron.update",
+    display_name="Update Scheduled Task",
+    group="Scheduling",
     description=(
         "Update a scheduled task's name, prompt, schedule, timezone, "
         "or enabled status. Use this to pause/resume, change the schedule, "
@@ -306,6 +316,8 @@ cron_update = ToolDefinition(
 
 cron_delete = ToolDefinition(
     name="cron.delete",
+    display_name="Delete Scheduled Task",
+    group="Scheduling",
     description="Delete a scheduled task permanently.",
     parameter_schema={
         "type": "object",
@@ -323,9 +335,12 @@ cron_delete = ToolDefinition(
 
 cron_get_runs = ToolDefinition(
     name="cron.get_runs",
+    display_name="View Run History",
+    group="Scheduling",
     description=(
         "View the execution history of a scheduled task. "
-        "Shows status, timestamps, token usage, and result summaries."
+        "Shows status, timestamps, and token usage; the run output itself "
+        "lives in the task's session transcript."
     ),
     parameter_schema={
         "type": "object",

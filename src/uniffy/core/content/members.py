@@ -94,6 +94,46 @@ def register_content_loader(content_type: ContentType, loader: ContentLoader) ->
     _CONTENT_LOADERS[content_type] = loader
 
 
+def find_content_loader(content_type: ContentType) -> ContentLoader | None:
+    """Non-raising lookup for callers that treat an unregistered type as
+    "cannot decide" rather than an error.
+    """
+    return _CONTENT_LOADERS.get(content_type)
+
+
+# Domain-level management power (e.g. agents builders): grants MANAGE on rows of
+# a content type without touching effective_role, so reads/lists/search stay
+# unaffected. See permissions.md "Domain admin".
+ManageOverride = Callable[
+    [AsyncSession, UUID, UUID],  # (session, actor_user_id, organization_id)
+    Awaitable[bool],
+]
+
+_manage_overrides: dict[ContentType, ManageOverride] = {}
+
+
+def register_manage_override(content_type: ContentType, check: ManageOverride) -> None:
+    _manage_overrides[content_type] = check
+
+
+# Runs inside the ownership-transfer transaction, before its commit, so domain
+# state tied to the owner (e.g. a cron task's execution identity) moves
+# atomically with owner_id.
+OwnershipTransferHook = Callable[
+    [AsyncSession, UUID, UUID, UUID],  # (session, organization_id, content_id, new_owner_id)
+    Awaitable[None],
+]
+
+_ownership_transfer_hooks: dict[ContentType, OwnershipTransferHook] = {}
+
+
+def register_ownership_transfer_hook(
+    content_type: ContentType,
+    hook: OwnershipTransferHook,
+) -> None:
+    _ownership_transfer_hooks[content_type] = hook
+
+
 def get_content_loader(content_type: ContentType) -> ContentLoader:
     loader = _CONTENT_LOADERS.get(content_type)
     if loader is None:
@@ -783,6 +823,12 @@ class ContentMembersOperations:
             note="Demoted to ADMIN via ownership transfer",
         )
 
+        transfer_hook = _ownership_transfer_hooks.get(content_type)
+        if transfer_hook is not None:
+            await transfer_hook(
+                self.session, organization_id, content_id, new_owner_user_id
+            )
+
         await self.session.commit()
         await self.session.refresh(content)
 
@@ -898,6 +944,9 @@ class ContentMembersOperations:
             baseline_role=content.baseline_role,
         )
         if not role_can_manage(role):
+            override = _manage_overrides.get(content_type)
+            if override and await override(self.session, actor_user_id, organization_id):
+                return ContentRole.ADMIN
             raise PermissionDeniedError("manage", content_type.value)
         return role
 

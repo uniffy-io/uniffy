@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Kanban, Cpu, List, MagnifyingGlass } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
@@ -12,6 +12,7 @@ import { cn } from '@/shared/utils/cn';
 import { UrnType } from '@/shared/utils/urn';
 import { getContentTypeConfig } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
+import { useAgentsBuilderAccess } from '@/features/agents/hooks/useAgentsBuilderAccess';
 import { UniffyLogo } from '@/components/ui/uniffy-logo';
 import { Drawer } from '@/components/ui/drawer';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -36,6 +37,15 @@ const navItems: NavItem[] = [
   { name: 'Projects', path: '/projects', icon: Kanban },
   { name: 'Agents', path: '/agents', icon: Cpu },
 ];
+
+// The builder surface is gated; non-builders never see the Agents entry.
+function useVisibleNavItems(): NavItem[] {
+  const { isBuilder } = useAgentsBuilderAccess();
+  return useMemo(
+    () => navItems.filter((item) => item.path !== '/agents' || isBuilder),
+    [isBuilder]
+  );
+}
 
 function LogoNavItem({ isActive }: { isActive: boolean }) {
 
@@ -120,6 +130,7 @@ function MobileNavDrawer({
   onClose: () => void;
   currentPath: string;
 }) {
+  const visibleNavItems = useVisibleNavItems();
   return (
     <Drawer open={open} onClose={onClose} side="left" ariaLabel="Navigation" className="w-64">
       <div className="pt-12 px-3">
@@ -137,7 +148,7 @@ function MobileNavDrawer({
             <UniffyLogo className="w-5 h-5" />
             Home
           </Link>
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = currentPath.startsWith(item.path);
             const NavIcon = item.icon;
             return (
@@ -168,6 +179,7 @@ export function AppHeader() {
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const { isMobile } = useBreakpoint();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const visibleNavItems = useVisibleNavItems();
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
@@ -196,7 +208,7 @@ export function AppHeader() {
 
             <nav className="hidden md:flex items-center gap-0.5">
               <LogoNavItem isActive={location.pathname === '/'} />
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.path);
                 return (
                   <CompactNavItem key={item.path} item={item} isActive={isActive} />

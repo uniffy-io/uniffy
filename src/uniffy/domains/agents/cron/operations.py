@@ -12,6 +12,7 @@ from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.members import (
     ContentMembersOperations,
     register_content_loader,
+    register_ownership_transfer_hook,
 )
 from uniffy.core.errors import (
     NotFoundError,
@@ -19,12 +20,12 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
 from uniffy.core.models.agents.cron_task import AgentCronTask
-from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.valkey import get_queue
+from uniffy.domains.agents.access import require_agents_builder
 from uniffy.domains.agents.agents.operations import AgentOperations
 
 MAX_CRON_TASKS_PER_USER = 20
@@ -83,6 +84,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         agent_ops = AgentOperations(self.session)
         await agent_ops.get_by_id(user_id, organization_id, agent_id)
 
+        await require_agents_builder(self.session, user_id, organization_id)
         await self._enforce_user_limit(user_id, organization_id)
 
         _validate_cron_expression(cron_expression)
@@ -157,6 +159,12 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         if task is None:
             raise NotFoundError("AgentCronTask", task_id)
 
+        await require_agents_builder(self.session, user_id, organization_id)
+        # Builder is a domain-level power over the automation surface, not a
+        # content bypass: the task carries its prompt and runs as its execution
+        # user, so touching one also needs an editor role on the task itself.
+        # Without this an edit doubles as a read of an OWNER_ONLY prompt, and
+        # a schedule or enabled flip never passes the identity guard below.
         await self._require_edit(user_id, organization_id, task)
 
         if name is not None:
@@ -164,6 +172,13 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         if description is not None:
             task.description = description
         if prompt is not None:
+            # A run executes with execution_user_id's permissions, so whoever
+            # rewrites the prompt owns the identity it runs under. Without this
+            # a builder could make someone else's task run attacker-authored
+            # instructions as that person.
+            if prompt != task.prompt and task.execution_user_id != user_id:
+                task.execution_user_id = user_id
+                task.owner_id = user_id
             task.prompt = prompt
 
         if cron_expression is not None:
@@ -208,6 +223,7 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         if task is None:
             raise NotFoundError("AgentCronTask", task_id)
 
+        await require_agents_builder(self.session, user_id, organization_id)
         await self._require_delete(user_id, organization_id, task)
 
         task.is_deleted = True
@@ -226,32 +242,39 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         user_id: UUID,
         organization_id: UUID,
         agent_id: UUID | None = None,
-        personal_only: bool = False,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[AgentCronTask], int]:
         """List cron tasks the user can access.
 
-        When `agent_id` is provided and accessible, all of its cron tasks
-        are returned regardless of the task's own access policy. Otherwise
-        tasks are filtered via the canonical `build_accessible_filter`.
+        The task's own access policy always applies: a task carries its prompt,
+        description and execution identity, so view access to the agent never
+        substitutes for view access to the task. `agent_id` only narrows that
+        set to one agent, which is additionally view-gated.
         """
         query = select(AgentCronTask).where(
             AgentCronTask.organization_id == organization_id,
             AgentCronTask.is_deleted == False,  # noqa: E712
+            await self.access_query.build_accessible_filter(
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=ContentType.AGENT_CRON_TASK,
+                content_id_column=AgentCronTask.id,
+                owner_id_column=AgentCronTask.owner_id,
+                access_mode_column=AgentCronTask.access_mode,
+                baseline_role_column=AgentCronTask.baseline_role,
+            ),
         )
 
         if agent_id:
             agent_ops = AgentOperations(self.session)
             await agent_ops.get_by_id(user_id, organization_id, agent_id)
             query = query.where(AgentCronTask.agent_id == agent_id)
-        elif personal_only:
-            query = query.where(AgentCronTask.owner_id == user_id)
         else:
             accessible_agent_ids = select(Agent.id).where(
                 Agent.organization_id == organization_id,
                 Agent.is_deleted == False,  # noqa: E712
-                self.access_query.build_accessible_filter(
+                await self.access_query.build_accessible_filter(
                     user_id=user_id,
                     organization_id=organization_id,
                     content_type=ContentType.AGENT,
@@ -275,14 +298,21 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         return tasks, total
 
     async def get_due_tasks(self) -> list[AgentCronTask]:
-        """Return all enabled, non-deleted tasks with `next_run_at <= now`."""
+        """Return all enabled, non-deleted tasks with `next_run_at <= now`.
+
+        A deleted agent cannot answer, so its tasks are skipped here as well as
+        disabled on delete: without the join, a schedule whose agent went away
+        would burn one failed run per tick.
+        """
         now = datetime.now(UTC)
         result = await self.session.execute(
             select(AgentCronTask)
+            .join(Agent, Agent.id == AgentCronTask.agent_id)
             .where(
                 AgentCronTask.is_enabled == True,  # noqa: E712
                 AgentCronTask.is_deleted == False,  # noqa: E712
                 AgentCronTask.next_run_at <= now,
+                Agent.is_deleted == False,  # noqa: E712
             )
             .order_by(AgentCronTask.next_run_at.asc())
             .limit(100)
@@ -330,19 +360,19 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         task_id: UUID,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[list[AgentCronRunLog], int]:
-        """Return execution history for a cron task."""
+    ) -> tuple[list[AgentRunLog], int]:
+        """Return execution history for a cron task from the shared run logs."""
         await self.get_by_id(user_id, organization_id, task_id)
 
         count_result = await self.session.execute(
-            select(func.count()).where(AgentCronRunLog.cron_task_id == task_id)
+            select(func.count()).where(AgentRunLog.cron_task_id == task_id)
         )
         total = count_result.scalar() or 0
 
         result = await self.session.execute(
-            select(AgentCronRunLog)
-            .where(AgentCronRunLog.cron_task_id == task_id)
-            .order_by(AgentCronRunLog.started_at.desc())
+            select(AgentRunLog)
+            .where(AgentRunLog.cron_task_id == task_id)
+            .order_by(AgentRunLog.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -353,19 +383,18 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
     async def transfer_ownership(
         self,
         *,
-        admin_user_id: UUID,
+        actor_user_id: UUID,
         organization_id: UUID,
         task_id: UUID,
         new_owner_id: UUID,
     ) -> AgentCronTask:
-        """Transfer task ownership (org admin only)."""
-        from uniffy.domains.organizations.operations import OrganizationOperations
+        """Transfer task ownership through the OWNER-only content path.
 
-        org_ops = OrganizationOperations(self.session)
-        membership = await org_ops.require_org_member(admin_user_id, organization_id)
-        if membership.role not in (OrganizationRole.ADMIN, OrganizationRole.OWNER):
-            raise PermissionDeniedError("transfer_ownership", "AGENT_CRON_TASK")
-
+        Ownership and execution identity move together: a cron run executes
+        with ``execution_user_id``'s permissions, so it is repointed to the
+        new owner in the same operation. There is no admin bypass; only the
+        current owner can transfer.
+        """
         result = await self.session.execute(
             select(AgentCronTask).where(
                 AgentCronTask.id == task_id,
@@ -386,13 +415,18 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
                 "New owner does not have access to the agent",
             ) from exc
 
-        task.owner_id = new_owner_id
-        task.execution_user_id = new_owner_id
-        task.updated_at = datetime.now(UTC)
+        # The registered ownership-transfer hook repoints execution_user_id
+        # inside the same transaction as the owner_id move.
+        members_ops = ContentMembersOperations(self.session)
+        await members_ops.transfer_ownership(
+            actor_user_id=actor_user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id=task_id,
+            new_owner_user_id=new_owner_id,
+        )
 
-        await self.session.commit()
         await self.session.refresh(task)
-
         await self._index_for_search(task)
         await self.session.commit()
 
@@ -403,16 +437,34 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         user_id: UUID,
         organization_id: UUID,
         task_id: UUID,
-    ) -> tuple[AgentCronTask, AgentCronRunLog]:
-        """Trigger immediate execution of a cron task via the worker."""
-        task = await self.get_by_id(user_id, organization_id, task_id)
+    ) -> tuple[AgentCronTask, AgentRunLog]:
+        """Trigger immediate execution of a cron task via the worker.
 
-        run_log = AgentCronRunLog(
+        A pending placeholder row gives the history view immediate feedback;
+        the worker replaces it with the runtime-written row (or records the
+        failure on it) when the execution settles.
+        """
+        task = await self.get_by_id(user_id, organization_id, task_id)
+        if task.execution_user_id != user_id:
+            raise PermissionDeniedError(
+                "trigger", "Only the task's execution user can run it on demand"
+            )
+
+        agent_deleted = await self.session.execute(
+            select(Agent.is_deleted).where(Agent.id == task.agent_id)
+        )
+        if agent_deleted.scalar_one_or_none() is not False:
+            raise ValidationError("agent", "This automation's agent was deleted")
+
+        run_log = AgentRunLog(
             cron_task_id=task.id,
             organization_id=task.organization_id,
-            session_id=task.session_id or task.id,
+            agent_id=task.agent_id,
+            user_id=task.execution_user_id,
+            session_id=task.session_id,
+            model="",
+            kind="cron",
             status="pending",
-            started_at=datetime.now(UTC),
         )
         self.session.add(run_log)
         await self.session.commit()
@@ -428,7 +480,6 @@ class CronTaskOperations(BaseContentOperations[AgentCronTask]):
         except RuntimeError as exc:
             run_log.status = "error"
             run_log.error = "Background worker unavailable. Please try again later."
-            run_log.completed_at = datetime.now(UTC)
             await self.session.commit()
             raise ValidationError("queue", "Background worker is not available") from exc
 
@@ -512,4 +563,19 @@ async def _load_cron_task(
     return result.scalar_one_or_none()
 
 
+async def _repoint_execution_identity(
+    session: AsyncSession,
+    organization_id: UUID,
+    content_id: UUID,
+    new_owner_id: UUID,
+) -> None:
+    """A cron run executes with ``execution_user_id``'s permissions, so it must
+    move with owner_id in the same transaction on every transfer path."""
+    task = await _load_cron_task(session, organization_id, content_id)
+    if task is not None:
+        task.execution_user_id = new_owner_id
+        task.updated_at = datetime.now(UTC)
+
+
 register_content_loader(ContentType.AGENT_CRON_TASK, _load_cron_task)
+register_ownership_transfer_hook(ContentType.AGENT_CRON_TASK, _repoint_execution_identity)

@@ -117,7 +117,7 @@ class BaseContentOperations[TModel](ABC):
         # Apply domain filters before the access filter so they don't interact.
         query = self._apply_filters(query, **filters)
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,

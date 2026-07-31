@@ -26,7 +26,7 @@ from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
-from uniffy.core.errors import ConflictError, NotFoundError
+from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
@@ -57,6 +57,8 @@ from uniffy.domains.tags import (
 from uniffy.observability.metrics import REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL
 
 logger = logger.bind(component="notes.operations")
+
+_MAX_TREE_DEPTH = 64
 
 _MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^|\]]+)\|[^\]]+\\?\]\\?\]\\?\]")
 _MENTION_RE = re.compile(r"\[\[\[([^|]+)\|[^\]]+\]\]\]")
@@ -275,7 +277,9 @@ class NoteOperations(BaseContentOperations[Note]):
         if effective_mode != AccessMode.OWNER_ONLY or group_ids:
             await self._emit_shared_notification(user_id, organization_id, note)
         await self._broadcast_open_to_org_create(organization_id, note.id, effective_mode)
-        await self._notify_new_mentions(user_id, organization_id, note, old_refs=None)
+        await self._notify_new_mentions(
+                user_id, organization_id, note, old_refs=None, writer_id=user_id
+            )
 
         return note
 
@@ -298,6 +302,9 @@ class NoteOperations(BaseContentOperations[Note]):
             raise NotFoundError("Note", note_id)
 
         await self._require_edit(user_id, organization_id, note)
+
+        if isinstance(parent_id, UUID):
+            await self._require_moveable_under(note_id, parent_id, organization_id)
 
         is_canvas = note.node_type == NodeType.CANVAS
         content_changed = canvas_content is not None if is_canvas else content is not None
@@ -440,9 +447,43 @@ class NoteOperations(BaseContentOperations[Note]):
             )
 
         if content_changed:
-            await self._notify_new_mentions(user_id, organization_id, note, old_refs=old_refs)
+            await self._notify_new_mentions(
+                user_id, organization_id, note, old_refs=old_refs, writer_id=user_id
+            )
 
         return note
+
+    async def _require_moveable_under(
+        self,
+        note_id: UUID,
+        parent_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        """Refuse a move that would detach a subtree from the tree by filing a
+        folder under itself or under one of its own descendants.
+        """
+        if parent_id == note_id:
+            raise ValidationError("parent_id", "A note cannot be its own parent")
+
+        current: UUID | None = parent_id
+        # Bounded so a cycle already present in the data cannot spin here.
+        for _ in range(_MAX_TREE_DEPTH):
+            if current is None:
+                return
+            if current == note_id:
+                raise ValidationError(
+                    "parent_id", "Cannot move a folder into its own subtree"
+                )
+            current = (
+                await self.session.execute(
+                    select(Note.parent_id).where(
+                        Note.id == current,
+                        Note.organization_id == organization_id,
+                    )
+                )
+            ).scalar_one_or_none()
+
+        raise ValidationError("parent_id", "Folder nesting is too deep")
 
     async def delete(
         self,
@@ -470,6 +511,7 @@ class NoteOperations(BaseContentOperations[Note]):
             tag_ops = TagOperations(self.session)
             for nid in removed_ids:
                 await tag_ops.unassign_all_for_urn(
+                    actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(self.content_type, nid),
                 )
@@ -628,7 +670,10 @@ class NoteOperations(BaseContentOperations[Note]):
         await self._index_for_search(note)
         await self.session.commit()
 
-        await self._notify_new_mentions(actor_id, organization_id, note, old_refs=old_refs)
+        # No acting user on the snapshot path, so nobody is excluded as the writer.
+        await self._notify_new_mentions(
+            actor_id, organization_id, note, old_refs=old_refs, writer_id=None
+        )
 
         return note
 
@@ -718,6 +763,7 @@ class NoteOperations(BaseContentOperations[Note]):
         for nid in trash_ids:
             urn = build_content_urn(self.content_type, nid)
             await tag_ops.unassign_all_for_urn(
+                actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=urn,
             )
@@ -745,6 +791,7 @@ class NoteOperations(BaseContentOperations[Note]):
         personal_only: bool = False,
         include_deleted: bool = False,
         tag_ids: list[UUID] | None = None,
+        node_types: list[NodeType] | None = None,
         page: int = 1,
         page_size: int = 50,
         sort_by: str = "updated_at",
@@ -752,6 +799,8 @@ class NoteOperations(BaseContentOperations[Note]):
     ) -> tuple[list[Note], int]:
         """List notes the user can access. Bookmarks go through BookmarksService."""
         query = select(Note).where(Note.organization_id == organization_id)
+        if node_types:
+            query = query.where(Note.node_type.in_(node_types))
         query = await self._apply_access_filter(
             query, user_id, organization_id, personal_only=personal_only
         )
@@ -903,10 +952,16 @@ class NoteOperations(BaseContentOperations[Note]):
         organization_id: UUID,
         note: Note,
         old_refs: list[str] | None,
+        writer_id: UUID | None = None,
     ) -> None:
-        # ``old_refs=None`` on create -> every mention counts as new. Self-mentions skipped.
+        # ``old_refs=None`` on create -> every mention counts as new. Self-mentions
+        # skipped, but only when the writer is actually known: the realtime
+        # snapshot path has no acting user and attributes the save to the owner,
+        # so discarding on that value would drop the owner from a notification an
+        # editor wrote for them.
         new_mentioned = extract_mentioned_user_ids(note.outgoing_references)
-        new_mentioned.discard(user_id)
+        if writer_id is not None:
+            new_mentioned.discard(writer_id)
         if old_refs is not None:
             new_mentioned -= extract_mentioned_user_ids(old_refs)
         if not new_mentioned:
@@ -1016,7 +1071,7 @@ class NoteOperations(BaseContentOperations[Note]):
         if personal_only:
             return query.where(Note.owner_id == user_id)
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,

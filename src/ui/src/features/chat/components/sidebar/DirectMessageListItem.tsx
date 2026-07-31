@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useMemo } from 'react';
-import { SpeakerSlash, PencilSimple } from '@phosphor-icons/react';
+import { SpeakerSlash, PencilSimple, Trash } from '@phosphor-icons/react';
 import { ChannelCallIndicator } from '@/features/calls/components/ChannelCallIndicator';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -64,6 +64,10 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
     isAgentDm && channel.agentId ? state.agents.agents[channel.agentId] ?? null : null,
   );
 
+  // Server-told, not inferred from the agent missing off the live list, which
+  // would also be true for an agent this member simply cannot see.
+  const agentRetired = isAgentDm && !!channel.agentIsRetired;
+
   const groupSubject = useMemo<Subject | null>(() => {
     if (!isGroupDm) return null;
     const groupDisplayName = currentUserName
@@ -124,7 +128,7 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
             isActive ? 'font-medium' : '',
           )}
         >
-          <div className="shrink-0">
+          <div className={cn('shrink-0', agentRetired && 'opacity-50')}>
             {groupSubject ? (
               <SubjectAvatar subject={groupSubject} size="sm" />
             ) : isAgentDm ? (
@@ -140,11 +144,20 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
           </div>
 
           <span
-            className="truncate text-[0.9rem] flex-1"
+            className={cn('truncate text-[0.9rem] flex-1', agentRetired && 'text-muted-foreground')}
             data-testid={`chat-sidebar-dm-name-${channel.id}`}
           >
             {displayName}
           </span>
+
+          {agentRetired && (
+            <Trash
+              size={12}
+              className="shrink-0 text-muted-foreground/70"
+              alt="Agent deleted"
+              data-testid={`chat-sidebar-dm-retired-${channel.id}`}
+            />
+          )}
 
           {!isGroupDm && !isAgentDm && otherUserId && (
             <CustomStatusDisplay

@@ -27,7 +27,6 @@ export {
   CategoryList,
   TemplateList,
   TagCloud,
-  EventScopeFilter,
 } from '@/features/calendar/components/sidebar';
 
 export { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
@@ -66,7 +65,6 @@ export {
   closeQuickCapture,
   openTimezoneModal,
   closeTimezoneModal,
-  setEventScope,
 } from '@/features/calendar/store';
 
 export { calendarApi } from '@/features/calendar/api/calendarApi';

@@ -316,7 +316,6 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
         organization_id=ctx.organization_id,
         project_id=project_id,
         title=title,
-        task_type=args.get("task_type", "task"),
         **kwargs,
     )
 
@@ -563,6 +562,8 @@ async def _execute_move_task(ctx: ToolContext, args: dict) -> ToolResult:
 
 create_project = ToolDefinition(
     name="projects.create_project",
+    display_name="Create Project",
+    group="Projects",
     description="Create a new project in the organization.",
     parameter_schema={
         "type": "object",
@@ -596,6 +597,8 @@ create_project = ToolDefinition(
 
 update_project = ToolDefinition(
     name="projects.update_project",
+    display_name="Edit Project",
+    group="Projects",
     description=(
         "Update a project's name, description, icon, color, or slug. "
         "Use permissions.v1.MembersService to change the access mode or members."
@@ -617,6 +620,8 @@ update_project = ToolDefinition(
 
 delete_project = ToolDefinition(
     name="projects.delete_project",
+    display_name="Delete Project",
+    group="Projects",
     description="Delete a project. This is destructive and removes all associated tasks.",
     parameter_schema={
         "type": "object",
@@ -631,6 +636,8 @@ delete_project = ToolDefinition(
 
 list_projects = ToolDefinition(
     name="projects.list_projects",
+    display_name="List Projects",
+    group="Projects",
     description="List all projects in the organization.",
     parameter_schema={"type": "object", "properties": {}},
     executor=_execute_list_projects,
@@ -639,6 +646,8 @@ list_projects = ToolDefinition(
 
 create_task = ToolDefinition(
     name="tasks.create_task",
+    display_name="Create Task",
+    group="Tasks",
     description=(
         "Create a task with subtasks, dependencies, multiple assignees, sprints, and task types."
     ),
@@ -704,6 +713,8 @@ create_task = ToolDefinition(
 
 update_task = ToolDefinition(
     name="tasks.update_task",
+    display_name="Edit Task",
+    group="Tasks",
     description=(
         "Update any task field: status, priority, type, assignees, dates, subtask parent, "
         "dependencies (blocked_by), sprint assignment, milestone flag, and more. "
@@ -769,6 +780,8 @@ update_task = ToolDefinition(
 
 delete_task = ToolDefinition(
     name="tasks.delete_task",
+    display_name="Delete Task",
+    group="Tasks",
     description="Delete a task. This is destructive.",
     parameter_schema={
         "type": "object",
@@ -783,6 +796,8 @@ delete_task = ToolDefinition(
 
 list_tasks = ToolDefinition(
     name="tasks.list_tasks",
+    display_name="List Tasks",
+    group="Tasks",
     description=(
         "List tasks in a project with full details (status, priority, type, assignees, dates, "
         "dependencies, subtask hierarchy, sprint). Supports filtering by parent, sprint, backlog, "
@@ -841,6 +856,8 @@ list_tasks = ToolDefinition(
 
 move_task = ToolDefinition(
     name="tasks.move_task",
+    display_name="Move Task",
+    group="Tasks",
     description=(
         "Move a task to a different status column "
         "(e.g. status_todo, status_in_progress, status_done)."

@@ -21,7 +21,18 @@ import {
   checkAvailability,
   findAvailableRooms,
   fetchAvailableRoomIds,
+  openRoomViewer,
 } from '@/features/rooms/store/roomsThunks';
+
+/** Read-only room view opened from a mention chip, a search hit or /rooms/:roomId. */
+interface RoomViewerState {
+  roomId: string | null;
+  /** The room page renders this state in place, so the global modal skips it. */
+  inline: boolean;
+  loading: boolean;
+  error: string | null;
+  bookings: RoomBooking[];
+}
 
 interface RoomsState {
   rooms: Record<string, Room>;
@@ -31,6 +42,7 @@ interface RoomsState {
   availability: Record<string, TimeSlot[]>;
   availableRoomIds: string[] | null;
   selectedRoomId: string | null;
+  viewer: RoomViewerState;
   filters: {
     roomType: RoomType | null;
     status: RoomStatus | null;
@@ -73,6 +85,13 @@ const initialState: RoomsState = {
   availability: {},
   availableRoomIds: null,
   selectedRoomId: null,
+  viewer: {
+    roomId: null,
+    inline: false,
+    loading: false,
+    error: null,
+    bookings: [],
+  },
   filters: {
     roomType: null,
     status: null,
@@ -126,6 +145,10 @@ const roomsSlice = createSlice({
     clearAvailableRoomIds: (state) => {
       state.availableRoomIds = null;
       state.loading.availableRooms = false;
+    },
+
+    closeRoomViewer: (state) => {
+      state.viewer = initialState.viewer;
     },
 
     clearRooms: () => initialState,
@@ -314,6 +337,29 @@ const roomsSlice = createSlice({
       });
 
     builder
+      .addCase(openRoomViewer.pending, (state, action) => {
+        state.viewer.roomId = action.meta.arg.roomId;
+        state.viewer.inline = action.meta.arg.inline ?? false;
+        state.viewer.loading = true;
+        state.viewer.error = null;
+        state.viewer.bookings = [];
+      })
+      .addCase(openRoomViewer.fulfilled, (state, action) => {
+        // A later open wins: a stale response must not repaint the room the user is looking at.
+        if (state.viewer.roomId !== action.payload.roomId) return;
+        state.viewer.loading = false;
+        state.viewer.bookings = action.payload.bookings;
+        // Keyed lookup only - roomIds drives the admin table and stays list-owned.
+        state.rooms[action.payload.room.id] = action.payload.room;
+        state.availability[action.payload.roomId] = action.payload.slots;
+      })
+      .addCase(openRoomViewer.rejected, (state, action) => {
+        if (state.viewer.roomId !== action.meta.arg.roomId) return;
+        state.viewer.loading = false;
+        state.viewer.error = action.payload || 'Failed to load room';
+      });
+
+    builder
       .addCase(fetchAvailableRoomIds.pending, (state) => {
         state.loading.availableRooms = true;
       })
@@ -336,6 +382,7 @@ export const {
   setFilters,
   clearFilters,
   clearAvailableRoomIds,
+  closeRoomViewer,
   clearRooms,
 } = roomsSlice.actions;
 
@@ -366,5 +413,8 @@ export const selectRoomAvailability = (state: RootState, roomId: string): TimeSl
 
 export const selectAvailableRoomIds = (state: RootState): string[] | null =>
   state.rooms.availableRoomIds;
+
+export const selectRoomViewer = (state: RootState): RoomViewerState =>
+  state.rooms.viewer;
 
 export const roomsReducer = roomsSlice.reducer;

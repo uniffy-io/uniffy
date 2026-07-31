@@ -80,6 +80,5 @@ export {
   closeCreateTemplateModal,
   setMobileView,
   setActiveMobilePanel,
-  setEventScope,
   resetCalendarUiState,
 } from '@/features/calendar/store/calendarUiSlice';

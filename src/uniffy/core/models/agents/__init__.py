@@ -7,6 +7,7 @@ from uniffy.core.models.agents.budget_alert import AgentBudgetAlert
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.currency_rate import AgentCurrencyRate
 from uniffy.core.models.agents.memory import AgentMemory
+from uniffy.core.models.agents.memory_bridge import AgentMemoryBridgeOptIn
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.rate_limit_config import AgentRateLimitConfig
@@ -23,6 +24,7 @@ __all__ = [
     "AgentChannelBinding",
     "AgentCurrencyRate",
     "AgentMemory",
+    "AgentMemoryBridgeOptIn",
     "AgentMessage",
     "AgentRateLimitConfig",
     "AgentRunLog",

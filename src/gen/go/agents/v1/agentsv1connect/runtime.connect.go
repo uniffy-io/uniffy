@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// RuntimeServiceName is the fully-qualified name of the RuntimeService service.
 	RuntimeServiceName = "agents.v1.RuntimeService"
+	// RuntimeSettingsServiceName is the fully-qualified name of the RuntimeSettingsService service.
+	RuntimeSettingsServiceName = "agents.v1.RuntimeSettingsService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -54,6 +56,15 @@ const (
 	// RuntimeServiceGetUsageStatsProcedure is the fully-qualified name of the RuntimeService's
 	// GetUsageStats RPC.
 	RuntimeServiceGetUsageStatsProcedure = "/agents.v1.RuntimeService/GetUsageStats"
+	// RuntimeServiceRegenerateImageProcedure is the fully-qualified name of the RuntimeService's
+	// RegenerateImage RPC.
+	RuntimeServiceRegenerateImageProcedure = "/agents.v1.RuntimeService/RegenerateImage"
+	// RuntimeSettingsServiceGetRuntimeSettingsProcedure is the fully-qualified name of the
+	// RuntimeSettingsService's GetRuntimeSettings RPC.
+	RuntimeSettingsServiceGetRuntimeSettingsProcedure = "/agents.v1.RuntimeSettingsService/GetRuntimeSettings"
+	// RuntimeSettingsServiceUpdateRuntimeSettingsProcedure is the fully-qualified name of the
+	// RuntimeSettingsService's UpdateRuntimeSettings RPC.
+	RuntimeSettingsServiceUpdateRuntimeSettingsProcedure = "/agents.v1.RuntimeSettingsService/UpdateRuntimeSettings"
 )
 
 // RuntimeServiceClient is a client for the agents.v1.RuntimeService service.
@@ -81,6 +92,10 @@ type RuntimeServiceClient interface {
 	RespondToConfirmation(context.Context, *connect.Request[v1.RespondToConfirmationRequest]) (*connect.Response[v1.RespondToConfirmationResponse], error)
 	// Get usage statistics for an organization
 	GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(context.Context, *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error)
 }
 
 // NewRuntimeServiceClient constructs a client for the agents.v1.RuntimeService service. By default,
@@ -136,6 +151,12 @@ func NewRuntimeServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(runtimeServiceMethods.ByName("GetUsageStats")),
 			connect.WithClientOptions(opts...),
 		),
+		regenerateImage: connect.NewClient[v1.RegenerateImageRequest, v1.RegenerateImageResponse](
+			httpClient,
+			baseURL+RuntimeServiceRegenerateImageProcedure,
+			connect.WithSchema(runtimeServiceMethods.ByName("RegenerateImage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -148,6 +169,7 @@ type runtimeServiceClient struct {
 	cancelStream          *connect.Client[v1.CancelStreamRequest, v1.CancelStreamResponse]
 	respondToConfirmation *connect.Client[v1.RespondToConfirmationRequest, v1.RespondToConfirmationResponse]
 	getUsageStats         *connect.Client[v1.GetUsageStatsRequest, v1.GetUsageStatsResponse]
+	regenerateImage       *connect.Client[v1.RegenerateImageRequest, v1.RegenerateImageResponse]
 }
 
 // SendMessage calls agents.v1.RuntimeService.SendMessage.
@@ -185,6 +207,11 @@ func (c *runtimeServiceClient) GetUsageStats(ctx context.Context, req *connect.R
 	return c.getUsageStats.CallUnary(ctx, req)
 }
 
+// RegenerateImage calls agents.v1.RuntimeService.RegenerateImage.
+func (c *runtimeServiceClient) RegenerateImage(ctx context.Context, req *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error) {
+	return c.regenerateImage.CallUnary(ctx, req)
+}
+
 // RuntimeServiceHandler is an implementation of the agents.v1.RuntimeService service.
 type RuntimeServiceHandler interface {
 	// Send a user message and get the assistant response
@@ -210,6 +237,10 @@ type RuntimeServiceHandler interface {
 	RespondToConfirmation(context.Context, *connect.Request[v1.RespondToConfirmationRequest]) (*connect.Response[v1.RespondToConfirmationResponse], error)
 	// Get usage statistics for an organization
 	GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error)
+	// Re-run the image generation behind a chat message with adjusted
+	// parameters. Re-executes the image tool under the CALLER's identity; it
+	// does not drive the LLM and writes no user message.
+	RegenerateImage(context.Context, *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error)
 }
 
 // NewRuntimeServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -261,6 +292,12 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 		connect.WithSchema(runtimeServiceMethods.ByName("GetUsageStats")),
 		connect.WithHandlerOptions(opts...),
 	)
+	runtimeServiceRegenerateImageHandler := connect.NewUnaryHandler(
+		RuntimeServiceRegenerateImageProcedure,
+		svc.RegenerateImage,
+		connect.WithSchema(runtimeServiceMethods.ByName("RegenerateImage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.RuntimeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case RuntimeServiceSendMessageProcedure:
@@ -277,6 +314,8 @@ func NewRuntimeServiceHandler(svc RuntimeServiceHandler, opts ...connect.Handler
 			runtimeServiceRespondToConfirmationHandler.ServeHTTP(w, r)
 		case RuntimeServiceGetUsageStatsProcedure:
 			runtimeServiceGetUsageStatsHandler.ServeHTTP(w, r)
+		case RuntimeServiceRegenerateImageProcedure:
+			runtimeServiceRegenerateImageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -312,4 +351,105 @@ func (UnimplementedRuntimeServiceHandler) RespondToConfirmation(context.Context,
 
 func (UnimplementedRuntimeServiceHandler) GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.GetUsageStats is not implemented"))
+}
+
+func (UnimplementedRuntimeServiceHandler) RegenerateImage(context.Context, *connect.Request[v1.RegenerateImageRequest]) (*connect.Response[v1.RegenerateImageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeService.RegenerateImage is not implemented"))
+}
+
+// RuntimeSettingsServiceClient is a client for the agents.v1.RuntimeSettingsService service.
+type RuntimeSettingsServiceClient interface {
+	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error)
+	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error)
+}
+
+// NewRuntimeSettingsServiceClient constructs a client for the agents.v1.RuntimeSettingsService
+// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
+// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
+// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewRuntimeSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) RuntimeSettingsServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	runtimeSettingsServiceMethods := v1.File_agents_v1_runtime_proto.Services().ByName("RuntimeSettingsService").Methods()
+	return &runtimeSettingsServiceClient{
+		getRuntimeSettings: connect.NewClient[v1.GetRuntimeSettingsRequest, v1.GetRuntimeSettingsResponse](
+			httpClient,
+			baseURL+RuntimeSettingsServiceGetRuntimeSettingsProcedure,
+			connect.WithSchema(runtimeSettingsServiceMethods.ByName("GetRuntimeSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateRuntimeSettings: connect.NewClient[v1.UpdateRuntimeSettingsRequest, v1.UpdateRuntimeSettingsResponse](
+			httpClient,
+			baseURL+RuntimeSettingsServiceUpdateRuntimeSettingsProcedure,
+			connect.WithSchema(runtimeSettingsServiceMethods.ByName("UpdateRuntimeSettings")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// runtimeSettingsServiceClient implements RuntimeSettingsServiceClient.
+type runtimeSettingsServiceClient struct {
+	getRuntimeSettings    *connect.Client[v1.GetRuntimeSettingsRequest, v1.GetRuntimeSettingsResponse]
+	updateRuntimeSettings *connect.Client[v1.UpdateRuntimeSettingsRequest, v1.UpdateRuntimeSettingsResponse]
+}
+
+// GetRuntimeSettings calls agents.v1.RuntimeSettingsService.GetRuntimeSettings.
+func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, req *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error) {
+	return c.getRuntimeSettings.CallUnary(ctx, req)
+}
+
+// UpdateRuntimeSettings calls agents.v1.RuntimeSettingsService.UpdateRuntimeSettings.
+func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, req *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error) {
+	return c.updateRuntimeSettings.CallUnary(ctx, req)
+}
+
+// RuntimeSettingsServiceHandler is an implementation of the agents.v1.RuntimeSettingsService
+// service.
+type RuntimeSettingsServiceHandler interface {
+	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error)
+	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error)
+}
+
+// NewRuntimeSettingsServiceHandler builds an HTTP handler from the service implementation. It
+// returns the path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewRuntimeSettingsServiceHandler(svc RuntimeSettingsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	runtimeSettingsServiceMethods := v1.File_agents_v1_runtime_proto.Services().ByName("RuntimeSettingsService").Methods()
+	runtimeSettingsServiceGetRuntimeSettingsHandler := connect.NewUnaryHandler(
+		RuntimeSettingsServiceGetRuntimeSettingsProcedure,
+		svc.GetRuntimeSettings,
+		connect.WithSchema(runtimeSettingsServiceMethods.ByName("GetRuntimeSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	runtimeSettingsServiceUpdateRuntimeSettingsHandler := connect.NewUnaryHandler(
+		RuntimeSettingsServiceUpdateRuntimeSettingsProcedure,
+		svc.UpdateRuntimeSettings,
+		connect.WithSchema(runtimeSettingsServiceMethods.ByName("UpdateRuntimeSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/agents.v1.RuntimeSettingsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case RuntimeSettingsServiceGetRuntimeSettingsProcedure:
+			runtimeSettingsServiceGetRuntimeSettingsHandler.ServeHTTP(w, r)
+		case RuntimeSettingsServiceUpdateRuntimeSettingsProcedure:
+			runtimeSettingsServiceUpdateRuntimeSettingsHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedRuntimeSettingsServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedRuntimeSettingsServiceHandler struct{}
+
+func (UnimplementedRuntimeSettingsServiceHandler) GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeSettingsService.GetRuntimeSettings is not implemented"))
+}
+
+func (UnimplementedRuntimeSettingsServiceHandler) UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeSettingsService.UpdateRuntimeSettings is not implemented"))
 }

@@ -28,13 +28,12 @@ enum SearchResultType {
   SEARCH_RESULT_TYPE_PROJECT = 6;
   SEARCH_RESULT_TYPE_TASK = 7;
   SEARCH_RESULT_TYPE_AGENT = 8;
-  SEARCH_RESULT_TYPE_PROMPT = 9;
-  SEARCH_RESULT_TYPE_CHAT_MESSAGE = 10;
-  SEARCH_RESULT_TYPE_ROOM = 11;
-  SEARCH_RESULT_TYPE_AGENT_CHAT = 12;
-  SEARCH_RESULT_TYPE_TAG = 13;
-  SEARCH_RESULT_TYPE_FOLDER = 14;
-  SEARCH_RESULT_TYPE_AGENT_FOLDER = 15;
+  SEARCH_RESULT_TYPE_CHAT_MESSAGE = 9;
+  SEARCH_RESULT_TYPE_ROOM = 10;
+  SEARCH_RESULT_TYPE_AGENT_CHAT = 11;
+  SEARCH_RESULT_TYPE_TAG = 12;
+  SEARCH_RESULT_TYPE_FOLDER = 13;
+  SEARCH_RESULT_TYPE_AGENT_FOLDER = 14;
 }
 
 message SearchRequest {
@@ -49,18 +48,16 @@ message SearchRequest {
   bool my_content_only = 7;
   string owner_filter = 8;
 
-  reserved 9;
-
   // Metadata field filters (e.g., {"channel_id": "uuid"} for chat message scoping)
-  map<string, string> metadata_filters = 10;
+  map<string, string> metadata_filters = 9;
 
   // Pagination offset into the result set (max_total_hits caps the window)
-  int32 offset = 11;
+  int32 offset = 10;
 
   // Client ranking context: listed types float to the top in this order.
   // Applied within match-strength buckets, so a weak (typo/partial) match
   // never outranks a full match via its type alone.
-  repeated SearchResultType type_priority = 12;
+  repeated SearchResultType type_priority = 11;
 }
 
 message SearchResponse {

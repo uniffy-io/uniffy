@@ -7,7 +7,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.agents.v1.agents_pb2 import (
     CreateAgentRequest,
@@ -20,8 +19,14 @@ from uniffy_proto.agents.v1.agents_pb2 import (
     GetAgentResponse,
     ListAgentsRequest,
     ListAgentsResponse,
+    ListAgentTemplatesRequest,
+    ListAgentTemplatesResponse,
+    ListToolsRequest,
+    ListToolsResponse,
     PreviewSystemPromptRequest,
     PreviewSystemPromptResponse,
+    RestoreAgentRequest,
+    RestoreAgentResponse,
     UpdateAgentRequest,
     UpdateAgentResponse,
     UploadAgentAvatarRequest,
@@ -37,19 +42,32 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
-from uniffy.domains.agents.agents.converters import agent_to_proto
+from uniffy.domains.agents.access import require_agents_builder
+from uniffy.domains.agents.agents.converters import (
+    agent_template_to_proto,
+    agent_to_proto,
+    tool_catalog_entry_to_proto,
+)
 from uniffy.domains.agents.agents.operations import AgentOperations
+from uniffy.domains.agents.cache import fetch_memory_index
+from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.runtime.prompt import (
+    MemoryScopeBlock,
+    build_memory_block,
     build_system_prompt,
     skill_passes_activation,
     to_skill_prompt_entry,
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
+from uniffy.domains.agents.templates import AGENT_TEMPLATES
+from uniffy.domains.agents.tools.catalog import list_tool_catalog
+from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
+from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.integrations.tool_gate import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.tags import Tag, TagOperations
 from uniffy.domains.users.operations import UserOperations
@@ -121,14 +139,14 @@ def _parse_uuid(value: str, field: str) -> UUID:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
 
-def _parse_model_params(raw: str) -> dict:
-    """Parse a model_params JSON string into a plain object."""
+def _parse_params(raw: str, field: str) -> dict:
+    """Parse a tuned-parameter JSON string into a plain object."""
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ConnectError(Code.INVALID_ARGUMENT, "model_params is not valid JSON") from exc
+        raise ConnectError(Code.INVALID_ARGUMENT, f"{field} is not valid JSON") from exc
     if not isinstance(parsed, dict):
-        raise ConnectError(Code.INVALID_ARGUMENT, "model_params must be a JSON object")
+        raise ConnectError(Code.INVALID_ARGUMENT, f"{field} must be a JSON object")
     return parsed
 
 
@@ -157,8 +175,10 @@ class AgentsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         soul_prompt = request.soul_prompt if request.HasField("soul_prompt") else ""
+        # Empty when omitted so a name-only agent inherits the org default model
+        # at run time; a hardcoded fallback here would shadow that default.
         primary_model = (
-            request.primary_model if request.HasField("primary_model") else "claude-sonnet-4-6"
+            request.primary_model if request.HasField("primary_model") else ""
         )
         avatar_emoji = request.avatar_emoji if request.HasField("avatar_emoji") else ""
         theme_color = request.theme_color if request.HasField("theme_color") else ""
@@ -185,15 +205,23 @@ class AgentsHandlers:
             if request.HasField("image_provider_key_id") and request.image_provider_key_id
             else None
         )
-        prompt_id = (
-            _parse_uuid(request.prompt_id, "prompt_id")
-            if request.HasField("prompt_id") and request.prompt_id
-            else None
-        )
         tag_ids = _parse_tag_ids(list(request.tag_ids))
         model_params = (
-            _parse_model_params(request.model_params)
+            _parse_params(request.model_params, "model_params")
             if request.HasField("model_params")
+            else None
+        )
+        image_params = (
+            _parse_params(request.image_params, "image_params")
+            if request.HasField("image_params")
+            else None
+        )
+        image_style_prompt = (
+            request.image_style_prompt if request.HasField("image_style_prompt") else None
+        )
+        integration_connections = (
+            _parse_params(request.integration_connections, "integration_connections")
+            if request.HasField("integration_connections")
             else None
         )
 
@@ -217,9 +245,11 @@ class AgentsHandlers:
                     image_model=image_model,
                     primary_provider_key_id=primary_provider_key_id,
                     image_provider_key_id=image_provider_key_id,
-                    prompt_id=prompt_id,
                     tag_ids=tag_ids or None,
                     model_params=model_params,
+                    image_params=image_params,
+                    image_style_prompt=image_style_prompt or "",
+                    integration_connections=integration_connections,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
@@ -283,7 +313,6 @@ class AgentsHandlers:
         org_id = _parse_uuid(request.organization_id, "organization_id")
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
-        personal_only = request.personal_only if request.HasField("personal_only") else False
         group_id = (
             _parse_uuid(request.group_id, "group_id") if request.HasField("group_id") else None
         )
@@ -299,15 +328,17 @@ class AgentsHandlers:
         try:
             async with open_session() as session:
                 ops = AgentOperations(session)
+                if request.deleted_only:
+                    await require_agents_builder(session, user_id, org_id)
                 agents, total = await ops.list_agents(
                     user_id=user_id,
                     organization_id=org_id,
                     access_mode=access_mode,
-                    personal_only=personal_only,
                     group_id=group_id,
                     page=page,
                     page_size=page_size,
                     tag_ids=tag_ids or None,
+                    deleted_only=request.deleted_only,
                 )
                 total_pages = (total + page_size - 1) // page_size if page_size else 1
                 roles = [await ops.resolve_role(user_id, org_id, a) for a in agents]
@@ -345,6 +376,69 @@ class AgentsHandlers:
             raise
         except Exception as exc:
             raise _map_domain_error("list_agents", exc) from exc
+
+    async def list_agent_templates(
+        self,
+        request: ListAgentTemplatesRequest,
+        ctx: RequestContext,
+    ) -> ListAgentTemplatesResponse:
+        """List the shipped templates with their bundled skills resolved to ids."""
+        user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+
+        try:
+            async with open_session() as session:
+                await require_agents_builder(session, user_id, org_id)
+
+                names = [
+                    name for t in AGENT_TEMPLATES for name in t.bundled_skill_names
+                ]
+                id_by_name = await SkillOperations(session).resolve_bundled_skill_id_map(
+                    names
+                )
+                return ListAgentTemplatesResponse(
+                    templates=[
+                        agent_template_to_proto(
+                            t,
+                            [
+                                id_by_name[name]
+                                for name in t.bundled_skill_names
+                                if name in id_by_name
+                            ],
+                        )
+                        for t in AGENT_TEMPLATES
+                    ]
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("list_agent_templates", exc) from exc
+
+    async def list_tools(
+        self,
+        request: ListToolsRequest,
+        ctx: RequestContext,
+    ) -> ListToolsResponse:
+        """List the builder-selectable tools, ordered as the builder renders them.
+
+        Member-level rather than builder-gated: the catalog is shipped content
+        with no tenant data in it, and the chat tool-activity pane labels tool
+        steps for every member, not just builders.
+        """
+        user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+
+        try:
+            async with open_session() as session:
+                await OrganizationOperations(session).require_org_member(user_id, org_id)
+
+                return ListToolsResponse(
+                    tools=[tool_catalog_entry_to_proto(entry) for entry in list_tool_catalog()]
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("list_tools", exc) from exc
 
     async def update_agent(
         self,
@@ -384,16 +478,6 @@ class AgentsHandlers:
             else:
                 clear_image_provider_key = True
 
-        prompt_id = None
-        clear_prompt = False
-        if request.HasField("prompt_id"):
-            if request.prompt_id:
-                prompt_id = _parse_uuid(request.prompt_id, "prompt_id")
-            else:
-                clear_prompt = True
-        if request.HasField("clear_prompt") and request.clear_prompt:
-            clear_prompt = True
-
         fallback_models = list(request.fallback_models)
         enabled_skills = list(request.enabled_skills)
         enabled_tools = list(request.enabled_tools)
@@ -403,8 +487,21 @@ class AgentsHandlers:
             tag_ids = _parse_tag_ids(list(request.tag_ids.ids))
 
         model_params = (
-            _parse_model_params(request.model_params)
+            _parse_params(request.model_params, "model_params")
             if request.HasField("model_params")
+            else None
+        )
+        image_params = (
+            _parse_params(request.image_params, "image_params")
+            if request.HasField("image_params")
+            else None
+        )
+        image_style_prompt = (
+            request.image_style_prompt if request.HasField("image_style_prompt") else None
+        )
+        integration_connections = (
+            _parse_params(request.integration_connections, "integration_connections")
+            if request.HasField("integration_connections")
             else None
         )
 
@@ -429,10 +526,11 @@ class AgentsHandlers:
                     image_provider_key_id=image_provider_key_id,
                     clear_primary_provider_key=clear_primary_provider_key,
                     clear_image_provider_key=clear_image_provider_key,
-                    prompt_id=prompt_id,
-                    clear_prompt=clear_prompt,
                     tag_ids=tag_ids,
                     model_params=model_params,
+                    image_params=image_params,
+                    image_style_prompt=image_style_prompt,
+                    integration_connections=integration_connections,
                 )
                 user_role = await ops.resolve_role(user_id, org_id, agent)
                 tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
@@ -476,6 +574,43 @@ class AgentsHandlers:
             raise
         except Exception as exc:
             raise _map_domain_error("delete_agent", exc) from exc
+
+    async def restore_agent(
+        self,
+        request: RestoreAgentRequest,
+        ctx: RequestContext,
+    ) -> RestoreAgentResponse:
+        """Bring a deleted agent back; its automations stay disabled."""
+        user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+        agent_id = _parse_uuid(request.agent_id, "agent_id")
+
+        try:
+            async with open_session() as session:
+                ops = AgentOperations(session)
+                agent = await ops.restore_agent(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    agent_id=agent_id,
+                )
+                user_role = await ops.resolve_role(user_id, org_id, agent)
+                tags_by_id = await _hydrate_agent_tags(session, org_id, [agent.id])
+                eff_mode, eff_baseline = await _resolve_effective_policy(
+                    session, org_id, agent,
+                )
+                return RestoreAgentResponse(
+                    agent=agent_to_proto(
+                        agent,
+                        user_role=user_role,
+                        tags=tags_by_id.get(agent.id),
+                        effective_access_mode=eff_mode,
+                        effective_baseline_role=eff_baseline,
+                    )
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("restore_agent", exc) from exc
 
     async def upload_agent_avatar(
         self,
@@ -605,10 +740,13 @@ class AgentsHandlers:
                     organization_id=org_id,
                 )
 
-                prompt_content = await self._resolve_prompt_for_preview(
-                    session=session,
-                    prompt_id=agent.prompt_id,
+                # Preview shows the run's initial state: no groups loaded yet.
+                registry = get_tool_registry()
+                schemas = registry.get_anthropic_schemas(agent.enabled_tools or [])
+                schemas = await filter_integration_tool_schemas(
+                    session, org_id, schemas
                 )
+                plan = plan_tool_advertisement(registry, schemas, [])
 
                 system_prompt = build_system_prompt(
                     agent_name=agent.name,
@@ -616,10 +754,9 @@ class AgentsHandlers:
                     org_name=org.name,
                     user_name=user.full_name or user.username,
                     user_role=user_role,
-                    enabled_tools=agent.enabled_tools or [],
+                    deferred_tools=plan.deferred_names() or None,
                     skills=skill_entries or None,
-                    memory_context=memory_context or None,
-                    prompt_content=prompt_content,
+                    memory_context=memory_context,
                 )
 
                 return PreviewSystemPromptResponse(system_prompt=system_prompt)
@@ -635,44 +772,43 @@ class AgentsHandlers:
         agent_id: UUID,
         user_id: UUID,
         organization_id: UUID,
-        limit: int = 10,
-    ) -> list[str]:
-        """Fetch memory context strings for prompt preview."""
+    ) -> str | None:
+        """Preview renders what a private session would inject: both org tiers + personal."""
         try:
-            result = await session.execute(
-                select(AgentMemory)
-                .where(
-                    AgentMemory.agent_id == agent_id,
-                    AgentMemory.user_id == user_id,
-                    AgentMemory.organization_id == organization_id,
-                )
-                .order_by(AgentMemory.importance.desc(), AgentMemory.updated_at.desc())
-                .limit(limit)
+            refs_with_labels = (
+                (
+                    MemoryScopeRef.org(),
+                    "Organization memory (curated by agent managers; "
+                    "visible to all members)",
+                ),
+                (
+                    MemoryScopeRef.org(agent_id),
+                    "Organization memory kept for you specifically "
+                    "(curated by agent managers)",
+                ),
+                (
+                    MemoryScopeRef.user(user_id),
+                    "Personal memory for this user (private to them; kept with "
+                    "every assistant they talk to)",
+                ),
             )
-            memories = list(result.scalars().all())
-            if not memories:
-                return []
-            return [f"[{m.category}] {m.key}: {m.content}" for m in memories]
+            blocks: list[MemoryScopeBlock] = []
+            for ref, label in refs_with_labels:
+                payload = await fetch_memory_index(
+                    session,
+                    organization_id=organization_id,
+                    scope_ref=ref,
+                )
+                blocks.append(
+                    MemoryScopeBlock(
+                        label=label,
+                        pinned=payload.get("pinned") or [],
+                        index=payload.get("index") or [],
+                        total=int(payload.get("total") or 0),
+                    )
+                )
+            return build_memory_block(blocks)
         except Exception:
             logger.opt(exception=True).warning("Failed to fetch memory context for preview")
-            return []
-
-    @staticmethod
-    async def _resolve_prompt_for_preview(
-        *,
-        session: AsyncSession,
-        prompt_id: UUID | None,
-    ) -> str | None:
-        """Resolve prompt template content for preview."""
-        if not prompt_id:
             return None
-        try:
-            from uniffy.domains.agents.prompts.operations import PromptOperations
 
-            prompt_ops = PromptOperations(session)
-            prompt = await prompt_ops.get_prompt_by_id(prompt_id)
-            if prompt and prompt.content:
-                return prompt.content
-        except Exception:
-            logger.opt(exception=True).warning("Failed to resolve prompt for preview")
-        return None

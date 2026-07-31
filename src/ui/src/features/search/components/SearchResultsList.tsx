@@ -28,7 +28,6 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.PROJECT]: UrnType.PROJECT,
   [SearchResultType.TASK]: UrnType.TASK,
   [SearchResultType.AGENT]: UrnType.AGENT,
-  [SearchResultType.PROMPT]: UrnType.PROMPT,
   [SearchResultType.ROOM]: UrnType.ROOM,
   [SearchResultType.TAG]: UrnType.TAG,
 };

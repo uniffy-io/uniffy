@@ -9,6 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
+import { Select, type SelectOption } from '@/components/ui/select';
 import { cn } from '@/shared/utils/cn';
 import { getInitials } from '@/components/subject/utils';
 import { useCall } from '@/features/calls/components/callContext';
@@ -78,21 +79,27 @@ function DeviceSelect({
   onChange: (id: string) => void;
 }) {
   if (devices.length === 0) return null;
+  const options: SelectOption<string>[] = devices.map((d, i) => ({
+    value: d.deviceId,
+    label: d.label || `${label} ${i + 1}`,
+  }));
+  // A stored preference can name a device that is gone, or that the browser
+  // hides behind an empty id until its permission is granted. Fall back to the
+  // first entry so the trigger never reads "Select...".
+  const known = devices.some((d) => d.deviceId === value);
   return (
-    <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+    <div className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
       {label}
-      <select
-        value={value ?? devices[0]?.deviceId ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-8 rounded-md border border-border bg-input px-2 text-sm text-foreground"
-      >
-        {devices.map((d, i) => (
-          <option key={d.deviceId || i} value={d.deviceId}>
-            {d.label || `${label} ${i + 1}`}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select
+        size="sm"
+        ariaLabel={label}
+        value={known ? (value ?? '') : (devices[0]?.deviceId ?? '')}
+        onChange={onChange}
+        options={options}
+        menuMinWidth={260}
+        triggerClassName="h-8 w-full min-w-0 bg-input font-normal text-foreground"
+      />
+    </div>
   );
 }
 

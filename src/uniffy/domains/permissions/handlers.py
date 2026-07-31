@@ -85,13 +85,6 @@ def _resolve_role(proto_role) -> ContentRole:
     return role
 
 
-def _resolve_access_mode(proto_mode) -> AccessMode:
-    mode = access_mode_from_proto(proto_mode)
-    if mode is None:
-        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid access mode")
-    return mode
-
-
 def _map_domain_error(exc: Exception) -> ConnectError:
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc))

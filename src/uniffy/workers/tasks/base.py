@@ -30,6 +30,10 @@ from uniffy.domains.agents.providers.client_cache import (
     close_provider_invalidation_subscriber,
     init_provider_invalidation_subscriber,
 )
+from uniffy.domains.integrations.client_cache import (
+    close_integration_invalidation_subscriber,
+    init_integration_invalidation_subscriber,
+)
 from uniffy.observability.metrics import (
     WORKER_JOB_DURATION,
     WORKER_JOBS_COMPLETED_TOTAL,
@@ -151,12 +155,22 @@ async def egress_on_startup(ctx: dict[str, Any]) -> None:
     except Exception as e:
         logger.warning(f"Egress worker: Provider invalidation subscriber not available: {e}")
 
+    try:
+        await init_integration_invalidation_subscriber()
+        logger.info("Egress worker: Integration invalidation subscriber started")
+    except Exception as e:
+        logger.warning(f"Egress worker: Integration invalidation subscriber not available: {e}")
+
 
 async def egress_on_shutdown(ctx: dict[str, Any]) -> None:
     try:
         await close_provider_invalidation_subscriber()
     except Exception as exc:
         logger.warning(f"Failed to close provider_lru_subscriber during shutdown: {exc}")
+    try:
+        await close_integration_invalidation_subscriber()
+    except Exception as exc:
+        logger.warning(f"Failed to close integration_lru_subscriber during shutdown: {exc}")
     await _on_shutdown_shared(ctx)
 
 

@@ -6,6 +6,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
+from sqlalchemy import select
 from uniffy_proto.chat.v1.chat_pb2 import (
     ChatMessage as ProtoChatMessage,
 )
@@ -25,6 +26,7 @@ from uniffy_proto.chat.v1.chat_pb2 import (
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.agents.message_feedback import AgentMessageFeedback
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
@@ -127,23 +129,43 @@ class ThreadHandlers:
 
                 resolver = SenderResolver(session)
                 sender_map = await resolver.resolve_many([_sender_ref(m) for m in messages])
-                return GetThreadMessagesResponse(
-                    messages=[
-                        message_to_proto(
-                            m,
-                            sender_name=(
-                                sender_map[m.sender_id].display_name
-                                if m.sender_id in sender_map
-                                else "Unknown"
-                            ),
-                            sender_avatar_url=(
-                                sender_map[m.sender_id].avatar_url or None
-                                if m.sender_id in sender_map
-                                else None
-                            ),
+
+                feedback_map: dict[UUID, str] = {}
+                agent_ids = [m.id for m in messages if m.sender_type == SenderType.AGENT]
+                if agent_ids:
+                    fb_result = await session.execute(
+                        select(
+                            AgentMessageFeedback.chat_message_id,
+                            AgentMessageFeedback.rating,
+                        ).where(
+                            AgentMessageFeedback.user_id == user_id,
+                            AgentMessageFeedback.chat_message_id.in_(agent_ids),
                         )
-                        for m in messages
-                    ],
+                    )
+                    feedback_map = {mid: rating for mid, rating in fb_result.all()}
+
+                proto_messages = []
+                for m in messages:
+                    proto_msg = message_to_proto(
+                        m,
+                        sender_name=(
+                            sender_map[m.sender_id].display_name
+                            if m.sender_id in sender_map
+                            else "Unknown"
+                        ),
+                        sender_avatar_url=(
+                            sender_map[m.sender_id].avatar_url or None
+                            if m.sender_id in sender_map
+                            else None
+                        ),
+                    )
+                    rating = feedback_map.get(m.id)
+                    if rating:
+                        proto_msg.feedback_rating = rating
+                    proto_messages.append(proto_msg)
+
+                return GetThreadMessagesResponse(
+                    messages=proto_messages,
                     has_more=has_more,
                 )
         except (NotFoundError, PermissionDeniedError) as e:

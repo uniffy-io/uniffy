@@ -7,7 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { parseUrn, urnToPath } from '@/shared/utils/urn';
+import { notificationTargetPath } from '@/features/notifications/utils/notificationTarget';
 import { NotificationItem } from '@/features/notifications/components/NotificationItem';
 import { markNotificationAsRead, deleteNotification } from '@/features/notifications/store/notificationsSlice';
 import {
@@ -80,14 +80,9 @@ export function NotificationsListView() {
         if (!notification.isRead) {
             dispatch(markNotificationAsRead(notification.id));
         }
-        if (notification.sourceUrn) {
-            const parsed = parseUrn(notification.sourceUrn);
-            if (parsed) {
-                const path = urnToPath(notification.sourceUrn);
-                if (path) {
-                    navigate(path);
-                }
-            }
+        const path = notificationTargetPath(notification);
+        if (path) {
+            navigate(path);
         }
     }, [dispatch, navigate]);
 

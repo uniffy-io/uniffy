@@ -1,6 +1,6 @@
 """Run agent cron tasks: scheduled via ARQ cron plus on-demand via "Run Now"."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -9,6 +9,86 @@ from loguru import logger
 from uniffy.db import open_session
 
 logger = logger.bind(component="tasks.agent_cron")
+
+STALE_PENDING_CUTOFF = timedelta(minutes=30)
+
+
+async def _stamp_run_logs(session, task, session_id: UUID, since: datetime) -> int:
+    """Mark the runtime-written run log rows of this execution as cron runs.
+
+    The runtime writes one ``agents_run_logs`` row per send; stamping it (rather
+    than writing a second summary row) keeps token and cost accounting single.
+    The session owner can also open the cron session and chat interactively, so
+    the stamp is bounded to rows the execution identity wrote within this
+    execution's window - never the session's whole unstamped history.
+    """
+    from sqlalchemy import update
+
+    from uniffy.core.models.agents.run_log import AgentRunLog
+
+    result = await session.execute(
+        update(AgentRunLog)
+        .where(
+            AgentRunLog.session_id == session_id,
+            AgentRunLog.cron_task_id.is_(None),
+            AgentRunLog.user_id == task.execution_user_id,
+            AgentRunLog.created_at >= since,
+        )
+        .values(cron_task_id=task.id, kind="cron")
+    )
+    await session.commit()
+    return int(result.rowcount or 0)
+
+
+async def _sweep_stale_pending_runs(session) -> int:
+    """Fold abandoned trigger-now placeholders into error rows.
+
+    A placeholder stays ``pending`` only while its queued job is alive; if the
+    worker dies mid-flight the row would render as a never-finishing run and
+    keep counting into usage totals. The cutoff sits well past the egress job
+    timeout, so a live execution can never be swept.
+    """
+    from sqlalchemy import update
+
+    from uniffy.core.models.agents.run_log import AgentRunLog
+
+    cutoff = datetime.now(UTC) - STALE_PENDING_CUTOFF
+    result = await session.execute(
+        update(AgentRunLog)
+        .where(
+            AgentRunLog.kind == "cron",
+            AgentRunLog.status == "pending",
+            AgentRunLog.created_at < cutoff,
+        )
+        .values(status="error", error="Execution was lost before completing")
+    )
+    await session.commit()
+    return int(result.rowcount or 0)
+
+
+async def _write_error_log(
+    session,
+    task,
+    session_id: UUID | None,
+    error: str,
+) -> None:
+    """Record a failure the runtime never logged (e.g. session setup failed)."""
+    from uniffy.core.models.agents.run_log import AgentRunLog
+
+    session.add(
+        AgentRunLog(
+            session_id=session_id,
+            agent_id=task.agent_id,
+            user_id=task.execution_user_id,
+            organization_id=task.organization_id,
+            model="",
+            kind="cron",
+            cron_task_id=task.id,
+            status="error",
+            error=error[:1000],
+        )
+    )
+    await session.commit()
 
 
 async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
@@ -21,6 +101,10 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
             from uniffy.domains.agents.cron.operations import CronTaskOperations
 
             ops = CronTaskOperations(session)
+            swept = await _sweep_stale_pending_runs(session)
+            if swept:
+                logger.warning(f"Marked {swept} stale pending cron run(s) as error")
+
             due_tasks = await ops.get_due_tasks()
 
             if not due_tasks:
@@ -58,11 +142,16 @@ async def execute_single_agent_cron_task(
     task_id: str,
     run_log_id: str,
 ) -> dict[str, Any]:
-    """Execute a single cron task on demand and update its pre-created run log."""
+    """Execute a single cron task on demand and resolve its pending run log.
+
+    ``run_log_id`` is the placeholder ``agents_run_logs`` row TriggerCronTask
+    pre-created; it is deleted once the runtime has written the real row, or
+    updated in place when the failure happened before any send.
+    """
     from sqlalchemy import select
 
-    from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
     from uniffy.core.models.agents.cron_task import AgentCronTask
+    from uniffy.core.models.agents.run_log import AgentRunLog
     from uniffy.domains.agents.cron.operations import CronTaskOperations
     from uniffy.domains.agents.runtime.operations import RuntimeOperations
     from uniffy.domains.agents.sessions.operations import SessionOperations
@@ -81,12 +170,23 @@ async def execute_single_agent_cron_task(
                 return {"status": "error", "error": "Task not found"}
 
             log_result = await session.execute(
-                select(AgentCronRunLog).where(AgentCronRunLog.id == log_uuid)
+                select(AgentRunLog).where(AgentRunLog.id == log_uuid)
             )
-            run_log = log_result.scalar_one_or_none()
-            if not run_log:
-                logger.error(f"Run log {run_log_id} not found for on-demand execution")
-                return {"status": "error", "error": "Run log not found"}
+            pending_log = log_result.scalar_one_or_none()
+
+            async def _resolve_pending(*, error: str | None, since: datetime) -> None:
+                if pending_log is None:
+                    return
+                stamped = await _stamp_run_logs(session, task, task.session_id, since)
+                if stamped and error is None:
+                    # The runtime wrote the real row; the placeholder is noise.
+                    await session.delete(pending_log)
+                else:
+                    pending_log.status = "error" if error else "success"
+                    pending_log.error = error[:1000] if error else None
+                    pending_log.session_id = task.session_id
+                    pending_log.cron_task_id = task.id
+                await session.commit()
 
             session_id = task.session_id
             if not session_id:
@@ -101,52 +201,53 @@ async def execute_single_agent_cron_task(
                     )
                     session_id = cron_session.id
                     task.session_id = session_id
-                    run_log.session_id = session_id
                     await session.commit()
                 except Exception as exc:
                     await session.rollback()
-                    run_log.status = "error"
-                    run_log.error = f"Session setup failed: {exc}"
-                    run_log.completed_at = datetime.now(UTC)
-                    await session.commit()
+                    if pending_log is not None:
+                        pending_log.status = "error"
+                        pending_log.error = f"Session setup failed: {exc}"[:1000]
+                        pending_log.cron_task_id = task.id
+                        await session.commit()
 
                     logger.exception(
                         f"On-demand cron task {task_id}: session setup failed: {exc}"
                     )
                     return {"status": "error", "task_id": task_id}
 
+            send_started_at = datetime.now(UTC)
             try:
                 runtime_ops = RuntimeOperations(session)
-                _user_msg, assistant_msg, _model = await runtime_ops.send_message(
+                await runtime_ops.send_message(
                     user_id=task.execution_user_id,
                     organization_id=task.organization_id,
                     session_id=session_id,
                     content=task.prompt,
                 )
-
-                run_log.status = "success"
-                run_log.result_summary = (
-                    assistant_msg.content[:500] if assistant_msg.content else None
-                )
-                run_log.input_tokens = assistant_msg.input_tokens or 0
-                run_log.output_tokens = assistant_msg.output_tokens or 0
-                run_log.completed_at = datetime.now(UTC)
-                run_log.session_id = session_id
-                await session.commit()
+                await _resolve_pending(error=None, since=send_started_at)
 
                 ops = CronTaskOperations(session)
                 await ops.mark_completed(task.id, status="success")
 
-                logger.info(f"On-demand cron task {task_id} ({task.name!r}) completed successfully")
+                logger.info(
+                    f"On-demand cron task {task_id} ({task.name!r}) completed successfully"
+                )
                 return {"status": "success", "task_id": task_id}
 
             except Exception as exc:
                 await session.rollback()
-
-                run_log.status = "error"
-                run_log.error = str(exc)[:1000]
-                run_log.completed_at = datetime.now(UTC)
-                await session.commit()
+                stamped = await _stamp_run_logs(session, task, session_id, send_started_at)
+                if pending_log is not None:
+                    if stamped:
+                        await session.delete(pending_log)
+                    else:
+                        pending_log.status = "error"
+                        pending_log.error = str(exc)[:1000]
+                        pending_log.session_id = session_id
+                        pending_log.cron_task_id = task.id
+                    await session.commit()
+                elif not stamped:
+                    await _write_error_log(session, task, session_id, str(exc))
 
                 ops = CronTaskOperations(session)
                 await ops.mark_completed(
@@ -168,8 +269,7 @@ async def execute_single_agent_cron_task(
 
 
 async def _execute_single_cron_task(session, task) -> None:
-    """Execute one cron task; always writes an AgentCronRunLog row."""
-    from uniffy.core.models.agents.cron_run_log import AgentCronRunLog
+    """Execute one cron task; its run log rows land in ``agents_run_logs``."""
     from uniffy.domains.agents.runtime.operations import RuntimeOperations
     from uniffy.domains.agents.sessions.operations import SessionOperations
 
@@ -191,23 +291,13 @@ async def _execute_single_cron_task(session, task) -> None:
             await session.commit()
     except Exception as exc:
         await session.rollback()
-        completed_at = datetime.now(UTC)
-        run_log = AgentCronRunLog(
-            cron_task_id=task.id,
-            organization_id=task.organization_id,
-            session_id=session_id or task.id,
-            status="error",
-            error=f"Session setup failed: {exc}",
-            started_at=started_at,
-            completed_at=completed_at,
-        )
-        session.add(run_log)
-        await session.commit()
+        await _write_error_log(session, task, None, f"Session setup failed: {exc}")
         raise
 
+    send_started_at = datetime.now(UTC)
     try:
         runtime_ops = RuntimeOperations(session)
-        user_msg, assistant_msg, model = await runtime_ops.send_message(
+        await runtime_ops.send_message(
             user_id=task.execution_user_id,
             organization_id=task.organization_id,
             session_id=session_id,
@@ -215,40 +305,18 @@ async def _execute_single_cron_task(session, task) -> None:
         )
     except Exception as exc:
         await session.rollback()
-        completed_at = datetime.now(UTC)
-        error_text = str(exc)[:1000]
-        run_log = AgentCronRunLog(
-            cron_task_id=task.id,
-            organization_id=task.organization_id,
-            session_id=session_id,
-            status="error",
-            error=error_text,
-            started_at=started_at,
-            completed_at=completed_at,
-        )
-        session.add(run_log)
-        await session.commit()
+        stamped = await _stamp_run_logs(session, task, session_id, send_started_at)
+        if not stamped:
+            await _write_error_log(session, task, session_id, str(exc))
 
         logger.exception(
-            f"Cron task {task.id} ({task.name!r}) failed: {error_text}"
+            f"Cron task {task.id} ({task.name!r}) failed: {str(exc)[:1000]}"
         )
         raise
 
-    completed_at = datetime.now(UTC)
-    duration_ms = int((completed_at - started_at).total_seconds() * 1000)
+    await _stamp_run_logs(session, task, session_id, send_started_at)
 
-    run_log = AgentCronRunLog(
-        cron_task_id=task.id,
-        organization_id=task.organization_id,
-        session_id=session_id,
-        status="success",
-        result_summary=(assistant_msg.content[:500] if assistant_msg.content else None),
-        started_at=started_at,
-        completed_at=completed_at,
-        input_tokens=assistant_msg.input_tokens or 0,
-        output_tokens=assistant_msg.output_tokens or 0,
+    duration_ms = int((datetime.now(UTC) - started_at).total_seconds() * 1000)
+    logger.info(
+        f"Cron task {task.id} ({task.name!r}) completed successfully in {duration_ms}ms"
     )
-    session.add(run_log)
-    await session.commit()
-
-    logger.info(f"Cron task {task.id} ({task.name!r}) completed successfully in {duration_ms}ms")

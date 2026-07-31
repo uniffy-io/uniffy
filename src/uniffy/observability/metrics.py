@@ -196,6 +196,17 @@ NOTIFICATION_DELIVERIES_TOTAL = Counter(
     ["channel"],
 )
 
+NOTIFICATION_RECIPIENTS_DROPPED_TOTAL = Counter(
+    "uniffy_notification_recipients_dropped_total",
+    "Recipients dropped before delivery for lacking view access on the content",
+)
+
+NOTIFICATION_RECIPIENTS_UNFILTERED_TOTAL = Counter(
+    "uniffy_notification_recipients_unfiltered_total",
+    "Notification events delivered without an access check, by content type",
+    ["content_type"],
+)
+
 
 APPROVAL_STORE_PENDING_SIZE = Gauge(
     "uniffy_approval_store_pending_size",
@@ -287,6 +298,72 @@ AGENT_MODEL_PARAM_DROPPED_TOTAL = Counter(
     "uniffy_agent_model_param_dropped_total",
     "Tuned model params stripped at request build because the target model rejects them",
     ["provider", "param"],
+)
+
+AGENT_IMAGE_PARAM_DROPPED_TOTAL = Counter(
+    "uniffy_agent_image_param_dropped_total",
+    "Image params stripped at request build because the target image model rejects them",
+    ["provider", "param"],
+)
+
+AGENT_MEMORY_RECALL_RUNS_TOTAL = Counter(
+    "uniffy_agent_memory_recall_runs_total",
+    "Query-conditioned memory recall attempts per run, by outcome and query script",
+    ["outcome", "script"],
+)
+
+AGENT_MEMORY_RECALL_PROMOTED_TOTAL = Counter(
+    "uniffy_agent_memory_recall_promoted_total",
+    "Memory entries promoted to full content on the trigger turn",
+    ["script"],
+)
+
+AGENT_MEMORY_RECALL_OVERFLOW_TOTAL = Counter(
+    "uniffy_agent_memory_recall_overflow_total",
+    "Entries that scored above threshold but exceeded the promotion caps",
+    ["script"],
+)
+
+AGENT_MEMORY_RECALL_SECONDS = Histogram(
+    "uniffy_agent_memory_recall_seconds",
+    "Memory recall scoring query duration",
+)
+
+AGENT_MEMORY_READ_AFTER_NO_RECALL_TOTAL = Counter(
+    "uniffy_agent_memory_read_after_no_recall_total",
+    "memory.read hits in runs where query-conditioned recall promoted nothing",
+    ["script"],
+)
+
+
+AGENT_TOOL_CALLS_TOTAL = Counter(
+    "uniffy_agent_tool_calls_total",
+    "Agent tool executions by outcome at the ToolExecutor boundary",
+    ["tool", "status"],
+)
+
+AGENT_TOOL_DURATION = Histogram(
+    "uniffy_agent_tool_duration_seconds",
+    "Agent tool execution duration at the ToolExecutor boundary",
+    ["tool"],
+)
+
+INTEGRATION_HTTP_REQUESTS_TOTAL = Counter(
+    "uniffy_integration_http_requests_total",
+    "Outbound integration API requests by response class",
+    ["provider", "status_class"],
+)
+
+INTEGRATION_HTTP_DURATION = Histogram(
+    "uniffy_integration_http_duration_seconds",
+    "Outbound integration API request duration",
+    ["provider"],
+)
+
+INTEGRATION_CONNECTION_VALIDATIONS_TOTAL = Counter(
+    "uniffy_integration_connection_validations_total",
+    "Integration credential probes by outcome",
+    ["provider", "outcome"],
 )
 
 
@@ -416,6 +493,12 @@ REALTIME_PERMISSION_REJECTIONS_TOTAL = Counter(
 REALTIME_AUTH_FAILURES_TOTAL = Counter(
     "uniffy_realtime_auth_failures_total",
     "Realtime WebSocket upgrades that failed authentication or origin checks",
+    ["reason"],
+)
+
+REALTIME_REAUTH_CLOSES_TOTAL = Counter(
+    "uniffy_realtime_reauth_closes_total",
+    "Live realtime sockets closed by the periodic re-authorization check",
     ["reason"],
 )
 

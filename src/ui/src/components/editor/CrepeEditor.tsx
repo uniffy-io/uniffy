@@ -118,6 +118,8 @@ interface CrepeEditorProps {
   headerSlot?: React.ReactNode;
   /** Default true; notes opt out because they ship their own floating toolbar. */
   floatingToolbar?: boolean;
+  /** Default true; surfaces whose markdown feeds an LLM prompt turn it off - not every model accepts images. */
+  allowImages?: boolean;
 }
 
 const VIDEO_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor"><path d="M164,104v48a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V104a4,4,0,0,1,4-4H160A4,4,0,0,1,164,104Zm48-8a4,4,0,0,0-4.22.43L172,122.75V133.25l35.78,26.32A4,4,0,0,0,212,160a4,4,0,0,0,4-4V100A4,4,0,0,0,212,96Z"/></svg>';
@@ -188,6 +190,7 @@ function createCrepeConfig(
   audioUploadHandler?: (file: File) => Promise<string>,
   floatingToolbar: boolean = true,
   realtime: boolean = false,
+  allowImages: boolean = true,
 ) {
   return {
     root,
@@ -198,7 +201,7 @@ function createCrepeConfig(
       [Crepe.Feature.CodeMirror]: true,
       [Crepe.Feature.ListItem]: true,
       [Crepe.Feature.LinkTooltip]: false,
-      [Crepe.Feature.ImageBlock]: true,
+      [Crepe.Feature.ImageBlock]: allowImages,
       // Disable editing features in readonly mode
       // In compact mode, BlockEdit is enabled for slash commands but drag handle is hidden via CSS
       [Crepe.Feature.BlockEdit]: !readonly,
@@ -223,7 +226,7 @@ function createCrepeConfig(
         searchPlaceholder: 'Search language...',
         noResultText: 'No language found',
       },
-      ...(imageUploadHandler && {
+      ...(allowImages && imageUploadHandler && {
         [Crepe.Feature.ImageBlock]: {
           onUpload: imageUploadHandler,
         },
@@ -416,6 +419,7 @@ export function CrepeEditor({
   onEditorReady,
   headerSlot,
   floatingToolbar = true,
+  allowImages = true,
   realtime,
 }: CrepeEditorProps) {
   const realtimeRef = useRef<CrepeRealtimeBinding | undefined>(realtime);
@@ -654,7 +658,7 @@ export function CrepeEditor({
     const crepe = new Crepe(createCrepeConfig(
       container, content, readonly, compact, placeholder,
       imageUploadHandler, videoUploadHandler, audioUploadHandler,
-      floatingToolbar, Boolean(realtimeRef.current),
+      floatingToolbar, Boolean(realtimeRef.current), allowImages,
     ));
 
     // CRITICAL: Add plugins BEFORE calling create()
@@ -1074,7 +1078,10 @@ export function CrepeEditor({
 
     contentRef.current = content;
 
-    const crepe = new Crepe(createCrepeConfig(container, content, true, compact, placeholder));
+    const crepe = new Crepe(createCrepeConfig(
+      container, content, true, compact, placeholder,
+      undefined, undefined, undefined, floatingToolbar, false, allowImages,
+    ));
 
     // Register plugins before create (same as above)
     try {
@@ -1119,7 +1126,16 @@ export function CrepeEditor({
     return () => {
       cancelled = true;
     };
-  }, [content, readonly, compact, placeholder, autoEmbedMedia, organizationId]);
+  }, [
+    content,
+    readonly,
+    compact,
+    placeholder,
+    autoEmbedMedia,
+    organizationId,
+    allowImages,
+    floatingToolbar,
+  ]);
 
   // Get shortcut matching function from settings
   const { matches } = useGlobalShortcuts();

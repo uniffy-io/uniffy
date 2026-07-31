@@ -1,22 +1,25 @@
 /** Renders an agent-authored ChatMessage by dispatching on `metadata.kind`. */
 
 import { useMemo, useState } from 'react';
-import { CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, Lightning } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle, XCircle, FileText, ArrowsClockwise, Warning, Check, X, ArrowClockwise, CaretDown, CaretUp, Lightning, ThumbsUp, ThumbsDown } from '@phosphor-icons/react';
 import { StreamingMessage } from '@/features/chat/components/channel/StreamingMessage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { respondToAgentConfirmation, stopAgentRun } from '@/features/chat/store/chatThunks';
+import { respondToAgentConfirmation, stopAgentRun, submitAgentReplyFeedback } from '@/features/chat/store/chatThunks';
 import {
     selectAgentThinkingForMessage,
     selectMessagesForChannel,
     selectTypingUsers,
 } from '@/features/chat/store/chatMessagesSlice';
+import { useAgentsBuilderAccess } from '@/features/agents/hooks/useAgentsBuilderAccess';
 import { ThinkingPane } from '@/features/agents/components/ThinkingPane';
 import { ToolActivityPane, type ToolStep } from '@/features/agents/components/ToolActivityPane';
+import { internalToolName, toolActionLabel } from '@/features/agents/config/toolLabels';
 import { persistedThinkingBlocks } from '@/features/agents/utils/thinkingBlocks';
-import { fetchSkillDraft, type SerializedSkillDraft } from '@/features/agents/store/agentSkillDraftsThunks';
-import { SkillDraftEditorModal } from '@/features/agents/components/skills/SkillDraftEditorModal';
+import { GeneratedImageCard } from '@/features/chat/components/channel/GeneratedImageCard';
+import { parseImageMeta, type ImageGenerationMeta } from '@/features/chat/utils/imageMeta';
 import type { ChatMessage } from '@/features/chat/types';
 
 interface AgentMessageBodyProps {
@@ -36,12 +39,6 @@ function readBoolean(metadata: Record<string, unknown>, key: string): boolean {
         return value === 'true' || value === 'True';
     }
     return false;
-}
-
-function humanizeToolName(toolName: string): string {
-    const [, action] = toolName.split('.', 2);
-    const verb = (action ?? toolName).replace(/_/g, ' ');
-    return verb.charAt(0).toUpperCase() + verb.slice(1);
 }
 
 export function AgentMessageBody({ message }: AgentMessageBodyProps) {
@@ -101,25 +98,68 @@ function FinalMessageWithThinking({ message, streaming }: { message: ChatMessage
                 />
             )}
             {showStreamingBody && <StreamingMessage content={message.content} streaming={streaming} />}
+            {!streaming && !!message.content && <ReplyFeedbackRow message={message} />}
+        </div>
+    );
+}
+
+/** Thumbs on a settled agent reply; clicking the active thumb clears the rating. */
+function ReplyFeedbackRow({ message }: { message: ChatMessage }) {
+    const dispatch = useAppDispatch();
+    const rating = message.feedbackRating ?? '';
+
+    const rate = (value: 'up' | 'down') => {
+        dispatch(
+            submitAgentReplyFeedback({
+                channelId: message.channelId,
+                messageId: message.id,
+                rating: rating === value ? '' : value,
+            }),
+        );
+    };
+
+    return (
+        <div
+            className={cn(
+                'mt-1 flex items-center gap-0.5 transition-opacity',
+                rating ? 'opacity-100' : 'md:opacity-0 md:group-hover:opacity-100',
+            )}
+            data-testid={`chat-agent-feedback-${message.id}`}
+            data-rating={rating || 'none'}
+        >
+            <button
+                type="button"
+                onClick={() => rate('up')}
+                className={cn(
+                    'p-1 rounded-md hover:bg-muted transition-colors',
+                    rating === 'up'
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-muted-foreground hover:text-foreground',
+                )}
+                title="Good response"
+                data-testid={`chat-agent-feedback-up-${message.id}`}
+            >
+                <ThumbsUp size={14} weight={rating === 'up' ? 'fill' : 'regular'} />
+            </button>
+            <button
+                type="button"
+                onClick={() => rate('down')}
+                className={cn(
+                    'p-1 rounded-md hover:bg-muted transition-colors',
+                    rating === 'down'
+                        ? 'text-red-500'
+                        : 'text-muted-foreground hover:text-foreground',
+                )}
+                title="Bad response"
+                data-testid={`chat-agent-feedback-down-${message.id}`}
+            >
+                <ThumbsDown size={14} weight={rating === 'down' ? 'fill' : 'regular'} />
+            </button>
         </div>
     );
 }
 
 const TOOL_ERROR_RE = /^(Error|Permission denied|Not found|Validation error)/i;
-
-/** Present-tense phrase for the running state, e.g. "Generating image". */
-function toolRunningLabel(toolName: string): string {
-    const [, rawAction] = toolName.split('.', 2);
-    const action = rawAction ?? toolName;
-    if (action.includes('image')) return 'Generating image';
-    if (action.includes('search')) return 'Searching';
-    if (action.startsWith('create')) return 'Creating';
-    if (action.startsWith('update')) return 'Updating';
-    if (action.startsWith('delete')) return 'Deleting';
-    if (action.startsWith('move')) return 'Moving';
-    if (action.startsWith('read') || action.startsWith('get') || action.startsWith('list')) return 'Reading';
-    return humanizeToolName(toolName);
-}
 
 /** Groups a run of tool calls into one reasoning-pane-styled timeline, evolving
  * running -> completed / failed as each call's result row and the agent's typing
@@ -152,12 +192,11 @@ export function AgentToolActivityPane({ toolMessages }: { toolMessages: ChatMess
         const failed = !!resultMsg && TOOL_ERROR_RE.test(result);
         const running = !resultMsg && agentActive;
         const interrupted = !resultMsg && !agentActive;
-        const isImage = toolName.includes('image');
+        const isImage = internalToolName(toolName).includes('image');
         return {
             id: message.id,
             toolName,
-            label: humanizeToolName(toolName),
-            runningLabel: toolRunningLabel(toolName),
+            label: toolActionLabel(toolName),
             args: readString(message.metadata, 'tool_args'),
             result: result || undefined,
             status: running ? 'running' : interrupted ? 'interrupted' : failed ? 'failed' : 'completed',
@@ -173,17 +212,44 @@ export function AgentToolActivityPane({ toolMessages }: { toolMessages: ChatMess
         };
     });
 
+    // A generated image carries its resolved params on the result row; they are
+    // what the regenerate menu patches, and the model never saw most of them.
+    const imageResults: { messageId: string; meta: ImageGenerationMeta }[] = toolMessages
+        .flatMap((message) => {
+            const toolCallId = readString(message.metadata, 'tool_call_id');
+            const resultMsg = toolCallId
+                ? channelMessages.find(
+                      (m) =>
+                          m.senderType === 'AGENT' &&
+                          m.metadata?.['kind'] === 'tool_result' &&
+                          m.metadata?.['tool_call_id'] === toolCallId,
+                  )
+                : undefined;
+            const meta = resultMsg ? parseImageMeta(resultMsg.metadata?.['tool_meta']) : null;
+            return meta && resultMsg ? [{ messageId: resultMsg.id, meta }] : [];
+        });
+
     const live = steps.some((s) => s.status === 'running');
     const onStop = live && agentId ? () => dispatch(stopAgentRun({ channelId, agentId })) : undefined;
 
     return (
-        <ToolActivityPane
-            steps={steps}
-            live={live}
-            answerStarted={!live}
-            onStop={onStop}
-            testId={`chat-agent-tool-activity-${toolMessages[0]?.id ?? ''}`}
-        />
+        <div className="min-w-0 flex-1">
+            <ToolActivityPane
+                steps={steps}
+                live={live}
+                answerStarted={!live}
+                onStop={onStop}
+                testId={`chat-agent-tool-activity-${toolMessages[0]?.id ?? ''}`}
+            />
+            {imageResults.map(({ messageId, meta }) => (
+                <GeneratedImageCard
+                    key={messageId}
+                    meta={meta}
+                    channelId={channelId}
+                    messageId={messageId}
+                />
+            ))}
+        </div>
     );
 }
 
@@ -196,7 +262,7 @@ function ToolResultCard({ message }: { message: ChatMessage }) {
         {
             id: message.id,
             toolName,
-            label: humanizeToolName(toolName),
+            label: toolActionLabel(toolName),
             result: result || undefined,
             status: failed ? 'failed' : 'completed',
         },
@@ -362,10 +428,7 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
                         <Warning size={18} weight="fill" className="text-yellow-500 shrink-0 mt-0.5" />
                         <div className="min-w-0">
                             <p className="text-[13px] font-medium text-foreground">
-                                Approval required: {humanizeToolName(toolName)}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 font-mono truncate">
-                                {toolName}
+                                Approval required: {toolActionLabel(toolName)}
                             </p>
                         </div>
                     </div>
@@ -427,9 +490,9 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
 }
 
 function SkillDraftCard({ message }: { message: ChatMessage }) {
-    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const currentUserId = useAppSelector((state) => state.auth.user?.id ?? '');
-    const organizationId = useAppSelector((state) => state.auth.currentOrganizationId ?? '');
+    const { isBuilder } = useAgentsBuilderAccess();
 
     const draftId = readString(message.metadata, 'draft_id') ?? '';
     const title = readString(message.metadata, 'draft_display_name')
@@ -441,20 +504,10 @@ function SkillDraftCard({ message }: { message: ChatMessage }) {
     const actorUserId = readString(message.metadata, 'actor_user_id') ?? '';
 
     const isActor = !!currentUserId && currentUserId === actorUserId;
-    const [loading, setLoading] = useState(false);
-    const [editingDraft, setEditingDraft] = useState<SerializedSkillDraft | null>(null);
 
-    const openReview = async () => {
-        if (!draftId || !organizationId || loading) return;
-        setLoading(true);
-        try {
-            const draft = await dispatch(fetchSkillDraft(draftId)).unwrap();
-            setEditingDraft(draft);
-        } catch {
-            // errorToastMiddleware surfaces the failure; leave the modal closed.
-        } finally {
-            setLoading(false);
-        }
+    const openReview = () => {
+        if (!draftId) return;
+        navigate(`/agents/skills/drafts/${draftId}`);
     };
 
     return (
@@ -480,18 +533,17 @@ function SkillDraftCard({ message }: { message: ChatMessage }) {
                     </div>
 
                     {status === 'pending' ? (
-                        isActor ? (
+                        isBuilder ? (
                             <Button
                                 onClick={openReview}
                                 size="sm"
-                                disabled={loading}
                                 data-testid={`chat-skill-draft-review-${message.id}`}
                             >
-                                {loading ? 'Opening...' : 'Review & save'}
+                                Review &amp; save
                             </Button>
                         ) : (
                             <p className="text-[11px] text-muted-foreground italic">
-                                Waiting for the requester to review...
+                                Waiting for a builder to review...
                             </p>
                         )
                     ) : (
@@ -507,10 +559,6 @@ function SkillDraftCard({ message }: { message: ChatMessage }) {
                     )}
                 </div>
             </div>
-
-            {editingDraft && (
-                <SkillDraftEditorModal draft={editingDraft} onClose={() => setEditingDraft(null)} />
-            )}
         </div>
     );
 }
@@ -528,7 +576,7 @@ function ConfirmationResolvedRow({ message }: { message: ChatMessage }) {
                 <XCircle size={14} weight="fill" className="text-red-500 shrink-0" />
             )}
             <span>
-                {approved ? 'Approved' : 'Denied'}: {humanizeToolName(toolName)}
+                {approved ? 'Approved' : 'Denied'}: {toolActionLabel(toolName)}
             </span>
             <ArrowsClockwise size={10} className="opacity-40" />
         </div>

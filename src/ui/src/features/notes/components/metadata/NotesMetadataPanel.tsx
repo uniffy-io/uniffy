@@ -21,6 +21,7 @@ import { useComments } from '@/features/comments/hooks/useComments';
 import { useLiveNoteMarkdown } from '@/features/notes/realtime/liveNoteDocs';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
+import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
 import { useNavigate } from 'react-router-dom';
 
 import { getInitials } from '@/components/subject/utils';
@@ -157,6 +158,11 @@ export function NotesMetadataPanel() {
 
   // Handle clicking on an outgoing link
   const handleLinkClick = (urn: string) => {
+    const parsed = parseUrn(urn);
+    if (parsed.type === UrnType.ROOM && parsed.id) {
+      dispatch(openRoomViewer({ roomId: parsed.id }));
+      return;
+    }
     const path = urnToPath(urn);
     if (path !== '#') {
       navigate(path);

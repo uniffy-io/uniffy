@@ -36,7 +36,6 @@ export const skillDraftToPlain = (draft: SkillDraft) => ({
     whenToUse: draft.whenToUse,
     requiresTools: [...draft.requiresTools],
     requiresContext: [...draft.requiresContext],
-    suggestedScope: draft.suggestedScope,
     suggestedAlwaysActive: draft.suggestedAlwaysActive,
     status: draft.status,
     createdAt: timestampToPlain(draft.createdAt),
@@ -53,7 +52,6 @@ export interface SaveDraftFields {
     whenToUse: string;
     requiresTools: string[];
     requiresContext: string[];
-    suggestedScope: string;
     suggestedAlwaysActive: boolean;
     changeSummary?: string;
 }
@@ -100,7 +98,6 @@ export const createSkillDraft = createAsyncThunk<
         whenToUse?: string;
         requiresTools?: string[];
         requiresContext?: string[];
-        suggestedScope?: string;
         suggestedAlwaysActive?: boolean;
         rationale?: string;
     },
@@ -119,7 +116,6 @@ export const createSkillDraft = createAsyncThunk<
             whenToUse: params.whenToUse ?? '',
             requiresTools: params.requiresTools ?? [],
             requiresContext: params.requiresContext ?? [],
-            suggestedScope: params.suggestedScope ?? 'personal',
             suggestedAlwaysActive: params.suggestedAlwaysActive ?? false,
             rationale: params.rationale ?? '',
         });
@@ -132,31 +128,34 @@ export const createSkillDraft = createAsyncThunk<
 
 export const saveSkillDraft = createAsyncThunk<
     { draftId: string; skill: ReturnType<typeof skillToPlain> },
-    { draftId: string; fields: SaveDraftFields },
+    { draftId: string; fields: SaveDraftFields; allowReplace?: boolean },
     { state: RootState; rejectValue: string }
->('agentSkillDrafts/save', async ({ draftId, fields }, { getState, rejectWithValue }) => {
-    try {
-        const organizationId = getOrganizationId(getState());
-        const response = await skillsApi.saveSkillDraft({
-            organizationId,
-            draftId,
-            name: fields.name,
-            displayName: fields.displayName,
-            description: fields.description,
-            content: fields.content,
-            whenToUse: fields.whenToUse,
-            requiresTools: fields.requiresTools,
-            requiresContext: fields.requiresContext,
-            suggestedScope: fields.suggestedScope,
-            suggestedAlwaysActive: fields.suggestedAlwaysActive,
-            changeSummary: fields.changeSummary ?? '',
-        });
-        if (!response.skill) throw new Error('No skill in response');
-        return { draftId, skill: skillToPlain(response.skill) };
-    } catch (error) {
-        return rejectWithValue(error instanceof Error ? error.message : 'Failed to save draft');
-    }
-});
+>(
+    'agentSkillDrafts/save',
+    async ({ draftId, fields, allowReplace }, { getState, rejectWithValue }) => {
+        try {
+            const organizationId = getOrganizationId(getState());
+            const response = await skillsApi.saveSkillDraft({
+                organizationId,
+                draftId,
+                name: fields.name,
+                displayName: fields.displayName,
+                description: fields.description,
+                content: fields.content,
+                whenToUse: fields.whenToUse,
+                requiresTools: fields.requiresTools,
+                requiresContext: fields.requiresContext,
+                suggestedAlwaysActive: fields.suggestedAlwaysActive,
+                changeSummary: fields.changeSummary ?? '',
+                allowReplace: allowReplace ?? false,
+            });
+            if (!response.skill) throw new Error('No skill in response');
+            return { draftId, skill: skillToPlain(response.skill) };
+        } catch (error) {
+            return rejectWithValue(error instanceof Error ? error.message : 'Failed to save draft');
+        }
+    },
+);
 
 export const discardSkillDraft = createAsyncThunk<
     string,

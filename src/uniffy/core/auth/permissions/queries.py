@@ -3,14 +3,15 @@
 Selects rows the user owns, has a non-BLOCKED ContentMember on (direct or
 via group), or that are OPEN_TO_ORG with a baseline; minus any content the
 user is BLOCKED on. Does NOT apply org/domain admin bypass - callers skip
-the filter entirely in that case.
+the filter entirely in that case. An actor without an active org membership
+gets a no-rows filter, mirroring the membership gate in ``effective_role``.
 """
 
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import and_, case, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.sql import Select
@@ -26,8 +27,28 @@ class ContentAccessQuery:
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+        self._active_member_cache: dict[tuple[UUID, UUID], bool] = {}
 
-    def build_accessible_filter(
+    async def _is_active_member(self, user_id: UUID, organization_id: UUID) -> bool:
+        from uniffy.core.models.login.organization_member import OrganizationMember
+
+        key = (user_id, organization_id)
+        cached = self._active_member_cache.get(key)
+        if cached is not None:
+            return cached
+
+        result = await self.session.execute(
+            select(OrganizationMember.role).where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active == True,  # noqa: E712
+            )
+        )
+        active = result.scalar_one_or_none() is not None
+        self._active_member_cache[key] = active
+        return active
+
+    async def build_accessible_filter(
         self,
         user_id: UUID,
         organization_id: UUID,
@@ -49,6 +70,12 @@ class ContentAccessQuery:
         """
         from uniffy.core.models.login.group_member import GroupMember
         from uniffy.core.models.permissions.content_member import ContentMember
+
+        # Membership is resolved once per (user, org) per query object rather
+        # than as a correlated EXISTS, which would ride along on every row of
+        # every list query.
+        if not await self._is_active_member(user_id, organization_id):
+            return false()
 
         now = datetime.now(UTC)
 
@@ -186,7 +213,7 @@ class ContentAccessQuery:
 
         return content_id_column.notin_(blocked_subq)
 
-    def build_shared_with_me_filter(
+    async def build_shared_with_me_filter(
         self,
         user_id: UUID,
         organization_id: UUID,
@@ -197,7 +224,7 @@ class ContentAccessQuery:
         baseline_role_column: InstrumentedAttribute,
     ) -> Any:
         """``build_accessible_filter`` minus owned rows (for "Shared with me")."""
-        base = self.build_accessible_filter(
+        base = await self.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=content_type,
@@ -218,7 +245,7 @@ class ContentAccessQuery:
         access_mode_column: InstrumentedAttribute,
         baseline_role_column: InstrumentedAttribute,
     ) -> list[UUID]:
-        filter_expr = self.build_accessible_filter(
+        filter_expr = await self.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=content_type,
@@ -230,7 +257,7 @@ class ContentAccessQuery:
         result = await self.session.execute(select(content_id_column).where(filter_expr))
         return [row[0] for row in result.all()]
 
-    def apply_visibility_filter(
+    async def apply_visibility_filter(
         self,
         query: Select,
         user_id: UUID,
@@ -241,7 +268,7 @@ class ContentAccessQuery:
         access_mode_column: InstrumentedAttribute,
         baseline_role_column: InstrumentedAttribute,
     ) -> Select:
-        filter_expr = self.build_accessible_filter(
+        filter_expr = await self.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=content_type,

@@ -259,6 +259,7 @@ class ProjectOperations(BaseContentOperations[Project]):
             tag_ops = TagOperations(self.session)
             project_urn = build_content_urn(self.content_type, project_id)
             await tag_ops.unassign_all_for_urn(
+                actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=project_urn,
             )
@@ -267,6 +268,7 @@ class ProjectOperations(BaseContentOperations[Project]):
             )
             for (task_id,) in task_id_rows:
                 await tag_ops.unassign_all_for_urn(
+                    actor_id=user_id,
                     organization_id=organization_id,
                     content_urn=build_content_urn(ContentType.TASK, task_id),
                 )
@@ -311,7 +313,7 @@ class ProjectOperations(BaseContentOperations[Project]):
     ) -> tuple[list[Project], int]:
         query = select(Project).where(Project.organization_id == organization_id)
 
-        access_filter = self.access_query.build_accessible_filter(
+        access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
             content_type=self.content_type,
@@ -1288,6 +1290,7 @@ class TaskOperations(BaseContentOperations[Task]):
         if permanent:
             tag_ops = TagOperations(self.session)
             await tag_ops.unassign_all_for_urn(
+                actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=build_content_urn(self.content_type, task_id),
             )

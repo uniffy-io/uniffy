@@ -672,6 +672,7 @@ class NotificationsHandlers:
                         actor_id=payload.get("actor_id", ""),
                         actor_name=payload.get("actor_name", ""),
                         is_read=False,
+                        metadata=payload.get("metadata") or {},
                     )
 
                     if "created_at" in payload:

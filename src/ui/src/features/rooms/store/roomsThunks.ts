@@ -256,6 +256,61 @@ export const fetchRoom = createAsyncThunk<
   }
 });
 
+/**
+ * Everything the room viewer shows, in one call: the room itself, the coming week's
+ * bookings, and today's availability. Kept out of the list-scoped state so opening a
+ * room from a mention never disturbs whatever the rooms admin table is showing.
+ */
+export const openRoomViewer = createAsyncThunk<
+  { roomId: string; room: Room; bookings: RoomBooking[]; slots: TimeSlot[] },
+  /** `inline` marks the room page, which renders the same state itself, so the modal stays out of its way. */
+  { roomId: string; inline?: boolean },
+  { state: RootState; rejectValue: string }
+>('rooms/openRoomViewer', async ({ roomId }, { getState, rejectWithValue }) => {
+  const organizationId = getState().auth.currentOrganizationId;
+  if (!organizationId) {
+    return rejectWithValue('No organization selected');
+  }
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+
+  try {
+    const roomResponse = await roomsApi.getRoom({ roomId, organizationId });
+    if (!roomResponse.room) {
+      return rejectWithValue('Room not found');
+    }
+
+    const [bookingsResponse, availabilityResponse] = await Promise.all([
+      roomsApi.listBookings({
+        organizationId,
+        roomId,
+        startDate: isoToTimestamp(now.toISOString()),
+        endDate: isoToTimestamp(endOfWeek.toISOString()),
+        page: 1,
+        pageSize: DEFAULT_PAGE_SIZE,
+      }),
+      roomsApi.checkAvailability({
+        organizationId,
+        roomId,
+        startDate: isoToTimestamp(startOfDay.toISOString()),
+        endDate: isoToTimestamp(endOfDay.toISOString()),
+      }),
+    ]);
+
+    return {
+      roomId,
+      room: roomFromProto(roomResponse.room),
+      bookings: bookingsResponse.bookings.map(bookingFromProto),
+      slots: availabilityResponse.slots.map(timeSlotFromProto),
+    };
+  } catch (error) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Failed to load room');
+  }
+});
+
 export const createRoom = createAsyncThunk<
   Room,
   {

@@ -147,6 +147,7 @@ def session_to_proto(session: AgentSession) -> SessionInfo:
         total_output_tokens=session.total_output_tokens,
         message_count=session.message_count,
         is_archived=session.is_archived,
+        is_test=session.is_test,
         created_at=datetime_to_timestamp(session.created_at),
         updated_at=datetime_to_timestamp(session.updated_at),
     )
@@ -159,9 +160,6 @@ def session_to_proto(session: AgentSession) -> SessionInfo:
 
     if session.last_model_used:
         info.last_model_used = session.last_model_used
-
-    if session.model_params_override:
-        info.model_params_override = json.dumps(session.model_params_override)
 
     return info
 
@@ -222,7 +220,7 @@ def message_to_proto(message: AgentMessage, *, feedback_rating: str = "") -> Mes
 def message_feedback_to_proto(feedback: AgentMessageFeedback) -> MessageFeedback:
     """Convert a stored thumbs rating to proto."""
     return MessageFeedback(
-        message_id=str(feedback.message_id),
+        message_id=str(feedback.agents_message_id or feedback.chat_message_id),
         rating=feedback.rating,
         comment=feedback.comment or "",
         created_at=datetime_to_timestamp(feedback.created_at),

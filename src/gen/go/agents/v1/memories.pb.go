@@ -79,20 +79,138 @@ func (MemoryCategory) EnumDescriptor() ([]byte, []int) {
 	return file_agents_v1_memories_proto_rawDescGZIP(), []int{0}
 }
 
-// Memory info returned to clients
+// Audience scope of a memory entry
+type MemoryScope int32
+
+const (
+	MemoryScope_MEMORY_SCOPE_UNSPECIFIED MemoryScope = 0
+	MemoryScope_MEMORY_SCOPE_USER        MemoryScope = 1
+	MemoryScope_MEMORY_SCOPE_CHANNEL     MemoryScope = 2
+	MemoryScope_MEMORY_SCOPE_SESSION     MemoryScope = 3
+	MemoryScope_MEMORY_SCOPE_ORG         MemoryScope = 4
+)
+
+// Enum value maps for MemoryScope.
+var (
+	MemoryScope_name = map[int32]string{
+		0: "MEMORY_SCOPE_UNSPECIFIED",
+		1: "MEMORY_SCOPE_USER",
+		2: "MEMORY_SCOPE_CHANNEL",
+		3: "MEMORY_SCOPE_SESSION",
+		4: "MEMORY_SCOPE_ORG",
+	}
+	MemoryScope_value = map[string]int32{
+		"MEMORY_SCOPE_UNSPECIFIED": 0,
+		"MEMORY_SCOPE_USER":        1,
+		"MEMORY_SCOPE_CHANNEL":     2,
+		"MEMORY_SCOPE_SESSION":     3,
+		"MEMORY_SCOPE_ORG":         4,
+	}
+)
+
+func (x MemoryScope) Enum() *MemoryScope {
+	p := new(MemoryScope)
+	*p = x
+	return p
+}
+
+func (x MemoryScope) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MemoryScope) Descriptor() protoreflect.EnumDescriptor {
+	return file_agents_v1_memories_proto_enumTypes[1].Descriptor()
+}
+
+func (MemoryScope) Type() protoreflect.EnumType {
+	return &file_agents_v1_memories_proto_enumTypes[1]
+}
+
+func (x MemoryScope) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MemoryScope.Descriptor instead.
+func (MemoryScope) EnumDescriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{1}
+}
+
+// How a memory entry was created
+type MemorySource int32
+
+const (
+	MemorySource_MEMORY_SOURCE_UNSPECIFIED MemorySource = 0
+	MemorySource_MEMORY_SOURCE_TOOL        MemorySource = 1
+	MemorySource_MEMORY_SOURCE_MANUAL      MemorySource = 2
+)
+
+// Enum value maps for MemorySource.
+var (
+	MemorySource_name = map[int32]string{
+		0: "MEMORY_SOURCE_UNSPECIFIED",
+		1: "MEMORY_SOURCE_TOOL",
+		2: "MEMORY_SOURCE_MANUAL",
+	}
+	MemorySource_value = map[string]int32{
+		"MEMORY_SOURCE_UNSPECIFIED": 0,
+		"MEMORY_SOURCE_TOOL":        1,
+		"MEMORY_SOURCE_MANUAL":      2,
+	}
+)
+
+func (x MemorySource) Enum() *MemorySource {
+	p := new(MemorySource)
+	*p = x
+	return p
+}
+
+func (x MemorySource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MemorySource) Descriptor() protoreflect.EnumDescriptor {
+	return file_agents_v1_memories_proto_enumTypes[2].Descriptor()
+}
+
+func (MemorySource) Type() protoreflect.EnumType {
+	return &file_agents_v1_memories_proto_enumTypes[2]
+}
+
+func (x MemorySource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MemorySource.Descriptor instead.
+func (MemorySource) EnumDescriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{2}
+}
+
+// Memory info returned to clients.
+// agent_id is set only on organization entries bound to one agent; absent means
+// every agent in the bucket reads it. created_by_agent_id is provenance.
 type MemoryInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Key           string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
-	Content       string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
-	Category      MemoryCategory         `protobuf:"varint,5,opt,name=category,proto3,enum=agents.v1.MemoryCategory" json:"category,omitempty"`
-	Importance    float32                `protobuf:"fixed32,6,opt,name=importance,proto3" json:"importance,omitempty"`
-	AccessCount   int32                  `protobuf:"varint,7,opt,name=access_count,json=accessCount,proto3" json:"access_count,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId            *string                `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
+	Key                string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	Content            string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
+	Category           MemoryCategory         `protobuf:"varint,5,opt,name=category,proto3,enum=agents.v1.MemoryCategory" json:"category,omitempty"`
+	Importance         float32                `protobuf:"fixed32,6,opt,name=importance,proto3" json:"importance,omitempty"`
+	AccessCount        int32                  `protobuf:"varint,7,opt,name=access_count,json=accessCount,proto3" json:"access_count,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Scope              MemoryScope            `protobuf:"varint,10,opt,name=scope,proto3,enum=agents.v1.MemoryScope" json:"scope,omitempty"`
+	Description        string                 `protobuf:"bytes,11,opt,name=description,proto3" json:"description,omitempty"`
+	Pinned             bool                   `protobuf:"varint,12,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	Source             MemorySource           `protobuf:"varint,13,opt,name=source,proto3,enum=agents.v1.MemorySource" json:"source,omitempty"`
+	CreatedByUserId    string                 `protobuf:"bytes,14,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
+	CreatedByName      string                 `protobuf:"bytes,15,opt,name=created_by_name,json=createdByName,proto3" json:"created_by_name,omitempty"`
+	ChannelId          *string                `protobuf:"bytes,16,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	SessionId          *string                `protobuf:"bytes,17,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
+	CreatedByAgentId   *string                `protobuf:"bytes,18,opt,name=created_by_agent_id,json=createdByAgentId,proto3,oneof" json:"created_by_agent_id,omitempty"`
+	CreatedByAgentName string                 `protobuf:"bytes,19,opt,name=created_by_agent_name,json=createdByAgentName,proto3" json:"created_by_agent_name,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *MemoryInfo) Reset() {
@@ -133,8 +251,8 @@ func (x *MemoryInfo) GetId() string {
 }
 
 func (x *MemoryInfo) GetAgentId() string {
-	if x != nil {
-		return x.AgentId
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
 	}
 	return ""
 }
@@ -188,13 +306,90 @@ func (x *MemoryInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *MemoryInfo) GetScope() MemoryScope {
+	if x != nil {
+		return x.Scope
+	}
+	return MemoryScope_MEMORY_SCOPE_UNSPECIFIED
+}
+
+func (x *MemoryInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *MemoryInfo) GetPinned() bool {
+	if x != nil {
+		return x.Pinned
+	}
+	return false
+}
+
+func (x *MemoryInfo) GetSource() MemorySource {
+	if x != nil {
+		return x.Source
+	}
+	return MemorySource_MEMORY_SOURCE_UNSPECIFIED
+}
+
+func (x *MemoryInfo) GetCreatedByUserId() string {
+	if x != nil {
+		return x.CreatedByUserId
+	}
+	return ""
+}
+
+func (x *MemoryInfo) GetCreatedByName() string {
+	if x != nil {
+		return x.CreatedByName
+	}
+	return ""
+}
+
+func (x *MemoryInfo) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
+func (x *MemoryInfo) GetSessionId() string {
+	if x != nil && x.SessionId != nil {
+		return *x.SessionId
+	}
+	return ""
+}
+
+func (x *MemoryInfo) GetCreatedByAgentId() string {
+	if x != nil && x.CreatedByAgentId != nil {
+		return *x.CreatedByAgentId
+	}
+	return ""
+}
+
+func (x *MemoryInfo) GetCreatedByAgentName() string {
+	if x != nil {
+		return x.CreatedByAgentName
+	}
+	return ""
+}
+
+// Scope defaults to MEMORY_SCOPE_USER (the caller's own entries).
+// channel_id / session_id are required subject ids for their scopes.
+// agent_id narrows to one agent's organization entries and is rejected on
+// every other scope, where memory is shared by all agents.
 type ListMemoriesRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	AgentId        *string                `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
 	Category       *MemoryCategory        `protobuf:"varint,3,opt,name=category,proto3,enum=agents.v1.MemoryCategory,oneof" json:"category,omitempty"`
 	Search         *string                `protobuf:"bytes,4,opt,name=search,proto3,oneof" json:"search,omitempty"`
 	Pagination     *v1.PaginationRequest  `protobuf:"bytes,5,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
+	Scope          MemoryScope            `protobuf:"varint,6,opt,name=scope,proto3,enum=agents.v1.MemoryScope" json:"scope,omitempty"`
+	ChannelId      *string                `protobuf:"bytes,7,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	SessionId      *string                `protobuf:"bytes,8,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -237,8 +432,8 @@ func (x *ListMemoriesRequest) GetOrganizationId() string {
 }
 
 func (x *ListMemoriesRequest) GetAgentId() string {
-	if x != nil {
-		return x.AgentId
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
 	}
 	return ""
 }
@@ -262,6 +457,27 @@ func (x *ListMemoriesRequest) GetPagination() *v1.PaginationRequest {
 		return x.Pagination
 	}
 	return nil
+}
+
+func (x *ListMemoriesRequest) GetScope() MemoryScope {
+	if x != nil {
+		return x.Scope
+	}
+	return MemoryScope_MEMORY_SCOPE_UNSPECIFIED
+}
+
+func (x *ListMemoriesRequest) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
+func (x *ListMemoriesRequest) GetSessionId() string {
+	if x != nil && x.SessionId != nil {
+		return *x.SessionId
+	}
+	return ""
 }
 
 type ListMemoriesResponse struct {
@@ -319,11 +535,15 @@ func (x *ListMemoriesResponse) GetPagination() *v1.PaginationResponse {
 type CreateMemoryRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	AgentId        *string                `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
 	Key            string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
 	Content        string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
 	Category       MemoryCategory         `protobuf:"varint,5,opt,name=category,proto3,enum=agents.v1.MemoryCategory" json:"category,omitempty"`
 	Importance     *float32               `protobuf:"fixed32,6,opt,name=importance,proto3,oneof" json:"importance,omitempty"`
+	Scope          MemoryScope            `protobuf:"varint,7,opt,name=scope,proto3,enum=agents.v1.MemoryScope" json:"scope,omitempty"`
+	ChannelId      *string                `protobuf:"bytes,8,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	SessionId      *string                `protobuf:"bytes,9,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
+	Description    string                 `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -366,8 +586,8 @@ func (x *CreateMemoryRequest) GetOrganizationId() string {
 }
 
 func (x *CreateMemoryRequest) GetAgentId() string {
-	if x != nil {
-		return x.AgentId
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
 	}
 	return ""
 }
@@ -400,6 +620,34 @@ func (x *CreateMemoryRequest) GetImportance() float32 {
 	return 0
 }
 
+func (x *CreateMemoryRequest) GetScope() MemoryScope {
+	if x != nil {
+		return x.Scope
+	}
+	return MemoryScope_MEMORY_SCOPE_UNSPECIFIED
+}
+
+func (x *CreateMemoryRequest) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
+func (x *CreateMemoryRequest) GetSessionId() string {
+	if x != nil && x.SessionId != nil {
+		return *x.SessionId
+	}
+	return ""
+}
+
+func (x *CreateMemoryRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 type UpdateMemoryRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -407,6 +655,7 @@ type UpdateMemoryRequest struct {
 	Content        *string                `protobuf:"bytes,3,opt,name=content,proto3,oneof" json:"content,omitempty"`
 	Category       *MemoryCategory        `protobuf:"varint,4,opt,name=category,proto3,enum=agents.v1.MemoryCategory,oneof" json:"category,omitempty"`
 	Importance     *float32               `protobuf:"fixed32,5,opt,name=importance,proto3,oneof" json:"importance,omitempty"`
+	Description    *string                `protobuf:"bytes,6,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -474,6 +723,13 @@ func (x *UpdateMemoryRequest) GetImportance() float32 {
 		return *x.Importance
 	}
 	return 0
+}
+
+func (x *UpdateMemoryRequest) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
 }
 
 type CreateMemoryResponse struct {
@@ -660,15 +916,319 @@ func (x *DeleteMemoryResponse) GetSuccess() bool {
 	return false
 }
 
+type SetMemoryPinnedRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	MemoryId       string                 `protobuf:"bytes,2,opt,name=memory_id,json=memoryId,proto3" json:"memory_id,omitempty"`
+	Pinned         bool                   `protobuf:"varint,3,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetMemoryPinnedRequest) Reset() {
+	*x = SetMemoryPinnedRequest{}
+	mi := &file_agents_v1_memories_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetMemoryPinnedRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetMemoryPinnedRequest) ProtoMessage() {}
+
+func (x *SetMemoryPinnedRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_memories_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetMemoryPinnedRequest.ProtoReflect.Descriptor instead.
+func (*SetMemoryPinnedRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SetMemoryPinnedRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetMemoryPinnedRequest) GetMemoryId() string {
+	if x != nil {
+		return x.MemoryId
+	}
+	return ""
+}
+
+func (x *SetMemoryPinnedRequest) GetPinned() bool {
+	if x != nil {
+		return x.Pinned
+	}
+	return false
+}
+
+type SetMemoryPinnedResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Memory        *MemoryInfo            `protobuf:"bytes,1,opt,name=memory,proto3" json:"memory,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetMemoryPinnedResponse) Reset() {
+	*x = SetMemoryPinnedResponse{}
+	mi := &file_agents_v1_memories_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetMemoryPinnedResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetMemoryPinnedResponse) ProtoMessage() {}
+
+func (x *SetMemoryPinnedResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_memories_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetMemoryPinnedResponse.ProtoReflect.Descriptor instead.
+func (*SetMemoryPinnedResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SetMemoryPinnedResponse) GetMemory() *MemoryInfo {
+	if x != nil {
+		return x.Memory
+	}
+	return nil
+}
+
+type GetMemorySharingRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetMemorySharingRequest) Reset() {
+	*x = GetMemorySharingRequest{}
+	mi := &file_agents_v1_memories_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMemorySharingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMemorySharingRequest) ProtoMessage() {}
+
+func (x *GetMemorySharingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_memories_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMemorySharingRequest.ProtoReflect.Descriptor instead.
+func (*GetMemorySharingRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetMemorySharingRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type GetMemorySharingResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	UseInSharedSpaces bool                   `protobuf:"varint,1,opt,name=use_in_shared_spaces,json=useInSharedSpaces,proto3" json:"use_in_shared_spaces,omitempty"`
+	OrgAllows         bool                   `protobuf:"varint,2,opt,name=org_allows,json=orgAllows,proto3" json:"org_allows,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetMemorySharingResponse) Reset() {
+	*x = GetMemorySharingResponse{}
+	mi := &file_agents_v1_memories_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMemorySharingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMemorySharingResponse) ProtoMessage() {}
+
+func (x *GetMemorySharingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_memories_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMemorySharingResponse.ProtoReflect.Descriptor instead.
+func (*GetMemorySharingResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetMemorySharingResponse) GetUseInSharedSpaces() bool {
+	if x != nil {
+		return x.UseInSharedSpaces
+	}
+	return false
+}
+
+func (x *GetMemorySharingResponse) GetOrgAllows() bool {
+	if x != nil {
+		return x.OrgAllows
+	}
+	return false
+}
+
+type SetMemorySharingRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId    string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UseInSharedSpaces bool                   `protobuf:"varint,2,opt,name=use_in_shared_spaces,json=useInSharedSpaces,proto3" json:"use_in_shared_spaces,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SetMemorySharingRequest) Reset() {
+	*x = SetMemorySharingRequest{}
+	mi := &file_agents_v1_memories_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetMemorySharingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetMemorySharingRequest) ProtoMessage() {}
+
+func (x *SetMemorySharingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_memories_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetMemorySharingRequest.ProtoReflect.Descriptor instead.
+func (*SetMemorySharingRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SetMemorySharingRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetMemorySharingRequest) GetUseInSharedSpaces() bool {
+	if x != nil {
+		return x.UseInSharedSpaces
+	}
+	return false
+}
+
+type SetMemorySharingResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	UseInSharedSpaces bool                   `protobuf:"varint,1,opt,name=use_in_shared_spaces,json=useInSharedSpaces,proto3" json:"use_in_shared_spaces,omitempty"`
+	OrgAllows         bool                   `protobuf:"varint,2,opt,name=org_allows,json=orgAllows,proto3" json:"org_allows,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SetMemorySharingResponse) Reset() {
+	*x = SetMemorySharingResponse{}
+	mi := &file_agents_v1_memories_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetMemorySharingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetMemorySharingResponse) ProtoMessage() {}
+
+func (x *SetMemorySharingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_memories_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetMemorySharingResponse.ProtoReflect.Descriptor instead.
+func (*SetMemorySharingResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_memories_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SetMemorySharingResponse) GetUseInSharedSpaces() bool {
+	if x != nil {
+		return x.UseInSharedSpaces
+	}
+	return false
+}
+
+func (x *SetMemorySharingResponse) GetOrgAllows() bool {
+	if x != nil {
+		return x.OrgAllows
+	}
+	return false
+}
+
 var File_agents_v1_memories_proto protoreflect.FileDescriptor
 
 const file_agents_v1_memories_proto_rawDesc = "" +
 	"\n" +
-	"\x18agents/v1/memories.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd3\x02\n" +
+	"\x18agents/v1/memories.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb8\x06\n" +
 	"\n" +
 	"MemoryInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x10\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1e\n" +
+	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n" +
 	"\acontent\x18\x04 \x01(\tR\acontent\x125\n" +
 	"\bcategory\x18\x05 \x01(\x0e2\x19.agents.v1.MemoryCategoryR\bcategory\x12\x1e\n" +
@@ -679,33 +1239,68 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9c\x02\n" +
-	"\x13ListMemoriesRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12:\n" +
-	"\bcategory\x18\x03 \x01(\x0e2\x19.agents.v1.MemoryCategoryH\x00R\bcategory\x88\x01\x01\x12\x1b\n" +
-	"\x06search\x18\x04 \x01(\tH\x01R\x06search\x88\x01\x01\x12A\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
+	"\x05scope\x18\n" +
+	" \x01(\x0e2\x16.agents.v1.MemoryScopeR\x05scope\x12 \n" +
+	"\vdescription\x18\v \x01(\tR\vdescription\x12\x16\n" +
+	"\x06pinned\x18\f \x01(\bR\x06pinned\x12/\n" +
+	"\x06source\x18\r \x01(\x0e2\x17.agents.v1.MemorySourceR\x06source\x12+\n" +
+	"\x12created_by_user_id\x18\x0e \x01(\tR\x0fcreatedByUserId\x12&\n" +
+	"\x0fcreated_by_name\x18\x0f \x01(\tR\rcreatedByName\x12\"\n" +
 	"\n" +
-	"pagination\x18\x05 \x01(\v2\x1c.common.v1.PaginationRequestH\x02R\n" +
-	"pagination\x88\x01\x01B\v\n" +
+	"channel_id\x18\x10 \x01(\tH\x01R\tchannelId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"session_id\x18\x11 \x01(\tH\x02R\tsessionId\x88\x01\x01\x122\n" +
+	"\x13created_by_agent_id\x18\x12 \x01(\tH\x03R\x10createdByAgentId\x88\x01\x01\x121\n" +
+	"\x15created_by_agent_name\x18\x13 \x01(\tR\x12createdByAgentNameB\v\n" +
+	"\t_agent_idB\r\n" +
+	"\v_channel_idB\r\n" +
+	"\v_session_idB\x16\n" +
+	"\x14_created_by_agent_id\"\xc2\x03\n" +
+	"\x13ListMemoriesRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1e\n" +
+	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x12:\n" +
+	"\bcategory\x18\x03 \x01(\x0e2\x19.agents.v1.MemoryCategoryH\x01R\bcategory\x88\x01\x01\x12\x1b\n" +
+	"\x06search\x18\x04 \x01(\tH\x02R\x06search\x88\x01\x01\x12A\n" +
+	"\n" +
+	"pagination\x18\x05 \x01(\v2\x1c.common.v1.PaginationRequestH\x03R\n" +
+	"pagination\x88\x01\x01\x12,\n" +
+	"\x05scope\x18\x06 \x01(\x0e2\x16.agents.v1.MemoryScopeR\x05scope\x12\"\n" +
+	"\n" +
+	"channel_id\x18\a \x01(\tH\x04R\tchannelId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"session_id\x18\b \x01(\tH\x05R\tsessionId\x88\x01\x01B\v\n" +
+	"\t_agent_idB\v\n" +
 	"\t_categoryB\t\n" +
 	"\a_searchB\r\n" +
-	"\v_pagination\"\x88\x01\n" +
+	"\v_paginationB\r\n" +
+	"\v_channel_idB\r\n" +
+	"\v_session_id\"\x88\x01\n" +
 	"\x14ListMemoriesResponse\x121\n" +
 	"\bmemories\x18\x01 \x03(\v2\x15.agents.v1.MemoryInfoR\bmemories\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\xf0\x01\n" +
+	"pagination\"\xb8\x03\n" +
 	"\x13CreateMemoryRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x10\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1e\n" +
+	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x18\n" +
 	"\acontent\x18\x04 \x01(\tR\acontent\x125\n" +
 	"\bcategory\x18\x05 \x01(\x0e2\x19.agents.v1.MemoryCategoryR\bcategory\x12#\n" +
 	"\n" +
-	"importance\x18\x06 \x01(\x02H\x00R\n" +
-	"importance\x88\x01\x01B\r\n" +
-	"\v_importance\"\x83\x02\n" +
+	"importance\x18\x06 \x01(\x02H\x01R\n" +
+	"importance\x88\x01\x01\x12,\n" +
+	"\x05scope\x18\a \x01(\x0e2\x16.agents.v1.MemoryScopeR\x05scope\x12\"\n" +
+	"\n" +
+	"channel_id\x18\b \x01(\tH\x02R\tchannelId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"session_id\x18\t \x01(\tH\x03R\tsessionId\x88\x01\x01\x12 \n" +
+	"\vdescription\x18\n" +
+	" \x01(\tR\vdescriptionB\v\n" +
+	"\t_agent_idB\r\n" +
+	"\v_importanceB\r\n" +
+	"\v_channel_idB\r\n" +
+	"\v_session_id\"\xba\x02\n" +
 	"\x13UpdateMemoryRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
 	"\tmemory_id\x18\x02 \x01(\tR\bmemoryId\x12\x1d\n" +
@@ -713,11 +1308,13 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\bcategory\x18\x04 \x01(\x0e2\x19.agents.v1.MemoryCategoryH\x01R\bcategory\x88\x01\x01\x12#\n" +
 	"\n" +
 	"importance\x18\x05 \x01(\x02H\x02R\n" +
-	"importance\x88\x01\x01B\n" +
+	"importance\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x06 \x01(\tH\x03R\vdescription\x88\x01\x01B\n" +
 	"\n" +
 	"\b_contentB\v\n" +
 	"\t_categoryB\r\n" +
-	"\v_importance\"E\n" +
+	"\v_importanceB\x0e\n" +
+	"\f_description\"E\n" +
 	"\x14CreateMemoryResponse\x12-\n" +
 	"\x06memory\x18\x01 \x01(\v2\x15.agents.v1.MemoryInfoR\x06memory\"E\n" +
 	"\x14UpdateMemoryResponse\x12-\n" +
@@ -726,18 +1323,50 @@ const file_agents_v1_memories_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
 	"\tmemory_id\x18\x02 \x01(\tR\bmemoryId\"0\n" +
 	"\x14DeleteMemoryResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess*\xac\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"v\n" +
+	"\x16SetMemoryPinnedRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
+	"\tmemory_id\x18\x02 \x01(\tR\bmemoryId\x12\x16\n" +
+	"\x06pinned\x18\x03 \x01(\bR\x06pinned\"H\n" +
+	"\x17SetMemoryPinnedResponse\x12-\n" +
+	"\x06memory\x18\x01 \x01(\v2\x15.agents.v1.MemoryInfoR\x06memory\"B\n" +
+	"\x17GetMemorySharingRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"j\n" +
+	"\x18GetMemorySharingResponse\x12/\n" +
+	"\x14use_in_shared_spaces\x18\x01 \x01(\bR\x11useInSharedSpaces\x12\x1d\n" +
+	"\n" +
+	"org_allows\x18\x02 \x01(\bR\torgAllows\"s\n" +
+	"\x17SetMemorySharingRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12/\n" +
+	"\x14use_in_shared_spaces\x18\x02 \x01(\bR\x11useInSharedSpaces\"j\n" +
+	"\x18SetMemorySharingResponse\x12/\n" +
+	"\x14use_in_shared_spaces\x18\x01 \x01(\bR\x11useInSharedSpaces\x12\x1d\n" +
+	"\n" +
+	"org_allows\x18\x02 \x01(\bR\torgAllows*\xac\x01\n" +
 	"\x0eMemoryCategory\x12\x1f\n" +
 	"\x1bMEMORY_CATEGORY_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bMEMORY_CATEGORY_PREFERENCES\x10\x01\x12\x19\n" +
 	"\x15MEMORY_CATEGORY_FACTS\x10\x02\x12\x1b\n" +
 	"\x17MEMORY_CATEGORY_CONTEXT\x10\x03\x12 \n" +
-	"\x1cMEMORY_CATEGORY_INSTRUCTIONS\x10\x042\xdd\x02\n" +
+	"\x1cMEMORY_CATEGORY_INSTRUCTIONS\x10\x04*\x8c\x01\n" +
+	"\vMemoryScope\x12\x1c\n" +
+	"\x18MEMORY_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11MEMORY_SCOPE_USER\x10\x01\x12\x18\n" +
+	"\x14MEMORY_SCOPE_CHANNEL\x10\x02\x12\x18\n" +
+	"\x14MEMORY_SCOPE_SESSION\x10\x03\x12\x14\n" +
+	"\x10MEMORY_SCOPE_ORG\x10\x04*_\n" +
+	"\fMemorySource\x12\x1d\n" +
+	"\x19MEMORY_SOURCE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12MEMORY_SOURCE_TOOL\x10\x01\x12\x18\n" +
+	"\x14MEMORY_SOURCE_MANUAL\x10\x022\xf7\x04\n" +
 	"\x0fMemoriesService\x12Q\n" +
 	"\fListMemories\x12\x1e.agents.v1.ListMemoriesRequest\x1a\x1f.agents.v1.ListMemoriesResponse\"\x00\x12Q\n" +
 	"\fCreateMemory\x12\x1e.agents.v1.CreateMemoryRequest\x1a\x1f.agents.v1.CreateMemoryResponse\"\x00\x12Q\n" +
 	"\fUpdateMemory\x12\x1e.agents.v1.UpdateMemoryRequest\x1a\x1f.agents.v1.UpdateMemoryResponse\"\x00\x12Q\n" +
-	"\fDeleteMemory\x12\x1e.agents.v1.DeleteMemoryRequest\x1a\x1f.agents.v1.DeleteMemoryResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\fDeleteMemory\x12\x1e.agents.v1.DeleteMemoryRequest\x1a\x1f.agents.v1.DeleteMemoryResponse\"\x00\x12Z\n" +
+	"\x0fSetMemoryPinned\x12!.agents.v1.SetMemoryPinnedRequest\x1a\".agents.v1.SetMemoryPinnedResponse\"\x00\x12]\n" +
+	"\x10GetMemorySharing\x12\".agents.v1.GetMemorySharingRequest\x1a#.agents.v1.GetMemorySharingResponse\"\x00\x12]\n" +
+	"\x10SetMemorySharing\x12\".agents.v1.SetMemorySharingRequest\x1a#.agents.v1.SetMemorySharingResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_memories_proto_rawDescOnce sync.Once
@@ -751,48 +1380,67 @@ func file_agents_v1_memories_proto_rawDescGZIP() []byte {
 	return file_agents_v1_memories_proto_rawDescData
 }
 
-var file_agents_v1_memories_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agents_v1_memories_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_agents_v1_memories_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agents_v1_memories_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_agents_v1_memories_proto_goTypes = []any{
-	(MemoryCategory)(0),           // 0: agents.v1.MemoryCategory
-	(*MemoryInfo)(nil),            // 1: agents.v1.MemoryInfo
-	(*ListMemoriesRequest)(nil),   // 2: agents.v1.ListMemoriesRequest
-	(*ListMemoriesResponse)(nil),  // 3: agents.v1.ListMemoriesResponse
-	(*CreateMemoryRequest)(nil),   // 4: agents.v1.CreateMemoryRequest
-	(*UpdateMemoryRequest)(nil),   // 5: agents.v1.UpdateMemoryRequest
-	(*CreateMemoryResponse)(nil),  // 6: agents.v1.CreateMemoryResponse
-	(*UpdateMemoryResponse)(nil),  // 7: agents.v1.UpdateMemoryResponse
-	(*DeleteMemoryRequest)(nil),   // 8: agents.v1.DeleteMemoryRequest
-	(*DeleteMemoryResponse)(nil),  // 9: agents.v1.DeleteMemoryResponse
-	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),  // 11: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil), // 12: common.v1.PaginationResponse
+	(MemoryCategory)(0),              // 0: agents.v1.MemoryCategory
+	(MemoryScope)(0),                 // 1: agents.v1.MemoryScope
+	(MemorySource)(0),                // 2: agents.v1.MemorySource
+	(*MemoryInfo)(nil),               // 3: agents.v1.MemoryInfo
+	(*ListMemoriesRequest)(nil),      // 4: agents.v1.ListMemoriesRequest
+	(*ListMemoriesResponse)(nil),     // 5: agents.v1.ListMemoriesResponse
+	(*CreateMemoryRequest)(nil),      // 6: agents.v1.CreateMemoryRequest
+	(*UpdateMemoryRequest)(nil),      // 7: agents.v1.UpdateMemoryRequest
+	(*CreateMemoryResponse)(nil),     // 8: agents.v1.CreateMemoryResponse
+	(*UpdateMemoryResponse)(nil),     // 9: agents.v1.UpdateMemoryResponse
+	(*DeleteMemoryRequest)(nil),      // 10: agents.v1.DeleteMemoryRequest
+	(*DeleteMemoryResponse)(nil),     // 11: agents.v1.DeleteMemoryResponse
+	(*SetMemoryPinnedRequest)(nil),   // 12: agents.v1.SetMemoryPinnedRequest
+	(*SetMemoryPinnedResponse)(nil),  // 13: agents.v1.SetMemoryPinnedResponse
+	(*GetMemorySharingRequest)(nil),  // 14: agents.v1.GetMemorySharingRequest
+	(*GetMemorySharingResponse)(nil), // 15: agents.v1.GetMemorySharingResponse
+	(*SetMemorySharingRequest)(nil),  // 16: agents.v1.SetMemorySharingRequest
+	(*SetMemorySharingResponse)(nil), // 17: agents.v1.SetMemorySharingResponse
+	(*timestamppb.Timestamp)(nil),    // 18: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),     // 19: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),    // 20: common.v1.PaginationResponse
 }
 var file_agents_v1_memories_proto_depIdxs = []int32{
 	0,  // 0: agents.v1.MemoryInfo.category:type_name -> agents.v1.MemoryCategory
-	10, // 1: agents.v1.MemoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	10, // 2: agents.v1.MemoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 3: agents.v1.ListMemoriesRequest.category:type_name -> agents.v1.MemoryCategory
-	11, // 4: agents.v1.ListMemoriesRequest.pagination:type_name -> common.v1.PaginationRequest
-	1,  // 5: agents.v1.ListMemoriesResponse.memories:type_name -> agents.v1.MemoryInfo
-	12, // 6: agents.v1.ListMemoriesResponse.pagination:type_name -> common.v1.PaginationResponse
-	0,  // 7: agents.v1.CreateMemoryRequest.category:type_name -> agents.v1.MemoryCategory
-	0,  // 8: agents.v1.UpdateMemoryRequest.category:type_name -> agents.v1.MemoryCategory
-	1,  // 9: agents.v1.CreateMemoryResponse.memory:type_name -> agents.v1.MemoryInfo
-	1,  // 10: agents.v1.UpdateMemoryResponse.memory:type_name -> agents.v1.MemoryInfo
-	2,  // 11: agents.v1.MemoriesService.ListMemories:input_type -> agents.v1.ListMemoriesRequest
-	4,  // 12: agents.v1.MemoriesService.CreateMemory:input_type -> agents.v1.CreateMemoryRequest
-	5,  // 13: agents.v1.MemoriesService.UpdateMemory:input_type -> agents.v1.UpdateMemoryRequest
-	8,  // 14: agents.v1.MemoriesService.DeleteMemory:input_type -> agents.v1.DeleteMemoryRequest
-	3,  // 15: agents.v1.MemoriesService.ListMemories:output_type -> agents.v1.ListMemoriesResponse
-	6,  // 16: agents.v1.MemoriesService.CreateMemory:output_type -> agents.v1.CreateMemoryResponse
-	7,  // 17: agents.v1.MemoriesService.UpdateMemory:output_type -> agents.v1.UpdateMemoryResponse
-	9,  // 18: agents.v1.MemoriesService.DeleteMemory:output_type -> agents.v1.DeleteMemoryResponse
-	15, // [15:19] is the sub-list for method output_type
-	11, // [11:15] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	18, // 1: agents.v1.MemoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 2: agents.v1.MemoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 3: agents.v1.MemoryInfo.scope:type_name -> agents.v1.MemoryScope
+	2,  // 4: agents.v1.MemoryInfo.source:type_name -> agents.v1.MemorySource
+	0,  // 5: agents.v1.ListMemoriesRequest.category:type_name -> agents.v1.MemoryCategory
+	19, // 6: agents.v1.ListMemoriesRequest.pagination:type_name -> common.v1.PaginationRequest
+	1,  // 7: agents.v1.ListMemoriesRequest.scope:type_name -> agents.v1.MemoryScope
+	3,  // 8: agents.v1.ListMemoriesResponse.memories:type_name -> agents.v1.MemoryInfo
+	20, // 9: agents.v1.ListMemoriesResponse.pagination:type_name -> common.v1.PaginationResponse
+	0,  // 10: agents.v1.CreateMemoryRequest.category:type_name -> agents.v1.MemoryCategory
+	1,  // 11: agents.v1.CreateMemoryRequest.scope:type_name -> agents.v1.MemoryScope
+	0,  // 12: agents.v1.UpdateMemoryRequest.category:type_name -> agents.v1.MemoryCategory
+	3,  // 13: agents.v1.CreateMemoryResponse.memory:type_name -> agents.v1.MemoryInfo
+	3,  // 14: agents.v1.UpdateMemoryResponse.memory:type_name -> agents.v1.MemoryInfo
+	3,  // 15: agents.v1.SetMemoryPinnedResponse.memory:type_name -> agents.v1.MemoryInfo
+	4,  // 16: agents.v1.MemoriesService.ListMemories:input_type -> agents.v1.ListMemoriesRequest
+	6,  // 17: agents.v1.MemoriesService.CreateMemory:input_type -> agents.v1.CreateMemoryRequest
+	7,  // 18: agents.v1.MemoriesService.UpdateMemory:input_type -> agents.v1.UpdateMemoryRequest
+	10, // 19: agents.v1.MemoriesService.DeleteMemory:input_type -> agents.v1.DeleteMemoryRequest
+	12, // 20: agents.v1.MemoriesService.SetMemoryPinned:input_type -> agents.v1.SetMemoryPinnedRequest
+	14, // 21: agents.v1.MemoriesService.GetMemorySharing:input_type -> agents.v1.GetMemorySharingRequest
+	16, // 22: agents.v1.MemoriesService.SetMemorySharing:input_type -> agents.v1.SetMemorySharingRequest
+	5,  // 23: agents.v1.MemoriesService.ListMemories:output_type -> agents.v1.ListMemoriesResponse
+	8,  // 24: agents.v1.MemoriesService.CreateMemory:output_type -> agents.v1.CreateMemoryResponse
+	9,  // 25: agents.v1.MemoriesService.UpdateMemory:output_type -> agents.v1.UpdateMemoryResponse
+	11, // 26: agents.v1.MemoriesService.DeleteMemory:output_type -> agents.v1.DeleteMemoryResponse
+	13, // 27: agents.v1.MemoriesService.SetMemoryPinned:output_type -> agents.v1.SetMemoryPinnedResponse
+	15, // 28: agents.v1.MemoriesService.GetMemorySharing:output_type -> agents.v1.GetMemorySharingResponse
+	17, // 29: agents.v1.MemoriesService.SetMemorySharing:output_type -> agents.v1.SetMemorySharingResponse
+	23, // [23:30] is the sub-list for method output_type
+	16, // [16:23] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_memories_proto_init() }
@@ -800,6 +1448,7 @@ func file_agents_v1_memories_proto_init() {
 	if File_agents_v1_memories_proto != nil {
 		return
 	}
+	file_agents_v1_memories_proto_msgTypes[0].OneofWrappers = []any{}
 	file_agents_v1_memories_proto_msgTypes[1].OneofWrappers = []any{}
 	file_agents_v1_memories_proto_msgTypes[3].OneofWrappers = []any{}
 	file_agents_v1_memories_proto_msgTypes[4].OneofWrappers = []any{}
@@ -808,8 +1457,8 @@ func file_agents_v1_memories_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_memories_proto_rawDesc), len(file_agents_v1_memories_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   9,
+			NumEnums:      3,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

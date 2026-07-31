@@ -636,7 +636,7 @@ class BudgetsOperations:
         from uniffy.core.models.login.organization_member import OrganizationRole
 
         membership = await self._org_ops.get_membership(user_id, organization_id)
-        if membership is None:
+        if membership is None or not membership.is_active:
             return False
         return membership.role in (OrganizationRole.ADMIN, OrganizationRole.OWNER)
 
@@ -777,20 +777,13 @@ class BudgetsOperations:
         if not cur or len(cur) != 3:
             raise ValidationError("display_currency", "expected ISO 4217 3-letter code")
 
-        settings = OrgSettingsOperations(self._session)
-        rows = await settings.get_namespace(organization_id, AGENTS_NAMESPACE)
-        existing = rows.get(RUNTIME_KEY)
-        blob = (
-            dict(existing.value)
-            if existing is not None and isinstance(existing.value, dict)
-            else {}
-        )
-        blob["display_currency"] = cur
-        await settings.set(
+        # Database-side JSONB merge so a concurrent runtime-settings save
+        # cannot clobber this key (or vice versa).
+        await OrgSettingsOperations(self._session).merge_json(
             organization_id=organization_id,
             namespace=AGENTS_NAMESPACE,
             key=RUNTIME_KEY,
-            value=blob,
+            patch={"display_currency": cur},
             updated_by_user_id=user_id,
         )
         await self._session.commit()

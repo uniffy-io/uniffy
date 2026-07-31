@@ -12,7 +12,10 @@ from uniffy.core.converters import (
     group_role_from_proto,
 )
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import (
+    get_user_id_from_context,
+    resolve_organization_id,
+)
 from uniffy.domains.groups.converters import group_with_count_to_proto
 from uniffy.domains.groups.operations import GroupOperations
 
@@ -25,8 +28,8 @@ class GroupsHandlers:
         request: pb.ListGroupsRequest,
         ctx: RequestContext,
     ) -> pb.ListGroupsResponse:
-        get_user_id_from_context(ctx)
-        org_id = UUID(request.organization_id)
+        user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
 
         page = 1
         page_size = 20
@@ -38,6 +41,7 @@ class GroupsHandlers:
             ops = GroupOperations(session)
             groups_with_counts, total = await ops.list_in_organization(
                 organization_id=org_id,
+                actor_user_id=user_id,
                 page=page,
                 page_size=page_size,
                 search=request.search if request.HasField("search") else None,
@@ -61,12 +65,13 @@ class GroupsHandlers:
         request: pb.GetGroupRequest,
         ctx: RequestContext,
     ) -> pb.GetGroupResponse:
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
-            group = await ops.get_by_id(group_id)
+            group = await ops.get_by_id(group_id, org_id, user_id)
 
         return pb.GetGroupResponse(group=group_info_to_proto(group))
 
@@ -76,7 +81,7 @@ class GroupsHandlers:
         ctx: RequestContext,
     ) -> pb.CreateGroupResponse:
         user_id = get_user_id_from_context(ctx)
-        org_id = UUID(request.organization_id)
+        org_id = resolve_organization_id(ctx, request.organization_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
@@ -97,17 +102,19 @@ class GroupsHandlers:
         ctx: RequestContext,
     ) -> pb.UpdateGroupResponse:
         user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
             group = await ops.update(
                 group_id=group_id,
+                organization_id=org_id,
+                actor_user_id=user_id,
                 name=request.name if request.HasField("name") else None,
                 description=request.description if request.HasField("description") else None,
                 is_private=request.is_private if request.HasField("is_private") else None,
                 is_default=request.is_default if request.HasField("is_default") else None,
-                actor_user_id=user_id,
             )
 
         return pb.UpdateGroupResponse(group=group_info_to_proto(group))
@@ -118,11 +125,12 @@ class GroupsHandlers:
         ctx: RequestContext,
     ) -> pb.DeleteGroupResponse:
         user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
-            await ops.delete(group_id, actor_user_id=user_id)
+            await ops.delete(group_id, org_id, actor_user_id=user_id)
 
         return pb.DeleteGroupResponse(success=True)
 
@@ -131,7 +139,8 @@ class GroupsHandlers:
         request: pb.ListGroupMembersRequest,
         ctx: RequestContext,
     ) -> pb.ListGroupMembersResponse:
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
 
         page = 1
@@ -148,6 +157,8 @@ class GroupsHandlers:
             ops = GroupOperations(session)
             members, total = await ops.list_members(
                 group_id=group_id,
+                organization_id=org_id,
+                actor_user_id=user_id,
                 page=page,
                 page_size=page_size,
                 role_filter=role_filter,
@@ -169,6 +180,7 @@ class GroupsHandlers:
         ctx: RequestContext,
     ) -> pb.AddGroupMemberResponse:
         user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
@@ -177,11 +189,12 @@ class GroupsHandlers:
             ops = GroupOperations(session)
             membership = await ops.add_member(
                 group_id=group_id,
+                organization_id=org_id,
                 user_id=target_user_id,
-                role=role,
                 actor_user_id=user_id,
+                role=role,
             )
-            _, user = await ops.get_member(group_id, target_user_id)
+            _, user = await ops.get_member(group_id, org_id, target_user_id, user_id)
 
         return pb.AddGroupMemberResponse(member=group_member_info_to_proto(user, membership))
 
@@ -190,7 +203,8 @@ class GroupsHandlers:
         request: pb.UpdateGroupMemberRequest,
         ctx: RequestContext,
     ) -> pb.UpdateGroupMemberResponse:
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
@@ -199,10 +213,12 @@ class GroupsHandlers:
             ops = GroupOperations(session)
             membership = await ops.update_member_role(
                 group_id=group_id,
+                organization_id=org_id,
                 user_id=target_user_id,
                 role=role,
+                actor_user_id=user_id,
             )
-            _, user = await ops.get_member(group_id, target_user_id)
+            _, user = await ops.get_member(group_id, org_id, target_user_id, user_id)
 
         return pb.UpdateGroupMemberResponse(
             member=group_member_info_to_proto(user, membership)
@@ -214,13 +230,14 @@ class GroupsHandlers:
         ctx: RequestContext,
     ) -> pb.RemoveGroupMemberResponse:
         user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
             await ops.remove_member(
-                group_id, target_user_id, actor_user_id=user_id
+                group_id, org_id, target_user_id, actor_user_id=user_id
             )
 
         return pb.RemoveGroupMemberResponse(success=True)
@@ -230,13 +247,13 @@ class GroupsHandlers:
         request: pb.GetUserGroupsRequest,
         ctx: RequestContext,
     ) -> pb.GetUserGroupsResponse:
-        get_user_id_from_context(ctx)
-        org_id = UUID(request.organization_id)
+        user_id = get_user_id_from_context(ctx)
+        org_id = resolve_organization_id(ctx, request.organization_id)
         target_user_id = UUID(request.user_id)
 
         async with open_session() as session:
             ops = GroupOperations(session)
-            groups = await ops.get_user_groups(target_user_id, org_id)
+            groups = await ops.get_user_groups(target_user_id, org_id, user_id)
 
         return pb.GetUserGroupsResponse(
             groups=[group_info_to_proto(g) for g in groups],

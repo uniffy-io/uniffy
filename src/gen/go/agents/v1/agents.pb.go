@@ -50,22 +50,32 @@ type AgentInfo struct {
 	PrimaryProviderKeyId string `protobuf:"bytes,18,opt,name=primary_provider_key_id,json=primaryProviderKeyId,proto3" json:"primary_provider_key_id,omitempty"`
 	// Provider key ID for the image model (empty = not assigned)
 	ImageProviderKeyId string `protobuf:"bytes,19,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3" json:"image_provider_key_id,omitempty"`
-	// Prompt template ID (empty = no template, uses soul_prompt directly)
-	PromptId string `protobuf:"bytes,20,opt,name=prompt_id,json=promptId,proto3" json:"prompt_id,omitempty"`
 	// Baseline role granted by access mode (when applicable)
-	BaselineRole *v1.ContentRole `protobuf:"varint,21,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	BaselineRole *v1.ContentRole `protobuf:"varint,20,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Effective role of the requesting user on this agent (if known).
 	// Set by the server so the UI can render edit/share affordances
 	// without re-resolving permissions client-side.
-	UserRole *v1.ContentRole `protobuf:"varint,22,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole,oneof" json:"user_role,omitempty"`
+	UserRole *v1.ContentRole `protobuf:"varint,21,opt,name=user_role,json=userRole,proto3,enum=common.v1.ContentRole,oneof" json:"user_role,omitempty"`
 	// Hydrated unified-tag rows assigned to this agent. Server-populated
 	// via “TagOperations.get_for_urns“; clients should treat as read-only.
-	Tags []*v11.Tag `protobuf:"bytes,23,rep,name=tags,proto3" json:"tags,omitempty"`
+	Tags []*v11.Tag `protobuf:"bytes,22,rep,name=tags,proto3" json:"tags,omitempty"`
 	// JSON object of tuned model parameters (knob -> value), validated
 	// against the model's parameter schema. "{}" = provider defaults.
-	ModelParams   string `protobuf:"bytes,24,opt,name=model_params,json=modelParams,proto3" json:"model_params,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ModelParams string `protobuf:"bytes,23,opt,name=model_params,json=modelParams,proto3" json:"model_params,omitempty"`
+	// JSON object of image-generation defaults (knob -> value), validated
+	// against the image model's schema. "{}" = provider defaults.
+	ImageParams string `protobuf:"bytes,24,opt,name=image_params,json=imageParams,proto3" json:"image_params,omitempty"`
+	// House style folded into every generated-image prompt.
+	ImageStylePrompt string `protobuf:"bytes,25,opt,name=image_style_prompt,json=imageStylePrompt,proto3" json:"image_style_prompt,omitempty"`
+	// Deleted agents are returned only when a listing asks for them. They cannot
+	// act: no chat replies, no automation runs.
+	IsDeleted bool                   `protobuf:"varint,26,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
+	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
+	// JSON object pinning an integration provider to one org connection
+	// (provider id -> connection id). "{}" = automatic resolution.
+	IntegrationConnections string `protobuf:"bytes,28,opt,name=integration_connections,json=integrationConnections,proto3" json:"integration_connections,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *AgentInfo) Reset() {
@@ -231,13 +241,6 @@ func (x *AgentInfo) GetImageProviderKeyId() string {
 	return ""
 }
 
-func (x *AgentInfo) GetPromptId() string {
-	if x != nil {
-		return x.PromptId
-	}
-	return ""
-}
-
 func (x *AgentInfo) GetBaselineRole() v1.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
@@ -266,6 +269,41 @@ func (x *AgentInfo) GetModelParams() string {
 	return ""
 }
 
+func (x *AgentInfo) GetImageParams() string {
+	if x != nil {
+		return x.ImageParams
+	}
+	return ""
+}
+
+func (x *AgentInfo) GetImageStylePrompt() string {
+	if x != nil {
+		return x.ImageStylePrompt
+	}
+	return ""
+}
+
+func (x *AgentInfo) GetIsDeleted() bool {
+	if x != nil {
+		return x.IsDeleted
+	}
+	return false
+}
+
+func (x *AgentInfo) GetDeletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return nil
+}
+
+func (x *AgentInfo) GetIntegrationConnections() string {
+	if x != nil {
+		return x.IntegrationConnections
+	}
+	return ""
+}
+
 type CreateAgentRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -284,16 +322,19 @@ type CreateAgentRequest struct {
 	// Provider key ID for the primary model
 	PrimaryProviderKeyId *string `protobuf:"bytes,13,opt,name=primary_provider_key_id,json=primaryProviderKeyId,proto3,oneof" json:"primary_provider_key_id,omitempty"`
 	// Provider key ID for the image model
-	ImageProviderKeyId *string `protobuf:"bytes,14,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3,oneof" json:"image_provider_key_id,omitempty"`
-	// Prompt template ID
-	PromptId     *string         `protobuf:"bytes,15,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
-	BaselineRole *v1.ContentRole `protobuf:"varint,16,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	ImageProviderKeyId *string         `protobuf:"bytes,14,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3,oneof" json:"image_provider_key_id,omitempty"`
+	BaselineRole       *v1.ContentRole `protobuf:"varint,15,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
 	// Optional unified-tag ids to assign on create.
-	TagIds []string `protobuf:"bytes,17,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	TagIds []string `protobuf:"bytes,16,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
 	// JSON object of tuned model parameters (knob -> value)
-	ModelParams   *string `protobuf:"bytes,18,opt,name=model_params,json=modelParams,proto3,oneof" json:"model_params,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ModelParams *string `protobuf:"bytes,17,opt,name=model_params,json=modelParams,proto3,oneof" json:"model_params,omitempty"`
+	// JSON object of image-generation defaults (knob -> value)
+	ImageParams      *string `protobuf:"bytes,18,opt,name=image_params,json=imageParams,proto3,oneof" json:"image_params,omitempty"`
+	ImageStylePrompt *string `protobuf:"bytes,19,opt,name=image_style_prompt,json=imageStylePrompt,proto3,oneof" json:"image_style_prompt,omitempty"`
+	// JSON object pinning integration providers to org connections
+	IntegrationConnections *string `protobuf:"bytes,20,opt,name=integration_connections,json=integrationConnections,proto3,oneof" json:"integration_connections,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreateAgentRequest) Reset() {
@@ -424,13 +465,6 @@ func (x *CreateAgentRequest) GetImageProviderKeyId() string {
 	return ""
 }
 
-func (x *CreateAgentRequest) GetPromptId() string {
-	if x != nil && x.PromptId != nil {
-		return *x.PromptId
-	}
-	return ""
-}
-
 func (x *CreateAgentRequest) GetBaselineRole() v1.ContentRole {
 	if x != nil && x.BaselineRole != nil {
 		return *x.BaselineRole
@@ -448,6 +482,27 @@ func (x *CreateAgentRequest) GetTagIds() []string {
 func (x *CreateAgentRequest) GetModelParams() string {
 	if x != nil && x.ModelParams != nil {
 		return *x.ModelParams
+	}
+	return ""
+}
+
+func (x *CreateAgentRequest) GetImageParams() string {
+	if x != nil && x.ImageParams != nil {
+		return *x.ImageParams
+	}
+	return ""
+}
+
+func (x *CreateAgentRequest) GetImageStylePrompt() string {
+	if x != nil && x.ImageStylePrompt != nil {
+		return *x.ImageStylePrompt
+	}
+	return ""
+}
+
+func (x *CreateAgentRequest) GetIntegrationConnections() string {
+	if x != nil && x.IntegrationConnections != nil {
+		return *x.IntegrationConnections
 	}
 	return ""
 }
@@ -729,11 +784,13 @@ type ListAgentsRequest struct {
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	Pagination     *v1.PaginationRequest  `protobuf:"bytes,2,opt,name=pagination,proto3,oneof" json:"pagination,omitempty"`
 	AccessMode     *v1.AccessMode         `protobuf:"varint,3,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
-	PersonalOnly   *bool                  `protobuf:"varint,4,opt,name=personal_only,json=personalOnly,proto3,oneof" json:"personal_only,omitempty"`
-	GroupId        *string                `protobuf:"bytes,5,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
+	GroupId        *string                `protobuf:"bytes,4,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
 	// Filter agents that carry every tag id in this list (logical AND).
 	// Empty = no tag filter.
-	TagIds        []string `protobuf:"bytes,6,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	TagIds []string `protobuf:"bytes,5,rep,name=tag_ids,json=tagIds,proto3" json:"tag_ids,omitempty"`
+	// Return deleted agents INSTEAD of live ones, for the builder's deleted
+	// group. Builder-gated.
+	DeletedOnly   bool `protobuf:"varint,6,opt,name=deleted_only,json=deletedOnly,proto3" json:"deleted_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -789,13 +846,6 @@ func (x *ListAgentsRequest) GetAccessMode() v1.AccessMode {
 	return v1.AccessMode(0)
 }
 
-func (x *ListAgentsRequest) GetPersonalOnly() bool {
-	if x != nil && x.PersonalOnly != nil {
-		return *x.PersonalOnly
-	}
-	return false
-}
-
 func (x *ListAgentsRequest) GetGroupId() string {
 	if x != nil && x.GroupId != nil {
 		return *x.GroupId
@@ -808,6 +858,13 @@ func (x *ListAgentsRequest) GetTagIds() []string {
 		return x.TagIds
 	}
 	return nil
+}
+
+func (x *ListAgentsRequest) GetDeletedOnly() bool {
+	if x != nil {
+		return x.DeletedOnly
+	}
+	return false
 }
 
 type ListAgentsResponse struct {
@@ -863,41 +920,43 @@ func (x *ListAgentsResponse) GetPagination() *v1.PaginationResponse {
 }
 
 type UpdateAgentRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Name           *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	SoulPrompt     *string                `protobuf:"bytes,4,opt,name=soul_prompt,json=soulPrompt,proto3,oneof" json:"soul_prompt,omitempty"`
-	PrimaryModel   *string                `protobuf:"bytes,5,opt,name=primary_model,json=primaryModel,proto3,oneof" json:"primary_model,omitempty"`
-	FallbackModels []string               `protobuf:"bytes,6,rep,name=fallback_models,json=fallbackModels,proto3" json:"fallback_models,omitempty"`
-	AvatarEmoji    *string                `protobuf:"bytes,7,opt,name=avatar_emoji,json=avatarEmoji,proto3,oneof" json:"avatar_emoji,omitempty"`
-	ThemeColor     *string                `protobuf:"bytes,8,opt,name=theme_color,json=themeColor,proto3,oneof" json:"theme_color,omitempty"`
-	IsDefault      *bool                  `protobuf:"varint,9,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
-	EnabledSkills  []string               `protobuf:"bytes,10,rep,name=enabled_skills,json=enabledSkills,proto3" json:"enabled_skills,omitempty"`
-	AccessMode     *v1.AccessMode         `protobuf:"varint,11,opt,name=access_mode,json=accessMode,proto3,enum=common.v1.AccessMode,oneof" json:"access_mode,omitempty"`
-	GroupIds       []string               `protobuf:"bytes,12,rep,name=group_ids,json=groupIds,proto3" json:"group_ids,omitempty"`
-	EnabledTools   []string               `protobuf:"bytes,13,rep,name=enabled_tools,json=enabledTools,proto3" json:"enabled_tools,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Access-policy changes (access mode, baseline role, group grants) go
+	// through permissions.v1.MembersService, never this request.
+	OrganizationId string   `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	AgentId        string   `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Name           *string  `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	SoulPrompt     *string  `protobuf:"bytes,4,opt,name=soul_prompt,json=soulPrompt,proto3,oneof" json:"soul_prompt,omitempty"`
+	PrimaryModel   *string  `protobuf:"bytes,5,opt,name=primary_model,json=primaryModel,proto3,oneof" json:"primary_model,omitempty"`
+	FallbackModels []string `protobuf:"bytes,6,rep,name=fallback_models,json=fallbackModels,proto3" json:"fallback_models,omitempty"`
+	AvatarEmoji    *string  `protobuf:"bytes,7,opt,name=avatar_emoji,json=avatarEmoji,proto3,oneof" json:"avatar_emoji,omitempty"`
+	ThemeColor     *string  `protobuf:"bytes,8,opt,name=theme_color,json=themeColor,proto3,oneof" json:"theme_color,omitempty"`
+	IsDefault      *bool    `protobuf:"varint,9,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
+	EnabledSkills  []string `protobuf:"bytes,10,rep,name=enabled_skills,json=enabledSkills,proto3" json:"enabled_skills,omitempty"`
+	EnabledTools   []string `protobuf:"bytes,11,rep,name=enabled_tools,json=enabledTools,proto3" json:"enabled_tools,omitempty"`
 	// Image generation model (empty string = disabled)
-	ImageModel *string `protobuf:"bytes,14,opt,name=image_model,json=imageModel,proto3,oneof" json:"image_model,omitempty"`
+	ImageModel *string `protobuf:"bytes,12,opt,name=image_model,json=imageModel,proto3,oneof" json:"image_model,omitempty"`
 	// Provider key ID for the primary model
-	PrimaryProviderKeyId *string `protobuf:"bytes,15,opt,name=primary_provider_key_id,json=primaryProviderKeyId,proto3,oneof" json:"primary_provider_key_id,omitempty"`
+	PrimaryProviderKeyId *string `protobuf:"bytes,13,opt,name=primary_provider_key_id,json=primaryProviderKeyId,proto3,oneof" json:"primary_provider_key_id,omitempty"`
 	// Provider key ID for the image model
-	ImageProviderKeyId *string `protobuf:"bytes,16,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3,oneof" json:"image_provider_key_id,omitempty"`
-	// Prompt template ID
-	PromptId *string `protobuf:"bytes,17,opt,name=prompt_id,json=promptId,proto3,oneof" json:"prompt_id,omitempty"`
-	// Clear the prompt template (set to null)
-	ClearPrompt  *bool           `protobuf:"varint,18,opt,name=clear_prompt,json=clearPrompt,proto3,oneof" json:"clear_prompt,omitempty"`
-	BaselineRole *v1.ContentRole `protobuf:"varint,19,opt,name=baseline_role,json=baselineRole,proto3,enum=common.v1.ContentRole,oneof" json:"baseline_role,omitempty"`
+	ImageProviderKeyId *string `protobuf:"bytes,14,opt,name=image_provider_key_id,json=imageProviderKeyId,proto3,oneof" json:"image_provider_key_id,omitempty"`
 	// Replacement set of unified-tag ids. Empty list clears all manual
 	// tags; field unset (HasField=false) leaves them untouched. Mirrors
 	// the NoteTagIds / FileTagIds / EventTagIds / ChannelTagIds wrapper
 	// pattern.
-	TagIds *AgentTagIds `protobuf:"bytes,20,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
+	TagIds *AgentTagIds `protobuf:"bytes,15,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
 	// JSON object of tuned model parameters (knob -> value); replaces the
 	// stored object wholesale ("{}" resets to provider defaults)
-	ModelParams   *string `protobuf:"bytes,21,opt,name=model_params,json=modelParams,proto3,oneof" json:"model_params,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ModelParams *string `protobuf:"bytes,16,opt,name=model_params,json=modelParams,proto3,oneof" json:"model_params,omitempty"`
+	// JSON object of image-generation defaults; replaces the stored object
+	// wholesale ("{}" resets to provider defaults)
+	ImageParams      *string `protobuf:"bytes,17,opt,name=image_params,json=imageParams,proto3,oneof" json:"image_params,omitempty"`
+	ImageStylePrompt *string `protobuf:"bytes,18,opt,name=image_style_prompt,json=imageStylePrompt,proto3,oneof" json:"image_style_prompt,omitempty"`
+	// JSON object pinning integration providers to org connections; replaces
+	// the stored object wholesale ("{}" resets to automatic resolution)
+	IntegrationConnections *string `protobuf:"bytes,19,opt,name=integration_connections,json=integrationConnections,proto3,oneof" json:"integration_connections,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UpdateAgentRequest) Reset() {
@@ -1000,20 +1059,6 @@ func (x *UpdateAgentRequest) GetEnabledSkills() []string {
 	return nil
 }
 
-func (x *UpdateAgentRequest) GetAccessMode() v1.AccessMode {
-	if x != nil && x.AccessMode != nil {
-		return *x.AccessMode
-	}
-	return v1.AccessMode(0)
-}
-
-func (x *UpdateAgentRequest) GetGroupIds() []string {
-	if x != nil {
-		return x.GroupIds
-	}
-	return nil
-}
-
 func (x *UpdateAgentRequest) GetEnabledTools() []string {
 	if x != nil {
 		return x.EnabledTools
@@ -1042,27 +1087,6 @@ func (x *UpdateAgentRequest) GetImageProviderKeyId() string {
 	return ""
 }
 
-func (x *UpdateAgentRequest) GetPromptId() string {
-	if x != nil && x.PromptId != nil {
-		return *x.PromptId
-	}
-	return ""
-}
-
-func (x *UpdateAgentRequest) GetClearPrompt() bool {
-	if x != nil && x.ClearPrompt != nil {
-		return *x.ClearPrompt
-	}
-	return false
-}
-
-func (x *UpdateAgentRequest) GetBaselineRole() v1.ContentRole {
-	if x != nil && x.BaselineRole != nil {
-		return *x.BaselineRole
-	}
-	return v1.ContentRole(0)
-}
-
 func (x *UpdateAgentRequest) GetTagIds() *AgentTagIds {
 	if x != nil {
 		return x.TagIds
@@ -1073,6 +1097,27 @@ func (x *UpdateAgentRequest) GetTagIds() *AgentTagIds {
 func (x *UpdateAgentRequest) GetModelParams() string {
 	if x != nil && x.ModelParams != nil {
 		return *x.ModelParams
+	}
+	return ""
+}
+
+func (x *UpdateAgentRequest) GetImageParams() string {
+	if x != nil && x.ImageParams != nil {
+		return *x.ImageParams
+	}
+	return ""
+}
+
+func (x *UpdateAgentRequest) GetImageStylePrompt() string {
+	if x != nil && x.ImageStylePrompt != nil {
+		return *x.ImageStylePrompt
+	}
+	return ""
+}
+
+func (x *UpdateAgentRequest) GetIntegrationConnections() string {
+	if x != nil && x.IntegrationConnections != nil {
+		return *x.IntegrationConnections
 	}
 	return ""
 }
@@ -1219,6 +1264,102 @@ func (x *DeleteAgentResponse) GetSuccess() bool {
 	return false
 }
 
+type RestoreAgentRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RestoreAgentRequest) Reset() {
+	*x = RestoreAgentRequest{}
+	mi := &file_agents_v1_agents_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreAgentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreAgentRequest) ProtoMessage() {}
+
+func (x *RestoreAgentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreAgentRequest.ProtoReflect.Descriptor instead.
+func (*RestoreAgentRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RestoreAgentRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RestoreAgentRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+type RestoreAgentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Agent         *AgentInfo             `protobuf:"bytes,1,opt,name=agent,proto3" json:"agent,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestoreAgentResponse) Reset() {
+	*x = RestoreAgentResponse{}
+	mi := &file_agents_v1_agents_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreAgentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreAgentResponse) ProtoMessage() {}
+
+func (x *RestoreAgentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreAgentResponse.ProtoReflect.Descriptor instead.
+func (*RestoreAgentResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RestoreAgentResponse) GetAgent() *AgentInfo {
+	if x != nil {
+		return x.Agent
+	}
+	return nil
+}
+
 type UploadAgentAvatarRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -1231,7 +1372,7 @@ type UploadAgentAvatarRequest struct {
 
 func (x *UploadAgentAvatarRequest) Reset() {
 	*x = UploadAgentAvatarRequest{}
-	mi := &file_agents_v1_agents_proto_msgTypes[14]
+	mi := &file_agents_v1_agents_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1243,7 +1384,7 @@ func (x *UploadAgentAvatarRequest) String() string {
 func (*UploadAgentAvatarRequest) ProtoMessage() {}
 
 func (x *UploadAgentAvatarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[14]
+	mi := &file_agents_v1_agents_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1256,7 +1397,7 @@ func (x *UploadAgentAvatarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadAgentAvatarRequest.ProtoReflect.Descriptor instead.
 func (*UploadAgentAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{14}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UploadAgentAvatarRequest) GetOrganizationId() string {
@@ -1297,7 +1438,7 @@ type DeleteAgentAvatarRequest struct {
 
 func (x *DeleteAgentAvatarRequest) Reset() {
 	*x = DeleteAgentAvatarRequest{}
-	mi := &file_agents_v1_agents_proto_msgTypes[15]
+	mi := &file_agents_v1_agents_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1309,7 +1450,7 @@ func (x *DeleteAgentAvatarRequest) String() string {
 func (*DeleteAgentAvatarRequest) ProtoMessage() {}
 
 func (x *DeleteAgentAvatarRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[15]
+	mi := &file_agents_v1_agents_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1322,7 +1463,7 @@ func (x *DeleteAgentAvatarRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentAvatarRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{15}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteAgentAvatarRequest) GetOrganizationId() string {
@@ -1349,7 +1490,7 @@ type PreviewSystemPromptRequest struct {
 
 func (x *PreviewSystemPromptRequest) Reset() {
 	*x = PreviewSystemPromptRequest{}
-	mi := &file_agents_v1_agents_proto_msgTypes[16]
+	mi := &file_agents_v1_agents_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1361,7 +1502,7 @@ func (x *PreviewSystemPromptRequest) String() string {
 func (*PreviewSystemPromptRequest) ProtoMessage() {}
 
 func (x *PreviewSystemPromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[16]
+	mi := &file_agents_v1_agents_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1374,7 +1515,7 @@ func (x *PreviewSystemPromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewSystemPromptRequest.ProtoReflect.Descriptor instead.
 func (*PreviewSystemPromptRequest) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{16}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *PreviewSystemPromptRequest) GetOrganizationId() string {
@@ -1400,7 +1541,7 @@ type PreviewSystemPromptResponse struct {
 
 func (x *PreviewSystemPromptResponse) Reset() {
 	*x = PreviewSystemPromptResponse{}
-	mi := &file_agents_v1_agents_proto_msgTypes[17]
+	mi := &file_agents_v1_agents_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1412,7 +1553,7 @@ func (x *PreviewSystemPromptResponse) String() string {
 func (*PreviewSystemPromptResponse) ProtoMessage() {}
 
 func (x *PreviewSystemPromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agents_v1_agents_proto_msgTypes[17]
+	mi := &file_agents_v1_agents_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1425,7 +1566,7 @@ func (x *PreviewSystemPromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewSystemPromptResponse.ProtoReflect.Descriptor instead.
 func (*PreviewSystemPromptResponse) Descriptor() ([]byte, []int) {
-	return file_agents_v1_agents_proto_rawDescGZIP(), []int{17}
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *PreviewSystemPromptResponse) GetSystemPrompt() string {
@@ -1435,11 +1576,401 @@ func (x *PreviewSystemPromptResponse) GetSystemPrompt() string {
 	return ""
 }
 
+// A shipped starting point for a new agent. Prefill only - a created agent is
+// an ordinary row with no link back to its template.
+type AgentTemplate struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Key          string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Name         string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Emoji        string                 `protobuf:"bytes,3,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	Description  string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	SoulPrompt   string                 `protobuf:"bytes,5,opt,name=soul_prompt,json=soulPrompt,proto3" json:"soul_prompt,omitempty"`
+	EnabledTools []string               `protobuf:"bytes,6,rep,name=enabled_tools,json=enabledTools,proto3" json:"enabled_tools,omitempty"`
+	// Bundled skill rows resolved by the server; empty when a skill is unseeded.
+	EnabledSkillIds []string `protobuf:"bytes,7,rep,name=enabled_skill_ids,json=enabledSkillIds,proto3" json:"enabled_skill_ids,omitempty"`
+	// Model ids the template works best on; empty when the template has no
+	// recommendation. Prefill only - clients apply them when the org serves them.
+	RecommendedModel      string `protobuf:"bytes,8,opt,name=recommended_model,json=recommendedModel,proto3" json:"recommended_model,omitempty"`
+	RecommendedImageModel string `protobuf:"bytes,9,opt,name=recommended_image_model,json=recommendedImageModel,proto3" json:"recommended_image_model,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *AgentTemplate) Reset() {
+	*x = AgentTemplate{}
+	mi := &file_agents_v1_agents_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentTemplate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentTemplate) ProtoMessage() {}
+
+func (x *AgentTemplate) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentTemplate.ProtoReflect.Descriptor instead.
+func (*AgentTemplate) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *AgentTemplate) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *AgentTemplate) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AgentTemplate) GetEmoji() string {
+	if x != nil {
+		return x.Emoji
+	}
+	return ""
+}
+
+func (x *AgentTemplate) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *AgentTemplate) GetSoulPrompt() string {
+	if x != nil {
+		return x.SoulPrompt
+	}
+	return ""
+}
+
+func (x *AgentTemplate) GetEnabledTools() []string {
+	if x != nil {
+		return x.EnabledTools
+	}
+	return nil
+}
+
+func (x *AgentTemplate) GetEnabledSkillIds() []string {
+	if x != nil {
+		return x.EnabledSkillIds
+	}
+	return nil
+}
+
+func (x *AgentTemplate) GetRecommendedModel() string {
+	if x != nil {
+		return x.RecommendedModel
+	}
+	return ""
+}
+
+func (x *AgentTemplate) GetRecommendedImageModel() string {
+	if x != nil {
+		return x.RecommendedImageModel
+	}
+	return ""
+}
+
+type ListAgentTemplatesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListAgentTemplatesRequest) Reset() {
+	*x = ListAgentTemplatesRequest{}
+	mi := &file_agents_v1_agents_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAgentTemplatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAgentTemplatesRequest) ProtoMessage() {}
+
+func (x *ListAgentTemplatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAgentTemplatesRequest.ProtoReflect.Descriptor instead.
+func (*ListAgentTemplatesRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListAgentTemplatesRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type ListAgentTemplatesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Templates     []*AgentTemplate       `protobuf:"bytes,1,rep,name=templates,proto3" json:"templates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAgentTemplatesResponse) Reset() {
+	*x = ListAgentTemplatesResponse{}
+	mi := &file_agents_v1_agents_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAgentTemplatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAgentTemplatesResponse) ProtoMessage() {}
+
+func (x *ListAgentTemplatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAgentTemplatesResponse.ProtoReflect.Descriptor instead.
+func (*ListAgentTemplatesResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ListAgentTemplatesResponse) GetTemplates() []*AgentTemplate {
+	if x != nil {
+		return x.Templates
+	}
+	return nil
+}
+
+// One selectable capability in the agent builder. The server owns this copy;
+// clients render what they receive instead of keeping their own tool list.
+type ToolInfo struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Builder grouping label, e.g. "Notes" or "GitHub".
+	Group string `protobuf:"bytes,4,opt,name=group,proto3" json:"group,omitempty"`
+	// "platform" for tools that run against this deployment, "external" for
+	// tools that call a third-party API.
+	Category    string `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"`
+	Destructive bool   `protobuf:"varint,6,opt,name=destructive,proto3" json:"destructive,omitempty"`
+	// Integration provider id whose org connection this tool calls through;
+	// empty for platform tools.
+	RequiresConnection string `protobuf:"bytes,7,opt,name=requires_connection,json=requiresConnection,proto3" json:"requires_connection,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ToolInfo) Reset() {
+	*x = ToolInfo{}
+	mi := &file_agents_v1_agents_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ToolInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ToolInfo) ProtoMessage() {}
+
+func (x *ToolInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ToolInfo.ProtoReflect.Descriptor instead.
+func (*ToolInfo) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ToolInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetGroup() string {
+	if x != nil {
+		return x.Group
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetDestructive() bool {
+	if x != nil {
+		return x.Destructive
+	}
+	return false
+}
+
+func (x *ToolInfo) GetRequiresConnection() string {
+	if x != nil {
+		return x.RequiresConnection
+	}
+	return ""
+}
+
+type ListToolsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListToolsRequest) Reset() {
+	*x = ListToolsRequest{}
+	mi := &file_agents_v1_agents_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListToolsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListToolsRequest) ProtoMessage() {}
+
+func (x *ListToolsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListToolsRequest.ProtoReflect.Descriptor instead.
+func (*ListToolsRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ListToolsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+// Ordered as the builder renders them: category, then group, then registration
+// order within the group.
+type ListToolsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tools         []*ToolInfo            `protobuf:"bytes,1,rep,name=tools,proto3" json:"tools,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListToolsResponse) Reset() {
+	*x = ListToolsResponse{}
+	mi := &file_agents_v1_agents_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListToolsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListToolsResponse) ProtoMessage() {}
+
+func (x *ListToolsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListToolsResponse.ProtoReflect.Descriptor instead.
+func (*ListToolsResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ListToolsResponse) GetTools() []*ToolInfo {
+	if x != nil {
+		return x.Tools
+	}
+	return nil
+}
+
 var File_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
-	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xe7\a\n" +
+	"\x16agents/v1/agents.proto\x12\tagents.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"\xc2\t\n" +
 	"\tAgentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -1468,15 +1999,22 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\vimage_model\x18\x11 \x01(\tR\n" +
 	"imageModel\x125\n" +
 	"\x17primary_provider_key_id\x18\x12 \x01(\tR\x14primaryProviderKeyId\x121\n" +
-	"\x15image_provider_key_id\x18\x13 \x01(\tR\x12imageProviderKeyId\x12\x1b\n" +
-	"\tprompt_id\x18\x14 \x01(\tR\bpromptId\x12@\n" +
-	"\rbaseline_role\x18\x15 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x128\n" +
-	"\tuser_role\x18\x16 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\buserRole\x88\x01\x01\x12 \n" +
-	"\x04tags\x18\x17 \x03(\v2\f.tags.v1.TagR\x04tags\x12!\n" +
-	"\fmodel_params\x18\x18 \x01(\tR\vmodelParamsB\x10\n" +
+	"\x15image_provider_key_id\x18\x13 \x01(\tR\x12imageProviderKeyId\x12@\n" +
+	"\rbaseline_role\x18\x14 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\fbaselineRole\x88\x01\x01\x128\n" +
+	"\tuser_role\x18\x15 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\buserRole\x88\x01\x01\x12 \n" +
+	"\x04tags\x18\x16 \x03(\v2\f.tags.v1.TagR\x04tags\x12!\n" +
+	"\fmodel_params\x18\x17 \x01(\tR\vmodelParams\x12!\n" +
+	"\fimage_params\x18\x18 \x01(\tR\vimageParams\x12,\n" +
+	"\x12image_style_prompt\x18\x19 \x01(\tR\x10imageStylePrompt\x12\x1d\n" +
+	"\n" +
+	"is_deleted\x18\x1a \x01(\bR\tisDeleted\x12>\n" +
+	"\n" +
+	"deleted_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tdeletedAt\x88\x01\x01\x127\n" +
+	"\x17integration_connections\x18\x1c \x01(\tR\x16integrationConnectionsB\x10\n" +
 	"\x0e_baseline_roleB\f\n" +
 	"\n" +
-	"_user_role\"\xd5\a\n" +
+	"_user_roleB\r\n" +
+	"\v_deleted_at\"\x82\t\n" +
 	"\x12CreateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -1497,12 +2035,14 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\vimage_model\x18\f \x01(\tH\x06R\n" +
 	"imageModel\x88\x01\x01\x12:\n" +
 	"\x17primary_provider_key_id\x18\r \x01(\tH\aR\x14primaryProviderKeyId\x88\x01\x01\x126\n" +
-	"\x15image_provider_key_id\x18\x0e \x01(\tH\bR\x12imageProviderKeyId\x88\x01\x01\x12 \n" +
-	"\tprompt_id\x18\x0f \x01(\tH\tR\bpromptId\x88\x01\x01\x12@\n" +
-	"\rbaseline_role\x18\x10 \x01(\x0e2\x16.common.v1.ContentRoleH\n" +
-	"R\fbaselineRole\x88\x01\x01\x12\x17\n" +
-	"\atag_ids\x18\x11 \x03(\tR\x06tagIds\x12&\n" +
-	"\fmodel_params\x18\x12 \x01(\tH\vR\vmodelParams\x88\x01\x01B\x0e\n" +
+	"\x15image_provider_key_id\x18\x0e \x01(\tH\bR\x12imageProviderKeyId\x88\x01\x01\x12@\n" +
+	"\rbaseline_role\x18\x0f \x01(\x0e2\x16.common.v1.ContentRoleH\tR\fbaselineRole\x88\x01\x01\x12\x17\n" +
+	"\atag_ids\x18\x10 \x03(\tR\x06tagIds\x12&\n" +
+	"\fmodel_params\x18\x11 \x01(\tH\n" +
+	"R\vmodelParams\x88\x01\x01\x12&\n" +
+	"\fimage_params\x18\x12 \x01(\tH\vR\vimageParams\x88\x01\x01\x121\n" +
+	"\x12image_style_prompt\x18\x13 \x01(\tH\fR\x10imageStylePrompt\x88\x01\x01\x12<\n" +
+	"\x17integration_connections\x18\x14 \x01(\tH\rR\x16integrationConnections\x88\x01\x01B\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
 	"\r_avatar_emojiB\x0e\n" +
@@ -1511,11 +2051,12 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\f_access_modeB\x0e\n" +
 	"\f_image_modelB\x1a\n" +
 	"\x18_primary_provider_key_idB\x18\n" +
-	"\x16_image_provider_key_idB\f\n" +
-	"\n" +
-	"_prompt_idB\x10\n" +
+	"\x16_image_provider_key_idB\x10\n" +
 	"\x0e_baseline_roleB\x0f\n" +
-	"\r_model_params\"A\n" +
+	"\r_model_paramsB\x0f\n" +
+	"\r_image_paramsB\x15\n" +
+	"\x13_image_style_promptB\x1a\n" +
+	"\x18_integration_connections\"A\n" +
 	"\x13CreateAgentResponse\x12*\n" +
 	"\x05agent\x18\x01 \x01(\v2\x14.agents.v1.AgentInfoR\x05agent\">\n" +
 	"\x10GetAgentResponse\x12*\n" +
@@ -1528,26 +2069,25 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x05agent\x18\x01 \x01(\v2\x14.agents.v1.AgentInfoR\x05agent\"U\n" +
 	"\x0fGetAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\"\xdd\x02\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\"\xc4\x02\n" +
 	"\x11ListAgentsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1c.common.v1.PaginationRequestH\x00R\n" +
 	"pagination\x88\x01\x01\x12;\n" +
 	"\vaccess_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x01R\n" +
-	"accessMode\x88\x01\x01\x12(\n" +
-	"\rpersonal_only\x18\x04 \x01(\bH\x02R\fpersonalOnly\x88\x01\x01\x12\x1e\n" +
-	"\bgroup_id\x18\x05 \x01(\tH\x03R\agroupId\x88\x01\x01\x12\x17\n" +
-	"\atag_ids\x18\x06 \x03(\tR\x06tagIdsB\r\n" +
+	"accessMode\x88\x01\x01\x12\x1e\n" +
+	"\bgroup_id\x18\x04 \x01(\tH\x02R\agroupId\x88\x01\x01\x12\x17\n" +
+	"\atag_ids\x18\x05 \x03(\tR\x06tagIds\x12!\n" +
+	"\fdeleted_only\x18\x06 \x01(\bR\vdeletedOnlyB\r\n" +
 	"\v_paginationB\x0e\n" +
-	"\f_access_modeB\x10\n" +
-	"\x0e_personal_onlyB\v\n" +
+	"\f_access_modeB\v\n" +
 	"\t_group_id\"\x81\x01\n" +
 	"\x12ListAgentsResponse\x12,\n" +
 	"\x06agents\x18\x01 \x03(\v2\x14.agents.v1.AgentInfoR\x06agents\x12=\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1d.common.v1.PaginationResponseR\n" +
-	"pagination\"\x85\t\n" +
+	"pagination\"\xbb\b\n" +
 	"\x12UpdateAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x17\n" +
@@ -1562,45 +2102,45 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\n" +
 	"is_default\x18\t \x01(\bH\x05R\tisDefault\x88\x01\x01\x12%\n" +
 	"\x0eenabled_skills\x18\n" +
-	" \x03(\tR\renabledSkills\x12;\n" +
-	"\vaccess_mode\x18\v \x01(\x0e2\x15.common.v1.AccessModeH\x06R\n" +
-	"accessMode\x88\x01\x01\x12\x1b\n" +
-	"\tgroup_ids\x18\f \x03(\tR\bgroupIds\x12#\n" +
-	"\renabled_tools\x18\r \x03(\tR\fenabledTools\x12$\n" +
-	"\vimage_model\x18\x0e \x01(\tH\aR\n" +
+	" \x03(\tR\renabledSkills\x12#\n" +
+	"\renabled_tools\x18\v \x03(\tR\fenabledTools\x12$\n" +
+	"\vimage_model\x18\f \x01(\tH\x06R\n" +
 	"imageModel\x88\x01\x01\x12:\n" +
-	"\x17primary_provider_key_id\x18\x0f \x01(\tH\bR\x14primaryProviderKeyId\x88\x01\x01\x126\n" +
-	"\x15image_provider_key_id\x18\x10 \x01(\tH\tR\x12imageProviderKeyId\x88\x01\x01\x12 \n" +
-	"\tprompt_id\x18\x11 \x01(\tH\n" +
-	"R\bpromptId\x88\x01\x01\x12&\n" +
-	"\fclear_prompt\x18\x12 \x01(\bH\vR\vclearPrompt\x88\x01\x01\x12@\n" +
-	"\rbaseline_role\x18\x13 \x01(\x0e2\x16.common.v1.ContentRoleH\fR\fbaselineRole\x88\x01\x01\x124\n" +
-	"\atag_ids\x18\x14 \x01(\v2\x16.agents.v1.AgentTagIdsH\rR\x06tagIds\x88\x01\x01\x12&\n" +
-	"\fmodel_params\x18\x15 \x01(\tH\x0eR\vmodelParams\x88\x01\x01B\a\n" +
+	"\x17primary_provider_key_id\x18\r \x01(\tH\aR\x14primaryProviderKeyId\x88\x01\x01\x126\n" +
+	"\x15image_provider_key_id\x18\x0e \x01(\tH\bR\x12imageProviderKeyId\x88\x01\x01\x124\n" +
+	"\atag_ids\x18\x0f \x01(\v2\x16.agents.v1.AgentTagIdsH\tR\x06tagIds\x88\x01\x01\x12&\n" +
+	"\fmodel_params\x18\x10 \x01(\tH\n" +
+	"R\vmodelParams\x88\x01\x01\x12&\n" +
+	"\fimage_params\x18\x11 \x01(\tH\vR\vimageParams\x88\x01\x01\x121\n" +
+	"\x12image_style_prompt\x18\x12 \x01(\tH\fR\x10imageStylePrompt\x88\x01\x01\x12<\n" +
+	"\x17integration_connections\x18\x13 \x01(\tH\rR\x16integrationConnections\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_soul_promptB\x10\n" +
 	"\x0e_primary_modelB\x0f\n" +
 	"\r_avatar_emojiB\x0e\n" +
 	"\f_theme_colorB\r\n" +
 	"\v_is_defaultB\x0e\n" +
-	"\f_access_modeB\x0e\n" +
 	"\f_image_modelB\x1a\n" +
 	"\x18_primary_provider_key_idB\x18\n" +
-	"\x16_image_provider_key_idB\f\n" +
-	"\n" +
-	"_prompt_idB\x0f\n" +
-	"\r_clear_promptB\x10\n" +
-	"\x0e_baseline_roleB\n" +
+	"\x16_image_provider_key_idB\n" +
 	"\n" +
 	"\b_tag_idsB\x0f\n" +
-	"\r_model_params\"\x1f\n" +
+	"\r_model_paramsB\x0f\n" +
+	"\r_image_paramsB\x15\n" +
+	"\x13_image_style_promptB\x1a\n" +
+	"\x18_integration_connections\"\x1f\n" +
 	"\vAgentTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"X\n" +
 	"\x12DeleteAgentRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\"/\n" +
 	"\x13DeleteAgentResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x99\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"Y\n" +
+	"\x13RestoreAgentRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\"B\n" +
+	"\x14RestoreAgentResponse\x12*\n" +
+	"\x05agent\x18\x01 \x01(\v2\x14.agents.v1.AgentInfoR\x05agent\"\x99\x01\n" +
 	"\x18UploadAgentAvatarRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
@@ -1614,17 +2154,47 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\"B\n" +
 	"\x1bPreviewSystemPromptResponse\x12#\n" +
-	"\rsystem_prompt\x18\x01 \x01(\tR\fsystemPrompt2\xbf\x05\n" +
+	"\rsystem_prompt\x18\x01 \x01(\tR\fsystemPrompt\"\xc4\x02\n" +
+	"\rAgentTemplate\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05emoji\x18\x03 \x01(\tR\x05emoji\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vsoul_prompt\x18\x05 \x01(\tR\n" +
+	"soulPrompt\x12#\n" +
+	"\renabled_tools\x18\x06 \x03(\tR\fenabledTools\x12*\n" +
+	"\x11enabled_skill_ids\x18\a \x03(\tR\x0fenabledSkillIds\x12+\n" +
+	"\x11recommended_model\x18\b \x01(\tR\x10recommendedModel\x126\n" +
+	"\x17recommended_image_model\x18\t \x01(\tR\x15recommendedImageModel\"D\n" +
+	"\x19ListAgentTemplatesRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"T\n" +
+	"\x1aListAgentTemplatesResponse\x126\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x18.agents.v1.AgentTemplateR\ttemplates\"\xe8\x01\n" +
+	"\bToolInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
+	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1a\n" +
+	"\bcategory\x18\x05 \x01(\tR\bcategory\x12 \n" +
+	"\vdestructive\x18\x06 \x01(\bR\vdestructive\x12/\n" +
+	"\x13requires_connection\x18\a \x01(\tR\x12requiresConnection\";\n" +
+	"\x10ListToolsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\">\n" +
+	"\x11ListToolsResponse\x12)\n" +
+	"\x05tools\x18\x01 \x03(\v2\x13.agents.v1.ToolInfoR\x05tools2\xc1\a\n" +
 	"\rAgentsService\x12N\n" +
 	"\vCreateAgent\x12\x1d.agents.v1.CreateAgentRequest\x1a\x1e.agents.v1.CreateAgentResponse\"\x00\x12E\n" +
 	"\bGetAgent\x12\x1a.agents.v1.GetAgentRequest\x1a\x1b.agents.v1.GetAgentResponse\"\x00\x12K\n" +
 	"\n" +
 	"ListAgents\x12\x1c.agents.v1.ListAgentsRequest\x1a\x1d.agents.v1.ListAgentsResponse\"\x00\x12N\n" +
 	"\vUpdateAgent\x12\x1d.agents.v1.UpdateAgentRequest\x1a\x1e.agents.v1.UpdateAgentResponse\"\x00\x12N\n" +
-	"\vDeleteAgent\x12\x1d.agents.v1.DeleteAgentRequest\x1a\x1e.agents.v1.DeleteAgentResponse\"\x00\x12`\n" +
+	"\vDeleteAgent\x12\x1d.agents.v1.DeleteAgentRequest\x1a\x1e.agents.v1.DeleteAgentResponse\"\x00\x12Q\n" +
+	"\fRestoreAgent\x12\x1e.agents.v1.RestoreAgentRequest\x1a\x1f.agents.v1.RestoreAgentResponse\"\x00\x12`\n" +
 	"\x11UploadAgentAvatar\x12#.agents.v1.UploadAgentAvatarRequest\x1a$.agents.v1.UploadAgentAvatarResponse\"\x00\x12`\n" +
 	"\x11DeleteAgentAvatar\x12#.agents.v1.DeleteAgentAvatarRequest\x1a$.agents.v1.DeleteAgentAvatarResponse\"\x00\x12f\n" +
-	"\x13PreviewSystemPrompt\x12%.agents.v1.PreviewSystemPromptRequest\x1a&.agents.v1.PreviewSystemPromptResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x13PreviewSystemPrompt\x12%.agents.v1.PreviewSystemPromptRequest\x1a&.agents.v1.PreviewSystemPromptResponse\"\x00\x12c\n" +
+	"\x12ListAgentTemplates\x12$.agents.v1.ListAgentTemplatesRequest\x1a%.agents.v1.ListAgentTemplatesResponse\"\x00\x12H\n" +
+	"\tListTools\x12\x1b.agents.v1.ListToolsRequest\x1a\x1c.agents.v1.ListToolsResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_agents_proto_rawDescOnce sync.Once
@@ -1638,7 +2208,7 @@ func file_agents_v1_agents_proto_rawDescGZIP() []byte {
 	return file_agents_v1_agents_proto_rawDescData
 }
 
-var file_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_agents_v1_agents_proto_goTypes = []any{
 	(*AgentInfo)(nil),                   // 0: agents.v1.AgentInfo
 	(*CreateAgentRequest)(nil),          // 1: agents.v1.CreateAgentRequest
@@ -1654,59 +2224,75 @@ var file_agents_v1_agents_proto_goTypes = []any{
 	(*AgentTagIds)(nil),                 // 11: agents.v1.AgentTagIds
 	(*DeleteAgentRequest)(nil),          // 12: agents.v1.DeleteAgentRequest
 	(*DeleteAgentResponse)(nil),         // 13: agents.v1.DeleteAgentResponse
-	(*UploadAgentAvatarRequest)(nil),    // 14: agents.v1.UploadAgentAvatarRequest
-	(*DeleteAgentAvatarRequest)(nil),    // 15: agents.v1.DeleteAgentAvatarRequest
-	(*PreviewSystemPromptRequest)(nil),  // 16: agents.v1.PreviewSystemPromptRequest
-	(*PreviewSystemPromptResponse)(nil), // 17: agents.v1.PreviewSystemPromptResponse
-	(*timestamppb.Timestamp)(nil),       // 18: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                  // 19: common.v1.AccessMode
-	(v1.ContentRole)(0),                 // 20: common.v1.ContentRole
-	(*v11.Tag)(nil),                     // 21: tags.v1.Tag
-	(*v1.PaginationRequest)(nil),        // 22: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),       // 23: common.v1.PaginationResponse
+	(*RestoreAgentRequest)(nil),         // 14: agents.v1.RestoreAgentRequest
+	(*RestoreAgentResponse)(nil),        // 15: agents.v1.RestoreAgentResponse
+	(*UploadAgentAvatarRequest)(nil),    // 16: agents.v1.UploadAgentAvatarRequest
+	(*DeleteAgentAvatarRequest)(nil),    // 17: agents.v1.DeleteAgentAvatarRequest
+	(*PreviewSystemPromptRequest)(nil),  // 18: agents.v1.PreviewSystemPromptRequest
+	(*PreviewSystemPromptResponse)(nil), // 19: agents.v1.PreviewSystemPromptResponse
+	(*AgentTemplate)(nil),               // 20: agents.v1.AgentTemplate
+	(*ListAgentTemplatesRequest)(nil),   // 21: agents.v1.ListAgentTemplatesRequest
+	(*ListAgentTemplatesResponse)(nil),  // 22: agents.v1.ListAgentTemplatesResponse
+	(*ToolInfo)(nil),                    // 23: agents.v1.ToolInfo
+	(*ListToolsRequest)(nil),            // 24: agents.v1.ListToolsRequest
+	(*ListToolsResponse)(nil),           // 25: agents.v1.ListToolsResponse
+	(*timestamppb.Timestamp)(nil),       // 26: google.protobuf.Timestamp
+	(v1.AccessMode)(0),                  // 27: common.v1.AccessMode
+	(v1.ContentRole)(0),                 // 28: common.v1.ContentRole
+	(*v11.Tag)(nil),                     // 29: tags.v1.Tag
+	(*v1.PaginationRequest)(nil),        // 30: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),       // 31: common.v1.PaginationResponse
 }
 var file_agents_v1_agents_proto_depIdxs = []int32{
-	18, // 0: agents.v1.AgentInfo.created_at:type_name -> google.protobuf.Timestamp
-	18, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
-	20, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
-	20, // 4: agents.v1.AgentInfo.user_role:type_name -> common.v1.ContentRole
-	21, // 5: agents.v1.AgentInfo.tags:type_name -> tags.v1.Tag
-	19, // 6: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
-	20, // 7: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
-	0,  // 8: agents.v1.CreateAgentResponse.agent:type_name -> agents.v1.AgentInfo
-	0,  // 9: agents.v1.GetAgentResponse.agent:type_name -> agents.v1.AgentInfo
-	0,  // 10: agents.v1.UpdateAgentResponse.agent:type_name -> agents.v1.AgentInfo
-	0,  // 11: agents.v1.UploadAgentAvatarResponse.agent:type_name -> agents.v1.AgentInfo
-	0,  // 12: agents.v1.DeleteAgentAvatarResponse.agent:type_name -> agents.v1.AgentInfo
-	22, // 13: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
-	19, // 14: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
-	0,  // 15: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
-	23, // 16: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
-	19, // 17: agents.v1.UpdateAgentRequest.access_mode:type_name -> common.v1.AccessMode
-	20, // 18: agents.v1.UpdateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
-	11, // 19: agents.v1.UpdateAgentRequest.tag_ids:type_name -> agents.v1.AgentTagIds
-	1,  // 20: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
-	7,  // 21: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
-	8,  // 22: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
-	10, // 23: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
-	12, // 24: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
-	14, // 25: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
-	15, // 26: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
-	16, // 27: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
-	2,  // 28: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.CreateAgentResponse
-	3,  // 29: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.GetAgentResponse
-	9,  // 30: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
-	4,  // 31: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.UpdateAgentResponse
-	13, // 32: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
-	5,  // 33: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.UploadAgentAvatarResponse
-	6,  // 34: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.DeleteAgentAvatarResponse
-	17, // 35: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
-	28, // [28:36] is the sub-list for method output_type
-	20, // [20:28] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	26, // 0: agents.v1.AgentInfo.created_at:type_name -> google.protobuf.Timestamp
+	26, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
+	28, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
+	28, // 4: agents.v1.AgentInfo.user_role:type_name -> common.v1.ContentRole
+	29, // 5: agents.v1.AgentInfo.tags:type_name -> tags.v1.Tag
+	26, // 6: agents.v1.AgentInfo.deleted_at:type_name -> google.protobuf.Timestamp
+	27, // 7: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	28, // 8: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	0,  // 9: agents.v1.CreateAgentResponse.agent:type_name -> agents.v1.AgentInfo
+	0,  // 10: agents.v1.GetAgentResponse.agent:type_name -> agents.v1.AgentInfo
+	0,  // 11: agents.v1.UpdateAgentResponse.agent:type_name -> agents.v1.AgentInfo
+	0,  // 12: agents.v1.UploadAgentAvatarResponse.agent:type_name -> agents.v1.AgentInfo
+	0,  // 13: agents.v1.DeleteAgentAvatarResponse.agent:type_name -> agents.v1.AgentInfo
+	30, // 14: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
+	27, // 15: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
+	0,  // 16: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
+	31, // 17: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
+	11, // 18: agents.v1.UpdateAgentRequest.tag_ids:type_name -> agents.v1.AgentTagIds
+	0,  // 19: agents.v1.RestoreAgentResponse.agent:type_name -> agents.v1.AgentInfo
+	20, // 20: agents.v1.ListAgentTemplatesResponse.templates:type_name -> agents.v1.AgentTemplate
+	23, // 21: agents.v1.ListToolsResponse.tools:type_name -> agents.v1.ToolInfo
+	1,  // 22: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
+	7,  // 23: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
+	8,  // 24: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
+	10, // 25: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
+	12, // 26: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
+	14, // 27: agents.v1.AgentsService.RestoreAgent:input_type -> agents.v1.RestoreAgentRequest
+	16, // 28: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
+	17, // 29: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
+	18, // 30: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
+	21, // 31: agents.v1.AgentsService.ListAgentTemplates:input_type -> agents.v1.ListAgentTemplatesRequest
+	24, // 32: agents.v1.AgentsService.ListTools:input_type -> agents.v1.ListToolsRequest
+	2,  // 33: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.CreateAgentResponse
+	3,  // 34: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.GetAgentResponse
+	9,  // 35: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
+	4,  // 36: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.UpdateAgentResponse
+	13, // 37: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
+	15, // 38: agents.v1.AgentsService.RestoreAgent:output_type -> agents.v1.RestoreAgentResponse
+	5,  // 39: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.UploadAgentAvatarResponse
+	6,  // 40: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.DeleteAgentAvatarResponse
+	19, // 41: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
+	22, // 42: agents.v1.AgentsService.ListAgentTemplates:output_type -> agents.v1.ListAgentTemplatesResponse
+	25, // 43: agents.v1.AgentsService.ListTools:output_type -> agents.v1.ListToolsResponse
+	33, // [33:44] is the sub-list for method output_type
+	22, // [22:33] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_agents_proto_init() }
@@ -1724,7 +2310,7 @@ func file_agents_v1_agents_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_agents_proto_rawDesc), len(file_agents_v1_agents_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

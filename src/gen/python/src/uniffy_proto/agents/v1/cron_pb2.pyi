@@ -63,15 +63,13 @@ class CronTaskInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., owner_id: _Optional[str] = ..., agent_id: _Optional[str] = ..., execution_user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., prompt: _Optional[str] = ..., cron_expression: _Optional[str] = ..., timezone: _Optional[str] = ..., is_enabled: _Optional[bool] = ..., last_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., next_run_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_run_status: _Optional[str] = ..., last_run_error: _Optional[str] = ..., run_count: _Optional[int] = ..., consecutive_failures: _Optional[int] = ..., max_consecutive_failures: _Optional[int] = ..., access_mode: _Optional[_Union[_common_pb2.AccessMode, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., agent_name: _Optional[str] = ..., baseline_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class CronRunLogInfo(_message.Message):
-    __slots__ = ("id", "cron_task_id", "organization_id", "agent_run_log_id", "session_id", "status", "error", "result_summary", "started_at", "completed_at", "input_tokens", "output_tokens")
+    __slots__ = ("id", "cron_task_id", "organization_id", "session_id", "status", "error", "started_at", "completed_at", "input_tokens", "output_tokens")
     ID_FIELD_NUMBER: _ClassVar[int]
     CRON_TASK_ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    AGENT_RUN_LOG_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
-    RESULT_SUMMARY_FIELD_NUMBER: _ClassVar[int]
     STARTED_AT_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
     INPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
@@ -79,16 +77,14 @@ class CronRunLogInfo(_message.Message):
     id: str
     cron_task_id: str
     organization_id: str
-    agent_run_log_id: str
     session_id: str
     status: str
     error: str
-    result_summary: str
     started_at: _timestamp_pb2.Timestamp
     completed_at: _timestamp_pb2.Timestamp
     input_tokens: int
     output_tokens: int
-    def __init__(self, id: _Optional[str] = ..., cron_task_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., agent_run_log_id: _Optional[str] = ..., session_id: _Optional[str] = ..., status: _Optional[str] = ..., error: _Optional[str] = ..., result_summary: _Optional[str] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., cron_task_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., session_id: _Optional[str] = ..., status: _Optional[str] = ..., error: _Optional[str] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., input_tokens: _Optional[int] = ..., output_tokens: _Optional[int] = ...) -> None: ...
 
 class CreateCronTaskRequest(_message.Message):
     __slots__ = ("organization_id", "agent_id", "name", "prompt", "cron_expression", "timezone", "description", "access_mode", "baseline_role")

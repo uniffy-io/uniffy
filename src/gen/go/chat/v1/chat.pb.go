@@ -388,8 +388,11 @@ type ChatChannel struct {
 	// The requesting user's agent-chat folder holding this channel. Per-user
 	// (from the member row), only set on is_agent_dm channels.
 	AgentFolderId *string `protobuf:"bytes,37,opt,name=agent_folder_id,json=agentFolderId,proto3,oneof" json:"agent_folder_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The bound agent was deleted, so this chat is frozen: history reads, sends
+	// are refused. Only meaningful on is_agent_dm channels.
+	AgentIsRetired bool `protobuf:"varint,38,opt,name=agent_is_retired,json=agentIsRetired,proto3" json:"agent_is_retired,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ChatChannel) Reset() {
@@ -611,6 +614,13 @@ func (x *ChatChannel) GetAgentFolderId() string {
 	return ""
 }
 
+func (x *ChatChannel) GetAgentIsRetired() bool {
+	if x != nil {
+		return x.AgentIsRetired
+	}
+	return false
+}
+
 // ThreadInfo holds thread metadata embedded in root messages.
 type ThreadInfo struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -757,6 +767,9 @@ type ChatMessage struct {
 	CreatedAt  *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// Inline quote reply reference
 	ReplyToId *string `protobuf:"bytes,12,opt,name=reply_to_id,json=replyToId,proto3,oneof" json:"reply_to_id,omitempty"`
+	// The caller's own thumbs rating on an agent reply ("up" | "down" | "").
+	// Populated only on history reads; empty on stream fanout.
+	FeedbackRating string `protobuf:"bytes,13,opt,name=feedback_rating,json=feedbackRating,proto3" json:"feedback_rating,omitempty"`
 	// Populated for root messages that have replies
 	Thread *ThreadInfo `protobuf:"bytes,20,opt,name=thread,proto3,oneof" json:"thread,omitempty"`
 	// Reactions on this message
@@ -880,6 +893,13 @@ func (x *ChatMessage) GetCreatedAt() *timestamppb.Timestamp {
 func (x *ChatMessage) GetReplyToId() string {
 	if x != nil && x.ReplyToId != nil {
 		return *x.ReplyToId
+	}
+	return ""
+}
+
+func (x *ChatMessage) GetFeedbackRating() string {
+	if x != nil {
+		return x.FeedbackRating
 	}
 	return ""
 }
@@ -8365,10 +8385,15 @@ type ChannelAgentConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Model override for this (channel, agent); "" = none (agent default).
 	ModelOverride string `protobuf:"bytes,1,opt,name=model_override,json=modelOverride,proto3" json:"model_override,omitempty"`
-	// JSON object of model-parameter overrides; "" = none.
-	ModelParamsOverrideJson string `protobuf:"bytes,2,opt,name=model_params_override_json,json=modelParamsOverrideJson,proto3" json:"model_params_override_json,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// JSON object of tuned parameter overrides for this (channel, agent),
+	// merged over the agent's own model_params; "" = none.
+	ModelParamsOverride string `protobuf:"bytes,2,opt,name=model_params_override,json=modelParamsOverride,proto3" json:"model_params_override,omitempty"`
+	// JSON object of image-generation overrides for this (channel, agent),
+	// merged over the agent's own image_params; "" = none. Builder-only knobs
+	// are rejected here.
+	ImageParamsOverride string `protobuf:"bytes,3,opt,name=image_params_override,json=imageParamsOverride,proto3" json:"image_params_override,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ChannelAgentConfig) Reset() {
@@ -8408,9 +8433,16 @@ func (x *ChannelAgentConfig) GetModelOverride() string {
 	return ""
 }
 
-func (x *ChannelAgentConfig) GetModelParamsOverrideJson() string {
+func (x *ChannelAgentConfig) GetModelParamsOverride() string {
 	if x != nil {
-		return x.ModelParamsOverrideJson
+		return x.ModelParamsOverride
+	}
+	return ""
+}
+
+func (x *ChannelAgentConfig) GetImageParamsOverride() string {
+	if x != nil {
+		return x.ImageParamsOverride
 	}
 	return ""
 }
@@ -8525,10 +8557,11 @@ type UpdateChannelAgentConfigRequest struct {
 	ChannelId      string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	AgentId        string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	ModelOverride  *string                `protobuf:"bytes,4,opt,name=model_override,json=modelOverride,proto3,oneof" json:"model_override,omitempty"`
-	// JSON object of model-parameter overrides; "" or "{}" clears them
-	ModelParamsOverrideJson *string `protobuf:"bytes,5,opt,name=model_params_override_json,json=modelParamsOverrideJson,proto3,oneof" json:"model_params_override_json,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// Absent = unchanged, "" = clear, otherwise a JSON object.
+	ModelParamsOverride *string `protobuf:"bytes,5,opt,name=model_params_override,json=modelParamsOverride,proto3,oneof" json:"model_params_override,omitempty"`
+	ImageParamsOverride *string `protobuf:"bytes,6,opt,name=image_params_override,json=imageParamsOverride,proto3,oneof" json:"image_params_override,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *UpdateChannelAgentConfigRequest) Reset() {
@@ -8589,9 +8622,16 @@ func (x *UpdateChannelAgentConfigRequest) GetModelOverride() string {
 	return ""
 }
 
-func (x *UpdateChannelAgentConfigRequest) GetModelParamsOverrideJson() string {
-	if x != nil && x.ModelParamsOverrideJson != nil {
-		return *x.ModelParamsOverrideJson
+func (x *UpdateChannelAgentConfigRequest) GetModelParamsOverride() string {
+	if x != nil && x.ModelParamsOverride != nil {
+		return *x.ModelParamsOverride
+	}
+	return ""
+}
+
+func (x *UpdateChannelAgentConfigRequest) GetImageParamsOverride() string {
+	if x != nil && x.ImageParamsOverride != nil {
+		return *x.ImageParamsOverride
 	}
 	return ""
 }
@@ -8647,7 +8687,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12tags/v1/tags.proto\"I\n" +
 	"\vChatSubject\x12*\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x16.common.v1.SubjectTypeR\x04type\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"\xa5\t\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"\xcf\t\n" +
 	"\vChatChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -8682,7 +8722,8 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"customName\x88\x01\x01\x12\x1e\n" +
 	"\bagent_id\x18# \x01(\tH\x04R\aagentId\x88\x01\x01\x12 \n" +
 	"\x04tags\x18$ \x03(\v2\f.tags.v1.TagR\x04tags\x12+\n" +
-	"\x0fagent_folder_id\x18% \x01(\tH\x05R\ragentFolderId\x88\x01\x01B\x0e\n" +
+	"\x0fagent_folder_id\x18% \x01(\tH\x05R\ragentFolderId\x88\x01\x01\x12(\n" +
+	"\x10agent_is_retired\x18& \x01(\bR\x0eagentIsRetiredB\x0e\n" +
 	"\f_category_idB\x14\n" +
 	"\x12_current_user_roleB\f\n" +
 	"\n" +
@@ -8702,7 +8743,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vsender_name\x18\x02 \x01(\tR\n" +
 	"senderName\x12'\n" +
-	"\x0fcontent_preview\x18\x03 \x01(\tR\x0econtentPreview\"\x8b\a\n" +
+	"\x0fcontent_preview\x18\x03 \x01(\tR\x0econtentPreview\"\xb4\a\n" +
 	"\vChatMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -8720,7 +8761,8 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	" \x03(\v2\".chat.v1.ChatMessage.MetadataEntryR\bmetadata\x129\n" +
 	"\n" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12#\n" +
-	"\vreply_to_id\x18\f \x01(\tH\x02R\treplyToId\x88\x01\x01\x120\n" +
+	"\vreply_to_id\x18\f \x01(\tH\x02R\treplyToId\x88\x01\x01\x12'\n" +
+	"\x0ffeedback_rating\x18\r \x01(\tR\x0efeedbackRating\x120\n" +
 	"\x06thread\x18\x14 \x01(\v2\x13.chat.v1.ThreadInfoH\x03R\x06thread\x88\x01\x01\x124\n" +
 	"\treactions\x18\x15 \x03(\v2\x16.chat.v1.ReactionGroupR\treactions\x12$\n" +
 	"\vsender_name\x18\x16 \x01(\tH\x04R\n" +
@@ -9370,26 +9412,29 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	" ResetChannelAgentContextResponse\x12,\n" +
 	"\x12divider_message_id\x18\x01 \x01(\tR\x10dividerMessageId\x125\n" +
 	"\breset_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\aresetAt\x127\n" +
-	"\x05stats\x18\x03 \x01(\v2!.chat.v1.ChannelAgentContextStatsR\x05stats\"x\n" +
+	"\x05stats\x18\x03 \x01(\v2!.chat.v1.ChannelAgentContextStatsR\x05stats\"\xa3\x01\n" +
 	"\x12ChannelAgentConfig\x12%\n" +
-	"\x0emodel_override\x18\x01 \x01(\tR\rmodelOverride\x12;\n" +
-	"\x1amodel_params_override_json\x18\x02 \x01(\tR\x17modelParamsOverrideJson\"\x81\x01\n" +
+	"\x0emodel_override\x18\x01 \x01(\tR\rmodelOverride\x122\n" +
+	"\x15model_params_override\x18\x02 \x01(\tR\x13modelParamsOverride\x122\n" +
+	"\x15image_params_override\x18\x03 \x01(\tR\x13imageParamsOverride\"\x81\x01\n" +
 	"\x1cGetChannelAgentConfigRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x19\n" +
 	"\bagent_id\x18\x03 \x01(\tR\aagentId\"T\n" +
 	"\x1dGetChannelAgentConfigResponse\x123\n" +
-	"\x06config\x18\x01 \x01(\v2\x1b.chat.v1.ChannelAgentConfigR\x06config\"\xa4\x02\n" +
+	"\x06config\x18\x01 \x01(\v2\x1b.chat.v1.ChannelAgentConfigR\x06config\"\xe9\x02\n" +
 	"\x1fUpdateChannelAgentConfigRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x19\n" +
 	"\bagent_id\x18\x03 \x01(\tR\aagentId\x12*\n" +
-	"\x0emodel_override\x18\x04 \x01(\tH\x00R\rmodelOverride\x88\x01\x01\x12@\n" +
-	"\x1amodel_params_override_json\x18\x05 \x01(\tH\x01R\x17modelParamsOverrideJson\x88\x01\x01B\x11\n" +
-	"\x0f_model_overrideB\x1d\n" +
-	"\x1b_model_params_override_json\"W\n" +
+	"\x0emodel_override\x18\x04 \x01(\tH\x00R\rmodelOverride\x88\x01\x01\x127\n" +
+	"\x15model_params_override\x18\x05 \x01(\tH\x01R\x13modelParamsOverride\x88\x01\x01\x127\n" +
+	"\x15image_params_override\x18\x06 \x01(\tH\x02R\x13imageParamsOverride\x88\x01\x01B\x11\n" +
+	"\x0f_model_overrideB\x18\n" +
+	"\x16_model_params_overrideB\x18\n" +
+	"\x16_image_params_override\"W\n" +
 	" UpdateChannelAgentConfigResponse\x123\n" +
 	"\x06config\x18\x01 \x01(\v2\x1b.chat.v1.ChannelAgentConfigR\x06config*\x92\x01\n" +
 	"\vChannelType\x12\x1c\n" +

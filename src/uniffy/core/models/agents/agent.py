@@ -49,6 +49,18 @@ class Agent(SQLModel, table=True):
         default="",
         sa_column=Column(String(100), nullable=False, server_default=text("''")),
     )
+    # Image-generation defaults (aspect_ratio, resolution, quality, ...),
+    # validated against the image model's catalog schema. {} = provider defaults.
+    image_params: dict = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'{}'::jsonb")),
+    )
+    # House style folded into every generated-image prompt; providers dropped
+    # the style parameter, so this is the only place style can live.
+    image_style_prompt: str = Field(
+        default="",
+        sa_column=Column(Text(), nullable=False, server_default=text("''")),
+    )
     primary_provider_key_id: UUID | None = Field(
         default=None,
         sa_column=Column(
@@ -65,16 +77,15 @@ class Agent(SQLModel, table=True):
             index=True,
         ),
     )
-    prompt_id: UUID | None = Field(
-        default=None,
-        sa_column=Column(
-            ForeignKey("agents_prompts.id", ondelete="SET NULL"),
-            nullable=True,
-            index=True,
-        ),
-    )
     enabled_tools: list = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
     enabled_skills: list = Field(default_factory=list, sa_column=Column(JSONB, nullable=False))
+    # Integration pins (provider id -> connection id), the default connection
+    # for that provider's tools when a call names none. {} = resolve
+    # automatically (single-connection auto or ambiguity error).
+    integration_connections: dict = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'{}'::jsonb")),
+    )
     avatar_emoji: str = Field(
         default="",
         sa_column=Column(String(10), nullable=False, server_default=text("''")),

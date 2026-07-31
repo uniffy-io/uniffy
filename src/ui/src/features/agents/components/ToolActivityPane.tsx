@@ -8,10 +8,8 @@ export type ToolStepStatus = 'running' | 'completed' | 'failed' | 'interrupted';
 export interface ToolStep {
     id: string;
     toolName: string;
-    /** Past/neutral action label, e.g. "Create note". */
+    /** Catalog display name, e.g. "Create Note" (see toolActionLabel). */
     label: string;
-    /** Present-tense label shown while running, e.g. "Creating note". Falls back to label. */
-    runningLabel?: string;
     args?: string;
     result?: string;
     status: ToolStepStatus;
@@ -55,7 +53,7 @@ export function ToolActivityPane({
     const active = steps.find((s) => s.status === 'running');
     const headerLabel = live
         ? active
-            ? `${active.runningLabel ?? active.label}...`
+            ? `${active.label}...`
             : 'Working...'
         : steps.length === 1
             ? steps[0].label
@@ -78,9 +76,6 @@ export function ToolActivityPane({
                         </>
                     ) : (
                         <span>{headerLabel}</span>
-                    )}
-                    {steps.length > 1 && (
-                        <span className="text-[11px] tabular-nums text-muted-foreground/70">{steps.length}</span>
                     )}
                     <CaretDown size={12} className={cn('transition-transform', expanded && 'rotate-180')} />
                 </button>
@@ -122,9 +117,10 @@ function StatusIcon({ status }: { status: ToolStepStatus }) {
         case 'failed':
             return <XCircle size={14} weight="fill" className="text-red-500 shrink-0" />;
         case 'interrupted':
-            return <Stop size={14} weight="fill" className="text-muted-foreground/70 shrink-0" />;
+            return <Stop size={14} className="text-muted-foreground/70 shrink-0" />;
         default:
-            return <CheckCircle size={14} weight="fill" className="text-green-500 shrink-0" />;
+            // Muted like the reasoning pane's settled icons; only failure gets color.
+            return <CheckCircle size={14} className="text-muted-foreground/70 shrink-0" />;
     }
 }
 
@@ -139,15 +135,15 @@ function ToolStepRow({
     showLabel: boolean;
     renderResult?: (result: string) => ReactNode;
 }) {
-    const [showArgs, setShowArgs] = useState(false);
-    const [showResult, setShowResult] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
 
     const hasArgs = !!step.args && step.args !== '{}' && step.args !== 'None';
     const hasResult = !!step.result && step.result.trim().length > 0;
+    const hasDetails = hasArgs || hasResult;
     const hasDuration = step.durationSecs !== undefined && step.durationSecs > 0;
     const labelText =
         step.status === 'running'
-            ? `${step.runningLabel ?? step.label}...`
+            ? `${step.label}...`
             : step.status === 'interrupted'
                 ? `${step.label} interrupted`
                 : step.status === 'failed'
@@ -173,48 +169,47 @@ function ToolStepRow({
                 {!last && <div className="w-px flex-1 bg-border mt-1" />}
             </div>
             <div className="text-[13px] leading-relaxed text-muted-foreground break-words pb-3 min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-foreground">{headline}</span>
-                    {showLabel && hasDuration && (
-                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">
-                            {formatMediaTime(step.durationSecs!)}
-                        </span>
-                    )}
-                </div>
-                {step.status === 'running' && step.hint && (
-                    <div className="mt-1 text-[11px] text-muted-foreground/80">{step.hint}</div>
-                )}
-                {(hasArgs || hasResult) && (
-                    <div className="flex items-center gap-3 mt-1">
-                        {hasArgs && (
-                            <button
-                                type="button"
-                                onClick={() => setShowArgs((v) => !v)}
-                                className="text-[11px] text-muted-foreground/80 hover:text-foreground"
-                                data-state={showArgs ? 'open' : 'closed'}
-                            >
-                                {showArgs ? 'Hide arguments' : 'Show arguments'}
-                            </button>
+                {hasDetails ? (
+                    <button
+                        type="button"
+                        onClick={() => setShowDetails((v) => !v)}
+                        className="group/step flex items-center gap-1.5 flex-wrap text-left hover:text-foreground transition-colors"
+                        data-state={showDetails ? 'open' : 'closed'}
+                    >
+                        <span>{headline}</span>
+                        {showLabel && hasDuration && (
+                            <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                                {formatMediaTime(step.durationSecs!)}
+                            </span>
                         )}
-                        {hasResult && (
-                            <button
-                                type="button"
-                                onClick={() => setShowResult((v) => !v)}
-                                className="text-[11px] text-muted-foreground/80 hover:text-foreground"
-                                data-state={showResult ? 'open' : 'closed'}
-                            >
-                                {showResult ? 'Hide result' : 'Show result'}
-                            </button>
+                        <CaretDown
+                            size={11}
+                            className={cn(
+                                'text-muted-foreground/50 transition-transform group-hover/step:text-muted-foreground',
+                                showDetails && 'rotate-180',
+                            )}
+                        />
+                    </button>
+                ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{headline}</span>
+                        {showLabel && hasDuration && (
+                            <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                                {formatMediaTime(step.durationSecs!)}
+                            </span>
                         )}
                     </div>
                 )}
-                {showArgs && hasArgs && (
-                    <pre className="text-[11px] font-mono bg-muted/40 rounded p-2 mt-1 overflow-x-auto text-foreground/80">
+                {step.status === 'running' && step.hint && (
+                    <div className="mt-1 text-[11px] text-muted-foreground/80">{step.hint}</div>
+                )}
+                {showDetails && hasArgs && (
+                    <pre className="text-[11px] font-mono bg-muted/40 rounded p-2 mt-1.5 overflow-x-auto text-foreground/80">
                         {step.args}
                     </pre>
                 )}
-                {showResult && hasResult && (
-                    <div className="mt-1">
+                {showDetails && hasResult && (
+                    <div className="mt-1.5">
                         {renderResult ? (
                             renderResult(step.result!)
                         ) : (

@@ -1,7 +1,7 @@
 """HTTP routes for agent avatars.
 
-Serves agent avatar images via standard HTTP endpoints with caching support.
-Auth is handled via service worker token injection.
+Identity comes from the shared asset dependency (Bearer or the asset-read
+cookie); the org check below is this route's own gate.
 """
 
 from typing import Annotated
@@ -13,10 +13,12 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.avatars import AVATAR_SIZES
+from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.storage import get_s3_client
 from uniffy.db import open_session
 from uniffy.domains.auth.http_deps import get_current_user_id
+from uniffy.domains.organizations.operations import OrganizationOperations
 
 logger = logger.bind(component="agents.agents.http_routes")
 
@@ -27,32 +29,10 @@ agent_avatars_router = APIRouter(prefix="/agents/avatars", tags=["agent-avatars"
 async def get_agent_avatar(
     agent_id: UUID,
     size: str,
-    _current_user_id: Annotated[UUID, Depends(get_current_user_id)],
+    current_user_id: Annotated[UUID, Depends(get_current_user_id)],
     if_none_match: Annotated[str | None, Header()] = None,
 ) -> StreamingResponse | Response:
-    """Stream agent avatar image with HTTP caching support.
-
-    Parameters
-    ----------
-    agent_id : UUID
-        Agent ID whose avatar to retrieve.
-    size : str
-        Avatar size: 'sm' (32px), 'md' (64px), or 'lg' (128px).
-    _current_user_id : UUID
-        Authenticated user ID (injected by dependency, used for auth check only).
-
-    Returns
-    -------
-    StreamingResponse
-        Avatar image as WebP with cache headers.
-
-    Raises
-    ------
-    HTTPException
-        400 if invalid size.
-        404 if agent or avatar not found.
-
-    """
+    """Stream an agent avatar as WebP, sizes ``sm`` / ``md`` / ``lg``."""
     if size not in AVATAR_SIZES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -70,6 +50,18 @@ async def get_agent_avatar(
             agent = result.scalar_one_or_none()
 
             if not agent:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Agent not found",
+                )
+
+            # The agent id is the only path input, so the caller's membership of
+            # the agent's org is what keeps this from being a cross-tenant read.
+            try:
+                await OrganizationOperations(session).require_org_member(
+                    current_user_id, agent.organization_id
+                )
+            except PermissionDeniedError:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Agent not found",

@@ -14,14 +14,11 @@ import {
   Clock,
   MapPin,
   Palette,
-  LockSimple,
-  Buildings,
   VideoCamera,
   Prohibit,
   Link,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { RichDescriptionInput } from "@shared/components/RichDescriptionInput";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
 import { TimePicker } from "@features/calendar/components/TimePicker";
@@ -34,20 +31,7 @@ import { FONT } from "@theme/typography";
 import { useCategories, useEvent } from "@features/calendar/useCalendar";
 import { useCreateEvent, useUpdateEvent } from "@features/calendar/useCalendarMutations";
 
-type EventScope = "private" | "organization";
 type MeetingMode = "none" | "link" | "channel";
-
-// An org-wide event grants every member VIEWER; a personal event stays
-// owner-only. A NULL access_mode would inherit the org default (OPEN_TO_ORG),
-// so the mode is always sent explicitly.
-function scopeToAccess(scope: EventScope): {
-  accessMode: AccessMode;
-  baselineRole: ContentRole | undefined;
-} {
-  return scope === "organization"
-    ? { accessMode: AccessMode.OPEN_TO_ORG, baselineRole: ContentRole.VIEWER }
-    : { accessMode: AccessMode.OWNER_ONLY, baselineRole: undefined };
-}
 
 function roundToNext30(date: Date): Date {
   const d = new Date(date);
@@ -106,7 +90,6 @@ export function CreateEventScreen() {
   const [meetingMode, setMeetingMode] = useState<MeetingMode>("none");
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [channelAutoCreated, setChannelAutoCreated] = useState(false);
-  const [scope, setScope] = useState<EventScope>("private");
   const [isAllDay, setIsAllDay] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
 
@@ -186,7 +169,6 @@ export function CreateEventScreen() {
       } else {
         // calendarId is omitted - the backend resolves the user's default
         // calendar (calendar management RPCs are deprecated).
-        const { accessMode, baselineRole } = scopeToAccess(scope);
         await createEvent.mutateAsync({
           title: title.trim(),
           description: descriptionRef.current.trim() || undefined,
@@ -199,8 +181,6 @@ export function CreateEventScreen() {
           channelId: channelOut || undefined,
           channelAutoCreated: channelOut ? channelAutoCreated : undefined,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          accessMode,
-          baselineRole,
         });
       }
       router.back();
@@ -245,56 +225,6 @@ export function CreateEventScreen() {
           autoFocus={!isEditing}
           returnKeyType="next"
         />
-
-        {/* Scope: personal keeps the event owner-only; organization shares it
-            org-wide. Set only at creation - changing it later is a share action. */}
-        {!isEditing && (
-          <View style={styles.segmentGroup}>
-            <TouchableOpacity
-              style={[
-                styles.segment,
-                { borderColor: T.border },
-                scope === "private" && { backgroundColor: T.accent, borderColor: T.accent },
-              ]}
-              onPress={() => setScope("private")}
-              activeOpacity={0.7}
-            >
-              <LockSimple
-                size={16}
-                color={scope === "private" ? "#fff" : T.textDim}
-                weight={scope === "private" ? "fill" : "duotone"}
-              />
-              <Text
-                style={[styles.segmentText, { color: scope === "private" ? "#fff" : T.textDim }]}
-              >
-                Personal
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.segment,
-                { borderColor: T.border },
-                scope === "organization" && { backgroundColor: T.accent, borderColor: T.accent },
-              ]}
-              onPress={() => setScope("organization")}
-              activeOpacity={0.7}
-            >
-              <Buildings
-                size={16}
-                color={scope === "organization" ? "#fff" : T.textDim}
-                weight={scope === "organization" ? "fill" : "duotone"}
-              />
-              <Text
-                style={[
-                  styles.segmentText,
-                  { color: scope === "organization" ? "#fff" : T.textDim },
-                ]}
-              >
-                Organization
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* Date & Time */}
         <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -619,18 +549,6 @@ const styles = StyleSheet.create({
   },
   categoryDot: { width: 8, height: 8, borderRadius: 4 },
   categoryChipText: { fontSize: 13, fontFamily: FONT.medium },
-  segmentGroup: { flexDirection: "row", gap: 8 },
-  segment: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  segmentText: { fontSize: 14, fontFamily: FONT.semibold },
   meetingModeRow: {
     flexDirection: "row",
     gap: 8,

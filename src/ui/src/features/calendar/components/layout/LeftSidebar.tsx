@@ -1,20 +1,16 @@
 import { Plus, CalendarBlank, CaretDoubleLeft } from '@phosphor-icons/react';
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { useAppDispatch } from '@/app/hooks';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { openEventModal, toggleSidebar } from '@/features/calendar/store';
-import { setEventScope } from '@/features/calendar/store/calendarUiSlice';
 import { QuickAccess } from '@/features/calendar/components/sidebar/QuickAccess';
 import { MiniCalendar } from '@/features/calendar/components/sidebar/MiniCalendar';
 import { CategoryList } from '@/features/calendar/components/sidebar/CategoryList';
 import { TagCloud } from '@/features/calendar/components/sidebar/TagCloud';
 import { TemplateList } from '@/features/calendar/components/sidebar/TemplateList';
-import { CompactScopeItem } from '@/features/calendar/components/sidebar/EventScopeFilter';
-import { SCOPE_FILTERS } from '@/features/calendar/components/sidebar/eventScopeConstants';
 
 export function LeftSidebar() {
   const dispatch = useAppDispatch();
   const { isMobile } = useBreakpoint();
-  const eventScope = useAppSelector((state) => state.calendarUi.eventScope);
 
   const handleNewEvent = () => {
     dispatch(openEventModal({ mode: 'create' }));
@@ -38,14 +34,6 @@ export function LeftSidebar() {
             Event
           </span>
         </button>
-        {SCOPE_FILTERS.map((filter) => (
-          <CompactScopeItem
-            key={filter.id}
-            filter={filter}
-            isActive={eventScope === filter.id}
-            onClick={() => dispatch(setEventScope(filter.id))}
-          />
-        ))}
         <div className="flex-1" />
         {!isMobile && (
           <button
