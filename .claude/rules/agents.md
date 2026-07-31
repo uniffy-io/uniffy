@@ -129,7 +129,7 @@ The `agents/runtime` settings blob (`runtime/settings.py`) is cached in-process 
 
 ### Adding a provider
 
-A provider is not done when the backend can call it. Half of these live in the frontend and none of them fail loudly - a missed step ships a provider that works but renders as a bare id with no logo, or a key form with no placeholder. Work the list:
+A provider is not done when the backend can call it. Part of this lives in the frontend and none of it fails loudly - a missed step ships a provider that works but cannot have a key added at all. Work the list:
 
 | # | Where | What |
 |---|---|---|
@@ -137,12 +137,12 @@ A provider is not done when the backend can call it. Half of these live in the f
 | 2 | `providers/registry.py::get_provider_registry` | Import the descriptor and register it - the imports are lazy at the bottom of that function. |
 | 3 | `uniffy/data/models/catalog.json` | Provider entry: `params_base`, `provider_options`, and its models. Model listing is catalog-only, so an absent entry means empty pickers. |
 | 4 | That provider's request builder | Map the reasoning / sampling knobs (see "Model parameters"). |
-| 5 | `ConfigView.tsx` `PROVIDER_OPTIONS` | The add-key form dropdown. Not derived from the backend - an unlisted provider cannot have a key added at all. |
-| 6 | `ConfigView.tsx` `CREDENTIAL_PLACEHOLDERS` | Key-shape hint (`sk-...`). Falls back to "API key". |
-| 7 | `src/ui/src/features/agents/config/providerBrands.ts` | Logo + display label. Add the icon file to the `@lobehub/icons-static-svg` imports and map it under the same provider id the catalog uses. |
-| 8 | `docs/TRADEMARKS.md` | A row for the new mark: owner and brand-guideline URL. |
+| 5 | `src/ui/src/features/agents/config/providerBrands.ts` | One entry keyed by the catalog's provider id: logo (added to the `@lobehub/icons-static-svg` imports), display label, key-shape placeholder, console URL, docs URL, and the one-line "where the key is created" help. |
+| 6 | `docs/TRADEMARKS.md` | A row for the new mark: owner and brand-guideline URL. |
 
-Provider marks are trademarks, so the rules in `docs/TRADEMARKS.md` bind: never restyle or recolor a mark into the Uniffy palette, and never use one as the identity of a Uniffy feature (no agent avatars, no section icons). Marks appear only where they identify that provider's own service - provider keys, model pickers, usage breakdowns, and the "runs on" badge. Everything renders through `ProviderLogo`, which draws monochrome marks as a `currentColor` mask so they invert with the theme (an `<img>` cannot inherit `currentColor` and would go invisible on dark) and renders nothing for an unmapped provider. That fallback is why a missed step 7 degrades to plain text instead of breaking, and it is also the removal path if a provider ever objects.
+`providerBrands.ts` is the whole frontend surface of a provider: `PROVIDER_BRAND_LIST` IS the add-key picker (an unlisted provider cannot have a key added), and the same record backs every mark, label, placeholder and key-onboarding link. The console URL renders as its bare host in the picker, so it must be the page a signed-in user actually lands on - check both URLs still resolve when adding or auditing a provider.
+
+Provider marks are trademarks, so the rules in `docs/TRADEMARKS.md` bind: never restyle or recolor a mark into the Uniffy palette, and never use one as the identity of a Uniffy feature (no agent avatars, no section icons). Marks appear only where they identify that provider's own service - provider keys, model pickers, usage breakdowns, and the "runs on" badge. Everything renders through `ProviderLogo`, which draws monochrome marks as a `currentColor` mask so they invert with the theme (an `<img>` cannot inherit `currentColor` and would go invisible on dark) and renders nothing for an unmapped provider. That fallback is why a partial step 5 degrades to plain text instead of breaking, and it is also the removal path if a provider ever objects.
 
 ## Model parameters
 
@@ -228,7 +228,8 @@ One flat `StreamEvent` dataclass + `EventType` StrEnum (`providers/base.py`) tra
 | `domains/agents/tools/builtin/` | Built-in executors grouped by domain |
 | `src/uniffy/tests/integration/providers/` | Live-provider tests (local-only, never collected by the unit suite) |
 | `domains/agents/providers/operations.py` + `client_cache.py` | Key management, two-tier resolution |
-| `src/ui/src/features/agents/config/providerBrands.ts` | Provider id -> logo + label; the only place a mark is declared |
+| `src/ui/src/features/agents/config/providerBrands.ts` | Provider id -> mark, label, key placeholder, console + docs links; the add-key picker's source list |
+| `src/ui/src/features/agents/components/ProviderPicker.tsx` | Add-key provider tiles + the "how to get a key" card |
 | `src/ui/src/features/agents/components/ProviderLogo.tsx` | Renders a mark; nothing for an unmapped provider |
 | `docs/TRADEMARKS.md` | Trademark notice + per-provider brand-guideline links |
 | `domains/agents/sessions/operations.py` | Session store, context query, compaction, feedback |

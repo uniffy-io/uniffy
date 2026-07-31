@@ -21,7 +21,6 @@ import { loadPanelLayout, savePanelLayout } from "@/shared/utils/panelStorage";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import {
@@ -41,23 +40,8 @@ import {
 } from "@/features/agents/store/agentProvidersThunks";
 import type { SerializedProviderKey } from "@/features/agents/store/agentProvidersThunks";
 import { ProviderLogo } from "@/features/agents/components/ProviderLogo";
+import { ProviderPicker } from "@/features/agents/components/ProviderPicker";
 import { providerBrand, providerLabel } from "@/features/agents/config/providerBrands";
-
-const PROVIDER_OPTIONS = [
-    { value: "anthropic", label: "Anthropic" },
-    { value: "openai", label: "OpenAI" },
-    { value: "google", label: "Google" },
-    { value: "openrouter", label: "OpenRouter" },
-    { value: "xai", label: "xAI (Grok)" },
-];
-
-const CREDENTIAL_PLACEHOLDERS: Record<string, string> = {
-    anthropic: "sk-ant-...",
-    openai: "sk-...",
-    google: "AIza...",
-    openrouter: "sk-or-...",
-    xai: "xai-...",
-};
 
 const CREDENTIAL_WRITE_ONCE_NOTE =
     "Pasted once and encrypted at rest. It is never shown again, so keep your own copy.";
@@ -193,14 +177,10 @@ function AddKeyForm({
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm text-muted-foreground mb-1">
+                <label className="block text-sm text-muted-foreground mb-1.5">
                     Provider
                 </label>
-                <Select
-                    value={provider}
-                    onChange={setProvider}
-                    options={PROVIDER_OPTIONS}
-                />
+                <ProviderPicker value={provider} onChange={setProvider} />
             </div>
             <div>
                 <label className="block text-sm text-muted-foreground mb-1">
@@ -220,7 +200,7 @@ function AddKeyForm({
                     type="password"
                     value={credential}
                     onChange={(e) => setCredential(e.target.value)}
-                    placeholder={CREDENTIAL_PLACEHOLDERS[provider] ?? "API key"}
+                    placeholder={providerBrand(provider)?.credentialPlaceholder ?? "API key"}
                     className="font-mono"
                 />
                 <div className="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground">
@@ -420,8 +400,8 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                                     <span className="text-sm font-medium truncate text-foreground">
                                         {key.label}
                                     </span>
-                                    <span className="text-xs text-muted-foreground capitalize truncate">
-                                        {key.provider} - {key.keyHint || "***"}
+                                    <span className="text-xs text-muted-foreground truncate">
+                                        {providerLabel(key.provider)} - {key.keyHint || "***"}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
@@ -466,14 +446,18 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                         <div className="px-6 py-4 border-b border-border">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                    <Key size={20} className="text-muted-foreground" />
+                                    {providerBrand(selectedKey.provider) ? (
+                                        <ProviderLogo provider={selectedKey.provider} size="lg" />
+                                    ) : (
+                                        <Key size={20} className="text-muted-foreground" />
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h2 className="text-xl font-semibold text-foreground">
                                         {selectedKey.label}
                                     </h2>
-                                    <p className="text-sm text-muted-foreground capitalize truncate">
-                                        {selectedKey.provider} - {selectedKey.keyHint || "***"}
+                                    <p className="text-sm text-muted-foreground truncate">
+                                        {providerLabel(selectedKey.provider)} - {selectedKey.keyHint || "***"}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -590,8 +574,12 @@ export function ConfigView({ embedded = false }: ConfigViewProps = {}) {
                                                             {model.id}
                                                         </p>
                                                     </div>
-                                                    <Badge variant="secondary" className="capitalize shrink-0">
-                                                        {model.provider}
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="flex items-center gap-1.5 shrink-0"
+                                                    >
+                                                        <ProviderLogo provider={model.provider} size="xs" />
+                                                        {providerLabel(model.provider)}
                                                     </Badge>
                                                 </div>
                                                 <div className="flex items-center gap-3 mt-2">

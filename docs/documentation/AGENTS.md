@@ -216,12 +216,15 @@ least one provider key.
 
 | Provider | How to get a key |
 |---|---|
-| Anthropic (Claude) | [console.anthropic.com](https://console.anthropic.com/) |
-| OpenAI (GPT) | [platform.openai.com](https://platform.openai.com/) |
-| Google (Gemini) | [ai.google.dev](https://ai.google.dev/) |
+| Anthropic (Claude) | [platform.claude.com/settings/keys](https://platform.claude.com/settings/keys) |
+| OpenAI (GPT) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| Google (Gemini) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| xAI (Grok) | [console.x.ai](https://console.x.ai) |
 
-Org admins add keys at **Agents > System > Config**. Keys are Fernet-encrypted
-at rest. A key must be both **valid** and **enabled** to be used.
+Org admins add keys at **Admin > Agents > Keys**. Pick the provider, and the
+form links straight to that provider's key page and API docs. Keys are
+encrypted at rest. A key must be both **valid** and **enabled** to be used.
 
 If no provider is configured, the agent picker shows a banner with a link to
 the config page. Agents won't reply until a key is enabled.
