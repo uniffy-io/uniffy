@@ -122,25 +122,6 @@ def _deserialize_channel(payload: dict[str, Any]) -> ChatChannel:
     )
 
 
-async def get_cached_channel(channel_id: UUID) -> ChatChannel | None:
-    # No negative caching: a soft-deleted row must not stick around as a sentinel.
-    cached = await cache_get(_channel_key(channel_id))
-    if cached is CACHE_MISS or cached is None:
-        return None
-    return _deserialize_channel(cached)
-
-
-async def set_cached_channel(channel: ChatChannel) -> None:
-    if channel.is_deleted:
-        # Read path filters soft-deleted rows; caching one would surface a phantom.
-        return
-    await cache_set(
-        _channel_key(channel.id),
-        _serialize_channel(channel),
-        ttl=_CHANNEL_TTL_SECONDS,
-    )
-
-
 async def invalidate_cached_channel(channel_id: UUID) -> None:
     await cache_delete(_channel_key(channel_id))
 

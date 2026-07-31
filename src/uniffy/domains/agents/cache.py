@@ -24,9 +24,7 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.core.valkey.cache import (
-    CACHE_MISS,
     cache_delete,
-    cache_get,
     cache_get_or_set_locked,
     cache_invalidate_by_tag,
     cache_invalidate_many,
@@ -170,14 +168,6 @@ def _deserialize_agent(payload: dict[str, Any]) -> Agent:
     )
 
 
-async def get_cached_agent(agent_id: UUID) -> Agent | None:
-    """Return a transient ``Agent`` from cache, or ``None`` on miss."""
-    cached = await cache_get(_agent_key(agent_id))
-    if cached is CACHE_MISS or cached is None:
-        return None
-    return _deserialize_agent(cached)
-
-
 async def set_cached_agent(agent: Agent) -> None:
     """Cache an Agent row. Soft-deleted agents are not seeded."""
     if agent.is_deleted:
@@ -259,33 +249,6 @@ def _deserialize_skill(payload: dict[str, Any]) -> AgentSkill:
         requires_tools=payload.get("requires_tools") or [],
         requires_context=payload.get("requires_context") or [],
         latest_version_number=payload.get("latest_version_number", 1),
-    )
-
-
-async def get_cached_agent_skills(
-    agent_id: UUID,
-) -> list[AgentSkill] | None:
-    """Return cached, ordered skills for an agent or ``None`` on miss."""
-    cached = await cache_get(_agent_skills_key(agent_id))
-    if cached is CACHE_MISS or cached is None:
-        return None
-    skills = cached.get("skills") if isinstance(cached, dict) else None
-    if not isinstance(skills, list):
-        return None
-    return [_deserialize_skill(s) for s in skills]
-
-
-async def set_cached_agent_skills(
-    agent_id: UUID,
-    organization_id: UUID,
-    skills: list[AgentSkill],
-) -> None:
-    payload = {"skills": [_serialize_skill(s) for s in skills]}
-    await cache_set(
-        _agent_skills_key(agent_id),
-        payload,
-        ttl=_SKILLS_TTL_SECONDS,
-        tags=[_org_skills_tag(organization_id)],
     )
 
 
