@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import and_, exists, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.elements import ColumnElement
 
 from uniffy.core.models.login.user import User
 from uniffy.core.models.rooms.booking import RoomBooking
@@ -84,6 +85,7 @@ async def find_available_rooms(
     organization_id: UUID,
     start_time: datetime,
     end_time: datetime,
+    access_filter: ColumnElement[bool],
     min_capacity: int | None = None,
     amenities: list[str] | None = None,
     room_type: RoomType | None = None,
@@ -103,6 +105,7 @@ async def find_available_rooms(
             Room.status == RoomStatus.ACTIVE,
             Room.is_deleted == False,  # noqa: E712
             not_(exists(conflict_subquery)),
+            access_filter,
         )
     )
 

@@ -10,6 +10,7 @@ import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { cn } from '@/shared/utils/cn';
 import { useAppDispatch } from '@/app/hooks';
 import { openViewerWithFetch } from '@/features/files/store/viewerThunks';
+import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
 
 // Rewrite [[[label|urn]]] as markdown links so react-markdown processes them.
 const MENTION_RE = /\[\[\[([^|]+)\|([^\]]+)\]\]\]/g;
@@ -81,6 +82,11 @@ function MentionLink({ href, children, compact }: { href: string; children: Reac
     // FILE mentions open the viewer modal in place (avoids stranding on /files/:id).
     if (parsed.type === UrnType.FILE && parsed.id && !e?.metaKey && !e?.ctrlKey) {
       dispatch(openViewerWithFetch({ fileId: parsed.id }));
+      return;
+    }
+    // Same for ROOM: the reader wants the room's context, not to leave the conversation.
+    if (parsed.type === UrnType.ROOM && parsed.id && !e?.metaKey && !e?.ctrlKey) {
+      dispatch(openRoomViewer({ roomId: parsed.id }));
       return;
     }
     // Prefer search-index URLs; urnToPath can't reconstruct e.g. chat message routes.

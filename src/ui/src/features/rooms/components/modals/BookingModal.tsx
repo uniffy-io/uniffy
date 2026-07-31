@@ -13,6 +13,8 @@ import { RoomPicker } from '@/features/rooms/components/shared/RoomPicker';
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Fires only when a booking was actually created, so callers can refresh their view. */
+  onBooked?: () => void;
   roomId?: string;
   roomName?: string;
 }
@@ -37,7 +39,7 @@ function decimalToTimeString(decimal: number): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModalProps) {
+export function BookingModal({ isOpen, onClose, onBooked, roomId, roomName }: BookingModalProps) {
   const dispatch = useAppDispatch();
   const loading = useAppSelector(selectRoomsLoading);
   const orgId = useAppSelector((state) => state.auth.currentOrganizationId) || '';
@@ -106,6 +108,7 @@ export function BookingModal({ isOpen, onClose, roomId, roomName }: BookingModal
       }
 
       if (createBooking.fulfilled.match(result)) {
+        onBooked?.();
         onClose();
       }
     } catch {

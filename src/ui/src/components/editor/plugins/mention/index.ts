@@ -9,7 +9,9 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { MentionChip, MentionDisplayBridge } from '@/components/mention';
 import { getStoreRef } from '@/app/storeRef';
-import { urnToPath } from '@/shared/utils/urn';
+import type { AppDispatch } from '@/app/store';
+import { parseUrn, urnToPath, UrnType } from '@/shared/utils/urn';
+import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
 import { navigateTo, openInNewTab } from '@/shared/utils/navigation';
 import { getResolvedUrl } from '@/components/editor/plugins/mention/useUrnPreview';
 import { getMentionUrl } from '@/components/mention/mentionStateEmitter';
@@ -230,6 +232,15 @@ class MentionNodeView implements NodeView {
       e.stopImmediatePropagation();
 
       const { urn } = this.node.attrs as { urn: string };
+
+      // ROOM opens in place: the writer stays in the document instead of losing it to a route.
+      const parsed = parseUrn(urn);
+      if (parsed.type === UrnType.ROOM && parsed.id && !e.metaKey && !e.ctrlKey) {
+        const dispatch = getStoreRef()?.dispatch as AppDispatch | undefined;
+        dispatch?.(openRoomViewer({ roomId: parsed.id }));
+        return;
+      }
+
       // Index-resolved URL handles nested routes (e.g. tasks under projects); urnToPath is the fallback.
       const path = getMentionUrl(urn) || getResolvedUrl(urn) || urnToPath(urn);
 

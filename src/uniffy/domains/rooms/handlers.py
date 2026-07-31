@@ -483,7 +483,7 @@ class BookingHandlers:
         request: CheckAvailabilityRequest,
         ctx: RequestContext,
     ) -> CheckAvailabilityResponse:
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
         room_id = _parse_uuid(request.room_id, "room_id")
 
@@ -491,6 +491,7 @@ class BookingHandlers:
             async with open_session() as session:
                 ops = BookingOperations(session)
                 slots = await ops.check_availability(
+                    user_id=user_id,
                     organization_id=organization_id,
                     room_id=room_id,
                     start_date=timestamp_to_datetime(request.start_date),
@@ -525,7 +526,7 @@ class BookingHandlers:
         request: FindAvailableRoomsRequest,
         ctx: RequestContext,
     ) -> FindAvailableRoomsResponse:
-        get_user_id_from_context(ctx)
+        user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
 
         min_capacity = request.min_capacity if request.HasField("min_capacity") else None
@@ -537,6 +538,7 @@ class BookingHandlers:
             async with open_session() as session:
                 ops = BookingOperations(session)
                 rooms = await ops.find_available_rooms(
+                    user_id=user_id,
                     organization_id=organization_id,
                     start_time=timestamp_to_datetime(request.start_time),
                     end_time=timestamp_to_datetime(request.end_time),

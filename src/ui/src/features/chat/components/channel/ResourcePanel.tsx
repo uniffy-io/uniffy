@@ -5,7 +5,8 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { closeResourcePanel } from '@/features/chat/store/chatUiSlice';
 import { selectActiveChannel } from '@/features/chat/store/chatChannelsSlice';
 import { fetchChannelResources } from '@/features/chat/store/chatThunks';
-import { parseUrn, urnToPath, getUrnIcon } from '@/shared/utils/urn';
+import { parseUrn, urnToPath, getUrnIcon, UrnType } from '@/shared/utils/urn';
+import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
 import { getUrnTypeHexColor } from '@/config/theme/urnColors';
 import { cn } from '@/shared/utils/cn';
 import type { ChatResource } from '@/features/chat/types';
@@ -58,9 +59,14 @@ export function ResourcePanel() {
   }, [dispatch]);
 
   const handleResourceClick = useCallback((urn: string) => {
+    const parsed = parseUrn(urn);
+    if (parsed.type === UrnType.ROOM && parsed.id) {
+      dispatch(openRoomViewer({ roomId: parsed.id }));
+      return;
+    }
     const path = urnToPath(urn);
     if (path) navigate(path);
-  }, [navigate]);
+  }, [dispatch, navigate]);
 
   const grouped = resources.reduce<Record<string, ChatResource[]>>((acc, r) => {
     const key = r.contentType;

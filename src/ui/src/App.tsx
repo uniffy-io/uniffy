@@ -14,6 +14,7 @@ import { SpotlightSearch } from '@/features/search';
 import { ZenModeHandler } from '@/components/layout/ZenModeHandler';
 import { StreamingProvider } from '@/components/streaming/StreamingProvider';
 import { FileViewerModal } from '@/features/files';
+import { RoomViewerModal } from '@/features/rooms/components/detail/RoomViewerModal';
 import { UploadTray } from '@/features/files/components/upload/UploadTray';
 import { CallProvider } from '@/features/calls/components/CallProvider';
 import { CallDock } from '@/features/calls/components/CallDock';
@@ -80,6 +81,7 @@ const FilesPage = lazyImport(() => import('@/features/files/pages/FilesPage'), '
 const FiltersPage = lazyImport(() => import('@/features/files/pages/FiltersPage'), 'FiltersPage');
 const FilesTrashPage = lazyImport(() => import('@/features/files/pages/FilesTrashPage'), 'FilesTrashPage');
 const RoomsAdminPage = lazyImport(() => import('@/features/rooms/pages/RoomsPage'), 'RoomsPage');
+const RoomPage = lazyImport(() => import('@/features/rooms/pages/RoomPage'), 'RoomPage');
 const ProjectsPage = lazyImport(() => import('@/features/projects/pages/ProjectsPage'), 'ProjectsPage');
 const PortfolioPage = lazyImport(() => import('@/features/projects/pages/PortfolioPage'), 'PortfolioPage');
 const TaskRedirectPage = lazyImport(() => import('@/features/projects/pages/TaskRedirectPage'), 'TaskRedirectPage');
@@ -237,6 +239,8 @@ export function App() {
                     <SpotlightSearch />
                     {/* Global File Viewer Modal - can be opened from search without navigating */}
                     <FileViewerModal />
+                    {/* Global Room Viewer Modal - room mentions and search hits open in place */}
+                    <RoomViewerModal />
                     {/* Global Zen Mode handler - toggles distraction-free mode */}
                     <ZenModeHandler />
                     {/* Global streaming connections (notifications, chat, presence) - mounts once, hooks no-op when unauthenticated */}
@@ -478,6 +482,18 @@ export function App() {
                             element={
                                 <ProtectedRoute>
                                     <LazyRoute><FilesTrashPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Room detail - the target of every room URN link */}
+                        <Route
+                            path="/rooms/:roomId"
+                            element={
+                                <ProtectedRoute>
+                                    <MainLayout>
+                                        <LazyRoute><RoomPage /></LazyRoute>
+                                    </MainLayout>
                                 </ProtectedRoute>
                             }
                         />

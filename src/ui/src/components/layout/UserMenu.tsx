@@ -33,6 +33,7 @@ import { clearAgentRuntimeSettings } from '@/features/admin/store/agentRuntimeSe
 import { clearIntegrations } from '@/features/integrations/store/integrationsSlice';
 import { clearTags } from '@/features/tags/store/tagsSlice';
 import { clearCalls } from '@/features/calls/store/callsSlice';
+import { clearRooms } from '@/features/rooms/store/roomsSlice';
 import { clearMemoryAccessToken } from '@/config/api';
 import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
@@ -132,6 +133,7 @@ export function UserMenu() {
         dispatch(clearIntegrations());
         dispatch(clearTags());
         dispatch(clearCalls());
+        dispatch(clearRooms());
         clearNotesCache().catch(console.error);
         clearBlobCache();
         navigate('/auth');
