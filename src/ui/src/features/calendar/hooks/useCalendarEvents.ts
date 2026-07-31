@@ -23,10 +23,6 @@ export function useCalendarEvents() {
   const loading = useAppSelector((state) => state.calendar.loading);
   const errors = useAppSelector((state) => state.calendar.errors);
 
-  const eventScope = useAppSelector(
-    (state) => state.calendarUi.eventScope
-  );
-
   const selectedEventId = useAppSelector(
     (state) => state.calendarUi.selectedEventId
   );
@@ -44,13 +40,6 @@ export function useCalendarEvents() {
     const allEvents = Object.values(events);
 
     return allEvents.filter((event) => {
-      if (eventScope === 'personal' && event.visibility !== 'private') {
-        return false;
-      }
-      if (eventScope === 'organization' && event.visibility !== 'organization') {
-        return false;
-      }
-
       if (
         filters.categoryIds.length > 0 &&
         !filters.categoryIds.includes(event.categoryId)
@@ -85,7 +74,7 @@ export function useCalendarEvents() {
 
       return true;
     });
-  }, [events, filters, eventScope]);
+  }, [events, filters]);
 
   const getEventsForDate = useCallback(
     (date: Date | string) => {

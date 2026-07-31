@@ -14,10 +14,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.permissions import resolve_access_policy
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
-from uniffy.core.content.members import (
-    ContentMembersOperations,
-    register_content_loader,
-)
+from uniffy.core.content.members import register_content_loader
 from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.errors import (
     NotFoundError,
@@ -45,7 +42,6 @@ from uniffy.core.types import (
     ContentType,
     NotificationType,
     RecurrencePattern,
-    SubjectType,
 )
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.domains.calendar import queries
@@ -224,9 +220,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         is_focus_time: bool = False,
         tag_ids: list[UUID] | None = None,
         linked_resources: list[dict] | None = None,
-        access_mode: AccessMode | None = None,
-        baseline_role: ContentRole | None = None,
-        group_ids: list[UUID] | None = None,
         reminders: list[int] | None = None,
         room_id: UUID | None = None,
         channel_id: UUID | None = None,
@@ -234,13 +227,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
     ) -> CalendarEvent:
         """Create a new calendar event.
 
-        `access_mode` / `baseline_role` default to the org defaults for
-        `CALENDAR_EVENT`; `group_ids` seeds VIEWER group memberships.
+        Events are invite-only: the row is always OWNER_ONLY and visibility
+        for non-organizers comes from the attendee floor in `_resolve_role`.
         """
-        access_mode, baseline_role = await self._resolve_access_policy(
-            organization_id, access_mode, baseline_role
-        )
-
         if room_id:
             # Detect the conflict before the event is committed so the
             # composite create_event(..., room_id=...) flow doesn't leave
@@ -299,8 +288,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             channel_id=channel_id,
             channel_auto_created=bool(channel_id) and channel_auto_created,
             category_id=category_id,
-            access_mode=access_mode,
-            baseline_role=baseline_role,
+            access_mode=AccessMode.OWNER_ONLY,
+            baseline_role=None,
             is_focus_time=is_focus_time,
             recurrence_pattern=recurrence_pattern,
             recurrence_config=recurrence_config,
@@ -345,19 +334,6 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self.session.commit()
         await self.session.refresh(event)
 
-        if group_ids:
-            members_ops = ContentMembersOperations(self.session)
-            for gid in group_ids:
-                await members_ops.add_member(
-                    actor_user_id=user_id,
-                    organization_id=organization_id,
-                    content_type=self.content_type,
-                    content_id=event.id,
-                    subject_type=SubjectType.GROUP,
-                    subject_id=gid,
-                    role=ContentRole.VIEWER,
-                )
-
         if tag_ids:
             tag_ops = TagOperations(self.session)
             await tag_ops.replace_manual_tags(
@@ -367,11 +343,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 tag_ids=tag_ids,
             )
 
-        await self._index_for_search(event, skip_member_lookup=not group_ids)
+        await self._index_for_search(event, skip_member_lookup=True)
         await self.session.commit()
-
-        effective_mode, _ = await self._effective_policy(organization_id, event)
-        await self._broadcast_open_to_org_create(organization_id, event.id, effective_mode)
 
         if attendee_ids:
             invited = [aid for aid in attendee_ids if aid != user_id]

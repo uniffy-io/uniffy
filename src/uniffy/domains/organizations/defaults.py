@@ -26,10 +26,6 @@ ORG_PERMISSION_DEFAULTS: dict[ContentType, PermissionDefaults] = {
         "default_access_mode": AccessMode.OPEN_TO_ORG,
         "default_baseline_role": ContentRole.VIEWER,
     },
-    ContentType.CALENDAR_EVENT: {
-        "default_access_mode": AccessMode.OPEN_TO_ORG,
-        "default_baseline_role": ContentRole.VIEWER,
-    },
     ContentType.PROJECT: {
         "default_access_mode": AccessMode.OPEN_TO_ORG,
         "default_baseline_role": ContentRole.EDITOR,

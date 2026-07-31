@@ -18,7 +18,6 @@ import {
   Plus,
   CaretLeft,
   CaretRight,
-  CaretDown,
   Funnel,
   Target,
   Warning,
@@ -26,8 +25,6 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
-import { useAuth } from "@core/providers/AuthContext";
-import { ActionSheet } from "@shared/components/ActionSheet";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useEventsInRange, useCategories } from "@features/calendar/useCalendar";
@@ -37,21 +34,8 @@ import type { SerializedEvent, SerializedCategory } from "@features/calendar/cal
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type ViewMode = "day" | "week" | "month";
-type CalendarScope = "mine" | "org" | "all";
 
 const HITSLOP = { top: 8, bottom: 8, left: 8, right: 8 };
-
-const SCOPE_LABEL: Record<CalendarScope, string> = {
-  mine: "Mine",
-  org: "Organization",
-  all: "All events",
-};
-
-const SCOPES: { key: CalendarScope; icon: string; sublabel: string }[] = [
-  { key: "mine", icon: "user", sublabel: "Events you organize or attend" },
-  { key: "org", icon: "buildings", sublabel: "Shared with the whole organization" },
-  { key: "all", icon: "stack", sublabel: "Everything you can access" },
-];
 
 // Hour grid config
 const HOUR_START = 0; // midnight
@@ -616,7 +600,6 @@ function WeekGrid({
 
 export function CalendarScreen() {
   const T = useTheme();
-  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const topPad = (Platform.OS === "web" ? 20 : insets.top) + 12;
   const bottomPad =
@@ -627,9 +610,7 @@ export function CalendarScreen() {
   );
   const [selectedDate, setSelectedDate] = useState(today);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
-  const [scope, setScope] = useState<CalendarScope>("mine");
   const [activeCategoryIds, setActiveCategoryIds] = useState<Set<string>>(new Set());
-  const [scopeSheetOpen, setScopeSheetOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const dayScrollRef = useRef<ScrollView>(null);
 
@@ -677,23 +658,12 @@ export function CalendarScreen() {
     });
   }, []);
 
-  // Scope narrows within events already returned (all accessible): "mine" is
-  // organizer-or-attendee, "org" is OPEN_TO_ORG. Category chips narrow further.
-  const myId = user?.id;
   const matchesFilter = useCallback(
     (event: SerializedEvent) => {
-      if (scope === "org" && event.accessMode !== "OPEN_TO_ORG") return false;
-      if (
-        scope === "mine" &&
-        event.organizerId !== myId &&
-        !event.attendees.some((a) => a.id === myId)
-      ) {
-        return false;
-      }
       if (activeCategoryIds.size > 0 && !activeCategoryIds.has(event.categoryId)) return false;
       return true;
     },
-    [scope, myId, activeCategoryIds],
+    [activeCategoryIds],
   );
 
   const dayEvents = useMemo(() => {
@@ -910,15 +880,7 @@ export function CalendarScreen() {
           { backgroundColor: T.bg, borderBottomColor: T.border, paddingTop: topPad },
         ]}
       >
-        <TouchableOpacity
-          style={[styles.scopePill, { backgroundColor: T.surface, borderColor: T.border }]}
-          onPress={() => setScopeSheetOpen(true)}
-          activeOpacity={0.7}
-          accessibilityLabel="Choose which events to show"
-        >
-          <Text style={[styles.scopePillText, { color: T.textBright }]}>{SCOPE_LABEL[scope]}</Text>
-          <CaretDown size={13} color={T.textDim} weight="bold" />
-        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: T.textBright }]}>Calendar</Text>
 
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -1256,21 +1218,6 @@ export function CalendarScreen() {
         </>
       )}
 
-      <ActionSheet
-        visible={scopeSheetOpen}
-        onClose={() => setScopeSheetOpen(false)}
-        title="Show events"
-        icon="calendar"
-        iconColor={T.accent}
-        actions={SCOPES.map((s) => ({
-          icon: scope === s.key ? "check" : s.icon,
-          label: SCOPE_LABEL[s.key],
-          sublabel: s.sublabel,
-          color: scope === s.key ? T.accent : undefined,
-          onPress: () => setScope(s.key),
-        }))}
-      />
-
       <CalendarFilterSheet
         visible={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
@@ -1293,17 +1240,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  scopePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingLeft: 14,
-    paddingRight: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  scopePillText: { fontSize: 14, fontFamily: FONT.semibold },
+  headerTitle: { fontSize: 18, fontFamily: FONT.bold },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",

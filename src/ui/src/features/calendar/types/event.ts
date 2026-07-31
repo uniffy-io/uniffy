@@ -65,8 +65,6 @@ export interface CalendarEvent {
   tagIds: string[];
   linkedResources: LinkedResource[];
   organizationId: string;
-  /** 'private' = personal, 'organization' = org-wide. */
-  visibility: 'private' | 'organization';
   createdAt: string;
   updatedAt: string;
   /** Minutes before event. */

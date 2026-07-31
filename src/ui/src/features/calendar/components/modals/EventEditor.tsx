@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   X,
-  LockSimple,
-  Buildings,
   Clock,
   Door,
   Tag,
@@ -36,8 +34,6 @@ import { ReminderSelector } from '@/features/calendar/components/modals/Reminder
 import { TimeSelect } from '@/features/calendar/components/modals/TimeSelect';
 import { useConflictDetection } from '@/features/calendar/hooks/useConflictDetection';
 import { TagPicker } from '@/features/tags';
-
-type EventVisibility = 'private' | 'organization';
 
 /** Hours as a decimal in the local zone (9:15 -> 9.25). */
 function getTimeValue(isoString: string): number {
@@ -88,9 +84,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const [formData, setFormData] = useState(event);
-  const [visibility, setVisibility] = useState<EventVisibility>(
-    (event.visibility as EventVisibility) || 'private'
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(event.recurrence);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(event.roomId || null);
@@ -161,7 +154,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset form when a different event is opened
       setFormData(event);
-      setVisibility((event.visibility as EventVisibility) || 'private');
       setRecurrence(event.recurrence);
       setMeetingMode(event.channelId ? 'channel' : event.meetingUrl ? 'link' : 'none');
       setSelectedChannelId(event.channelId || null);
@@ -254,7 +246,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
         isFocusTime: formData.isFocusTime,
         tagIds: formData.tagIds,
         attendeeIds: formData.attendees.map((a) => a.id),
-        visibility,
         reminders: formData.reminders,
         recurrence,
         recurrenceEditScope: scope,
@@ -303,35 +294,6 @@ export function EventEditor({ event, isOpen, onClose }: EventEditorProps) {
 
           <form onSubmit={handleSubmit} className="max-h-[calc(85vh-80px)] overflow-y-auto">
             <div className="p-5 pt-12 space-y-5">
-              <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setVisibility('private')}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
-                    visibility === 'private'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <LockSimple size={16} weight={visibility === 'private' ? 'fill' : 'duotone'} />
-                  <span>Personal</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVisibility('organization')}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
-                    visibility === 'organization'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <Buildings size={16} weight={visibility === 'organization' ? 'fill' : 'duotone'} />
-                  <span>Organization</span>
-                </button>
-              </div>
-
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <TextAa size={16} weight="duotone" className="text-muted-foreground" />

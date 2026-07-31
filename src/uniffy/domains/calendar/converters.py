@@ -176,8 +176,6 @@ def event_to_proto(
     room_location: str | None = None,
     room_capacity: int = 0,
     room_amenities: list[str] | None = None,
-    effective_access_mode: AccessMode | None = None,
-    effective_baseline_role: ContentRole | None = None,
 ) -> ProtoCalendarEvent:
     """Convert a ``CalendarEvent`` row to its proto representation.
 
@@ -190,13 +188,6 @@ def event_to_proto(
     proto_recurrence = RECURRENCE_TO_PROTO.get(
         event.recurrence_pattern,
         ProtoRecurrencePattern.RECURRENCE_PATTERN_NONE,
-    )
-
-    resolved_mode = (
-        effective_access_mode if effective_access_mode is not None else event.access_mode
-    )
-    resolved_baseline = (
-        effective_baseline_role if effective_baseline_role is not None else event.baseline_role
     )
 
     proto_event = ProtoCalendarEvent(
@@ -213,7 +204,6 @@ def event_to_proto(
         category_id=str(event.category_id) if event.category_id else "",
         organizer_id=str(event.organizer_id),
         is_focus_time=event.is_focus_time,
-        access_mode=access_mode_to_proto(resolved_mode) if resolved_mode is not None else 0,
         is_deleted=event.is_deleted,
         channel_auto_created=event.channel_auto_created,
         tags=[tag_to_proto(t) for t in tags] if tags else [],
@@ -221,9 +211,6 @@ def event_to_proto(
         created_at=datetime_to_timestamp(event.created_at),
         updated_at=datetime_to_timestamp(event.updated_at),
     )
-
-    if resolved_baseline is not None:
-        proto_event.baseline_role = content_role_to_proto(resolved_baseline)
 
     proto_event.is_recurring = event.recurrence_pattern != RecurrencePattern.NONE
 

@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   X,
-  LockSimple,
-  Buildings,
   Clock,
   Door,
   Tag,
@@ -34,8 +32,6 @@ import { TagPicker } from '@/features/tags';
 import type { Attendee, RecurrenceConfig } from '@/features/calendar/types';
 import { MeetingChannelPicker } from '@/features/calendar/components/modals/MeetingChannelPicker';
 import type { MeetingMode } from '@/features/calendar/utils/meeting';
-
-type EventVisibility = 'private' | 'organization';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -98,7 +94,6 @@ export function QuickEventModal({
   const [endHour, setEndHour] = useState(initialEndHour);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [visibility, setVisibility] = useState<EventVisibility>('private');
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
@@ -160,7 +155,6 @@ export function QuickEventModal({
       setEndDate(getDateString(date));
       setStartHour(initialStartHour);
       setEndHour(initialEndHour);
-      setVisibility('private');
       setRecurrence(undefined);
       setTagIds([]);
       setMeetingMode('none');
@@ -259,7 +253,6 @@ export function QuickEventModal({
         categoryId: isValidUuid(selectedCategoryId) ? selectedCategoryId : undefined,
         isFocusTime: selectedCategoryId === 'cat-deepwork',
         attendeeIds: attendees.map((a) => a.id),
-        visibility,
         recurrence,
         roomId: selectedRoomId || undefined,
         tagIds,
@@ -313,35 +306,6 @@ export function QuickEventModal({
 
           <form onSubmit={handleSubmit} className="max-h-[calc(85vh-80px)] overflow-y-auto">
             <div className="p-5 pt-12 space-y-5">
-              <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setVisibility('private')}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
-                    visibility === 'private'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <LockSimple size={16} weight={visibility === 'private' ? 'fill' : 'duotone'} />
-                  <span>Personal</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVisibility('organization')}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
-                    visibility === 'organization'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  )}
-                >
-                  <Buildings size={16} weight={visibility === 'organization' ? 'fill' : 'duotone'} />
-                  <span>Organization</span>
-                </button>
-              </div>
-
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <TextAa size={16} weight="duotone" className="text-muted-foreground" />

@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
-import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { calendarApi } from "@features/calendar/calendarApi";
 
@@ -32,8 +31,6 @@ export function useCreateEvent() {
       categoryId?: string;
       attendeeIds?: string[];
       tagIds?: string[];
-      accessMode?: AccessMode;
-      baselineRole?: ContentRole;
     }) =>
       calendarApi.createEvent({
         organizationId: organizationId!,
@@ -50,8 +47,6 @@ export function useCreateEvent() {
         categoryId: args.categoryId,
         attendeeIds: args.attendeeIds ?? [],
         tagIds: args.tagIds ?? [],
-        accessMode: args.accessMode,
-        baselineRole: args.baselineRole,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events-range"] });

@@ -29,6 +29,7 @@ import { useCalendarEvents } from '@/features/calendar/hooks';
 import { EventMeetingJoin } from '@/features/calendar/components/layout/EventMeetingJoin';
 import { CATEGORY_COLORS } from '@/features/calendar/constants';
 import { useBookmarkToggle } from '@/features/bookmarks';
+import { openRoomViewer } from '@/features/rooms/store/roomsThunks';
 import { CrepeEditor } from '@/components/editor/CrepeEditor';
 import { ContentType } from '@uniffy/proto/common/v1/common_pb';
 import { MentionChipCompact } from '@/components/mention';
@@ -334,7 +335,18 @@ export function DetailPanel() {
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <Door size={16} weight="duotone" className="text-muted-foreground" />
-                  <span className="text-sm font-medium text-foreground">{selectedEvent.roomName}</span>
+                  {selectedEvent.roomId ? (
+                    <button
+                      type="button"
+                      onClick={() => dispatch(openRoomViewer({ roomId: selectedEvent.roomId! }))}
+                      className="text-sm font-medium text-foreground hover:text-primary transition-colors text-left"
+                      title="View room details"
+                    >
+                      {selectedEvent.roomName}
+                    </button>
+                  ) : (
+                    <span className="text-sm font-medium text-foreground">{selectedEvent.roomName}</span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground pl-6">
                   {selectedEvent.roomLocation && (

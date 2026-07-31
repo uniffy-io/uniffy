@@ -4,7 +4,6 @@ import {
     ShieldCheck,
     NotePencil,
     FolderSimple,
-    CalendarDots,
     WarningCircle,
     Kanban,
     Robot,
@@ -25,7 +24,6 @@ const CONTENT_TYPE_ICONS: Record<number, typeof NotePencil> = {
     [ContentType.NOTE]: NotePencil,
     [ContentType.FILE]: FolderSimple,
     [ContentType.PROJECT]: Kanban,
-    [ContentType.CALENDAR_EVENT]: CalendarDots,
     [ContentType.AGENT]: Robot,
 };
 
@@ -33,7 +31,6 @@ const ALL_CONTENT_TYPES = [
     ContentType.NOTE,
     ContentType.FILE,
     ContentType.PROJECT,
-    ContentType.CALENDAR_EVENT,
     ContentType.AGENT,
 ];
 

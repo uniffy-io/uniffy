@@ -160,7 +160,9 @@ Organization admins control the defaults that apply to brand new content of each
 - The default access mode (Owner only, Explicit members, or Open to organization).
 - The default baseline role for Open to organization mode (Viewer, Commenter, Editor, or Admin).
 
-When a user creates a new note, file, project, calendar event, agent, or other content, the new item starts with these defaults. The owner can change them immediately from the members panel; the defaults only describe the starting state.
+When a user creates a new note, file, project, agent, or other content, the new item starts with these defaults. The owner can change them immediately from the members panel; the defaults only describe the starting state.
+
+Calendar events sit outside this system: they are always invite-only. The organizer and the invited attendees see an event, the organizer edits it, and there is no org-wide visibility option or configurable default for events.
 
 The shipped defaults are:
 
@@ -169,8 +171,6 @@ The shipped defaults are:
 | Note | Owner only | - |
 | File | Owner only | - |
 | Folder | Owner only | - |
-| Calendar event | Open to organization | Viewer |
-| Calendar | Open to organization | Viewer |
 | Project | Open to organization | Editor |
 | Task | Inherits the parent project | - |
 | Agent | Open to organization | Viewer |

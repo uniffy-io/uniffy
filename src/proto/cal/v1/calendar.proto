@@ -200,8 +200,6 @@ message CalendarEvent {
   bool is_focus_time = 16;
   // Linked resources (notes, files, chats)
   repeated LinkedResource linked_resources = 17;
-  // Access mode
-  common.v1.AccessMode access_mode = 18;
   // Is deleted flag (soft delete)
   bool is_deleted = 19;
   // URNs referenced in this event's description (outgoing links)
@@ -226,8 +224,6 @@ message CalendarEvent {
   optional string room_location = 30;
   optional int32 room_capacity = 31;
   repeated string room_amenities = 32;
-  // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 33;
   // Hydrated tags applied to this event (server-side from TagOperations).
   repeated tags.v1.Tag tags = 34;
   // Bound chat channel for a Uniffy online meeting. When set, this event is a
@@ -318,14 +314,10 @@ message CreateEventRequest {
   bool is_focus_time = 14;
   // Linked resource URNs
   repeated string linked_resource_urns = 15;
-  // Access mode (defaults to OWNER_ONLY)
-  optional common.v1.AccessMode access_mode = 16;
   // Reminder intervals in minutes before event (e.g., 15, 30, 60, 1440)
   repeated int32 reminders = 17;
   // Optional room ID to book alongside the event
   optional string room_id = 18;
-  // Baseline role granted by access mode (when applicable)
-  optional common.v1.ContentRole baseline_role = 19;
   // Optional unified-tag ids to assign on create
   repeated string tag_ids = 20;
   // Optional channel to bind as a Uniffy online meeting. Mutually exclusive
@@ -375,8 +367,6 @@ message UpdateEventRequest {
   optional bool is_focus_time = 14;
   // Updated linked resource URNs (replaces existing)
   repeated string linked_resource_urns = 15;
-  // Updated access mode
-  optional common.v1.AccessMode access_mode = 16;
   // Updated attendee IDs (replaces existing list)
   repeated string attendee_ids = 17;
   // Updated reminder intervals in minutes before event
@@ -387,8 +377,6 @@ message UpdateEventRequest {
   optional string occurrence_date = 20;
   // Optional room ID to book/change for this event
   optional string room_id = 21;
-  // Updated baseline role granted by access mode
-  optional common.v1.ContentRole baseline_role = 22;
   // Replacement set of unified-tag ids. Empty list clears all manual tags.
   // Field is unset (HasField=false) to leave manual tags untouched.
   optional EventTagIds tag_ids = 23;
