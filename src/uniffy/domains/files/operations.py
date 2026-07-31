@@ -61,6 +61,8 @@ THRESHOLD_XLARGE = 2 * 1024 * 1024 * 1024
 
 DEFAULT_UPLOAD_EXPIRY_HOURS = int(os.getenv("UPLOAD_EXPIRY_HOURS", 24))
 
+_MAX_FOLDER_DEPTH = 64
+
 
 def _file_uploaded_audit_enabled() -> bool:
     # Default off; one row per upload swamps the audit table on storage-heavy deployments.
@@ -901,6 +903,73 @@ class FileOperations(BaseContentOperations[File]):
 
         return file
 
+    async def move_file(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        file_id: UUID,
+        folder_id: UUID | None,
+    ) -> File:
+        """Move a file into ``folder_id`` (``None`` = root).
+
+        The destination only needs VIEW: a folder is a place to put things, not
+        a permission container, so filing into it never widens who can read the
+        file. ``folder_id`` rides the file's search document as ``folder_id`` +
+        ``parent_label``, hence the re-index and the mention fanout.
+        """
+        from uniffy.core.valkey.mentions import publish_mention_state
+
+        file = await self._fetch_by_id(file_id, organization_id)
+        if not file:
+            raise NotFoundError("File", file_id)
+
+        await self._require_edit(user_id, organization_id, file)
+
+        folder_name = ""
+        if folder_id is not None:
+            folder_ops = FolderOperations(self.session)
+            folder = await folder_ops.get_by_id(folder_id, organization_id)
+            if not folder or folder.is_deleted:
+                raise NotFoundError("Folder", folder_id)
+            await folder_ops.require_view(user_id, organization_id, folder)
+            folder_name = folder.name
+
+        if file.folder_id == folder_id:
+            return file
+
+        previous_folder_id = file.folder_id
+        file.folder_id = folder_id
+        file.updated_at = datetime.now(UTC)
+
+        await write_audit_event(
+            self.session,
+            organization_id=organization_id,
+            actor_user_id=user_id,
+            action=Action.FILE_MOVED,
+            resource_type=ContentType.FILE.value,
+            resource_id=file_id,
+            details={
+                "previous_folder_id": str(previous_folder_id) if previous_folder_id else None,
+                "new_folder_id": str(folder_id) if folder_id else None,
+            },
+        )
+        await self.session.commit()
+        await self.session.refresh(file)
+
+        await self._index_for_search(model=file)
+        await self.session.commit()
+
+        try:
+            await publish_mention_state(
+                organization_id=organization_id,
+                urn=build_content_urn(self.content_type, file.id),
+                changes={"parent_label": folder_name},
+            )
+        except Exception:
+            logger.warning(f"Failed to publish parent_label for file {file.id}")
+
+        return file
+
     async def delete(
         self,
         user_id: UUID,
@@ -1382,6 +1451,59 @@ class FolderOperations:
         except Exception:
             logger.warning(f"Search remove failed for folder {folder_id}")
 
+    async def _role_for(self, user_id: UUID, organization_id: UUID, folder: Folder):
+        if folder.owner_id == user_id:
+            return ContentRole.OWNER
+        return await self.permission_checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id=folder.id,
+            owner_id=folder.owner_id,
+            access_mode=folder.access_mode,
+            baseline_role=folder.baseline_role,
+        )
+
+    async def require_view(self, user_id: UUID, organization_id: UUID, folder: Folder) -> None:
+        if not role_can_view(await self._role_for(user_id, organization_id, folder)):
+            raise PermissionDeniedError("view", "folder")
+
+    async def require_edit(self, user_id: UUID, organization_id: UUID, folder: Folder) -> None:
+        from uniffy.core.auth.permissions import role_can_edit
+
+        if not role_can_edit(await self._role_for(user_id, organization_id, folder)):
+            raise PermissionDeniedError("edit", "folder")
+
+    async def _require_moveable_under(
+        self,
+        folder_id: UUID,
+        parent_id: UUID,
+        organization_id: UUID,
+    ) -> None:
+        """Refuse a move that would detach a subtree by filing a folder under
+        itself or under one of its own descendants.
+        """
+        if parent_id == folder_id:
+            raise ValidationError("parent_id", "A folder cannot be its own parent")
+
+        current: UUID | None = parent_id
+        # Bounded so a cycle already present in the data cannot spin here.
+        for _ in range(_MAX_FOLDER_DEPTH):
+            if current is None:
+                return
+            if current == folder_id:
+                raise ValidationError("parent_id", "Cannot move a folder into its own subtree")
+            current = (
+                await self.session.execute(
+                    select(Folder.parent_id).where(
+                        Folder.id == current,
+                        Folder.organization_id == organization_id,
+                    )
+                )
+            ).scalar_one_or_none()
+
+        raise ValidationError("parent_id", "Folder nesting is too deep")
+
     async def create(
         self,
         user_id: UUID,
@@ -1462,20 +1584,10 @@ class FolderOperations:
         if not folder:
             raise NotFoundError("Folder", folder_id)
 
-        if folder.owner_id != user_id:
-            role = await self.permission_checker.effective_role(
-                user_id=user_id,
-                organization_id=organization_id,
-                content_type=self.content_type,
-                content_id=folder.id,
-                owner_id=folder.owner_id,
-                access_mode=folder.access_mode,
-                baseline_role=folder.baseline_role,
-            )
-            from uniffy.core.auth.permissions import role_can_edit
+        await self.require_edit(user_id, organization_id, folder)
 
-            if not role_can_edit(role):
-                raise PermissionDeniedError("edit", "folder")
+        if isinstance(parent_id, UUID):
+            await self._require_moveable_under(folder.id, parent_id, organization_id)
 
         name_changed = name is not None and name != folder.name
         if name is not None:
@@ -1951,8 +2063,15 @@ class FolderOperations:
         include_deleted: bool = False,
         personal_only: bool = False,
         access_mode: AccessMode | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Folder]:
-        """List folders with permission filtering."""
+        """List folders with permission filtering.
+
+        ``limit`` is opt-in: the sidebar tree is a full-set caller and asks for
+        every folder it can see. Anything that renders into a bounded surface
+        (an agent tool result, an API page) passes one.
+        """
         query = select(Folder).where(Folder.organization_id == organization_id)
 
         if personal_only:
@@ -1981,6 +2100,8 @@ class FolderOperations:
             query = query.where(Folder.is_deleted == False)  # noqa: E712
 
         query = query.order_by(Folder.name.asc())
+        if limit is not None:
+            query = query.offset(offset).limit(limit)
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
