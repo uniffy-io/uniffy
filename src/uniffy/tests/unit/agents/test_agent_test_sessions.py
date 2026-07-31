@@ -1,15 +1,11 @@
 """Test-session isolation: hidden from listings, memory writes suppressed.
-
-Vanilla pytest + ``asyncio.run`` with mocked sessions, matching the repo's
-other agents tests (no pytest-asyncio, no live DB).
 """
 
-import asyncio
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.models.agents.memory import MemoryScope
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.tools.builtin.memory import (
     TEST_SESSION_WRITE_ERROR,
@@ -20,10 +16,6 @@ from uniffy.domains.agents.tools.builtin.memory import (
 from uniffy.domains.agents.tools.definitions import ToolContext
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _tool_ctx(*, is_test_session: bool) -> ToolContext:
     session = MagicMock()
     session.execute = AsyncMock()
@@ -31,39 +23,37 @@ def _tool_ctx(*, is_test_session: bool) -> ToolContext:
     session.delete = AsyncMock()
     return ToolContext(
         session=session,
-        user_id=uuid4(),
-        organization_id=uuid4(),
-        agent_id=uuid4(),
-        memory_scope=MemoryScopeRef(MemoryScope.USER, uuid4()),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        agent_id=generate_id(),
+        memory_scope=MemoryScopeRef(MemoryScope.USER, generate_id()),
         is_test_session=is_test_session,
     )
 
 
 class TestMemoryWriteSuppression:
-    def test_save_refuses_in_test_session(self) -> None:
+    async def test_save_refuses_in_test_session(self) -> None:
         ctx = _tool_ctx(is_test_session=True)
-        result = _run(
-            _execute_memory_save(
-                ctx, {"key": "k", "description": "d", "content": "c"}
-            )
+        result = await _execute_memory_save(
+            ctx, {"key": "k", "description": "d", "content": "c"}
         )
         assert not result.success
         assert result.error == TEST_SESSION_WRITE_ERROR
         ctx.session.execute.assert_not_awaited()
         ctx.session.commit.assert_not_awaited()
 
-    def test_forget_refuses_in_test_session(self) -> None:
+    async def test_forget_refuses_in_test_session(self) -> None:
         ctx = _tool_ctx(is_test_session=True)
-        result = _run(_execute_memory_forget(ctx, {"key": "k"}))
+        result = await _execute_memory_forget(ctx, {"key": "k"})
         assert not result.success
         assert result.error == TEST_SESSION_WRITE_ERROR
         ctx.session.execute.assert_not_awaited()
         ctx.session.delete.assert_not_awaited()
 
-    def test_read_still_works_in_test_session(self) -> None:
+    async def test_read_still_works_in_test_session(self) -> None:
         ctx = _tool_ctx(is_test_session=True)
         row = NS(
-            id=uuid4(),
+            id=generate_id(),
             key="deploy_steps",
             description="how we deploy",
             content="use blue-green",
@@ -76,12 +66,12 @@ class TestMemoryWriteSuppression:
         search_result.scalars.return_value.all.return_value = [row]
         ctx.session.execute = AsyncMock(side_effect=[search_result, MagicMock()])
 
-        result = _run(_execute_memory_read(ctx, {"query": "deploy"}))
+        result = await _execute_memory_read(ctx, {"query": "deploy"})
 
         assert result.success
         assert "deploy_steps" in result.data
 
-    def test_save_works_outside_test_session(self) -> None:
+    async def test_save_works_outside_test_session(self) -> None:
         ctx = _tool_ctx(is_test_session=False)
         captured = {}
 
@@ -96,10 +86,8 @@ class TestMemoryWriteSuppression:
         with patch(
             "uniffy.domains.agents.memories.operations.MemoryOperations", FakeOps
         ):
-            result = _run(
-                _execute_memory_save(
-                    ctx, {"key": "k", "description": "d", "content": "c"}
-                )
+            result = await _execute_memory_save(
+                ctx, {"key": "k", "description": "d", "content": "c"}
             )
         assert result.success
         assert captured["key"] == "k"
@@ -121,15 +109,15 @@ def _session_ops():
 class TestCreateTestSession:
     def _create(self, ops, **overrides):
         kwargs = dict(
-            user_id=uuid4(),
-            organization_id=uuid4(),
-            agent_id=uuid4(),
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            agent_id=generate_id(),
             kind="group",
         )
         kwargs.update(overrides)
         return ops.create_session(**kwargs)
 
-    def test_is_test_flag_persisted(self) -> None:
+    async def test_is_test_flag_persisted(self) -> None:
         ops = _session_ops()
         agent_ops = MagicMock()
         agent_ops.get_by_id = AsyncMock()
@@ -137,11 +125,11 @@ class TestCreateTestSession:
             "uniffy.domains.agents.sessions.operations.AgentOperations",
             return_value=agent_ops,
         ):
-            _run(self._create(ops, is_test=True))
+            await self._create(ops, is_test=True)
         added = ops._session.add.call_args[0][0]
         assert added.is_test is True
 
-    def test_default_is_not_test(self) -> None:
+    async def test_default_is_not_test(self) -> None:
         ops = _session_ops()
         agent_ops = MagicMock()
         agent_ops.get_by_id = AsyncMock()
@@ -149,7 +137,7 @@ class TestCreateTestSession:
             "uniffy.domains.agents.sessions.operations.AgentOperations",
             return_value=agent_ops,
         ):
-            _run(self._create(ops))
+            await self._create(ops)
         added = ops._session.add.call_args[0][0]
         assert added.is_test is False
 

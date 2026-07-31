@@ -6,14 +6,13 @@ simulates both "first fire" (dedupe claim succeeds) and "already fired"
 (IntegrityError) scenarios.
 """
 
-import asyncio
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from sqlalchemy.exc import IntegrityError
 
 from uniffy.core.models.agents.budget import AgentBudget
+from uniffy.core.types import generate_id
 from uniffy.domains.agents import budget_alerts as mod
 from uniffy.domains.agents.budget_alerts import (
     _compute_crossings,
@@ -81,39 +80,39 @@ def _bare_session(budget: AgentBudget | None) -> MagicMock:
 class TestCheckAndFireAlertsEdges:
     """Boundary cases that short-circuit before any fan-out."""
 
-    def test_no_cost_no_images_early_return(self) -> None:
+    async def test_no_cost_no_images_early_return(self) -> None:
         session = _bare_session(None)
 
         async def run() -> None:
             await check_and_fire_alerts(
                 session,
-                organization_id=uuid4(),
+                organization_id=generate_id(),
                 run_cost=Decimal(0),
                 run_image_count=0,
             )
 
-        asyncio.run(run())
+        await run()
         # Session's execute should never run: we early-returned.
         session.execute.assert_not_called()
 
-    def test_missing_budget_row_is_noop(self) -> None:
+    async def test_missing_budget_row_is_noop(self) -> None:
         # Cost is non-zero but there is no budget row, so no thresholds.
         session = _bare_session(None)
 
         async def run() -> None:
             await check_and_fire_alerts(
                 session,
-                organization_id=uuid4(),
+                organization_id=generate_id(),
                 run_cost=Decimal("10"),
                 run_image_count=0,
             )
 
-        asyncio.run(run())
+        await run()
         # Only the budget lookup ran; no further queries or commits.
         assert session.execute.call_count == 1
 
-    def test_unlimited_budget_is_noop(self) -> None:
-        org_id = uuid4()
+    async def test_unlimited_budget_is_noop(self) -> None:
+        org_id = generate_id()
         budget = AgentBudget(
             organization_id=org_id,
             monthly_limit=None,
@@ -131,7 +130,7 @@ class TestCheckAndFireAlertsEdges:
                 run_image_count=1,
             )
 
-        asyncio.run(run())
+        await run()
 
 
 class TestCheckAndFireAlertsFires:
@@ -159,8 +158,8 @@ class TestCheckAndFireAlertsFires:
         session.begin_nested = MagicMock(return_value=_Nested())
         return session
 
-    def test_fires_on_first_crossing(self) -> None:
-        org_id = uuid4()
+    async def test_fires_on_first_crossing(self) -> None:
+        org_id = generate_id()
         budget = AgentBudget(
             organization_id=org_id,
             monthly_limit=Decimal("100.00"),
@@ -177,7 +176,7 @@ class TestCheckAndFireAlertsFires:
                 patch.object(
                     mod,
                     "_resolve_recipients",
-                    AsyncMock(return_value=[uuid4(), uuid4()]),
+                    AsyncMock(return_value=[generate_id(), generate_id()]),
                 ),
             ):
                 await check_and_fire_alerts(
@@ -187,12 +186,12 @@ class TestCheckAndFireAlertsFires:
                     run_image_count=0,
                 )
 
-        asyncio.run(run())
+        await run()
         # Alert dedupe row + 2 notifications = 3 session.add calls.
         assert session.add.call_count == 3
 
-    def test_skips_already_fired_threshold(self) -> None:
-        org_id = uuid4()
+    async def test_skips_already_fired_threshold(self) -> None:
+        org_id = generate_id()
         budget = AgentBudget(
             organization_id=org_id,
             monthly_limit=Decimal("100.00"),
@@ -219,7 +218,7 @@ class TestCheckAndFireAlertsFires:
                 patch.object(
                     mod,
                     "_resolve_recipients",
-                    AsyncMock(return_value=[uuid4()]),
+                    AsyncMock(return_value=[generate_id()]),
                 ),
             ):
                 await check_and_fire_alerts(
@@ -229,13 +228,13 @@ class TestCheckAndFireAlertsFires:
                     run_image_count=0,
                 )
 
-        asyncio.run(run())
+        await run()
         # No notifications sent because the claim failed.
         # The dedupe attempt still added a pending row, so count == 1.
         assert session.add.call_count == 1
 
-    def test_errors_are_swallowed(self) -> None:
-        org_id = uuid4()
+    async def test_errors_are_swallowed(self) -> None:
+        org_id = generate_id()
         session = MagicMock()
         session.execute = AsyncMock(side_effect=RuntimeError("db dead"))
 
@@ -248,4 +247,4 @@ class TestCheckAndFireAlertsFires:
                 run_image_count=0,
             )
 
-        asyncio.run(run())
+        await run()

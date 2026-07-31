@@ -10,7 +10,6 @@ verify:
 - cache invalidation helpers call the right tags / keys
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.auth.permissions.visible_sets import (
@@ -22,10 +21,6 @@ from uniffy.core.auth.permissions.visible_sets import (
     invalidate_visible_sets_for_user,
 )
 from uniffy.core.types import generate_id
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 class TestPayloadCodec:
@@ -54,7 +49,7 @@ class TestPayloadCodec:
 
 
 class TestComputeVisibleTagIds:
-    def test_org_admin_is_filtered_not_short_circuited(self) -> None:
+    async def test_org_admin_is_filtered_not_short_circuited(self) -> None:
         """Org admins no longer get a None ('see all') sentinel - they build the
         same filtered union as any member and run it."""
         session = MagicMock()
@@ -70,10 +65,8 @@ class TestComputeVisibleTagIds:
             checker = checker_cls.return_value
             checker.is_org_admin = AsyncMock(return_value=True)
             checker.is_domain_admin = AsyncMock(return_value=False)
-            result = _run(
-                compute_visible_tag_ids(
-                    session, user_id=user_id, organization_id=org_id
-                )
+            result = await compute_visible_tag_ids(
+                session, user_id=user_id, organization_id=org_id
             )
 
         assert result == set()
@@ -81,7 +74,7 @@ class TestComputeVisibleTagIds:
 
 
 class TestGetVisibleTagIdsCacheWiring:
-    def test_admin_payload_decoded_to_none(self) -> None:
+    async def test_admin_payload_decoded_to_none(self) -> None:
         session = MagicMock()
         org_id = generate_id()
         user_id = generate_id()
@@ -93,15 +86,13 @@ class TestGetVisibleTagIdsCacheWiring:
             "uniffy.core.auth.permissions.visible_sets.cache_get_or_set_locked",
             new=AsyncMock(side_effect=fake_cache),
         ):
-            result = _run(
-                get_visible_tag_ids(
-                    session, user_id=user_id, organization_id=org_id
-                )
+            result = await get_visible_tag_ids(
+                session, user_id=user_id, organization_id=org_id
             )
 
         assert result is None
 
-    def test_set_payload_decoded_to_uuid_set(self) -> None:
+    async def test_set_payload_decoded_to_uuid_set(self) -> None:
         session = MagicMock()
         org_id = generate_id()
         user_id = generate_id()
@@ -114,28 +105,26 @@ class TestGetVisibleTagIdsCacheWiring:
             "uniffy.core.auth.permissions.visible_sets.cache_get_or_set_locked",
             new=AsyncMock(side_effect=fake_cache),
         ):
-            result = _run(
-                get_visible_tag_ids(
-                    session, user_id=user_id, organization_id=org_id
-                )
+            result = await get_visible_tag_ids(
+                session, user_id=user_id, organization_id=org_id
             )
 
         assert result == {tag_id}
 
 
 class TestInvalidationHelpers:
-    def test_invalidate_for_org_uses_org_tag(self) -> None:
+    async def test_invalidate_for_org_uses_org_tag(self) -> None:
         org_id = generate_id()
 
         with patch(
             "uniffy.core.auth.permissions.visible_sets.cache_invalidate_by_tag",
             new=AsyncMock(),
         ) as fake_tag:
-            _run(invalidate_visible_sets_for_org(org_id))
+            await invalidate_visible_sets_for_org(org_id)
 
         fake_tag.assert_awaited_once_with(f"perm_visible_org:{org_id}")
 
-    def test_invalidate_for_user_drops_known_keys(self) -> None:
+    async def test_invalidate_for_user_drops_known_keys(self) -> None:
         org_id = generate_id()
         user_id = generate_id()
 
@@ -143,7 +132,7 @@ class TestInvalidationHelpers:
             "uniffy.core.auth.permissions.visible_sets.cache_invalidate_many",
             new=AsyncMock(),
         ) as fake_many:
-            _run(invalidate_visible_sets_for_user(org_id, user_id))
+            await invalidate_visible_sets_for_user(org_id, user_id)
 
         # One tags-key + one per content type covered (NOTE, FILE, etc.).
         keys = fake_many.call_args[0]

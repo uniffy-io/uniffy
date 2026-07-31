@@ -7,12 +7,11 @@ ffmpeg binary guarantee. The end-to-end fixture-based test is run
 manually before merging (see backlog manual checklist).
 """
 
-import asyncio
 from typing import Any
-from uuid import uuid4
 
 import pytest
 
+from uniffy.core.types import generate_id
 from uniffy.workers.tasks import video_transcode as transcode_mod
 
 
@@ -55,24 +54,22 @@ def lock_held(monkeypatch):
     return fake
 
 
-def test_invalid_uuid_args_short_circuit() -> None:
+async def test_invalid_uuid_args_short_circuit() -> None:
     """Bad uuid arguments should never touch Valkey, S3, or PG."""
-    result = asyncio.run(
-        transcode_mod.transcode_video_to_mp4(
-            ctx={},
-            file_id="not-a-uuid",
-            organization_id=str(uuid4()),
-        )
+    result = await transcode_mod.transcode_video_to_mp4(
+        ctx={},
+        file_id="not-a-uuid",
+        organization_id=str(generate_id()),
     )
     assert result == {"status": "error", "error": "invalid_uuid"}
 
 
-def test_lock_held_returns_skipped(lock_held) -> None:
+async def test_lock_held_returns_skipped(lock_held) -> None:
     """Concurrent invocation while another worker holds the lock is a
     no-op so two workers cannot race to write duplicate FileVersion rows.
     """
-    file_id = str(uuid4())
-    org_id = str(uuid4())
+    file_id = str(generate_id())
+    org_id = str(generate_id())
 
     async def _run() -> dict[str, Any]:
         return await transcode_mod.transcode_video_to_mp4(
@@ -81,7 +78,7 @@ def test_lock_held_returns_skipped(lock_held) -> None:
             organization_id=org_id,
         )
 
-    result = asyncio.run(_run())
+    result = await _run()
     assert result == {
         "status": "skipped",
         "reason": "lock_held",
@@ -89,7 +86,7 @@ def test_lock_held_returns_skipped(lock_held) -> None:
     }
 
 
-def test_release_lock_called_on_invalid_uuid(monkeypatch) -> None:
+async def test_release_lock_called_on_invalid_uuid(monkeypatch) -> None:
     """Even when the body short-circuits, the lock must be released so
     a retried submit does not have to wait out the TTL.
 
@@ -98,12 +95,10 @@ def test_release_lock_called_on_invalid_uuid(monkeypatch) -> None:
     """
     fake = _FakeOpsClient()
     monkeypatch.setattr(transcode_mod, "_get_ops_client", lambda: fake)
-    asyncio.run(
-        transcode_mod.transcode_video_to_mp4(
-            ctx={},
-            file_id="not-a-uuid",
-            organization_id=str(uuid4()),
-        )
+    await transcode_mod.transcode_video_to_mp4(
+        ctx={},
+        file_id="not-a-uuid",
+        organization_id=str(generate_id()),
     )
     assert fake.calls == []
 
@@ -132,7 +127,7 @@ def test_ffmpeg_codec_args_unknown_hw_encoder_falls_back(monkeypatch) -> None:
     assert args[:2] == ["-c:v", "libx264"]
 
 
-def test_run_ffmpeg_raises_on_nonzero_exit(monkeypatch, tmp_path) -> None:
+async def test_run_ffmpeg_raises_on_nonzero_exit(monkeypatch, tmp_path) -> None:
     """A non-zero ffmpeg exit must bubble up as RuntimeError so the
     worker can flip ``transcode_status=FAILED`` and leave the WebM live.
     """
@@ -149,7 +144,7 @@ def test_run_ffmpeg_raises_on_nonzero_exit(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(transcode_mod.asyncio, "create_subprocess_exec", _fake_exec)
 
     with pytest.raises(RuntimeError, match="ffmpeg failed"):
-        asyncio.run(transcode_mod._run_ffmpeg(tmp_path / "in.webm", tmp_path / "out.mp4"))
+        await transcode_mod._run_ffmpeg(tmp_path / "in.webm", tmp_path / "out.mp4")
 
 
 def test_get_jobs_for_webm_includes_transcode() -> None:
@@ -214,7 +209,7 @@ def test_transcode_status_proto_mapping_is_total() -> None:
     "status",
     ["NOT_NEEDED", "COMPLETED"],
 )
-def test_worker_skips_terminal_states(monkeypatch, lock_acquired, status) -> None:
+async def test_worker_skips_terminal_states(monkeypatch, lock_acquired, status) -> None:
     """A re-enqueued job that lands on a row in a terminal state must
     no-op so a retry storm cannot resurface a completed file.
 
@@ -252,28 +247,26 @@ def test_worker_skips_terminal_states(monkeypatch, lock_acquired, status) -> Non
 
     class _File:
         def __init__(self, status_value, org_id):
-            self.id = uuid4()
+            self.id = generate_id()
             self.organization_id = org_id
             self.transcode_status = TranscodeStatus(status_value)
             self.storage_key = "old/key.webm"
             self.storage_bucket = "bucket"
-            self.owner_id = uuid4()
+            self.owner_id = generate_id()
             self.filename = "Screen Recording.mp4"
             self.version = 1
 
-    org_id = uuid4()
+    org_id = generate_id()
     file = _File(status, org_id)
 
     monkeypatch.setattr(
         transcode_mod, "open_session", lambda: _CtxMgr(file)
     )
 
-    result = asyncio.run(
-        transcode_mod.transcode_video_to_mp4(
-            ctx={},
-            file_id=str(file.id),
-            organization_id=str(org_id),
-        )
+    result = await transcode_mod.transcode_video_to_mp4(
+        ctx={},
+        file_id=str(file.id),
+        organization_id=str(org_id),
     )
     assert result["status"] == "skipped"
     if status == "COMPLETED":

@@ -5,9 +5,7 @@ DB calls are stubbed; these exercise the permission matrix of
 ``leave_channel``.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
@@ -18,18 +16,14 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
-from uniffy.core.types import SubjectType
+from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _make_channel(channel_type: ChannelType = ChannelType.PUBLIC) -> ChatChannel:
     return ChatChannel(
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         name="general",
         slug="general",
         description="",
@@ -38,9 +32,9 @@ def _make_channel(channel_type: ChannelType = ChannelType.PUBLIC) -> ChatChannel
 
 
 def _make_member(role: ChannelRole, user_id=None) -> ChatChannelMember:
-    uid = user_id or uuid4()
+    uid = user_id or generate_id()
     return ChatChannelMember(
-        channel_id=uuid4(),
+        channel_id=generate_id(),
         subject_type=SubjectType.USER,
         subject_id=uid,
         user_id=uid,
@@ -83,45 +77,45 @@ def _patch_side_effects():
 class TestUpdateMemberRole:
     def _call(self, ops, channel, actor_id=None, target_id=None, role=ChannelRole.ADMIN):
         return ops.update_member_role(
-            actor_id or uuid4(),
+            actor_id or generate_id(),
             channel.organization_id,
             channel.id,
-            target_id or uuid4(),
+            target_id or generate_id(),
             role,
         )
 
-    def test_direct_dm_rejected(self) -> None:
+    async def test_direct_dm_rejected(self) -> None:
         channel = _make_channel(ChannelType.DIRECT)
         ops = _make_ops(channel)
         with pytest.raises(ValidationError, match="roles"):
-            _run(self._call(ops, channel))
+            await self._call(ops, channel)
 
-    def test_plain_member_actor_rejected(self) -> None:
+    async def test_plain_member_actor_rejected(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.MEMBER)
         with pytest.raises(PermissionDeniedError):
-            _run(self._call(ops, channel))
+            await self._call(ops, channel)
 
-    def test_admin_actor_cannot_grant_owner(self) -> None:
+    async def test_admin_actor_cannot_grant_owner(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.ADMIN)
         target = _make_member(ChannelRole.MEMBER)
         ops.session.execute.return_value = _result(scalar_one_or_none=target)
         with pytest.raises(PermissionDeniedError, match="owner"):
-            _run(self._call(ops, channel, role=ChannelRole.OWNER))
+            await self._call(ops, channel, role=ChannelRole.OWNER)
 
-    def test_admin_actor_cannot_demote_owner(self) -> None:
+    async def test_admin_actor_cannot_demote_owner(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.ADMIN)
         target = _make_member(ChannelRole.OWNER)
         ops.session.execute.return_value = _result(scalar_one_or_none=target)
         with pytest.raises(PermissionDeniedError, match="owner"):
-            _run(self._call(ops, channel, role=ChannelRole.MEMBER))
+            await self._call(ops, channel, role=ChannelRole.MEMBER)
 
-    def test_admin_actor_promotes_member_to_admin(self) -> None:
+    async def test_admin_actor_promotes_member_to_admin(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.ADMIN)
@@ -132,12 +126,12 @@ class TestUpdateMemberRole:
             _result(scalar_one=user),
         ]
         with _patch_side_effects():
-            member, _ = _run(self._call(ops, channel, role=ChannelRole.ADMIN))
+            member, _ = await self._call(ops, channel, role=ChannelRole.ADMIN)
         assert member.role == ChannelRole.ADMIN
         ops.session.commit.assert_awaited_once()
         ops._publish_member_role_changed.assert_awaited_once()
 
-    def test_owner_actor_promotes_member_to_owner(self) -> None:
+    async def test_owner_actor_promotes_member_to_owner(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER)
@@ -148,13 +142,13 @@ class TestUpdateMemberRole:
             _result(scalar_one=user),
         ]
         with _patch_side_effects():
-            member, _ = _run(self._call(ops, channel, role=ChannelRole.OWNER))
+            member, _ = await self._call(ops, channel, role=ChannelRole.OWNER)
         assert member.role == ChannelRole.OWNER
 
-    def test_last_owner_cannot_be_demoted(self) -> None:
+    async def test_last_owner_cannot_be_demoted(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
-        actor_id = uuid4()
+        actor_id = generate_id()
         ops.access.get_membership.return_value = _make_member(
             ChannelRole.OWNER, user_id=actor_id
         )
@@ -164,17 +158,15 @@ class TestUpdateMemberRole:
             _result(scalar_one=1),
         ]
         with pytest.raises(ValidationError, match="Promote another member"):
-            _run(
-                self._call(
-                    ops,
-                    channel,
-                    actor_id=actor_id,
-                    target_id=actor_id,
-                    role=ChannelRole.MEMBER,
-                )
+            await self._call(
+                ops,
+                channel,
+                actor_id=actor_id,
+                target_id=actor_id,
+                role=ChannelRole.MEMBER,
             )
 
-    def test_co_owner_can_be_demoted(self) -> None:
+    async def test_co_owner_can_be_demoted(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER)
@@ -186,10 +178,10 @@ class TestUpdateMemberRole:
             _result(scalar_one=user),
         ]
         with _patch_side_effects():
-            member, _ = _run(self._call(ops, channel, role=ChannelRole.MEMBER))
+            member, _ = await self._call(ops, channel, role=ChannelRole.MEMBER)
         assert member.role == ChannelRole.MEMBER
 
-    def test_org_admin_moderation_path_can_grant_owner(self) -> None:
+    async def test_org_admin_moderation_path_can_grant_owner(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = None
@@ -201,18 +193,18 @@ class TestUpdateMemberRole:
             _result(scalar_one=user),
         ]
         with _patch_side_effects():
-            member, _ = _run(self._call(ops, channel, role=ChannelRole.OWNER))
+            member, _ = await self._call(ops, channel, role=ChannelRole.OWNER)
         assert member.role == ChannelRole.OWNER
 
-    def test_unknown_target_raises_not_found(self) -> None:
+    async def test_unknown_target_raises_not_found(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER)
         ops.session.execute.return_value = _result(scalar_one_or_none=None)
         with pytest.raises(NotFoundError):
-            _run(self._call(ops, channel))
+            await self._call(ops, channel)
 
-    def test_same_role_is_a_no_op(self) -> None:
+    async def test_same_role_is_a_no_op(self) -> None:
         channel = _make_channel()
         ops = _make_ops(channel)
         ops.access.get_membership.return_value = _make_member(ChannelRole.OWNER)
@@ -222,7 +214,7 @@ class TestUpdateMemberRole:
             _result(scalar_one_or_none=target),
             _result(scalar_one=user),
         ]
-        member, _ = _run(self._call(ops, channel, role=ChannelRole.ADMIN))
+        member, _ = await self._call(ops, channel, role=ChannelRole.ADMIN)
         assert member.role == ChannelRole.ADMIN
         ops.session.commit.assert_not_awaited()
         ops._publish_member_role_changed.assert_not_awaited()
@@ -247,21 +239,21 @@ class TestLeaveChannelOwnerGuard:
             kick_user_from_active_call=AsyncMock(),
         )
 
-    def test_sole_owner_with_other_members_blocked(self) -> None:
+    async def test_sole_owner_with_other_members_blocked(self) -> None:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
-        user_id = uuid4()
+        user_id = generate_id()
         ops.access.get_membership.return_value = _make_member(
             ChannelRole.OWNER, user_id=user_id
         )
         ops.session.execute.return_value = _result(one=(1, 3))
         with pytest.raises(ValidationError, match="Promote another member"):
-            _run(ops.leave_channel(user_id, channel.organization_id, channel.id))
+            await ops.leave_channel(user_id, channel.organization_id, channel.id)
 
-    def test_owner_with_co_owner_can_leave(self) -> None:
+    async def test_owner_with_co_owner_can_leave(self) -> None:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
-        user_id = uuid4()
+        user_id = generate_id()
         ops.access.get_membership.return_value = _make_member(
             ChannelRole.OWNER, user_id=user_id
         )
@@ -271,13 +263,13 @@ class TestLeaveChannelOwnerGuard:
             _result(),
         ]
         with self._leave_patches():
-            _run(ops.leave_channel(user_id, channel.organization_id, channel.id))
+            await ops.leave_channel(user_id, channel.organization_id, channel.id)
         ops._publish_member_event.assert_awaited_once()
 
-    def test_sole_owner_alone_can_leave(self) -> None:
+    async def test_sole_owner_alone_can_leave(self) -> None:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
-        user_id = uuid4()
+        user_id = generate_id()
         ops.access.get_membership.return_value = _make_member(
             ChannelRole.OWNER, user_id=user_id
         )
@@ -287,25 +279,25 @@ class TestLeaveChannelOwnerGuard:
             _result(),
         ]
         with self._leave_patches():
-            _run(ops.leave_channel(user_id, channel.organization_id, channel.id))
+            await ops.leave_channel(user_id, channel.organization_id, channel.id)
         ops._publish_member_event.assert_awaited_once()
 
-    def test_plain_member_leaves_without_owner_query(self) -> None:
+    async def test_plain_member_leaves_without_owner_query(self) -> None:
         channel = _make_channel(ChannelType.PRIVATE)
         ops = self._make_leave_ops(channel)
-        user_id = uuid4()
+        user_id = generate_id()
         ops.access.get_membership.return_value = _make_member(
             ChannelRole.MEMBER, user_id=user_id
         )
         ops.session.execute.side_effect = [_result(), _result()]
         with self._leave_patches():
-            _run(ops.leave_channel(user_id, channel.organization_id, channel.id))
+            await ops.leave_channel(user_id, channel.organization_id, channel.id)
         assert ops.session.execute.await_count == 2
 
-    def test_group_dm_leave_refreshes_name_and_peers(self) -> None:
+    async def test_group_dm_leave_refreshes_name_and_peers(self) -> None:
         channel = _make_channel(ChannelType.GROUP_DM)
         ops = self._make_leave_ops(channel)
-        user_id = uuid4()
+        user_id = generate_id()
         ops.access.get_membership.return_value = _make_member(
             ChannelRole.MEMBER, user_id=user_id
         )
@@ -318,12 +310,12 @@ class TestLeaveChannelOwnerGuard:
             invalidate_visible_sets_for_user=AsyncMock(),
             kick_user_from_active_call=AsyncMock(),
         ):
-            _run(ops.leave_channel(user_id, channel.organization_id, channel.id))
+            await ops.leave_channel(user_id, channel.organization_id, channel.id)
         ops._refresh_group_dm_name.assert_awaited_once()
         peers_mock.assert_awaited_once_with(channel.id)
 
-    def test_direct_dm_leave_rejected(self) -> None:
+    async def test_direct_dm_leave_rejected(self) -> None:
         channel = _make_channel(ChannelType.DIRECT)
         ops = self._make_leave_ops(channel)
         with pytest.raises(ValidationError, match="direct message"):
-            _run(ops.leave_channel(uuid4(), channel.organization_id, channel.id))
+            await ops.leave_channel(generate_id(), channel.organization_id, channel.id)

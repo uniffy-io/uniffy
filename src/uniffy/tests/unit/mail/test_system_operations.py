@@ -8,24 +8,19 @@ RPC handler tests in a separate suite.
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import ValidationError
+from uniffy.core.types import generate_id
 from uniffy.domains.mail.system_operations import (
     SystemMailOperations,
     _flatten_delivery,
     _outcome_actions,
     _system_summary_from_env,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 class TestSystemSummaryFromEnv:
@@ -110,10 +105,10 @@ class TestOutcomeActions:
 class TestFlattenDelivery:
     def test_extracts_recipient_from_known_keys(self) -> None:
         event = MagicMock()
-        event.id = uuid4()
+        event.id = generate_id()
         event.created_at = "2026-05-25T12:00:00Z"
         event.action = Action.MAIL_SENT
-        event.organization_id = uuid4()
+        event.organization_id = generate_id()
         event.details = {
             "config_source": "org",
             "recipient_email": "user@example.com",
@@ -132,7 +127,7 @@ class TestFlattenDelivery:
 
     def test_empty_details_yields_none_fields(self) -> None:
         event = MagicMock()
-        event.id = uuid4()
+        event.id = generate_id()
         event.created_at = "2026-05-25T12:00:00Z"
         event.action = Action.MAIL_SEND_FAILED
         event.organization_id = None
@@ -157,26 +152,22 @@ class TestRemoveSuppressionValidation:
         ops._user_ops.require_system_admin = AsyncMock()
         return ops
 
-    def test_empty_reason_raises_validation_error(self) -> None:
+    async def test_empty_reason_raises_validation_error(self) -> None:
         ops = self._build_ops()
         with pytest.raises(ValidationError):
-            _run(
-                ops.remove_suppression(
-                    user_id=uuid4(),
-                    email="foo@bar.com",
-                    reason="   ",
-                )
+            await ops.remove_suppression(
+                user_id=generate_id(),
+                email="foo@bar.com",
+                reason="   ",
             )
 
-    def test_invalid_email_raises_validation_error(self) -> None:
+    async def test_invalid_email_raises_validation_error(self) -> None:
         ops = self._build_ops()
         with pytest.raises(ValidationError):
-            _run(
-                ops.remove_suppression(
-                    user_id=uuid4(),
-                    email="no-at-sign",
-                    reason="customer asked",
-                )
+            await ops.remove_suppression(
+                user_id=generate_id(),
+                email="no-at-sign",
+                reason="customer asked",
             )
 
 
@@ -190,13 +181,11 @@ class TestForceClearOrgConfigValidation:
         ops._user_ops.require_system_admin = AsyncMock()
         return ops
 
-    def test_empty_reason_raises_validation_error(self) -> None:
+    async def test_empty_reason_raises_validation_error(self) -> None:
         ops = self._build_ops()
         with pytest.raises(ValidationError):
-            _run(
-                ops.force_clear_org_config(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    reason="",
-                )
+            await ops.force_clear_org_config(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                reason="",
             )

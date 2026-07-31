@@ -7,10 +7,9 @@ identity through ``details.actor_kind = "agent"`` plus
 ``None``.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
     ToolContext,
@@ -33,7 +32,7 @@ def _audit_rows(session: MagicMock) -> list:
     ]
 
 
-def test_tool_call_attributes_to_human_with_agent_kind_detail() -> None:
+async def test_tool_call_attributes_to_human_with_agent_kind_detail() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.execute = AsyncMock(
@@ -41,13 +40,14 @@ def test_tool_call_attributes_to_human_with_agent_kind_detail() -> None:
     )
     session.commit = AsyncMock()
 
-    human_id = uuid4()
-    agent_id = uuid4()
+    human_id = generate_id()
+    agent_id = generate_id()
     ctx = ToolContext(
         session=session,
         user_id=human_id,
-        organization_id=uuid4(),
+        organization_id=generate_id(),
         agent_id=agent_id,
+        allowed_tools=frozenset({"notes.create_note"}),
     )
 
     tool = ToolDefinition(
@@ -60,7 +60,7 @@ def test_tool_call_attributes_to_human_with_agent_kind_detail() -> None:
     registry.register(tool)
     executor = ToolExecutor(registry, ctx)
 
-    asyncio.run(executor.execute(ToolCall(id="t1", name=tool.name, input={})))
+    await executor.execute(ToolCall(id="t1", name=tool.name, input={}))
 
     rows = _audit_rows(session)
     assert len(rows) == 1

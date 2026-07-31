@@ -1,15 +1,11 @@
 """Tests for skill-driven tool schema resolution and the view_skill lookup.
-
-Vanilla pytest + ``asyncio.run`` and mocks, matching the repo's agents tests
-(no pytest-asyncio, no live DB).
 """
 
-import asyncio
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 from uniffy.core.models.agents.skill import AgentSkill
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.runtime.operations import _resolve_tool_schemas
 from uniffy.domains.agents.runtime.prompt import (
     SKILL_VIEW_TOOL,
@@ -21,13 +17,9 @@ from uniffy.domains.agents.tools.registry import get_tool_registry, to_api_name
 _VIEW_API_NAME = to_api_name(SKILL_VIEW_TOOL)
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _skill(**kw) -> NS:
     base = dict(
-        id=uuid4(),
+        id=generate_id(),
         name="report",
         display_name="Report",
         description="",
@@ -110,10 +102,10 @@ class TestViewSkillExecutionWithoutEnabledTool:
     def _ctx(self):
         return NS(
             session=MagicMock(),
-            user_id=uuid4(),
-            organization_id=uuid4(),
-            agent_id=uuid4(),
-            session_id=uuid4(),
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            agent_id=generate_id(),
+            session_id=generate_id(),
         )
 
     def _patch(self, monkeypatch, skills):
@@ -141,12 +133,12 @@ class TestViewSkillExecutionWithoutEnabledTool:
         assert tool is not None
         assert tool.read_only is True
 
-    def test_execute_returns_content_when_not_in_enabled_tools(self, monkeypatch) -> None:
+    async def test_execute_returns_content_when_not_in_enabled_tools(self, monkeypatch) -> None:
         from uniffy.domains.agents.tools.builtin.skills import _execute_view_skill
 
         skill = AgentSkill(
-            id=uuid4(),
-            organization_id=uuid4(),
+            id=generate_id(),
+            organization_id=generate_id(),
             name="report",
             display_name="Report",
             source="organization",
@@ -155,7 +147,7 @@ class TestViewSkillExecutionWithoutEnabledTool:
         )
         self._patch(monkeypatch, [skill])
 
-        result = _run(_execute_view_skill(self._ctx(), {"name": "report"}))
+        result = await _execute_view_skill(self._ctx(), {"name": "report"})
 
         assert result.success
         assert "THE INSTRUCTIONS" in result.data
@@ -185,11 +177,11 @@ class TestNameCollisionShadowing:
         assert "ORG_ALWAYS_CONTENT" in prompt
         assert "BUNDLED_CONTENT" in prompt  # invoked skill rendered in full
 
-    def test_view_skill_prefers_org_over_bundled_on_name_collision(self, monkeypatch) -> None:
+    async def test_view_skill_prefers_org_over_bundled_on_name_collision(self, monkeypatch) -> None:
         from uniffy.domains.agents.tools.builtin.skills import _execute_view_skill
 
         bundled = AgentSkill(
-            id=uuid4(),
+            id=generate_id(),
             organization_id=None,
             name="report",
             display_name="Report",
@@ -197,8 +189,8 @@ class TestNameCollisionShadowing:
             content="BUNDLED_INSTRUCTIONS",
         )
         org = AgentSkill(
-            id=uuid4(),
-            organization_id=uuid4(),
+            id=generate_id(),
+            organization_id=generate_id(),
             name="report",
             display_name="Report",
             source="organization",
@@ -207,10 +199,10 @@ class TestNameCollisionShadowing:
 
         ctx = NS(
             session=MagicMock(),
-            user_id=uuid4(),
-            organization_id=uuid4(),
-            agent_id=uuid4(),
-            session_id=uuid4(),
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            agent_id=generate_id(),
+            session_id=generate_id(),
         )
 
         import uniffy.domains.agents.cache as cache_mod
@@ -234,7 +226,7 @@ class TestNameCollisionShadowing:
                 ops_mod, "SkillOperations", lambda _session, _ops=fake_ops: _ops
             )
 
-            result = _run(_execute_view_skill(ctx, {"name": "report"}))
+            result = await _execute_view_skill(ctx, {"name": "report"})
 
             assert result.success
             assert "ORG_INSTRUCTIONS" in result.data

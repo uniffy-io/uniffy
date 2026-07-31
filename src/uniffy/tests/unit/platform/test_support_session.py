@@ -6,10 +6,9 @@ audit writer ContextVar merge. Pure mock-based; no DB required.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
@@ -18,6 +17,7 @@ from uniffy.core.models.platform.support_session import (
     SupportSessionScope,
     SupportSessionState,
 )
+from uniffy.core.types import generate_id
 from uniffy.domains.platform.support_session.cache import (
     _ttl_until,
 )
@@ -42,10 +42,6 @@ from uniffy.domains.platform.support_session.policy import (
     deployment_default_duration_minutes,
     deployment_max_duration_minutes,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 class TestClampDuration:
@@ -82,7 +78,7 @@ class TestTtlUntil:
 
 
 class TestScopeRejection:
-    def test_request_session_rejects_read_write(self) -> None:
+    async def test_request_session_rejects_read_write(self) -> None:
         """READ_WRITE must raise SupportSessionScopeError in v1."""
 
         async def _check() -> None:
@@ -97,16 +93,16 @@ class TestScopeRejection:
 
             with pytest.raises(SupportSessionScopeError):
                 await ops.request_session(
-                    actor_user_id=uuid4(),
-                    organization_id=uuid4(),
+                    actor_user_id=generate_id(),
+                    organization_id=generate_id(),
                     reason="legitimate",
                     scope=SupportSessionScope.READ_WRITE,
                     duration_minutes=30,
                 )
 
-        _run(_check())
+        await _check()
 
-    def test_request_session_rejects_empty_reason(self) -> None:
+    async def test_request_session_rejects_empty_reason(self) -> None:
         async def _check() -> None:
             session_db = MagicMock()
             session_db.commit = AsyncMock()
@@ -118,15 +114,15 @@ class TestScopeRejection:
 
             with pytest.raises(ValidationError) as exc:
                 await ops.request_session(
-                    actor_user_id=uuid4(),
-                    organization_id=uuid4(),
+                    actor_user_id=generate_id(),
+                    organization_id=generate_id(),
                     reason="   ",
                     scope=SupportSessionScope.READ_ONLY,
                     duration_minutes=30,
                 )
             assert exc.value.field == "reason"
 
-        _run(_check())
+        await _check()
 
 
 class TestTransitionGuard:
@@ -210,7 +206,7 @@ class TestContextVar:
 
 
 class TestCipherBridge:
-    def test_decrypt_under_session_raises_without_opt_in(self) -> None:
+    async def test_decrypt_under_session_raises_without_opt_in(self) -> None:
         """OrgCipher.decrypt default-denies under an active session."""
         from uniffy.core.crypto.org_cipher import (
             OrgCipher,
@@ -218,7 +214,7 @@ class TestCipherBridge:
         )
 
         async def _check() -> None:
-            org_id = uuid4()
+            org_id = generate_id()
             db_session = MagicMock()
             db_session.add = MagicMock()
             db_session.execute = AsyncMock()
@@ -227,9 +223,9 @@ class TestCipherBridge:
             cipher = OrgCipher(db_session)
             token = active_support_session_var.set(
                 ActiveSupportSession(
-                    session_id=uuid4(),
+                    session_id=generate_id(),
                     organization_id=org_id,
-                    support_user_id=uuid4(),
+                    support_user_id=generate_id(),
                     scope="READ_ONLY",
                 )
             )
@@ -239,9 +235,9 @@ class TestCipherBridge:
             finally:
                 active_support_session_var.reset(token)
 
-        _run(_check())
+        await _check()
 
-    def test_decrypt_under_different_org_is_unaffected(self) -> None:
+    async def test_decrypt_under_different_org_is_unaffected(self) -> None:
         """A session for org A must not block decrypt for org B."""
         from uniffy.core.crypto.org_cipher import OrgCipher
 
@@ -256,9 +252,9 @@ class TestCipherBridge:
 
             token = active_support_session_var.set(
                 ActiveSupportSession(
-                    session_id=uuid4(),
+                    session_id=generate_id(),
                     organization_id=UUID(int=11),
-                    support_user_id=uuid4(),
+                    support_user_id=generate_id(),
                     scope="READ_ONLY",
                 )
             )
@@ -271,7 +267,7 @@ class TestCipherBridge:
             finally:
                 active_support_session_var.reset(token)
 
-        _run(_check())
+        await _check()
 
 
 class TestAuditWriterMerge:
@@ -279,13 +275,13 @@ class TestAuditWriterMerge:
         """write_audit_event auto-tags details when session is active."""
         from uniffy.core.audit.writer import _merge_support_session_tag
 
-        org_id = uuid4()
-        session_id = uuid4()
+        org_id = generate_id()
+        session_id = generate_id()
         token = active_support_session_var.set(
             ActiveSupportSession(
                 session_id=session_id,
                 organization_id=org_id,
-                support_user_id=uuid4(),
+                support_user_id=generate_id(),
                 scope="READ_ONLY",
             )
         )
@@ -303,7 +299,7 @@ class TestAuditWriterMerge:
         from uniffy.core.audit.writer import _merge_support_session_tag
 
         details: dict = {"foo": "bar"}
-        _merge_support_session_tag(details, uuid4())
+        _merge_support_session_tag(details, generate_id())
         assert "actor_kind" not in details
 
     def test_merge_skips_when_session_targets_other_org(self) -> None:
@@ -311,9 +307,9 @@ class TestAuditWriterMerge:
 
         token = active_support_session_var.set(
             ActiveSupportSession(
-                session_id=uuid4(),
+                session_id=generate_id(),
                 organization_id=UUID(int=11),
-                support_user_id=uuid4(),
+                support_user_id=generate_id(),
                 scope="READ_ONLY",
             )
         )
@@ -334,12 +330,12 @@ class TestAuditWriterMerge:
         """
         from uniffy.core.audit.writer import _merge_support_session_tag
 
-        org_id = uuid4()
+        org_id = generate_id()
         token = active_support_session_var.set(
             ActiveSupportSession(
-                session_id=uuid4(),
+                session_id=generate_id(),
                 organization_id=org_id,
-                support_user_id=uuid4(),
+                support_user_id=generate_id(),
                 scope="READ_ONLY",
             )
         )

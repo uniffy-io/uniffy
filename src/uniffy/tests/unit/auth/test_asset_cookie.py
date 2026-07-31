@@ -8,13 +8,14 @@ on the access path and vice-versa, and the cookie attributes flip correctly betw
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import jwt
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
+from uniffy.core.types import generate_id
 from uniffy.domains.auth.cookies import (
     attach_asset_cookie,
     build_clear_cookie,
@@ -39,9 +40,9 @@ def _set_jwt_secret(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_asset_read_token_roundtrips_with_its_claims() -> None:
-    user_id = uuid4()
-    org_id = uuid4()
-    sid = uuid4()
+    user_id = generate_id()
+    org_id = generate_id()
+    sid = generate_id()
     token = create_asset_read_token(user_id, org_id, token_version=7, session_id=sid)
 
     payload = decode_asset_read_token(token)
@@ -53,13 +54,13 @@ def test_asset_read_token_roundtrips_with_its_claims() -> None:
 
 
 def test_access_token_is_rejected_on_the_asset_path() -> None:
-    access = create_access_token(uuid4())
+    access = create_access_token(generate_id())
     with pytest.raises(jwt.InvalidTokenError):
         decode_asset_read_token(access)
 
 
 def test_asset_read_token_is_rejected_on_the_access_path() -> None:
-    asset = create_asset_read_token(uuid4())
+    asset = create_asset_read_token(generate_id())
     with pytest.raises(jwt.InvalidTokenError):
         decode_access_token(asset)
 
@@ -124,7 +125,7 @@ def _asset_route_client() -> TestClient:
 
 def test_cookie_authenticates_an_asset_route(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ASSET_COOKIE_SECURE", "false")
-    user_id = uuid4()
+    user_id = generate_id()
     client = _asset_route_client()
     client.cookies.set("uniffy_asset", create_asset_read_token(user_id))
 
@@ -134,7 +135,7 @@ def test_cookie_authenticates_an_asset_route(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_bearer_still_authenticates_an_asset_route() -> None:
-    user_id = uuid4()
+    user_id = generate_id()
     client = _asset_route_client()
 
     resp = client.get(
@@ -148,7 +149,7 @@ def test_asset_token_in_bearer_header_is_rejected() -> None:
     client = _asset_route_client()
     resp = client.get(
         "/me",
-        headers={"Authorization": f"Bearer {create_asset_read_token(uuid4())}"},
+        headers={"Authorization": f"Bearer {create_asset_read_token(generate_id())}"},
     )
     assert resp.status_code == 401
 
@@ -156,7 +157,7 @@ def test_asset_token_in_bearer_header_is_rejected() -> None:
 def test_access_token_in_cookie_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ASSET_COOKIE_SECURE", "false")
     client = _asset_route_client()
-    client.cookies.set("uniffy_asset", create_access_token(uuid4()))
+    client.cookies.set("uniffy_asset", create_access_token(generate_id()))
 
     resp = client.get("/me")
     assert resp.status_code == 401
@@ -183,9 +184,9 @@ def test_attach_asset_cookie_returns_the_pair_it_sets(
         def response_headers(self) -> _Headers:
             return _Headers()
 
-    user_id = uuid4()
-    org_id = uuid4()
-    sid = uuid4()
+    user_id = generate_id()
+    org_id = generate_id()
+    sid = generate_id()
     access = create_access_token(user_id, org_id, token_version=3, session_id=sid)
 
     pair = attach_asset_cookie(

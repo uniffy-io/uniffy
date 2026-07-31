@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
 import uniffy.domains.auth  # noqa: F401  -- pre-import auth chain
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.runtime import failover as failover_mod
 from uniffy.domains.agents.runtime.failover import (
     COOLDOWN_SECONDS,
@@ -32,18 +32,18 @@ class _FakeException(Exception):
 class TestCircuitBreaker:
     def test_clean_breaker_is_closed(self) -> None:
         breaker = CircuitBreaker()
-        assert breaker.is_open(uuid4()) is False
+        assert breaker.is_open(generate_id()) is False
 
     def test_opens_after_threshold_failures(self) -> None:
         breaker = CircuitBreaker()
-        key = uuid4()
+        key = generate_id()
         for _ in range(OPEN_THRESHOLD):
             breaker.record_failure(key)
         assert breaker.is_open(key) is True
 
     def test_success_resets_breaker(self) -> None:
         breaker = CircuitBreaker()
-        key = uuid4()
+        key = generate_id()
         for _ in range(OPEN_THRESHOLD):
             breaker.record_failure(key)
         assert breaker.is_open(key) is True
@@ -54,7 +54,7 @@ class TestCircuitBreaker:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         breaker = CircuitBreaker()
-        key = uuid4()
+        key = generate_id()
         base = time.monotonic()
         timeline = {"now": base}
 
@@ -72,8 +72,8 @@ class TestCircuitBreaker:
 
     def test_per_key_isolation(self) -> None:
         breaker = CircuitBreaker()
-        a = uuid4()
-        b = uuid4()
+        a = generate_id()
+        b = generate_id()
         for _ in range(OPEN_THRESHOLD):
             breaker.record_failure(a)
         assert breaker.is_open(a) is True
@@ -81,8 +81,8 @@ class TestCircuitBreaker:
 
     def test_reset_specific_key(self) -> None:
         breaker = CircuitBreaker()
-        a = uuid4()
-        b = uuid4()
+        a = generate_id()
+        b = generate_id()
         for _ in range(OPEN_THRESHOLD):
             breaker.record_failure(a)
             breaker.record_failure(b)
@@ -152,7 +152,7 @@ class TestRetryableClassification:
 def _make_key(*, key_id: UUID | None = None, provider: str = "anthropic") -> MagicMock:
     """Build a fake ProviderKey-shaped object for the iterator tests."""
     key = MagicMock()
-    key.id = key_id or uuid4()
+    key.id = key_id or generate_id()
     key.provider = provider
     return key
 
@@ -181,8 +181,8 @@ def _make_provider_ops(
 
 
 class TestCandidateIterator:
-    def test_yields_siblings_then_fallbacks(self) -> None:
-        org_id = uuid4()
+    async def test_yields_siblings_then_fallbacks(self) -> None:
+        org_id = generate_id()
         primary_key = _make_key(provider="anthropic")
         sibling_a = _make_key(provider="anthropic")
         sibling_b = _make_key(provider="anthropic")
@@ -209,7 +209,7 @@ class TestCandidateIterator:
                 out.append(c)
             return out
 
-        candidates = asyncio.run(collect())
+        candidates = await collect()
         assert len(candidates) == 3
         assert {c.provider_key_id for c in candidates[:2]} == {
             sibling_a.id,
@@ -218,8 +218,8 @@ class TestCandidateIterator:
         assert candidates[-1].model == "gpt-4o-mini"
         assert candidates[-1].provider_key_id == fallback_key.id
 
-    def test_caps_at_max_attempts(self) -> None:
-        org_id = uuid4()
+    async def test_caps_at_max_attempts(self) -> None:
+        org_id = generate_id()
         primary_key = _make_key(provider="anthropic")
         siblings = [primary_key] + [
             _make_key(provider="anthropic") for _ in range(5)
@@ -240,11 +240,11 @@ class TestCandidateIterator:
                 out.append(c)
             return out
 
-        candidates = asyncio.run(collect())
+        candidates = await collect()
         assert len(candidates) == MAX_FAILOVER_ATTEMPTS
 
-    def test_skips_open_breaker_keys(self) -> None:
-        org_id = uuid4()
+    async def test_skips_open_breaker_keys(self) -> None:
+        org_id = generate_id()
         primary_key = _make_key(provider="anthropic")
         bad_sibling = _make_key(provider="anthropic")
         good_sibling = _make_key(provider="anthropic")
@@ -269,12 +269,12 @@ class TestCandidateIterator:
                 out.append(c)
             return out
 
-        candidates = asyncio.run(collect())
+        candidates = await collect()
         assert len(candidates) == 1
         assert candidates[0].provider_key_id == good_sibling.id
 
-    def test_no_fallback_when_resolver_returns_none(self) -> None:
-        org_id = uuid4()
+    async def test_no_fallback_when_resolver_returns_none(self) -> None:
+        org_id = generate_id()
         primary_key = _make_key(provider="anthropic")
 
         ops = _make_provider_ops(
@@ -296,5 +296,5 @@ class TestCandidateIterator:
                 out.append(c)
             return out
 
-        candidates = asyncio.run(collect())
+        candidates = await collect()
         assert candidates == []

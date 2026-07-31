@@ -12,15 +12,13 @@ Covers the pure-Python pieces that don't require a live DB:
   flag on an idempotent re-bind, and enforces mutual exclusion with
   ``meeting_url``.
 
-Uses ``asyncio.run`` so it runs without pytest-asyncio, mirroring the rest of
-the calendar unit suite. SET NULL cascade behaviour is a Postgres-level FK
+SET NULL cascade behaviour is a Postgres-level FK
 guarantee exercised by the (separate) live-DB harness.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
@@ -31,13 +29,9 @@ from uniffy.core.errors import (
 )
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
-from uniffy.core.types import AccessMode
+from uniffy.core.types import AccessMode, generate_id
 from uniffy.domains.calendar.converters import event_to_proto
 from uniffy.domains.calendar.operations import CalendarEventOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _make_event(
@@ -48,9 +42,9 @@ def _make_event(
 ) -> CalendarEvent:
     now = datetime.now(UTC)
     return CalendarEvent(
-        organization_id=uuid4(),
-        organizer_id=uuid4(),
-        calendar_id=uuid4(),
+        organization_id=generate_id(),
+        organizer_id=generate_id(),
+        calendar_id=generate_id(),
         title="Sprint Planning",
         start_time=now,
         end_time=now,
@@ -69,8 +63,8 @@ def _make_ops() -> CalendarEventOperations:
 
 def _make_channel(*, is_archived: bool = False) -> ChatChannel:
     return ChatChannel(
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         name="standup",
         slug="standup",
         description="",
@@ -112,7 +106,7 @@ def _patch_checker(
 
 class TestChannelBindingConverter:
     def test_converter_passes_channel_binding(self) -> None:
-        cid = uuid4()
+        cid = generate_id()
         proto = event_to_proto(
             _make_event(channel_id=cid, channel_auto_created=True)
         )
@@ -127,21 +121,21 @@ class TestChannelBindingConverter:
 
 
 class TestValidateChannelBinding:
-    def test_happy_path_passes(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_happy_path_passes(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _patch_checker(monkeypatch, channel=_make_channel())
         ops = _make_ops()
         # No raise means the organizer may bind to the channel.
-        _run(ops._validate_channel_binding(uuid4(), uuid4(), uuid4()))
+        await ops._validate_channel_binding(generate_id(), generate_id(), generate_id())
 
-    def test_archived_channel_rejected(
+    async def test_archived_channel_rejected(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _patch_checker(monkeypatch, channel=_make_channel(is_archived=True))
         ops = _make_ops()
         with pytest.raises(ValidationError):
-            _run(ops._validate_channel_binding(uuid4(), uuid4(), uuid4()))
+            await ops._validate_channel_binding(generate_id(), generate_id(), generate_id())
 
-    def test_no_access_propagates(
+    async def test_no_access_propagates(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _patch_checker(
@@ -151,139 +145,125 @@ class TestValidateChannelBinding:
         )
         ops = _make_ops()
         with pytest.raises(PermissionDeniedError):
-            _run(ops._validate_channel_binding(uuid4(), uuid4(), uuid4()))
+            await ops._validate_channel_binding(generate_id(), generate_id(), generate_id())
 
-    def test_missing_or_cross_org_channel_propagates(
+    async def test_missing_or_cross_org_channel_propagates(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # get_channel already scopes by org and filters deleted rows, so a
         # cross-org or deleted channel surfaces as NotFound here.
         _patch_checker(
-            monkeypatch, get_error=NotFoundError("channel", uuid4())
+            monkeypatch, get_error=NotFoundError("channel", generate_id())
         )
         ops = _make_ops()
         with pytest.raises(NotFoundError):
-            _run(ops._validate_channel_binding(uuid4(), uuid4(), uuid4()))
+            await ops._validate_channel_binding(generate_id(), generate_id(), generate_id())
 
 
 class TestCreateMutualExclusion:
-    def test_create_rejects_meeting_url_and_channel_both_set(self) -> None:
+    async def test_create_rejects_meeting_url_and_channel_both_set(self) -> None:
         ops = _make_ops()
         now = datetime.now(UTC)
         with pytest.raises(ValidationError):
-            _run(
-                ops.create(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    title="Sync",
-                    start_time=now,
-                    end_time=now,
-                    calendar_id=uuid4(),
-                    meeting_url="https://zoom.test/x",
-                    channel_id=uuid4(),
-                )
+            await ops.create(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                title="Sync",
+                start_time=now,
+                end_time=now,
+                calendar_id=generate_id(),
+                meeting_url="https://zoom.test/x",
+                channel_id=generate_id(),
             )
 
-    def test_create_validates_channel_when_no_meeting_url(self) -> None:
+    async def test_create_validates_channel_when_no_meeting_url(self) -> None:
         ops = _make_ops()
         ops._validate_channel_binding = AsyncMock(
             side_effect=ValidationError("channel_id", "denied")
         )
         now = datetime.now(UTC)
         with pytest.raises(ValidationError):
-            _run(
-                ops.create(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    title="Sync",
-                    start_time=now,
-                    end_time=now,
-                    calendar_id=uuid4(),
-                    channel_id=uuid4(),
-                )
+            await ops.create(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                title="Sync",
+                start_time=now,
+                end_time=now,
+                calendar_id=generate_id(),
+                channel_id=generate_id(),
             )
         ops._validate_channel_binding.assert_awaited_once()
 
 
 class TestApplyChannelBindingUpdate:
-    def test_clears_binding_on_empty_string(self) -> None:
+    async def test_clears_binding_on_empty_string(self) -> None:
         ops = _make_ops()
-        event = _make_event(channel_id=uuid4(), channel_auto_created=True)
-        _run(ops._apply_channel_binding_update(uuid4(), uuid4(), event, "", False))
+        event = _make_event(channel_id=generate_id(), channel_auto_created=True)
+        await ops._apply_channel_binding_update(generate_id(), generate_id(), event, "", False)
         assert event.channel_id is None
         assert event.channel_auto_created is False
 
-    def test_binds_new_channel(self) -> None:
+    async def test_binds_new_channel(self) -> None:
         ops = _make_ops()
         ops._validate_channel_binding = AsyncMock()
         event = _make_event()
-        new_id = uuid4()
-        _run(
-            ops._apply_channel_binding_update(
-                uuid4(), uuid4(), event, str(new_id), False
-            )
+        new_id = generate_id()
+        await ops._apply_channel_binding_update(
+            generate_id(), generate_id(), event, str(new_id), False
         )
         assert event.channel_id == new_id
         assert event.channel_auto_created is False
         ops._validate_channel_binding.assert_awaited_once()
 
-    def test_preserves_auto_created_on_idempotent_rebind(self) -> None:
+    async def test_preserves_auto_created_on_idempotent_rebind(self) -> None:
         ops = _make_ops()
         ops._validate_channel_binding = AsyncMock()
-        cid = uuid4()
+        cid = generate_id()
         event = _make_event(channel_id=cid, channel_auto_created=True)
-        _run(
-            ops._apply_channel_binding_update(
-                uuid4(), uuid4(), event, str(cid), False
-            )
+        await ops._apply_channel_binding_update(
+            generate_id(), generate_id(), event, str(cid), False
         )
         assert event.channel_id == cid
         # Re-binding the same channel must not clear an auto-created flag.
         assert event.channel_auto_created is True
 
-    def test_untouched_leaves_binding(self) -> None:
+    async def test_untouched_leaves_binding(self) -> None:
         ops = _make_ops()
         ops._validate_channel_binding = AsyncMock()
-        cid = uuid4()
+        cid = generate_id()
         event = _make_event(channel_id=cid, channel_auto_created=True)
-        _run(
-            ops._apply_channel_binding_update(uuid4(), uuid4(), event, None, False)
-        )
+        await ops._apply_channel_binding_update(generate_id(), generate_id(), event, None, False)
         assert event.channel_id == cid
         assert event.channel_auto_created is True
         ops._validate_channel_binding.assert_not_awaited()
 
-    def test_rejects_binding_alongside_meeting_url(self) -> None:
+    async def test_rejects_binding_alongside_meeting_url(self) -> None:
         ops = _make_ops()
         ops._validate_channel_binding = AsyncMock()
         event = _make_event(meeting_url="https://zoom.test/x")
         with pytest.raises(ValidationError):
-            _run(
-                ops._apply_channel_binding_update(
-                    uuid4(), uuid4(), event, str(uuid4()), False
-                )
+            await ops._apply_channel_binding_update(
+                generate_id(), generate_id(), event, str(generate_id()), False
             )
 
-    def test_new_binding_carries_auto_created_flag(self) -> None:
+    async def test_new_binding_carries_auto_created_flag(self) -> None:
         ops = _make_ops()
         ops._validate_channel_binding = AsyncMock()
         event = _make_event()
-        new_id = uuid4()
-        _run(
-            ops._apply_channel_binding_update(
-                uuid4(), uuid4(), event, str(new_id), False, channel_auto_created=True
-            )
+        new_id = generate_id()
+        await ops._apply_channel_binding_update(
+            generate_id(), generate_id(), event, str(new_id), False, channel_auto_created=True
         )
         assert event.channel_id == new_id
         assert event.channel_auto_created is True
 
-    def test_picked_channel_defaults_flag_false(self) -> None:
+    async def test_picked_channel_defaults_flag_false(self) -> None:
         ops = _make_ops()
         ops._validate_channel_binding = AsyncMock()
         event = _make_event()
-        new_id = uuid4()
-        _run(
-            ops._apply_channel_binding_update(uuid4(), uuid4(), event, str(new_id), False)
+        new_id = generate_id()
+        await ops._apply_channel_binding_update(
+            generate_id(), generate_id(), event, str(new_id), False
         )
         assert event.channel_id == new_id
         assert event.channel_auto_created is False
@@ -327,28 +307,28 @@ def _patch_chat_ops(
 
 
 class TestAutoCreatedRoomSync:
-    def test_skips_picked_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_skips_picked_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls = _patch_chat_ops(monkeypatch)
         ops = _make_ops()
-        event = _make_event(channel_id=uuid4(), channel_auto_created=False)
-        _run(ops._sync_auto_created_room_members(event, added=[uuid4()], removed=[]))
+        event = _make_event(channel_id=generate_id(), channel_auto_created=False)
+        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
         assert calls["add"] == []
         assert calls["remove"] == []
 
-    def test_skips_when_no_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_skips_when_no_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls = _patch_chat_ops(monkeypatch)
         ops = _make_ops()
         event = _make_event(channel_auto_created=True)
-        _run(ops._sync_auto_created_room_members(event, added=[uuid4()], removed=[]))
+        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])
         assert calls["add"] == []
 
-    def test_mirrors_add_and_remove(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_mirrors_add_and_remove(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls = _patch_chat_ops(monkeypatch)
         ops = _make_ops()
-        cid = uuid4()
+        cid = generate_id()
         event = _make_event(channel_id=cid, channel_auto_created=True)
-        u_add, u_rm = uuid4(), uuid4()
-        _run(ops._sync_auto_created_room_members(event, added=[u_add], removed=[u_rm]))
+        u_add, u_rm = generate_id(), generate_id()
+        await ops._sync_auto_created_room_members(event, added=[u_add], removed=[u_rm])
         assert calls["add"] == [
             (event.organizer_id, event.organization_id, cid, [u_add])
         ]
@@ -356,24 +336,22 @@ class TestAutoCreatedRoomSync:
             (event.organizer_id, event.organization_id, cid, [u_rm])
         ]
 
-    def test_excludes_organizer(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_excludes_organizer(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls = _patch_chat_ops(monkeypatch)
         ops = _make_ops()
-        event = _make_event(channel_id=uuid4(), channel_auto_created=True)
+        event = _make_event(channel_id=generate_id(), channel_auto_created=True)
         # The organizer owns the room; never re-add or remove them.
-        _run(
-            ops._sync_auto_created_room_members(
-                event, added=[event.organizer_id], removed=[event.organizer_id]
-            )
+        await ops._sync_auto_created_room_members(
+            event, added=[event.organizer_id], removed=[event.organizer_id]
         )
         assert calls["add"] == []
         assert calls["remove"] == []
 
-    def test_best_effort_swallows_chat_failure(
+    async def test_best_effort_swallows_chat_failure(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _patch_chat_ops(monkeypatch, add_error=RuntimeError("chat down"))
         ops = _make_ops()
-        event = _make_event(channel_id=uuid4(), channel_auto_created=True)
+        event = _make_event(channel_id=generate_id(), channel_auto_created=True)
         # A chat-side failure must not fail the calendar operation.
-        _run(ops._sync_auto_created_room_members(event, added=[uuid4()], removed=[]))
+        await ops._sync_auto_created_room_members(event, added=[generate_id()], removed=[])

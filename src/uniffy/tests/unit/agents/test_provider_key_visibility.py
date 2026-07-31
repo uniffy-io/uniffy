@@ -1,15 +1,14 @@
 """What a provider key renders to a caller: hints and admin-only diagnostics."""
 
-import asyncio
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 from uniffy_proto.agents.v1.providers_pb2 import ListProviderKeysRequest
 
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.converters import provider_key_to_proto
 from uniffy.domains.agents.providers.handlers import ProvidersHandlers
 from uniffy.domains.agents.providers.utils import build_key_hint
@@ -18,7 +17,7 @@ from uniffy.domains.agents.providers.utils import build_key_hint
 def _key_row(**overrides):
     now = datetime.now(UTC)
     defaults = dict(
-        id=uuid4(),
+        id=generate_id(),
         provider="anthropic",
         label="Primary",
         key_hint="sk-ant-api03...abcd",
@@ -26,7 +25,7 @@ def _key_row(**overrides):
         is_enabled=True,
         created_at=now,
         updated_at=now,
-        created_by=uuid4(),
+        created_by=generate_id(),
         last_validated_at=now,
         last_used_at=None,
         last_error="401 unauthorized: sk-ant-live-... rejected by upstream",
@@ -42,10 +41,10 @@ def test_converter_hides_last_error_unless_diagnostics_requested() -> None:
     assert provider_key_to_proto(key, include_diagnostics=True).last_error == key.last_error
 
 
-def _list_keys_as(*, org_admin: bool, keys: list) -> tuple[list, AsyncMock]:
+async def _list_keys_as(*, org_admin: bool, keys: list) -> tuple[list, AsyncMock]:
     """Run ListProviderKeys with a stubbed session, ops and role lookup."""
     handlers = ProvidersHandlers()
-    request = ListProviderKeysRequest(organization_id=str(uuid4()))
+    request = ListProviderKeysRequest(organization_id=str(generate_id()))
     ops = MagicMock()
     ops.list_keys = AsyncMock(return_value=keys)
     gate = AsyncMock(return_value=org_admin)
@@ -58,7 +57,7 @@ def _list_keys_as(*, org_admin: bool, keys: list) -> tuple[list, AsyncMock]:
         with (
             patch(
                 "uniffy.domains.agents.providers.handlers.get_user_id_from_context",
-                MagicMock(return_value=uuid4()),
+                MagicMock(return_value=generate_id()),
             ),
             patch(
                 "uniffy.domains.agents.providers.handlers.open_session",
@@ -76,29 +75,29 @@ def _list_keys_as(*, org_admin: bool, keys: list) -> tuple[list, AsyncMock]:
             response = await handlers.list_provider_keys(request, MagicMock())
         return list(response.keys)
 
-    return asyncio.run(run()), gate
+    return await run(), gate
 
 
-def test_list_keys_gives_an_org_admin_the_validation_error() -> None:
+async def test_list_keys_gives_an_org_admin_the_validation_error() -> None:
     key = _key_row()
 
-    rendered, _ = _list_keys_as(org_admin=True, keys=[key])
+    rendered, _ = await _list_keys_as(org_admin=True, keys=[key])
 
     assert rendered[0].last_error == key.last_error
 
 
-def test_list_keys_hides_the_validation_error_from_a_plain_member() -> None:
+async def test_list_keys_hides_the_validation_error_from_a_plain_member() -> None:
     key = _key_row()
 
-    rendered, _ = _list_keys_as(org_admin=False, keys=[key])
+    rendered, _ = await _list_keys_as(org_admin=False, keys=[key])
 
     assert not rendered[0].HasField("last_error")
     assert rendered[0].key_hint == key.key_hint
     assert rendered[0].is_valid is False
 
 
-def test_role_is_resolved_once_per_rpc_not_per_key() -> None:
-    rendered, gate = _list_keys_as(
+async def test_role_is_resolved_once_per_rpc_not_per_key() -> None:
+    rendered, gate = await _list_keys_as(
         org_admin=False,
         keys=[_key_row(), _key_row(), _key_row()],
     )

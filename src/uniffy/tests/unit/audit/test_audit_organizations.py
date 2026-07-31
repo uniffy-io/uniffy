@@ -5,9 +5,7 @@ update_member_role / remove_member and the settings JSONB merge path.
 DB calls are mocked.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.organization import Organization
@@ -15,6 +13,7 @@ from uniffy.core.models.login.organization_member import (
     OrganizationMember,
     OrganizationRole,
 )
+from uniffy.core.types import generate_id
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
@@ -28,7 +27,7 @@ def _audit_rows(session: MagicMock) -> list:
 
 def _make_org(*, name: str = "Acme", slug: str = "acme") -> Organization:
     return Organization(
-        id=uuid4(),
+        id=generate_id(),
         name=name,
         slug=slug,
         plan="free",
@@ -37,7 +36,7 @@ def _make_org(*, name: str = "Acme", slug: str = "acme") -> Organization:
     )
 
 
-def test_update_emits_settings_changed_with_diff() -> None:
+async def test_update_emits_settings_changed_with_diff() -> None:
     org = _make_org(name="Old", slug="old")
     session = MagicMock()
     session.execute = AsyncMock()
@@ -49,13 +48,11 @@ def test_update_emits_settings_changed_with_diff() -> None:
     with patch.object(
         OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
     ):
-        asyncio.run(
-            ops.update(
-                org_id=org.id,
-                name="New",
-                plan="pro",
-                actor_user_id=uuid4(),
-            )
+        await ops.update(
+            org_id=org.id,
+            name="New",
+            plan="pro",
+            actor_user_id=generate_id(),
         )
 
     rows = _audit_rows(session)
@@ -64,7 +61,7 @@ def test_update_emits_settings_changed_with_diff() -> None:
     assert sorted(rows[0].details["changed_keys"]) == ["name", "plan"]
 
 
-def test_update_with_no_changes_skips_audit() -> None:
+async def test_update_with_no_changes_skips_audit() -> None:
     org = _make_org()
     session = MagicMock()
     session.execute = AsyncMock()
@@ -76,12 +73,12 @@ def test_update_with_no_changes_skips_audit() -> None:
     with patch.object(
         OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
     ):
-        asyncio.run(ops.update(org_id=org.id, actor_user_id=uuid4()))
+        await ops.update(org_id=org.id, actor_user_id=generate_id())
 
     assert _audit_rows(session) == []
 
 
-def test_delete_emits_organization_deleted() -> None:
+async def test_delete_emits_organization_deleted() -> None:
     org = _make_org()
     session = MagicMock()
     session.execute = AsyncMock(return_value=MagicMock(all=lambda: []))
@@ -93,7 +90,7 @@ def test_delete_emits_organization_deleted() -> None:
     with patch.object(
         OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
     ):
-        asyncio.run(ops.delete(org.id, actor_user_id=uuid4()))
+        await ops.delete(org.id, actor_user_id=generate_id())
 
     rows = _audit_rows(session)
     deleted = [r for r in rows if r.action == Action.ORGANIZATION_DELETED]
@@ -101,7 +98,7 @@ def test_delete_emits_organization_deleted() -> None:
     assert deleted[0].details["name"] == "Acme"
 
 
-def test_add_member_emits_member_added() -> None:
+async def test_add_member_emits_member_added() -> None:
     session = MagicMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     session.add = MagicMock()
@@ -113,9 +110,9 @@ def test_add_member_emits_member_added() -> None:
     ops = OrganizationOperations(session)
     ops._user_indexer = indexer
 
-    org_id = uuid4()
-    target = uuid4()
-    actor = uuid4()
+    org_id = generate_id()
+    target = generate_id()
+    actor = generate_id()
 
     attachment_ops_instance = MagicMock()
     attachment_ops_instance.get_or_create_attachments_folder = AsyncMock(
@@ -139,10 +136,8 @@ def test_add_member_emits_member_added() -> None:
         "uniffy.domains.organizations.operations._drop_user_perm_cache",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(
-            ops.add_member(
-                target, org_id, OrganizationRole.ADMIN, actor_user_id=actor
-            )
+        await ops.add_member(
+            target, org_id, OrganizationRole.ADMIN, actor_user_id=actor
         )
 
     rows = _audit_rows(session)
@@ -153,10 +148,10 @@ def test_add_member_emits_member_added() -> None:
     assert added[0].details["role"] == "ADMIN"
 
 
-def test_update_member_role_emits_role_changed_with_previous_role() -> None:
-    admin = uuid4()
-    org_id = uuid4()
-    target = uuid4()
+async def test_update_member_role_emits_role_changed_with_previous_role() -> None:
+    admin = generate_id()
+    org_id = generate_id()
+    target = generate_id()
     member = OrganizationMember(
         user_id=target,
         organization_id=org_id,
@@ -185,9 +180,7 @@ def test_update_member_role_emits_role_changed_with_previous_role() -> None:
         "uniffy.domains.organizations.operations._drop_user_perm_cache",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(
-            ops.update_member_role(admin, org_id, target, OrganizationRole.ADMIN)
-        )
+        await ops.update_member_role(admin, org_id, target, OrganizationRole.ADMIN)
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -197,10 +190,10 @@ def test_update_member_role_emits_role_changed_with_previous_role() -> None:
     assert row.details["new_role"] == "ADMIN"
 
 
-def test_remove_member_emits_member_removed_with_previous_role() -> None:
-    admin = uuid4()
-    org_id = uuid4()
-    target = uuid4()
+async def test_remove_member_emits_member_removed_with_previous_role() -> None:
+    admin = generate_id()
+    org_id = generate_id()
+    target = generate_id()
     membership = OrganizationMember(
         user_id=target,
         organization_id=org_id,
@@ -228,7 +221,7 @@ def test_remove_member_emits_member_removed_with_previous_role() -> None:
         "uniffy.domains.organizations.operations._drop_user_perm_cache",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(ops.remove_member(admin, org_id, target))
+        await ops.remove_member(admin, org_id, target)
 
     rows = _audit_rows(session)
     removed = [r for r in rows if r.action == Action.ORGANIZATION_MEMBER_REMOVED]
@@ -237,7 +230,7 @@ def test_remove_member_emits_member_removed_with_previous_role() -> None:
     assert removed[0].actor_user_id == admin
 
 
-def test_update_organization_settings_emits_changed_keys() -> None:
+async def test_update_organization_settings_emits_changed_keys() -> None:
     org = _make_org()
     org.settings = {"chat": {"agents_enabled": False}}
     session = MagicMock()
@@ -252,9 +245,7 @@ def test_update_organization_settings_emits_changed_keys() -> None:
     ), patch.object(
         OrganizationOperations, "get_by_id", AsyncMock(return_value=org)
     ):
-        asyncio.run(
-            ops.update_organization_settings(uuid4(), org.id, chat_agents_enabled=True)
-        )
+        await ops.update_organization_settings(generate_id(), org.id, chat_agents_enabled=True)
 
     rows = _audit_rows(session)
     assert len(rows) == 1

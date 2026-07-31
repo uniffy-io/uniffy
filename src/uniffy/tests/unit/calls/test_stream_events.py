@@ -1,11 +1,11 @@
 """Call event payloads survive the Valkey JSON hop into proto ChatEvents."""
 
-import uuid
 from datetime import UTC, datetime
 
 from uniffy_proto.calls.v1.calls_pb2 import CallType as ProtoCallType
 from uniffy_proto.chat.v1.chat_stream_pb2 import ChatEventType
 
+from uniffy.core.types import generate_id
 from uniffy.domains.chat.streaming import events as evt
 from uniffy.domains.chat.streaming.handlers import (
     _CHANNEL_EVENT_TYPES,
@@ -49,10 +49,10 @@ def test_call_events_route_as_channel_events():
 
 
 def test_call_started_carries_snapshot():
-    call_id = str(uuid.uuid4())
+    call_id = str(generate_id())
     call = {
         "call_id": call_id,
-        "organization_id": str(uuid.uuid4()),
+        "organization_id": str(generate_id()),
         "channel_id": "chan-1",
         "call_type": "CHANNEL",
         "initiator_user_id": "u1",
@@ -72,8 +72,8 @@ def test_call_started_carries_snapshot():
 
 def test_call_ended_maps_end_reason():
     call = {
-        "call_id": str(uuid.uuid4()),
-        "organization_id": str(uuid.uuid4()),
+        "call_id": str(generate_id()),
+        "organization_id": str(generate_id()),
         "channel_id": "chan-1",
         "call_type": "DIRECT",
         "initiator_user_id": "u1",
@@ -89,7 +89,7 @@ def test_call_ended_maps_end_reason():
 
 
 def test_participant_events_carry_count():
-    call_id = uuid.uuid4()
+    call_id = generate_id()
     for event_name, proto_type in (
         (evt.CALL_PARTICIPANT_JOINED, ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_JOINED),
         (evt.CALL_PARTICIPANT_LEFT, ChatEventType.CHAT_EVENT_TYPE_CALL_PARTICIPANT_LEFT),
@@ -103,8 +103,8 @@ def test_participant_events_carry_count():
 
 
 def test_call_ring_payload():
-    call_id = uuid.uuid4()
-    caller_id = uuid.uuid4()
+    call_id = generate_id()
+    caller_id = generate_id()
     payload = evt.build_call_ring_payload(
         call_id=call_id,
         channel_name="Q1 Planning",
@@ -123,7 +123,7 @@ def test_call_ring_payload():
 
 
 def test_call_host_changed():
-    call_id, new_host = uuid.uuid4(), uuid.uuid4()
+    call_id, new_host = generate_id(), generate_id()
     payload = evt.build_call_host_changed_payload(call_id, new_host)
     event = _payload_to_channel_event(_wire(evt.CALL_HOST_CHANGED, payload))
     assert event.event_type == ChatEventType.CHAT_EVENT_TYPE_CALL_HOST_CHANGED

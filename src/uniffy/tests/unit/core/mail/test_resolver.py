@@ -5,20 +5,15 @@ logic without touching Postgres. Per-org mail config lives in the
 generic ``org_settings`` table under ``namespace='mail'``.
 """
 
-import asyncio
 from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.mail import MailNotConfiguredError
 from uniffy.core.mail.resolver import MailConfigResolver
-
-
-def _run(coro):
-    return asyncio.run(coro)
+from uniffy.core.types import generate_id
 
 
 @dataclass
@@ -46,11 +41,11 @@ def _miss():
 
 
 class TestResolveFromOrgRows:
-    def test_org_rows_win_over_env(self, monkeypatch) -> None:
+    async def test_org_rows_win_over_env(self, monkeypatch) -> None:
         monkeypatch.setenv("MAIL_FROM_ADDRESS", "env@uniffy.local")
         monkeypatch.setenv("SMTP_HOST", "env-smtp")
 
-        org_id = uuid4()
+        org_id = generate_id()
         rows = [
             _Row("from_address", value="org@acme.com"),
             _Row("from_name", value="Acme"),
@@ -77,7 +72,7 @@ class TestResolveFromOrgRows:
             cipher.decrypt = AsyncMock(return_value="plain-secret")
             cipher_cls.return_value = cipher
             resolver = MailConfigResolver(session)
-            cfg = _run(resolver.resolve(org_id))
+            cfg = await resolver.resolve(org_id)
 
         assert cfg.from_address == "org@acme.com"
         assert cfg.from_name == "Acme"
@@ -86,7 +81,7 @@ class TestResolveFromOrgRows:
         assert cfg.smtp_password == "plain-secret"
         assert cfg.source == "org"
 
-    def test_partial_org_rows_fall_back_to_env(self, monkeypatch) -> None:
+    async def test_partial_org_rows_fall_back_to_env(self, monkeypatch) -> None:
         monkeypatch.setenv("MAIL_FROM_ADDRESS", "sys@uniffy.local")
         monkeypatch.setenv("SMTP_HOST", "smtp.local")
 
@@ -100,12 +95,12 @@ class TestResolveFromOrgRows:
             new=AsyncMock(return_value=_miss()),
         ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
             resolver = MailConfigResolver(session)
-            cfg = _run(resolver.resolve(uuid4()))
+            cfg = await resolver.resolve(generate_id())
 
         assert cfg.source == "env"
         assert cfg.from_address == "sys@uniffy.local"
 
-    def test_no_rows_falls_back_to_env(self, monkeypatch) -> None:
+    async def test_no_rows_falls_back_to_env(self, monkeypatch) -> None:
         monkeypatch.setenv("MAIL_FROM_ADDRESS", "sys@uniffy.local")
         monkeypatch.setenv("SMTP_HOST", "smtp.local")
         monkeypatch.setenv("SMTP_PORT", "2525")
@@ -116,13 +111,13 @@ class TestResolveFromOrgRows:
             new=AsyncMock(return_value=_miss()),
         ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
             resolver = MailConfigResolver(session)
-            cfg = _run(resolver.resolve(uuid4()))
+            cfg = await resolver.resolve(generate_id())
 
         assert cfg.from_address == "sys@uniffy.local"
         assert cfg.smtp_port == 2525
         assert cfg.source == "env"
 
-    def test_no_rows_no_env_raises(self, monkeypatch) -> None:
+    async def test_no_rows_no_env_raises(self, monkeypatch) -> None:
         monkeypatch.delenv("MAIL_FROM_ADDRESS", raising=False)
         monkeypatch.delenv("SMTP_HOST", raising=False)
 
@@ -133,9 +128,9 @@ class TestResolveFromOrgRows:
         ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
             resolver = MailConfigResolver(session)
             with pytest.raises(MailNotConfiguredError):
-                _run(resolver.resolve(uuid4()))
+                await resolver.resolve(generate_id())
 
-    def test_none_org_falls_through_to_env(self, monkeypatch) -> None:
+    async def test_none_org_falls_through_to_env(self, monkeypatch) -> None:
         # With no org id and no deployment_settings rows, the resolver
         # skips the org tier, queries deployment (empty), then falls
         # through to env. The deployment query is one ``session.execute``
@@ -150,13 +145,13 @@ class TestResolveFromOrgRows:
             new=AsyncMock(return_value=_miss()),
         ), patch("uniffy.core.mail.resolver.cache_set", new=AsyncMock()):
             resolver = MailConfigResolver(session)
-            cfg = _run(resolver.resolve(None))
+            cfg = await resolver.resolve(None)
 
         assert cfg.source == "env"
 
 
 class TestCache:
-    def test_cache_hit_skips_db(self) -> None:
+    async def test_cache_hit_skips_db(self) -> None:
         session = AsyncMock()
         cached_payload = {
             "from_address": "cached@uniffy.io",
@@ -172,6 +167,6 @@ class TestCache:
             new=AsyncMock(return_value=cached_payload),
         ):
             resolver = MailConfigResolver(session)
-            cfg = _run(resolver.resolve(uuid4()))
+            cfg = await resolver.resolve(generate_id())
         assert cfg.from_address == "cached@uniffy.io"
         session.execute.assert_not_called()

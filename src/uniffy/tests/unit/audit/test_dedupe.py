@@ -6,13 +6,12 @@ write; lock contention suppresses it. Valkey unavailability is
 fail-open.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.types import generate_id
 
 
 def _session_with_role() -> MagicMock:
@@ -24,7 +23,7 @@ def _session_with_role() -> MagicMock:
     return session
 
 
-def test_dedupe_lock_acquired_inserts_one_row() -> None:
+async def test_dedupe_lock_acquired_inserts_one_row() -> None:
     session = _session_with_role()
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=True)
@@ -32,14 +31,12 @@ def test_dedupe_lock_acquired_inserts_one_row() -> None:
     with patch(
         "uniffy.core.audit.writer._get_ops_client", return_value=valkey
     ):
-        asyncio.run(
-            write_audit_event(
-                session,
-                organization_id=uuid4(),
-                actor_user_id=uuid4(),
-                action=Action.AUTH_TOKEN_REFRESHED,
-                dedupe_key="user-1",
-            )
+        await write_audit_event(
+            session,
+            organization_id=generate_id(),
+            actor_user_id=generate_id(),
+            action=Action.AUTH_TOKEN_REFRESHED,
+            dedupe_key="user-1",
         )
 
     session.add.assert_called_once()
@@ -48,7 +45,7 @@ def test_dedupe_lock_acquired_inserts_one_row() -> None:
     assert kwargs == {"nx": True, "ex": 3600}
 
 
-def test_dedupe_lock_held_skips_write() -> None:
+async def test_dedupe_lock_held_skips_write() -> None:
     session = _session_with_role()
     valkey = MagicMock()
     valkey.set = AsyncMock(return_value=False)
@@ -56,39 +53,35 @@ def test_dedupe_lock_held_skips_write() -> None:
     with patch(
         "uniffy.core.audit.writer._get_ops_client", return_value=valkey
     ):
-        asyncio.run(
-            write_audit_event(
-                session,
-                organization_id=uuid4(),
-                actor_user_id=uuid4(),
-                action=Action.AUTH_TOKEN_REFRESHED,
-                dedupe_key="user-1",
-            )
+        await write_audit_event(
+            session,
+            organization_id=generate_id(),
+            actor_user_id=generate_id(),
+            action=Action.AUTH_TOKEN_REFRESHED,
+            dedupe_key="user-1",
         )
 
     session.add.assert_not_called()
 
 
-def test_dedupe_fails_open_when_valkey_unreachable() -> None:
+async def test_dedupe_fails_open_when_valkey_unreachable() -> None:
     session = _session_with_role()
 
     with patch(
         "uniffy.core.audit.writer._get_ops_client", return_value=None
     ):
-        asyncio.run(
-            write_audit_event(
-                session,
-                organization_id=uuid4(),
-                actor_user_id=uuid4(),
-                action=Action.AUTH_TOKEN_REFRESHED,
-                dedupe_key="user-1",
-            )
+        await write_audit_event(
+            session,
+            organization_id=generate_id(),
+            actor_user_id=generate_id(),
+            action=Action.AUTH_TOKEN_REFRESHED,
+            dedupe_key="user-1",
         )
 
     session.add.assert_called_once()
 
 
-def test_dedupe_fails_open_when_valkey_call_errors() -> None:
+async def test_dedupe_fails_open_when_valkey_call_errors() -> None:
     session = _session_with_role()
     valkey = MagicMock()
     valkey.set = AsyncMock(side_effect=RuntimeError("network"))
@@ -96,14 +89,12 @@ def test_dedupe_fails_open_when_valkey_call_errors() -> None:
     with patch(
         "uniffy.core.audit.writer._get_ops_client", return_value=valkey
     ):
-        asyncio.run(
-            write_audit_event(
-                session,
-                organization_id=uuid4(),
-                actor_user_id=uuid4(),
-                action=Action.AUTH_TOKEN_REFRESHED,
-                dedupe_key="user-1",
-            )
+        await write_audit_event(
+            session,
+            organization_id=generate_id(),
+            actor_user_id=generate_id(),
+            action=Action.AUTH_TOKEN_REFRESHED,
+            dedupe_key="user-1",
         )
 
     session.add.assert_called_once()

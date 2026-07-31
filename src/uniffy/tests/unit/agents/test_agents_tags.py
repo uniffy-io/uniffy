@@ -1,12 +1,7 @@
 """Unit tests for the agents <-> tags wiring.
-
-Uses ``asyncio.run`` helpers for the async paths so it works with the
-repo's vanilla pytest harness (no pytest-asyncio dependency).
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
@@ -15,14 +10,10 @@ from uniffy.core.types import AccessMode, generate_id
 from uniffy.domains.agents.agents.operations import AgentOperations
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _make_agent() -> Agent:
     return Agent(
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         name="Helper",
         soul_prompt="",
         primary_model="claude-sonnet-4-6",
@@ -61,20 +52,20 @@ class TestTagFilterSubquery:
 
 
 class TestSyncAgentTags:
-    def test_none_tag_ids_short_circuits(self) -> None:
+    async def test_none_tag_ids_short_circuits(self) -> None:
         ops = _make_ops()
         agent = _make_agent()
         # ``tag_ids=None`` means "leave manual assignments untouched"
         # so the helper must never reach into TagOperations.
-        _run(ops._sync_agent_tags(actor_id=uuid4(), agent=agent, tag_ids=None))
+        await ops._sync_agent_tags(actor_id=generate_id(), agent=agent, tag_ids=None)
         ops.session.execute.assert_not_called()
 
-    def test_replace_routes_through_unified_store(
+    async def test_replace_routes_through_unified_store(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         ops = _make_ops()
         agent = _make_agent()
-        actor_id = uuid4()
+        actor_id = generate_id()
         replacement = [generate_id()]
 
         captured: dict[str, object] = {}
@@ -101,10 +92,8 @@ class TestSyncAgentTags:
             raising=True,
         )
 
-        _run(
-            ops._sync_agent_tags(
-                actor_id=actor_id, agent=agent, tag_ids=replacement
-            )
+        await ops._sync_agent_tags(
+            actor_id=actor_id, agent=agent, tag_ids=replacement
         )
 
         assert captured["actor_id"] == actor_id
@@ -114,10 +103,10 @@ class TestSyncAgentTags:
 
 
 class TestHydrateHelper:
-    def test_hydrate_helper_no_op_on_empty_input(self) -> None:
+    async def test_hydrate_helper_no_op_on_empty_input(self) -> None:
         from uniffy.domains.agents.agents.handlers import _hydrate_agent_tags
 
         session = AsyncMock()
-        out = _run(_hydrate_agent_tags(session, uuid4(), []))
+        out = await _hydrate_agent_tags(session, generate_id(), [])
         assert out == {}
         session.execute.assert_not_called()

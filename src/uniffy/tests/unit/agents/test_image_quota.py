@@ -4,16 +4,15 @@ Uses MagicMock sessions because the helper just runs a few reads. The
 month-window math is pure and has its own direct tests.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import BudgetExceededError
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.user_quota import AgentUserQuota
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.budgets import image_quota as mod
 from uniffy.domains.agents.budgets.defaults import (
     DEFAULT_DAILY_IMAGE_LIMIT_PER_USER,
@@ -73,7 +72,7 @@ class TestMonthWindow:
 class TestCheckImageQuotaNoRows:
     """No quota or budget rows -> server defaults, always soft."""
 
-    def test_under_daily_default_is_noop(self) -> None:
+    async def test_under_daily_default_is_noop(self) -> None:
         session = _mock_session()
 
         async def run() -> None:
@@ -91,13 +90,13 @@ class TestCheckImageQuotaNoRows:
             ):
                 await check_image_quota(
                     session,
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_over_daily_default_is_warn_not_hard(self) -> None:
+    async def test_over_daily_default_is_warn_not_hard(self) -> None:
         session = _mock_session()
 
         async def run() -> None:
@@ -118,13 +117,13 @@ class TestCheckImageQuotaNoRows:
                 # Defaults alone never raise; the overage just logs.
                 await check_image_quota(
                     session,
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_over_monthly_default_is_warn_not_hard(self) -> None:
+    async def test_over_monthly_default_is_warn_not_hard(self) -> None:
         session = _mock_session()
 
         async def run() -> None:
@@ -144,19 +143,19 @@ class TestCheckImageQuotaNoRows:
             ):
                 await check_image_quota(
                     session,
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                 )
 
-        asyncio.run(run())
+        await run()
 
 
 class TestCheckImageQuotaWithHardLimit:
     """Row-backed caps with hard_limit=True raise BudgetExceededError."""
 
-    def test_user_quota_hard_rejects(self) -> None:
-        org_id = uuid4()
-        user_id = uuid4()
+    async def test_user_quota_hard_rejects(self) -> None:
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -188,10 +187,10 @@ class TestCheckImageQuotaWithHardLimit:
                 assert excinfo.value.limit_kind == "image_count"
                 assert excinfo.value.limit == "5"
 
-        asyncio.run(run())
+        await run()
 
-    def test_org_budget_hard_rejects_monthly(self) -> None:
-        org_id = uuid4()
+    async def test_org_budget_hard_rejects_monthly(self) -> None:
+        org_id = generate_id()
         budget = AgentBudget(
             organization_id=org_id,
             image_monthly_limit=100,
@@ -216,16 +215,16 @@ class TestCheckImageQuotaWithHardLimit:
                 with pytest.raises(BudgetExceededError) as excinfo:
                     await check_image_quota(
                         session,
-                        user_id=uuid4(),
+                        user_id=generate_id(),
                         organization_id=org_id,
                     )
                 assert excinfo.value.scope == "org"
 
-        asyncio.run(run())
+        await run()
 
-    def test_user_quota_hard_but_under_cap_passes(self) -> None:
-        org_id = uuid4()
-        user_id = uuid4()
+    async def test_user_quota_hard_but_under_cap_passes(self) -> None:
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -253,15 +252,15 @@ class TestCheckImageQuotaWithHardLimit:
                     organization_id=org_id,
                 )
 
-        asyncio.run(run())
+        await run()
 
 
 class TestCheckImageQuotaSoftRows:
     """Row-backed caps with hard_limit=False log but never raise."""
 
-    def test_user_quota_soft_logs_on_overage(self) -> None:
-        org_id = uuid4()
-        user_id = uuid4()
+    async def test_user_quota_soft_logs_on_overage(self) -> None:
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -290,12 +289,12 @@ class TestCheckImageQuotaSoftRows:
                     organization_id=org_id,
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_quota_with_null_daily_falls_back_to_default_soft(self) -> None:
+    async def test_quota_with_null_daily_falls_back_to_default_soft(self) -> None:
         """If the row has a null daily cap, the fallback is always soft."""
-        org_id = uuid4()
-        user_id = uuid4()
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -327,4 +326,4 @@ class TestCheckImageQuotaSoftRows:
                     organization_id=org_id,
                 )
 
-        asyncio.run(run())
+        await run()

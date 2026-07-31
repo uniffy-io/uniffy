@@ -6,31 +6,24 @@ Covers the pure-Python pieces that don't require a live DB:
 - ``rename_agent_chat`` validation (length + non-agent-DM rejection)
 - ``ChatChannelOperations.create_agent_chat`` flag wiring (mocked session)
 
-Live-DB integration coverage runs under the chat-domain harness. Uses
-``asyncio.run`` so it runs without pytest-asyncio.
+Live-DB integration coverage runs under the chat-domain harness.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
-from uniffy.core.types import SubjectType
+from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 class TestEffectiveName:
     def test_returns_name_when_custom_unset(self) -> None:
         channel = ChatChannel(
-            organization_id=uuid4(),
-            owner_id=uuid4(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             name="Acme Agent",
             slug="acme-agent",
             channel_type=ChannelType.DIRECT,
@@ -39,8 +32,8 @@ class TestEffectiveName:
 
     def test_returns_custom_when_set(self) -> None:
         channel = ChatChannel(
-            organization_id=uuid4(),
-            owner_id=uuid4(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             name="Acme Agent",
             slug="acme-agent",
             channel_type=ChannelType.DIRECT,
@@ -50,8 +43,8 @@ class TestEffectiveName:
 
     def test_whitespace_only_custom_falls_back_to_name(self) -> None:
         channel = ChatChannel(
-            organization_id=uuid4(),
-            owner_id=uuid4(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             name="Acme Agent",
             slug="acme-agent",
             channel_type=ChannelType.DIRECT,
@@ -82,10 +75,10 @@ class TestRenameAgentChatValidation:
         ops.get_by_id = AsyncMock(return_value=channel)
         return ops
 
-    def test_rejects_non_agent_dm(self) -> None:
+    async def test_rejects_non_agent_dm(self) -> None:
         channel = ChatChannel(
-            organization_id=uuid4(),
-            owner_id=uuid4(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             name="Some DM",
             slug="some-dm",
             channel_type=ChannelType.DIRECT,
@@ -93,19 +86,17 @@ class TestRenameAgentChatValidation:
         )
         ops = self._build_ops(channel, membership=MagicMock(subject_type=SubjectType.USER))
         with pytest.raises(ValidationError):
-            _run(
-                ops.rename_agent_chat(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    channel_id=uuid4(),
-                    custom_name="New name",
-                )
+            await ops.rename_agent_chat(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                channel_id=generate_id(),
+                custom_name="New name",
             )
 
-    def test_rejects_non_member(self) -> None:
+    async def test_rejects_non_member(self) -> None:
         channel = ChatChannel(
-            organization_id=uuid4(),
-            owner_id=uuid4(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             name="Acme Agent",
             slug="acme-agent",
             channel_type=ChannelType.DIRECT,
@@ -113,19 +104,17 @@ class TestRenameAgentChatValidation:
         )
         ops = self._build_ops(channel, membership=None)
         with pytest.raises(PermissionDeniedError):
-            _run(
-                ops.rename_agent_chat(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    channel_id=uuid4(),
-                    custom_name="Stranger rename",
-                )
+            await ops.rename_agent_chat(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                channel_id=generate_id(),
+                custom_name="Stranger rename",
             )
 
-    def test_rejects_overlong_name(self) -> None:
+    async def test_rejects_overlong_name(self) -> None:
         channel = ChatChannel(
-            organization_id=uuid4(),
-            owner_id=uuid4(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             name="Acme Agent",
             slug="acme-agent",
             channel_type=ChannelType.DIRECT,
@@ -134,19 +123,17 @@ class TestRenameAgentChatValidation:
         ops = self._build_ops(channel, membership=MagicMock(subject_type=SubjectType.USER))
         too_long = "x" * 201
         with pytest.raises(ValidationError):
-            _run(
-                ops.rename_agent_chat(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    channel_id=uuid4(),
-                    custom_name=too_long,
-                )
+            await ops.rename_agent_chat(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                channel_id=generate_id(),
+                custom_name=too_long,
             )
 
-    def test_clears_custom_name_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_clears_custom_name_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
         channel = ChatChannel(
-            organization_id=uuid4(),
-            owner_id=uuid4(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             name="Acme Agent",
             slug="acme-agent",
             channel_type=ChannelType.DIRECT,
@@ -158,12 +145,10 @@ class TestRenameAgentChatValidation:
             AsyncMock(return_value=None),
         )
         ops = self._build_ops(channel, membership=MagicMock(subject_type=SubjectType.USER))
-        _run(
-            ops.rename_agent_chat(
-                user_id=uuid4(),
-                organization_id=uuid4(),
-                channel_id=uuid4(),
-                custom_name="   ",
-            )
+        await ops.rename_agent_chat(
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            channel_id=generate_id(),
+            custom_name="   ",
         )
         assert channel.custom_name is None

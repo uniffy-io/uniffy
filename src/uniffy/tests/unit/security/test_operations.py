@@ -1,20 +1,15 @@
 """SecurityOperations CRUD with sessions mocked."""
 
-import asyncio
 from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.types import generate_id
 from uniffy.domains.security.operations import (
     SECURITY_NAMESPACE,
     SecurityOperations,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 @dataclass
@@ -50,19 +45,19 @@ def _patch_settings_ops():
 
 
 class TestGet:
-    def test_missing_row_returns_default_enabled(self) -> None:
+    async def test_missing_row_returns_default_enabled(self) -> None:
         session = _session()
         patcher, settings = _patch_settings_ops()
         settings.get_namespace = AsyncMock(return_value={})
         with patcher:
-            out = _run(SecurityOperations(session).get(uuid4()))
+            out = await SecurityOperations(session).get(generate_id())
         assert out.password_reset_enabled is True
 
-    def test_explicit_disabled_row_wins_over_default(self) -> None:
+    async def test_explicit_disabled_row_wins_over_default(self) -> None:
         from uniffy.core.models.settings.org_setting import OrgSetting
 
         row = OrgSetting(
-            organization_id=uuid4(),
+            organization_id=generate_id(),
             namespace=SECURITY_NAMESPACE,
             key="password_reset_enabled",
             value=False,
@@ -74,25 +69,23 @@ class TestGet:
             return_value={"password_reset_enabled": row}
         )
         with patcher:
-            out = _run(SecurityOperations(session).get(uuid4()))
+            out = await SecurityOperations(session).get(generate_id())
         assert out.password_reset_enabled is False
 
 
 class TestSet:
-    def test_changing_value_writes_audit_and_setting(self) -> None:
+    async def test_changing_value_writes_audit_and_setting(self) -> None:
         session = _session()
-        org_id = uuid4()
-        actor = uuid4()
+        org_id = generate_id()
+        actor = generate_id()
         patcher, settings = _patch_settings_ops()
         settings.get_namespace = AsyncMock(return_value={})  # default is True
         settings.set = AsyncMock()
         with patcher, patch(
             "uniffy.domains.security.operations.write_audit_event", new=AsyncMock()
         ) as audit:
-            _run(
-                SecurityOperations(session).set_password_reset_enabled(
-                    organization_id=org_id, enabled=False, actor_user_id=actor,
-                )
+            await SecurityOperations(session).set_password_reset_enabled(
+                organization_id=org_id, enabled=False, actor_user_id=actor,
             )
         settings.set.assert_awaited_once()
         audit.assert_awaited_once()
@@ -101,11 +94,11 @@ class TestSet:
         assert kwargs["details"]["previous"] is True
         assert kwargs["details"]["new"] is False
 
-    def test_unchanged_value_is_a_noop(self) -> None:
+    async def test_unchanged_value_is_a_noop(self) -> None:
         from uniffy.core.models.settings.org_setting import OrgSetting
 
         existing = OrgSetting(
-            organization_id=uuid4(),
+            organization_id=generate_id(),
             namespace=SECURITY_NAMESPACE,
             key="password_reset_enabled",
             value=True,
@@ -120,10 +113,8 @@ class TestSet:
         with patcher, patch(
             "uniffy.domains.security.operations.write_audit_event", new=AsyncMock()
         ) as audit:
-            _run(
-                SecurityOperations(session).set_password_reset_enabled(
-                    organization_id=uuid4(), enabled=True, actor_user_id=uuid4(),
-                )
+            await SecurityOperations(session).set_password_reset_enabled(
+                organization_id=generate_id(), enabled=True, actor_user_id=generate_id(),
             )
         settings.set.assert_not_awaited()
         audit.assert_not_awaited()

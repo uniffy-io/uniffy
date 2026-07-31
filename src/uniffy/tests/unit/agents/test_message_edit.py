@@ -9,10 +9,8 @@ the rows it touches in-memory.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
@@ -23,6 +21,7 @@ import uniffy.domains.auth  # noqa: F401
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.session import AgentSession
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.sessions.operations import (
     EDIT_WINDOW_SECONDS,
     SessionOperations,
@@ -31,8 +30,8 @@ from uniffy.domains.agents.sessions.operations import (
 
 def _make_user_message(*, age_seconds: float = 5) -> AgentMessage:
     return AgentMessage(
-        id=uuid4(),
-        session_id=uuid4(),
+        id=generate_id(),
+        session_id=generate_id(),
         role="user",
         content="hello",
         created_at=datetime.now(UTC) - timedelta(seconds=age_seconds),
@@ -41,9 +40,9 @@ def _make_user_message(*, age_seconds: float = 5) -> AgentMessage:
 
 def _make_session(*, user_id) -> AgentSession:
     return AgentSession(
-        id=uuid4(),
-        organization_id=uuid4(),
-        agent_id=uuid4(),
+        id=generate_id(),
+        organization_id=generate_id(),
+        agent_id=generate_id(),
         user_id=user_id,
         kind="direct",
     )
@@ -91,13 +90,13 @@ def _make_ops_with_message(
 
 
 class TestEditMessage:
-    def test_succeeds_within_window(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        user = uuid4()
+    async def test_succeeds_within_window(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        user = generate_id()
         msg = _make_user_message(age_seconds=5)
         sess = _make_session(user_id=user)
         downstream = [
             AgentMessage(
-                id=uuid4(),
+                id=generate_id(),
                 session_id=sess.id,
                 role="assistant",
                 content="reply",
@@ -108,13 +107,11 @@ class TestEditMessage:
             msg, sess, downstream=downstream, monkeypatch=monkeypatch
         )
 
-        result = asyncio.run(
-            ops.edit_message(
-                user_id=user,
-                organization_id=sess.organization_id,
-                message_id=msg.id,
-                new_content="updated",
-            )
+        result = await ops.edit_message(
+            user_id=user,
+            organization_id=sess.organization_id,
+            message_id=msg.id,
+            new_content="updated",
         )
 
         assert result.content == "updated"
@@ -123,42 +120,38 @@ class TestEditMessage:
         assert downstream[0].is_invalidated is True
         assert downstream[0].invalidated_by == user
 
-    def test_rejects_after_window(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        user = uuid4()
+    async def test_rejects_after_window(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        user = generate_id()
         msg = _make_user_message(age_seconds=EDIT_WINDOW_SECONDS + 60)
         sess = _make_session(user_id=user)
         ops = _make_ops_with_message(msg, sess, monkeypatch=monkeypatch)
 
         with pytest.raises(ValidationError, match="window expired"):
-            asyncio.run(
-                ops.edit_message(
-                    user_id=user,
-                    organization_id=sess.organization_id,
-                    message_id=msg.id,
-                    new_content="updated",
-                )
+            await ops.edit_message(
+                user_id=user,
+                organization_id=sess.organization_id,
+                message_id=msg.id,
+                new_content="updated",
             )
 
-    def test_rejects_non_owner(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_rejects_non_owner(self, monkeypatch: pytest.MonkeyPatch) -> None:
         msg = _make_user_message()
-        sess = _make_session(user_id=uuid4())
+        sess = _make_session(user_id=generate_id())
         ops = _make_ops_with_message(msg, sess, monkeypatch=monkeypatch)
 
         with pytest.raises(PermissionDeniedError):
-            asyncio.run(
-                ops.edit_message(
-                    user_id=uuid4(),
-                    organization_id=sess.organization_id,
-                    message_id=msg.id,
-                    new_content="updated",
-                )
+            await ops.edit_message(
+                user_id=generate_id(),
+                organization_id=sess.organization_id,
+                message_id=msg.id,
+                new_content="updated",
             )
 
-    def test_rejects_non_user_role(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        user = uuid4()
+    async def test_rejects_non_user_role(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        user = generate_id()
         sess = _make_session(user_id=user)
         msg = AgentMessage(
-            id=uuid4(),
+            id=generate_id(),
             session_id=sess.id,
             role="assistant",
             content="reply",
@@ -167,35 +160,31 @@ class TestEditMessage:
         ops = _make_ops_with_message(msg, sess, monkeypatch=monkeypatch)
 
         with pytest.raises(ValidationError, match="user messages"):
-            asyncio.run(
-                ops.edit_message(
-                    user_id=user,
-                    organization_id=sess.organization_id,
-                    message_id=msg.id,
-                    new_content="updated",
-                )
+            await ops.edit_message(
+                user_id=user,
+                organization_id=sess.organization_id,
+                message_id=msg.id,
+                new_content="updated",
             )
 
-    def test_rejects_empty_content(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        user = uuid4()
+    async def test_rejects_empty_content(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        user = generate_id()
         msg = _make_user_message()
         sess = _make_session(user_id=user)
         ops = _make_ops_with_message(msg, sess, monkeypatch=monkeypatch)
 
         with pytest.raises(ValidationError, match="empty"):
-            asyncio.run(
-                ops.edit_message(
-                    user_id=user,
-                    organization_id=sess.organization_id,
-                    message_id=msg.id,
-                    new_content="   ",
-                )
+            await ops.edit_message(
+                user_id=user,
+                organization_id=sess.organization_id,
+                message_id=msg.id,
+                new_content="   ",
             )
 
-    def test_rejects_when_run_is_inflight(
+    async def test_rejects_when_run_is_inflight(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        user = uuid4()
+        user = generate_id()
         msg = _make_user_message()
         sess = _make_session(user_id=user)
         ops = _make_ops_with_message(
@@ -203,26 +192,24 @@ class TestEditMessage:
         )
 
         with pytest.raises(ValidationError, match="streaming"):
-            asyncio.run(
-                ops.edit_message(
-                    user_id=user,
-                    organization_id=sess.organization_id,
-                    message_id=msg.id,
-                    new_content="updated",
-                )
+            await ops.edit_message(
+                user_id=user,
+                organization_id=sess.organization_id,
+                message_id=msg.id,
+                new_content="updated",
             )
 
 
 class TestRetryMessage:
-    def test_user_message_returns_content_and_invalidates_downstream(
+    async def test_user_message_returns_content_and_invalidates_downstream(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        user = uuid4()
+        user = generate_id()
         msg = _make_user_message()
         msg.file_ids = ["f1", "f2"]
         sess = _make_session(user_id=user)
         downstream = AgentMessage(
-            id=uuid4(),
+            id=generate_id(),
             session_id=sess.id,
             role="assistant",
             content="b",
@@ -232,12 +219,10 @@ class TestRetryMessage:
             msg, sess, downstream=[downstream], monkeypatch=monkeypatch
         )
 
-        content, file_ids = asyncio.run(
-            ops.retry_message(
-                user_id=user,
-                organization_id=sess.organization_id,
-                message_id=msg.id,
-            )
+        content, file_ids = await ops.retry_message(
+            user_id=user,
+            organization_id=sess.organization_id,
+            message_id=msg.id,
         )
 
         assert content == "hello"
@@ -245,20 +230,20 @@ class TestRetryMessage:
         assert downstream.is_invalidated is True
         assert msg.is_invalidated is False  # anchor preserved
 
-    def test_assistant_message_walks_back_to_user(
+    async def test_assistant_message_walks_back_to_user(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        user = uuid4()
+        user = generate_id()
         sess = _make_session(user_id=user)
         anchor_user = AgentMessage(
-            id=uuid4(),
+            id=generate_id(),
             session_id=sess.id,
             role="user",
             content="anchor",
             created_at=datetime.now(UTC) - timedelta(seconds=10),
         )
         assistant = AgentMessage(
-            id=uuid4(),
+            id=generate_id(),
             session_id=sess.id,
             role="assistant",
             content="reply",
@@ -297,12 +282,10 @@ class TestRetryMessage:
             fake_active,
         )
 
-        content, _ = asyncio.run(
-            ops.retry_message(
-                user_id=user,
-                organization_id=sess.organization_id,
-                message_id=assistant.id,
-            )
+        content, _ = await ops.retry_message(
+            user_id=user,
+            organization_id=sess.organization_id,
+            message_id=assistant.id,
         )
 
         assert content == "anchor"

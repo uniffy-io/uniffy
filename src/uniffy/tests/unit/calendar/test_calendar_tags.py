@@ -16,7 +16,7 @@ Live-DB integration coverage runs under the calendar-domain harness.
 
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.types import AccessMode, generate_id
@@ -29,9 +29,9 @@ from uniffy.domains.calendar.operations import (
 def _make_event(*, description: str = "", location: str = "") -> CalendarEvent:
     now = datetime.now(UTC)
     return CalendarEvent(
-        organization_id=uuid4(),
-        organizer_id=uuid4(),
-        calendar_id=uuid4(),
+        organization_id=generate_id(),
+        organizer_id=generate_id(),
+        calendar_id=generate_id(),
         title="Sprint Planning",
         description=description,
         start_time=now,
@@ -94,7 +94,7 @@ class TestMasterEventId:
         assert _master_event_id(event) == event.id
 
     def test_master_id_strips_occurrence_suffix(self) -> None:
-        master_uuid = uuid4()
+        master_uuid = generate_id()
         synthetic_id = f"{master_uuid}__occurrence__2026-05-07"
         event = _make_event()
         event.id = synthetic_id  # type: ignore[assignment]
@@ -104,7 +104,7 @@ class TestMasterEventId:
         assert _master_event_id(event) == master_uuid
 
     def test_master_id_handles_string_uuid(self) -> None:
-        u = uuid4()
+        u = generate_id()
         event = _make_event()
         event.id = str(u)  # type: ignore[assignment]
         assert _master_event_id(event) == UUID(str(u))

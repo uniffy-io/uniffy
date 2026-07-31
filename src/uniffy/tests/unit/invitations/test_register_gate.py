@@ -6,7 +6,6 @@ default. These tests mock the deployment-settings layer so the
 fallback chain is exercised without a real DB.
 """
 
-import asyncio
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -17,10 +16,6 @@ from uniffy.domains.auth.operations import (
     AuthOperations,
     is_public_registration_enabled,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _empty_namespace_mock() -> AsyncMock:
@@ -43,7 +38,7 @@ class TestPublicRegistrationFlag:
             ("anything-else", False),
         ],
     )
-    def test_env_fallback_when_no_deployment_row(self, raw: str, expected: bool) -> None:
+    async def test_env_fallback_when_no_deployment_row(self, raw: str, expected: bool) -> None:
         session = MagicMock()
         with (
             patch.dict(os.environ, {"ALLOW_PUBLIC_REGISTRATION": raw}, clear=False),
@@ -52,9 +47,9 @@ class TestPublicRegistrationFlag:
                 return_value=_empty_namespace_mock(),
             ),
         ):
-            assert _run(is_public_registration_enabled(session)) is expected
+            assert await is_public_registration_enabled(session) is expected
 
-    def test_missing_env_defaults_to_false(self) -> None:
+    async def test_missing_env_defaults_to_false(self) -> None:
         env = {k: v for k, v in os.environ.items() if k != "ALLOW_PUBLIC_REGISTRATION"}
         session = MagicMock()
         with (
@@ -64,9 +59,9 @@ class TestPublicRegistrationFlag:
                 return_value=_empty_namespace_mock(),
             ),
         ):
-            assert _run(is_public_registration_enabled(session)) is False
+            assert await is_public_registration_enabled(session) is False
 
-    def test_deployment_row_wins_over_env(self) -> None:
+    async def test_deployment_row_wins_over_env(self) -> None:
         # Even with env set to false, a deployment row that says true wins.
         deployment_ops = MagicMock()
         row = MagicMock()
@@ -83,11 +78,11 @@ class TestPublicRegistrationFlag:
                 return_value=deployment_ops,
             ),
         ):
-            assert _run(is_public_registration_enabled(session)) is True
+            assert await is_public_registration_enabled(session) is True
 
 
 class TestRegisterGate:
-    def test_rejects_when_disabled(self) -> None:
+    async def test_rejects_when_disabled(self) -> None:
         # AsyncSession.add is sync; AsyncMock would return an unawaited coroutine.
         session = AsyncMock()
         session.add = MagicMock()
@@ -104,18 +99,16 @@ class TestRegisterGate:
             ) as audit,
             pytest.raises(RegistrationError, match="invited"),
         ):
-            _run(
-                ops.register(
-                    email="x@y.com",
-                    username="x",
-                    password="password1",
-                )
+            await ops.register(
+                email="x@y.com",
+                username="x",
+                password="password1",
             )
         audit.assert_awaited_once()
         # Session commit was awaited for the audit row only; user was never added.
         session.add.assert_not_called()
 
-    def test_allows_when_enabled(self) -> None:
+    async def test_allows_when_enabled(self) -> None:
         # We only verify the gate falls through; downstream code raises on the
         # AsyncMock session inside the real flow, which is fine -- we just need
         # to know the gate did not short-circuit with RegistrationError.
@@ -140,10 +133,8 @@ class TestRegisterGate:
                 RegistrationError, match="Could not create account"
             ),
         ):
-            _run(
-                ops.register(
-                    email="dup@y.com",
-                    username="dup",
-                    password="password1",
-                )
+            await ops.register(
+                email="dup@y.com",
+                username="dup",
+                password="password1",
             )

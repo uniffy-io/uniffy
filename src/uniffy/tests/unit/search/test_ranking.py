@@ -2,8 +2,8 @@
 a typo/partial match never rides its type above a full match.
 """
 
-from uuid import uuid4
 
+from uniffy.core.types import generate_id
 from uniffy.domains.search.queries import SearchResult, apply_type_priority
 
 CHAT_PRIORITY = ["user", "chat", "agent_chat", "chat_message"]
@@ -12,14 +12,14 @@ CHAT_PRIORITY = ["user", "chat", "agent_chat", "chat_message"]
 def make_result(entity_type: str, urn: str, score: float | None) -> SearchResult:
     return SearchResult(
         urn=urn,
-        organization_id=uuid4(),
+        organization_id=generate_id(),
         title=urn,
         description=None,
         entity_type=entity_type,
         url_path=f"/{urn}",
         access_mode="OWNER_ONLY",
         baseline_role=None,
-        owner_id=uuid4(),
+        owner_id=generate_id(),
         tags=None,
         metadata=None,
         updated_at=None,

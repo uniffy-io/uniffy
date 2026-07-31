@@ -1,26 +1,18 @@
 """Agent template catalog and default-agent bootstrap tests.
-
-Vanilla pytest + ``asyncio.run`` with mocked sessions, matching the repo's
-other agents tests (no pytest-asyncio, no live DB).
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from uniffy.core.data_files import DATA_DIR, load_documents
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.types import AccessMode
+from uniffy.core.types import AccessMode, generate_id
 from uniffy.domains.agents.templates import (
     AGENT_TEMPLATES,
     get_default_template,
     get_template,
 )
 from uniffy.domains.agents.tools.registry import get_tool_registry
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 class TestCatalogIntegrity:
@@ -67,7 +59,7 @@ class TestCatalogIntegrity:
         assert files == {t.key for t in AGENT_TEMPLATES}
 
 
-def _org_create(skill_rows: list[tuple[UUID, str]]):
+async def _org_create(skill_rows: list[tuple[UUID, str]]):
     """Run OrganizationOperations.create on a mocked session; return captured state."""
     from uniffy.domains.organizations.operations import OrganizationOperations
 
@@ -96,7 +88,7 @@ def _org_create(skill_rows: list[tuple[UUID, str]]):
     agent_ops = MagicMock()
     agent_ops._index_for_search = AsyncMock()
 
-    owner_id = uuid4()
+    owner_id = generate_id()
     with (
         patch(
             "uniffy.domains.organizations.operations.OrgCipher",
@@ -127,9 +119,7 @@ def _org_create(skill_rows: list[tuple[UUID, str]]):
             return_value=agent_ops,
         ),
     ):
-        org = _run(
-            ops.create(name="Acme", slug="acme", owner_user_id=owner_id)
-        )
+        org = await ops.create(name="Acme", slug="acme", owner_user_id=owner_id)
 
     agents = [
         call.args[0]
@@ -140,10 +130,10 @@ def _org_create(skill_rows: list[tuple[UUID, str]]):
 
 
 class TestDefaultAgentBootstrap:
-    def test_seeds_one_default_agent_from_default_template(self) -> None:
+    async def test_seeds_one_default_agent_from_default_template(self) -> None:
         template = get_default_template()
-        skill_id = uuid4()
-        org, owner_id, agents, agent_ops = _org_create(
+        skill_id = generate_id()
+        org, owner_id, agents, agent_ops = await _org_create(
             [(skill_id, template.bundled_skill_names[0])]
         )
 
@@ -165,8 +155,8 @@ class TestDefaultAgentBootstrap:
             agent, skip_member_lookup=True
         )
 
-    def test_bootstrap_tolerates_missing_bundled_skills(self) -> None:
-        _, _, agents, _ = _org_create([])
+    async def test_bootstrap_tolerates_missing_bundled_skills(self) -> None:
+        _, _, agents, _ = await _org_create([])
 
         assert len(agents) == 1
         assert agents[0].is_default is True

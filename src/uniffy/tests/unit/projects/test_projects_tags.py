@@ -1,12 +1,7 @@
 """Unit tests for the projects + tasks <-> tags wiring.
-
-Uses ``asyncio.run`` helpers for the async paths so it works with the
-repo's vanilla pytest harness (no pytest-asyncio dependency).
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
@@ -16,14 +11,10 @@ from uniffy.core.types import AccessMode, generate_id
 from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _make_project() -> Project:
     return Project(
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         name="Marketing",
         description="",
         icon="folder",
@@ -35,9 +26,9 @@ def _make_project() -> Project:
 
 def _make_task() -> Task:
     return Task(
-        project_id=uuid4(),
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        project_id=generate_id(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         title="Investigate",
         description="",
         status="status_todo",
@@ -96,18 +87,18 @@ class TestTaskTagFilterSubquery:
 
 
 class TestSyncTaskTags:
-    def test_none_tag_ids_short_circuits(self) -> None:
+    async def test_none_tag_ids_short_circuits(self) -> None:
         ops = _make_task_ops()
         task = _make_task()
-        _run(ops._sync_task_tags(actor_id=uuid4(), task=task, tag_ids=None))
+        await ops._sync_task_tags(actor_id=generate_id(), task=task, tag_ids=None)
         ops.session.execute.assert_not_called()
 
-    def test_replace_routes_through_unified_store(
+    async def test_replace_routes_through_unified_store(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         ops = _make_task_ops()
         task = _make_task()
-        actor_id = uuid4()
+        actor_id = generate_id()
         replacement = [generate_id()]
 
         captured: dict[str, object] = {}
@@ -134,7 +125,7 @@ class TestSyncTaskTags:
             raising=True,
         )
 
-        _run(ops._sync_task_tags(actor_id=actor_id, task=task, tag_ids=replacement))
+        await ops._sync_task_tags(actor_id=actor_id, task=task, tag_ids=replacement)
 
         assert captured["actor_id"] == actor_id
         assert captured["organization_id"] == task.organization_id
@@ -143,18 +134,18 @@ class TestSyncTaskTags:
 
 
 class TestSyncProjectTags:
-    def test_none_tag_ids_short_circuits(self) -> None:
+    async def test_none_tag_ids_short_circuits(self) -> None:
         ops = _make_project_ops()
         project = _make_project()
-        _run(ops._sync_project_tags(actor_id=uuid4(), project=project, tag_ids=None))
+        await ops._sync_project_tags(actor_id=generate_id(), project=project, tag_ids=None)
         ops.session.execute.assert_not_called()
 
-    def test_replace_routes_through_unified_store(
+    async def test_replace_routes_through_unified_store(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         ops = _make_project_ops()
         project = _make_project()
-        actor_id = uuid4()
+        actor_id = generate_id()
         replacement = [generate_id()]
 
         captured: dict[str, object] = {}
@@ -181,10 +172,8 @@ class TestSyncProjectTags:
             raising=True,
         )
 
-        _run(
-            ops._sync_project_tags(
-                actor_id=actor_id, project=project, tag_ids=replacement
-            )
+        await ops._sync_project_tags(
+            actor_id=actor_id, project=project, tag_ids=replacement
         )
 
         assert captured["actor_id"] == actor_id
@@ -194,19 +183,19 @@ class TestSyncProjectTags:
 
 
 class TestHydrateHelpers:
-    def test_hydrate_task_tags_no_op_on_empty_input(self) -> None:
+    async def test_hydrate_task_tags_no_op_on_empty_input(self) -> None:
         from uniffy.domains.projects.handlers import _hydrate_task_tags
 
         session = AsyncMock()
-        out = _run(_hydrate_task_tags(session, uuid4(), []))
+        out = await _hydrate_task_tags(session, generate_id(), [])
         assert out == {}
         session.execute.assert_not_called()
 
-    def test_hydrate_project_tags_no_op_on_empty_input(self) -> None:
+    async def test_hydrate_project_tags_no_op_on_empty_input(self) -> None:
         from uniffy.domains.projects.handlers import _hydrate_project_tags
 
         session = AsyncMock()
-        out = _run(_hydrate_project_tags(session, uuid4(), []))
+        out = await _hydrate_project_tags(session, generate_id(), [])
         assert out == {}
         session.execute.assert_not_called()
 

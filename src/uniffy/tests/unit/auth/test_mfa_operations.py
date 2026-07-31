@@ -18,16 +18,16 @@ enrollment paths now enforce:
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pyotp
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.types import generate_id
 from uniffy.domains.auth.errors import (
     AuthenticationError,
     MfaRateLimitedError,
@@ -36,10 +36,6 @@ from uniffy.domains.auth.errors import (
 from uniffy.domains.auth.mfa import operations as mfa_ops
 from uniffy.domains.auth.mfa.operations import MfaOperations
 from uniffy.domains.auth.mfa.rate_limit import VerifyLockStatus
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 @dataclass
@@ -103,8 +99,8 @@ class TestBeginEnrollmentRefuseWhenEnabled:
     silently disabling MFA without ever needing a current TOTP code.
     """
 
-    def test_refuses_when_mfa_already_enabled(self) -> None:
-        user_id = uuid4()
+    async def test_refuses_when_mfa_already_enabled(self) -> None:
+        user_id = generate_id()
         user = _User(id=user_id, is_active=True)
         mfa = _Mfa(user_id=user_id, enabled=True)
         session = _session([
@@ -114,25 +110,25 @@ class TestBeginEnrollmentRefuseWhenEnabled:
         ops = MfaOperations(session)
 
         with pytest.raises(PermissionDeniedError):
-            _run(ops.begin_enrollment(user_id))
+            await ops.begin_enrollment(user_id)
 
         session.commit.assert_not_called()
         session.add.assert_not_called()
 
-    def test_refuses_when_user_inactive(self) -> None:
-        user_id = uuid4()
+    async def test_refuses_when_user_inactive(self) -> None:
+        user_id = generate_id()
         user = _User(id=user_id, is_active=False)
         session = _session([_result(scalar=user)])
         ops = MfaOperations(session)
 
         with pytest.raises(AuthenticationError):
-            _run(ops.begin_enrollment(user_id))
+            await ops.begin_enrollment(user_id)
 
         session.commit.assert_not_called()
 
-    def test_allows_pending_re_enrollment(self) -> None:
+    async def test_allows_pending_re_enrollment(self) -> None:
         """A row with ``enabled=False`` is the pending state; overwrite ok."""
-        user_id = uuid4()
+        user_id = generate_id()
         user = _User(id=user_id, is_active=True)
         mfa = _Mfa(user_id=user_id, enabled=False)
         org_ids_result = MagicMock()
@@ -154,7 +150,7 @@ class TestBeginEnrollmentRefuseWhenEnabled:
         ), patch.object(
             mfa_ops, "write_audit_event", AsyncMock(return_value=None)
         ):
-            challenge = _run(ops.begin_enrollment(user_id))
+            challenge = await ops.begin_enrollment(user_id)
 
         assert challenge.secret_b32 == "REUSED-SECRET-B32"
         assert challenge.qr_svg_base64
@@ -176,8 +172,8 @@ class TestBeginEnrollmentIdempotent:
     is actually in the DB.
     """
 
-    def test_fresh_enrollment_inserts_and_returns_new_secret(self) -> None:
-        user_id = uuid4()
+    async def test_fresh_enrollment_inserts_and_returns_new_secret(self) -> None:
+        user_id = generate_id()
         user = _User(id=user_id, is_active=True)
         stored_after_insert = _Mfa(
             user_id=user_id, totp_secret_encrypted="freshly-inserted", enabled=False
@@ -210,7 +206,7 @@ class TestBeginEnrollmentIdempotent:
         ), patch.object(
             mfa_ops, "write_audit_event", AsyncMock(return_value=None)
         ):
-            challenge = _run(ops.begin_enrollment(user_id))
+            challenge = await ops.begin_enrollment(user_id)
 
         assert challenge.secret_b32 == "FRESH-SECRET-B32"
         session.commit.assert_awaited_once()
@@ -234,8 +230,8 @@ class TestVerifyMfaTokenBinding:
             payload["org_id"] = str(org_id)
         return payload
 
-    def test_rejects_when_user_inactive(self) -> None:
-        user_id = uuid4()
+    async def test_rejects_when_user_inactive(self) -> None:
+        user_id = generate_id()
         user = _User(id=user_id, is_active=False, token_version=3)
         payload = self._build_challenge_payload(user_id, tkv=3)
         session = _session([_result(scalar=user)])
@@ -248,15 +244,13 @@ class TestVerifyMfaTokenBinding:
             "is_verify_locked",
             AsyncMock(return_value=VerifyLockStatus(False, False)),
         ), pytest.raises(AuthenticationError):
-            _run(
-                ops.verify_mfa(
-                    challenge_token="opaque", code="123456", method="totp"
-                )
+            await ops.verify_mfa(
+                challenge_token="opaque", code="123456", method="totp"
             )
 
-    def test_rejects_when_token_version_advanced(self) -> None:
+    async def test_rejects_when_token_version_advanced(self) -> None:
         """tkv claim is N, but user.token_version is N+1: revoked."""
-        user_id = uuid4()
+        user_id = generate_id()
         user = _User(id=user_id, is_active=True, token_version=5)
         payload = self._build_challenge_payload(user_id, tkv=4)
         session = _session([_result(scalar=user)])
@@ -269,15 +263,13 @@ class TestVerifyMfaTokenBinding:
             "is_verify_locked",
             AsyncMock(return_value=VerifyLockStatus(False, False)),
         ), pytest.raises(TokenError):
-            _run(
-                ops.verify_mfa(
-                    challenge_token="opaque", code="123456", method="totp"
-                )
+            await ops.verify_mfa(
+                challenge_token="opaque", code="123456", method="totp"
             )
 
-    def test_rejects_when_tkv_claim_missing(self) -> None:
+    async def test_rejects_when_tkv_claim_missing(self) -> None:
         """A challenge token without a tkv claim is treated as revoked."""
-        user_id = uuid4()
+        user_id = generate_id()
         user = _User(id=user_id, is_active=True, token_version=2)
         payload = {"sub": str(user_id), "type": "mfa_challenge"}
         session = _session([_result(scalar=user)])
@@ -290,15 +282,13 @@ class TestVerifyMfaTokenBinding:
             "is_verify_locked",
             AsyncMock(return_value=VerifyLockStatus(False, False)),
         ), pytest.raises(TokenError):
-            _run(
-                ops.verify_mfa(
-                    challenge_token="opaque", code="123456", method="totp"
-                )
+            await ops.verify_mfa(
+                challenge_token="opaque", code="123456", method="totp"
             )
 
-    def test_rate_limit_short_circuits_before_user_load(self) -> None:
+    async def test_rate_limit_short_circuits_before_user_load(self) -> None:
         """A locked user is rejected without touching the DB."""
-        user_id = uuid4()
+        user_id = generate_id()
         payload = self._build_challenge_payload(user_id, tkv=1)
         session = _session([])
         ops = MfaOperations(session)
@@ -310,10 +300,8 @@ class TestVerifyMfaTokenBinding:
             "is_verify_locked",
             AsyncMock(return_value=VerifyLockStatus(user_locked=True, ip_locked=False)),
         ), pytest.raises(MfaRateLimitedError):
-            _run(
-                ops.verify_mfa(
-                    challenge_token="opaque", code="123456", method="totp"
-                )
+            await ops.verify_mfa(
+                challenge_token="opaque", code="123456", method="totp"
             )
 
 
@@ -337,65 +325,65 @@ class TestTotpCounterDetection:
     def _build_ops(self) -> MfaOperations:
         return MfaOperations(MagicMock())
 
-    def test_returns_now_counter_for_current_code(self, monkeypatch) -> None:
+    async def test_returns_now_counter_for_current_code(self, monkeypatch) -> None:
         secret = pyotp.random_base32()
         totp = pyotp.TOTP(secret)
         now_counter = 1_000_000
         monkeypatch.setattr(mfa_ops, "totp_counter_now", lambda: now_counter)
         code = totp.generate_otp(now_counter)
-        mfa = _Mfa(user_id=uuid4(), totp_secret_encrypted=secret, enabled=True)
+        mfa = _Mfa(user_id=generate_id(), totp_secret_encrypted=secret, enabled=True)
 
-        matched = _run(self._build_ops()._verify_totp_match_counter(mfa, code))
+        matched = await self._build_ops()._verify_totp_match_counter(mfa, code)
 
         assert matched == now_counter
 
-    def test_returns_future_counter_when_authenticator_ahead(self, monkeypatch) -> None:
+    async def test_returns_future_counter_when_authenticator_ahead(self, monkeypatch) -> None:
         secret = pyotp.random_base32()
         totp = pyotp.TOTP(secret)
         now_counter = 1_000_000
         monkeypatch.setattr(mfa_ops, "totp_counter_now", lambda: now_counter)
         code = totp.generate_otp(now_counter + 1)
-        mfa = _Mfa(user_id=uuid4(), totp_secret_encrypted=secret, enabled=True)
+        mfa = _Mfa(user_id=generate_id(), totp_secret_encrypted=secret, enabled=True)
 
-        matched = _run(self._build_ops()._verify_totp_match_counter(mfa, code))
+        matched = await self._build_ops()._verify_totp_match_counter(mfa, code)
 
         assert matched == now_counter + 1
 
-    def test_returns_past_counter_when_authenticator_behind(self, monkeypatch) -> None:
+    async def test_returns_past_counter_when_authenticator_behind(self, monkeypatch) -> None:
         secret = pyotp.random_base32()
         totp = pyotp.TOTP(secret)
         now_counter = 1_000_000
         monkeypatch.setattr(mfa_ops, "totp_counter_now", lambda: now_counter)
         code = totp.generate_otp(now_counter - 1)
-        mfa = _Mfa(user_id=uuid4(), totp_secret_encrypted=secret, enabled=True)
+        mfa = _Mfa(user_id=generate_id(), totp_secret_encrypted=secret, enabled=True)
 
-        matched = _run(self._build_ops()._verify_totp_match_counter(mfa, code))
+        matched = await self._build_ops()._verify_totp_match_counter(mfa, code)
 
         assert matched == now_counter - 1
 
-    def test_returns_none_outside_window(self, monkeypatch) -> None:
+    async def test_returns_none_outside_window(self, monkeypatch) -> None:
         secret = pyotp.random_base32()
         totp = pyotp.TOTP(secret)
         now_counter = 1_000_000
         monkeypatch.setattr(mfa_ops, "totp_counter_now", lambda: now_counter)
         code = totp.generate_otp(now_counter + 5)
-        mfa = _Mfa(user_id=uuid4(), totp_secret_encrypted=secret, enabled=True)
+        mfa = _Mfa(user_id=generate_id(), totp_secret_encrypted=secret, enabled=True)
 
-        matched = _run(self._build_ops()._verify_totp_match_counter(mfa, code))
+        matched = await self._build_ops()._verify_totp_match_counter(mfa, code)
 
         assert matched is None
 
-    def test_returns_none_for_empty_code(self) -> None:
+    async def test_returns_none_for_empty_code(self) -> None:
         secret = pyotp.random_base32()
-        mfa = _Mfa(user_id=uuid4(), totp_secret_encrypted=secret, enabled=True)
+        mfa = _Mfa(user_id=generate_id(), totp_secret_encrypted=secret, enabled=True)
 
-        assert _run(self._build_ops()._verify_totp_match_counter(mfa, "")) is None
-        assert _run(self._build_ops()._verify_totp_match_counter(mfa, "   ")) is None
+        assert await self._build_ops()._verify_totp_match_counter(mfa, "") is None
+        assert await self._build_ops()._verify_totp_match_counter(mfa, "   ") is None
 
-    def test_returns_none_when_secret_missing(self) -> None:
-        mfa = _Mfa(user_id=uuid4(), totp_secret_encrypted=None, enabled=False)
+    async def test_returns_none_when_secret_missing(self) -> None:
+        mfa = _Mfa(user_id=generate_id(), totp_secret_encrypted=None, enabled=False)
 
-        assert _run(self._build_ops()._verify_totp_match_counter(mfa, "123456")) is None
+        assert await self._build_ops()._verify_totp_match_counter(mfa, "123456") is None
 
 
 class TestAuditFanOutToOrgs:
@@ -407,10 +395,10 @@ class TestAuditFanOutToOrgs:
     wrote was only visible on ``/platform/audit``.
     """
 
-    def test_fans_out_one_row_per_active_membership(self) -> None:
-        user_id = uuid4()
-        org_a = uuid4()
-        org_b = uuid4()
+    async def test_fans_out_one_row_per_active_membership(self) -> None:
+        user_id = generate_id()
+        org_a = generate_id()
+        org_b = generate_id()
         scalars = MagicMock()
         scalars.all = lambda: [org_a, org_b]
         result = MagicMock()
@@ -421,10 +409,8 @@ class TestAuditFanOutToOrgs:
 
         writer = AsyncMock(return_value=None)
         with patch.object(mfa_ops, "write_audit_event", writer):
-            _run(
-                ops._audit_mfa_self_event(
-                    user_id=user_id, action="auth.mfa_enrolled"
-                )
+            await ops._audit_mfa_self_event(
+                user_id=user_id, action="auth.mfa_enrolled"
             )
 
         assert writer.await_count == 2
@@ -436,8 +422,8 @@ class TestAuditFanOutToOrgs:
             assert call.kwargs["actor_user_id"] == user_id
             assert call.kwargs["action"] == "auth.mfa_enrolled"
 
-    def test_falls_back_to_null_org_when_user_has_no_memberships(self) -> None:
-        user_id = uuid4()
+    async def test_falls_back_to_null_org_when_user_has_no_memberships(self) -> None:
+        user_id = generate_id()
         scalars = MagicMock()
         scalars.all = lambda: []
         result = MagicMock()
@@ -448,10 +434,8 @@ class TestAuditFanOutToOrgs:
 
         writer = AsyncMock(return_value=None)
         with patch.object(mfa_ops, "write_audit_event", writer):
-            _run(
-                ops._audit_mfa_self_event(
-                    user_id=user_id, action="auth.mfa_disabled"
-                )
+            await ops._audit_mfa_self_event(
+                user_id=user_id, action="auth.mfa_disabled"
             )
 
         writer.assert_awaited_once()
@@ -469,15 +453,15 @@ class TestRecoveryCodeConditionalUpdate:
     result.
     """
 
-    def test_returns_false_when_update_loses_race(self) -> None:
+    async def test_returns_false_when_update_loses_race(self) -> None:
         from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 
-        user_id = uuid4()
+        user_id = generate_id()
         # SELECT returns one matching row; the conditional UPDATE
         # afterwards reports rowcount=0 (another tx already stamped
         # used_at under us).
         row = UserRecoveryCode(
-            id=uuid4(), user_id=user_id, code_hash="abcd"
+            id=generate_id(), user_id=user_id, code_hash="abcd"
         )
 
         scalars = MagicMock()
@@ -493,16 +477,16 @@ class TestRecoveryCodeConditionalUpdate:
         ops = MfaOperations(session)
 
         with patch.object(mfa_ops, "verify_recovery_code", return_value=True):
-            consumed = _run(ops._consume_recovery_code(user_id, "code"))
+            consumed = await ops._consume_recovery_code(user_id, "code")
 
         assert consumed is False
 
-    def test_returns_true_when_update_succeeds(self) -> None:
+    async def test_returns_true_when_update_succeeds(self) -> None:
         from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 
-        user_id = uuid4()
+        user_id = generate_id()
         row = UserRecoveryCode(
-            id=uuid4(), user_id=user_id, code_hash="abcd"
+            id=generate_id(), user_id=user_id, code_hash="abcd"
         )
 
         scalars = MagicMock()
@@ -518,16 +502,16 @@ class TestRecoveryCodeConditionalUpdate:
         ops = MfaOperations(session)
 
         with patch.object(mfa_ops, "verify_recovery_code", return_value=True):
-            consumed = _run(ops._consume_recovery_code(user_id, "code"))
+            consumed = await ops._consume_recovery_code(user_id, "code")
 
         assert consumed is True
 
-    def test_returns_false_when_no_codes_match(self) -> None:
+    async def test_returns_false_when_no_codes_match(self) -> None:
         from uniffy.core.models.login.user_recovery_code import UserRecoveryCode
 
-        user_id = uuid4()
+        user_id = generate_id()
         row = UserRecoveryCode(
-            id=uuid4(), user_id=user_id, code_hash="abcd"
+            id=generate_id(), user_id=user_id, code_hash="abcd"
         )
         scalars = MagicMock()
         scalars.__iter__ = lambda self: iter([row])
@@ -539,6 +523,6 @@ class TestRecoveryCodeConditionalUpdate:
         ops = MfaOperations(session)
 
         with patch.object(mfa_ops, "verify_recovery_code", return_value=False):
-            consumed = _run(ops._consume_recovery_code(user_id, "code"))
+            consumed = await ops._consume_recovery_code(user_id, "code")
 
         assert consumed is False

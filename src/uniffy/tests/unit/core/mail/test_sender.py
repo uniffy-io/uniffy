@@ -1,9 +1,7 @@
 """End-to-end MailSender pipeline with the backend + DB stubbed out."""
 
-import asyncio
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 
@@ -14,10 +12,7 @@ from uniffy.core.mail import (
     MailSuppressedError,
 )
 from uniffy.core.mail.backends.base import MailResult
-
-
-def _run(coro):
-    return asyncio.run(coro)
+from uniffy.core.types import generate_id
 
 
 @asynccontextmanager
@@ -70,7 +65,7 @@ CONFIG = MailConfig(
 
 
 class TestSender:
-    def test_happy_path_dispatches_through_backend(self) -> None:
+    async def test_happy_path_dispatches_through_backend(self) -> None:
         backend_patch, backend = _patch_backend(
             MailResult(success=True, provider_message_id="mid-1")
         )
@@ -82,12 +77,12 @@ class TestSender:
             _patch_audit(),
         ):
             sender = MailSender(session_factory=_fake_session)
-            result = _run(sender.send(
+            result = await sender.send(
                 recipient_email="USER@Example.com",
                 template_name="admin/test",
                 context={"sent_at": "t", "config_source": "env", "org_name": ""},
                 organization_id=None,
-            ))
+            )
 
         assert result.success is True
         assert result.provider_message_id == "mid-1"
@@ -98,7 +93,7 @@ class TestSender:
         parts = list(msg.iter_parts())
         assert len(parts) == 2
 
-    def test_suppressed_recipient_raises_before_backend(self) -> None:
+    async def test_suppressed_recipient_raises_before_backend(self) -> None:
         backend_patch, backend = _patch_backend(MailResult(success=True))
         with (
             _patch_resolver(CONFIG),
@@ -109,14 +104,14 @@ class TestSender:
         ):
             sender = MailSender(session_factory=_fake_session)
             with pytest.raises(MailSuppressedError):
-                _run(sender.send(
+                await sender.send(
                     recipient_email="x@y.com",
                     template_name="admin/test",
                     context={"sent_at": "t", "config_source": "env"},
-                ))
+                )
         backend.send.assert_not_called()
 
-    def test_backend_failure_raises_provider_error(self) -> None:
+    async def test_backend_failure_raises_provider_error(self) -> None:
         backend_patch, _backend = _patch_backend(MailResult(success=False, error="connect refused"))
         with (
             _patch_resolver(CONFIG),
@@ -127,28 +122,28 @@ class TestSender:
         ):
             sender = MailSender(session_factory=_fake_session)
             with pytest.raises(MailProviderError) as exc_info:
-                _run(sender.send(
+                await sender.send(
                     recipient_email="user@example.com",
                     template_name="admin/test",
                     context={"sent_at": "t", "config_source": "env"},
-                ))
+                )
         assert "connect refused" in str(exc_info.value)
 
-    def test_unknown_template_raises_before_resolver(self) -> None:
+    async def test_unknown_template_raises_before_resolver(self) -> None:
         from uniffy.core.mail import TemplateNotFoundError
 
         sender = MailSender(session_factory=_fake_session)
         with pytest.raises(TemplateNotFoundError):
-            _run(sender.send(
+            await sender.send(
                 recipient_email="user@example.com",
                 template_name="nope/missing",
                 context={},
-                organization_id=uuid4(),
-            ))
+                organization_id=generate_id(),
+            )
 
 
 class TestSenderAudit:
-    def test_success_writes_mail_sent_event(self) -> None:
+    async def test_success_writes_mail_sent_event(self) -> None:
         from uniffy.core.audit.actions import Action
 
         backend_patch, _ = _patch_backend(
@@ -163,11 +158,11 @@ class TestSenderAudit:
             audit_patch as audit_mock,
         ):
             sender = MailSender(session_factory=_fake_session)
-            _run(sender.send(
+            await sender.send(
                 recipient_email="user@example.com",
                 template_name="admin/test",
                 context={"sent_at": "t", "config_source": "env", "org_name": ""},
-            ))
+            )
 
         actions = [call.kwargs["action"] for call in audit_mock.await_args_list]
         assert Action.MAIL_SENT in actions
@@ -177,7 +172,7 @@ class TestSenderAudit:
         assert success_call.kwargs["details"]["template"] == "admin/test"
         assert success_call.kwargs["details"]["provider_message_id"] == "mid-1"
 
-    def test_suppressed_writes_mail_suppressed_event(self) -> None:
+    async def test_suppressed_writes_mail_suppressed_event(self) -> None:
         from uniffy.core.audit.actions import Action
 
         backend_patch, _ = _patch_backend(MailResult(success=True))
@@ -191,16 +186,16 @@ class TestSenderAudit:
         ):
             sender = MailSender(session_factory=_fake_session)
             with pytest.raises(MailSuppressedError):
-                _run(sender.send(
+                await sender.send(
                     recipient_email="x@y.com",
                     template_name="admin/test",
                     context={"sent_at": "t", "config_source": "env"},
-                ))
+                )
 
         actions = [c.kwargs["action"] for c in audit_mock.await_args_list]
         assert Action.MAIL_SUPPRESSED in actions
 
-    def test_backend_failure_writes_mail_send_failed_event(self) -> None:
+    async def test_backend_failure_writes_mail_send_failed_event(self) -> None:
         from uniffy.core.audit.actions import Action
 
         backend_patch, _ = _patch_backend(MailResult(success=False, error="connect refused"))
@@ -214,11 +209,11 @@ class TestSenderAudit:
         ):
             sender = MailSender(session_factory=_fake_session)
             with pytest.raises(MailProviderError):
-                _run(sender.send(
+                await sender.send(
                     recipient_email="user@example.com",
                     template_name="admin/test",
                     context={"sent_at": "t", "config_source": "env"},
-                ))
+                )
 
         actions = [c.kwargs["action"] for c in audit_mock.await_args_list]
         assert Action.MAIL_SEND_FAILED in actions

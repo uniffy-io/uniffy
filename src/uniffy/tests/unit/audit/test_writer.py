@@ -13,7 +13,6 @@ Verifies the contract documented in
 import asyncio
 from contextvars import copy_context
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
@@ -24,6 +23,7 @@ from uniffy.core.audit.request_context import (
     audit_user_agent_var,
 )
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.types import generate_id
 
 
 def _build_session(*, role: OrganizationRole | None) -> MagicMock:
@@ -36,22 +36,20 @@ def _build_session(*, role: OrganizationRole | None) -> MagicMock:
     return session
 
 
-def test_writer_adds_row_to_caller_session() -> None:
+async def test_writer_adds_row_to_caller_session() -> None:
     session = _build_session(role=OrganizationRole.ADMIN)
-    org_id = uuid4()
-    actor_id = uuid4()
-    resource_id = uuid4()
+    org_id = generate_id()
+    actor_id = generate_id()
+    resource_id = generate_id()
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=org_id,
-            actor_user_id=actor_id,
-            action=Action.PERMISSIONS_MEMBER_ADDED,
-            resource_type="NOTE",
-            resource_id=resource_id,
-            details={"subject_id": "abc"},
-        )
+    await write_audit_event(
+        session,
+        organization_id=org_id,
+        actor_user_id=actor_id,
+        action=Action.PERMISSIONS_MEMBER_ADDED,
+        resource_type="NOTE",
+        resource_id=resource_id,
+        details={"subject_id": "abc"},
     )
 
     session.add.assert_called_once()
@@ -66,32 +64,28 @@ def test_writer_adds_row_to_caller_session() -> None:
     session.commit.assert_not_called()
 
 
-def test_missing_membership_snapshots_as_null_role() -> None:
+async def test_missing_membership_snapshots_as_null_role() -> None:
     session = _build_session(role=None)
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=uuid4(),
-            actor_user_id=uuid4(),
-            action=Action.AUTH_LOGIN_SUCCESS,
-        )
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=generate_id(),
+        action=Action.AUTH_LOGIN_SUCCESS,
     )
 
     event = session.add.call_args[0][0]
     assert event.actor_org_role is None
 
 
-def test_none_actor_skips_role_lookup() -> None:
+async def test_none_actor_skips_role_lookup() -> None:
     session = _build_session(role=OrganizationRole.OWNER)
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=uuid4(),
-            actor_user_id=None,
-            action="system.cron",
-        )
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=None,
+        action="system.cron",
     )
 
     session.execute.assert_not_called()
@@ -100,54 +94,48 @@ def test_none_actor_skips_role_lookup() -> None:
     assert event.actor_org_role is None
 
 
-def test_ip_and_user_agent_pulled_from_context_vars() -> None:
+async def test_ip_and_user_agent_pulled_from_context_vars() -> None:
     session = _build_session(role=OrganizationRole.MEMBER)
 
-    def run_in_context() -> None:
-        audit_ip_var.set("203.0.113.42")
-        audit_user_agent_var.set("Mozilla/5.0")
-        asyncio.run(
-            write_audit_event(
-                session,
-                organization_id=uuid4(),
-                actor_user_id=uuid4(),
-                action=Action.AUTH_LOGIN_SUCCESS,
-            )
+    async def emit() -> None:
+        await write_audit_event(
+            session,
+            organization_id=generate_id(),
+            actor_user_id=generate_id(),
+            action=Action.AUTH_LOGIN_SUCCESS,
         )
 
     ctx = copy_context()
-    ctx.run(run_in_context)
+    ctx.run(audit_ip_var.set, "203.0.113.42")
+    ctx.run(audit_user_agent_var.set, "Mozilla/5.0")
+    await asyncio.create_task(emit(), context=ctx)
 
     event = session.add.call_args[0][0]
     assert event.ip_address == "203.0.113.42"
     assert event.user_agent == "Mozilla/5.0"
 
 
-def test_writer_does_not_swallow_exceptions() -> None:
+async def test_writer_does_not_swallow_exceptions() -> None:
     session = MagicMock()
     session.execute = AsyncMock(side_effect=RuntimeError("DB down"))
 
     with pytest.raises(RuntimeError, match="DB down"):
-        asyncio.run(
-            write_audit_event(
-                session,
-                organization_id=uuid4(),
-                actor_user_id=uuid4(),
-                action=Action.AUTH_LOGIN_SUCCESS,
-            )
-        )
-
-
-def test_details_default_to_empty_dict() -> None:
-    session = _build_session(role=OrganizationRole.MEMBER)
-
-    asyncio.run(
-        write_audit_event(
+        await write_audit_event(
             session,
-            organization_id=uuid4(),
-            actor_user_id=uuid4(),
+            organization_id=generate_id(),
+            actor_user_id=generate_id(),
             action=Action.AUTH_LOGIN_SUCCESS,
         )
+
+
+async def test_details_default_to_empty_dict() -> None:
+    session = _build_session(role=OrganizationRole.MEMBER)
+
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=generate_id(),
+        action=Action.AUTH_LOGIN_SUCCESS,
     )
 
     event = session.add.call_args[0][0]

@@ -5,17 +5,16 @@ CRUD operations. DB round-trips are mocked; period math has its own
 tests in ``test_image_quota.py`` via the shared ``month_window``.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import BudgetExceededError, ValidationError
 from uniffy.core.models.agents.budget import AgentBudget
 from uniffy.core.models.agents.user_quota import AgentUserQuota
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.budgets.operations import (
     BudgetsOperations,
     _PreflightSpend,
@@ -54,24 +53,24 @@ def _make_ops(budget=None, quota=None) -> BudgetsOperations:
 class TestCheckPreflightNoConfig:
     """Without any config rows, preflight is always a no-op."""
 
-    def test_no_budget_no_quota_noop(self) -> None:
+    async def test_no_budget_no_quota_noop(self) -> None:
         ops = _make_ops()
 
         async def run() -> None:
             await ops.check_preflight(
-                user_id=uuid4(),
-                organization_id=uuid4(),
+                user_id=generate_id(),
+                organization_id=generate_id(),
             )
 
-        asyncio.run(run())
+        await run()
 
 
 class TestCheckPreflightHardUserDaily:
     """A user quota with hard_limit + daily cap rejects on overage."""
 
-    def test_hard_daily_over_cap_raises(self) -> None:
-        org_id = uuid4()
-        user_id = uuid4()
+    async def test_hard_daily_over_cap_raises(self) -> None:
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -90,11 +89,11 @@ class TestCheckPreflightHardUserDaily:
             assert excinfo.value.scope == "user"
             assert excinfo.value.limit_kind == "spend"
 
-        asyncio.run(run())
+        await run()
 
-    def test_hard_daily_under_cap_passes(self) -> None:
-        org_id = uuid4()
-        user_id = uuid4()
+    async def test_hard_daily_under_cap_passes(self) -> None:
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -110,11 +109,11 @@ class TestCheckPreflightHardUserDaily:
                 organization_id=org_id,
             )
 
-        asyncio.run(run())
+        await run()
 
-    def test_soft_daily_over_cap_warns_but_passes(self) -> None:
-        org_id = uuid4()
-        user_id = uuid4()
+    async def test_soft_daily_over_cap_warns_but_passes(self) -> None:
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -130,14 +129,14 @@ class TestCheckPreflightHardUserDaily:
                 organization_id=org_id,
             )
 
-        asyncio.run(run())
+        await run()
 
 
 class TestCheckPreflightHardOrgMonthly:
     """Org budget rejection when its monthly dollar cap is crossed."""
 
-    def test_hard_org_over_cap_raises(self) -> None:
-        org_id = uuid4()
+    async def test_hard_org_over_cap_raises(self) -> None:
+        org_id = generate_id()
         budget = AgentBudget(
             organization_id=org_id,
             monthly_limit=Decimal("100.00"),
@@ -150,18 +149,18 @@ class TestCheckPreflightHardOrgMonthly:
         async def run() -> None:
             with pytest.raises(BudgetExceededError) as excinfo:
                 await ops.check_preflight(
-                    user_id=uuid4(),
+                    user_id=generate_id(),
                     organization_id=org_id,
                 )
             assert excinfo.value.scope == "org"
 
-        asyncio.run(run())
+        await run()
 
-    def test_user_cap_overrides_org_cap_when_hit_first(self) -> None:
+    async def test_user_cap_overrides_org_cap_when_hit_first(self) -> None:
         """Per-user daily check runs before org monthly; when both are
         tripped, the user-scoped error fires."""
-        org_id = uuid4()
-        user_id = uuid4()
+        org_id = generate_id()
+        user_id = generate_id()
         quota = AgentUserQuota(
             organization_id=org_id,
             user_id=user_id,
@@ -186,20 +185,20 @@ class TestCheckPreflightHardOrgMonthly:
             # User daily fires first.
             assert excinfo.value.scope == "user"
 
-        asyncio.run(run())
+        await run()
 
 
 class TestUpsertValidation:
     """Input validation on the write operations."""
 
-    def test_invalid_reset_day(self) -> None:
+    async def test_invalid_reset_day(self) -> None:
         ops = _make_ops()
 
         async def run() -> None:
             with pytest.raises(ValidationError):
                 await ops.upsert_org_budget(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                     monthly_limit="10.00",
                     image_monthly_limit=None,
                     hard_limit=False,
@@ -207,16 +206,16 @@ class TestUpsertValidation:
                     reset_day=40,
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_invalid_threshold(self) -> None:
+    async def test_invalid_threshold(self) -> None:
         ops = _make_ops()
 
         async def run() -> None:
             with pytest.raises(ValidationError):
                 await ops.upsert_org_budget(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                     monthly_limit="10.00",
                     image_monthly_limit=None,
                     hard_limit=False,
@@ -224,16 +223,16 @@ class TestUpsertValidation:
                     reset_day=1,
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_negative_image_limit_rejected(self) -> None:
+    async def test_negative_image_limit_rejected(self) -> None:
         ops = _make_ops()
 
         async def run() -> None:
             with pytest.raises(ValidationError):
                 await ops.upsert_org_budget(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                     monthly_limit=None,
                     image_monthly_limit=-1,
                     hard_limit=False,
@@ -241,16 +240,16 @@ class TestUpsertValidation:
                     reset_day=1,
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_unparseable_dollar_rejected(self) -> None:
+    async def test_unparseable_dollar_rejected(self) -> None:
         ops = _make_ops()
 
         async def run() -> None:
             with pytest.raises(ValidationError):
                 await ops.upsert_org_budget(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                     monthly_limit="not-a-number",
                     image_monthly_limit=None,
                     hard_limit=False,
@@ -258,15 +257,15 @@ class TestUpsertValidation:
                     reset_day=1,
                 )
 
-        asyncio.run(run())
+        await run()
 
 
 class TestSpendSummary:
     """get_current_spend computes pct_of_limit when a budget is set."""
 
-    def test_pct_of_limit_at_50_percent(self) -> None:
-        org_id = uuid4()
-        actor_id = uuid4()
+    async def test_pct_of_limit_at_50_percent(self) -> None:
+        org_id = generate_id()
+        actor_id = generate_id()
         budget = AgentBudget(
             organization_id=org_id,
             monthly_limit=Decimal("100.00"),
@@ -298,4 +297,4 @@ class TestSpendSummary:
             assert summary.spend == Decimal("50.00")
             assert summary.pct_of_limit == 50
 
-        asyncio.run(run())
+        await run()

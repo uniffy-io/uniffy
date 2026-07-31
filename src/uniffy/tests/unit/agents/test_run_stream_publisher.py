@@ -6,11 +6,10 @@ are replaced with in-memory recorders so the test runs without a live
 broker.
 """
 
-import asyncio
 
 import pytest
 
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime import publishers as publishers_mod
 from uniffy.domains.agents.runtime.publishers import RunStreamPublisher
@@ -36,17 +35,17 @@ def _patch(monkeypatch, recorder: _Recorder) -> None:
 
 def _make_publisher(flush_ms: int = 0, buffer_cap: int = 32) -> RunStreamPublisher:
     return RunStreamPublisher(
-        run_id=uuid7(),
-        user_id=uuid7(),
-        organization_id=uuid7(),
-        session_id=uuid7(),
+        run_id=generate_id(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        session_id=generate_id(),
         flush_ms=flush_ms,
         buffer_cap=buffer_cap,
     )
 
 
 class TestRunStreamPublisher:
-    def test_token_buffer_cap_flushes(self, monkeypatch) -> None:
+    async def test_token_buffer_cap_flushes(self, monkeypatch) -> None:
         rec = _Recorder()
         _patch(monkeypatch, rec)
         pub = _make_publisher(flush_ms=1000, buffer_cap=3)
@@ -56,12 +55,12 @@ class TestRunStreamPublisher:
             await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="b"))
             await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="c"))
 
-        asyncio.run(run())
+        await run()
         assert len(rec.xadds) == 1
         assert rec.xadds[0][1]["seq"] == 1
         assert rec.xadds[0][1]["event"]["delta"] == "abc"
 
-    def test_non_token_event_flushes_pending_tokens_first(self, monkeypatch) -> None:
+    async def test_non_token_event_flushes_pending_tokens_first(self, monkeypatch) -> None:
         rec = _Recorder()
         _patch(monkeypatch, rec)
         pub = _make_publisher(flush_ms=0)
@@ -71,11 +70,11 @@ class TestRunStreamPublisher:
             await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="b"))
             await pub.publish(StreamEvent(type=EventType.ERROR, error="boom"))
 
-        asyncio.run(run())
+        await run()
         assert [x[1]["seq"] for x in rec.xadds] == [1, 2, 3]
         assert rec.xadds[-1][1]["event"]["type"] == "error"
 
-    def test_block_change_flushes_before_buffering(self, monkeypatch) -> None:
+    async def test_block_change_flushes_before_buffering(self, monkeypatch) -> None:
         rec = _Recorder()
         _patch(monkeypatch, rec)
         pub = _make_publisher(flush_ms=1000, buffer_cap=32)
@@ -93,14 +92,14 @@ class TestRunStreamPublisher:
             )
             await pub.close()
 
-        asyncio.run(run())
+        await run()
         assert len(rec.xadds) == 2
         assert rec.xadds[0][1]["event"]["type"] == "text_block_delta"
         assert rec.xadds[0][1]["event"]["delta"] == "a"
         assert rec.xadds[1][1]["event"]["type"] == "thinking_block_delta"
         assert rec.xadds[1][1]["event"]["delta"] == "t"
 
-    def test_close_flushes_pending(self, monkeypatch) -> None:
+    async def test_close_flushes_pending(self, monkeypatch) -> None:
         rec = _Recorder()
         _patch(monkeypatch, rec)
         pub = _make_publisher(flush_ms=1000, buffer_cap=64)
@@ -109,11 +108,11 @@ class TestRunStreamPublisher:
             await pub.publish(StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="x"))
             await pub.close()
 
-        asyncio.run(run())
+        await run()
         assert len(rec.xadds) == 1
         assert rec.xadds[0][1]["event"]["delta"] == "x"
 
-    def test_state_hash_refreshed_on_every_publish(self, monkeypatch) -> None:
+    async def test_state_hash_refreshed_on_every_publish(self, monkeypatch) -> None:
         rec = _Recorder()
         _patch(monkeypatch, rec)
         pub = _make_publisher(flush_ms=0)
@@ -127,12 +126,12 @@ class TestRunStreamPublisher:
                 )
             )
 
-        asyncio.run(run())
+        await run()
         assert rec.states[0]["status"] == "running"
         assert rec.states[-1]["status"] == "done"
         assert [s["last_seq"] for s in rec.states] == [1, 2]
 
-    def test_error_event_flips_status_to_error(self, monkeypatch) -> None:
+    async def test_error_event_flips_status_to_error(self, monkeypatch) -> None:
         rec = _Recorder()
         _patch(monkeypatch, rec)
         pub = _make_publisher(flush_ms=0)
@@ -140,7 +139,7 @@ class TestRunStreamPublisher:
         async def run() -> None:
             await pub.publish(StreamEvent(type=EventType.ERROR, error="boom"))
 
-        asyncio.run(run())
+        await run()
         assert rec.states[0]["status"] == "error"
         assert rec.states[0]["error"] == "boom"
 
@@ -151,8 +150,8 @@ def _make_message_for_done():
     from uniffy.core.models.agents.message import AgentMessage
 
     return AgentMessage(
-        id=uuid7(),
-        session_id=uuid7(),
+        id=generate_id(),
+        session_id=generate_id(),
         role="assistant",
         content="done",
         created_at=datetime.now(UTC),

@@ -4,15 +4,10 @@ An invitation is an explicit grant: attendees get a VIEWER floor on the event
 regardless of its access mode (the accept-from-notification flow fetches the
 event right after the RSVP), they stay searchable for the invitee, and an
 explicit BLOCKED grant still beats the invitation.
-
-Uses ``asyncio.run`` so it runs without pytest-asyncio, mirroring the rest of
-the calendar unit suite.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
@@ -20,20 +15,16 @@ from uniffy.core.auth.permissions import ContentAccessQuery
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.meilisearch import MeilisearchClient
-from uniffy.core.types import AccessMode, ContentRole
+from uniffy.core.types import AccessMode, ContentRole, generate_id
 from uniffy.domains.calendar.operations import CalendarEventOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _make_event() -> CalendarEvent:
     now = datetime.now(UTC)
     return CalendarEvent(
-        organization_id=uuid4(),
-        organizer_id=uuid4(),
-        calendar_id=uuid4(),
+        organization_id=generate_id(),
+        organizer_id=generate_id(),
+        calendar_id=generate_id(),
         title="1:1 Sync",
         start_time=now,
         end_time=now,
@@ -57,25 +48,25 @@ def _make_ops(
 
 
 class TestResolveRoleAttendeeFloor:
-    def test_attendee_gets_viewer_on_owner_only_event(self) -> None:
+    async def test_attendee_gets_viewer_on_owner_only_event(self) -> None:
         ops = _make_ops(is_attendee=True)
-        role = _run(ops._resolve_role(uuid4(), uuid4(), _make_event()))
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
         assert role == ContentRole.VIEWER
 
-    def test_non_attendee_stays_denied(self) -> None:
+    async def test_non_attendee_stays_denied(self) -> None:
         ops = _make_ops(is_attendee=False)
-        role = _run(ops._resolve_role(uuid4(), uuid4(), _make_event()))
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
         assert role is None
 
-    def test_blocked_attendee_stays_denied(self) -> None:
+    async def test_blocked_attendee_stays_denied(self) -> None:
         ops = _make_ops(is_attendee=True, is_blocked=True)
-        role = _run(ops._resolve_role(uuid4(), uuid4(), _make_event()))
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
         assert role is None
 
-    def test_content_role_wins_over_floor(self) -> None:
+    async def test_content_role_wins_over_floor(self) -> None:
         # An explicit EDITOR grant must not be downgraded to the VIEWER floor.
         ops = _make_ops(effective_role=ContentRole.EDITOR, is_attendee=True)
-        role = _run(ops._resolve_role(uuid4(), uuid4(), _make_event()))
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
         assert role == ContentRole.EDITOR
         ops._is_attendee.assert_not_awaited()
 
@@ -85,26 +76,26 @@ class TestGetByIdAfterRsvp:
     fetches the event. The fetch must pass for an invitee on a personal event.
     """
 
-    def test_invitee_can_fetch_owner_only_event(self) -> None:
+    async def test_invitee_can_fetch_owner_only_event(self) -> None:
         ops = _make_ops(is_attendee=True)
         event = _make_event()
         ops._fetch_by_id = AsyncMock(return_value=event)
-        fetched = _run(ops.get_by_id(uuid4(), event.organization_id, event.id))
+        fetched = await ops.get_by_id(generate_id(), event.organization_id, event.id)
         assert fetched is event
 
-    def test_stranger_still_denied(self) -> None:
+    async def test_stranger_still_denied(self) -> None:
         ops = _make_ops(is_attendee=False)
         event = _make_event()
         ops._fetch_by_id = AsyncMock(return_value=event)
         with pytest.raises(PermissionDeniedError):
-            _run(ops.get_by_id(uuid4(), event.organization_id, event.id))
+            await ops.get_by_id(generate_id(), event.organization_id, event.id)
 
 
 class TestAttendeeListFilter:
     def test_attendee_branch_carries_blocked_guard(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         ops.access_query = ContentAccessQuery(MagicMock())
-        sql = str(ops._attendee_access_filter(uuid4(), uuid4()))
+        sql = str(ops._attendee_access_filter(generate_id(), generate_id()))
         assert "calendar_event_attendees" in sql
         # BLOCKED beats the invitation: the branch excludes blocked content ids.
         assert "permissions_content_members" in sql
@@ -112,54 +103,54 @@ class TestAttendeeListFilter:
 
 
 class TestSearchAttendeeIds:
-    def test_hook_returns_attendee_ids(self) -> None:
+    async def test_hook_returns_attendee_ids(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
-        u1, u2 = uuid4(), uuid4()
+        u1, u2 = generate_id(), generate_id()
         ops.session = MagicMock()
         ops.session.execute = AsyncMock(
             return_value=MagicMock(all=MagicMock(return_value=[(u1,), (u2,)]))
         )
-        ids = _run(ops._get_search_attendee_user_ids(_make_event()))
+        ids = await ops._get_search_attendee_user_ids(_make_event())
         assert ids == [u1, u2]
 
-    def test_hook_returns_none_when_no_attendees(self) -> None:
+    async def test_hook_returns_none_when_no_attendees(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         ops.session = MagicMock()
         ops.session.execute = AsyncMock(
             return_value=MagicMock(all=MagicMock(return_value=[]))
         )
-        assert _run(ops._get_search_attendee_user_ids(_make_event())) is None
+        assert await ops._get_search_attendee_user_ids(_make_event()) is None
 
-    def test_index_for_search_passes_attendees(self) -> None:
+    async def test_index_for_search_passes_attendees(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         ops.session = MagicMock()
         ops.search_indexer = MagicMock()
         ops.search_indexer.index = AsyncMock()
         ops._effective_policy = AsyncMock(return_value=(AccessMode.OWNER_ONLY, None))
         ops._get_search_tags_async = AsyncMock(return_value=None)
-        invitee = uuid4()
+        invitee = generate_id()
         ops._get_search_attendee_user_ids = AsyncMock(return_value=[invitee])
 
-        _run(ops._index_for_search(_make_event(), skip_member_lookup=True))
+        await ops._index_for_search(_make_event(), skip_member_lookup=True)
 
         kwargs = ops.search_indexer.index.await_args.kwargs
         assert kwargs["attendee_user_ids"] == [invitee]
 
-    def test_refresh_pushes_current_set(self) -> None:
+    async def test_refresh_pushes_current_set(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         ops.search_indexer = MagicMock()
         ops.search_indexer.update_attendees = AsyncMock()
-        invitee = uuid4()
+        invitee = generate_id()
         ops._get_search_attendee_user_ids = AsyncMock(return_value=[invitee])
 
         event = _make_event()
-        _run(ops._refresh_search_attendees(event))
+        await ops._refresh_search_attendees(event)
 
         kwargs = ops.search_indexer.update_attendees.await_args.kwargs
         assert kwargs["attendee_user_ids"] == [invitee]
         assert kwargs["organization_id"] == event.organization_id
 
-    def test_refresh_is_best_effort(self) -> None:
+    async def test_refresh_is_best_effort(self) -> None:
         ops = CalendarEventOperations.__new__(CalendarEventOperations)
         ops.search_indexer = MagicMock()
         ops.search_indexer.update_attendees = AsyncMock(
@@ -167,22 +158,22 @@ class TestSearchAttendeeIds:
         )
         ops._get_search_attendee_user_ids = AsyncMock(return_value=[])
         # A search-side failure must not fail the attendee mutation.
-        _run(ops._refresh_search_attendees(_make_event()))
+        await ops._refresh_search_attendees(_make_event())
 
 
 class TestMeiliPermissionFilter:
     def test_filter_includes_attendee_branch(self) -> None:
         client = MeilisearchClient.__new__(MeilisearchClient)
-        user_id = uuid4()
-        filter_expr = client._build_permission_filter(uuid4(), user_id)
+        user_id = generate_id()
+        filter_expr = client._build_permission_filter(generate_id(), user_id)
         assert f'attendee_user_ids = "{user_id}"' in filter_expr
         # The allow branch stays inside the AND with the blocked exclusion.
         assert f'NOT blocked_user_ids = "{user_id}"' in filter_expr
 
     def test_my_content_only_skips_attendee_branch(self) -> None:
         client = MeilisearchClient.__new__(MeilisearchClient)
-        user_id = uuid4()
+        user_id = generate_id()
         filter_expr = client._build_permission_filter(
-            uuid4(), user_id, my_content_only=True
+            generate_id(), user_id, my_content_only=True
         )
         assert "attendee_user_ids" not in filter_expr

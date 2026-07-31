@@ -7,18 +7,17 @@ throughout; the multilingual similarity numbers themselves were measured
 against a live Postgres and live in the plan.
 """
 
-import asyncio
 import re
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 import pytest
 from sqlalchemy.dialects import postgresql
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.memory import AgentMemory, MemoryScope
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.memories import recall as recall_mod
 from uniffy.domains.agents.memories.operations import _validate_entry_fields
 from uniffy.domains.agents.memories.recall import (
@@ -43,16 +42,12 @@ from uniffy.domains.agents.runtime.operations import RuntimeOperations
 from uniffy.domains.agents.runtime.prompt import MemoryScopeBlock, build_memory_block
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _memory(**overrides):
     defaults = dict(
         scope=MemoryScope.USER.value,
-        user_id=uuid4(),
-        organization_id=uuid4(),
-        created_by_user_id=uuid4(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        created_by_user_id=generate_id(),
         key="deploy_window",
         description="read this when scheduling or releases come up",
         content="Alice's deploy window is Tuesday 09:00",
@@ -149,38 +144,32 @@ class TestTrigramScorer:
             )
         )
 
-    def test_empty_query_short_circuits(self):
+    async def test_empty_query_short_circuits(self):
         session = _CapturingSession()
-        result = _run(
-            TrigramMemoryScorer().score(
-                session,
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="   ",
-            )
+        result = await TrigramMemoryScorer().score(
+            session,
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="   ",
         )
         assert result == []
         assert session.statements == []
 
-    def test_empty_refs_short_circuits(self):
+    async def test_empty_refs_short_circuits(self):
         session = _CapturingSession()
-        result = _run(
-            TrigramMemoryScorer().score(
-                session, organization_id=uuid4(), refs=[], query="deploy"
-            )
+        result = await TrigramMemoryScorer().score(
+            session, organization_id=generate_id(), refs=[], query="deploy"
         )
         assert result == []
         assert session.statements == []
 
-    def test_sql_uses_word_similarity_unaccent_and_escaped_ilike(self):
+    async def test_sql_uses_word_similarity_unaccent_and_escaped_ilike(self):
         session = _CapturingSession()
-        _run(
-            TrigramMemoryScorer().score(
-                session,
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4()), MemoryScopeRef.org()],
-                query="deploy window",
-            )
+        await TrigramMemoryScorer().score(
+            session,
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id()), MemoryScopeRef.org()],
+            query="deploy window",
         )
         sql = self._compiled(session)
         assert "word_similarity" in sql
@@ -196,15 +185,13 @@ class TestTrigramScorer:
         # bare content.
         assert sql.count("concat_ws(") == sql.count("left(agents_memories.content")
 
-    def test_short_query_skips_trigram_keeps_substring(self):
+    async def test_short_query_skips_trigram_keeps_substring(self):
         session = _CapturingSession()
-        _run(
-            TrigramMemoryScorer().score(
-                session,
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="ab",
-            )
+        await TrigramMemoryScorer().score(
+            session,
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="ab",
         )
         assert len("ab") < MIN_TRIGRAM_QUERY_CHARS
         sql = self._compiled(session)
@@ -213,15 +200,13 @@ class TestTrigramScorer:
         where_clause = sql.split("WHERE", 1)[1].split("ORDER BY", 1)[0]
         assert "word_similarity" not in where_clause
 
-    def test_tool_written_instructions_excluded(self):
+    async def test_tool_written_instructions_excluded(self):
         session = _CapturingSession()
-        _run(
-            TrigramMemoryScorer().score(
-                session,
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="deploy window",
-            )
+        await TrigramMemoryScorer().score(
+            session,
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="deploy window",
         )
         sql = self._compiled(session)
         assert "NOT (" in sql
@@ -246,54 +231,46 @@ class TestBuildMemoryRecall:
     def _with_scorer(self, monkeypatch, scorer):
         monkeypatch.setattr(recall_mod, "_scorer", scorer)
 
-    def test_no_match_returns_none(self, monkeypatch):
+    async def test_no_match_returns_none(self, monkeypatch):
         self._with_scorer(monkeypatch, _StubScorer([]))
-        result = _run(
-            build_memory_recall(
-                MagicMock(),
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="deploy",
-            )
+        result = await build_memory_recall(
+            MagicMock(),
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="deploy",
         )
         assert result is None
 
-    def test_scoring_error_fails_open(self, monkeypatch):
+    async def test_scoring_error_fails_open(self, monkeypatch):
         self._with_scorer(monkeypatch, _StubScorer(error=RuntimeError("pg down")))
-        result = _run(
-            build_memory_recall(
-                MagicMock(),
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="deploy",
-            )
+        result = await build_memory_recall(
+            MagicMock(),
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="deploy",
         )
         assert result is None
 
-    def test_entry_cap_promotes_three_and_lists_rest(self, monkeypatch):
+    async def test_entry_cap_promotes_three_and_lists_rest(self, monkeypatch):
         scored = [(_memory(key=f"k{i}", content="short"), 0.9) for i in range(5)]
         self._with_scorer(monkeypatch, _StubScorer(scored))
-        result = _run(
-            build_memory_recall(
-                MagicMock(),
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="deploy",
-            )
+        result = await build_memory_recall(
+            MagicMock(),
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="deploy",
         )
         assert len(result.entries) == MAX_PROMOTED_ENTRIES
         assert result.also_matched == ["k3", "k4"]
 
-    def test_char_cap_truncates_with_marker(self, monkeypatch):
+    async def test_char_cap_truncates_with_marker(self, monkeypatch):
         big = _memory(key="big", content="x" * 4000)
         self._with_scorer(monkeypatch, _StubScorer([(big, 0.9)]))
-        result = _run(
-            build_memory_recall(
-                MagicMock(),
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="deploy",
-            )
+        result = await build_memory_recall(
+            MagicMock(),
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="deploy",
         )
         entry = result.entries[0]
         assert entry.truncated
@@ -301,19 +278,17 @@ class TestBuildMemoryRecall:
         assert "memory.read" in entry.content
         assert "big" in entry.content
 
-    def test_exhausted_budget_pushes_to_also_matched(self, monkeypatch):
+    async def test_exhausted_budget_pushes_to_also_matched(self, monkeypatch):
         scored = [
             (_memory(key="first", content="x" * 4000), 0.9),
             (_memory(key="second", content="short"), 0.8),
         ]
         self._with_scorer(monkeypatch, _StubScorer(scored))
-        result = _run(
-            build_memory_recall(
-                MagicMock(),
-                organization_id=uuid4(),
-                refs=[MemoryScopeRef.user(uuid4())],
-                query="deploy",
-            )
+        result = await build_memory_recall(
+            MagicMock(),
+            organization_id=generate_id(),
+            refs=[MemoryScopeRef.user(generate_id())],
+            query="deploy",
         )
         assert [e.key for e in result.entries] == ["first"]
         assert result.also_matched == ["second"]
@@ -417,7 +392,7 @@ class TestBuildRecallQuery:
 
 
 class TestRuntimeRecallRefs:
-    def test_bridge_bucket_never_scored(self, monkeypatch):
+    async def test_bridge_bucket_never_scored(self, monkeypatch):
         captured = {}
 
         async def fake_build(session, *, organization_id, refs, query):
@@ -428,18 +403,16 @@ class TestRuntimeRecallRefs:
             "uniffy.domains.agents.runtime.operations.build_memory_recall",
             fake_build,
         )
-        agent_id = uuid4()
-        surface = MemoryScopeRef.channel(uuid4())
+        agent_id = generate_id()
+        surface = MemoryScopeRef.channel(generate_id())
         fake_self = SimpleNamespace(_session=MagicMock())
-        result = _run(
-            RuntimeOperations._build_memory_recall_block(
-                fake_self,
-                agent_id=agent_id,
-                organization_id=uuid4(),
-                scope_ref=surface,
-                context_messages=[],
-                content="deploy window",
-            )
+        result = await RuntimeOperations._build_memory_recall_block(
+            fake_self,
+            agent_id=agent_id,
+            organization_id=generate_id(),
+            scope_ref=surface,
+            context_messages=[],
+            content="deploy window",
         )
         assert result is None
         assert captured["refs"] == [
@@ -451,7 +424,7 @@ class TestRuntimeRecallRefs:
             ref.scope is not MemoryScope.USER for ref in captured["refs"]
         )
 
-    def test_empty_query_skips_scoring_entirely(self, monkeypatch):
+    async def test_empty_query_skips_scoring_entirely(self, monkeypatch):
         called = False
 
         async def fake_build(session, **kwargs):
@@ -464,15 +437,13 @@ class TestRuntimeRecallRefs:
             fake_build,
         )
         fake_self = SimpleNamespace(_session=MagicMock())
-        result = _run(
-            RuntimeOperations._build_memory_recall_block(
-                fake_self,
-                agent_id=uuid4(),
-                organization_id=uuid4(),
-                scope_ref=MemoryScopeRef.user(uuid4()),
-                context_messages=[],
-                content="   ",
-            )
+        result = await RuntimeOperations._build_memory_recall_block(
+            fake_self,
+            agent_id=generate_id(),
+            organization_id=generate_id(),
+            scope_ref=MemoryScopeRef.user(generate_id()),
+            context_messages=[],
+            content="   ",
         )
         assert result is None
         assert not called

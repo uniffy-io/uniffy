@@ -4,12 +4,11 @@ Soft and permanent delete plus the ``calendar_event.moved`` row that
 fires when an event's ``calendar_id`` shifts between calendars.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.types import generate_id
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -29,27 +28,25 @@ def _build_session() -> MagicMock:
     return session
 
 
-def test_calendar_event_moved_payload_carries_previous_and_new_calendar() -> None:
+async def test_calendar_event_moved_payload_carries_previous_and_new_calendar() -> None:
     from uniffy.core.audit import write_audit_event
 
     session = _build_session()
-    event_id = uuid4()
-    prev_cal = uuid4()
-    new_cal = uuid4()
+    event_id = generate_id()
+    prev_cal = generate_id()
+    new_cal = generate_id()
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=uuid4(),
-            actor_user_id=uuid4(),
-            action=Action.CALENDAR_EVENT_MOVED,
-            resource_type="CALENDAR_EVENT",
-            resource_id=event_id,
-            details={
-                "previous_calendar_id": str(prev_cal),
-                "new_calendar_id": str(new_cal),
-            },
-        )
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=generate_id(),
+        action=Action.CALENDAR_EVENT_MOVED,
+        resource_type="CALENDAR_EVENT",
+        resource_id=event_id,
+        details={
+            "previous_calendar_id": str(prev_cal),
+            "new_calendar_id": str(new_cal),
+        },
     )
 
     rows = _audit_rows(session)
@@ -59,23 +56,21 @@ def test_calendar_event_moved_payload_carries_previous_and_new_calendar() -> Non
     assert rows[0].details["new_calendar_id"] == str(new_cal)
 
 
-def test_calendar_event_deleted_records_title_and_start_time() -> None:
+async def test_calendar_event_deleted_records_title_and_start_time() -> None:
     from uniffy.core.audit import write_audit_event
 
     session = _build_session()
-    event_id = uuid4()
+    event_id = generate_id()
     start = datetime(2026, 6, 1, 14, 0, tzinfo=UTC)
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=uuid4(),
-            actor_user_id=uuid4(),
-            action=Action.CALENDAR_EVENT_DELETED,
-            resource_type="CALENDAR_EVENT",
-            resource_id=event_id,
-            details={"title": "Standup", "start_time": start.isoformat()},
-        )
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=generate_id(),
+        action=Action.CALENDAR_EVENT_DELETED,
+        resource_type="CALENDAR_EVENT",
+        resource_id=event_id,
+        details={"title": "Standup", "start_time": start.isoformat()},
     )
 
     rows = _audit_rows(session)

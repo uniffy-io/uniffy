@@ -17,7 +17,6 @@ without a live database or Valkey.
 
 from __future__ import annotations
 
-import asyncio
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
@@ -26,7 +25,7 @@ from uuid import UUID
 import pytest
 
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.workers.tasks import agent_run as agent_run_mod
 
@@ -171,8 +170,8 @@ def _install_ops_client(monkeypatch, *, lock_acquired: bool = True) -> _FakeOpsC
 def _make_done_event() -> StreamEvent:
     return StreamEvent(type=EventType.DONE, 
         assistant_message=AgentMessage(
-            id=uuid7(),
-            session_id=uuid7(),
+            id=generate_id(),
+            session_id=generate_id(),
             role="assistant",
             content="ok",
             created_at=datetime.now(UTC),
@@ -183,15 +182,15 @@ def _make_done_event() -> StreamEvent:
 
 def _ids() -> dict[str, str]:
     return {
-        "run_id": str(uuid7()),
-        "user_id": str(uuid7()),
-        "organization_id": str(uuid7()),
-        "session_id": str(uuid7()),
+        "run_id": str(generate_id()),
+        "user_id": str(generate_id()),
+        "organization_id": str(generate_id()),
+        "session_id": str(generate_id()),
     }
 
 
 class TestRunAgentSession:
-    def test_lock_loss_skips_runtime(self, monkeypatch) -> None:
+    async def test_lock_loss_skips_runtime(self, monkeypatch) -> None:
         ops_client = _install_ops_client(monkeypatch, lock_acquired=False)
         session_ops = _install_session_stub(monkeypatch)
         runtime_ops = _install_runtime_stub(monkeypatch, events=[_make_done_event()])
@@ -209,7 +208,7 @@ class TestRunAgentSession:
                 **_ids(),
             )
 
-        result = asyncio.run(run())
+        result = await run()
         assert result["status"] == "skipped"
         assert result["reason"] == "lock_held"
         assert ops_client.set_calls, "lock SET NX must be attempted"
@@ -218,7 +217,7 @@ class TestRunAgentSession:
         assert runtime_ops == [], "runtime never invoked"
         assert publisher.events == [], "publisher never called"
 
-    def test_done_path_schedules_cleanup(self, monkeypatch) -> None:
+    async def test_done_path_schedules_cleanup(self, monkeypatch) -> None:
         ops_client = _install_ops_client(monkeypatch)
         _install_session_stub(monkeypatch)
         _install_runtime_stub(
@@ -242,7 +241,7 @@ class TestRunAgentSession:
                 **_ids(),
             )
 
-        result = asyncio.run(run())
+        result = await run()
         assert result["status"] == "success"
         assert publisher.closed is True, "publisher must be closed in finally"
         assert ops_client.delete_calls, "lock must be released after run"
@@ -255,7 +254,7 @@ class TestRunAgentSession:
         types = [ev.type for ev in publisher.events]
         assert types == [EventType.TEXT_BLOCK_DELTA, EventType.DONE]
 
-    def test_no_done_event_skips_cleanup(self, monkeypatch) -> None:
+    async def test_no_done_event_skips_cleanup(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
         _install_session_stub(monkeypatch)
         _install_runtime_stub(
@@ -276,11 +275,11 @@ class TestRunAgentSession:
                 **_ids(),
             )
 
-        result = asyncio.run(run())
+        result = await run()
         assert result["status"] == "success"
         assert valkey.enqueued == [], "no cleanup without a DONE event"
 
-    def test_exception_emits_synthetic_error_and_reraises(self, monkeypatch) -> None:
+    async def test_exception_emits_synthetic_error_and_reraises(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
         _install_session_stub(monkeypatch)
         boom = RuntimeError("driver blew up")
@@ -300,7 +299,7 @@ class TestRunAgentSession:
             )
 
         with pytest.raises(RuntimeError, match="driver blew up"):
-            asyncio.run(run())
+            await run()
 
         assert publisher.closed is True
         error_events = [e for e in publisher.events if e.type is EventType.ERROR]
@@ -313,7 +312,7 @@ class TestRunAgentSession:
         assert last_state["error"] == "driver blew up"
         assert valkey.enqueued == [], "no cleanup scheduled on failure"
 
-    def test_invalid_uuid_returns_error_without_lock(self, monkeypatch) -> None:
+    async def test_invalid_uuid_returns_error_without_lock(self, monkeypatch) -> None:
         ops_client = _install_ops_client(monkeypatch)
         runtime_ops = _install_runtime_stub(monkeypatch, events=[_make_done_event()])
 
@@ -321,20 +320,20 @@ class TestRunAgentSession:
             return await agent_run_mod.run_agent_session(
                 ctx={"valkey": _FakeValkey()},
                 run_id="not-a-uuid",
-                user_id=str(uuid7()),
-                organization_id=str(uuid7()),
-                session_id=str(uuid7()),
+                user_id=str(generate_id()),
+                organization_id=str(generate_id()),
+                session_id=str(generate_id()),
                 content="hi",
                 files=None,
                 user_timezone=None,
             )
 
-        result = asyncio.run(run())
+        result = await run()
         assert result == {"status": "error", "error": "invalid_uuid"}
         assert ops_client.set_calls == []
         assert runtime_ops == []
 
-    def test_files_payload_rebuilt_into_file_contexts(self, monkeypatch) -> None:
+    async def test_files_payload_rebuilt_into_file_contexts(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
         _install_session_stub(monkeypatch)
         captured = _install_runtime_stub(monkeypatch, events=[_make_done_event()])
@@ -344,7 +343,7 @@ class TestRunAgentSession:
 
         files = [
             {
-                "file_id": str(uuid7()),
+                "file_id": str(generate_id()),
                 "media_type": "image/png",
                 "filename": "diagram.png",
                 "storage_key": "org/diagram.png",
@@ -362,7 +361,7 @@ class TestRunAgentSession:
                 **_ids(),
             )
 
-        asyncio.run(run())
+        await run()
         assert captured, "runtime stub must be constructed"
         invocation = captured[0].invocations[0]
         rebuilt = invocation["files"]
@@ -373,7 +372,7 @@ class TestRunAgentSession:
 
 
 class TestDeleteRunStream:
-    def test_delete_calls_stream_delete(self, monkeypatch) -> None:
+    async def test_delete_calls_stream_delete(self, monkeypatch) -> None:
         captured: list[tuple[str, str]] = []
 
         async def fake_stream_delete(stream_key: str, state_key: str) -> None:
@@ -381,7 +380,7 @@ class TestDeleteRunStream:
 
         monkeypatch.setattr(agent_run_mod, "stream_delete", fake_stream_delete)
 
-        run_id = uuid7()
+        run_id = generate_id()
 
         async def run() -> dict[str, Any]:
             return await agent_run_mod.delete_run_stream(
@@ -389,13 +388,13 @@ class TestDeleteRunStream:
                 run_id=str(run_id),
             )
 
-        result = asyncio.run(run())
+        result = await run()
         assert result == {"status": "success", "run_id": str(run_id)}
         assert captured == [
             (f"agent:run:{run_id}", f"agent:run:{run_id}:state")
         ]
 
-    def test_delete_invalid_uuid_returns_error(self, monkeypatch) -> None:
+    async def test_delete_invalid_uuid_returns_error(self, monkeypatch) -> None:
         called: list[Any] = []
 
         async def fake_stream_delete(*_args: Any) -> None:
@@ -406,6 +405,6 @@ class TestDeleteRunStream:
         async def run() -> dict[str, Any]:
             return await agent_run_mod.delete_run_stream(ctx={}, run_id="bad")
 
-        result = asyncio.run(run())
+        result = await run()
         assert result == {"status": "error", "error": "invalid_uuid"}
         assert called == []

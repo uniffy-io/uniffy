@@ -5,14 +5,13 @@ all patched in the tool_gate namespace, so no provider pack is imported
 and no store is touched.
 """
 
-import asyncio
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 import pytest
 
 import uniffy.domains.integrations.client_cache as client_cache_mod
+from uniffy.core.types import generate_id
 from uniffy.domains.integrations import tool_gate
 from uniffy.domains.integrations.base import (
     IntegrationDescriptor,
@@ -25,10 +24,6 @@ from uniffy.domains.integrations.registry import IntegrationRegistry
 READ_SCHEMA = {"name": "github-search_issues"}
 WRITE_SCHEMA = {"name": "github-create_issue"}
 PLATFORM_SCHEMA = {"name": "notes-search_notes"}
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 class FakeGitHubProvider(IntegrationProvider):
@@ -62,7 +57,7 @@ class _ToolRegistryStub:
 
 def _meta_row(**overrides) -> dict:
     row = {
-        "id": str(uuid4()),
+        "id": str(generate_id()),
         "provider": "github",
         "name": "main",
         "allow_writes": False,
@@ -87,33 +82,31 @@ def _patched_gate(monkeypatch):
     )
 
 
-def _filter(monkeypatch, meta: list[dict], schemas):
+async def _filter(monkeypatch, meta: list[dict], schemas):
     async def fake_meta(session, organization_id):
         return meta
 
     monkeypatch.setattr(tool_gate, "get_org_connections_meta", fake_meta)
-    return _run(
-        tool_gate.filter_integration_tool_schemas(MagicMock(), uuid4(), schemas)
-    )
+    return await tool_gate.filter_integration_tool_schemas(MagicMock(), generate_id(), schemas)
 
 
-def test_missing_connection_drops_integration_schemas_only(monkeypatch) -> None:
-    filtered = _filter(monkeypatch, [], [READ_SCHEMA, PLATFORM_SCHEMA])
+async def test_missing_connection_drops_integration_schemas_only(monkeypatch) -> None:
+    filtered = await _filter(monkeypatch, [], [READ_SCHEMA, PLATFORM_SCHEMA])
     assert filtered == [PLATFORM_SCHEMA]
 
 
-def test_enabled_valid_connection_keeps_read_schemas(monkeypatch) -> None:
-    filtered = _filter(monkeypatch, [_meta_row()], [READ_SCHEMA, PLATFORM_SCHEMA])
+async def test_enabled_valid_connection_keeps_read_schemas(monkeypatch) -> None:
+    filtered = await _filter(monkeypatch, [_meta_row()], [READ_SCHEMA, PLATFORM_SCHEMA])
     assert filtered == [READ_SCHEMA, PLATFORM_SCHEMA]
 
 
-def test_write_schema_is_dropped_without_a_writable_connection(monkeypatch) -> None:
-    filtered = _filter(monkeypatch, [_meta_row()], [READ_SCHEMA, WRITE_SCHEMA])
+async def test_write_schema_is_dropped_without_a_writable_connection(monkeypatch) -> None:
+    filtered = await _filter(monkeypatch, [_meta_row()], [READ_SCHEMA, WRITE_SCHEMA])
     assert filtered == [READ_SCHEMA]
 
 
-def test_write_schema_is_kept_when_a_connection_allows_writes(monkeypatch) -> None:
-    filtered = _filter(
+async def test_write_schema_is_kept_when_a_connection_allows_writes(monkeypatch) -> None:
+    filtered = await _filter(
         monkeypatch, [_meta_row(allow_writes=True)], [READ_SCHEMA, WRITE_SCHEMA]
     )
     assert filtered == [READ_SCHEMA, WRITE_SCHEMA]
@@ -127,20 +120,18 @@ def test_write_schema_is_kept_when_a_connection_allows_writes(monkeypatch) -> No
     ],
     ids=["disabled", "invalid"],
 )
-def test_disabled_or_invalid_connections_count_as_absent(monkeypatch, meta) -> None:
-    filtered = _filter(monkeypatch, meta, [READ_SCHEMA, PLATFORM_SCHEMA])
+async def test_disabled_or_invalid_connections_count_as_absent(monkeypatch, meta) -> None:
+    filtered = await _filter(monkeypatch, meta, [READ_SCHEMA, PLATFORM_SCHEMA])
     assert filtered == [PLATFORM_SCHEMA]
 
 
 @pytest.mark.parametrize("schemas", [None, []], ids=["none", "empty"])
-def test_absent_schema_lists_pass_through_unchanged(monkeypatch, schemas) -> None:
+async def test_absent_schema_lists_pass_through_unchanged(monkeypatch, schemas) -> None:
     async def fail_meta(session, organization_id):
         raise AssertionError("metadata must not be loaded for empty schema lists")
 
     monkeypatch.setattr(tool_gate, "get_org_connections_meta", fail_meta)
-    result = _run(
-        tool_gate.filter_integration_tool_schemas(MagicMock(), uuid4(), schemas)
-    )
+    result = await tool_gate.filter_integration_tool_schemas(MagicMock(), generate_id(), schemas)
     assert result is schemas
 
 
@@ -151,20 +142,20 @@ def test_has_advertised_integration_tools() -> None:
     assert not tool_gate.has_advertised_integration_tools(None)
 
 
-def test_client_lru_round_trips_credential_and_client() -> None:
+async def test_client_lru_round_trips_credential_and_client() -> None:
     async def scenario():
         lru = IntegrationClientLRU()
-        connection_id = uuid4()
+        connection_id = generate_id()
         client = MagicMock()
         await lru.set(connection_id, "secret", client)
         cached = await lru.get(connection_id)
         assert cached == ("secret", client)
-        assert await lru.get(uuid4()) is None
+        assert await lru.get(generate_id()) is None
 
-    _run(scenario())
+    await scenario()
 
 
-def test_client_lru_expires_entries_after_the_ttl(monkeypatch) -> None:
+async def test_client_lru_expires_entries_after_the_ttl(monkeypatch) -> None:
     clock = SimpleNamespace(now=1_000.0)
     monkeypatch.setattr(
         client_cache_mod, "time", SimpleNamespace(time=lambda: clock.now)
@@ -172,7 +163,7 @@ def test_client_lru_expires_entries_after_the_ttl(monkeypatch) -> None:
 
     async def scenario():
         lru = IntegrationClientLRU()
-        connection_id = uuid4()
+        connection_id = generate_id()
         await lru.set(connection_id, "secret", MagicMock())
         clock.now += client_cache_mod._TTL_SECONDS - 1
         assert await lru.get(connection_id) is not None
@@ -180,28 +171,28 @@ def test_client_lru_expires_entries_after_the_ttl(monkeypatch) -> None:
         assert await lru.get(connection_id) is None
         assert await lru.size() == 0
 
-    _run(scenario())
+    await scenario()
 
 
-def test_client_lru_evicts_the_oldest_entry_beyond_max_size() -> None:
+async def test_client_lru_evicts_the_oldest_entry_beyond_max_size() -> None:
     async def scenario():
         lru = IntegrationClientLRU()
-        first = uuid4()
+        first = generate_id()
         await lru.set(first, "secret", MagicMock())
         for _ in range(client_cache_mod._MAX_SIZE):
-            await lru.set(uuid4(), "secret", MagicMock())
+            await lru.set(generate_id(), "secret", MagicMock())
         assert await lru.size() == client_cache_mod._MAX_SIZE
         assert await lru.get(first) is None
 
-    _run(scenario())
+    await scenario()
 
 
-def test_client_lru_invalidate_reports_whether_an_entry_was_dropped() -> None:
+async def test_client_lru_invalidate_reports_whether_an_entry_was_dropped() -> None:
     async def scenario():
         lru = IntegrationClientLRU()
-        connection_id = uuid4()
+        connection_id = generate_id()
         await lru.set(connection_id, "secret", MagicMock())
         assert await lru.invalidate(connection_id) is True
         assert await lru.invalidate(connection_id) is False
 
-    _run(scenario())
+    await scenario()

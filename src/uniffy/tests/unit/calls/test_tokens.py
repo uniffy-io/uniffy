@@ -4,11 +4,11 @@ import base64
 import hashlib
 import json
 import time
-import uuid
 
 import jwt
 import pytest
 
+from uniffy.core.types import generate_id
 from uniffy.core.webhooks import WebhookVerificationError
 from uniffy.domains.calls.config import LiveKitConfig
 from uniffy.domains.calls.tokens import (
@@ -46,7 +46,7 @@ def _decode(token: str) -> dict:
 
 
 def test_room_name_round_trip():
-    org_id, call_id = uuid.uuid4(), uuid.uuid4()
+    org_id, call_id = generate_id(), generate_id()
     assert parse_room_call_id(livekit_room_name(org_id, call_id)) == call_id
 
 
@@ -57,7 +57,7 @@ def test_parse_room_rejects_foreign_names():
 
 
 def test_user_token_grants(minter):
-    org_id, call_id, user_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    org_id, call_id, user_id = generate_id(), generate_id(), generate_id()
     minted = minter.mint_user_token(
         organization_id=org_id,
         call_id=call_id,
@@ -81,9 +81,9 @@ def test_user_token_grants(minter):
 
 def test_user_token_listen_only(minter):
     minted = minter.mint_user_token(
-        organization_id=uuid.uuid4(),
-        call_id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
+        organization_id=generate_id(),
+        call_id=generate_id(),
+        user_id=generate_id(),
         device_id="dev1",
         display_name="Bob",
         can_publish=False,

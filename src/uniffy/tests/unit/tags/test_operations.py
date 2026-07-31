@@ -6,7 +6,6 @@ only: source-array merging, the manual cap, the merge-tags handoff,
 URN parsing.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -23,10 +22,6 @@ from uniffy.domains.tags.operations import (
     TagOperations,
     _content_type_from_urn,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _make_tag(*, organization_id=None, name="docs", slug="docs") -> Tag:
@@ -92,7 +87,7 @@ class TestUrnParsing:
 class TestAssignSourceMerging:
     """``assign`` adds a source without spawning a duplicate row."""
 
-    def test_existing_inline_assignment_gets_manual_source_added(self) -> None:
+    async def test_existing_inline_assignment_gets_manual_source_added(self) -> None:
         org_id = generate_id()
         actor_id = generate_id()
         tag = _make_tag(organization_id=org_id)
@@ -120,14 +115,12 @@ class TestAssignSourceMerging:
         ), patch(
             "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
         ):
-            rows = _run(
-                ops.assign(
-                    actor_id=actor_id,
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[tag.id],
-                    source=SOURCE_MANUAL,
-                )
+            rows = await ops.assign(
+                actor_id=actor_id,
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[tag.id],
+                source=SOURCE_MANUAL,
             )
 
         assert SOURCE_MANUAL in existing.sources
@@ -139,7 +132,7 @@ class TestAssignSourceMerging:
 class TestAssignManualCap:
     """Manual cap rejects assignment that would push the URN past 20."""
 
-    def test_rejects_when_cap_exceeded(self) -> None:
+    async def test_rejects_when_cap_exceeded(self) -> None:
         org_id = generate_id()
         actor_id = generate_id()
         tag = _make_tag(organization_id=org_id)
@@ -161,17 +154,15 @@ class TestAssignManualCap:
         with patch(
             "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
         ), pytest.raises(TagLimitExceededError):
-            _run(
-                ops.assign(
-                    actor_id=actor_id,
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[tag.id],
-                    source=SOURCE_MANUAL,
-                )
+            await ops.assign(
+                actor_id=actor_id,
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[tag.id],
+                source=SOURCE_MANUAL,
             )
 
-    def test_inline_source_exempt_from_cap(self) -> None:
+    async def test_inline_source_exempt_from_cap(self) -> None:
         org_id = generate_id()
         actor_id = generate_id()
         tag = _make_tag(organization_id=org_id)
@@ -197,14 +188,12 @@ class TestAssignManualCap:
         ), patch(
             "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
         ):
-            _run(
-                ops.assign(
-                    actor_id=actor_id,
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[tag.id],
-                    source=SOURCE_INLINE,
-                )
+            await ops.assign(
+                actor_id=actor_id,
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[tag.id],
+                source=SOURCE_INLINE,
             )
 
         session.add.assert_called()
@@ -213,7 +202,7 @@ class TestAssignManualCap:
 class TestUnassignSourceSemantics:
     """Removing one source keeps the row alive when another remains."""
 
-    def test_removing_inline_preserves_manual_row(self) -> None:
+    async def test_removing_inline_preserves_manual_row(self) -> None:
         org_id = generate_id()
         urn = "urn:uniffy:content:NOTE:" + generate_id().hex
         tag_id = generate_id()
@@ -232,13 +221,12 @@ class TestUnassignSourceSemantics:
         ), patch(
             "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
         ):
-            removed = _run(
-                ops.unassign(
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[tag_id],
-                    source=SOURCE_INLINE,
-                )
+            removed = await ops.unassign(
+                actor_id=generate_id(),
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[tag_id],
+                source=SOURCE_INLINE,
             )
 
         assert removed == []
@@ -246,7 +234,7 @@ class TestUnassignSourceSemantics:
         session.delete.assert_not_called()
         assert session.execute.await_count == 1
 
-    def test_removing_only_source_deletes_row(self) -> None:
+    async def test_removing_only_source_deletes_row(self) -> None:
         org_id = generate_id()
         urn = "urn:uniffy:content:NOTE:" + generate_id().hex
         tag_id = generate_id()
@@ -267,13 +255,12 @@ class TestUnassignSourceSemantics:
         ), patch(
             "uniffy.domains.tags.operations.cache_invalidate_many", AsyncMock()
         ):
-            removed = _run(
-                ops.unassign(
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[tag_id],
-                    source=SOURCE_INLINE,
-                )
+            removed = await ops.unassign(
+                actor_id=generate_id(),
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[tag_id],
+                source=SOURCE_INLINE,
             )
 
         assert removed == [tag_id]
@@ -291,7 +278,7 @@ class TestMergeTags:
     asserted in integration tests against Postgres.
     """
 
-    def test_runs_insert_then_deletes(self) -> None:
+    async def test_runs_insert_then_deletes(self) -> None:
         org_id = generate_id()
         actor_id = generate_id()
         source_tag = _make_tag(organization_id=org_id, slug="src")
@@ -325,13 +312,11 @@ class TestMergeTags:
         ), patch.object(ops, "_remove_tag_entity", AsyncMock()), patch.object(
             ops, "_reindex_tag_docs", AsyncMock(return_value={})
         ):
-            target = _run(
-                ops.merge_tags(
-                    actor_id=actor_id,
-                    organization_id=org_id,
-                    source_tag_id=source_tag.id,
-                    target_tag_id=target_tag.id,
-                )
+            target = await ops.merge_tags(
+                actor_id=actor_id,
+                organization_id=org_id,
+                source_tag_id=source_tag.id,
+                target_tag_id=target_tag.id,
             )
 
         assert target is target_tag
@@ -340,15 +325,13 @@ class TestMergeTags:
 
 
 class TestSourceValidation:
-    def test_rejects_unknown_source(self) -> None:
+    async def test_rejects_unknown_source(self) -> None:
         ops = _make_ops(MagicMock())
         with pytest.raises(ValidationError):
-            _run(
-                ops.assign(
-                    actor_id=generate_id(),
-                    organization_id=generate_id(),
-                    content_urn="urn:uniffy:content:NOTE:abc",
-                    tag_ids=[generate_id()],
-                    source="bogus",
-                )
+            await ops.assign(
+                actor_id=generate_id(),
+                organization_id=generate_id(),
+                content_urn="urn:uniffy:content:NOTE:abc",
+                tag_ids=[generate_id()],
+                source="bogus",
             )

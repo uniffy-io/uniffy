@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 from cryptography.fernet import Fernet
 
@@ -15,25 +13,25 @@ def _make_fernet() -> Fernet:
     return Fernet(Fernet.generate_key())
 
 
-def test_get_returns_none_when_missing() -> None:
+async def test_get_returns_none_when_missing() -> None:
     async def run() -> None:
         cache = DeploymentDekCache()
         assert await cache.get(1) is None
 
-    asyncio.run(run())
+    await run()
 
 
-def test_set_get_round_trip() -> None:
+async def test_set_get_round_trip() -> None:
     async def run() -> None:
         cache = DeploymentDekCache()
         f = _make_fernet()
         await cache.set(1, f)
         assert await cache.get(1) is f
 
-    asyncio.run(run())
+    await run()
 
 
-def test_get_drops_expired_entry(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_get_drops_expired_entry(monkeypatch: pytest.MonkeyPatch) -> None:
     async def run() -> None:
         cache = DeploymentDekCache()
         await cache.set(1, _make_fernet())
@@ -41,10 +39,10 @@ def test_get_drops_expired_entry(monkeypatch: pytest.MonkeyPatch) -> None:
         assert await cache.get(1) is None
         assert await cache.size() == 0
 
-    asyncio.run(run())
+    await run()
 
 
-def test_invalidate_all_drops_every_version() -> None:
+async def test_invalidate_all_drops_every_version() -> None:
     async def run() -> None:
         cache = DeploymentDekCache()
         await cache.set(1, _make_fernet())
@@ -53,10 +51,10 @@ def test_invalidate_all_drops_every_version() -> None:
         assert dropped == 2
         assert await cache.size() == 0
 
-    asyncio.run(run())
+    await run()
 
 
-def test_invalidate_version_drops_only_one_version() -> None:
+async def test_invalidate_version_drops_only_one_version() -> None:
     async def run() -> None:
         cache = DeploymentDekCache()
         await cache.set(1, _make_fernet())
@@ -66,10 +64,10 @@ def test_invalidate_version_drops_only_one_version() -> None:
         assert await cache.get(2) is not None
         assert await cache.invalidate_version(99) is False
 
-    asyncio.run(run())
+    await run()
 
 
-def test_eviction_when_over_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_eviction_when_over_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     async def run() -> None:
         monkeypatch.setattr(cache_module, "_MAX_SIZE", 2)
         cache = DeploymentDekCache()
@@ -80,4 +78,4 @@ def test_eviction_when_over_cap(monkeypatch: pytest.MonkeyPatch) -> None:
         assert await cache.get(1) is None
         assert await cache.get(3) is not None
 
-    asyncio.run(run())
+    await run()

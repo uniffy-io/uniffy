@@ -6,15 +6,14 @@ the writer is invoked with the right shape, and that dedupe gates
 through the Valkey ``SET NX`` lock.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
+from uniffy.core.types import generate_id
 from uniffy.domains.auth.errors import AuthenticationError, TokenError
 from uniffy.domains.auth.mfa.enforcement import MfaRequirement, MfaRequirementResult
 from uniffy.domains.auth.operations import AuthOperations
@@ -46,7 +45,7 @@ def _session_for_login(user: User | None, role: OrganizationRole | None = None) 
 
 def _make_user(*, hashed_password: bytes = b"$argon2id$v=19$placeholder") -> User:
     return User(
-        id=uuid4(),
+        id=generate_id(),
         email="alice@example.com",
         username="alice",
         full_name="Alice",
@@ -56,7 +55,7 @@ def _make_user(*, hashed_password: bytes = b"$argon2id$v=19$placeholder") -> Use
     )
 
 
-def test_login_success_emits_login_success() -> None:
+async def test_login_success_emits_login_success() -> None:
     user = _make_user()
     session = _session_for_login(user, OrganizationRole.MEMBER)
     ops = AuthOperations(session)
@@ -73,13 +72,13 @@ def test_login_success_emits_login_success() -> None:
     ), patch.object(
         AuthOperations,
         "_create_session",
-        AsyncMock(return_value=MagicMock(id=uuid4())),
+        AsyncMock(return_value=MagicMock(id=generate_id())),
     ), patch(
         "uniffy.domains.auth.operations.create_access_token", return_value="atk"
     ), patch(
         "uniffy.domains.auth.operations.create_refresh_token", return_value="rtk"
     ):
-        asyncio.run(ops.authenticate(user.email, "pw"))
+        await ops.authenticate(user.email, "pw")
 
     rows = _audit_rows(session)
     actions = {r.action for r in rows}
@@ -90,12 +89,12 @@ def test_login_success_emits_login_success() -> None:
     assert success.details["email"] == user.email
 
 
-def test_login_failure_unknown_email_emits_failure_without_user() -> None:
+async def test_login_failure_unknown_email_emits_failure_without_user() -> None:
     session = _session_for_login(user=None)
     ops = AuthOperations(session)
 
     with pytest.raises(AuthenticationError):
-        asyncio.run(ops.authenticate("ghost@example.com", "pw"))
+        await ops.authenticate("ghost@example.com", "pw")
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -106,7 +105,7 @@ def test_login_failure_unknown_email_emits_failure_without_user() -> None:
     assert "Invalid email or password" in failure.details["failure_reason"]
 
 
-def test_login_failure_bad_password_carries_user_attribution() -> None:
+async def test_login_failure_bad_password_carries_user_attribution() -> None:
     user = _make_user()
     session = _session_for_login(user)
     ops = AuthOperations(session)
@@ -114,7 +113,7 @@ def test_login_failure_bad_password_carries_user_attribution() -> None:
     with patch(
         "uniffy.domains.auth.operations.verify_password", return_value=False
     ), pytest.raises(AuthenticationError):
-        asyncio.run(ops.authenticate(user.email, "wrong"))
+        await ops.authenticate(user.email, "wrong")
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -124,7 +123,7 @@ def test_login_failure_bad_password_carries_user_attribution() -> None:
     assert failure.details["email_attempted"] == user.email
 
 
-def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
+async def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
     user = _make_user()
     session = MagicMock()
     user_lookup = _scalar(user)
@@ -152,7 +151,7 @@ def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
     ), patch(
         "uniffy.core.audit.writer._get_ops_client", return_value=valkey
     ):
-        asyncio.run(ops.refresh_token("doesnt-matter"))
+        await ops.refresh_token("doesnt-matter")
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -163,7 +162,7 @@ def test_refresh_token_emits_token_refreshed_with_dedupe() -> None:
     assert kwargs["ex"] == 3600
 
 
-def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
+async def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
     user = _make_user()
     session = MagicMock()
     session.execute = AsyncMock(
@@ -191,14 +190,14 @@ def test_refresh_token_dedupe_suppresses_rapid_writes() -> None:
     ), patch(
         "uniffy.core.audit.writer._get_ops_client", return_value=valkey
     ):
-        asyncio.run(ops.refresh_token("doesnt-matter"))
+        await ops.refresh_token("doesnt-matter")
 
     assert _audit_rows(session) == []
 
 
-def test_revoke_session_emits_session_terminated() -> None:
-    user_id = uuid4()
-    session_id = uuid4()
+async def test_revoke_session_emits_session_terminated() -> None:
+    user_id = generate_id()
+    session_id = generate_id()
     session_record = MagicMock(id=session_id, user_id=user_id, is_revoked=False)
     session = MagicMock()
     session.execute = AsyncMock(side_effect=[_scalar(session_record)])
@@ -206,7 +205,7 @@ def test_revoke_session_emits_session_terminated() -> None:
     session.commit = AsyncMock()
     ops = AuthOperations(session)
 
-    asyncio.run(ops.revoke_session(user_id, session_id))
+    await ops.revoke_session(user_id, session_id)
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -215,10 +214,10 @@ def test_revoke_session_emits_session_terminated() -> None:
     assert rows[0].details["initiator"] == "self"
 
 
-def test_revoke_other_sessions_emits_token_revoked() -> None:
-    user_id = uuid4()
-    current_session = uuid4()
-    target_ids = [uuid4(), uuid4(), uuid4()]
+async def test_revoke_other_sessions_emits_token_revoked() -> None:
+    user_id = generate_id()
+    current_session = generate_id()
+    target_ids = [generate_id(), generate_id(), generate_id()]
     session = MagicMock()
     select_result = MagicMock()
     select_result.all = MagicMock(return_value=[(sid,) for sid in target_ids])
@@ -231,7 +230,7 @@ def test_revoke_other_sessions_emits_token_revoked() -> None:
     session.commit = AsyncMock()
     ops = AuthOperations(session)
 
-    asyncio.run(ops.revoke_other_sessions(user_id, current_session))
+    await ops.revoke_other_sessions(user_id, current_session)
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -242,7 +241,7 @@ def test_revoke_other_sessions_emits_token_revoked() -> None:
     assert row.details["kept_session_id"] == str(current_session)
 
 
-def test_token_error_does_not_emit_audit_row() -> None:
+async def test_token_error_does_not_emit_audit_row() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.execute = AsyncMock()
@@ -253,6 +252,6 @@ def test_token_error_does_not_emit_audit_row() -> None:
         "uniffy.domains.auth.operations.decode_refresh_token",
         side_effect=Exception("bad token"),
     ), pytest.raises(TokenError):
-        asyncio.run(ops.refresh_token("garbage"))
+        await ops.refresh_token("garbage")
 
     assert _audit_rows(session) == []

@@ -3,13 +3,11 @@
 Create / update (with archive detection on status -> RETIRED) / delete.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.types import RoomStatus, RoomType
+from uniffy.core.types import RoomStatus, RoomType, generate_id
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -31,9 +29,9 @@ def _build_session() -> MagicMock:
 
 def _make_room(**overrides) -> Room:
     defaults = dict(
-        id=uuid4(),
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        id=generate_id(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         name="Boardroom",
         description="",
         room_type=RoomType.CONFERENCE_ROOM,
@@ -46,7 +44,7 @@ def _make_room(**overrides) -> Room:
     return Room(**defaults)
 
 
-def test_create_room_emits_room_created() -> None:
+async def test_create_room_emits_room_created() -> None:
     from uniffy.domains.rooms.operations import RoomOperations
 
     session = _build_session()
@@ -58,12 +56,10 @@ def test_create_room_emits_room_created() -> None:
         "_resolve_access_policy",
         AsyncMock(return_value=(None, None)),
     ):
-        asyncio.run(
-            ops.create_room(
-                user_id=uuid4(),
-                organization_id=uuid4(),
-                name="Phone Booth",
-            )
+        await ops.create_room(
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            name="Phone Booth",
         )
 
     rows = _audit_rows(session)
@@ -72,7 +68,7 @@ def test_create_room_emits_room_created() -> None:
     assert created[0].details["name"] == "Phone Booth"
 
 
-def test_update_room_status_to_retired_emits_archived() -> None:
+async def test_update_room_status_to_retired_emits_archived() -> None:
     from uniffy.domains.rooms.operations import RoomOperations
 
     room = _make_room(status=RoomStatus.ACTIVE)
@@ -85,13 +81,11 @@ def test_update_room_status_to_retired_emits_archived() -> None:
     ), patch.object(
         RoomOperations, "_require_edit", AsyncMock(return_value=None)
     ):
-        asyncio.run(
-            ops.update_room(
-                user_id=uuid4(),
-                organization_id=room.organization_id,
-                room_id=room.id,
-                status=RoomStatus.RETIRED,
-            )
+        await ops.update_room(
+            user_id=generate_id(),
+            organization_id=room.organization_id,
+            room_id=room.id,
+            status=RoomStatus.RETIRED,
         )
 
     rows = _audit_rows(session)
@@ -100,7 +94,7 @@ def test_update_room_status_to_retired_emits_archived() -> None:
     assert archived[0].details["changed_keys"] == ["status"]
 
 
-def test_delete_room_emits_room_deleted() -> None:
+async def test_delete_room_emits_room_deleted() -> None:
     from uniffy.domains.rooms.operations import RoomOperations
 
     room = _make_room()
@@ -117,12 +111,10 @@ def test_delete_room_emits_room_deleted() -> None:
     ), patch.object(
         RoomOperations, "_require_delete", AsyncMock(return_value=None)
     ):
-        asyncio.run(
-            ops.delete_room(
-                user_id=uuid4(),
-                organization_id=room.organization_id,
-                room_id=room.id,
-            )
+        await ops.delete_room(
+            user_id=generate_id(),
+            organization_id=room.organization_id,
+            room_id=room.id,
         )
 
     rows = _audit_rows(session)

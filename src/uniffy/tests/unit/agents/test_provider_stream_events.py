@@ -7,7 +7,6 @@ CompletionResult. Thinking must never leak into answer text.
 No network; SDK clients are replaced with canned streams.
 """
 
-import asyncio
 from types import SimpleNamespace
 
 from uniffy.domains.agents.providers.anthropic.provider import AnthropicProvider
@@ -19,12 +18,12 @@ from uniffy.domains.agents.providers.xai.provider import XAIProvider
 MESSAGES = [{"role": "user", "content": "hi"}]
 
 
-def _collect(coro_stream) -> list[StreamEvent]:
+async def _collect(coro_stream) -> list[StreamEvent]:
     async def _run() -> list[StreamEvent]:
         stream = await coro_stream
         return [event async for event in stream]
 
-    return asyncio.run(_run())
+    return await _run()
 
 
 def _types(events: list[StreamEvent]) -> list[EventType]:
@@ -157,8 +156,8 @@ def _make_anthropic(events: list | None = None) -> AnthropicProvider:
 
 
 class TestAnthropicStream:
-    def test_event_sequence(self) -> None:
-        events = _collect(
+    async def test_event_sequence(self) -> None:
+        events = await _collect(
             _make_anthropic().chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
         )
         assert _types(events) == [
@@ -178,16 +177,16 @@ class TestAnthropicStream:
             EventType.MODEL_CALL_END,
         ]
 
-    def test_thinking_never_in_answer_content(self) -> None:
-        events = _collect(
+    async def test_thinking_never_in_answer_content(self) -> None:
+        events = await _collect(
             _make_anthropic().chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
         )
         result = events[-1].result
         assert result.content == "Hello world"
         assert "pondering" not in result.content
 
-    def test_block_ids_consistent_and_distinct(self) -> None:
-        events = _collect(
+    async def test_block_ids_consistent_and_distinct(self) -> None:
+        events = await _collect(
             _make_anthropic().chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
         )
         thinking_ids = {
@@ -214,15 +213,15 @@ class TestAnthropicStream:
         assert len(text_ids) == 1
         assert thinking_ids != text_ids
 
-    def test_signature_captured_on_thinking_end(self) -> None:
-        events = _collect(
+    async def test_signature_captured_on_thinking_end(self) -> None:
+        events = await _collect(
             _make_anthropic().chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
         )
         end = _only(events, EventType.THINKING_BLOCK_END)[0]
         assert end.signature == "sig-abc"
 
-    def test_tool_call_end_and_result(self) -> None:
-        events = _collect(
+    async def test_tool_call_end_and_result(self) -> None:
+        events = await _collect(
             _make_anthropic().chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
         )
         end = _only(events, EventType.TOOL_CALL_END)[0]
@@ -233,8 +232,8 @@ class TestAnthropicStream:
         assert [tc.id for tc in result.tool_calls] == ["tc_1"]
         assert result.stop_reason == "tool_use"
 
-    def test_usage_on_model_call_end(self) -> None:
-        events = _collect(
+    async def test_usage_on_model_call_end(self) -> None:
+        events = await _collect(
             _make_anthropic().chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
         )
         end = events[-1]
@@ -244,7 +243,7 @@ class TestAnthropicStream:
         assert end.cache_read_input_tokens == 3
         assert end.model == "claude-sonnet-4-6"
 
-    def test_error_event_on_exception(self) -> None:
+    async def test_error_event_on_exception(self) -> None:
         provider = AnthropicProvider("sk-ant-api03-test")
 
         def _boom(**kwargs):
@@ -253,7 +252,7 @@ class TestAnthropicStream:
         provider._client = SimpleNamespace(
             messages=SimpleNamespace(stream=_boom)
         )
-        events = _collect(
+        events = await _collect(
             provider.chat_completion(MESSAGES, "claude-sonnet-4-6", stream=True)
         )
         assert _types(events) == [EventType.ERROR]
@@ -320,10 +319,10 @@ def _openai_reasoning_chunks(reasoning_attr: str) -> list:
 
 
 class TestOpenAIFamilyStream:
-    def test_reasoning_content_becomes_thinking_blocks(self) -> None:
+    async def test_reasoning_content_becomes_thinking_blocks(self) -> None:
         provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
         _install_openai_stream(provider, _openai_reasoning_chunks("reasoning_content"))
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         assert _types(events) == [
             EventType.MODEL_CALL_START,
             EventType.THINKING_BLOCK_START,
@@ -341,30 +340,30 @@ class TestOpenAIFamilyStream:
         )
         assert thinking == "chain of thought"
 
-    def test_openrouter_reasoning_field_via_inheritance(self) -> None:
+    async def test_openrouter_reasoning_field_via_inheritance(self) -> None:
         provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
         _install_openai_stream(provider, _openai_reasoning_chunks("reasoning"))
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         deltas = _only(events, EventType.THINKING_BLOCK_DELTA)
         assert "".join(e.delta for e in deltas) == "chain of thought"
 
-    def test_xai_reasoning_content_via_inheritance(self) -> None:
+    async def test_xai_reasoning_content_via_inheritance(self) -> None:
         provider = XAIProvider("xai-0123456789abcdef1234")
         _install_openai_stream(
             provider, _openai_reasoning_chunks("reasoning_content")
         )
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         assert _only(events, EventType.THINKING_BLOCK_DELTA)
 
-    def test_thinking_never_in_answer_content(self) -> None:
+    async def test_thinking_never_in_answer_content(self) -> None:
         provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
         _install_openai_stream(provider, _openai_reasoning_chunks("reasoning_content"))
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         result = events[-1].result
         assert result.content == "Answer text"
         assert "chain" not in result.content
 
-    def test_tool_call_blocks_with_arg_deltas(self) -> None:
+    async def test_tool_call_blocks_with_arg_deltas(self) -> None:
         provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
         chunks = [
             _openai_chunk(content="Using a tool"),
@@ -378,7 +377,7 @@ class TestOpenAIFamilyStream:
             SimpleNamespace(usage=_openai_usage(), model="gpt-test", choices=[]),
         ]
         _install_openai_stream(provider, chunks)
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         starts = _only(events, EventType.TOOL_CALL_START)
         deltas = _only(events, EventType.TOOL_CALL_DELTA)
         ends = _only(events, EventType.TOOL_CALL_END)
@@ -392,16 +391,16 @@ class TestOpenAIFamilyStream:
         assert result.stop_reason == "tool_use"
         assert result.tool_calls[0].input == {"q": "report"}
 
-    def test_usage_split_on_model_call_end(self) -> None:
+    async def test_usage_split_on_model_call_end(self) -> None:
         provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
         _install_openai_stream(provider, _openai_reasoning_chunks("reasoning_content"))
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         end = events[-1]
         assert end.input_tokens == 16
         assert end.cache_read_input_tokens == 4
         assert end.output_tokens == 7
 
-    def test_error_event_on_exception(self) -> None:
+    async def test_error_event_on_exception(self) -> None:
         provider = OpenRouterProvider("sk-or-v1-0123456789abcdef")
 
         async def _create(**kwargs):
@@ -410,7 +409,7 @@ class TestOpenAIFamilyStream:
         provider._client = SimpleNamespace(
             chat=SimpleNamespace(completions=SimpleNamespace(create=_create))
         )
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-test", stream=True))
         assert _types(events) == [EventType.ERROR]
         assert "quota" in events[0].error
 
@@ -453,7 +452,7 @@ def _install_google_stream(provider: GoogleProvider, chunks: list) -> None:
 
 
 class TestGoogleStream:
-    def _events(self) -> list[StreamEvent]:
+    async def _events(self) -> list[StreamEvent]:
         provider = GoogleProvider("google-test-key")
         usage = SimpleNamespace(
             prompt_token_count=30,
@@ -477,12 +476,12 @@ class TestGoogleStream:
             ),
         ]
         _install_google_stream(provider, chunks)
-        return _collect(
+        return await _collect(
             provider.chat_completion(MESSAGES, "gemini-2.5-pro", stream=True)
         )
 
-    def test_thought_parts_become_thinking_blocks(self) -> None:
-        events = self._events()
+    async def test_thought_parts_become_thinking_blocks(self) -> None:
+        events = await self._events()
         assert _types(events) == [
             EventType.MODEL_CALL_START,
             EventType.THINKING_BLOCK_START,
@@ -497,20 +496,20 @@ class TestGoogleStream:
             EventType.MODEL_CALL_END,
         ]
 
-    def test_thought_text_filtered_from_answer(self) -> None:
-        events = self._events()
+    async def test_thought_text_filtered_from_answer(self) -> None:
+        events = await self._events()
         result = events[-1].result
         assert result.content == "The answer"
         assert "mulling" not in result.content
 
-    def test_tool_call_carries_thought_signature_metadata(self) -> None:
-        events = self._events()
+    async def test_tool_call_carries_thought_signature_metadata(self) -> None:
+        events = await self._events()
         result = events[-1].result
         assert result.tool_calls[0].metadata == {"thought_signature": b"gsig"}
         end = _only(events, EventType.TOOL_CALL_END)[0]
         assert end.tool_args == {"day": "today"}
 
-    def test_error_event_on_exception(self) -> None:
+    async def test_error_event_on_exception(self) -> None:
         provider = GoogleProvider("google-test-key")
 
         async def _stream(**kwargs):
@@ -521,7 +520,7 @@ class TestGoogleStream:
                 models=SimpleNamespace(generate_content_stream=_stream)
             )
         )
-        events = _collect(
+        events = await _collect(
             provider.chat_completion(MESSAGES, "gemini-2.5-pro", stream=True)
         )
         assert _types(events) == [EventType.ERROR]

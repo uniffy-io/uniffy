@@ -7,11 +7,10 @@ THINKING_BLOCK_END, CompletionResult stripping on MODEL_CALL_END, and
 ERROR capture (not forwarded).
 """
 
-import asyncio
 from datetime import UTC, datetime
 
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
     EventType,
@@ -25,8 +24,8 @@ from uniffy.domains.agents.runtime.operations import (
 
 def _placeholder() -> AgentMessage:
     return AgentMessage(
-        id=uuid7(),
-        session_id=uuid7(),
+        id=generate_id(),
+        session_id=generate_id(),
         role="assistant",
         content="",
         created_at=datetime.now(UTC),
@@ -48,7 +47,7 @@ class _SessionWriter:
         return None
 
 
-def _segment(events: list[StreamEvent], writer) -> list:
+async def _segment(events: list[StreamEvent], writer) -> list:
     async def _gen():
         for event in events:
             yield event
@@ -57,7 +56,7 @@ def _segment(events: list[StreamEvent], writer) -> list:
         ops = object.__new__(RuntimeOperations)
         return [e async for e in ops._stream_segment(_gen(), writer)]
 
-    return asyncio.run(_run())
+    return await _run()
 
 
 def _provider_events() -> list[StreamEvent]:
@@ -79,9 +78,9 @@ def _provider_events() -> list[StreamEvent]:
 
 
 class TestStreamSegment:
-    def test_thinking_delta_reserves_placeholder(self) -> None:
+    async def test_thinking_delta_reserves_placeholder(self) -> None:
         writer = _ChatWriter()
-        out = _segment(_provider_events(), writer)
+        out = await _segment(_provider_events(), writer)
         assert writer.reserve_calls == 1
         stored = [e for e in out[:-1] if e.type is EventType.MESSAGE_STORED]
         assert len(stored) == 1
@@ -89,9 +88,9 @@ class TestStreamSegment:
         types_before_stored = [e.type for e in out[: out.index(stored[0])]]
         assert EventType.TEXT_BLOCK_DELTA not in types_before_stored
 
-    def test_block_events_stamped_with_message_id_and_sequence(self) -> None:
+    async def test_block_events_stamped_with_message_id_and_sequence(self) -> None:
         writer = _ChatWriter()
-        out = _segment(_provider_events(), writer)
+        out = await _segment(_provider_events(), writer)
         stamped = [
             e
             for e in out[:-1]
@@ -110,13 +109,13 @@ class TestStreamSegment:
         start = next(e for e in out if e.type is EventType.THINKING_BLOCK_START)
         assert start.message_id is None
 
-    def test_elapsed_ms_stamped_on_thinking_end(self) -> None:
-        out = _segment(_provider_events(), _ChatWriter())
+    async def test_elapsed_ms_stamped_on_thinking_end(self) -> None:
+        out = await _segment(_provider_events(), _ChatWriter())
         end = next(e for e in out if e.type is EventType.THINKING_BLOCK_END)
         assert end.elapsed_ms >= 0
 
-    def test_model_call_end_forwarded_without_result(self) -> None:
-        out = _segment(_provider_events(), _ChatWriter())
+    async def test_model_call_end_forwarded_without_result(self) -> None:
+        out = await _segment(_provider_events(), _ChatWriter())
         forwarded = next(e for e in out if e.type is EventType.MODEL_CALL_END)
         assert forwarded.result is None
         assert forwarded.input_tokens == 3
@@ -125,8 +124,8 @@ class TestStreamSegment:
         assert sentinel.completion is not None
         assert sentinel.completion.content == "Hello"
 
-    def test_session_writer_leaves_events_unstamped(self) -> None:
-        out = _segment(_provider_events(), _SessionWriter())
+    async def test_session_writer_leaves_events_unstamped(self) -> None:
+        out = await _segment(_provider_events(), _SessionWriter())
         assert not any(
             e.type is EventType.MESSAGE_STORED for e in out[:-1]
         )
@@ -138,12 +137,12 @@ class TestStreamSegment:
         ]
         assert all(e.message_id is None and e.sequence == 0 for e in deltas)
 
-    def test_provider_error_captured_not_forwarded(self) -> None:
+    async def test_provider_error_captured_not_forwarded(self) -> None:
         events = [
             StreamEvent(type=EventType.MODEL_CALL_START, model="m"),
             StreamEvent(type=EventType.ERROR, error="boom"),
         ]
-        out = _segment(events, _ChatWriter())
+        out = await _segment(events, _ChatWriter())
         assert not any(
             isinstance(e, StreamEvent) and e.type is EventType.ERROR
             for e in out[:-1]
@@ -152,13 +151,13 @@ class TestStreamSegment:
         assert sentinel.error == "boom"
         assert sentinel.completion is None
 
-    def test_thinking_never_patches_placeholder_content(self) -> None:
+    async def test_thinking_never_patches_placeholder_content(self) -> None:
         writer = _ChatWriter()
-        _segment(_provider_events(), writer)
+        await _segment(_provider_events(), writer)
         assert writer.placeholder.content == ""
 
-    def test_sentinel_carries_folded_thinking(self) -> None:
-        out = _segment(_provider_events(), _ChatWriter())
+    async def test_sentinel_carries_folded_thinking(self) -> None:
+        out = await _segment(_provider_events(), _ChatWriter())
         sentinel = out[-1]
         assert len(sentinel.thinking) == 1
         block = sentinel.thinking[0]
@@ -166,7 +165,7 @@ class TestStreamSegment:
         assert block["content"] == "hmm"
         assert block["elapsed_ms"] >= 0
 
-    def test_empty_thinking_blocks_not_folded(self) -> None:
+    async def test_empty_thinking_blocks_not_folded(self) -> None:
         events = [
             StreamEvent(type=EventType.THINKING_BLOCK_START, block_id="t1"),
             StreamEvent(type=EventType.THINKING_BLOCK_END, block_id="t1"),
@@ -176,5 +175,5 @@ class TestStreamSegment:
                 result=CompletionResult(content="x", model="m"),
             ),
         ]
-        out = _segment(events, _SessionWriter())
+        out = await _segment(events, _SessionWriter())
         assert out[-1].thinking == []

@@ -1,29 +1,20 @@
 """Unit tests for free/busy computation and meeting-slot suggestions.
-
-Uses ``asyncio.run`` so it runs without pytest-asyncio, mirroring the rest of
-the calendar unit suite.
 """
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.types import AccessMode, RecurrencePattern
+from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
 from uniffy.domains.calendar.availability import (
     MAX_FREE_BUSY_USERS,
     compute_free_slots,
     get_busy_intervals,
     merge_intervals,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _dt(day: int, hour: int, minute: int = 0) -> datetime:
@@ -152,9 +143,9 @@ def _make_event(
     is_all_day: bool = False,
 ) -> CalendarEvent:
     return CalendarEvent(
-        organization_id=uuid4(),
-        organizer_id=uuid4(),
-        calendar_id=uuid4(),
+        organization_id=generate_id(),
+        organizer_id=generate_id(),
+        calendar_id=generate_id(),
         title="Busy",
         start_time=start,
         end_time=end,
@@ -181,22 +172,20 @@ def _session_returning(rows: list, exception_rows: list | None = None) -> MagicM
 
 
 class TestGetBusyIntervals:
-    def test_bounds_rejected_before_any_query(self) -> None:
+    async def test_bounds_rejected_before_any_query(self) -> None:
         session = MagicMock()
-        too_many = [uuid4() for _ in range(MAX_FREE_BUSY_USERS + 1)]
+        too_many = [generate_id() for _ in range(MAX_FREE_BUSY_USERS + 1)]
         with pytest.raises(ValidationError):
-            _run(get_busy_intervals(session, uuid4(), too_many, _dt(3, 0), _dt(4, 0)))
+            await get_busy_intervals(session, generate_id(), too_many, _dt(3, 0), _dt(4, 0))
         with pytest.raises(ValidationError):
-            _run(get_busy_intervals(session, uuid4(), [uuid4()], _dt(4, 0), _dt(3, 0)))
+            await get_busy_intervals(session, generate_id(), [generate_id()], _dt(4, 0), _dt(3, 0))
         with pytest.raises(ValidationError):
-            _run(
-                get_busy_intervals(
-                    session, uuid4(), [uuid4()], _dt(1, 0), _dt(1, 0) + timedelta(days=90)
-                )
+            await get_busy_intervals(
+                session, generate_id(), [generate_id()], _dt(1, 0), _dt(1, 0) + timedelta(days=90)
             )
 
-    def test_plain_event_clipped_and_merged(self) -> None:
-        user = uuid4()
+    async def test_plain_event_clipped_and_merged(self) -> None:
+        user = generate_id()
         early = _make_event(start=_dt(2, 23), end=_dt(3, 1))
         overlapping = _make_event(start=_dt(3, 0, 30), end=_dt(3, 2))
         session = _session_returning([(early, user), (overlapping, user)])
@@ -205,11 +194,11 @@ class TestGetBusyIntervals:
             MagicMock(all=MagicMock(return_value=[(early, user), (overlapping, user)])),
         ]
 
-        busy = _run(get_busy_intervals(session, uuid4(), [user], _dt(3, 0), _dt(4, 0)))
+        busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(4, 0))
         assert busy[user] == [(_dt(3, 0), _dt(3, 2))]
 
-    def test_weekly_recurring_master_expands_into_range(self) -> None:
-        user = uuid4()
+    async def test_weekly_recurring_master_expands_into_range(self) -> None:
+        user = generate_id()
         master = _make_event(
             start=datetime(2026, 7, 6, 9, tzinfo=UTC),
             end=datetime(2026, 7, 6, 9, 30, tzinfo=UTC),
@@ -229,5 +218,5 @@ class TestGetBusyIntervals:
             ]
         )
 
-        busy = _run(get_busy_intervals(session, uuid4(), [user], _dt(3, 0), _dt(10, 0)))
+        busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(10, 0))
         assert (_dt(3, 9), _dt(3, 9, 30)) in busy[user]

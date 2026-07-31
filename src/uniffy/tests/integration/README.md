@@ -1,39 +1,56 @@
 # Integration tests
 
-Tests that need a real service behind them: an LLM provider API, a database,
-a mail relay. They cost real money or real infrastructure, so they are
-local-only for now: no CI wiring, run them deliberately.
+Tests that need something running behind them. Local-only: CI provisions no
+services, so the unit runner targets `src/uniffy/tests/unit/` and never
+collects this tree. Run these deliberately.
 
 ## Layout
 
-One subfolder per suite, each with its own `conftest.py` for suite-specific
-fixtures; this folder's `conftest.py` only loads the repo-root `.env`.
+`{area}/{suite}/`. The area says whose contract is under test, the suite says
+what has to be running. Each suite owns its `conftest.py`; this folder's only
+loads the repo-root `.env`.
 
-| Folder | Covers |
-|---|---|
-| `providers/` | LLM provider APIs (Anthropic, OpenAI, Google, OpenRouter, xAI): tool round trips and the deferred tool-loading contract |
-| `database/` | Domain operations against a real Postgres, where a mock would test the mock: encryption round trips, unique constraints, gate ordering against loaded rows |
+| Suite | Needs | Covers |
+|---|---|---|
+| `agents/providers/` | A paid API key per provider | Anthropic, OpenAI, Google, OpenRouter and xAI: tool round trips and the deferred tool-loading contract |
+| `internal/database/` | Postgres | Integrations-slice security: `OrgCipher` round trips, cross-org isolation, unique constraints, admin-gate ordering, and what an error string leaks |
+| `internal/migrations/` | Postgres, plus rights to `CREATE DATABASE` | The whole Alembic chain applied to an empty database: reaches head, builds every table the models declare, and survives a second pass |
 
-Add new suites as sibling folders (e.g. `github/` for the GitHub integration,
-`mail/` for a live SMTP relay) rather than growing an existing one.
+`internal/migrations/` is the one that makes wiring CI worth it. Every other
+check runs against a database that is already at head, where `upgrade head`
+does nothing and reports success; that suite creates a scratch database per
+test so a broken or missing migration fails before a deploy finds it. The
+static half of the same question (one head, no duplicate ids, no dangling
+parent) needs no database at all and already runs in CI as
+`tests/unit/db/test_migration_chain.py`.
 
-A suite whose service is absent skips rather than fails: `providers/` skips
-per missing key, `database/` skips whole when nothing answers on the
-configured `DATABASE_URL`.
+New suites go under the matching area (`internal/valkey/`,
+`internal/meilisearch/`, `agents/embeddings/`) rather than growing an
+existing one.
 
-## Isolation from the unit suite
+**A suite whose service is absent skips rather than fails.** `providers/`
+skips per missing key, `database/` skips whole when nothing answers on
+`DATABASE_URL`. A run with nothing up reports skips, not a wall of
+connection errors.
 
-The unit runner (`./manage.py test -s backend`, CI) targets
-`src/uniffy/tests/unit/` explicitly and never collects this folder.
+## Cost
+
+`agents/providers/` spends real money on every run and asserts the behavior
+of models we do not control, so a weak model can fail it with nothing broken
+here. `internal/` is free and deterministic. Target a subtree when you only
+mean one:
+
+```bash
+./manage.py test -s integration                          # everything
+uv run pytest src/uniffy/tests/integration/internal/     # free half
+uv run pytest src/uniffy/tests/integration/agents/ -k anthropic -v
+```
 
 ## Running
 
 ```bash
-./manage.py test -s integration                 # everything (docker stack)
+./manage.py test -s integration                 # docker stack
 ./manage.py test -s integration --stack local   # host venv
-
-# Direct pytest, e.g. one suite or one provider:
-uv run pytest src/uniffy/tests/integration/providers/ -k anthropic -v
 ```
 
 ## Credentials and models (providers suite)
@@ -48,11 +65,7 @@ Keys are read from the environment, falling back to the repo-root `.env`:
 | openrouter | `OPENROUTER_API_KEY` |
 | xai | `XAI_API_KEY` |
 
-A provider whose key is missing is skipped, not failed. Each provider runs its
-cheapest sensible model (see `DEFAULT_MODELS` in `providers/conftest.py`);
-override with `UNIFFY_ITEST_MODEL_<PROVIDER>`, e.g.
-`UNIFFY_ITEST_MODEL_OPENAI=gpt-5.5`.
-
-These tests assert model BEHAVIOR (following the load-then-call pattern), so
-a weak model can fail them without anything being broken in Uniffy. If one
-provider fails while others pass, rerun it alone before digging.
+Each provider runs its cheapest sensible model (see `DEFAULT_MODELS` in
+`agents/providers/conftest.py`); override with `UNIFFY_ITEST_MODEL_<PROVIDER>`,
+e.g. `UNIFFY_ITEST_MODEL_OPENAI=gpt-5.5`. If one provider fails while others
+pass, rerun it alone before digging.

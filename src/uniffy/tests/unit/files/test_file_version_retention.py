@@ -1,10 +1,10 @@
 """Tests for file version retention selection and policy resolution."""
 
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.models.files.file_version import FileVersion
+from uniffy.core.types import generate_id
 from uniffy.domains.files.version_policy import (
     DEFAULT_KEEP_VERSIONS,
     MAX_KEEP_VERSIONS,
@@ -17,13 +17,13 @@ from uniffy.domains.files.version_policy import (
 
 def _version(number: int, size: int = 100) -> FileVersion:
     return FileVersion(
-        id=uuid4(),
-        file_id=uuid4(),
+        id=generate_id(),
+        file_id=generate_id(),
         version_number=number,
         size_bytes=size,
         storage_key=f"org/user/{number}/file.bin",
         storage_bucket="uniffy-files",
-        uploaded_by=uuid4(),
+        uploaded_by=generate_id(),
     )
 
 

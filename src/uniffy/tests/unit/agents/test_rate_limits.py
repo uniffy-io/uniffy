@@ -1,12 +1,11 @@
 """Tests for the agents rate-limit buckets and override plumbing."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import RateLimitExceededError, ValidationError
+from uniffy.core.types import generate_id
 from uniffy.core.valkey.rate_limit import (
     AGENT_MSG_AGENT,
     AGENT_MSG_ORG,
@@ -70,41 +69,37 @@ class TestDefaultsAndResolve:
 class TestValkeyUnavailable:
     """Rate limiting degrades gracefully when Valkey is not connected."""
 
-    def test_check_rate_limit_noop_when_client_none(self) -> None:
+    async def test_check_rate_limit_noop_when_client_none(self) -> None:
         with patch("uniffy.core.valkey.rate_limit._get_client", return_value=None):
-            asyncio.run(
-                check_rate_limit(
-                    key="rl:test",
-                    limit=1,
-                    window_seconds=60,
-                    resource="test",
-                )
+            await check_rate_limit(
+                key="rl:test",
+                limit=1,
+                window_seconds=60,
+                resource="test",
             )
 
-    def test_check_rate_limit_swallows_valkey_errors(self) -> None:
+    async def test_check_rate_limit_swallows_valkey_errors(self) -> None:
         client = MagicMock()
         client.incr = AsyncMock(side_effect=RuntimeError("valkey oops"))
         with patch("uniffy.core.valkey.rate_limit._get_client", return_value=client):
-            asyncio.run(
-                check_rate_limit(
-                    key="rl:test",
-                    limit=1,
-                    window_seconds=60,
-                    resource="test",
-                )
+            await check_rate_limit(
+                key="rl:test",
+                limit=1,
+                window_seconds=60,
+                resource="test",
             )
 
 
 class TestBucketIsolation:
     """Text and image buckets use distinct Valkey keys."""
 
-    def test_agent_message_uses_three_separate_buckets(self) -> None:
+    async def test_agent_message_uses_three_separate_buckets(self) -> None:
         counters: dict[str, int] = {}
         client = _counting_client(counters)
         session = MagicMock()
-        user_id = uuid4()
-        org_id = uuid4()
-        agent_id = uuid4()
+        user_id = generate_id()
+        org_id = generate_id()
+        agent_id = generate_id()
 
         async def run() -> None:
             with (
@@ -123,17 +118,17 @@ class TestBucketIsolation:
                     agent_id=agent_id,
                 )
 
-        asyncio.run(run())
+        await run()
         assert f"rl:agent_msg:user:{user_id}" in counters
         assert f"rl:agent_msg:org:{org_id}" in counters
         assert f"rl:agent_msg:agent:{user_id}:{agent_id}" in counters
 
-    def test_image_generation_does_not_touch_text_buckets(self) -> None:
+    async def test_image_generation_does_not_touch_text_buckets(self) -> None:
         counters: dict[str, int] = {}
         client = _counting_client(counters)
         session = MagicMock()
-        user_id = uuid4()
-        org_id = uuid4()
+        user_id = generate_id()
+        org_id = generate_id()
 
         async def run() -> None:
             with (
@@ -151,7 +146,7 @@ class TestBucketIsolation:
                     organization_id=org_id,
                 )
 
-        asyncio.run(run())
+        await run()
         assert f"rl:image_gen:user:{user_id}" in counters
         assert f"rl:image_gen:org:{org_id}" in counters
         assert not any(k.startswith("rl:agent_msg") for k in counters)
@@ -160,13 +155,13 @@ class TestBucketIsolation:
 class TestOverrideApplied:
     """Per-org overrides win over module defaults when present."""
 
-    def test_override_shrinks_limit(self) -> None:
+    async def test_override_shrinks_limit(self) -> None:
         counters: dict[str, int] = {}
         client = _counting_client(counters)
         session = MagicMock()
-        user_id = uuid4()
-        org_id = uuid4()
-        agent_id = uuid4()
+        user_id = generate_id()
+        org_id = generate_id()
+        agent_id = generate_id()
 
         # Tight override: 1 message per 60s per user.
         override = {AGENT_MSG_USER: LimitConfig(limit=1, window_seconds=60)}
@@ -199,13 +194,13 @@ class TestOverrideApplied:
                 assert "per user" in excinfo.value.resource
                 assert excinfo.value.limit == 1
 
-        asyncio.run(run())
+        await run()
 
 
 class TestRetryAfter:
     """RateLimitExceededError carries the window TTL so callers can back off."""
 
-    def test_retry_after_populated_from_ttl(self) -> None:
+    async def test_retry_after_populated_from_ttl(self) -> None:
         client = _counting_client({}, ttl_seconds=42)
 
         async def run() -> None:
@@ -227,7 +222,7 @@ class TestRetryAfter:
                     )
                 assert excinfo.value.retry_after == 42
 
-        asyncio.run(run())
+        await run()
 
 
 class TestCacheInvalidation:
@@ -235,7 +230,7 @@ class TestCacheInvalidation:
         invalidate_overrides_cache()  # no orgs, no-op
 
     def test_invalidate_single_org(self) -> None:
-        invalidate_overrides_cache(uuid4())  # non-existent, no-op
+        invalidate_overrides_cache(generate_id())  # non-existent, no-op
 
 
 class TestRateLimitsOperationsValidation:
@@ -250,50 +245,50 @@ class TestRateLimitsOperationsValidation:
         ops._org_ops.require_org_admin = AsyncMock(return_value=None)
         return ops
 
-    def test_unknown_kind_rejected(self) -> None:
+    async def test_unknown_kind_rejected(self) -> None:
         ops = self._make_ops()
 
         async def run() -> None:
             with pytest.raises(ValidationError):
                 await ops.upsert(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                     kind="NOT_A_KIND",
                     limit=10,
                     window_seconds=60,
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_limit_zero_rejected(self) -> None:
+    async def test_limit_zero_rejected(self) -> None:
         ops = self._make_ops()
 
         async def run() -> None:
             with pytest.raises(ValidationError):
                 await ops.upsert(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                     kind=AGENT_MSG_USER,
                     limit=0,
                     window_seconds=60,
                 )
 
-        asyncio.run(run())
+        await run()
 
-    def test_window_too_large_rejected(self) -> None:
+    async def test_window_too_large_rejected(self) -> None:
         ops = self._make_ops()
 
         async def run() -> None:
             with pytest.raises(ValidationError):
                 await ops.upsert(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
+                    user_id=generate_id(),
+                    organization_id=generate_id(),
                     kind=AGENT_MSG_USER,
                     limit=10,
                     window_seconds=999_999,
                 )
 
-        asyncio.run(run())
+        await run()
 
 
 class TestConverters:

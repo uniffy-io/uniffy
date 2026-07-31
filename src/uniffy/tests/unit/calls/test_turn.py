@@ -1,7 +1,7 @@
 """Ephemeral TURN credential minting, config resolution, and response wiring."""
 
 import time
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from uniffy_proto.calls.v1.calls_pb2 import (
@@ -10,6 +10,7 @@ from uniffy_proto.calls.v1.calls_pb2 import (
     JoinCallResponse,
 )
 
+from uniffy.core.types import generate_id
 from uniffy.domains.calls import config as calls_config
 from uniffy.domains.calls.config import LiveKitConfigError, TurnConfig
 from uniffy.domains.calls.handlers import _ice_fields
@@ -61,12 +62,12 @@ def test_hmac_vector_pins_wire_format(monkeypatch):
 
 
 def test_single_credential_pair_covers_all_urls():
-    creds = mint_turn_credentials(uuid4(), _config())
+    creds = mint_turn_credentials(generate_id(), _config())
     assert creds.urls == TURN_URLS
 
 
 def test_username_expiry_is_now_plus_ttl():
-    user_id = uuid4()
+    user_id = generate_id()
     before = int(time.time())
     creds = mint_turn_credentials(user_id, _config(ttl=86400))
     after = int(time.time())
@@ -108,7 +109,7 @@ def test_nonpositive_ttl_raises_typed_error(turn_env):
 
 def test_join_response_carries_ice_servers_when_turn_configured(turn_env):
     turn_env("turn:a:3478,turn:b:3478")
-    user_id = uuid4()
+    user_id = generate_id()
     response = JoinCallResponse(livekit_token="tok", **_ice_fields(user_id))
     assert response.ice_transport_policy == ICE_TRANSPORT_POLICY_RELAY
     assert len(response.ice_servers) == 1
@@ -120,6 +121,6 @@ def test_join_response_carries_ice_servers_when_turn_configured(turn_env):
 
 def test_join_response_has_no_ice_servers_in_direct_mode(turn_env):
     turn_env("")
-    response = JoinCallResponse(livekit_token="tok", **_ice_fields(uuid4()))
+    response = JoinCallResponse(livekit_token="tok", **_ice_fields(generate_id()))
     assert len(response.ice_servers) == 0
     assert response.ice_transport_policy == ICE_TRANSPORT_POLICY_UNSPECIFIED

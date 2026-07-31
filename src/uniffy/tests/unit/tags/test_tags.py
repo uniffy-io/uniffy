@@ -5,7 +5,6 @@ presets seed values, and the proto criteria converter. AsyncMock-driven so
 the suite runs without a real Postgres / Meilisearch / Valkey.
 """
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
@@ -66,39 +65,35 @@ def _make_session_for_filter(saved_filter: SavedTagFilter) -> MagicMock:
     return session
 
 
-def test_get_by_id_blocks_other_user_non_preset() -> None:
+async def test_get_by_id_blocks_other_user_non_preset() -> None:
     sf = _make_filter()
     session = _make_session_for_filter(sf)
     ops = SavedTagFilterOperations(session)
     other_user_id = generate_id()
 
     with pytest.raises(PermissionDeniedError):
-        asyncio.run(
-            ops.get_by_id(
-                user_id=other_user_id,
-                organization_id=sf.organization_id,
-                filter_id=sf.id,
-            )
+        await ops.get_by_id(
+            user_id=other_user_id,
+            organization_id=sf.organization_id,
+            filter_id=sf.id,
         )
 
 
-def test_get_by_id_returns_preset_for_any_user() -> None:
+async def test_get_by_id_returns_preset_for_any_user() -> None:
     sf = _make_filter(is_preset=True)
     session = _make_session_for_filter(sf)
     ops = SavedTagFilterOperations(session)
     other_user_id = generate_id()
 
-    out = asyncio.run(
-        ops.get_by_id(
-            user_id=other_user_id,
-            organization_id=sf.organization_id,
-            filter_id=sf.id,
-        )
+    out = await ops.get_by_id(
+        user_id=other_user_id,
+        organization_id=sf.organization_id,
+        filter_id=sf.id,
     )
     assert out is sf
 
 
-def test_get_by_id_raises_not_found() -> None:
+async def test_get_by_id_raises_not_found() -> None:
     session = MagicMock()
     result = MagicMock()
     scalars = MagicMock()
@@ -108,47 +103,41 @@ def test_get_by_id_raises_not_found() -> None:
     ops = SavedTagFilterOperations(session)
 
     with pytest.raises(NotFoundError):
-        asyncio.run(
-            ops.get_by_id(
-                user_id=generate_id(),
-                organization_id=generate_id(),
-                filter_id=generate_id(),
-            )
+        await ops.get_by_id(
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            filter_id=generate_id(),
         )
 
 
-def test_update_preset_rejected() -> None:
+async def test_update_preset_rejected() -> None:
     sf = _make_filter(is_preset=True)
     session = _make_session_for_filter(sf)
     ops = SavedTagFilterOperations(session)
 
     with pytest.raises(PermissionDeniedError):
-        asyncio.run(
-            ops.update(
-                user_id=sf.user_id,
-                organization_id=sf.organization_id,
-                filter_id=sf.id,
-                name="renamed",
-            )
+        await ops.update(
+            user_id=sf.user_id,
+            organization_id=sf.organization_id,
+            filter_id=sf.id,
+            name="renamed",
         )
 
 
-def test_delete_preset_rejected() -> None:
+async def test_delete_preset_rejected() -> None:
     sf = _make_filter(is_preset=True)
     session = _make_session_for_filter(sf)
     ops = SavedTagFilterOperations(session)
 
     with pytest.raises(PermissionDeniedError):
-        asyncio.run(
-            ops.delete(
-                user_id=sf.user_id,
-                organization_id=sf.organization_id,
-                filter_id=sf.id,
-            )
+        await ops.delete(
+            user_id=sf.user_id,
+            organization_id=sf.organization_id,
+            filter_id=sf.id,
         )
 
 
-def test_create_persists_normalised_fields() -> None:
+async def test_create_persists_normalised_fields() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
@@ -157,15 +146,13 @@ def test_create_persists_normalised_fields() -> None:
 
     user_id = generate_id()
     org_id = generate_id()
-    out = asyncio.run(
-        ops.create(
-            user_id=user_id,
-            organization_id=org_id,
-            name="  Sprint planning ",
-            description="latest",
-            criteria={"tag_ids": ["a"]},
-            icon={"type": "icon", "value": "Funnel"},
-        )
+    out = await ops.create(
+        user_id=user_id,
+        organization_id=org_id,
+        name="  Sprint planning ",
+        description="latest",
+        criteria={"tag_ids": ["a"]},
+        icon={"type": "icon", "value": "Funnel"},
     )
 
     assert out.name == "Sprint planning"

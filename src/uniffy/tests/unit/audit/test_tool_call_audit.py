@@ -10,11 +10,10 @@ tool. These tests assert:
 - The action follows the ``agent.tool_call.<tool_name>`` shape.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
     ToolContext,
@@ -25,13 +24,18 @@ from uniffy.domains.agents.tools.executor import ToolExecutor
 from uniffy.domains.agents.tools.registry import ToolRegistry
 
 
-def _context(session: MagicMock | None = None) -> ToolContext:
+def _context(
+    session: MagicMock | None = None,
+    *,
+    allowed: frozenset[str] = frozenset(),
+) -> ToolContext:
     return ToolContext(
         session=session or _stub_session(),
-        user_id=uuid4(),
-        organization_id=uuid4(),
-        agent_id=uuid4(),
-        session_id=uuid4(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        agent_id=generate_id(),
+        session_id=generate_id(),
+        allowed_tools=allowed,
     )
 
 
@@ -67,9 +71,9 @@ async def _denied_executor(_ctx: ToolContext, _args: dict) -> ToolResult:
     raise PermissionDeniedError("delete", "note")
 
 
-def test_read_only_tool_does_not_audit() -> None:
+async def test_read_only_tool_does_not_audit() -> None:
     session = _stub_session()
-    ctx = _context(session)
+    ctx = _context(session, allowed=frozenset({"notes.read_note"}))
     tool = ToolDefinition(
         name="notes.read_note",
         description="",
@@ -78,14 +82,14 @@ def test_read_only_tool_does_not_audit() -> None:
     )
     executor = ToolExecutor(_make_registry(tool), ctx)
 
-    asyncio.run(executor.execute(ToolCall(id="t1", name=tool.name, input={})))
+    await executor.execute(ToolCall(id="t1", name=tool.name, input={}))
 
     assert _audit_rows(session) == []
 
 
-def test_mutating_tool_success_emits_single_row() -> None:
+async def test_mutating_tool_success_emits_single_row() -> None:
     session = _stub_session()
-    ctx = _context(session)
+    ctx = _context(session, allowed=frozenset({"notes.create_note"}))
     tool = ToolDefinition(
         name="notes.create_note",
         description="",
@@ -94,7 +98,7 @@ def test_mutating_tool_success_emits_single_row() -> None:
     )
     executor = ToolExecutor(_make_registry(tool), ctx)
 
-    asyncio.run(executor.execute(ToolCall(id="t1", name=tool.name, input={})))
+    await executor.execute(ToolCall(id="t1", name=tool.name, input={}))
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -106,9 +110,9 @@ def test_mutating_tool_success_emits_single_row() -> None:
     assert row.details["agent_id"] == str(ctx.agent_id)
 
 
-def test_mutating_tool_failure_emits_failed_with_reason() -> None:
+async def test_mutating_tool_failure_emits_failed_with_reason() -> None:
     session = _stub_session()
-    ctx = _context(session)
+    ctx = _context(session, allowed=frozenset({"notes.delete_note"}))
     tool = ToolDefinition(
         name="notes.delete_note",
         description="",
@@ -117,9 +121,7 @@ def test_mutating_tool_failure_emits_failed_with_reason() -> None:
     )
     executor = ToolExecutor(_make_registry(tool), ctx)
 
-    result = asyncio.run(
-        executor.execute(ToolCall(id="t1", name=tool.name, input={}))
-    )
+    result = await executor.execute(ToolCall(id="t1", name=tool.name, input={}))
 
     assert result.success is False
     rows = _audit_rows(session)
@@ -128,12 +130,12 @@ def test_mutating_tool_failure_emits_failed_with_reason() -> None:
     assert rows[0].details["error_reason"] == "permission_denied"
 
 
-def test_unknown_tool_does_not_audit() -> None:
+async def test_unknown_tool_does_not_audit() -> None:
     session = _stub_session()
     ctx = _context(session)
     registry = ToolRegistry()
     executor = ToolExecutor(registry, ctx)
 
-    asyncio.run(executor.execute(ToolCall(id="t1", name="nope.unknown", input={})))
+    await executor.execute(ToolCall(id="t1", name="nope.unknown", input={}))
 
     assert _audit_rows(session) == []

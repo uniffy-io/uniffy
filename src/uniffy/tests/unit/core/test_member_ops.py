@@ -8,7 +8,6 @@ Two layers are tested here:
    only exercise the validation branches.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,8 +15,7 @@ import pytest
 from uniffy.core.content.members import ContentMembersOperations
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.login.organization_member import OrganizationRole
-from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 
 
 def _make_ops() -> ContentMembersOperations:
@@ -36,8 +34,8 @@ def _fake_content(
     baseline_role=None,
 ):
     content = MagicMock()
-    content.id = uuid7()
-    content.owner_id = owner_id or uuid7()
+    content.id = generate_id()
+    content.owner_id = owner_id or generate_id()
     content.access_mode = access_mode
     content.baseline_role = baseline_role
     return content
@@ -113,56 +111,50 @@ class TestAddMemberRejections:
             ),
         )
 
-    def test_rejects_owner_role(self) -> None:
+    async def test_rejects_owner_role(self) -> None:
         ops = _make_ops()
         content = _fake_content()
         p1, p2 = self._patch_prereqs(ops, content)
         with p1, p2, pytest.raises(ValidationError, match="transfer_ownership"):
-            asyncio.run(
-                ops.add_member(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=uuid7(),
-                    role=ContentRole.OWNER,
-                )
+            await ops.add_member(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                subject_type=SubjectType.USER,
+                subject_id=generate_id(),
+                role=ContentRole.OWNER,
             )
 
-    def test_rejects_when_owner_only_mode(self) -> None:
+    async def test_rejects_when_owner_only_mode(self) -> None:
         ops = _make_ops()
         content = _fake_content(access_mode=AccessMode.OWNER_ONLY)
         p1, p2 = self._patch_prereqs(ops, content)
         with p1, p2, pytest.raises(ValidationError, match="OWNER_ONLY"):
-            asyncio.run(
-                ops.add_member(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=uuid7(),
-                    role=ContentRole.EDITOR,
-                )
+            await ops.add_member(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                subject_type=SubjectType.USER,
+                subject_id=generate_id(),
+                role=ContentRole.EDITOR,
             )
 
-    def test_rejects_adding_owner_as_member(self) -> None:
-        owner_id = uuid7()
+    async def test_rejects_adding_owner_as_member(self) -> None:
+        owner_id = generate_id()
         ops = _make_ops()
         content = _fake_content(owner_id=owner_id)
         p1, p2 = self._patch_prereqs(ops, content)
         with p1, p2, pytest.raises(ValidationError, match="Owner cannot be added"):
-            asyncio.run(
-                ops.add_member(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=owner_id,
-                    role=ContentRole.EDITOR,
-                )
+            await ops.add_member(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                subject_type=SubjectType.USER,
+                subject_id=owner_id,
+                role=ContentRole.EDITOR,
             )
 
 
@@ -177,21 +169,19 @@ class TestUpdateMemberRoleRejections:
             ),
         )
 
-    def test_rejects_new_role_owner(self) -> None:
+    async def test_rejects_new_role_owner(self) -> None:
         ops = _make_ops()
         content = _fake_content()
         p1, p2 = self._patch_prereqs(ops, content)
         with p1, p2, pytest.raises(ValidationError, match="transfer_ownership"):
-            asyncio.run(
-                ops.update_member_role(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=uuid7(),
-                    new_role=ContentRole.OWNER,
-                )
+            await ops.update_member_role(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                subject_type=SubjectType.USER,
+                subject_id=generate_id(),
+                new_role=ContentRole.OWNER,
             )
 
 
@@ -206,31 +196,29 @@ class TestSetAccessModeRejections:
             ),
         )
 
-    def test_rejects_baseline_without_access_mode(self) -> None:
+    async def test_rejects_baseline_without_access_mode(self) -> None:
         """`(access_mode=None, baseline_role=X)` is an undefined storage shape
         and must be rejected before any DB work."""
         ops = _make_ops()
         content = _fake_content()
         p1, p2 = self._patch_prereqs(ops, content)
         with p1, p2, pytest.raises(ValidationError, match="baseline_role"):
-            asyncio.run(
-                ops.set_access_mode(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    new_access_mode=None,
-                    new_baseline_role=ContentRole.VIEWER,
-                )
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                new_access_mode=None,
+                new_baseline_role=ContentRole.VIEWER,
             )
 
-    def test_rejects_owner_only_when_members_exist_without_flag(self) -> None:
+    async def test_rejects_owner_only_when_members_exist_without_flag(self) -> None:
         ops = _make_ops()
         content = _fake_content()
 
         existing_member = MagicMock()
         existing_member.subject_type = SubjectType.USER
-        existing_member.subject_id = uuid7()
+        existing_member.subject_id = generate_id()
         existing_member.role = ContentRole.EDITOR
 
         member_query_result = MagicMock()
@@ -239,19 +227,17 @@ class TestSetAccessModeRejections:
 
         p1, p2 = self._patch_prereqs(ops, content)
         with p1, p2, pytest.raises(ValidationError, match="OWNER_ONLY"):
-            asyncio.run(
-                ops.set_access_mode(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    new_access_mode=AccessMode.OWNER_ONLY,
-                    new_baseline_role=None,
-                    remove_members_on_narrow=False,
-                )
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                new_access_mode=AccessMode.OWNER_ONLY,
+                new_baseline_role=None,
+                remove_members_on_narrow=False,
             )
 
-    def test_accepts_owner_only_with_remove_members_flag(self) -> None:
+    async def test_accepts_owner_only_with_remove_members_flag(self) -> None:
         """remove_members_on_narrow=True allows the transition and deletes members."""
         ops = _make_ops()
         content = _fake_content()
@@ -259,7 +245,7 @@ class TestSetAccessModeRejections:
 
         existing_member = MagicMock()
         existing_member.subject_type = SubjectType.USER
-        existing_member.subject_id = uuid7()
+        existing_member.subject_id = generate_id()
         existing_member.role = ContentRole.EDITOR
 
         member_query_result = MagicMock()
@@ -275,16 +261,14 @@ class TestSetAccessModeRejections:
             patch.object(ops, "_sync_search_sharing", search_sync_mock),
             patch.object(ops, "_sync_search_access_policy", AsyncMock()),
         ):
-            asyncio.run(
-                ops.set_access_mode(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    new_access_mode=AccessMode.OWNER_ONLY,
-                    new_baseline_role=None,
-                    remove_members_on_narrow=True,
-                )
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                new_access_mode=AccessMode.OWNER_ONLY,
+                new_baseline_role=None,
+                remove_members_on_narrow=True,
             )
         ops.session.delete.assert_called_once_with(existing_member)
 
@@ -300,26 +284,24 @@ class TestTransferOwnershipRejections:
             ),
         )
 
-    def test_rejects_same_owner_transfer(self) -> None:
-        owner_id = uuid7()
+    async def test_rejects_same_owner_transfer(self) -> None:
+        owner_id = generate_id()
         ops = _make_ops()
         content = _fake_content(owner_id=owner_id)
         p1, p2 = self._patch_prereqs(ops, content)
         with p1, p2, pytest.raises(ValidationError, match="already the current owner"):
-            asyncio.run(
-                ops.transfer_ownership(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    new_owner_user_id=owner_id,
-                )
+            await ops.transfer_ownership(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                new_owner_user_id=owner_id,
             )
 
-    def test_rejects_new_owner_not_in_org(self) -> None:
+    async def test_rejects_new_owner_not_in_org(self) -> None:
         ops = _make_ops()
         content = _fake_content()
-        new_owner = uuid7()
+        new_owner = generate_id()
         p1, p2 = self._patch_prereqs(ops, content)
         with (
             p1,
@@ -327,23 +309,21 @@ class TestTransferOwnershipRejections:
             patch.object(ops, "_is_active_org_member", AsyncMock(return_value=False)),
             pytest.raises(ValidationError, match="not an active member"),
         ):
-            asyncio.run(
-                ops.transfer_ownership(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.NOTE,
-                    content_id=content.id,
-                    new_owner_user_id=new_owner,
-                )
+            await ops.transfer_ownership(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.NOTE,
+                content_id=content.id,
+                new_owner_user_id=new_owner,
             )
 
-    def test_registered_hook_runs_before_the_transfer_commit(self) -> None:
+    async def test_registered_hook_runs_before_the_transfer_commit(self) -> None:
         """Domain state tied to the owner must move in the same transaction."""
         from uniffy.core.content import members as members_module
 
         ops = _make_ops()
         content = _fake_content()
-        new_owner = uuid7()
+        new_owner = generate_id()
         order: list[str] = []
 
         async def hook(session, org_id, content_id, new_owner_id):
@@ -372,14 +352,12 @@ class TestTransferOwnershipRejections:
                 ),
                 patch.object(members_module, "publish_perm_change", AsyncMock()),
             ):
-                asyncio.run(
-                    ops.transfer_ownership(
-                        actor_user_id=uuid7(),
-                        organization_id=uuid7(),
-                        content_type=ContentType.NOTE,
-                        content_id=content.id,
-                        new_owner_user_id=new_owner,
-                    )
+                await ops.transfer_ownership(
+                    actor_user_id=generate_id(),
+                    organization_id=generate_id(),
+                    content_type=ContentType.NOTE,
+                    content_id=content.id,
+                    new_owner_user_id=new_owner,
                 )
         finally:
             members_module._ownership_transfer_hooks.pop(ContentType.NOTE, None)
@@ -423,7 +401,7 @@ def _dispatch_session(*, org_role=None, admin_domains: frozenset = frozenset()):
             result.scalar_one_or_none = MagicMock(return_value=org_role)
         elif entity is DomainAdmin:
             domain = _queried_domain(stmt)
-            hit = uuid7() if domain in admin_domains else None
+            hit = generate_id() if domain in admin_domains else None
             result.scalar_one_or_none = MagicMock(return_value=hit)
         else:
             result.scalar_one_or_none = MagicMock(return_value=None)
@@ -478,7 +456,7 @@ class TestManageOverrides:
         # Provider keys have no access policy at all; nothing to override.
         assert ContentType.PROVIDER_KEY not in _manage_overrides
 
-    def test_agents_builder_cannot_manage_unowned_cron_task(self) -> None:
+    async def test_agents_builder_cannot_manage_unowned_cron_task(self) -> None:
         import uniffy.domains.agents.cron.operations  # noqa: F401
         from uniffy.core.errors import PermissionDeniedError
         from uniffy.core.types import DomainType
@@ -493,17 +471,15 @@ class TestManageOverrides:
             _cache_passthrough(),
             pytest.raises(PermissionDeniedError),
         ):
-            asyncio.run(
-                ops.set_access_mode(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.AGENT_CRON_TASK,
-                    content_id=content.id,
-                    new_access_mode=AccessMode.OPEN_TO_ORG,
-                )
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.AGENT_CRON_TASK,
+                content_id=content.id,
+                new_access_mode=AccessMode.OPEN_TO_ORG,
             )
 
-    def test_org_admin_can_add_member_on_unowned_agent(self) -> None:
+    async def test_org_admin_can_add_member_on_unowned_agent(self) -> None:
         ops = self._make_override_ops(org_role=OrganizationRole.ADMIN)
         content = self._agent_content()
         with (
@@ -512,19 +488,17 @@ class TestManageOverrides:
             _cache_passthrough(),
             pytest.raises(_Reached),
         ):
-            asyncio.run(
-                ops.add_member(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.AGENT,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=uuid7(),
-                    role=ContentRole.EDITOR,
-                )
+            await ops.add_member(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.AGENT,
+                content_id=content.id,
+                subject_type=SubjectType.USER,
+                subject_id=generate_id(),
+                role=ContentRole.EDITOR,
             )
 
-    def test_agents_domain_admin_can_set_access_mode_on_agent(self) -> None:
+    async def test_agents_domain_admin_can_set_access_mode_on_agent(self) -> None:
         from uniffy.core.types import DomainType
 
         ops = self._make_override_ops(
@@ -540,17 +514,15 @@ class TestManageOverrides:
             _cache_passthrough(),
             pytest.raises(_Reached),
         ):
-            asyncio.run(
-                ops.set_access_mode(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.AGENT,
-                    content_id=content.id,
-                    new_access_mode=AccessMode.EXPLICIT_MEMBERS,
-                )
+            await ops.set_access_mode(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.AGENT,
+                content_id=content.id,
+                new_access_mode=AccessMode.EXPLICIT_MEMBERS,
             )
 
-    def test_plain_member_cannot_manage_agent(self) -> None:
+    async def test_plain_member_cannot_manage_agent(self) -> None:
         from uniffy.core.errors import PermissionDeniedError
 
         ops = self._make_override_ops(org_role=OrganizationRole.MEMBER)
@@ -560,20 +532,18 @@ class TestManageOverrides:
             _cache_passthrough(),
             pytest.raises(PermissionDeniedError),
         ):
-            asyncio.run(
-                ops.add_member(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.AGENT,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=uuid7(),
-                    role=ContentRole.EDITOR,
-                )
+            await ops.add_member(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.AGENT,
+                content_id=content.id,
+                subject_type=SubjectType.USER,
+                subject_id=generate_id(),
+                role=ContentRole.EDITOR,
             )
         ops.session.add.assert_not_called()
 
-    def test_other_domain_admin_gets_no_manage_on_agent(self) -> None:
+    async def test_other_domain_admin_gets_no_manage_on_agent(self) -> None:
         from uniffy.core.errors import PermissionDeniedError
         from uniffy.core.types import DomainType
 
@@ -587,19 +557,17 @@ class TestManageOverrides:
             _cache_passthrough(),
             pytest.raises(PermissionDeniedError),
         ):
-            asyncio.run(
-                ops.add_member(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.AGENT,
-                    content_id=content.id,
-                    subject_type=SubjectType.USER,
-                    subject_id=uuid7(),
-                    role=ContentRole.EDITOR,
-                )
+            await ops.add_member(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.AGENT,
+                content_id=content.id,
+                subject_type=SubjectType.USER,
+                subject_id=generate_id(),
+                role=ContentRole.EDITOR,
             )
 
-    def test_override_does_not_grant_view(self) -> None:
+    async def test_override_does_not_grant_view(self) -> None:
         """The view path stays pure effective_role: an org admin with no access
         to the row cannot list its members."""
         from uniffy.core.errors import PermissionDeniedError
@@ -613,16 +581,14 @@ class TestManageOverrides:
             _cache_passthrough(),
             pytest.raises(PermissionDeniedError),
         ):
-            asyncio.run(
-                ops.list_members(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.AGENT,
-                    content_id=content.id,
-                )
+            await ops.list_members(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.AGENT,
+                content_id=content.id,
             )
 
-    def test_override_does_not_grant_transfer(self) -> None:
+    async def test_override_does_not_grant_transfer(self) -> None:
         """MANAGE via override never becomes OWNER: transfer still requires the
         real effective_role to be OWNER."""
         from uniffy.core.errors import PermissionDeniedError
@@ -636,12 +602,10 @@ class TestManageOverrides:
             _cache_passthrough(),
             pytest.raises(PermissionDeniedError),
         ):
-            asyncio.run(
-                ops.transfer_ownership(
-                    actor_user_id=uuid7(),
-                    organization_id=uuid7(),
-                    content_type=ContentType.AGENT,
-                    content_id=content.id,
-                    new_owner_user_id=uuid7(),
-                )
+            await ops.transfer_ownership(
+                actor_user_id=generate_id(),
+                organization_id=generate_id(),
+                content_type=ContentType.AGENT,
+                content_id=content.id,
+                new_owner_user_id=generate_id(),
             )

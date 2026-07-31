@@ -1,6 +1,5 @@
 """OpenAI Responses API path: request building and stream parsing."""
 
-import asyncio
 from types import SimpleNamespace
 
 from uniffy.domains.agents.providers.base import EventType
@@ -13,12 +12,12 @@ from uniffy.domains.agents.providers.openai.responses import (
 MESSAGES = [{"role": "user", "content": "hi"}]
 
 
-def _collect(awaitable_iter):
+async def _collect(awaitable_iter):
     async def _run():
         iterator = await awaitable_iter
         return [event async for event in iterator]
 
-    return asyncio.run(_run())
+    return await _run()
 
 
 def _types(events):
@@ -134,10 +133,10 @@ def _full_stream_events() -> list:
 
 
 class TestResponsesStream:
-    def test_block_framing(self) -> None:
+    async def test_block_framing(self) -> None:
         provider = OpenAIProvider("sk-test")
         _install_responses_stream(provider, _full_stream_events())
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
         assert _types(events) == [
             EventType.MODEL_CALL_START,
             EventType.THINKING_BLOCK_START,
@@ -155,10 +154,10 @@ class TestResponsesStream:
             EventType.MODEL_CALL_END,
         ]
 
-    def test_thinking_separate_from_answer(self) -> None:
+    async def test_thinking_separate_from_answer(self) -> None:
         provider = OpenAIProvider("sk-test")
         _install_responses_stream(provider, _full_stream_events())
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
         thinking = "".join(
             e.delta for e in events if e.type == EventType.THINKING_BLOCK_DELTA
         )
@@ -167,10 +166,10 @@ class TestResponsesStream:
         assert result.content == "Answer"
         assert "thought" not in result.content
 
-    def test_tool_call_and_result(self) -> None:
+    async def test_tool_call_and_result(self) -> None:
         provider = OpenAIProvider("sk-test")
         _install_responses_stream(provider, _full_stream_events())
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
         ends = [e for e in events if e.type == EventType.TOOL_CALL_END]
         assert ends[0].tool_call_id == "call_1"
         assert ends[0].tool_args == {"q": "report"}
@@ -179,29 +178,29 @@ class TestResponsesStream:
         assert result.tool_calls[0].id == "call_1"
         assert result.tool_calls[0].input == {"q": "report"}
 
-    def test_reasoning_items_captured_for_refeed(self) -> None:
+    async def test_reasoning_items_captured_for_refeed(self) -> None:
         provider = OpenAIProvider("sk-test")
         _install_responses_stream(provider, _full_stream_events())
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
         blocks = events[-1].result.thinking_blocks
         assert blocks[0]["type"] == "openai_reasoning"
         assert blocks[0]["item"]["encrypted_content"] == "enc-blob"
 
-    def test_usage_split_and_thinking_tokens(self) -> None:
+    async def test_usage_split_and_thinking_tokens(self) -> None:
         provider = OpenAIProvider("sk-test")
         _install_responses_stream(provider, _full_stream_events())
-        end = _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))[-1]
+        end = (await _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True)))[-1]
         assert end.input_tokens == 16
         assert end.cache_read_input_tokens == 4
         assert end.output_tokens == 9
         assert end.thinking_tokens == 5
 
-    def test_error_without_completed(self) -> None:
+    async def test_error_without_completed(self) -> None:
         provider = OpenAIProvider("sk-test")
         _install_responses_stream(
             provider, [_event("response.output_text.delta", item_id="x", delta="hi")],
         )
-        events = _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
+        events = await _collect(provider.chat_completion(MESSAGES, "gpt-5.5", stream=True))
         assert events[-1].type == EventType.ERROR
 
 

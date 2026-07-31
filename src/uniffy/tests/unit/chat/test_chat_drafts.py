@@ -6,10 +6,8 @@ sessions; the fanout is asserted via a monkeypatched publisher.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 import uniffy.domains.auth  # noqa: F401
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.types import generate_id
 from uniffy.domains.chat.drafts import operations as draft_ops_module
 from uniffy.domains.chat.drafts.operations import (
     MAX_CLIENT_SESSION_ID_LENGTH,
@@ -57,7 +56,7 @@ def _make_ops(
     session.commit = AsyncMock()
 
     access = MagicMock()
-    access.get_channel = AsyncMock(return_value=MagicMock(id=uuid4()))
+    access.get_channel = AsyncMock(return_value=MagicMock(id=generate_id()))
     access.check_access = AsyncMock()
     return ChatDraftOperations(session, access)
 
@@ -69,66 +68,64 @@ def _row_result(value):
     return result
 
 
-def test_save_draft_rejects_oversized_content():
+async def test_save_draft_rejects_oversized_content():
     ops = _make_ops()
     with pytest.raises(ValidationError):
-        asyncio.run(
-            ops.save_draft(uuid4(), uuid4(), uuid4(), None, "x" * (MAX_MESSAGE_LENGTH + 1))
+        await ops.save_draft(
+            generate_id(), generate_id(), generate_id(), None, "x" * (MAX_MESSAGE_LENGTH + 1)
         )
 
 
-def test_save_draft_rejects_long_client_session_id():
+async def test_save_draft_rejects_long_client_session_id():
     ops = _make_ops()
     with pytest.raises(ValidationError):
-        asyncio.run(
-            ops.save_draft(
-                uuid4(),
-                uuid4(),
-                uuid4(),
-                None,
-                "hello",
-                client_session_id="s" * (MAX_CLIENT_SESSION_ID_LENGTH + 1),
-            )
+        await ops.save_draft(
+            generate_id(),
+            generate_id(),
+            generate_id(),
+            None,
+            "hello",
+            client_session_id="s" * (MAX_CLIENT_SESSION_ID_LENGTH + 1),
         )
 
 
-def test_save_draft_propagates_access_denial():
+async def test_save_draft_propagates_access_denial():
     ops = _make_ops()
     ops.access.check_access = AsyncMock(side_effect=PermissionDeniedError("access", "channel"))
     with pytest.raises(PermissionDeniedError):
-        asyncio.run(ops.save_draft(uuid4(), uuid4(), uuid4(), None, "hello"))
+        await ops.save_draft(generate_id(), generate_id(), generate_id(), None, "hello")
 
 
-def test_save_draft_empty_content_routes_to_delete():
+async def test_save_draft_empty_content_routes_to_delete():
     ops = _make_ops()
     ops.delete_draft = AsyncMock(return_value=True)
-    draft = asyncio.run(ops.save_draft(uuid4(), uuid4(), uuid4(), None, "   \n  "))
+    draft = await ops.save_draft(generate_id(), generate_id(), generate_id(), None, "   \n  ")
     ops.delete_draft.assert_awaited_once()
     assert draft.content == ""
 
 
-def test_save_draft_channel_branch_targets_partial_index(monkeypatch):
+async def test_save_draft_channel_branch_targets_partial_index(monkeypatch):
     executed: list = []
     ops = _make_ops(executed=executed)
     monkeypatch.setattr(draft_ops_module, "publish_user_chat_event", AsyncMock())
 
-    asyncio.run(ops.save_draft(uuid4(), uuid4(), uuid4(), None, "hello"))
+    await ops.save_draft(generate_id(), generate_id(), generate_id(), None, "hello")
 
     upsert = executed[-1]
     conflict = upsert._post_values_clause
     assert list(conflict.inferred_target_elements) == ["user_id", "channel_id"]
 
 
-def test_save_draft_thread_branch_validates_root_and_targets_thread_index(monkeypatch):
-    channel_id = uuid4()
-    root_id = uuid4()
+async def test_save_draft_thread_branch_validates_root_and_targets_thread_index(monkeypatch):
+    channel_id = generate_id()
+    root_id = generate_id()
     executed: list = []
     ops = _make_ops(executed=executed, execute_results=[_row_result(channel_id)])
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
     publish = AsyncMock()
     monkeypatch.setattr(draft_ops_module, "publish_user_chat_event", publish)
 
-    asyncio.run(ops.save_draft(uuid4(), uuid4(), channel_id, root_id, "hello"))
+    await ops.save_draft(generate_id(), generate_id(), channel_id, root_id, "hello")
 
     upsert = executed[-1]
     conflict = upsert._post_values_clause
@@ -140,15 +137,15 @@ def test_save_draft_thread_branch_validates_root_and_targets_thread_index(monkey
     publish.assert_awaited_once()
 
 
-def test_save_draft_rejects_root_from_other_channel():
-    channel_id = uuid4()
-    ops = _make_ops(execute_results=[_row_result(uuid4())])
+async def test_save_draft_rejects_root_from_other_channel():
+    channel_id = generate_id()
+    ops = _make_ops(execute_results=[_row_result(generate_id())])
     ops.access.get_channel = AsyncMock(return_value=MagicMock(id=channel_id))
     with pytest.raises(NotFoundError):
-        asyncio.run(ops.save_draft(uuid4(), uuid4(), channel_id, uuid4(), "hello"))
+        await ops.save_draft(generate_id(), generate_id(), channel_id, generate_id(), "hello")
 
 
-def test_save_draft_converts_integrity_error_without_content(monkeypatch):
+async def test_save_draft_converts_integrity_error_without_content(monkeypatch):
     ops = _make_ops()
 
     async def raise_integrity(stmt):
@@ -160,29 +157,29 @@ def test_save_draft_converts_integrity_error_without_content(monkeypatch):
     monkeypatch.setattr(draft_ops_module, "publish_user_chat_event", publish)
 
     with pytest.raises(NotFoundError):
-        asyncio.run(ops.save_draft(uuid4(), uuid4(), uuid4(), None, "hello"))
+        await ops.save_draft(generate_id(), generate_id(), generate_id(), None, "hello")
 
     ops.session.rollback.assert_awaited_once()
     publish.assert_not_awaited()
 
 
-def test_delete_draft_no_row_returns_false_without_publish(monkeypatch):
+async def test_delete_draft_no_row_returns_false_without_publish(monkeypatch):
     ops = _make_ops(execute_results=[_row_result(None)])
     publish = AsyncMock()
     monkeypatch.setattr(draft_ops_module, "publish_user_chat_event", publish)
 
-    deleted = asyncio.run(ops.delete_draft(uuid4(), uuid4(), uuid4(), None))
+    deleted = await ops.delete_draft(generate_id(), generate_id(), generate_id(), None)
 
     assert deleted is False
     publish.assert_not_awaited()
 
 
-def test_delete_draft_row_returns_true_and_publishes_once(monkeypatch):
-    ops = _make_ops(execute_results=[_row_result((uuid4(),))])
+async def test_delete_draft_row_returns_true_and_publishes_once(monkeypatch):
+    ops = _make_ops(execute_results=[_row_result((generate_id(),))])
     publish = AsyncMock()
     monkeypatch.setattr(draft_ops_module, "publish_user_chat_event", publish)
 
-    deleted = asyncio.run(ops.delete_draft(uuid4(), uuid4(), uuid4(), None))
+    deleted = await ops.delete_draft(generate_id(), generate_id(), generate_id(), None)
 
     assert deleted is True
     publish.assert_awaited_once()
@@ -191,16 +188,16 @@ def test_delete_draft_row_returns_true_and_publishes_once(monkeypatch):
     assert payload["content"] == ""
 
 
-def test_list_drafts_empty_for_non_member(monkeypatch):
+async def test_list_drafts_empty_for_non_member(monkeypatch):
     ops = _make_ops()
     monkeypatch.setattr(draft_ops_module, "is_active_member", AsyncMock(return_value=False))
-    assert asyncio.run(ops.list_drafts(uuid4(), uuid4())) == []
+    assert await ops.list_drafts(generate_id(), generate_id()) == []
 
 
-def test_clear_for_send_swallows_errors():
+async def test_clear_for_send_swallows_errors():
     ops = _make_ops()
     ops.delete_draft = AsyncMock(side_effect=RuntimeError("pg down"))
-    asyncio.run(ops.clear_for_send(uuid4(), uuid4(), uuid4(), None))
+    await ops.clear_for_send(generate_id(), generate_id(), generate_id(), None)
 
 
 def _make_message_ops_for_post_send() -> object:
@@ -222,7 +219,7 @@ def _make_message_ops_for_post_send() -> object:
     ("sender_type", "expect_clear"),
     [(SenderType.USER, True), (SenderType.AGENT, False)],
 )
-def test_background_post_send_clears_drafts_for_users_only(
+async def test_background_post_send_clears_drafts_for_users_only(
     monkeypatch, sender_type, expect_clear
 ):
     ops = _make_message_ops_for_post_send()
@@ -231,25 +228,23 @@ def test_background_post_send_clears_drafts_for_users_only(
     monkeypatch.setattr(draft_ops_module, "ChatDraftOperations", fake_cls)
 
     message = ChatMessage(
-        id=uuid4(),
-        channel_id=uuid4(),
-        sender_id=uuid4(),
+        id=generate_id(),
+        channel_id=generate_id(),
+        sender_id=generate_id(),
         sender_type=sender_type,
         content="hi",
         created_at=datetime.now(UTC),
     )
-    channel = MagicMock(id=message.channel_id, organization_id=uuid4())
+    channel = MagicMock(id=message.channel_id, organization_id=generate_id())
 
-    asyncio.run(
-        ops._background_post_send(message, channel, message.sender_id, None, "name", [])
-    )
+    await ops._background_post_send(message, channel, message.sender_id, None, "name", [])
 
     assert clear.await_count == (1 if expect_clear else 0)
 
 
 def test_build_draft_changed_payload_shape():
     now = datetime.now(UTC)
-    channel_id = uuid4()
+    channel_id = generate_id()
 
     payload = build_draft_changed_payload(channel_id, None, "hi", False, now, "sess")
     assert payload == {
@@ -260,7 +255,7 @@ def test_build_draft_changed_payload_shape():
         "client_session_id": "sess",
     }
 
-    root_id = uuid4()
+    root_id = generate_id()
     with_root = build_draft_changed_payload(channel_id, root_id, "", True, now)
     assert with_root["root_message_id"] == str(root_id)
     assert with_root["deleted"] is True

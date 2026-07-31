@@ -19,23 +19,19 @@ These tests pin the behaviour against three regressions:
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.types import generate_id
 from uniffy.domains.auth.mfa import enforcement as enf
 from uniffy.domains.auth.mfa.enforcement import (
     MfaRequirement,
     evaluate_mfa_requirement,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 @dataclass
@@ -84,55 +80,49 @@ def _patch_policy(required_for_system_admins):
 class TestEnforcementScansAllMemberships:
     """The login flow no longer needs an org slug to trigger enrollment."""
 
-    def test_admin_of_one_org_with_required_for_admins(self) -> None:
+    async def test_admin_of_one_org_with_required_for_admins(self) -> None:
         """Regression: admin of org X (requires MFA) was being let in."""
-        user = _User(id=uuid4())
-        org_x = uuid4()
+        user = _User(id=generate_id())
+        org_x = generate_id()
         session = _membership_rows([(org_x, OrganizationRole.ADMIN)])
 
         with _patch_policy(False), _patch_security({
             org_x: _Settings(mfa_required_for_admins=True),
         }):
-            result = _run(
-                evaluate_mfa_requirement(session, user=user, user_mfa=None)
-            )
+            result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.HARD_REQUIRED
 
-    def test_member_of_org_with_required_for_members(self) -> None:
-        user = _User(id=uuid4())
-        org_y = uuid4()
+    async def test_member_of_org_with_required_for_members(self) -> None:
+        user = _User(id=generate_id())
+        org_y = generate_id()
         session = _membership_rows([(org_y, OrganizationRole.MEMBER)])
 
         with _patch_policy(False), _patch_security({
             org_y: _Settings(mfa_required_for_members=True),
         }):
-            result = _run(
-                evaluate_mfa_requirement(session, user=user, user_mfa=None)
-            )
+            result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.HARD_REQUIRED
 
-    def test_member_of_admin_only_required_org_is_skipped(self) -> None:
+    async def test_member_of_admin_only_required_org_is_skipped(self) -> None:
         """A plain MEMBER of an admins-only-required org is not forced."""
-        user = _User(id=uuid4())
-        org_y = uuid4()
+        user = _User(id=generate_id())
+        org_y = generate_id()
         session = _membership_rows([(org_y, OrganizationRole.MEMBER)])
 
         with _patch_policy(False), _patch_security({
             org_y: _Settings(mfa_required_for_admins=True),
         }):
-            result = _run(
-                evaluate_mfa_requirement(session, user=user, user_mfa=None)
-            )
+            result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.NOT_REQUIRED
 
-    def test_any_membership_triggering_wins(self) -> None:
+    async def test_any_membership_triggering_wins(self) -> None:
         """Multi-org user: one requires, the other does not, still required."""
-        user = _User(id=uuid4())
-        org_a = uuid4()
-        org_b = uuid4()
+        user = _User(id=generate_id())
+        org_a = generate_id()
+        org_b = generate_id()
         session = _membership_rows([
             (org_a, OrganizationRole.MEMBER),
             (org_b, OrganizationRole.OWNER),
@@ -142,66 +132,56 @@ class TestEnforcementScansAllMemberships:
             org_a: _Settings(),  # no requirement
             org_b: _Settings(mfa_required_for_admins=True),
         }):
-            result = _run(
-                evaluate_mfa_requirement(session, user=user, user_mfa=None)
-            )
+            result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.HARD_REQUIRED
 
-    def test_user_with_no_memberships_not_required(self) -> None:
-        user = _User(id=uuid4())
+    async def test_user_with_no_memberships_not_required(self) -> None:
+        user = _User(id=generate_id())
         session = _membership_rows([])
 
         with _patch_policy(False), _patch_security({}):
-            result = _run(
-                evaluate_mfa_requirement(session, user=user, user_mfa=None)
-            )
+            result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.NOT_REQUIRED
 
-    def test_system_admin_with_platform_policy(self) -> None:
+    async def test_system_admin_with_platform_policy(self) -> None:
         """Platform-admin branch fires before membership scan."""
-        user = _User(id=uuid4(), is_system_admin=True)
+        user = _User(id=generate_id(), is_system_admin=True)
         session = _membership_rows([])
 
         with _patch_policy(True), _patch_security({}):
-            result = _run(
-                evaluate_mfa_requirement(session, user=user, user_mfa=None)
-            )
+            result = await evaluate_mfa_requirement(session, user=user, user_mfa=None)
 
         assert result.requirement == MfaRequirement.HARD_REQUIRED
 
-    def test_enabled_user_skips_evaluation(self) -> None:
+    async def test_enabled_user_skips_evaluation(self) -> None:
         """Users with MFA already enabled never hit this branch."""
-        user = _User(id=uuid4())
+        user = _User(id=generate_id())
         session = MagicMock()
         session.execute = AsyncMock(
             side_effect=AssertionError("must not be called"),
         )
 
         with _patch_policy(True), _patch_security({}):
-            result = _run(
-                evaluate_mfa_requirement(
-                    session,
-                    user=user,
-                    user_mfa=MagicMock(enabled=True),
-                )
+            result = await evaluate_mfa_requirement(
+                session,
+                user=user,
+                user_mfa=MagicMock(enabled=True),
             )
 
         assert result.requirement == MfaRequirement.NOT_REQUIRED
 
-    def test_failed_lookup_is_fail_closed(self) -> None:
+    async def test_failed_lookup_is_fail_closed(self) -> None:
         """A backend hiccup must NOT silently disable MFA enforcement.
 
         The evaluator re-raises so the login surfaces a typed error
         and oncall gets paged instead of issuing tokens to users that
         policy would otherwise have funnelled into the enrollment path.
         """
-        user = _User(id=uuid4())
+        user = _User(id=generate_id())
         session = MagicMock()
         session.execute = AsyncMock(side_effect=RuntimeError("db down"))
 
         with _patch_policy(False), pytest.raises(RuntimeError, match="db down"):
-            _run(
-                evaluate_mfa_requirement(session, user=user, user_mfa=None)
-            )
+            await evaluate_mfa_requirement(session, user=user, user_mfa=None)

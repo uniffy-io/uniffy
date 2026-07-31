@@ -13,10 +13,8 @@ and ``revoke_domain_admin``. DB calls are mocked. The test asserts:
 - Both paths drop the Valkey entry the ``is_domain_admin`` gate reads.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
@@ -24,7 +22,7 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
-from uniffy.core.types import DomainType
+from uniffy.core.types import DomainType, generate_id
 from uniffy.domains.organizations.operations import OrganizationOperations
 
 
@@ -34,7 +32,7 @@ def _build_session_for_grant(existing: DomainAdmin | None) -> MagicMock:
     """
     session = MagicMock()
     user = MagicMock()
-    user.id = uuid4()
+    user.id = generate_id()
 
     domain_lookup = MagicMock()
     domain_lookup.scalar_one_or_none.return_value = existing
@@ -93,18 +91,16 @@ def _build_session_for_revoke(existing: DomainAdmin) -> MagicMock:
     return session
 
 
-def test_grant_emits_one_audit_row_with_correct_shape() -> None:
+async def test_grant_emits_one_audit_row_with_correct_shape() -> None:
     session = _build_session_for_grant(existing=None)
     ops = OrganizationOperations(session)
-    admin_id = uuid4()
-    org_id = uuid4()
-    target_id = uuid4()
+    admin_id = generate_id()
+    org_id = generate_id()
+    target_id = generate_id()
 
     rqa, rqm, inv, pub = _patch_helpers()
     with rqa, rqm, inv, pub:
-        asyncio.run(
-            ops.grant_domain_admin(admin_id, org_id, target_id, DomainType.CHAT)
-        )
+        await ops.grant_domain_admin(admin_id, org_id, target_id, DomainType.CHAT)
 
     added = [c.args[0] for c in session.add.call_args_list]
     audit_rows = [obj for obj in added if obj.__class__.__name__ == "AuditEvent"]
@@ -119,7 +115,7 @@ def test_grant_emits_one_audit_row_with_correct_shape() -> None:
     assert row.details == {"domain": "CHAT"}
 
 
-def test_grant_writes_audit_before_commit() -> None:
+async def test_grant_writes_audit_before_commit() -> None:
     session = _build_session_for_grant(existing=None)
     ops = OrganizationOperations(session)
 
@@ -141,33 +137,29 @@ def test_grant_writes_audit_before_commit() -> None:
 
     rqa, rqm, inv, pub = _patch_helpers()
     with rqa, rqm, inv, pub:
-        asyncio.run(
-            ops.grant_domain_admin(uuid4(), uuid4(), uuid4(), DomainType.FILES)
-        )
+        await ops.grant_domain_admin(generate_id(), generate_id(), generate_id(), DomainType.FILES)
 
     assert call_order == ["audit_add", "commit"]
 
 
-def test_revoke_emits_one_audit_row_with_previous_state() -> None:
+async def test_revoke_emits_one_audit_row_with_previous_state() -> None:
     existing = DomainAdmin(
-        user_id=uuid4(),
-        organization_id=uuid4(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
         domain=DomainType.CALENDAR,
-        granted_by=uuid4(),
+        granted_by=generate_id(),
         granted_at=datetime(2026, 5, 19, 11, 30, 0, tzinfo=UTC),
     )
     session = _build_session_for_revoke(existing)
 
     ops = OrganizationOperations(session)
-    admin_id = uuid4()
-    org_id = uuid4()
-    target_id = uuid4()
+    admin_id = generate_id()
+    org_id = generate_id()
+    target_id = generate_id()
 
     rqa, rqm, inv, pub = _patch_helpers()
     with rqa, rqm, inv, pub:
-        asyncio.run(
-            ops.revoke_domain_admin(admin_id, org_id, target_id, DomainType.CALENDAR)
-        )
+        await ops.revoke_domain_admin(admin_id, org_id, target_id, DomainType.CALENDAR)
 
     added = [c.args[0] for c in session.add.call_args_list]
     audit_rows = [obj for obj in added if obj.__class__.__name__ == "AuditEvent"]
@@ -184,7 +176,7 @@ def test_revoke_emits_one_audit_row_with_previous_state() -> None:
     assert row.details["previous_state"]["granted_by"] == str(existing.granted_by)
 
 
-def test_non_admin_blocked_before_audit_runs() -> None:
+async def test_non_admin_blocked_before_audit_runs() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.execute = AsyncMock()
@@ -203,9 +195,7 @@ def test_non_admin_blocked_before_audit_runs() -> None:
     )
 
     with rqa, rqm, pytest.raises(PermissionDeniedError):
-        asyncio.run(
-            ops.grant_domain_admin(uuid4(), uuid4(), uuid4(), DomainType.CHAT)
-        )
+        await ops.grant_domain_admin(generate_id(), generate_id(), generate_id(), DomainType.CHAT)
 
     added = [c.args[0] for c in session.add.call_args_list]
     audit_rows = [obj for obj in added if obj.__class__.__name__ == "AuditEvent"]
@@ -226,34 +216,32 @@ def _capture_cache_drops():
     )
 
 
-def test_grant_drops_the_domain_admin_gate_cache_entry() -> None:
+async def test_grant_drops_the_domain_admin_gate_cache_entry() -> None:
     from uniffy.core.auth.cache import _domain_admin_key
 
     session = _build_session_for_grant(existing=None)
     ops = OrganizationOperations(session)
-    org_id = uuid4()
-    target_id = uuid4()
+    org_id = generate_id()
+    target_id = generate_id()
 
     dropped, cache_patch = _capture_cache_drops()
     rqa, rqm, inv, pub = _patch_helpers()
     with rqa, rqm, inv, pub, cache_patch:
-        asyncio.run(
-            ops.grant_domain_admin(uuid4(), org_id, target_id, DomainType.AGENTS)
-        )
+        await ops.grant_domain_admin(generate_id(), org_id, target_id, DomainType.AGENTS)
 
     assert _domain_admin_key(org_id, target_id, DomainType.AGENTS) in dropped
 
 
-def test_revoke_drops_the_domain_admin_gate_cache_entry() -> None:
+async def test_revoke_drops_the_domain_admin_gate_cache_entry() -> None:
     from uniffy.core.auth.cache import _domain_admin_key
 
-    org_id = uuid4()
-    target_id = uuid4()
+    org_id = generate_id()
+    target_id = generate_id()
     existing = DomainAdmin(
         user_id=target_id,
         organization_id=org_id,
         domain=DomainType.AGENTS,
-        granted_by=uuid4(),
+        granted_by=generate_id(),
         granted_at=datetime(2026, 5, 19, 11, 30, 0, tzinfo=UTC),
     )
     session = _build_session_for_revoke(existing)
@@ -262,8 +250,6 @@ def test_revoke_drops_the_domain_admin_gate_cache_entry() -> None:
     dropped, cache_patch = _capture_cache_drops()
     rqa, rqm, inv, pub = _patch_helpers()
     with rqa, rqm, inv, pub, cache_patch:
-        asyncio.run(
-            ops.revoke_domain_admin(uuid4(), org_id, target_id, DomainType.AGENTS)
-        )
+        await ops.revoke_domain_admin(generate_id(), org_id, target_id, DomainType.AGENTS)
 
     assert _domain_admin_key(org_id, target_id, DomainType.AGENTS) in dropped

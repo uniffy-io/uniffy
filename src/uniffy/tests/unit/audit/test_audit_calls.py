@@ -4,13 +4,12 @@ Join/leave stay unaudited - calls_participants is the attendance record.
 The audit log carries lifecycle (started/ended) and moderation (kick/mute).
 """
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.calls import Call, CallEndReason, CallParticipant, CallType
+from uniffy.core.types import generate_id
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -49,20 +48,20 @@ def _build_ops(session: MagicMock):
 
 def _call(org_id, channel_id, host_id, started_minutes_ago: int = 10) -> Call:
     return Call(
-        id=uuid4(),
+        id=generate_id(),
         organization_id=org_id,
         channel_id=channel_id,
         call_type=CallType.CHANNEL,
         initiator_user_id=host_id,
         host_user_id=host_id,
-        livekit_room_name=f"org_{org_id}:call_{uuid4()}",
+        livekit_room_name=f"org_{org_id}:call_{generate_id()}",
         started_at=datetime.now(UTC) - timedelta(minutes=started_minutes_ago),
     )
 
 
 def _participant(call: Call, user_id) -> CallParticipant:
     return CallParticipant(
-        id=uuid4(),
+        id=generate_id(),
         call_id=call.id,
         organization_id=call.organization_id,
         user_id=user_id,
@@ -73,8 +72,8 @@ def _participant(call: Call, user_id) -> CallParticipant:
     )
 
 
-def test_end_call_internal_emits_call_ended_with_reason_and_actor() -> None:
-    org_id, channel_id, host_id = uuid4(), uuid4(), uuid4()
+async def test_end_call_internal_emits_call_ended_with_reason_and_actor() -> None:
+    org_id, channel_id, host_id = generate_id(), generate_id(), generate_id()
     call = _call(org_id, channel_id, host_id)
     session = _build_session()
     ops = _build_ops(session)
@@ -89,9 +88,7 @@ def test_end_call_internal_emits_call_ended_with_reason_and_actor() -> None:
         "uniffy.domains.calls.operations.get_livekit_admin_client"
     ) as client_factory:
         client_factory.return_value.delete_room = AsyncMock()
-        asyncio.run(
-            ops.end_call_internal(call, CallEndReason.HOST_ENDED, actor_user_id=host_id)
-        )
+        await ops.end_call_internal(call, CallEndReason.HOST_ENDED, actor_user_id=host_id)
 
     rows = _audit_rows(session)
     ended = [r for r in rows if r.action == Action.CALL_ENDED]
@@ -103,8 +100,8 @@ def test_end_call_internal_emits_call_ended_with_reason_and_actor() -> None:
     assert ended[0].details["duration_seconds"] >= 9 * 60
 
 
-def test_system_end_emits_call_ended_without_actor() -> None:
-    call = _call(uuid4(), uuid4(), uuid4())
+async def test_system_end_emits_call_ended_without_actor() -> None:
+    call = _call(generate_id(), generate_id(), generate_id())
     session = _build_session()
     ops = _build_ops(session)
 
@@ -118,7 +115,7 @@ def test_system_end_emits_call_ended_without_actor() -> None:
         "uniffy.domains.calls.operations.get_livekit_admin_client"
     ) as client_factory:
         client_factory.return_value.delete_room = AsyncMock()
-        asyncio.run(ops.end_call_internal(call, CallEndReason.MAX_DURATION))
+        await ops.end_call_internal(call, CallEndReason.MAX_DURATION)
 
     ended = [r for r in _audit_rows(session) if r.action == Action.CALL_ENDED]
     assert len(ended) == 1
@@ -126,8 +123,13 @@ def test_system_end_emits_call_ended_without_actor() -> None:
     assert ended[0].details["reason"] == "MAX_DURATION"
 
 
-def test_kick_emits_participant_kicked_with_target() -> None:
-    org_id, channel_id, host_id, target_id = uuid4(), uuid4(), uuid4(), uuid4()
+async def test_kick_emits_participant_kicked_with_target() -> None:
+    org_id, channel_id, host_id, target_id = (
+        generate_id(),
+        generate_id(),
+        generate_id(),
+        generate_id(),
+    )
     call = _call(org_id, channel_id, host_id)
     participant = _participant(call, target_id)
     session = _build_session()
@@ -143,7 +145,7 @@ def test_kick_emits_participant_kicked_with_target() -> None:
         "uniffy.domains.calls.operations.get_livekit_admin_client"
     ) as client_factory:
         client_factory.return_value.remove_participant = AsyncMock()
-        asyncio.run(ops.kick_participant(host_id, org_id, call.id, participant.identity))
+        await ops.kick_participant(host_id, org_id, call.id, participant.identity)
 
     kicked = [r for r in _audit_rows(session) if r.action == Action.CALL_PARTICIPANT_KICKED]
     assert len(kicked) == 1
@@ -152,8 +154,13 @@ def test_kick_emits_participant_kicked_with_target() -> None:
     assert kicked[0].details["target_identity"] == participant.identity
 
 
-def test_mute_emits_participant_muted() -> None:
-    org_id, channel_id, host_id, target_id = uuid4(), uuid4(), uuid4(), uuid4()
+async def test_mute_emits_participant_muted() -> None:
+    org_id, channel_id, host_id, target_id = (
+        generate_id(),
+        generate_id(),
+        generate_id(),
+        generate_id(),
+    )
     call = _call(org_id, channel_id, host_id)
     participant = _participant(call, target_id)
     participant.mic_enabled = True
@@ -170,7 +177,7 @@ def test_mute_emits_participant_muted() -> None:
         "uniffy.domains.calls.operations.get_livekit_admin_client"
     ) as client_factory:
         client_factory.return_value.mute_participant_microphone = AsyncMock(return_value=True)
-        asyncio.run(ops.mute_participant(host_id, org_id, call.id, participant.identity))
+        await ops.mute_participant(host_id, org_id, call.id, participant.identity)
 
     muted = [r for r in _audit_rows(session) if r.action == Action.CALL_PARTICIPANT_MUTED]
     assert len(muted) == 1
@@ -179,10 +186,10 @@ def test_mute_emits_participant_muted() -> None:
     assert participant.mic_enabled is False
 
 
-def test_join_and_leave_do_not_audit() -> None:
+async def test_join_and_leave_do_not_audit() -> None:
     """mark_participant_left (RPC leave / webhook path) emits no audit row."""
-    call = _call(uuid4(), uuid4(), uuid4())
-    participant = _participant(call, uuid4())
+    call = _call(generate_id(), generate_id(), generate_id())
+    participant = _participant(call, generate_id())
     session = _build_session()
     ops = _build_ops(session)
 
@@ -197,6 +204,6 @@ def test_join_and_leave_do_not_audit() -> None:
     ), patch(
         "uniffy.domains.calls.operations.publish_channel_event_to_members", AsyncMock()
     ):
-        asyncio.run(ops.mark_participant_left(call, participant))
+        await ops.mark_participant_left(call, participant)
 
     assert _audit_rows(session) == []

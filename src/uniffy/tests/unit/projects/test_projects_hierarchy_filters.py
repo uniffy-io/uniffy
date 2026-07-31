@@ -7,15 +7,10 @@ inspect the SQL the operation builds, and the recursive CTE that powers the
 compiling the constructed query and asserting structural markers in the SQL.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
+from uniffy.core.types import generate_id
 from uniffy.domains.projects.operations import TaskOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _make_ops() -> TaskOperations:
@@ -56,35 +51,31 @@ def _patch_project_check():
 
 
 class TestRootOnlyFilter:
-    def test_root_only_emits_parent_id_is_null(self) -> None:
+    async def test_root_only_emits_parent_id_is_null(self) -> None:
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    root_only=True,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                root_only=True,
             )
         # Both the count and data queries should carry the IS NULL predicate.
         assert any("parent_id is null" in sql for sql in captured)
 
-    def test_root_only_overrides_parent_id(self) -> None:
+    async def test_root_only_overrides_parent_id(self) -> None:
         """Spec: ``root_only`` wins over an explicit parent_id."""
         ops = _make_ops()
         captured = _capture_executes(ops)
-        explicit_parent = uuid4()
+        explicit_parent = generate_id()
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    parent_id=explicit_parent,
-                    root_only=True,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                parent_id=explicit_parent,
+                root_only=True,
             )
         assert any("parent_id is null" in sql for sql in captured)
         # No equality against the explicit parent id leaked in.
@@ -92,140 +83,124 @@ class TestRootOnlyFilter:
 
 
 class TestHasSubtasksFilter:
-    def test_has_subtasks_true_emits_in_subquery(self) -> None:
+    async def test_has_subtasks_true_emits_in_subquery(self) -> None:
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    has_subtasks=True,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                has_subtasks=True,
             )
         sql = next(s for s in captured if "select projects_tasks.id" in s)
         assert "projects_tasks.id in" in sql
         assert "parent_id is not null" in sql
         assert "projects_tasks.id not in" not in sql
 
-    def test_has_subtasks_false_emits_not_in_subquery(self) -> None:
+    async def test_has_subtasks_false_emits_not_in_subquery(self) -> None:
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    has_subtasks=False,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                has_subtasks=False,
             )
         sql = next(s for s in captured if "select projects_tasks.id" in s)
         assert "projects_tasks.id not in" in sql
 
 
 class TestAncestryCte:
-    def test_in_epic_id_builds_cte(self) -> None:
+    async def test_in_epic_id_builds_cte(self) -> None:
         ops = _make_ops()
         captured = _capture_executes(ops)
-        epic_id = uuid4()
+        epic_id = generate_id()
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    in_epic_id=epic_id,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                in_epic_id=epic_id,
             )
         sql = next(s for s in captured if "task_ancestry" in s)
         assert "with recursive" in sql
         assert "task_ancestry" in sql
         assert f"ancestor_id = '{epic_id.hex}'" in sql
 
-    def test_min_depth_uses_max_aggregate(self) -> None:
+    async def test_min_depth_uses_max_aggregate(self) -> None:
         """Task depth = MAX(depth) over the ancestry walk (deepest ancestor)."""
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    min_depth=1,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                min_depth=1,
             )
         sql = next(s for s in captured if "task_ancestry" in s)
         assert "with recursive" in sql
         assert "max(task_ancestry.depth) >= 1" in sql
 
-    def test_max_depth_uses_max_aggregate(self) -> None:
+    async def test_max_depth_uses_max_aggregate(self) -> None:
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    max_depth=2,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                max_depth=2,
             )
         sql = next(s for s in captured if "task_ancestry" in s)
         assert "max(task_ancestry.depth) <= 2" in sql
 
-    def test_depth_range_combines_having_conditions(self) -> None:
+    async def test_depth_range_combines_having_conditions(self) -> None:
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    min_depth=1,
-                    max_depth=3,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                min_depth=1,
+                max_depth=3,
             )
         sql = next(s for s in captured if "task_ancestry" in s)
         assert "max(task_ancestry.depth) >= 1" in sql
         assert "max(task_ancestry.depth) <= 3" in sql
 
-    def test_cte_omitted_when_no_hierarchy_filters(self) -> None:
+    async def test_cte_omitted_when_no_hierarchy_filters(self) -> None:
         """The recursive CTE only shows up when in_epic/min_depth/max_depth fire."""
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    root_only=True,
-                    has_subtasks=True,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                root_only=True,
+                has_subtasks=True,
             )
         assert not any("task_ancestry" in sql for sql in captured)
         assert not any("with recursive" in sql for sql in captured)
 
 
 class TestFilterComposition:
-    def test_in_epic_plus_max_depth_share_cte(self) -> None:
+    async def test_in_epic_plus_max_depth_share_cte(self) -> None:
         """One CTE should cover both ancestry filters in the same query."""
         ops = _make_ops()
         captured = _capture_executes(ops)
-        epic_id = uuid4()
+        epic_id = generate_id()
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    in_epic_id=epic_id,
-                    max_depth=1,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                in_epic_id=epic_id,
+                max_depth=1,
             )
         sql = next(s for s in captured if "task_ancestry" in s)
         # ``WITH RECURSIVE task_ancestry`` appears exactly once per query --
@@ -234,18 +209,16 @@ class TestFilterComposition:
         assert f"ancestor_id = '{epic_id.hex}'" in sql
         assert "max(task_ancestry.depth) <= 1" in sql
 
-    def test_root_only_plus_has_subtasks_compose(self) -> None:
+    async def test_root_only_plus_has_subtasks_compose(self) -> None:
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                    root_only=True,
-                    has_subtasks=True,
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
+                root_only=True,
+                has_subtasks=True,
             )
         sql = next(s for s in captured if "select projects_tasks.id" in s)
         assert "parent_id is null" in sql
@@ -253,7 +226,7 @@ class TestFilterComposition:
 
 
 class TestNoMagicStringForRoot:
-    def test_string_root_no_longer_filters_to_null(self) -> None:
+    async def test_string_root_no_longer_filters_to_null(self) -> None:
         """The legacy ``parent_id='root'`` contract is gone.
 
         Callers must pass ``root_only=True`` instead. Passing the literal
@@ -264,12 +237,10 @@ class TestNoMagicStringForRoot:
         ops = _make_ops()
         captured = _capture_executes(ops)
         with _patch_project_check():
-            _run(
-                ops.list_tasks(
-                    user_id=uuid4(),
-                    organization_id=uuid4(),
-                    project_id=uuid4(),
-                )
+            await ops.list_tasks(
+                user_id=generate_id(),
+                organization_id=generate_id(),
+                project_id=generate_id(),
             )
         # Bare list_tasks call: no parent filter, no IS NULL, no equality.
         assert not any("parent_id is null" in sql for sql in captured)

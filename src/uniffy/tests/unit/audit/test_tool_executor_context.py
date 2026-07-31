@@ -9,12 +9,12 @@ reaches every concurrent audit write inside the request.
 import asyncio
 from contextvars import copy_context
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 from uniffy.core.audit.request_context import (
     audit_ip_var,
     audit_user_agent_var,
 )
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
     ToolContext,
@@ -37,7 +37,7 @@ def _audit_rows(session: MagicMock) -> list:
     ]
 
 
-def test_gather_fan_out_inherits_audit_ip_and_user_agent() -> None:
+async def test_gather_fan_out_inherits_audit_ip_and_user_agent() -> None:
     session = MagicMock()
     session.add = MagicMock()
     session.execute = AsyncMock(
@@ -56,9 +56,10 @@ def test_gather_fan_out_inherits_audit_ip_and_user_agent() -> None:
 
     ctx = ToolContext(
         session=session,
-        user_id=uuid4(),
-        organization_id=uuid4(),
-        agent_id=uuid4(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        agent_id=generate_id(),
+        allowed_tools=frozenset({tool.name}),
     )
 
     async def fan_out() -> None:
@@ -69,13 +70,10 @@ def test_gather_fan_out_inherits_audit_ip_and_user_agent() -> None:
             executor.execute(ToolCall(id="t3", name=tool.name, input={})),
         )
 
-    def run_with_context() -> None:
-        audit_ip_var.set("192.0.2.50")
-        audit_user_agent_var.set("uniffy-test-runner")
-        asyncio.run(fan_out())
-
     ctx_copy = copy_context()
-    ctx_copy.run(run_with_context)
+    ctx_copy.run(audit_ip_var.set, "192.0.2.50")
+    ctx_copy.run(audit_user_agent_var.set, "uniffy-test-runner")
+    await asyncio.create_task(fan_out(), context=ctx_copy)
 
     rows = _audit_rows(session)
     assert len(rows) == 3

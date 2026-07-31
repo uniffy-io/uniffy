@@ -13,7 +13,6 @@ inherit the 150ms ``ops_call`` deadline guard.
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import pytest
@@ -45,14 +44,14 @@ class _FakeOpsClient:
         return []
 
 
-def test_stream_xread_uses_streams_client_not_ops_client(monkeypatch) -> None:
+async def test_stream_xread_uses_streams_client_not_ops_client(monkeypatch) -> None:
     streams_client = _FakeStreamsClient(result=[])
     ops_client = _FakeOpsClient()
 
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: streams_client)
     monkeypatch.setattr(streams_mod, "_get_ops_client", lambda: ops_client)
 
-    asyncio.run(streams_mod.stream_xread("agent:run:test", last_id="0", block_ms=5000))
+    await streams_mod.stream_xread("agent:run:test", last_id="0", block_ms=5000)
 
     assert len(streams_client.xread_calls) == 1, (
         "stream_xread MUST go through the streams client. "
@@ -62,13 +61,13 @@ def test_stream_xread_uses_streams_client_not_ops_client(monkeypatch) -> None:
     assert ops_client.xread_calls == []
 
 
-def test_stream_xread_returns_empty_when_streams_client_missing(monkeypatch) -> None:
+async def test_stream_xread_returns_empty_when_streams_client_missing(monkeypatch) -> None:
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: None)
-    result = asyncio.run(streams_mod.stream_xread("agent:run:test"))
+    result = await streams_mod.stream_xread("agent:run:test")
     assert result == []
 
 
-def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
+async def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
     from valkey.exceptions import TimeoutError as ValkeyTimeoutError
 
     class _BoomClient:
@@ -78,7 +77,7 @@ def test_stream_xread_swallows_redis_timeout(monkeypatch, caplog) -> None:
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: _BoomClient())
 
     with caplog.at_level("WARNING"):
-        result = asyncio.run(streams_mod.stream_xread("agent:run:test"))
+        result = await streams_mod.stream_xread("agent:run:test")
 
     assert result == []
     warnings = [r for r in caplog.records if r.levelname == "WARNING"]
@@ -108,7 +107,7 @@ def test_streams_kwargs_have_long_socket_timeout() -> None:
     "func_name",
     ["stream_xadd", "stream_set_state", "stream_get_state", "stream_delete"],
 )
-def test_non_blocking_helpers_still_use_ops_client(monkeypatch, func_name: str) -> None:
+async def test_non_blocking_helpers_still_use_ops_client(monkeypatch, func_name: str) -> None:
     """The non-blocking writes / reads stay on the ops client tier."""
     ops_used = {"called": False}
 
@@ -162,13 +161,13 @@ def test_non_blocking_helpers_still_use_ops_client(monkeypatch, func_name: str) 
 
     func = getattr(streams_mod, func_name)
     if func_name == "stream_xadd":
-        asyncio.run(func("agent:run:test", {"seq": 1}))
+        await func("agent:run:test", {"seq": 1})
     elif func_name == "stream_set_state":
-        asyncio.run(func("agent:run:test:state", {"status": "running"}))
+        await func("agent:run:test:state", {"status": "running"})
     elif func_name == "stream_get_state":
-        asyncio.run(func("agent:run:test:state"))
+        await func("agent:run:test:state")
     elif func_name == "stream_delete":
-        asyncio.run(func("agent:run:test", "agent:run:test:state"))
+        await func("agent:run:test", "agent:run:test:state")
 
     assert ops_used["called"] is True, f"{func_name} must use the ops client"
     assert streams_blew_up["called"] is False, (

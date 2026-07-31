@@ -13,7 +13,7 @@ from uuid import UUID
 import pytest
 
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime.converters import (
     runtime_stream_event_from_json,
@@ -23,8 +23,8 @@ from uniffy.domains.agents.runtime.converters import (
 
 def _make_message(role: str = "assistant") -> AgentMessage:
     return AgentMessage(
-        id=uuid7(),
-        session_id=uuid7(),
+        id=generate_id(),
+        session_id=generate_id(),
         role=role,
         content="hello",
         input_tokens=1,
@@ -40,7 +40,7 @@ def _round_trip(event: StreamEvent) -> StreamEvent:
 
 class TestRuntimeStreamEventRoundTrip:
     def test_text_delta_round_trip(self) -> None:
-        msg_id = uuid7()
+        msg_id = generate_id()
         decoded = _round_trip(
             StreamEvent(
                 type=EventType.TEXT_BLOCK_DELTA,
@@ -96,7 +96,7 @@ class TestRuntimeStreamEventRoundTrip:
                 tool_call_id="tc_1",
                 tool_name="notes.read_note",
                 tool_args={"note_id": "abc"},
-                message_id=uuid7(),
+                message_id=generate_id(),
             )
         )
         assert decoded.type is EventType.TOOL_RESULT_START
@@ -153,7 +153,7 @@ class TestRuntimeStreamEventRoundTrip:
         assert decoded.model == "claude-sonnet-4-6"
 
     def test_confirmation_required_round_trip(self) -> None:
-        request_id = uuid7()
+        request_id = generate_id()
         decoded = _round_trip(
             StreamEvent(
                 type=EventType.CONFIRMATION_REQUIRED,
@@ -191,9 +191,9 @@ class TestRuntimeStreamEventRoundTrip:
         from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 
         draft = AgentSkillDraft(
-            id=uuid7(),
-            organization_id=uuid7(),
-            owner_id=uuid7(),
+            id=generate_id(),
+            organization_id=generate_id(),
+            owner_id=generate_id(),
             kind="create",
             name="weekly-report",
             display_name="Weekly Report",

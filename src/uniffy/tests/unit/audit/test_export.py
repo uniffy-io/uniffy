@@ -13,18 +13,17 @@ DB calls are mocked. We assert:
 - Authorization: a regular member is denied before pre-flight runs.
 """
 
-import asyncio
 import csv
 import json
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.types import generate_id
 from uniffy.domains.audit.export import (
     CSV_COLUMNS,
     MAX_EXPORT_ROWS,
@@ -36,13 +35,13 @@ from uniffy.domains.audit.operations import ListEventsFilter
 
 def _make_event(**overrides) -> AuditEvent:
     base = {
-        "id": uuid4(),
-        "organization_id": uuid4(),
-        "actor_user_id": uuid4(),
+        "id": generate_id(),
+        "organization_id": generate_id(),
+        "actor_user_id": generate_id(),
         "actor_org_role": "ADMIN",
         "action": "note.deleted",
         "resource_type": "NOTE",
-        "resource_id": uuid4(),
+        "resource_id": generate_id(),
         "details": {"reason": "cleanup"},
         "ip_address": "127.0.0.1",
         "user_agent": "pytest",
@@ -97,7 +96,7 @@ def _admin_session(*, count: int, batches: list[list[AuditEvent]]):
 async def _collect_csv(ops: ExportOperations, filter_: ListEventsFilter) -> bytes:
     payload = bytearray()
     async for chunk in ops.stream_export(
-        uuid4(), ExportFilter(filter=filter_, format="csv")
+        generate_id(), ExportFilter(filter=filter_, format="csv")
     ):
         payload.extend(chunk)
     return bytes(payload)
@@ -106,33 +105,29 @@ async def _collect_csv(ops: ExportOperations, filter_: ListEventsFilter) -> byte
 async def _collect_ndjson(ops: ExportOperations, filter_: ListEventsFilter) -> bytes:
     payload = bytearray()
     async for chunk in ops.stream_export(
-        uuid4(), ExportFilter(filter=filter_, format="ndjson")
+        generate_id(), ExportFilter(filter=filter_, format="ndjson")
     ):
         payload.extend(chunk)
     return bytes(payload)
 
 
-def test_csv_starts_with_header_row_in_canonical_order() -> None:
+async def test_csv_starts_with_header_row_in_canonical_order() -> None:
     session = _admin_session(count=0, batches=[[]])
     ops = ExportOperations(session)
-    output = asyncio.run(
-        _collect_csv(ops, ListEventsFilter(organization_id=uuid4()))
-    )
+    output = await _collect_csv(ops, ListEventsFilter(organization_id=generate_id()))
     # Empty result: a header row is still emitted.
     first_line = output.decode("utf-8").splitlines()[0]
     reader = csv.reader([first_line])
     assert tuple(next(reader)) == CSV_COLUMNS
 
 
-def test_csv_serialises_an_event_row_into_the_expected_columns() -> None:
+async def test_csv_serialises_an_event_row_into_the_expected_columns() -> None:
     event = _make_event()
     session = _admin_session(count=1, batches=[[event]])
     ops = ExportOperations(session)
-    output = asyncio.run(
-        _collect_csv(
-            ops,
-            ListEventsFilter(organization_id=event.organization_id),
-        )
+    output = await _collect_csv(
+        ops,
+        ListEventsFilter(organization_id=event.organization_id),
     )
 
     lines = output.decode("utf-8").splitlines()
@@ -150,15 +145,13 @@ def test_csv_serialises_an_event_row_into_the_expected_columns() -> None:
     assert json.loads(row["details_json"]) == {"reason": "cleanup"}
 
 
-def test_ndjson_emits_one_json_object_per_line_with_parsed_details() -> None:
+async def test_ndjson_emits_one_json_object_per_line_with_parsed_details() -> None:
     event = _make_event()
     session = _admin_session(count=1, batches=[[event]])
     ops = ExportOperations(session)
-    output = asyncio.run(
-        _collect_ndjson(
-            ops,
-            ListEventsFilter(organization_id=event.organization_id),
-        )
+    output = await _collect_ndjson(
+        ops,
+        ListEventsFilter(organization_id=event.organization_id),
     )
 
     lines = [line for line in output.decode("utf-8").splitlines() if line]
@@ -170,7 +163,7 @@ def test_ndjson_emits_one_json_object_per_line_with_parsed_details() -> None:
     assert payload["actor_org_role"] == "ADMIN"
 
 
-def test_row_cap_blocks_filters_that_would_dump_too_many_rows() -> None:
+async def test_row_cap_blocks_filters_that_would_dump_too_many_rows() -> None:
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[
@@ -183,19 +176,19 @@ def test_row_cap_blocks_filters_that_would_dump_too_many_rows() -> None:
 
     async def _run() -> None:
         async for _ in ops.stream_export(
-            uuid4(),
+            generate_id(),
             ExportFilter(
-                filter=ListEventsFilter(organization_id=uuid4()),
+                filter=ListEventsFilter(organization_id=generate_id()),
                 format="csv",
             ),
         ):
             return
 
     with pytest.raises(ValidationError):
-        asyncio.run(_run())
+        await _run()
 
 
-def test_regular_member_denied_before_export_begins() -> None:
+async def test_regular_member_denied_before_export_begins() -> None:
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[
@@ -207,19 +200,19 @@ def test_regular_member_denied_before_export_begins() -> None:
 
     async def _run() -> None:
         async for _ in ops.stream_export(
-            uuid4(),
+            generate_id(),
             ExportFilter(
-                filter=ListEventsFilter(organization_id=uuid4()),
+                filter=ListEventsFilter(organization_id=generate_id()),
                 format="csv",
             ),
         ):
             return
 
     with pytest.raises(PermissionDeniedError):
-        asyncio.run(_run())
+        await _run()
 
 
-def test_system_admin_can_export_without_org_membership() -> None:
+async def test_system_admin_can_export_without_org_membership() -> None:
     event = _make_event()
     session = MagicMock()
     side_effects = [
@@ -232,10 +225,8 @@ def test_system_admin_can_export_without_org_membership() -> None:
     session.execute = AsyncMock(side_effect=side_effects)
     ops = ExportOperations(session)
 
-    output = asyncio.run(
-        _collect_csv(
-            ops,
-            ListEventsFilter(organization_id=event.organization_id),
-        )
+    output = await _collect_csv(
+        ops,
+        ListEventsFilter(organization_id=event.organization_id),
     )
     assert "note.deleted" in output.decode("utf-8")

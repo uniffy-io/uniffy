@@ -13,7 +13,6 @@ Live-DB integration coverage runs under the files-domain harness.
 """
 
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 from uniffy_proto.files.v1.files_pb2 import FilterCriteria as ProtoFilterCriteria
 
@@ -29,8 +28,8 @@ from uniffy.domains.files.operations import FileOperations
 
 def _make_file(*, description: str | None = None, with_extracted_text: str | None = None) -> File:
     file = File(
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         access_mode=AccessMode.OWNER_ONLY,
         filename="report.pdf",
         original_filename="report.pdf",

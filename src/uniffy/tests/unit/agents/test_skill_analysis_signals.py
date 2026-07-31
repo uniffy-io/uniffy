@@ -1,22 +1,14 @@
 """Unit tests for channel-transcript gathering in the skill-evolution analyzer.
-
-Vanilla pytest + ``asyncio.run`` and mocks, matching the repo's agents tests
-(no pytest-asyncio, no live DB).
 """
 
-import asyncio
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 from uniffy.core.models.chat.message import SenderType
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.skills.analysis import SkillEvolutionAnalyzer
 
 _INTERNAL_META = {"kind": "final", "visibility": "agent_internal"}
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _msg(sender_type: SenderType, content: str, metadata: dict | None = None) -> NS:
@@ -33,7 +25,7 @@ def _analyzer_over(rows: list[NS]) -> SkillEvolutionAnalyzer:
 
 
 class TestGatherChannelSignals:
-    def test_keeps_user_and_final_agent_lines_only(self) -> None:
+    async def test_keeps_user_and_final_agent_lines_only(self) -> None:
         # Newest-first, as the created_at.desc() query returns them; the gatherer
         # reverses into chronological order before building the transcript.
         rows = [
@@ -45,10 +37,8 @@ class TestGatherChannelSignals:
             _msg(SenderType.AGENT, "the assistant final reply", {"kind": "final"}),
             _msg(SenderType.USER, "hello from the user", None),
         ]
-        signals = _run(
-            _analyzer_over(rows).gather_channel_signals(
-                channel_id=uuid4(), organization_id=uuid4()
-            )
+        signals = await _analyzer_over(rows).gather_channel_signals(
+            channel_id=generate_id(), organization_id=generate_id()
         )
 
         assert signals is not None
@@ -59,7 +49,7 @@ class TestGatherChannelSignals:
             "Assistant: the assistant final reply",
         ]
 
-    def test_excludes_every_non_final_and_internal_agent_row(self) -> None:
+    async def test_excludes_every_non_final_and_internal_agent_row(self) -> None:
         rows = [
             _msg(SenderType.USER, "user asked something", None),
             _msg(SenderType.AGENT, "final answer", {"kind": "final"}),
@@ -69,10 +59,8 @@ class TestGatherChannelSignals:
             _msg(SenderType.AGENT, "CONTEXTRESET_TEXT", {"kind": "context_reset"}),
             _msg(SenderType.AGENT, "INTERNAL_TEXT", _INTERNAL_META),
         ]
-        signals = _run(
-            _analyzer_over(rows).gather_channel_signals(
-                channel_id=uuid4(), organization_id=uuid4()
-            )
+        signals = await _analyzer_over(rows).gather_channel_signals(
+            channel_id=generate_id(), organization_id=generate_id()
         )
 
         assert signals is not None
@@ -89,26 +77,22 @@ class TestGatherChannelSignals:
         assert transcript.count("Assistant:") == 1
         assert transcript.count("User:") == 1
 
-    def test_user_row_without_kind_is_kept(self) -> None:
+    async def test_user_row_without_kind_is_kept(self) -> None:
         rows = [_msg(SenderType.USER, "just a user message", None)]
-        signals = _run(
-            _analyzer_over(rows).gather_channel_signals(
-                channel_id=uuid4(), organization_id=uuid4()
-            )
+        signals = await _analyzer_over(rows).gather_channel_signals(
+            channel_id=generate_id(), organization_id=generate_id()
         )
 
         assert signals is not None
         assert signals.transcript == "User: just a user message"
 
-    def test_no_human_facing_rows_returns_none(self) -> None:
+    async def test_no_human_facing_rows_returns_none(self) -> None:
         rows = [
             _msg(SenderType.AGENT, "TOOLCALL_TEXT", {"kind": "tool_call"}),
             _msg(SenderType.AGENT, "SUMMARY_TEXT", {"kind": "summary"}),
         ]
-        signals = _run(
-            _analyzer_over(rows).gather_channel_signals(
-                channel_id=uuid4(), organization_id=uuid4()
-            )
+        signals = await _analyzer_over(rows).gather_channel_signals(
+            channel_id=generate_id(), organization_id=generate_id()
         )
 
         assert signals is None

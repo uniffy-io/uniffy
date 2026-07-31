@@ -6,12 +6,11 @@ the model cannot view images. Documents and extracted text are
 unaffected by the vision flag.
 """
 
-import asyncio
 from types import SimpleNamespace
 
 import pytest
 
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.runtime.file_loader import FileContext
 from uniffy.domains.agents.runtime.operations import (
     _file_context_to_content_block,
@@ -19,16 +18,12 @@ from uniffy.domains.agents.runtime.operations import (
 )
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _image(filename: str = "screenshot.png", mime: str = "image/png") -> FileContext:
     return FileContext(
-        file_id=str(uuid7()),
+        file_id=str(generate_id()),
         media_type=mime,
         filename=filename,
-        storage_key=f"files/{uuid7()}.png",
+        storage_key=f"files/{generate_id()}.png",
         extracted_text=None,
         extraction_status="completed",
     )
@@ -36,10 +31,10 @@ def _image(filename: str = "screenshot.png", mime: str = "image/png") -> FileCon
 
 def _pdf() -> FileContext:
     return FileContext(
-        file_id=str(uuid7()),
+        file_id=str(generate_id()),
         media_type="application/pdf",
         filename="contract.pdf",
-        storage_key=f"files/{uuid7()}.pdf",
+        storage_key=f"files/{generate_id()}.pdf",
         extracted_text=None,
         extraction_status="completed",
     )
@@ -47,10 +42,10 @@ def _pdf() -> FileContext:
 
 def _text_extracted() -> FileContext:
     return FileContext(
-        file_id=str(uuid7()),
+        file_id=str(generate_id()),
         media_type="text/plain",
         filename="notes.txt",
-        storage_key=f"files/{uuid7()}.txt",
+        storage_key=f"files/{generate_id()}.txt",
         extracted_text="hello world",
         extraction_status="completed",
     )
@@ -92,7 +87,7 @@ class TestNonImageUnaffectedByVisionFlag:
 
 
 class TestResolveSupportsVision:
-    def test_returns_model_flag_when_present(self) -> None:
+    async def test_returns_model_flag_when_present(self) -> None:
         models = [
             SimpleNamespace(id="claude-opus-4-7", supports_vision=True),
             SimpleNamespace(id="o1-mini", supports_vision=False),
@@ -102,24 +97,24 @@ class TestResolveSupportsVision:
             async def get_available_models(self):
                 return models
 
-        assert _run(_resolve_supports_vision(_Provider(), "o1-mini")) is False
-        assert _run(_resolve_supports_vision(_Provider(), "claude-opus-4-7")) is True
+        assert await _resolve_supports_vision(_Provider(), "o1-mini") is False
+        assert await _resolve_supports_vision(_Provider(), "claude-opus-4-7") is True
 
-    def test_unknown_model_defaults_to_true(self) -> None:
+    async def test_unknown_model_defaults_to_true(self) -> None:
         class _Provider:
             async def get_available_models(self):
                 return [SimpleNamespace(id="claude-opus-4-7", supports_vision=True)]
 
         # Unknown id should default to True so we don't silently drop attachments
         # on newly-released models the catalog hasn't been updated for yet.
-        assert _run(_resolve_supports_vision(_Provider(), "claude-opus-5")) is True
+        assert await _resolve_supports_vision(_Provider(), "claude-opus-5") is True
 
-    def test_provider_lookup_failure_defaults_to_true(self) -> None:
+    async def test_provider_lookup_failure_defaults_to_true(self) -> None:
         class _Provider:
             async def get_available_models(self):
                 raise RuntimeError("provider exploded")
 
-        assert _run(_resolve_supports_vision(_Provider(), "claude-opus-4-7")) is True
+        assert await _resolve_supports_vision(_Provider(), "claude-opus-4-7") is True
 
 
 if __name__ == "__main__":

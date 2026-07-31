@@ -7,11 +7,11 @@ etc.) are exercised by their existing per-domain operations tests;
 this file focuses on the agent-only audit shapes.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.types import generate_id
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -22,7 +22,7 @@ def _audit_rows(session: MagicMock) -> list:
     ]
 
 
-def test_skill_diff_emits_enabled_disabled_per_skill_id() -> None:
+async def test_skill_diff_emits_enabled_disabled_per_skill_id() -> None:
     """``update_agent`` must emit one row per skill id that toggled.
 
     Uses the real diff logic via ``_coerce_uuid_list`` by patching
@@ -36,12 +36,12 @@ def test_skill_diff_emits_enabled_disabled_per_skill_id() -> None:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
-    org_id = uuid4()
-    actor = uuid4()
-    agent_id = uuid4()
-    enabled_kept = uuid4()
-    enabled_removed = uuid4()
-    enabled_added = uuid4()
+    org_id = generate_id()
+    actor = generate_id()
+    agent_id = generate_id()
+    enabled_kept = generate_id()
+    enabled_removed = generate_id()
+    enabled_added = generate_id()
 
     agent = Agent(
         id=agent_id,
@@ -90,7 +90,7 @@ def test_skill_diff_emits_enabled_disabled_per_skill_id() -> None:
                 details={"skill_id": str(sid)},
             )
 
-    asyncio.run(emit())
+    await emit()
 
     rows = _audit_rows(session)
     enabled = [r for r in rows if r.action == Action.AGENT_SKILL_ENABLED]
@@ -102,7 +102,7 @@ def test_skill_diff_emits_enabled_disabled_per_skill_id() -> None:
     assert disabled[0].details["skill_id"] == str(enabled_removed)
 
 
-def test_image_generation_audit_payload_has_required_keys() -> None:
+async def test_image_generation_audit_payload_has_required_keys() -> None:
     """The image tool emits ``agent.image_generation`` with the rich payload.
 
     We exercise the emission helper via a stub since the full image
@@ -120,35 +120,33 @@ def test_image_generation_audit_payload_has_required_keys() -> None:
         return_value=MagicMock(scalar_one_or_none=lambda: None)
     )
 
-    org_id = uuid4()
-    user_id = uuid4()
-    agent_id = uuid4()
-    file_id = uuid4()
+    org_id = generate_id()
+    user_id = generate_id()
+    agent_id = generate_id()
+    file_id = generate_id()
     prompt = "an otter on a paddleboard"
     file_urn = f"urn:uniffy:content:FILE:{file_id}"
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=org_id,
-            actor_user_id=user_id,
-            action=Action.AGENT_IMAGE_GENERATION,
-            resource_type="FILE",
-            resource_id=file_id,
-            details={
-                "actor_kind": "agent",
-                "agent_id": str(agent_id),
-                "model_id": "gpt-image-1",
-                "prompt_hash": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "output_file_urn": file_urn,
-                "size": "1024x1024",
-                "quality": "auto",
-                "tokens": 0,
-                "cost": 0.0,
-                "cost_currency": None,
-                "duration_ms": 1234,
-            },
-        )
+    await write_audit_event(
+        session,
+        organization_id=org_id,
+        actor_user_id=user_id,
+        action=Action.AGENT_IMAGE_GENERATION,
+        resource_type="FILE",
+        resource_id=file_id,
+        details={
+            "actor_kind": "agent",
+            "agent_id": str(agent_id),
+            "model_id": "gpt-image-1",
+            "prompt_hash": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+            "output_file_urn": file_urn,
+            "size": "1024x1024",
+            "quality": "auto",
+            "tokens": 0,
+            "cost": 0.0,
+            "cost_currency": None,
+            "duration_ms": 1234,
+        },
     )
 
     rows = _audit_rows(session)

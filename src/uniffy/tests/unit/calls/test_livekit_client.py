@@ -1,6 +1,5 @@
 """Unit tests for the LiveKit Twirp admin client and its circuit breaker."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -21,10 +20,6 @@ CONFIG = LiveKitConfig(
 )
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _response(status: int, payload: dict | None = None) -> MagicMock:
     response = MagicMock()
     response.status = status
@@ -39,12 +34,12 @@ def _client() -> LiveKitAdminClient:
     return admin
 
 
-def test_list_participants_unwraps_payload():
+async def test_list_participants_unwraps_payload():
     client = _client()
     client._http.post = AsyncMock(
         return_value=_response(200, {"participants": [{"identity": "u:d"}]})
     )
-    participants = _run(client.list_participants("room"))
+    participants = await client.list_participants("room")
     assert participants == [{"identity": "u:d"}]
     url = client._http.post.call_args.args[0]
     assert url == "http://livekit:7880/twirp/livekit.RoomService/ListParticipants"
@@ -52,39 +47,39 @@ def test_list_participants_unwraps_payload():
     assert headers["authorization"].startswith("Bearer ")
 
 
-def test_4xx_raises_without_tripping_breaker():
+async def test_4xx_raises_without_tripping_breaker():
     client = _client()
     client._http.post = AsyncMock(return_value=_response(404))
     for _ in range(BREAKER_FAILURE_THRESHOLD + 1):
         with pytest.raises(LiveKitApiError) as exc_info:
-            _run(client.delete_room("gone"))
+            await client.delete_room("gone")
         assert exc_info.value.status_code == 404
     # Breaker stayed closed: the next call still reaches the transport.
     client._http.post = AsyncMock(return_value=_response(200))
-    _run(client.delete_room("ok"))
+    await client.delete_room("ok")
 
 
-def test_breaker_opens_after_repeated_5xx():
+async def test_breaker_opens_after_repeated_5xx():
     client = _client()
     client._http.post = AsyncMock(return_value=_response(500))
     for _ in range(BREAKER_FAILURE_THRESHOLD):
         with pytest.raises(LiveKitApiError):
-            _run(client.list_rooms())
+            await client.list_rooms()
     with pytest.raises(LiveKitUnavailableError):
-        _run(client.list_rooms())
+        await client.list_rooms()
 
 
-def test_transport_error_counts_as_failure():
+async def test_transport_error_counts_as_failure():
     client = _client()
     client._http.post = AsyncMock(side_effect=ConnectionError("refused"))
     for _ in range(BREAKER_FAILURE_THRESHOLD):
         with pytest.raises(LiveKitApiError):
-            _run(client.list_rooms())
+            await client.list_rooms()
     with pytest.raises(LiveKitUnavailableError):
-        _run(client.list_rooms())
+        await client.list_rooms()
 
 
-def test_mute_participant_microphone_targets_mic_tracks():
+async def test_mute_participant_microphone_targets_mic_tracks():
     client = _client()
     client._http.post = AsyncMock(
         side_effect=[
@@ -109,7 +104,7 @@ def test_mute_participant_microphone_targets_mic_tracks():
             _response(200),
         ]
     )
-    muted = _run(client.mute_participant_microphone("room", "u1:d1"))
+    muted = await client.mute_participant_microphone("room", "u1:d1")
     assert muted is True
     assert client._http.post.call_count == 2
     mute_body = client._http.post.call_args.kwargs["content"]

@@ -4,7 +4,6 @@ Registry dispatch, base URL wiring, and the live-probe validate path.
 No network calls; HTTP goes through a mocked client where needed.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -61,26 +60,26 @@ def _stub_key_endpoint(provider: OpenRouterProvider, status: int) -> AsyncMock:
 
 
 class TestOpenRouterValidate:
-    def test_valid_key(self) -> None:
+    async def test_valid_key(self) -> None:
         provider = OpenRouterProvider(OPENROUTER_KEY)
         get = _stub_key_endpoint(provider, 200)
-        result = asyncio.run(provider.validate())
+        result = await provider.validate()
         assert result == (True, None)
         assert get.call_args.args[0] == "https://openrouter.ai/api/v1/key"
         headers = get.call_args.kwargs["headers"]
         assert headers["Authorization"] == f"Bearer {OPENROUTER_KEY}"
 
-    def test_invalid_key(self) -> None:
+    async def test_invalid_key(self) -> None:
         provider = OpenRouterProvider(OPENROUTER_KEY)
         _stub_key_endpoint(provider, 401)
-        valid, message = asyncio.run(provider.validate())
+        valid, message = await provider.validate()
         assert valid is False
         assert message
 
-    def test_rate_limited_key_is_valid(self) -> None:
+    async def test_rate_limited_key_is_valid(self) -> None:
         provider = OpenRouterProvider(OPENROUTER_KEY)
         _stub_key_endpoint(provider, 429)
-        result = asyncio.run(provider.validate())
+        result = await provider.validate()
         assert result == (True, None)
 
 

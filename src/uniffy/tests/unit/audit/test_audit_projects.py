@@ -1,10 +1,9 @@
 """Destructive-action audit emissions for projects and tasks."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.types import generate_id
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -15,23 +14,21 @@ def _audit_rows(session: MagicMock) -> list:
     ]
 
 
-def test_project_deleted_payload_has_name() -> None:
+async def test_project_deleted_payload_has_name() -> None:
     from uniffy.core.audit import write_audit_event
 
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=uuid4(),
-            actor_user_id=uuid4(),
-            action=Action.PROJECT_DELETED,
-            resource_type="PROJECT",
-            resource_id=uuid4(),
-            details={"name": "Q4 roadmap"},
-        )
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=generate_id(),
+        action=Action.PROJECT_DELETED,
+        resource_type="PROJECT",
+        resource_id=generate_id(),
+        details={"name": "Q4 roadmap"},
     )
 
     rows = _audit_rows(session)
@@ -40,30 +37,28 @@ def test_project_deleted_payload_has_name() -> None:
     assert rows[0].details["name"] == "Q4 roadmap"
 
 
-def test_task_moved_payload_records_parent_change() -> None:
+async def test_task_moved_payload_records_parent_change() -> None:
     from uniffy.core.audit import write_audit_event
 
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
 
-    task_id = uuid4()
-    old_parent = uuid4()
-    new_parent = uuid4()
+    task_id = generate_id()
+    old_parent = generate_id()
+    new_parent = generate_id()
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=uuid4(),
-            actor_user_id=uuid4(),
-            action=Action.TASK_MOVED,
-            resource_type="TASK",
-            resource_id=task_id,
-            details={
-                "previous_parent_id": str(old_parent),
-                "new_parent_id": str(new_parent),
-            },
-        )
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=generate_id(),
+        action=Action.TASK_MOVED,
+        resource_type="TASK",
+        resource_id=task_id,
+        details={
+            "previous_parent_id": str(old_parent),
+            "new_parent_id": str(new_parent),
+        },
     )
 
     rows = _audit_rows(session)
@@ -73,26 +68,24 @@ def test_task_moved_payload_records_parent_change() -> None:
     assert rows[0].details["new_parent_id"] == str(new_parent)
 
 
-def test_task_permanently_deleted_carries_project_id() -> None:
+async def test_task_permanently_deleted_carries_project_id() -> None:
     from uniffy.core.audit import write_audit_event
 
     session = MagicMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
 
-    task_id = uuid4()
-    project_id = uuid4()
+    task_id = generate_id()
+    project_id = generate_id()
 
-    asyncio.run(
-        write_audit_event(
-            session,
-            organization_id=uuid4(),
-            actor_user_id=uuid4(),
-            action=Action.TASK_PERMANENTLY_DELETED,
-            resource_type="TASK",
-            resource_id=task_id,
-            details={"title": "Ship widgets", "project_id": str(project_id)},
-        )
+    await write_audit_event(
+        session,
+        organization_id=generate_id(),
+        actor_user_id=generate_id(),
+        action=Action.TASK_PERMANENTLY_DELETED,
+        resource_type="TASK",
+        resource_id=task_id,
+        details={"title": "Ship widgets", "project_id": str(project_id)},
     )
 
     rows = _audit_rows(session)

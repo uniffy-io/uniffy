@@ -10,26 +10,21 @@ helper so the per-file permission-tolerance and the no-attachment shortcut
 are pinned down.
 """
 
-import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.chat_integration import operations as bridge_mod
 from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
 from uniffy.domains.agents.runtime.file_loader import FileContext
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _file_context(*, file_id: str = "", media_type: str = "image/png") -> FileContext:
     return FileContext(
-        file_id=file_id or str(uuid7()),
+        file_id=file_id or str(generate_id()),
         media_type=media_type,
         filename="screenshot.png",
         storage_key=f"files/{file_id or 'k'}.png",
@@ -44,7 +39,7 @@ def _attachment_row(file_id) -> tuple:
 
 
 class TestLoadTriggerAttachments:
-    def test_returns_none_when_trigger_has_no_attachments(self, monkeypatch) -> None:
+    async def test_returns_none_when_trigger_has_no_attachments(self, monkeypatch) -> None:
         fake_ops = MagicMock()
         fake_ops.list_attachments = AsyncMock(return_value=[])
         monkeypatch.setattr(bridge_mod, "AttachmentOperations", lambda _s: fake_ops)
@@ -53,20 +48,18 @@ class TestLoadTriggerAttachments:
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
         bridge = AgentChatBridge(MagicMock())
-        result = _run(
-            bridge._load_trigger_attachments(
-                user_id=uuid7(),
-                organization_id=uuid7(),
-                trigger_message_id=uuid7(),
-            )
+        result = await bridge._load_trigger_attachments(
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            trigger_message_id=generate_id(),
         )
         assert result is None
         safe_loader.assert_not_awaited()
 
-    def test_returns_file_contexts_when_trigger_has_attachments(
+    async def test_returns_file_contexts_when_trigger_has_attachments(
         self, monkeypatch
     ) -> None:
-        fid_a, fid_b = uuid7(), uuid7()
+        fid_a, fid_b = generate_id(), generate_id()
         fake_ops = MagicMock()
         fake_ops.list_attachments = AsyncMock(
             return_value=[_attachment_row(fid_a), _attachment_row(fid_b)]
@@ -80,14 +73,12 @@ class TestLoadTriggerAttachments:
         safe_loader = AsyncMock(return_value=loaded)
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
-        user_id, org_id, trigger_id = uuid7(), uuid7(), uuid7()
+        user_id, org_id, trigger_id = generate_id(), generate_id(), generate_id()
         bridge = AgentChatBridge(MagicMock())
-        result = _run(
-            bridge._load_trigger_attachments(
-                user_id=user_id,
-                organization_id=org_id,
-                trigger_message_id=trigger_id,
-            )
+        result = await bridge._load_trigger_attachments(
+            user_id=user_id,
+            organization_id=org_id,
+            trigger_message_id=trigger_id,
         )
         assert result == loaded
         safe_loader.assert_awaited_once()
@@ -98,8 +89,8 @@ class TestLoadTriggerAttachments:
         assert passed_org == org_id
         assert passed_file_ids == [str(fid_a), str(fid_b)]
 
-    def test_returns_none_when_safe_load_returns_empty(self, monkeypatch) -> None:
-        fid = uuid7()
+    async def test_returns_none_when_safe_load_returns_empty(self, monkeypatch) -> None:
+        fid = generate_id()
         fake_ops = MagicMock()
         fake_ops.list_attachments = AsyncMock(return_value=[_attachment_row(fid)])
         monkeypatch.setattr(bridge_mod, "AttachmentOperations", lambda _s: fake_ops)
@@ -108,16 +99,14 @@ class TestLoadTriggerAttachments:
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
         bridge = AgentChatBridge(MagicMock())
-        result = _run(
-            bridge._load_trigger_attachments(
-                user_id=uuid7(),
-                organization_id=uuid7(),
-                trigger_message_id=uuid7(),
-            )
+        result = await bridge._load_trigger_attachments(
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            trigger_message_id=generate_id(),
         )
         assert result is None
 
-    def test_returns_none_when_list_attachments_raises(self, monkeypatch) -> None:
+    async def test_returns_none_when_list_attachments_raises(self, monkeypatch) -> None:
         fake_ops = MagicMock()
         fake_ops.list_attachments = AsyncMock(
             side_effect=PermissionDeniedError("access", "content")
@@ -128,12 +117,10 @@ class TestLoadTriggerAttachments:
         monkeypatch.setattr(bridge_mod, "_safe_load_files", safe_loader)
 
         bridge = AgentChatBridge(MagicMock())
-        result = _run(
-            bridge._load_trigger_attachments(
-                user_id=uuid7(),
-                organization_id=uuid7(),
-                trigger_message_id=uuid7(),
-            )
+        result = await bridge._load_trigger_attachments(
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            trigger_message_id=generate_id(),
         )
         assert result is None
         safe_loader.assert_not_awaited()
@@ -142,7 +129,7 @@ class TestLoadTriggerAttachments:
 class TestSafeLoadFiles:
     """Pin down per-file permission tolerance shared by the bridge + future callers."""
 
-    def test_skips_files_the_user_cannot_view(self, monkeypatch) -> None:
+    async def test_skips_files_the_user_cannot_view(self, monkeypatch) -> None:
         from uniffy.domains.agents.runtime import file_loader
 
         ok = _file_context(file_id="ok")
@@ -156,18 +143,16 @@ class TestSafeLoadFiles:
 
         monkeypatch.setattr(file_loader, "_load_files", fake_load_files)
 
-        result = _run(
-            file_loader._safe_load_files(MagicMock(), uuid7(), uuid7(), ["ok", "blocked"])
+        result = await file_loader._safe_load_files(
+            MagicMock(), generate_id(), generate_id(), ["ok", "blocked"]
         )
         assert result == [ok]
         assert call_count["n"] == 2
 
-    def test_returns_empty_list_for_no_file_ids(self) -> None:
+    async def test_returns_empty_list_for_no_file_ids(self) -> None:
         from uniffy.domains.agents.runtime import file_loader
 
-        result = _run(
-            file_loader._safe_load_files(MagicMock(), uuid7(), uuid7(), [])
-        )
+        result = await file_loader._safe_load_files(MagicMock(), generate_id(), generate_id(), [])
         assert result == []
 
 

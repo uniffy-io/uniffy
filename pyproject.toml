@@ -77,6 +77,7 @@ dev = [
   "pip-licenses>=5.5.0",
   "protoc-gen-connectrpc>=0.10.0",
   "pytest>=8.0.0",
+  "pytest-asyncio>=1.4.0",
   "pytest-benchmark>=5.0.0",
   "ruff>=0.14.13",
   "ty>=0.0.10",
@@ -94,6 +95,12 @@ uniffy-proto = { workspace = true }
 [[tool.ty.overrides]]
 include = ["tests/**", "**/test_*.py"]
 exclude = ["*.proto"]
+
+[tool.pytest.ini_options]
+# Coroutine tests run without a marker; a test that forgets one is a silent
+# skip in strict mode, so auto keeps async the default across every suite.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.pyright]
 exclude = ["**", "./**/**"]

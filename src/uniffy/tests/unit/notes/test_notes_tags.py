@@ -14,9 +14,7 @@ Covers the pure-Python pieces that don't require a live DB:
 Live-DB integration coverage runs under the notes-domain harness.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.tags.tag import TagAssignment
@@ -29,14 +27,10 @@ from uniffy.domains.tags.operations import (
 )
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 def _make_note(*, content: str = "", canvas: dict | None = None) -> Note:
     return Note(
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         node_type=NodeType.CANVAS if canvas is not None else NodeType.NOTE,
         title="t",
         content=content,
@@ -59,7 +53,7 @@ class TestExtractContentFields:
             NodeType.NOTE,
             "Hello [[[tag|design-review]]] and [[[tag|launch]]] today",
             None,
-            uuid4(),
+            generate_id(),
         )
         assert fields.parsed_inline_tag_names == ["design-review", "launch"]
         assert fields.canvas_content is None
@@ -72,13 +66,13 @@ class TestExtractContentFields:
                 {"data": {"type": "text", "content": "[[[tag|focus]]] still"}},
             ]
         }
-        fields = ops._extract_content_fields(NodeType.CANVAS, "", canvas, uuid4())
+        fields = ops._extract_content_fields(NodeType.CANVAS, "", canvas, generate_id())
         assert fields.parsed_inline_tag_names == ["focus"]
         assert fields.canvas_content == canvas
 
     def test_empty_content_yields_no_names(self) -> None:
         ops = _make_ops()
-        fields = ops._extract_content_fields(NodeType.NOTE, "", None, uuid4())
+        fields = ops._extract_content_fields(NodeType.NOTE, "", None, generate_id())
         assert fields.parsed_inline_tag_names == []
 
 
@@ -116,9 +110,9 @@ class TestReplaceManualTags:
         ops.indexer = MagicMock()
         return ops
 
-    def test_diff_emits_combined_event(self) -> None:
-        org_id = uuid4()
-        actor_id = uuid4()
+    async def test_diff_emits_combined_event(self) -> None:
+        org_id = generate_id()
+        actor_id = generate_id()
         urn = f"urn:uniffy:content:NOTE:{generate_id().hex}"
 
         keep_id = generate_id()
@@ -168,13 +162,11 @@ class TestReplaceManualTags:
         with patch(
             "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
         ) as publish_mock:
-            _run(
-                ops.replace_manual_tags(
-                    actor_id=actor_id,
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[keep_id, add_id],
-                )
+            await ops.replace_manual_tags(
+                actor_id=actor_id,
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[keep_id, add_id],
             )
 
         publish_mock.assert_awaited_once()
@@ -189,9 +181,9 @@ class TestReplaceManualTags:
         affected_ids = set(ops._reindex_tag_docs.await_args.args[1])
         assert affected_ids == {drop_id, add_id}
 
-    def test_no_change_skips_writes(self) -> None:
-        org_id = uuid4()
-        actor_id = uuid4()
+    async def test_no_change_skips_writes(self) -> None:
+        org_id = generate_id()
+        actor_id = generate_id()
         urn = f"urn:uniffy:content:NOTE:{generate_id().hex}"
         tag_id = generate_id()
         existing = [
@@ -217,21 +209,19 @@ class TestReplaceManualTags:
         with patch(
             "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
         ) as publish_mock:
-            _run(
-                ops.replace_manual_tags(
-                    actor_id=actor_id,
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[tag_id],
-                )
+            await ops.replace_manual_tags(
+                actor_id=actor_id,
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[tag_id],
             )
 
         publish_mock.assert_not_awaited()
         session.commit.assert_not_awaited()
 
-    def test_clearing_only_drops_manual_source(self) -> None:
-        org_id = uuid4()
-        actor_id = uuid4()
+    async def test_clearing_only_drops_manual_source(self) -> None:
+        org_id = generate_id()
+        actor_id = generate_id()
         urn = f"urn:uniffy:content:NOTE:{generate_id().hex}"
         tag_id = generate_id()
         inline_only_id = generate_id()
@@ -265,13 +255,11 @@ class TestReplaceManualTags:
         with patch(
             "uniffy.domains.tags.operations.publish_tag_event", AsyncMock()
         ) as publish_mock:
-            _run(
-                ops.replace_manual_tags(
-                    actor_id=actor_id,
-                    organization_id=org_id,
-                    content_urn=urn,
-                    tag_ids=[],
-                )
+            await ops.replace_manual_tags(
+                actor_id=actor_id,
+                organization_id=org_id,
+                content_urn=urn,
+                tag_ids=[],
             )
 
         publish_mock.assert_awaited_once()

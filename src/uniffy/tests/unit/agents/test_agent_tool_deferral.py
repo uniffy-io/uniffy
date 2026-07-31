@@ -1,16 +1,12 @@
 """Deferred tool advertisement: planning, the load_group tool, loop expansion.
-
-Vanilla pytest + ``asyncio.run`` with mocked sessions, matching the repo's
-other agents tests (no pytest-asyncio, no live DB).
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import CompletionResult, ToolCall
 from uniffy.domains.agents.runtime.operations import (
     MAX_LOAD_ONLY_ITERATIONS,
@@ -34,10 +30,6 @@ from uniffy.domains.agents.tools.executor import ToolExecutor
 from uniffy.domains.agents.tools.registry import ToolRegistry, to_api_name
 
 LOAD_API_NAME = to_api_name(LOAD_GROUP_TOOL)
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _tool(name: str, group: str, *, internal: bool = False) -> ToolDefinition:
@@ -153,10 +145,10 @@ class TestPromptToolSection:
 def _ctx(**overrides) -> ToolContext:
     defaults = dict(
         session=AsyncMock(),
-        user_id=uuid4(),
-        organization_id=uuid4(),
-        agent_id=uuid4(),
-        session_id=uuid4(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        agent_id=generate_id(),
+        session_id=generate_id(),
         deferred_tool_groups={"Notes": ["notes.tool_0", "notes.tool_1"]},
         loaded_tool_groups=[],
     )
@@ -165,19 +157,19 @@ def _ctx(**overrides) -> ToolContext:
 
 
 class TestLoadGroupTool:
-    def test_missing_argument(self) -> None:
-        result = _run(load_group(_ctx(), {}))
+    async def test_missing_argument(self) -> None:
+        result = await load_group(_ctx(), {})
         assert not result.success
         assert "group" in result.error
 
-    def test_unknown_group_lists_loadable(self) -> None:
-        result = _run(load_group(_ctx(), {"group": "Files"}))
+    async def test_unknown_group_lists_loadable(self) -> None:
+        result = await load_group(_ctx(), {"group": "Files"})
         assert not result.success
         assert "Notes" in result.error
 
-    def test_load_is_case_insensitive_and_mutates_context(self) -> None:
+    async def test_load_is_case_insensitive_and_mutates_context(self) -> None:
         ctx = _ctx()
-        result = _run(load_group(ctx, {"group": "notes"}))
+        result = await load_group(ctx, {"group": "notes"})
         assert result.success
         assert result.metadata == {LOADED_GROUPS_METADATA_KEY: ["Notes"]}
         assert ctx.loaded_tool_groups == ["Notes"]
@@ -185,17 +177,17 @@ class TestLoadGroupTool:
         assert "notes-tool_0" in result.data
         ctx.session.execute.assert_awaited()
 
-    def test_second_load_is_idempotent(self) -> None:
+    async def test_second_load_is_idempotent(self) -> None:
         ctx = _ctx()
-        _run(load_group(ctx, {"group": "Notes"}))
-        again = _run(load_group(ctx, {"group": "Notes"}))
+        await load_group(ctx, {"group": "Notes"})
+        again = await load_group(ctx, {"group": "Notes"})
         assert again.success
         assert again.metadata is None
         assert "already loaded" in again.data
 
-    def test_channel_destination_persists_via_binding_upsert(self) -> None:
-        ctx = _ctx(session_id=None, channel_id=uuid4())
-        result = _run(load_group(ctx, {"group": "Notes"}))
+    async def test_channel_destination_persists_via_binding_upsert(self) -> None:
+        ctx = _ctx(session_id=None, channel_id=generate_id())
+        result = await load_group(ctx, {"group": "Notes"})
         assert result.success
         ctx.session.execute.assert_awaited()
 
@@ -234,7 +226,7 @@ def _loop_ops() -> RuntimeOperations:
 
 
 class TestRunToolLoopExpansion:
-    def test_load_call_expands_schemas_for_next_iteration(self, monkeypatch) -> None:
+    async def test_load_call_expands_schemas_for_next_iteration(self, monkeypatch) -> None:
         import uniffy.domains.agents.tools.executor as executor_mod
 
         monkeypatch.setattr(executor_mod, "write_audit_event", AsyncMock())
@@ -279,9 +271,9 @@ class TestRunToolLoopExpansion:
             assert "notes-tool_0" in seen_tools[0]
             assert "calendar-tool_0" not in seen_tools[0]
 
-        _run(scenario())
+        await scenario()
 
-    def test_load_only_iterations_are_capped(self, monkeypatch) -> None:
+    async def test_load_only_iterations_are_capped(self, monkeypatch) -> None:
         import uniffy.domains.agents.tools.executor as executor_mod
 
         monkeypatch.setattr(executor_mod, "write_audit_event", AsyncMock())
@@ -331,4 +323,4 @@ class TestRunToolLoopExpansion:
                 )
             assert counter["n"] == MAX_LOAD_ONLY_ITERATIONS
 
-        _run(scenario())
+        await scenario()

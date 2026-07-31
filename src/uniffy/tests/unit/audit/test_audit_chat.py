@@ -5,11 +5,10 @@ emits when the deleter is not the message's sender. Regular self-deletes
 stay unaudited because the volume is too high.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.types import generate_id
 
 
 def _audit_rows(session: MagicMock) -> list:
@@ -29,19 +28,19 @@ def _build_session() -> MagicMock:
     return session
 
 
-def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> None:
+async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> None:
     """Audit fires only when the actor is NOT the message sender."""
     from datetime import UTC, datetime
 
     from uniffy.core.models.chat.message import ChatMessage, SenderType
     from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
-    sender_id = uuid4()
-    admin_id = uuid4()
-    org_id = uuid4()
-    channel_id = uuid4()
+    sender_id = generate_id()
+    admin_id = generate_id()
+    org_id = generate_id()
+    channel_id = generate_id()
     message = ChatMessage(
-        id=uuid4(),
+        id=generate_id(),
         channel_id=channel_id,
         sender_id=sender_id,
         sender_type=SenderType.USER,
@@ -79,9 +78,7 @@ def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> None:
         AsyncMock(return_value=None),
         create=True,
     ):
-        asyncio.run(
-            ops.delete_message(admin_id, org_id, channel_id, message.id)
-        )
+        await ops.delete_message(admin_id, org_id, channel_id, message.id)
 
     rows = _audit_rows(session)
     moderation = [
@@ -92,18 +89,18 @@ def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> None:
     assert moderation[0].details["sender_id"] == str(sender_id)
 
 
-def test_self_delete_does_not_audit() -> None:
+async def test_self_delete_does_not_audit() -> None:
     """User deleting their own message produces no audit row."""
     from datetime import UTC, datetime
 
     from uniffy.core.models.chat.message import ChatMessage, SenderType
     from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
-    user_id = uuid4()
-    org_id = uuid4()
-    channel_id = uuid4()
+    user_id = generate_id()
+    org_id = generate_id()
+    channel_id = generate_id()
     message = ChatMessage(
-        id=uuid4(),
+        id=generate_id(),
         channel_id=channel_id,
         sender_id=user_id,
         sender_type=SenderType.USER,
@@ -139,9 +136,7 @@ def test_self_delete_does_not_audit() -> None:
         AsyncMock(return_value=None),
         create=True,
     ):
-        asyncio.run(
-            ops.delete_message(user_id, org_id, channel_id, message.id)
-        )
+        await ops.delete_message(user_id, org_id, channel_id, message.id)
 
     rows = _audit_rows(session)
     assert [r for r in rows if r.action == Action.CHAT_MESSAGE_DELETED_BY_ADMIN] == []

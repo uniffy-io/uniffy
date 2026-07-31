@@ -5,13 +5,12 @@ attribution lives in ``details`` so the raw address never enters the
 audit payload.
 """
 
-import asyncio
 import hashlib
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.user import User
+from uniffy.core.types import generate_id
 from uniffy.domains.users.operations import UserOperations
 
 
@@ -31,7 +30,7 @@ def _scalar(value):
 
 def _make_user(**overrides) -> User:
     defaults = dict(
-        id=uuid4(),
+        id=generate_id(),
         email="bob@example.com",
         username="bob",
         full_name="Bob",
@@ -47,25 +46,23 @@ def _email_hash(email: str) -> str:
     return hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()
 
 
-def test_admin_create_emits_user_invited() -> None:
+async def test_admin_create_emits_user_invited() -> None:
     session = MagicMock()
-    primary_org = uuid4()
+    primary_org = generate_id()
     session.execute = AsyncMock(side_effect=[_scalar(primary_org)])
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
 
     ops = UserOperations(session)
-    actor = uuid4()
+    actor = generate_id()
 
-    asyncio.run(
-        ops.admin_create(
-            email="new@example.com",
-            username="new",
-            hashed_password="hashed",
-            is_system_admin=True,
-            actor_user_id=actor,
-        )
+    await ops.admin_create(
+        email="new@example.com",
+        username="new",
+        hashed_password="hashed",
+        is_system_admin=True,
+        actor_user_id=actor,
     )
 
     rows = _audit_rows(session)
@@ -78,9 +75,9 @@ def test_admin_create_emits_user_invited() -> None:
     assert row.details["is_system_admin"] is True
 
 
-def test_admin_update_deactivation_emits_deactivated() -> None:
+async def test_admin_update_deactivation_emits_deactivated() -> None:
     user = _make_user(is_active=True)
-    org = uuid4()
+    org = generate_id()
     session = MagicMock()
     session.execute = AsyncMock(side_effect=[_scalar(org)])
     session.add = MagicMock()
@@ -100,12 +97,10 @@ def test_admin_update_deactivation_emits_deactivated() -> None:
         "uniffy.domains.users.operations.publish_token_revoke",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(
-            ops.admin_update(
-                user_id=user.id,
-                is_active=False,
-                actor_user_id=uuid4(),
-            )
+        await ops.admin_update(
+            user_id=user.id,
+            is_active=False,
+            actor_user_id=generate_id(),
         )
 
     rows = _audit_rows(session)
@@ -115,9 +110,9 @@ def test_admin_update_deactivation_emits_deactivated() -> None:
     assert deact.resource_id == user.id
 
 
-def test_admin_update_email_change_emits_hashed_pair() -> None:
+async def test_admin_update_email_change_emits_hashed_pair() -> None:
     user = _make_user(email="old@example.com")
-    org = uuid4()
+    org = generate_id()
     session = MagicMock()
     session.execute = AsyncMock(side_effect=[_scalar(org)])
     session.add = MagicMock()
@@ -134,12 +129,10 @@ def test_admin_update_email_change_emits_hashed_pair() -> None:
         "uniffy.domains.users.operations.invalidate_user_profile",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(
-            ops.admin_update(
-                user_id=user.id,
-                email="new@example.com",
-                actor_user_id=uuid4(),
-            )
+        await ops.admin_update(
+            user_id=user.id,
+            email="new@example.com",
+            actor_user_id=generate_id(),
         )
 
     rows = _audit_rows(session)
@@ -152,10 +145,10 @@ def test_admin_update_email_change_emits_hashed_pair() -> None:
     assert "new_email" not in row.details
 
 
-def test_admin_update_password_change_emits_password_changed_by_admin() -> None:
+async def test_admin_update_password_change_emits_password_changed_by_admin() -> None:
     user = _make_user()
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[_scalar(uuid4())])
+    session.execute = AsyncMock(side_effect=[_scalar(generate_id())])
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
@@ -166,7 +159,7 @@ def test_admin_update_password_change_emits_password_changed_by_admin() -> None:
     ops = UserOperations(session)
     ops._user_indexer = indexer
 
-    actor = uuid4()
+    actor = generate_id()
     with patch.object(UserOperations, "get_by_id", AsyncMock(return_value=user)), patch(
         "uniffy.domains.users.operations.invalidate_user_profile",
         AsyncMock(return_value=None),
@@ -174,12 +167,10 @@ def test_admin_update_password_change_emits_password_changed_by_admin() -> None:
         "uniffy.domains.users.operations.publish_token_revoke",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(
-            ops.admin_update(
-                user_id=user.id,
-                hashed_password="new_hashed",
-                actor_user_id=actor,
-            )
+        await ops.admin_update(
+            user_id=user.id,
+            hashed_password="new_hashed",
+            actor_user_id=actor,
         )
 
     rows = _audit_rows(session)
@@ -188,10 +179,10 @@ def test_admin_update_password_change_emits_password_changed_by_admin() -> None:
     assert pw_rows[0].details["initiator"] == "admin"
 
 
-def test_delete_emits_user_deleted() -> None:
+async def test_delete_emits_user_deleted() -> None:
     user = _make_user()
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[MagicMock(), _scalar(uuid4())])
+    session.execute = AsyncMock(side_effect=[MagicMock(), _scalar(generate_id())])
     session.add = MagicMock()
     session.delete = AsyncMock()
     session.commit = AsyncMock()
@@ -205,7 +196,7 @@ def test_delete_emits_user_deleted() -> None:
         "uniffy.domains.users.operations.invalidate_user_profile",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(ops.delete(user.id, actor_user_id=uuid4()))
+        await ops.delete(user.id, actor_user_id=generate_id())
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -213,9 +204,9 @@ def test_delete_emits_user_deleted() -> None:
     assert rows[0].details["email_hash"] == _email_hash(user.email)
 
 
-def test_upload_avatar_emits_avatar_changed() -> None:
+async def test_upload_avatar_emits_avatar_changed() -> None:
     user = _make_user(avatar_key=None)
-    org = uuid4()
+    org = generate_id()
     session = MagicMock()
     session.execute = AsyncMock(side_effect=[_scalar(org)])
     session.add = MagicMock()
@@ -234,7 +225,7 @@ def test_upload_avatar_emits_avatar_changed() -> None:
         "uniffy.domains.users.operations.invalidate_user_profile",
         AsyncMock(return_value=None),
     ):
-        asyncio.run(ops.upload_avatar(user.id, b"img", "a.png"))
+        await ops.upload_avatar(user.id, b"img", "a.png")
 
     rows = _audit_rows(session)
     assert len(rows) == 1

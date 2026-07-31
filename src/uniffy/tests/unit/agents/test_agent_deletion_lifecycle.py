@@ -1,15 +1,11 @@
 """Deleting an agent must retire it everywhere, not just hide it from a list.
 
-Vanilla pytest + ``asyncio.run`` with mocked sessions, matching the other agents
-tests. The contract under test lives in `.claude/plans/agent-deletion-lifecycle.md`:
-the row survives so past chat messages still resolve a name, while every path
+The row survives so past chat messages still resolve a name, while every path
 that would let the agent act refuses.
 """
 
-import asyncio
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
@@ -18,20 +14,17 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.chat.message import SenderType
+from uniffy.core.types import generate_id
 
 OPS_MODULE = "uniffy.domains.agents.agents.operations"
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _agent(**overrides):
     """Stand-in row; the ops under test only read attributes off it."""
     return NS(
-        id=overrides.get("id", uuid4()),
-        organization_id=overrides.get("organization_id", uuid4()),
-        owner_id=uuid4(),
+        id=overrides.get("id", generate_id()),
+        organization_id=overrides.get("organization_id", generate_id()),
+        owner_id=generate_id(),
         name="Ada",
         enabled_skills=overrides.get("enabled_skills", []),
         is_default=overrides.get("is_default", False),
@@ -92,7 +85,7 @@ def _quiet_side_effects():
 
 
 class TestDeleteFanOut:
-    def test_marks_deleted_and_clears_default(self) -> None:
+    async def test_marks_deleted_and_clears_default(self) -> None:
         agent = _agent(is_default=True)
         session = _RecordingSession()
         ops = _ops(session, agent)
@@ -101,12 +94,10 @@ class TestDeleteFanOut:
         for p in patches:
             p.start()
         try:
-            _run(
-                ops.delete_agent(
-                    user_id=uuid4(),
-                    organization_id=agent.organization_id,
-                    agent_id=agent.id,
-                )
+            await ops.delete_agent(
+                user_id=generate_id(),
+                organization_id=agent.organization_id,
+                agent_id=agent.id,
             )
         finally:
             for p in patches:
@@ -117,7 +108,7 @@ class TestDeleteFanOut:
         # A retired agent must not keep the org's default slot hostage.
         assert agent.is_default is False
 
-    def test_disables_cron_tasks_and_drops_agent_bound_memories(self) -> None:
+    async def test_disables_cron_tasks_and_drops_agent_bound_memories(self) -> None:
         agent = _agent()
         session = _RecordingSession()
         ops = _ops(session, agent)
@@ -126,12 +117,10 @@ class TestDeleteFanOut:
         for p in patches:
             p.start()
         try:
-            _run(
-                ops.delete_agent(
-                    user_id=uuid4(),
-                    organization_id=agent.organization_id,
-                    agent_id=agent.id,
-                )
+            await ops.delete_agent(
+                user_id=generate_id(),
+                organization_id=agent.organization_id,
+                agent_id=agent.id,
             )
         finally:
             for p in patches:
@@ -145,7 +134,7 @@ class TestDeleteFanOut:
         assert len(memory_delete) == 1, compiled
         assert "agent_id" in memory_delete[0]
 
-    def test_search_row_is_removed(self) -> None:
+    async def test_search_row_is_removed(self) -> None:
         agent = _agent()
         session = _RecordingSession()
         ops = _ops(session, agent)
@@ -154,12 +143,10 @@ class TestDeleteFanOut:
         for p in patches:
             p.start()
         try:
-            _run(
-                ops.delete_agent(
-                    user_id=uuid4(),
-                    organization_id=agent.organization_id,
-                    agent_id=agent.id,
-                )
+            await ops.delete_agent(
+                user_id=generate_id(),
+                organization_id=agent.organization_id,
+                agent_id=agent.id,
             )
         finally:
             for p in patches:
@@ -169,7 +156,7 @@ class TestDeleteFanOut:
 
 
 class TestRestore:
-    def test_clears_flags_and_reindexes(self) -> None:
+    async def test_clears_flags_and_reindexes(self) -> None:
         agent = _agent(is_deleted=True, deleted_at="2026-07-30")
         session = _RecordingSession()
         ops = _ops(session, agent)
@@ -178,12 +165,10 @@ class TestRestore:
         for p in patches:
             p.start()
         try:
-            restored = _run(
-                ops.restore_agent(
-                    user_id=uuid4(),
-                    organization_id=agent.organization_id,
-                    agent_id=agent.id,
-                )
+            restored = await ops.restore_agent(
+                user_id=generate_id(),
+                organization_id=agent.organization_id,
+                agent_id=agent.id,
             )
         finally:
             for p in patches:
@@ -195,7 +180,7 @@ class TestRestore:
         # Restoring never re-enables a schedule: the runs would start unasked.
         assert not [s for s in session.statements if "agents_cron_tasks" in str(s)]
 
-    def test_live_agent_is_a_no_op(self) -> None:
+    async def test_live_agent_is_a_no_op(self) -> None:
         agent = _agent(is_deleted=False)
         session = _RecordingSession()
         ops = _ops(session, agent)
@@ -204,12 +189,10 @@ class TestRestore:
         for p in patches:
             p.start()
         try:
-            _run(
-                ops.restore_agent(
-                    user_id=uuid4(),
-                    organization_id=agent.organization_id,
-                    agent_id=agent.id,
-                )
+            await ops.restore_agent(
+                user_id=generate_id(),
+                organization_id=agent.organization_id,
+                agent_id=agent.id,
             )
         finally:
             for p in patches:
@@ -220,19 +203,19 @@ class TestRestore:
 
 
 class TestChatInvocationRefusesDeletedAgent:
-    def test_no_run_is_started(self) -> None:
+    async def test_no_run_is_started(self) -> None:
         from uniffy.domains.agents.chat_integration.operations import AgentChatBridge
 
-        org_id = uuid4()
-        channel_id = uuid4()
-        trigger_id = uuid4()
+        org_id = generate_id()
+        channel_id = generate_id()
+        trigger_id = generate_id()
         agent = _agent(organization_id=org_id, is_deleted=True)
 
         trigger = NS(
             id=trigger_id,
             channel_id=channel_id,
             sender_type=SenderType.USER,
-            sender_id=uuid4(),
+            sender_id=generate_id(),
             root_id=None,
             message_metadata=None,
         )
@@ -252,17 +235,17 @@ class TestChatInvocationRefusesDeletedAgent:
             side_effect=AssertionError("run started for a deleted agent")
         )
 
-        _run(bridge.respond_to_chat_message(channel_id, trigger_id, agent.id))
+        await bridge.respond_to_chat_message(channel_id, trigger_id, agent.id)
 
 
 class TestFrozenAgentDm:
-    def test_send_is_refused(self) -> None:
+    async def test_send_is_refused(self) -> None:
         from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
-        org_id = uuid4()
-        agent_id = uuid4()
+        org_id = generate_id()
+        agent_id = generate_id()
         channel = NS(
-            id=uuid4(),
+            id=generate_id(),
             organization_id=org_id,
             is_agent_dm=True,
             agent_id=agent_id,
@@ -282,20 +265,18 @@ class TestFrozenAgentDm:
         )
 
         with pytest.raises(ValidationError):
-            _run(
-                ops.send_message(
-                    user_id=uuid4(),
-                    organization_id=org_id,
-                    channel_id=channel.id,
-                    content="are you there?",
-                )
+            await ops.send_message(
+                user_id=generate_id(),
+                organization_id=org_id,
+                channel_id=channel.id,
+                content="are you there?",
             )
 
 
 class TestQueriesExcludeDeletedAgents:
     """The filters live in SQL, so the statements themselves are the assertion."""
 
-    def test_mention_detection_joins_the_agent_row(self) -> None:
+    async def test_mention_detection_joins_the_agent_row(self) -> None:
         from uniffy.core.models.chat.channel import ChannelType
         from uniffy.domains.agents.chat_integration.mention_detector import (
             detect_agent_mentions,
@@ -317,15 +298,15 @@ class TestQueriesExcludeDeletedAgents:
             reply_to_id=None,
             root_id=None,
         )
-        channel = NS(id=uuid4(), channel_type=ChannelType.DIRECT)
+        channel = NS(id=generate_id(), channel_type=ChannelType.DIRECT)
 
-        _run(detect_agent_mentions(session, message, channel))
+        await detect_agent_mentions(session, message, channel)
 
         assert captured, "no membership query issued"
         assert "agents_agents" in captured[0]
         assert "is_deleted" in captured[0]
 
-    def test_due_cron_tasks_join_the_agent_row(self) -> None:
+    async def test_due_cron_tasks_join_the_agent_row(self) -> None:
         from uniffy.domains.agents.cron.operations import CronTaskOperations
 
         captured: list = []
@@ -341,7 +322,7 @@ class TestQueriesExcludeDeletedAgents:
         ops = CronTaskOperations.__new__(CronTaskOperations)
         ops.session = session
 
-        _run(ops.get_due_tasks())
+        await ops.get_due_tasks()
 
         assert captured
         assert "agents_agents" in captured[0]

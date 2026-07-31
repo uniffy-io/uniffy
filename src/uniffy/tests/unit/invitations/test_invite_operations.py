@@ -5,18 +5,17 @@ which email template gets enqueued, and that the existing-user branch
 goes through ``OrganizationOperations.add_member``.
 """
 
-import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.types import generate_id
 from uniffy.domains.invitations.errors import (
     InvitationAlreadyUsedError,
     InvitationEmailConflictError,
@@ -28,10 +27,6 @@ from uniffy.domains.invitations.operations import (
     InviteOutcome,
     _hash_token,
 )
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 @dataclass
@@ -78,7 +73,7 @@ class _Invitation:
 
     def __post_init__(self) -> None:
         if self.id is None:
-            self.id = uuid4()
+            self.id = generate_id()
         if self.created_at is None:
             self.created_at = datetime.now(UTC)
 
@@ -139,13 +134,13 @@ def _patch_org_ops(*, get_by_id_returns: _FakeOrg, add_member_returns: Any | Non
 
 
 class TestInviteExistingUser:
-    def test_auto_adds_member_and_emails(self) -> None:
-        inviter_id = uuid4()
-        existing_id = uuid4()
-        org = _FakeOrg(id=uuid4())
+    async def test_auto_adds_member_and_emails(self) -> None:
+        inviter_id = generate_id()
+        existing_id = generate_id()
+        org = _FakeOrg(id=generate_id())
         inviter = _FakeUser(id=inviter_id, email="boss@acme.io", username="boss")
         existing = _FakeUser(id=existing_id, email="member@acme.io")
-        membership = SimpleNamespace(id=uuid4(), role=OrganizationRole.MEMBER)
+        membership = SimpleNamespace(id=generate_id(), role=OrganizationRole.MEMBER)
 
         # Order: lookup inviter, lookup existing user-by-email.
         session = _make_session(
@@ -158,13 +153,11 @@ class TestInviteExistingUser:
 
         with _patch_audit(), queue_patch, org_ops_patch:
             ops = InvitationOperations(session)
-            result = _run(
-                ops.invite(
-                    org_id=org.id,
-                    email="MEMBER@acme.io",
-                    role=OrganizationRole.MEMBER,
-                    inviter_id=inviter_id,
-                )
+            result = await ops.invite(
+                org_id=org.id,
+                email="MEMBER@acme.io",
+                role=OrganizationRole.MEMBER,
+                inviter_id=inviter_id,
             )
 
         assert result.outcome is InviteOutcome.ADDED
@@ -177,9 +170,9 @@ class TestInviteExistingUser:
 
 
 class TestInviteNewEmail:
-    def test_writes_row_and_enqueues_accept_link(self) -> None:
-        inviter_id = uuid4()
-        org = _FakeOrg(id=uuid4())
+    async def test_writes_row_and_enqueues_accept_link(self) -> None:
+        inviter_id = generate_id()
+        org = _FakeOrg(id=generate_id())
         inviter = _FakeUser(id=inviter_id, email="boss@acme.io", username="boss")
 
         # Order: lookup inviter, lookup existing-by-email (None), select pending (none).
@@ -196,13 +189,11 @@ class TestInviteNewEmail:
 
         with _patch_audit() as audit, queue_patch, org_ops_patch:
             ops = InvitationOperations(session)
-            result = _run(
-                ops.invite(
-                    org_id=org.id,
-                    email="new@acme.io",
-                    role=OrganizationRole.MEMBER,
-                    inviter_id=inviter_id,
-                )
+            result = await ops.invite(
+                org_id=org.id,
+                email="new@acme.io",
+                role=OrganizationRole.MEMBER,
+                inviter_id=inviter_id,
             )
 
         assert result.outcome is InviteOutcome.INVITED
@@ -217,44 +208,42 @@ class TestInviteNewEmail:
 
 
 class TestRejectsObviouslyBadEmail:
-    def test_validation(self) -> None:
+    async def test_validation(self) -> None:
         session = _make_session([])
-        org_ops_patch, _ = _patch_org_ops(get_by_id_returns=_FakeOrg(id=uuid4()))
+        org_ops_patch, _ = _patch_org_ops(get_by_id_returns=_FakeOrg(id=generate_id()))
         with org_ops_patch:
             ops = InvitationOperations(session)
             with pytest.raises(ValueError, match="Invalid email"):
-                _run(
-                    ops.invite(
-                        org_id=uuid4(),
-                        email="not-an-email",
-                        role=OrganizationRole.MEMBER,
-                        inviter_id=uuid4(),
-                    )
+                await ops.invite(
+                    org_id=generate_id(),
+                    email="not-an-email",
+                    role=OrganizationRole.MEMBER,
+                    inviter_id=generate_id(),
                 )
 
 
 class TestLoadByToken:
-    def test_expired_raises(self) -> None:
-        org_id = uuid4()
+    async def test_expired_raises(self) -> None:
+        org_id = generate_id()
         inv = _Invitation(
             organization_id=org_id,
             email="x@y.com",
             role=OrganizationRole.MEMBER,
-            invited_by_user_id=uuid4(),
+            invited_by_user_id=generate_id(),
             token_hash=_hash_token("raw"),
             expires_at=datetime.now(UTC) - timedelta(seconds=1),
         )
         session = _make_session([_result(scalar=inv)])
         ops = InvitationOperations(session)
         with pytest.raises(InvitationExpiredError):
-            _run(ops.get_for_token("raw"))
+            await ops.get_for_token("raw")
 
-    def test_revoked_raises(self) -> None:
+    async def test_revoked_raises(self) -> None:
         inv = _Invitation(
-            organization_id=uuid4(),
+            organization_id=generate_id(),
             email="x@y.com",
             role=OrganizationRole.MEMBER,
-            invited_by_user_id=uuid4(),
+            invited_by_user_id=generate_id(),
             token_hash=_hash_token("raw"),
             expires_at=datetime.now(UTC) + timedelta(days=1),
             revoked_at=datetime.now(UTC),
@@ -262,14 +251,14 @@ class TestLoadByToken:
         session = _make_session([_result(scalar=inv)])
         ops = InvitationOperations(session)
         with pytest.raises(InvitationRevokedError):
-            _run(ops.get_for_token("raw"))
+            await ops.get_for_token("raw")
 
-    def test_already_used_raises(self) -> None:
+    async def test_already_used_raises(self) -> None:
         inv = _Invitation(
-            organization_id=uuid4(),
+            organization_id=generate_id(),
             email="x@y.com",
             role=OrganizationRole.MEMBER,
-            invited_by_user_id=uuid4(),
+            invited_by_user_id=generate_id(),
             token_hash=_hash_token("raw"),
             expires_at=datetime.now(UTC) + timedelta(days=1),
             accepted_at=datetime.now(UTC),
@@ -277,17 +266,17 @@ class TestLoadByToken:
         session = _make_session([_result(scalar=inv)])
         ops = InvitationOperations(session)
         with pytest.raises(InvitationAlreadyUsedError):
-            _run(ops.get_for_token("raw"))
+            await ops.get_for_token("raw")
 
 
 class TestAcceptRejectsConflict:
-    def test_existing_user_with_same_email_blocks_accept(self) -> None:
-        existing = _FakeUser(id=uuid4(), email="x@y.com")
+    async def test_existing_user_with_same_email_blocks_accept(self) -> None:
+        existing = _FakeUser(id=generate_id(), email="x@y.com")
         inv = _Invitation(
-            organization_id=uuid4(),
+            organization_id=generate_id(),
             email="x@y.com",
             role=OrganizationRole.MEMBER,
-            invited_by_user_id=uuid4(),
+            invited_by_user_id=generate_id(),
             token_hash=_hash_token("raw"),
             expires_at=datetime.now(UTC) + timedelta(days=1),
         )
@@ -295,12 +284,10 @@ class TestAcceptRejectsConflict:
         session = _make_session([_result(scalar=inv), _result(scalar=existing)])
         ops = InvitationOperations(session)
         with pytest.raises(InvitationEmailConflictError):
-            _run(
-                ops.accept(
-                    raw_token="raw",
-                    username="new_user",
-                    password="Passw0rd!ok",
-                    full_name=None,
-                    user_agent="pytest",
-                )
+            await ops.accept(
+                raw_token="raw",
+                username="new_user",
+                password="Passw0rd!ok",
+                full_name=None,
+                user_agent="pytest",
             )

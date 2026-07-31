@@ -5,7 +5,6 @@ to the right channel with a JSON-serialisable payload, and that an
 unknown event type is rejected without touching Valkey.
 """
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -13,11 +12,7 @@ from uniffy.core.types import generate_id
 from uniffy.core.valkey import tags as tags_pubsub
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
-def test_publish_emits_to_org_channel() -> None:
+async def test_publish_emits_to_org_channel() -> None:
     fake_client = MagicMock()
     fake_client.publish = AsyncMock(return_value=1)
     org_id = generate_id()
@@ -26,12 +21,10 @@ def test_publish_emits_to_org_channel() -> None:
         ctx.return_value.__aenter__ = AsyncMock(return_value=None)
         ctx.return_value.__aexit__ = AsyncMock(return_value=None)
         with patch("uniffy.core.valkey.pubsub._pubsub_client", fake_client):
-            _run(
-                tags_pubsub.publish_tag_event(
-                    org_id,
-                    tags_pubsub.EVENT_TAG_CREATED,
-                    {"tag": {"id": str(generate_id()), "name": "docs"}},
-                )
+            await tags_pubsub.publish_tag_event(
+                org_id,
+                tags_pubsub.EVENT_TAG_CREATED,
+                {"tag": {"id": str(generate_id()), "name": "docs"}},
             )
 
     fake_client.publish.assert_awaited_once()
@@ -42,20 +35,18 @@ def test_publish_emits_to_org_channel() -> None:
     assert "tag" in decoded["payload"]
 
 
-def test_publish_skips_unknown_event_type() -> None:
+async def test_publish_skips_unknown_event_type() -> None:
     fake_client = MagicMock()
     fake_client.publish = AsyncMock(return_value=1)
 
     with patch("uniffy.core.valkey.pubsub._pubsub_client", fake_client):
-        _run(tags_pubsub.publish_tag_event(generate_id(), "tag.unknown", {}))
+        await tags_pubsub.publish_tag_event(generate_id(), "tag.unknown", {})
 
     fake_client.publish.assert_not_awaited()
 
 
-def test_publish_no_op_when_pubsub_unavailable() -> None:
+async def test_publish_no_op_when_pubsub_unavailable() -> None:
     with patch("uniffy.core.valkey.pubsub._pubsub_client", None):
-        _run(
-            tags_pubsub.publish_tag_event(
-                generate_id(), tags_pubsub.EVENT_TAG_DELETED, {"tag_id": "x"}
-            )
+        await tags_pubsub.publish_tag_event(
+            generate_id(), tags_pubsub.EVENT_TAG_DELETED, {"tag_id": "x"}
         )

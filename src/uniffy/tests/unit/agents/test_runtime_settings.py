@@ -1,10 +1,9 @@
 """Tests for the per-org agent runtime settings loader and cache."""
 
-import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.runtime.settings import (
     DEFAULT_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
     DEFAULT_CIRCUIT_BREAKER_RECOVERY_SECONDS,
@@ -28,10 +27,10 @@ def _session_returning(blob: dict | None) -> MagicMock:
     return session
 
 
-def test_missing_row_falls_back_to_module_defaults() -> None:
+async def test_missing_row_falls_back_to_module_defaults() -> None:
     async def run() -> None:
         invalidate_runtime_settings_cache()
-        org_id = uuid4()
+        org_id = generate_id()
         session = _session_returning(None)
 
         resolved = await get_runtime_settings(session, org_id)
@@ -51,13 +50,13 @@ def test_missing_row_falls_back_to_module_defaults() -> None:
         assert resolved.default_provider_key_id is None
         assert resolved.default_chat_model is None
 
-    asyncio.run(run())
+    await run()
 
 
-def test_blob_overrides_defaults_only_for_set_keys() -> None:
+async def test_blob_overrides_defaults_only_for_set_keys() -> None:
     async def run() -> None:
         invalidate_runtime_settings_cache()
-        org_id = uuid4()
+        org_id = generate_id()
         session = _session_returning(
             {
                 "send_deadline_seconds": 15,
@@ -78,26 +77,26 @@ def test_blob_overrides_defaults_only_for_set_keys() -> None:
         assert resolved.circuit_breaker_recovery_seconds == 5
         assert resolved.display_currency == "EUR"
 
-    asyncio.run(run())
+    await run()
 
 
-def test_null_deadline_falls_back_to_module_default() -> None:
+async def test_null_deadline_falls_back_to_module_default() -> None:
     async def run() -> None:
         invalidate_runtime_settings_cache()
-        org_id = uuid4()
+        org_id = generate_id()
         session = _session_returning({"send_deadline_seconds": None})
 
         resolved = await get_runtime_settings(session, org_id)
 
         assert resolved.send_deadline_seconds == DEFAULT_SEND_DEADLINE_SECONDS
 
-    asyncio.run(run())
+    await run()
 
 
-def test_failed_db_call_returns_defaults_without_raising() -> None:
+async def test_failed_db_call_returns_defaults_without_raising() -> None:
     async def run() -> None:
         invalidate_runtime_settings_cache()
-        org_id = uuid4()
+        org_id = generate_id()
         session = MagicMock()
         session.execute = AsyncMock(side_effect=RuntimeError("db down"))
 
@@ -105,7 +104,7 @@ def test_failed_db_call_returns_defaults_without_raising() -> None:
 
         assert resolved.send_deadline_seconds == DEFAULT_SEND_DEADLINE_SECONDS
 
-    asyncio.run(run())
+    await run()
 
 
 def _admin_ops(*, admin_raises=False, store: dict | None = None):
@@ -144,8 +143,8 @@ def _admin_ops(*, admin_raises=False, store: dict | None = None):
 
 def _update_kwargs(**overrides):
     kwargs = dict(
-        user_id=uuid4(),
-        organization_id=uuid4(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
         send_deadline_seconds=42,
         failover_enabled=True,
         resume_enabled=True,
@@ -161,22 +160,22 @@ def _update_kwargs(**overrides):
     return kwargs
 
 
-def test_admin_get_requires_org_admin() -> None:
+async def test_admin_get_requires_org_admin() -> None:
     from uniffy.core.errors import PermissionDeniedError
 
     ops, _ = _admin_ops(admin_raises=True)
 
     async def run() -> None:
         try:
-            await ops.get(user_id=uuid4(), organization_id=uuid4())
+            await ops.get(user_id=generate_id(), organization_id=generate_id())
         except PermissionDeniedError:
             return
         raise AssertionError("expected PermissionDeniedError")
 
-    asyncio.run(run())
+    await run()
 
 
-def test_admin_update_round_trips_every_field() -> None:
+async def test_admin_update_round_trips_every_field() -> None:
     ops, patch = _admin_ops()
 
     async def run() -> None:
@@ -207,10 +206,10 @@ def test_admin_update_round_trips_every_field() -> None:
         assert resolved.image_max_resolution == "2K"
         assert resolved.image_max_quality == "high"
 
-    asyncio.run(run())
+    await run()
 
 
-def test_admin_update_preserves_unmanaged_keys() -> None:
+async def test_admin_update_preserves_unmanaged_keys() -> None:
     store = {"display_currency": "EUR", "failover_enabled": True}
     ops, patch = _admin_ops(store=store)
 
@@ -227,12 +226,12 @@ def test_admin_update_preserves_unmanaged_keys() -> None:
         assert store["display_currency"] == "EUR"
         assert resolved.display_currency == "EUR"
 
-    asyncio.run(run())
+    await run()
 
 
 def _key_row(**overrides):
     defaults = dict(
-        id=uuid4(),
+        id=generate_id(),
         provider="anthropic",
         is_enabled=True,
         is_valid=True,
@@ -249,7 +248,7 @@ def _ops_with_key(key):
     return ops, patch
 
 
-def _expect_update_rejected(ops, **overrides) -> None:
+async def _expect_update_rejected(ops, **overrides) -> None:
     from uniffy.core.errors import ValidationError
 
     async def run() -> None:
@@ -259,16 +258,16 @@ def _expect_update_rejected(ops, **overrides) -> None:
             return
         raise AssertionError("expected ValidationError")
 
-    asyncio.run(run())
+    await run()
 
 
-def test_default_key_must_be_enabled_and_valid() -> None:
+async def test_default_key_must_be_enabled_and_valid() -> None:
     key = _key_row(is_enabled=False)
     ops, _ = _ops_with_key(key)
-    _expect_update_rejected(ops, default_provider_key_id=str(key.id))
+    await _expect_update_rejected(ops, default_provider_key_id=str(key.id))
 
 
-def test_default_model_must_match_key_provider() -> None:
+async def test_default_model_must_match_key_provider() -> None:
     from unittest.mock import patch
 
     key = _key_row(provider="anthropic")
@@ -277,14 +276,14 @@ def test_default_model_must_match_key_provider() -> None:
         "uniffy.domains.agents.runtime.settings.provider_for_model",
         MagicMock(return_value="openai"),
     ):
-        _expect_update_rejected(
+        await _expect_update_rejected(
             ops,
             default_provider_key_id=str(key.id),
             default_chat_model="gpt-5.4",
         )
 
 
-def test_coherent_default_key_and_model_accepted() -> None:
+async def test_coherent_default_key_and_model_accepted() -> None:
     from unittest.mock import patch
 
     key = _key_row(provider="anthropic")
@@ -310,7 +309,7 @@ def test_coherent_default_key_and_model_accepted() -> None:
         assert resolved.default_provider_key_id == key.id
         assert resolved.default_chat_model == "claude-sonnet-4-6"
 
-    asyncio.run(run())
+    await run()
 
 
 def test_from_blob_survives_malformed_values() -> None:
@@ -337,7 +336,7 @@ def test_from_blob_survives_malformed_values() -> None:
 def test_from_blob_parses_key_id_and_model() -> None:
     from uniffy.domains.agents.runtime.settings import _from_blob
 
-    key_id = uuid4()
+    key_id = generate_id()
     parsed = _from_blob(
         {
             "default_provider_key_id": str(key_id),
@@ -355,7 +354,7 @@ def test_from_blob_bad_key_id_is_none() -> None:
     assert parsed.default_provider_key_id is None
 
 
-def test_bridge_disabled_when_flag_false() -> None:
+async def test_bridge_disabled_when_flag_false() -> None:
     from types import SimpleNamespace as NS
     from unittest.mock import patch
 
@@ -372,10 +371,10 @@ def test_bridge_disabled_when_flag_false() -> None:
             AsyncMock(return_value=NS(personal_memory_bridge_enabled=False)),
         ):
             result = await ops._resolve_memory_bridge(
-                scope_ref=MemoryScopeRef(MemoryScope.CHANNEL, uuid4()),
-                user_id=uuid4(),
-                organization_id=uuid4(),
+                scope_ref=MemoryScopeRef(MemoryScope.CHANNEL, generate_id()),
+                user_id=generate_id(),
+                organization_id=generate_id(),
             )
         assert result is None
 
-    asyncio.run(run())
+    await run()

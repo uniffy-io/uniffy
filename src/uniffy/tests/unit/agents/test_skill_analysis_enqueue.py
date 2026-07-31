@@ -1,15 +1,11 @@
 """Job-id salting and worker-side quietness debounce for skill analysis.
-
-Vanilla pytest + ``asyncio.run`` with monkeypatched collaborators, matching the
-repo's other ARQ-task tests (no pytest-asyncio, no live DB / Valkey).
 """
 
-import asyncio
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import uuid4
 
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.sessions.operations import (
     SKILL_ANALYSIS_DEBOUNCE_SECONDS,
     _skill_analysis_job_id,
@@ -17,33 +13,29 @@ from uniffy.domains.agents.sessions.operations import (
 from uniffy.workers.tasks import agent_skill_analysis as task_mod
 
 
-def _run(coro):
-    return asyncio.run(coro)
-
-
 class TestJobIdSalt:
     def test_job_id_contains_salt(self) -> None:
-        dest = uuid4()
+        dest = generate_id()
         job_id = _skill_analysis_job_id("session", dest, "deadbeef")
         assert job_id == f"analyze_skills:session:{dest}:deadbeef"
         assert "deadbeef" in job_id
 
     def test_distinct_triggers_produce_distinct_ids(self) -> None:
-        dest = uuid4()
-        first = _skill_analysis_job_id("session", dest, uuid4().hex)
-        second = _skill_analysis_job_id("session", dest, uuid4().hex)
+        dest = generate_id()
+        first = _skill_analysis_job_id("session", dest, generate_id().hex)
+        second = _skill_analysis_job_id("session", dest, generate_id().hex)
         # Same destination, different trigger -> different job id, so ARQ does
         # not dedupe the second enqueue against the first.
         assert first != second
 
     def test_kind_and_destination_partition_the_id(self) -> None:
         salt = "abc123"
-        dest = uuid4()
+        dest = generate_id()
         assert _skill_analysis_job_id("session", dest, salt) != _skill_analysis_job_id(
             "channel", dest, salt
         )
         assert _skill_analysis_job_id("session", dest, salt) != _skill_analysis_job_id(
-            "session", uuid4(), salt
+            "session", generate_id(), salt
         )
 
 
@@ -94,17 +86,17 @@ class _FakeSession:
 
 
 class TestLatestActivityAt:
-    def test_session_destination_returns_scalar(self) -> None:
+    async def test_session_destination_returns_scalar(self) -> None:
         ts = datetime.now(UTC)
         session = _FakeSession(ts)
-        result = _run(task_mod._latest_activity_at(session, "session", uuid4()))
+        result = await task_mod._latest_activity_at(session, "session", generate_id())
         assert result is ts
         assert session.statements, "a query must be issued"
 
-    def test_channel_destination_returns_scalar(self) -> None:
+    async def test_channel_destination_returns_scalar(self) -> None:
         ts = datetime.now(UTC)
         session = _FakeSession(ts)
-        result = _run(task_mod._latest_activity_at(session, "channel", uuid4()))
+        result = await task_mod._latest_activity_at(session, "channel", generate_id())
         assert result is ts
 
 
@@ -155,29 +147,27 @@ def _install_enabled_probe(monkeypatch) -> list[bool]:
 
 def _ids() -> dict[str, str]:
     return {
-        "destination_id": str(uuid4()),
-        "user_id": str(uuid4()),
-        "agent_id": str(uuid4()),
-        "organization_id": str(uuid4()),
+        "destination_id": str(generate_id()),
+        "user_id": str(generate_id()),
+        "agent_id": str(generate_id()),
+        "organization_id": str(generate_id()),
     }
 
 
 class TestTaskQuietnessGate:
-    def test_recent_activity_exits_before_opt_in(self, monkeypatch) -> None:
+    async def test_recent_activity_exits_before_opt_in(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
         _install_open_session(monkeypatch)
         _install_latest_activity(monkeypatch, datetime.now(UTC))
         enabled_calls = _install_enabled_probe(monkeypatch)
 
-        result = _run(
-            task_mod.analyze_session_for_skills(
-                ctx={}, destination_kind="session", **_ids()
-            )
+        result = await task_mod.analyze_session_for_skills(
+            ctx={}, destination_kind="session", **_ids()
         )
         assert result == {"status": "skipped", "reason": "still_active"}
         assert enabled_calls == [], "opt-in must not be consulted while still active"
 
-    def test_quiet_conversation_proceeds_past_the_gate(self, monkeypatch) -> None:
+    async def test_quiet_conversation_proceeds_past_the_gate(self, monkeypatch) -> None:
         _install_ops_client(monkeypatch)
         _install_open_session(monkeypatch)
         quiet_ts = datetime.now(UTC) - timedelta(
@@ -186,10 +176,8 @@ class TestTaskQuietnessGate:
         _install_latest_activity(monkeypatch, quiet_ts)
         enabled_calls = _install_enabled_probe(monkeypatch)
 
-        result = _run(
-            task_mod.analyze_session_for_skills(
-                ctx={}, destination_kind="session", **_ids()
-            )
+        result = await task_mod.analyze_session_for_skills(
+            ctx={}, destination_kind="session", **_ids()
         )
         # Past the quietness gate the task reaches the opt-in probe (stubbed off
         # here), so it stops at "disabled" rather than "still_active".

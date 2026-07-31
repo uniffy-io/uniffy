@@ -80,13 +80,19 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 ./manage.py landing build|preview|deploy     # preview on :8788; deploy needs CLOUDFLARE_API_TOKEN in host env
 ```
 
-Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed). Backend unit tests live in `src/uniffy/tests/unit/{domain}/`, benchmarks in `src/uniffy/tests/benchmarks/`, local-only live-service tests in `src/uniffy/tests/integration/{suite}/` (`test -s integration`); frontend tests in `src/ui/`.
+Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed). Backend tests split by what they need: `src/uniffy/tests/unit/{domain}/` needs nothing and runs in CI, `src/uniffy/tests/integration/{area}/{suite}/` needs a live service and is local-only (`test -s integration`; `internal/database` needs Postgres, `agents/providers` needs paid API keys), benchmarks in `src/uniffy/tests/benchmarks/`. Frontend tests are in `src/ui/`.
 
 Stack and container invariants:
 
 - `--stack local` never auto-creates `.venv`/`node_modules` on the host; `serve` and `cli` are host-only. Docker deps live in per-container `.venv`/`node_modules` volumes the entrypoint syncs on restart - never hand-edit a `package.json` then `deps install` (the frozen lockfile refuses).
 - Supply-chain: `pnpm-workspace.yaml` `minimumReleaseAge` (5d) refuses too-fresh versions on host and in containers - do not bypass. Surface a blocked deliberate upgrade to the user.
 - Containers that run third-party code use `cap_drop: ALL` + read-only rootfs (`<<: *contained` in `dev.yaml`); a new code-running service gets that anchor. Writes stay host-owned via `HOST_UID`/`setpriv`, so never chown `/app` from inside a container.
+
+### Stack rules
+
+- If we are on a docker stack, don't run any commands in the host, e.g uv run pytest, pnpm exec vitest, uv ... or scripts. The code is live mounted in the docker containers, so use the appropriete container to run what you want to do with docker exec or with manage.py ( mostly ).
+
+- If we are on docker stack again it's forbiden to install any dependencies on the host whatsoever. 
 
 ## Rules
 

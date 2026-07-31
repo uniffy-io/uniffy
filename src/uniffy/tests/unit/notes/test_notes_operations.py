@@ -6,9 +6,7 @@ CAS re-read retries). Live-DB integration coverage runs under the notes-domain
 harness.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 from sqlalchemy.dialects import postgresql
@@ -16,12 +14,8 @@ from sqlalchemy.sql.dml import Delete, Update
 
 from uniffy.core.errors import ConflictError
 from uniffy.core.models.notes.note import Note
-from uniffy.core.types import AccessMode, NodeType
+from uniffy.core.types import AccessMode, NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 @pytest.fixture(autouse=True)
@@ -34,9 +28,9 @@ def publish_mock(monkeypatch):
 
 def _make_note(*, version: int = 3, content: str = "old content") -> Note:
     return Note(
-        id=uuid4(),
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        id=generate_id(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         node_type=NodeType.NOTE,
         title="t",
         content=content,
@@ -74,18 +68,16 @@ def _select_result(note: Note | None) -> MagicMock:
 
 
 class TestUpdateCas:
-    def test_content_update_bumps_version_and_deletes_snapshot_row(self) -> None:
+    async def test_content_update_bumps_version_and_deletes_snapshot_row(self) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [MagicMock(rowcount=1), MagicMock()]
 
-        result = _run(
-            ops.update(
-                user_id=note.owner_id,
-                organization_id=note.organization_id,
-                note_id=note.id,
-                content="new content",
-            )
+        result = await ops.update(
+            user_id=note.owner_id,
+            organization_id=note.organization_id,
+            note_id=note.id,
+            content="new content",
         )
 
         assert result is note
@@ -100,18 +92,16 @@ class TestUpdateCas:
         assert isinstance(delete_stmt, Delete)
         assert delete_stmt.table.name == "realtime_yjs_snapshots"
 
-    def test_content_update_publishes_content_replace(self, publish_mock) -> None:
+    async def test_content_update_publishes_content_replace(self, publish_mock) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [MagicMock(rowcount=1), MagicMock()]
 
-        _run(
-            ops.update(
-                user_id=note.owner_id,
-                organization_id=note.organization_id,
-                note_id=note.id,
-                content="new content",
-            )
+        await ops.update(
+            user_id=note.owner_id,
+            organization_id=note.organization_id,
+            note_id=note.id,
+            content="new content",
         )
 
         publish_mock.assert_awaited_once()
@@ -120,18 +110,16 @@ class TestUpdateCas:
         assert args[1] == note.id
         assert args[2] == "new content"
 
-    def test_title_only_update_keeps_version_and_snapshot_row(self, publish_mock) -> None:
+    async def test_title_only_update_keeps_version_and_snapshot_row(self, publish_mock) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [MagicMock(rowcount=1)]
 
-        _run(
-            ops.update(
-                user_id=note.owner_id,
-                organization_id=note.organization_id,
-                note_id=note.id,
-                title="renamed",
-            )
+        await ops.update(
+            user_id=note.owner_id,
+            organization_id=note.organization_id,
+            note_id=note.id,
+            title="renamed",
         )
 
         assert ops.session.execute.await_count == 1
@@ -141,7 +129,7 @@ class TestUpdateCas:
         assert params["title"] == "renamed"
         publish_mock.assert_not_awaited()
 
-    def test_update_retries_after_concurrent_version_bump(self) -> None:
+    async def test_update_retries_after_concurrent_version_bump(self) -> None:
         note = _make_note(version=3)
         refreshed = _make_note(version=4)
         refreshed.id = note.id
@@ -155,13 +143,11 @@ class TestUpdateCas:
             MagicMock(),
         ]
 
-        result = _run(
-            ops.update(
-                user_id=note.owner_id,
-                organization_id=note.organization_id,
-                note_id=note.id,
-                content="new content",
-            )
+        result = await ops.update(
+            user_id=note.owner_id,
+            organization_id=note.organization_id,
+            note_id=note.id,
+            content="new content",
         )
 
         assert result is refreshed
@@ -172,7 +158,7 @@ class TestUpdateCas:
         assert second["version"] == 5
         ops.session.rollback.assert_awaited_once()
 
-    def test_update_raises_conflict_after_exhausted_retries(self) -> None:
+    async def test_update_raises_conflict_after_exhausted_retries(self) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [
@@ -184,18 +170,16 @@ class TestUpdateCas:
         ]
 
         with pytest.raises(ConflictError):
-            _run(
-                ops.update(
-                    user_id=note.owner_id,
-                    organization_id=note.organization_id,
-                    note_id=note.id,
-                    title="renamed",
-                )
+            await ops.update(
+                user_id=note.owner_id,
+                organization_id=note.organization_id,
+                note_id=note.id,
+                title="renamed",
             )
 
 
 class TestRealtimeSave:
-    def test_blank_transition_counts_metric_and_still_writes(self) -> None:
+    async def test_blank_transition_counts_metric_and_still_writes(self) -> None:
         note = _make_note(version=3, content="existing text")
         ops = _make_ops(note)
         ops.session.execute.side_effect = [
@@ -206,13 +190,11 @@ class TestRealtimeSave:
         with patch(
             "uniffy.domains.notes.operations.REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL"
         ) as counter:
-            result = _run(
-                ops.realtime_save(
-                    organization_id=note.organization_id,
-                    note_id=note.id,
-                    content="",
-                    canvas_content=None,
-                )
+            result = await ops.realtime_save(
+                organization_id=note.organization_id,
+                note_id=note.id,
+                content="",
+                canvas_content=None,
             )
 
         assert result is note
@@ -222,7 +204,7 @@ class TestRealtimeSave:
         assert params["content"] == ""
         assert params["version"] == 4
 
-    def test_non_blank_save_does_not_count_metric(self) -> None:
+    async def test_non_blank_save_does_not_count_metric(self) -> None:
         note = _make_note(version=3, content="existing text")
         ops = _make_ops(note)
         ops.session.execute.side_effect = [
@@ -233,18 +215,16 @@ class TestRealtimeSave:
         with patch(
             "uniffy.domains.notes.operations.REALTIME_BLANK_CONTENT_OVERWRITES_TOTAL"
         ) as counter:
-            _run(
-                ops.realtime_save(
-                    organization_id=note.organization_id,
-                    note_id=note.id,
-                    content="fresh text",
-                    canvas_content=None,
-                )
+            await ops.realtime_save(
+                organization_id=note.organization_id,
+                note_id=note.id,
+                content="fresh text",
+                canvas_content=None,
             )
 
         counter.labels.assert_not_called()
 
-    def test_cas_loss_re_reads_and_retries(self) -> None:
+    async def test_cas_loss_re_reads_and_retries(self) -> None:
         note = _make_note(version=3)
         refreshed = _make_note(version=4)
         refreshed.id = note.id
@@ -258,13 +238,11 @@ class TestRealtimeSave:
             MagicMock(rowcount=1),
         ]
 
-        result = _run(
-            ops.realtime_save(
-                organization_id=note.organization_id,
-                note_id=note.id,
-                content="rendered",
-                canvas_content=None,
-            )
+        result = await ops.realtime_save(
+            organization_id=note.organization_id,
+            note_id=note.id,
+            content="rendered",
+            canvas_content=None,
         )
 
         assert result is refreshed
@@ -272,7 +250,7 @@ class TestRealtimeSave:
         assert second["version_1"] == 4
         assert second["version"] == 5
 
-    def test_returns_none_after_exhausted_cas(self) -> None:
+    async def test_returns_none_after_exhausted_cas(self) -> None:
         note = _make_note(version=3)
         ops = _make_ops(note)
         ops.session.execute.side_effect = [
@@ -284,13 +262,11 @@ class TestRealtimeSave:
             MagicMock(rowcount=0),
         ]
 
-        result = _run(
-            ops.realtime_save(
-                organization_id=note.organization_id,
-                note_id=note.id,
-                content="rendered",
-                canvas_content=None,
-            )
+        result = await ops.realtime_save(
+            organization_id=note.organization_id,
+            note_id=note.id,
+            content="rendered",
+            canvas_content=None,
         )
 
         assert result is None

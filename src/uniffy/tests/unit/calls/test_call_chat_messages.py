@@ -1,12 +1,11 @@
 """Call lifecycle system messages posted into the channel's chat."""
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.models.calls import Call, CallEndReason, CallType
 from uniffy.core.models.chat.message import SenderType
+from uniffy.core.types import generate_id
 from uniffy.domains.calls.operations import _format_call_duration
 
 
@@ -35,27 +34,25 @@ def _build_ops(session: MagicMock):
 
 
 def _call(host_id, started_minutes_ago: int = 10) -> Call:
-    org_id = uuid4()
+    org_id = generate_id()
     return Call(
-        id=uuid4(),
+        id=generate_id(),
         organization_id=org_id,
-        channel_id=uuid4(),
+        channel_id=generate_id(),
         call_type=CallType.CHANNEL,
         initiator_user_id=host_id,
         host_user_id=host_id,
-        livekit_room_name=f"org_{org_id}:call_{uuid4()}",
+        livekit_room_name=f"org_{org_id}:call_{generate_id()}",
         started_at=datetime.now(UTC) - timedelta(minutes=started_minutes_ago),
     )
 
 
-def _run_summary(ops, call, reason, actor_user_id, profiles):
+async def _run_summary(ops, call, reason, actor_user_id, profiles):
     with patch.object(
         type(ops), "resolve_profiles", AsyncMock(return_value=profiles)
     ), patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
         msg_ops_cls.return_value.send_message = AsyncMock()
-        asyncio.run(
-            ops._post_call_ended_summary(call, reason, actor_user_id, datetime.now(UTC))
-        )
+        await ops._post_call_ended_summary(call, reason, actor_user_id, datetime.now(UTC))
         send = msg_ops_cls.return_value.send_message
     return send
 
@@ -66,13 +63,13 @@ def test_format_call_duration() -> None:
     assert _format_call_duration(3900) == "1h 05m"
 
 
-def test_all_left_summary_lists_participants() -> None:
-    host_id, other_id = uuid4(), uuid4()
+async def test_all_left_summary_lists_participants() -> None:
+    host_id, other_id = generate_id(), generate_id()
     call = _call(host_id)
     session = _build_session(participant_rows=[(host_id,), (other_id,)])
     ops = _build_ops(session)
 
-    send = _run_summary(
+    send = await _run_summary(
         ops,
         call,
         CallEndReason.ALL_LEFT,
@@ -94,13 +91,13 @@ def test_all_left_summary_lists_participants() -> None:
     assert f"[[[Bob|urn:uniffy:content:USER:{other_id}]]]" in content
 
 
-def test_host_ended_summary_names_the_actor() -> None:
-    host_id = uuid4()
+async def test_host_ended_summary_names_the_actor() -> None:
+    host_id = generate_id()
     call = _call(host_id)
     session = _build_session(participant_rows=[(host_id,)])
     ops = _build_ops(session)
 
-    send = _run_summary(
+    send = await _run_summary(
         ops,
         call,
         CallEndReason.HOST_ENDED,
@@ -114,14 +111,14 @@ def test_host_ended_summary_names_the_actor() -> None:
     )
 
 
-def test_summary_caps_mentions_with_overflow() -> None:
-    host_id = uuid4()
+async def test_summary_caps_mentions_with_overflow() -> None:
+    host_id = generate_id()
     call = _call(host_id)
-    user_ids = [host_id] + [uuid4() for _ in range(7)]
+    user_ids = [host_id] + [generate_id() for _ in range(7)]
     session = _build_session(participant_rows=[(uid,) for uid in user_ids])
     ops = _build_ops(session)
 
-    send = _run_summary(
+    send = await _run_summary(
         ops,
         call,
         CallEndReason.ALL_LEFT,
@@ -134,8 +131,8 @@ def test_summary_caps_mentions_with_overflow() -> None:
     assert "and 2 more" in content
 
 
-def test_summary_failure_never_raises() -> None:
-    call = _call(uuid4())
+async def test_summary_failure_never_raises() -> None:
+    call = _call(generate_id())
     session = _build_session()
     ops = _build_ops(session)
 
@@ -143,19 +140,17 @@ def test_summary_failure_never_raises() -> None:
         type(ops), "resolve_profiles", AsyncMock(side_effect=RuntimeError("resolver down"))
     ), patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
         msg_ops_cls.return_value.send_message = AsyncMock()
-        asyncio.run(
-            ops._post_call_ended_summary(
-                call, CallEndReason.ALL_LEFT, None, datetime.now(UTC)
-            )
+        await ops._post_call_ended_summary(
+            call, CallEndReason.ALL_LEFT, None, datetime.now(UTC)
         )
         msg_ops_cls.return_value.send_message.assert_not_called()
 
 
-def test_system_message_failure_is_swallowed() -> None:
-    call = _call(uuid4())
+async def test_system_message_failure_is_swallowed() -> None:
+    call = _call(generate_id())
     session = _build_session()
     ops = _build_ops(session)
 
     with patch("uniffy.domains.calls.operations.ChatMessageOperations") as msg_ops_cls:
         msg_ops_cls.return_value.send_message = AsyncMock(side_effect=RuntimeError("chat down"))
-        asyncio.run(ops._post_call_system_message(call, "Call ended", call.host_user_id))
+        await ops._post_call_system_message(call, "Call ended", call.host_user_id)

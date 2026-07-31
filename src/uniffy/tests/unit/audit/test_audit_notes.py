@@ -5,13 +5,11 @@ parent-folder move via the update path. Mock-driven; full integration
 behaviour is exercised by ``test_notes_*`` integration tests.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.models.notes.note import Note
-from uniffy.core.types import NodeType
+from uniffy.core.types import NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
 
 
@@ -25,9 +23,9 @@ def _audit_rows(session: MagicMock) -> list:
 
 def _make_note(**overrides) -> Note:
     defaults = dict(
-        id=uuid4(),
-        organization_id=uuid4(),
-        owner_id=uuid4(),
+        id=generate_id(),
+        organization_id=generate_id(),
+        owner_id=generate_id(),
         title="My note",
         content="",
         node_type=NodeType.NOTE,
@@ -48,7 +46,7 @@ def _build_session() -> MagicMock:
     return session
 
 
-def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
+async def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
     note = _make_note()
     session = _build_session()
     ops = NoteOperations(session)
@@ -60,7 +58,7 @@ def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
     ), patch.object(
         NoteOperations,
         "_collect_descendant_ids",
-        AsyncMock(return_value=[note.id, uuid4(), uuid4()]),
+        AsyncMock(return_value=[note.id, generate_id(), generate_id()]),
     ), patch(
         "uniffy.domains.notes.queries.soft_delete_recursive",
         AsyncMock(return_value=None),
@@ -69,7 +67,7 @@ def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
         create=True,
     ):
         ops.search_indexer = MagicMock(remove=AsyncMock())
-        asyncio.run(ops.delete(uuid4(), note.organization_id, note.id))
+        await ops.delete(generate_id(), note.organization_id, note.id)
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -80,7 +78,7 @@ def test_soft_delete_emits_note_deleted_with_descendant_count() -> None:
     assert row.details["node_type"] == "NOTE"
 
 
-def test_permanent_delete_emits_note_permanently_deleted() -> None:
+async def test_permanent_delete_emits_note_permanently_deleted() -> None:
     note = _make_note()
     session = _build_session()
     ops = NoteOperations(session)
@@ -104,15 +102,13 @@ def test_permanent_delete_emits_note_permanently_deleted() -> None:
         "uniffy.domains.notes.operations.TagOperations",
         MagicMock(return_value=tag_ops_mock),
     ):
-        asyncio.run(
-            ops.delete(uuid4(), note.organization_id, note.id, permanent=True)
-        )
+        await ops.delete(generate_id(), note.organization_id, note.id, permanent=True)
 
     rows = _audit_rows(session)
     assert any(r.action == Action.NOTE_PERMANENTLY_DELETED for r in rows)
 
 
-def test_restore_emits_note_restored() -> None:
+async def test_restore_emits_note_restored() -> None:
     note = _make_note(is_deleted=True)
     session = _build_session()
     ops = NoteOperations(session)
@@ -124,7 +120,7 @@ def test_restore_emits_note_restored() -> None:
     ), patch.object(
         NoteOperations, "_index_for_search", AsyncMock(return_value=None)
     ):
-        asyncio.run(ops.restore(uuid4(), note.organization_id, note.id))
+        await ops.restore(generate_id(), note.organization_id, note.id)
 
     rows = _audit_rows(session)
     assert len(rows) == 1
@@ -132,13 +128,13 @@ def test_restore_emits_note_restored() -> None:
     assert rows[0].resource_id == note.id
 
 
-def test_parent_change_emits_note_moved_with_previous_state() -> None:
+async def test_parent_change_emits_note_moved_with_previous_state() -> None:
     """The update path emits note.moved when the parent_id changes."""
     from uniffy.core.audit import write_audit_event
 
     session = _build_session()
     note = _make_note(parent_id=None)
-    new_parent = uuid4()
+    new_parent = generate_id()
 
     async def emit() -> None:
         previous_parent_id = note.parent_id
@@ -158,7 +154,7 @@ def test_parent_change_emits_note_moved_with_previous_state() -> None:
             },
         )
 
-    asyncio.run(emit())
+    await emit()
 
     rows = _audit_rows(session)
     assert len(rows) == 1

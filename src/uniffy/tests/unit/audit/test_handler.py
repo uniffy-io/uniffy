@@ -11,15 +11,14 @@ DB calls are mocked. We assert:
   to ``DEFAULT_PAGE_SIZE`` for zero / negative inputs.
 """
 
-import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.types import generate_id
 from uniffy.domains.audit.operations import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -52,7 +51,7 @@ def _scalar_result(value):
     return result
 
 
-def test_org_admin_can_query_own_org() -> None:
+async def test_org_admin_can_query_own_org() -> None:
     session = _session_with_actor(org_role=OrganizationRole.ADMIN)
     session.execute = AsyncMock(
         side_effect=[
@@ -63,42 +62,36 @@ def test_org_admin_can_query_own_org() -> None:
     )
     ops = AuditOperations(session)
 
-    page = asyncio.run(
-        ops.list_events(
-            uuid4(),
-            ListEventsFilter(organization_id=uuid4()),
-        )
+    page = await ops.list_events(
+        generate_id(),
+        ListEventsFilter(organization_id=generate_id()),
     )
 
     assert page.events == []
     assert page.next_page_token is None
 
 
-def test_regular_member_denied() -> None:
+async def test_regular_member_denied() -> None:
     session = _session_with_actor(org_role=OrganizationRole.MEMBER)
     ops = AuditOperations(session)
 
     with pytest.raises(PermissionDeniedError):
-        asyncio.run(
-            ops.list_events(
-                uuid4(),
-                ListEventsFilter(organization_id=uuid4()),
-            )
+        await ops.list_events(
+            generate_id(),
+            ListEventsFilter(organization_id=generate_id()),
         )
 
 
-def test_system_admin_can_query_any_org() -> None:
+async def test_system_admin_can_query_any_org() -> None:
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[_scalar_result(True), _list_result([])]
     )
     ops = AuditOperations(session)
 
-    page = asyncio.run(
-        ops.list_events(
-            uuid4(),
-            ListEventsFilter(organization_id=uuid4()),
-        )
+    page = await ops.list_events(
+        generate_id(),
+        ListEventsFilter(organization_id=generate_id()),
     )
 
     assert page.events == []
@@ -112,7 +105,7 @@ def _list_result(rows):
 
 def test_cursor_encode_decode_roundtrip() -> None:
     moment = datetime(2026, 5, 20, 12, 34, 56, tzinfo=UTC)
-    event_id = uuid4()
+    event_id = generate_id()
     token = _encode_cursor(moment, event_id)
     decoded_at, decoded_id = _decode_cursor(token)
     assert decoded_at == moment
@@ -125,17 +118,17 @@ def test_malformed_cursor_raises_validation_error() -> None:
 
 
 def test_filter_default_order_is_time_desc() -> None:
-    assert ListEventsFilter(organization_id=uuid4()).order is SortOrder.TIME_DESC
+    assert ListEventsFilter(organization_id=generate_id()).order is SortOrder.TIME_DESC
 
 
 def test_filter_accepts_time_asc_order() -> None:
-    f = ListEventsFilter(organization_id=uuid4(), order=SortOrder.TIME_ASC)
+    f = ListEventsFilter(organization_id=generate_id(), order=SortOrder.TIME_ASC)
     assert f.order is SortOrder.TIME_ASC
 
 
 def test_page_size_caps_at_max() -> None:
     page_size = ListEventsFilter(
-        organization_id=uuid4(),
+        organization_id=generate_id(),
         page_size=10_000,
     ).page_size
     assert page_size == 10_000  # filter holds raw value

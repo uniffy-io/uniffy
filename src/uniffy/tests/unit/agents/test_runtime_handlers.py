@@ -8,7 +8,6 @@ Valkey) so the suite asserts the contract, not the integration.
 
 from __future__ import annotations
 
-import asyncio
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
@@ -31,7 +30,7 @@ from uniffy.core.errors import (
     RateLimitExceededError,
 )
 from uniffy.core.models.agents.message import AgentMessage
-from uniffy.core.types import generate_id as uuid7
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import EventType, StreamEvent
 from uniffy.domains.agents.runtime import handlers as handlers_mod
 from uniffy.domains.agents.runtime.file_loader import FileContext
@@ -219,7 +218,7 @@ def _install_fixed_run_id(monkeypatch, run_id: UUID) -> None:
 
 def _make_user_message(session_id: UUID) -> AgentMessage:
     return AgentMessage(
-        id=uuid7(),
+        id=generate_id(),
         session_id=session_id,
         role="user",
         content="hi",
@@ -229,7 +228,7 @@ def _make_user_message(session_id: UUID) -> AgentMessage:
 
 def _make_assistant_message(session_id: UUID) -> AgentMessage:
     return AgentMessage(
-        id=uuid7(),
+        id=generate_id(),
         session_id=session_id,
         role="assistant",
         content="hello",
@@ -276,8 +275,8 @@ def _build_unary_request(
 
 
 class TestStreamSendMessage:
-    def test_invalid_uuid_short_circuits(self, monkeypatch) -> None:
-        _install_user_id(monkeypatch, uuid7())
+    async def test_invalid_uuid_short_circuits(self, monkeypatch) -> None:
+        _install_user_id(monkeypatch, generate_id())
         queue = _install_queue(monkeypatch)
         _install_open_session(monkeypatch)
 
@@ -295,16 +294,16 @@ class TestStreamSendMessage:
             assert exc_info.value.code == Code.INVALID_ARGUMENT
             return collected
 
-        asyncio.run(run())
+        await run()
         assert queue.enqueued == []
 
-    def test_empty_content_short_circuits(self, monkeypatch) -> None:
-        _install_user_id(monkeypatch, uuid7())
+    async def test_empty_content_short_circuits(self, monkeypatch) -> None:
+        _install_user_id(monkeypatch, generate_id())
         queue = _install_queue(monkeypatch)
 
         request = _build_request(
-            organization_id=uuid7(),
-            session_id=uuid7(),
+            organization_id=generate_id(),
+            session_id=generate_id(),
             content="   ",
         )
 
@@ -315,13 +314,13 @@ class TestStreamSendMessage:
                     pass
             assert exc_info.value.code == Code.INVALID_ARGUMENT
 
-        asyncio.run(run())
+        await run()
         assert queue.enqueued == []
 
-    def test_org_membership_failure_short_circuits_before_enqueue(
+    async def test_org_membership_failure_short_circuits_before_enqueue(
         self, monkeypatch
     ) -> None:
-        _install_user_id(monkeypatch, uuid7())
+        _install_user_id(monkeypatch, generate_id())
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch, factory=_FailingOrgOps)
         _install_session_ops(monkeypatch)
@@ -332,7 +331,7 @@ class TestStreamSendMessage:
         queue = _install_queue(monkeypatch)
         _install_subscribe(monkeypatch, [])
 
-        request = _build_request(organization_id=uuid7(), session_id=uuid7())
+        request = _build_request(organization_id=generate_id(), session_id=generate_id())
 
         async def run() -> None:
             handlers = RuntimeHandlers()
@@ -341,13 +340,13 @@ class TestStreamSendMessage:
                     pass
             assert exc_info.value.code == Code.PERMISSION_DENIED
 
-        asyncio.run(run())
+        await run()
         assert queue.enqueued == [], "no enqueue when org membership rejects"
 
-    def test_session_ownership_failure_short_circuits_before_enqueue(
+    async def test_session_ownership_failure_short_circuits_before_enqueue(
         self, monkeypatch
     ) -> None:
-        _install_user_id(monkeypatch, uuid7())
+        _install_user_id(monkeypatch, generate_id())
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch, factory=_FailingSessionOps)
@@ -358,7 +357,7 @@ class TestStreamSendMessage:
         queue = _install_queue(monkeypatch)
         _install_subscribe(monkeypatch, [])
 
-        request = _build_request(organization_id=uuid7(), session_id=uuid7())
+        request = _build_request(organization_id=generate_id(), session_id=generate_id())
 
         async def run() -> None:
             handlers = RuntimeHandlers()
@@ -367,13 +366,13 @@ class TestStreamSendMessage:
                     pass
             assert exc_info.value.code == Code.NOT_FOUND
 
-        asyncio.run(run())
+        await run()
         assert queue.enqueued == [], "no enqueue when session lookup fails"
 
-    def test_rate_limit_failure_short_circuits_before_enqueue(
+    async def test_rate_limit_failure_short_circuits_before_enqueue(
         self, monkeypatch
     ) -> None:
-        _install_user_id(monkeypatch, uuid7())
+        _install_user_id(monkeypatch, generate_id())
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
         _install_session_ops(monkeypatch)
@@ -386,7 +385,7 @@ class TestStreamSendMessage:
         queue = _install_queue(monkeypatch)
         _install_subscribe(monkeypatch, [])
 
-        request = _build_request(organization_id=uuid7(), session_id=uuid7())
+        request = _build_request(organization_id=generate_id(), session_id=generate_id())
 
         async def run() -> None:
             handlers = RuntimeHandlers()
@@ -395,16 +394,16 @@ class TestStreamSendMessage:
                     pass
             assert exc_info.value.code == Code.RESOURCE_EXHAUSTED
 
-        asyncio.run(run())
+        await run()
         assert queue.enqueued == [], "no enqueue when rate limit trips"
 
-    def test_happy_path_enqueues_and_yields_events_in_order(
+    async def test_happy_path_enqueues_and_yields_events_in_order(
         self, monkeypatch
     ) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
-        run_id = uuid7()
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
+        run_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -415,7 +414,7 @@ class TestStreamSendMessage:
             monkeypatch,
             files=[
                 FileContext(
-                    file_id=str(uuid7()),
+                    file_id=str(generate_id()),
                     media_type="image/png",
                     filename="a.png",
                     storage_key="org/a.png",
@@ -442,7 +441,7 @@ class TestStreamSendMessage:
         request = _build_request(
             organization_id=org_id,
             session_id=session_id,
-            file_ids=[str(uuid7())],
+            file_ids=[str(generate_id())],
             user_timezone="UTC",
         )
 
@@ -453,7 +452,7 @@ class TestStreamSendMessage:
                 collected.append(ev)
             return collected
 
-        collected = asyncio.run(run())
+        collected = await run()
 
         assert len(queue.enqueued) == 1
         name, args, kwargs = queue.enqueued[0]
@@ -489,11 +488,11 @@ class TestStreamSendMessage:
         for ev in collected:
             assert ev.event.run_id == str(run_id)
 
-    def test_subscribe_timeout_yields_synthetic_error(self, monkeypatch) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
-        run_id = uuid7()
+    async def test_subscribe_timeout_yields_synthetic_error(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
+        run_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -519,7 +518,7 @@ class TestStreamSendMessage:
                 collected.append(ev)
             return collected
 
-        collected = asyncio.run(run())
+        collected = await run()
         # run_id header + synthetic error proto envelope
         assert len(collected) == 2
         assert collected[0].event.run_id == str(run_id)
@@ -529,8 +528,8 @@ class TestStreamSendMessage:
 
 
 class TestSendMessageUnary:
-    def test_invalid_uuid_short_circuits(self, monkeypatch) -> None:
-        _install_user_id(monkeypatch, uuid7())
+    async def test_invalid_uuid_short_circuits(self, monkeypatch) -> None:
+        _install_user_id(monkeypatch, generate_id())
         queue = _install_queue(monkeypatch)
 
         request = SendMessageRequest()
@@ -543,15 +542,15 @@ class TestSendMessageUnary:
             return await handlers.send_message(request, ctx=MagicMock())
 
         with pytest.raises(ConnectError) as exc_info:
-            asyncio.run(run())
+            await run()
         assert exc_info.value.code == Code.INVALID_ARGUMENT
         assert queue.enqueued == []
 
-    def test_drains_stream_and_returns_final_tuple(self, monkeypatch) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
-        run_id = uuid7()
+    async def test_drains_stream_and_returns_final_tuple(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
+        run_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -581,16 +580,16 @@ class TestSendMessageUnary:
             handlers = RuntimeHandlers()
             return await handlers.send_message(request, ctx=MagicMock())
 
-        response = asyncio.run(run())
+        response = await run()
         assert response.user_message.id == str(user_msg.id)
         assert response.assistant_message.id == str(assistant_msg.id)
         assert response.model_used == "claude-sonnet-4-6"
 
-    def test_runtime_error_event_surfaces_as_connect_error(self, monkeypatch) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
-        run_id = uuid7()
+    async def test_runtime_error_event_surfaces_as_connect_error(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
+        run_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -614,17 +613,17 @@ class TestSendMessageUnary:
             return await handlers.send_message(request, ctx=MagicMock())
 
         with pytest.raises(ConnectError) as exc_info:
-            asyncio.run(run())
+            await run()
         assert exc_info.value.code == Code.INTERNAL
         assert "provider blew up" in exc_info.value.message
 
-    def test_subscribe_timeout_surfaces_as_deadline_exceeded(
+    async def test_subscribe_timeout_surfaces_as_deadline_exceeded(
         self, monkeypatch
     ) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
-        run_id = uuid7()
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
+        run_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -648,7 +647,7 @@ class TestSendMessageUnary:
             return await handlers.send_message(request, ctx=MagicMock())
 
         with pytest.raises(ConnectError) as exc_info:
-            asyncio.run(run())
+            await run()
         assert exc_info.value.code == Code.DEADLINE_EXCEEDED
         assert exc_info.value.message == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
 
@@ -675,8 +674,8 @@ def _build_subscribe_request(
 
 
 class TestSubscribeToRun:
-    def test_invalid_uuid_returns_invalid_argument(self, monkeypatch) -> None:
-        _install_user_id(monkeypatch, uuid7())
+    async def test_invalid_uuid_returns_invalid_argument(self, monkeypatch) -> None:
+        _install_user_id(monkeypatch, generate_id())
         _install_run_state(monkeypatch, None)
 
         request = SubscribeToRunRequest()
@@ -690,14 +689,14 @@ class TestSubscribeToRun:
                     pass
             assert exc_info.value.code == Code.INVALID_ARGUMENT
 
-        asyncio.run(drive())
+        await drive()
 
-    def test_state_missing_maps_to_not_found(self, monkeypatch) -> None:
-        _install_user_id(monkeypatch, uuid7())
+    async def test_state_missing_maps_to_not_found(self, monkeypatch) -> None:
+        _install_user_id(monkeypatch, generate_id())
         _install_run_state(monkeypatch, None)
         _install_subscribe(monkeypatch, [])
 
-        request = _build_subscribe_request(run_id=uuid7(), organization_id=uuid7())
+        request = _build_subscribe_request(run_id=generate_id(), organization_id=generate_id())
 
         async def drive() -> None:
             handlers = RuntimeHandlers()
@@ -706,13 +705,13 @@ class TestSubscribeToRun:
                     pass
             assert exc_info.value.code == Code.NOT_FOUND
 
-        asyncio.run(drive())
+        await drive()
 
-    def test_user_mismatch_maps_to_permission_denied(self, monkeypatch) -> None:
-        caller = uuid7()
-        owner = uuid7()
-        org_id = uuid7()
-        run_id = uuid7()
+    async def test_user_mismatch_maps_to_permission_denied(self, monkeypatch) -> None:
+        caller = generate_id()
+        owner = generate_id()
+        org_id = generate_id()
+        run_id = generate_id()
         _install_user_id(monkeypatch, caller)
         _install_run_state(
             monkeypatch,
@@ -720,7 +719,7 @@ class TestSubscribeToRun:
                 "run_id": str(run_id),
                 "user_id": str(owner),
                 "organization_id": str(org_id),
-                "session_id": str(uuid7()),
+                "session_id": str(generate_id()),
                 "status": "running",
                 "last_seq": 1,
             },
@@ -736,13 +735,13 @@ class TestSubscribeToRun:
                     pass
             assert exc_info.value.code == Code.PERMISSION_DENIED
 
-        asyncio.run(drive())
+        await drive()
 
-    def test_org_mismatch_maps_to_permission_denied(self, monkeypatch) -> None:
-        user_id = uuid7()
-        run_id = uuid7()
-        request_org = uuid7()
-        state_org = uuid7()
+    async def test_org_mismatch_maps_to_permission_denied(self, monkeypatch) -> None:
+        user_id = generate_id()
+        run_id = generate_id()
+        request_org = generate_id()
+        state_org = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_run_state(
             monkeypatch,
@@ -750,7 +749,7 @@ class TestSubscribeToRun:
                 "run_id": str(run_id),
                 "user_id": str(user_id),
                 "organization_id": str(state_org),
-                "session_id": str(uuid7()),
+                "session_id": str(generate_id()),
                 "status": "running",
                 "last_seq": 1,
             },
@@ -766,13 +765,13 @@ class TestSubscribeToRun:
                     pass
             assert exc_info.value.code == Code.PERMISSION_DENIED
 
-        asyncio.run(drive())
+        await drive()
 
-    def test_happy_path_replays_events_with_run_id_header(self, monkeypatch) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
-        run_id = uuid7()
+    async def test_happy_path_replays_events_with_run_id_header(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
+        run_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_run_state(
             monkeypatch,
@@ -804,7 +803,7 @@ class TestSubscribeToRun:
                 collected.append(ev)
             return collected
 
-        collected = asyncio.run(drive())
+        collected = await drive()
 
         assert captured == [run_id]
         # First event is the run_id header (no oneof set).
@@ -818,7 +817,7 @@ class TestSubscribeToRun:
 
 
 class TestSubscribeRuntimeEvents:
-    def test_yields_synthetic_error_when_wall_budget_elapsed(
+    async def test_yields_synthetic_error_when_wall_budget_elapsed(
         self, monkeypatch
     ) -> None:
         async def empty_xread(*_args: Any, **_kwargs: Any) -> list[Any]:
@@ -834,22 +833,22 @@ class TestSubscribeRuntimeEvents:
 
         async def drive() -> list[StreamEvent]:
             collected: list[StreamEvent] = []
-            async for ev in handlers_mod._subscribe_runtime_events(uuid7()):
+            async for ev in handlers_mod._subscribe_runtime_events(generate_id()):
                 collected.append(ev)
             return collected
 
-        collected = asyncio.run(drive())
+        collected = await drive()
         assert len(collected) == 1
         assert collected[0].type is EventType.ERROR
         assert collected[0].error == handlers_mod.SUBSCRIBE_TIMEOUT_MESSAGE
 
-    def test_decodes_and_yields_events_in_order(self, monkeypatch) -> None:
+    async def test_decodes_and_yields_events_in_order(self, monkeypatch) -> None:
         from uniffy.domains.agents.runtime.converters import (
             runtime_stream_event_to_json,
         )
 
-        run_id = uuid7()
-        session_id = uuid7()
+        run_id = generate_id()
+        session_id = generate_id()
         events: list[StreamEvent] = [
             StreamEvent(type=EventType.TEXT_BLOCK_DELTA, delta="hello", sequence=1),
             StreamEvent(type=EventType.DONE, 
@@ -877,7 +876,7 @@ class TestSubscribeRuntimeEvents:
                 collected.append(ev)
             return collected
 
-        collected = asyncio.run(drive())
+        collected = await drive()
         types = [ev.type for ev in collected]
         assert types == [EventType.TEXT_BLOCK_DELTA, EventType.DONE]
 
@@ -929,10 +928,10 @@ def _build_confirmation_request(
 
 
 class TestRespondToConfirmation:
-    def test_actor_match_approves(self, monkeypatch) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
+    async def test_actor_match_approves(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -946,7 +945,7 @@ class TestRespondToConfirmation:
         async def drive() -> Any:
             return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
 
-        resp = asyncio.run(drive())
+        resp = await drive()
         assert resp.accepted is True
         assert store.respond_calls == [
             {
@@ -957,11 +956,11 @@ class TestRespondToConfirmation:
             }
         ]
 
-    def test_foreign_caller_rejected(self, monkeypatch) -> None:
-        caller = uuid7()
-        owner = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
+    async def test_foreign_caller_rejected(self, monkeypatch) -> None:
+        caller = generate_id()
+        owner = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
         _install_user_id(monkeypatch, caller)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -976,14 +975,14 @@ class TestRespondToConfirmation:
             return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
 
         with pytest.raises(ConnectError) as exc:
-            asyncio.run(drive())
+            await drive()
         assert exc.value.code == Code.PERMISSION_DENIED
         assert store.respond_calls == []
 
-    def test_missing_approval_returns_not_found(self, monkeypatch) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
+    async def test_missing_approval_returns_not_found(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch)
@@ -998,14 +997,14 @@ class TestRespondToConfirmation:
             return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
 
         with pytest.raises(ConnectError) as exc:
-            asyncio.run(drive())
+            await drive()
         assert exc.value.code == Code.NOT_FOUND
         assert store.respond_calls == []
 
-    def test_non_member_rejected(self, monkeypatch) -> None:
-        user_id = uuid7()
-        org_id = uuid7()
-        session_id = uuid7()
+    async def test_non_member_rejected(self, monkeypatch) -> None:
+        user_id = generate_id()
+        org_id = generate_id()
+        session_id = generate_id()
         _install_user_id(monkeypatch, user_id)
         _install_open_session(monkeypatch)
         _install_org_ops(monkeypatch, factory=_FailingOrgOps)
@@ -1020,6 +1019,6 @@ class TestRespondToConfirmation:
             return await RuntimeHandlers().respond_to_confirmation(request, ctx=MagicMock())
 
         with pytest.raises(ConnectError) as exc:
-            asyncio.run(drive())
+            await drive()
         assert exc.value.code == Code.PERMISSION_DENIED
         assert store.respond_calls == []

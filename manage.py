@@ -597,7 +597,7 @@ def format_cmd(stack):
 @click.option("--service", "-s", type=click.Choice(["backend", "ui", "cli", "integration"]), default="backend", show_default=True)
 @stack_option
 def test(service, stack):
-    """Run tests for a service (integration = live-provider tests, needs API keys)."""
+    """Run tests for a service (integration needs live services; the provider suite costs money)."""
     if service == "backend":
         workspace_cmd("backend", stack, ["run", "pytest", "src/uniffy/tests/unit/"])
     elif service == "integration":

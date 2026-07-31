@@ -12,19 +12,13 @@ database. We intercept ``session.execute`` and compile the constructed query to
 SQL text, then assert the access-filter predicates are present.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
-from uniffy.core.types import ContentType
+from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
 
 _MEMBERS_TABLE = "permissions_content_members"
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _make_ops(*, is_admin: bool) -> NoteOperations:
@@ -56,32 +50,32 @@ def _capture_executes(ops: NoteOperations) -> list[str]:
     return captured
 
 
-def test_org_admin_still_gets_access_filter() -> None:
+async def test_org_admin_still_gets_access_filter() -> None:
     ops = _make_ops(is_admin=True)
     captured = _capture_executes(ops)
 
-    _run(ops.list_notes(user_id=uuid4(), organization_id=uuid4()))
+    await ops.list_notes(user_id=generate_id(), organization_id=generate_id())
 
     # The access filter joins the content-members table for explicit/blocked
     # grants; its presence proves the admin did not bypass the filter.
     assert any(_MEMBERS_TABLE in sql for sql in captured)
 
 
-def test_regular_member_gets_access_filter() -> None:
+async def test_regular_member_gets_access_filter() -> None:
     ops = _make_ops(is_admin=False)
     captured = _capture_executes(ops)
 
-    _run(ops.list_notes(user_id=uuid4(), organization_id=uuid4()))
+    await ops.list_notes(user_id=generate_id(), organization_id=generate_id())
 
     assert any(_MEMBERS_TABLE in sql for sql in captured)
 
 
-def test_personal_only_is_owner_scoped_without_member_join() -> None:
+async def test_personal_only_is_owner_scoped_without_member_join() -> None:
     ops = _make_ops(is_admin=True)
     captured = _capture_executes(ops)
-    user_id = uuid4()
+    user_id = generate_id()
 
-    _run(ops.list_notes(user_id=user_id, organization_id=uuid4(), personal_only=True))
+    await ops.list_notes(user_id=user_id, organization_id=generate_id(), personal_only=True)
 
     data_sql = [sql for sql in captured if "owner_id" in sql]
     assert data_sql, "expected an owner-scoped predicate"

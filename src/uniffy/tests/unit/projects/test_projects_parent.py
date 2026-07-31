@@ -1,22 +1,17 @@
 """Unit tests for parent-chain validation on tasks.
 
-Mirrors the harness used by ``test_projects_tags.py`` (``asyncio.run`` +
-``MagicMock`` session) and exercises ``_validate_no_circular_parent`` on the
-update and create paths.
+Exercises ``_validate_no_circular_parent`` on the update and create paths
+against a ``MagicMock`` session.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.types import generate_id
 from uniffy.domains.projects.operations import TaskOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 def _make_ops() -> TaskOperations:
@@ -51,78 +46,84 @@ def _chain_session(parents_by_id: dict[UUID, UUID | None]) -> AsyncMock:
 
 
 class TestValidateNoCircularParent:
-    def test_self_parent_rejected(self) -> None:
+    async def test_self_parent_rejected(self) -> None:
         ops = _make_ops()
-        task_id = uuid4()
+        task_id = generate_id()
         with pytest.raises(ValidationError, match="own parent"):
-            _run(ops._validate_no_circular_parent(task_id, task_id))
+            await ops._validate_no_circular_parent(task_id, task_id)
 
-    def test_two_node_cycle_rejected(self) -> None:
+    async def test_two_node_cycle_rejected(self) -> None:
         ops = _make_ops()
-        task_id = uuid4()
-        parent_id = uuid4()
+        task_id = generate_id()
+        parent_id = generate_id()
         # parent_id's parent is task_id - completing the cycle one hop up.
         ops.session.execute = _chain_session({parent_id: task_id})
         with pytest.raises(ValidationError, match="loop"):
-            _run(ops._validate_no_circular_parent(task_id, parent_id))
+            await ops._validate_no_circular_parent(task_id, parent_id)
 
-    def test_five_node_cycle_rejected(self) -> None:
+    async def test_five_node_cycle_rejected(self) -> None:
         ops = _make_ops()
-        task_id = uuid4()
-        a, b, c, d = uuid4(), uuid4(), uuid4(), uuid4()
+        task_id = generate_id()
+        a, b, c, d = generate_id(), generate_id(), generate_id(), generate_id()
         # Walking up from a -> b -> c -> d -> task_id closes a 5-node loop.
         ops.session.execute = _chain_session(
             {a: b, b: c, c: d, d: task_id},
         )
         with pytest.raises(ValidationError, match="loop"):
-            _run(ops._validate_no_circular_parent(task_id, a))
+            await ops._validate_no_circular_parent(task_id, a)
 
-    def test_depth_five_chain_allowed(self) -> None:
+    async def test_depth_five_chain_allowed(self) -> None:
         ops = _make_ops()
-        task_id = uuid4()
+        task_id = generate_id()
         # Depth 5: task_id sits below 5 ancestors. Walking up from p1 visits
         # p1..p5; the validator counts depth=1 at p1 and depth=5 at p5, then
         # finds None and returns cleanly.
-        p1, p2, p3, p4, p5 = uuid4(), uuid4(), uuid4(), uuid4(), uuid4()
+        p1, p2, p3, p4, p5 = (
+            generate_id(),
+            generate_id(),
+            generate_id(),
+            generate_id(),
+            generate_id(),
+        )
         ops.session.execute = _chain_session(
             {p1: p2, p2: p3, p3: p4, p4: p5, p5: None},
         )
-        _run(ops._validate_no_circular_parent(task_id, p1))
+        await ops._validate_no_circular_parent(task_id, p1)
 
-    def test_depth_six_chain_rejected(self) -> None:
+    async def test_depth_six_chain_rejected(self) -> None:
         ops = _make_ops()
-        task_id = uuid4()
-        p1, p2, p3, p4, p5, p6 = (uuid4() for _ in range(6))
+        task_id = generate_id()
+        p1, p2, p3, p4, p5, p6 = (generate_id() for _ in range(6))
         ops.session.execute = _chain_session(
             {p1: p2, p2: p3, p3: p4, p4: p5, p5: p6, p6: None},
         )
         with pytest.raises(ValidationError, match="depth"):
-            _run(ops._validate_no_circular_parent(task_id, p1))
+            await ops._validate_no_circular_parent(task_id, p1)
 
-    def test_existing_chain_cycle_rejected(self) -> None:
+    async def test_existing_chain_cycle_rejected(self) -> None:
         ops = _make_ops()
-        task_id = uuid4()
-        a, b = uuid4(), uuid4()
+        task_id = generate_id()
+        a, b = generate_id(), generate_id()
         # a <-> b loop that does not involve task_id - validator should still
         # bail out instead of spinning forever.
         ops.session.execute = _chain_session({a: b, b: a})
         with pytest.raises(ValidationError, match="cycle"):
-            _run(ops._validate_no_circular_parent(task_id, a))
+            await ops._validate_no_circular_parent(task_id, a)
 
-    def test_create_path_skips_cycle_check(self) -> None:
+    async def test_create_path_skips_cycle_check(self) -> None:
         ops = _make_ops()
         # Create path passes task_id=None. The chain walks up and terminates
         # normally; depth limits still apply but cycles cannot be detected
         # because the new task is not yet anyone's ancestor.
-        parent = uuid4()
+        parent = generate_id()
         ops.session.execute = _chain_session({parent: None})
-        _run(ops._validate_no_circular_parent(None, parent))
+        await ops._validate_no_circular_parent(None, parent)
 
-    def test_create_path_still_enforces_depth(self) -> None:
+    async def test_create_path_still_enforces_depth(self) -> None:
         ops = _make_ops()
-        p1, p2, p3, p4, p5, p6 = (uuid4() for _ in range(6))
+        p1, p2, p3, p4, p5, p6 = (generate_id() for _ in range(6))
         ops.session.execute = _chain_session(
             {p1: p2, p2: p3, p3: p4, p4: p5, p5: p6, p6: None},
         )
         with pytest.raises(ValidationError, match="depth"):
-            _run(ops._validate_no_circular_parent(None, p1))
+            await ops._validate_no_circular_parent(None, p1)

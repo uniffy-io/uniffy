@@ -1,18 +1,13 @@
 """Generic OrgSettingsOperations CRUD with the cipher + session mocked."""
 
-import asyncio
 from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 
+from uniffy.core.types import generate_id
 from uniffy.domains.org_settings.operations import OrgSettingsOperations
-
-
-def _run(coro):
-    return asyncio.run(coro)
 
 
 @dataclass
@@ -48,8 +43,8 @@ def _patch_cipher(*, encrypt_to: str = "v1:cipher", decrypt_to: str = "plain"):
 
 
 class TestGetNamespace:
-    def test_returns_keyed_map(self) -> None:
-        org_id = uuid4()
+    async def test_returns_keyed_map(self) -> None:
+        org_id = generate_id()
         rows = [
             _Row("from_address", value="x@y.com"),
             _Row("smtp_host", value="smtp.test"),
@@ -58,25 +53,23 @@ class TestGetNamespace:
         patcher, _cipher = _patch_cipher()
         with patcher:
             ops = OrgSettingsOperations(session)
-            out = _run(ops.get_namespace(org_id, "mail"))
+            out = await ops.get_namespace(org_id, "mail")
         assert set(out) == {"from_address", "smtp_host"}
         assert out["from_address"].value == "x@y.com"
 
 
 class TestSet:
-    def test_plain_row_writes_value_column(self) -> None:
+    async def test_plain_row_writes_value_column(self) -> None:
         session = _session()
         patcher, cipher = _patch_cipher()
         with patcher:
             ops = OrgSettingsOperations(session)
-            _run(
-                ops.set(
-                    organization_id=uuid4(),
-                    namespace="mail",
-                    key="from_address",
-                    value="no-reply@uniffy.io",
-                    is_secret=False,
-                )
+            await ops.set(
+                organization_id=generate_id(),
+                namespace="mail",
+                key="from_address",
+                value="no-reply@uniffy.io",
+                is_secret=False,
             )
         cipher.encrypt.assert_not_awaited()
         stmt = session.execute.call_args.args[0]
@@ -87,19 +80,17 @@ class TestSet:
         assert values["namespace"] == "mail"
         assert values["key"] == "from_address"
 
-    def test_secret_row_encrypts_and_writes_ciphertext_column(self) -> None:
+    async def test_secret_row_encrypts_and_writes_ciphertext_column(self) -> None:
         session = _session()
         patcher, cipher = _patch_cipher(encrypt_to="v1:abc")
         with patcher:
             ops = OrgSettingsOperations(session)
-            _run(
-                ops.set(
-                    organization_id=uuid4(),
-                    namespace="mail",
-                    key="smtp_password",
-                    value="supersecret",
-                    is_secret=True,
-                )
+            await ops.set(
+                organization_id=generate_id(),
+                namespace="mail",
+                key="smtp_password",
+                value="supersecret",
+                is_secret=True,
             )
         cipher.encrypt.assert_awaited_once_with(
             cipher.encrypt.await_args.args[0], "supersecret"
@@ -114,25 +105,23 @@ class TestSet:
             v for v in values.values() if isinstance(v, str)
         }
 
-    def test_secret_rejects_non_string_value(self) -> None:
+    async def test_secret_rejects_non_string_value(self) -> None:
         session = _session()
         patcher, _cipher = _patch_cipher()
         with patcher:
             ops = OrgSettingsOperations(session)
             with pytest.raises(TypeError):
-                _run(
-                    ops.set(
-                        organization_id=uuid4(),
-                        namespace="mail",
-                        key="smtp_password",
-                        value=12345,
-                        is_secret=True,
-                    )
+                await ops.set(
+                    organization_id=generate_id(),
+                    namespace="mail",
+                    key="smtp_password",
+                    value=12345,
+                    is_secret=True,
                 )
 
 
 class TestGetSecret:
-    def test_returns_decrypted_plaintext(self) -> None:
+    async def test_returns_decrypted_plaintext(self) -> None:
         row = _Row(
             "smtp_password",
             value_encrypted="v1:cipher",
@@ -142,23 +131,23 @@ class TestGetSecret:
         patcher, _cipher = _patch_cipher(decrypt_to="real-password")
         with patcher:
             ops = OrgSettingsOperations(session)
-            out = _run(ops.get_secret(uuid4(), "mail", "smtp_password"))
+            out = await ops.get_secret(generate_id(), "mail", "smtp_password")
         assert out == "real-password"
 
-    def test_returns_none_for_missing_or_non_secret(self) -> None:
+    async def test_returns_none_for_missing_or_non_secret(self) -> None:
         patcher, _cipher = _patch_cipher()
         with patcher:
             ops = OrgSettingsOperations(_session(None))
-            assert _run(ops.get_secret(uuid4(), "mail", "smtp_password")) is None
+            assert await ops.get_secret(generate_id(), "mail", "smtp_password") is None
 
         plain_row = _Row("from_address", value="x@y.com", is_secret=False)
         with patcher:
             ops = OrgSettingsOperations(_session(plain_row))
-            assert _run(ops.get_secret(uuid4(), "mail", "from_address")) is None
+            assert await ops.get_secret(generate_id(), "mail", "from_address") is None
 
 
 class TestDelete:
-    def test_delete_key_returns_true_on_hit(self) -> None:
+    async def test_delete_key_returns_true_on_hit(self) -> None:
         session = AsyncMock()
         result = AsyncMock()
         result.rowcount = 1
@@ -166,15 +155,13 @@ class TestDelete:
         patcher, _cipher = _patch_cipher()
         with patcher:
             ops = OrgSettingsOperations(session)
-            assert _run(
-                ops.delete_key(
-                    organization_id=uuid4(),
+            assert await ops.delete_key(
+                    organization_id=generate_id(),
                     namespace="mail",
                     key="from_address",
-                )
-            ) is True
+                ) is True
 
-    def test_delete_namespace_returns_count(self) -> None:
+    async def test_delete_namespace_returns_count(self) -> None:
         session = AsyncMock()
         result = AsyncMock()
         result.rowcount = 5
@@ -182,9 +169,7 @@ class TestDelete:
         patcher, _cipher = _patch_cipher()
         with patcher:
             ops = OrgSettingsOperations(session)
-            assert _run(
-                ops.delete_namespace(organization_id=uuid4(), namespace="mail")
-            ) == 5
+            assert await ops.delete_namespace(organization_id=generate_id(), namespace="mail") == 5
 
 
 class TestConsumerRegistration:
