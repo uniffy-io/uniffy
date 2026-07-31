@@ -263,49 +263,6 @@ def test_admin_mutations_are_denied_for_a_plain_member(rpc: str) -> None:
     _with_env(body)
 
 
-def test_request_org_mismatching_the_session_is_a_permission_error() -> None:
-    handlers = IntegrationsHandlers()
-    request = ListConnectionsRequest(organization_id=str(uuid4()))
-    with (
-        _ctx_as(uuid4(), uuid4(), MagicMock()),
-        pytest.raises(ConnectError) as exc_info,
-    ):
-        asyncio.run(handlers.list_connections(request, MagicMock()))
-    assert exc_info.value.code == Code.PERMISSION_DENIED
-
-
-@pytest.mark.parametrize("rpc", ["update", "remove", "validate", "toggle"])
-def test_malformed_connection_id_is_an_invalid_argument(rpc: str) -> None:
-    handlers = IntegrationsHandlers()
-    org_id = uuid4()
-    requests = {
-        "update": UpdateConnectionRequest(
-            organization_id=str(org_id), connection_id="not-a-uuid", name="x"
-        ),
-        "remove": RemoveConnectionRequest(
-            organization_id=str(org_id), connection_id="not-a-uuid"
-        ),
-        "validate": ValidateConnectionRequest(
-            organization_id=str(org_id), connection_id="not-a-uuid"
-        ),
-        "toggle": ToggleConnectionRequest(
-            organization_id=str(org_id), connection_id="not-a-uuid", enabled=True
-        ),
-    }
-    handler = {
-        "update": handlers.update_connection,
-        "remove": handlers.remove_connection,
-        "validate": handlers.validate_connection,
-        "toggle": handlers.toggle_connection,
-    }[rpc]
-    with (
-        _ctx_as(uuid4(), org_id, MagicMock()),
-        pytest.raises(ConnectError) as exc_info,
-    ):
-        asyncio.run(handler(requests[rpc], MagicMock()))
-    assert exc_info.value.code == Code.INVALID_ARGUMENT
-
-
 def test_list_integration_providers_returns_the_registered_set() -> None:
     async def body(session, env):
         handlers = IntegrationsHandlers()

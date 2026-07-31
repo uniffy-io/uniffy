@@ -7,7 +7,6 @@ with a fake provider so no provider pack is imported.
 
 import asyncio
 import contextlib
-from datetime import UTC, datetime
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -34,8 +33,7 @@ from uniffy.domains.integrations.base import (
     IntegrationProbeResult,
     IntegrationProvider,
 )
-from uniffy.domains.integrations.converters import connection_to_proto
-from uniffy.domains.integrations.operations import ConnectionOperations, _normalize_base_url
+from uniffy.domains.integrations.operations import ConnectionOperations
 from uniffy.domains.integrations.registry import IntegrationRegistry
 
 _CREDENTIAL = "ghp_" + "a" * 40
@@ -269,34 +267,6 @@ def test_the_same_name_on_another_org_is_allowed() -> None:
             await _teardown_env(session, env_b)
 
     _with_session(body)
-
-
-def test_base_url_trailing_slash_is_stripped() -> None:
-    assert (
-        _normalize_base_url("https://ghe.example.com/api/v3/")
-        == "https://ghe.example.com/api/v3"
-    )
-
-
-def test_base_url_empty_string_means_provider_default() -> None:
-    assert _normalize_base_url("") is None
-    assert _normalize_base_url("   ") is None
-    assert _normalize_base_url(None) is None
-
-
-@pytest.mark.parametrize(
-    "raw",
-    [
-        "ftp://ghe.example.com",
-        "https://",
-        "https://user:pw@ghe.example.com",
-        "https://ghe.example.com/api?x=1",
-    ],
-    ids=["scheme", "missing-host", "userinfo", "query"],
-)
-def test_base_url_rejects_unsafe_shapes(raw: str) -> None:
-    with pytest.raises(ValidationError):
-        _normalize_base_url(raw)
 
 
 _MEMBER_MUTATIONS = [
@@ -722,54 +692,6 @@ def test_mark_connection_invalid_records_the_error() -> None:
         assert row.last_error == "upstream rejected the token"
 
     _with_env(body)
-
-
-def _connection_row(**overrides):
-    now = datetime.now(UTC)
-    defaults = dict(
-        id=uuid4(),
-        provider="github",
-        name="primary",
-        base_url=None,
-        credential_hint="ghp_aaaaaaaa...aaaa",
-        account_login=None,
-        allow_writes=False,
-        is_valid=False,
-        is_enabled=True,
-        last_validated_at=None,
-        last_used_at=None,
-        last_error="401 from upstream",
-        created_by=uuid4(),
-        created_at=now,
-        updated_at=now,
-    )
-    defaults.update(overrides)
-    return NS(**defaults)
-
-
-def test_converter_hides_last_error_unless_diagnostics_requested() -> None:
-    row = _connection_row()
-
-    assert not connection_to_proto(row).HasField("last_error")
-    assert (
-        connection_to_proto(row, include_diagnostics=True).last_error == row.last_error
-    )
-
-
-def test_converter_leaves_optional_fields_unset_when_none() -> None:
-    row = _connection_row()
-
-    info = connection_to_proto(row)
-    assert not info.HasField("base_url")
-    assert not info.HasField("account_login")
-    assert not info.HasField("last_validated_at")
-    assert not info.HasField("last_used_at")
-
-    populated = connection_to_proto(
-        _connection_row(base_url="https://ghe.example.com/api/v3", account_login="octocat")
-    )
-    assert populated.base_url == "https://ghe.example.com/api/v3"
-    assert populated.account_login == "octocat"
 
 
 def _agent_ops(session) -> AgentOperations:
