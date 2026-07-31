@@ -4,12 +4,11 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from uniffy.core.types import AccessMode
+from uniffy.domains.agents.tools.builtin.args import parse_uuid, parse_uuid_list
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
 from uniffy.domains.tags import TagOperations
 
 _RECURRENCE_VALUES = ("NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "YEARLY")
-_ACCESS_MODE_VALUES = ("OWNER_ONLY", "EXPLICIT_MEMBERS", "OPEN_TO_ORG")
 _ATTENDEE_ROLE_VALUES = ("REQUIRED", "OPTIONAL")
 _RSVP_VALUES = ("ACCEPTED", "TENTATIVE", "DECLINED")
 
@@ -50,28 +49,6 @@ def _parse_datetime(value: str, user_timezone: str | None = None) -> datetime | 
     return dt.replace(tzinfo=local_tz).astimezone(UTC)
 
 
-def _parse_uuid(value: str, field_name: str) -> tuple[UUID | None, str | None]:
-    """Parse a UUID string, returning (uuid, error)."""
-    try:
-        return UUID(value), None
-    except ValueError:
-        return None, f"Invalid {field_name}: {value}"
-
-
-def _parse_uuid_list(
-    values: list,
-    field_name: str,
-) -> tuple[list[UUID] | None, str | None]:
-    """Parse a list of UUID strings, returning (uuids, error)."""
-    uuids: list[UUID] = []
-    for v in values:
-        parsed, err = _parse_uuid(str(v), field_name)
-        if err:
-            return None, err
-        uuids.append(parsed)  # type: ignore[arg-type]
-    return uuids, None
-
-
 async def _format_event_result(
     prefix: str,
     event,
@@ -104,8 +81,6 @@ async def _format_event_result(
         fields.append(f"Meeting URL: {event.meeting_url}")
     if event.channel_id:
         fields.append(f"Meeting channel: {event.channel_id}")
-    if event.access_mode:
-        fields.append(f"Access mode: {event.access_mode.value}")
     if event.is_focus_time:
         fields.append("Focus time: yes")
     if event.recurrence_pattern and event.recurrence_pattern.value != "NONE":
@@ -168,13 +143,13 @@ async def _execute_list_events(ctx: ToolContext, args: dict) -> ToolResult:
 
     raw_cal_ids = args.get("calendar_ids")
     if raw_cal_ids:
-        calendar_ids, err = _parse_uuid_list(raw_cal_ids, "calendar_ids")
+        calendar_ids, err = parse_uuid_list(raw_cal_ids, "calendar_ids")
         if err:
             return ToolResult(success=False, data="", error=err)
 
     raw_cat_ids = args.get("category_ids")
     if raw_cat_ids:
-        category_ids, err = _parse_uuid_list(raw_cat_ids, "category_ids")
+        category_ids, err = parse_uuid_list(raw_cat_ids, "category_ids")
         if err:
             return ToolResult(success=False, data="", error=err)
 
@@ -220,7 +195,7 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
     if not event_id_str:
         return ToolResult(success=False, data="", error="event_id is required")
 
-    event_id, err = _parse_uuid(event_id_str, "event_id")
+    event_id, err = parse_uuid(event_id_str, "event_id")
     if err:
         return ToolResult(success=False, data="", error=err)
 
@@ -322,34 +297,24 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     if "is_focus_time" in args:
         kwargs["is_focus_time"] = bool(args["is_focus_time"])
     if "tag_ids" in args and isinstance(args["tag_ids"], list):
-        tag_ids, tag_err = _parse_uuid_list(args["tag_ids"], "tag_ids")
+        tag_ids, tag_err = parse_uuid_list(args["tag_ids"], "tag_ids")
         if tag_err:
             return ToolResult(success=False, data="", error=tag_err)
         kwargs["tag_ids"] = tag_ids
     if "reminders" in args and isinstance(args["reminders"], list):
         kwargs["reminders"] = [int(m) for m in args["reminders"]]
 
-    # Access mode (handled separately from the normal update path; see
-    # permissions.v1.MembersService.SetAccessMode for changing policy on
-    # an existing event).
-    raw_mode = args.get("access_mode")
-    if raw_mode:
-        mode_upper = str(raw_mode).upper()
-        if mode_upper not in _ACCESS_MODE_VALUES:
-            return ToolResult(
-                success=False,
-                data="",
-                error=(
-                    f"Invalid access_mode: {raw_mode}. "
-                    f"Must be one of: {', '.join(_ACCESS_MODE_VALUES)}"
-                ),
-            )
-        kwargs["access_mode"] = AccessMode(mode_upper)
+    raw_room = args.get("room_id")
+    if raw_room:
+        room_id, err = parse_uuid(str(raw_room), "room_id")
+        if err:
+            return ToolResult(success=False, data="", error=err)
+        kwargs["room_id"] = room_id
 
     # Category
     raw_cat = args.get("category_id")
     if raw_cat:
-        cat_id, err = _parse_uuid(str(raw_cat), "category_id")
+        cat_id, err = parse_uuid(str(raw_cat), "category_id")
         if err:
             return ToolResult(success=False, data="", error=err)
         kwargs["category_id"] = cat_id
@@ -357,7 +322,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
     # Attendees
     raw_attendees = args.get("attendee_ids")
     if raw_attendees and isinstance(raw_attendees, list):
-        att_ids, err = _parse_uuid_list(raw_attendees, "attendee_ids")
+        att_ids, err = parse_uuid_list(raw_attendees, "attendee_ids")
         if err:
             return ToolResult(success=False, data="", error=err)
         kwargs["attendee_ids"] = att_ids
@@ -415,7 +380,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
     if not event_id_str:
         return ToolResult(success=False, data="", error="event_id is required")
 
-    event_id, err = _parse_uuid(event_id_str, "event_id")
+    event_id, err = parse_uuid(event_id_str, "event_id")
     if err:
         return ToolResult(success=False, data="", error=err)
 
@@ -446,7 +411,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     # Tags - replacement set of unified-tag ids (UUID strings).
     if "tag_ids" in args and isinstance(args["tag_ids"], list):
-        tag_ids, tag_err = _parse_uuid_list(args["tag_ids"], "tag_ids")
+        tag_ids, tag_err = parse_uuid_list(args["tag_ids"], "tag_ids")
         if tag_err:
             return ToolResult(success=False, data="", error=tag_err)
         kwargs["tag_ids"] = tag_ids
@@ -455,27 +420,10 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
     if "reminders" in args and isinstance(args["reminders"], list):
         kwargs["reminders"] = [int(m) for m in args["reminders"]]
 
-    # Access mode (handled separately from the normal update path; see
-    # permissions.v1.MembersService.SetAccessMode for changing policy on
-    # an existing event).
-    raw_mode = args.get("access_mode")
-    if raw_mode:
-        mode_upper = str(raw_mode).upper()
-        if mode_upper not in _ACCESS_MODE_VALUES:
-            return ToolResult(
-                success=False,
-                data="",
-                error=(
-                    f"Invalid access_mode: {raw_mode}. "
-                    f"Must be one of: {', '.join(_ACCESS_MODE_VALUES)}"
-                ),
-            )
-        kwargs["access_mode"] = AccessMode(mode_upper)
-
     # Category
     raw_cat = args.get("category_id")
     if raw_cat:
-        cat_id, cat_err = _parse_uuid(str(raw_cat), "category_id")
+        cat_id, cat_err = parse_uuid(str(raw_cat), "category_id")
         if cat_err:
             return ToolResult(success=False, data="", error=cat_err)
         kwargs["category_id"] = cat_id
@@ -483,7 +431,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
     # Attendees (replaces existing list)
     raw_attendees = args.get("attendee_ids")
     if raw_attendees is not None and isinstance(raw_attendees, list):
-        att_ids, att_err = _parse_uuid_list(raw_attendees, "attendee_ids")
+        att_ids, att_err = parse_uuid_list(raw_attendees, "attendee_ids")
         if att_err:
             return ToolResult(success=False, data="", error=att_err)
         kwargs["attendee_ids"] = att_ids
@@ -522,7 +470,7 @@ async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
     if not event_id_str:
         return ToolResult(success=False, data="", error="event_id is required")
 
-    event_id, err = _parse_uuid(event_id_str, "event_id")
+    event_id, err = parse_uuid(event_id_str, "event_id")
     if err:
         return ToolResult(success=False, data="", error=err)
 
@@ -545,7 +493,7 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     if not event_id_str:
         return ToolResult(success=False, data="", error="event_id is required")
 
-    event_id, err = _parse_uuid(event_id_str, "event_id")
+    event_id, err = parse_uuid(event_id_str, "event_id")
     if err:
         return ToolResult(success=False, data="", error=err)
 
@@ -557,7 +505,7 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
             error="attendee_ids is required (list of UUIDs)",
         )
 
-    att_ids, att_err = _parse_uuid_list(raw_ids, "attendee_ids")
+    att_ids, att_err = parse_uuid_list(raw_ids, "attendee_ids")
     if att_err:
         return ToolResult(success=False, data="", error=att_err)
 
@@ -601,7 +549,7 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     if not event_id_str:
         return ToolResult(success=False, data="", error="event_id is required")
 
-    event_id, err = _parse_uuid(event_id_str, "event_id")
+    event_id, err = parse_uuid(event_id_str, "event_id")
     if err:
         return ToolResult(success=False, data="", error=err)
 
@@ -613,7 +561,7 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
             error="attendee_ids is required (list of UUIDs)",
         )
 
-    att_ids, att_err = _parse_uuid_list(raw_ids, "attendee_ids")
+    att_ids, att_err = parse_uuid_list(raw_ids, "attendee_ids")
     if att_err:
         return ToolResult(success=False, data="", error=att_err)
 
@@ -643,7 +591,7 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
     if not event_id_str:
         return ToolResult(success=False, data="", error="event_id is required")
 
-    event_id, err = _parse_uuid(event_id_str, "event_id")
+    event_id, err = parse_uuid(event_id_str, "event_id")
     if err:
         return ToolResult(success=False, data="", error=err)
 
@@ -722,15 +670,6 @@ _RECURRENCE_CONFIG_SCHEMA = {
     ),
 }
 
-_ACCESS_MODE_SCHEMA = {
-    "type": "string",
-    "enum": list(_ACCESS_MODE_VALUES),
-    "description": (
-        "Event access mode: OWNER_ONLY (private), EXPLICIT_MEMBERS "
-        "(listed members only), or OPEN_TO_ORG (all org members)."
-    ),
-}
-
 _TAG_IDS_SCHEMA = {
     "type": "array",
     "items": {"type": "string"},
@@ -759,6 +698,8 @@ _ATTENDEE_IDS_SCHEMA = {
 
 list_events = ToolDefinition(
     name="calendar.list_events",
+    display_name="List Events",
+    group="Calendar",
     description=(
         "List calendar events within a date range. Optionally filter by calendar or category."
     ),
@@ -792,6 +733,8 @@ list_events = ToolDefinition(
 
 read_event = ToolDefinition(
     name="calendar.read_event",
+    display_name="Read Event",
+    group="Calendar",
     description=(
         "Read a single calendar event with full details "
         "including attendees, recurrence, description, and category."
@@ -809,11 +752,14 @@ read_event = ToolDefinition(
 
 create_event = ToolDefinition(
     name="calendar.create_event",
+    display_name="Create Event",
+    group="Calendar",
     description=(
         "Create a single calendar event. For recurring events (daily, weekly, etc.), "
         "set recurrence_pattern on this ONE event - do NOT create multiple events. "
         "Supports title, times, location, attendees, recurrence, categories, "
-        "reminders, and access_mode."
+        "and reminders. Events are invite-only: attendees and the organizer "
+        "see them, nobody else."
     ),
     parameter_schema={
         "type": "object",
@@ -868,7 +814,14 @@ create_event = ToolDefinition(
                 "description": "Mark as focus/deep work time.",
             },
             "tag_ids": _TAG_IDS_SCHEMA,
-            "access_mode": _ACCESS_MODE_SCHEMA,
+            "room_id": {
+                "type": "string",
+                "description": (
+                    "Optional room UUID to book alongside the event. Use "
+                    "rooms.find_available to pick one; an already-booked room "
+                    "returns an error and nothing is created."
+                ),
+            },
             "reminders": _REMINDERS_SCHEMA,
         },
         "required": ["title", "start_time"],
@@ -878,9 +831,11 @@ create_event = ToolDefinition(
 
 update_event = ToolDefinition(
     name="calendar.update_event",
+    display_name="Edit Event",
+    group="Calendar",
     description=(
         "Update a calendar event. Any field can be changed: title, times, "
-        "location, attendees, recurrence, category, access_mode, reminders."
+        "location, attendees, recurrence, category, reminders."
     ),
     parameter_schema={
         "type": "object",
@@ -930,7 +885,6 @@ update_event = ToolDefinition(
                 "description": "Mark as focus/deep work time.",
             },
             "tag_ids": _TAG_IDS_SCHEMA,
-            "access_mode": _ACCESS_MODE_SCHEMA,
             "reminders": _REMINDERS_SCHEMA,
         },
         "required": ["event_id"],
@@ -940,6 +894,8 @@ update_event = ToolDefinition(
 
 delete_event = ToolDefinition(
     name="calendar.delete_event",
+    display_name="Delete Event",
+    group="Calendar",
     description="Delete a calendar event. This is destructive and cannot be undone.",
     parameter_schema={
         "type": "object",
@@ -954,6 +910,8 @@ delete_event = ToolDefinition(
 
 add_attendees = ToolDefinition(
     name="calendar.add_attendees",
+    display_name="Add Attendees",
+    group="Calendar",
     description=(
         "Add attendees to a calendar event. New attendees receive an invitation notification."
     ),
@@ -981,6 +939,8 @@ add_attendees = ToolDefinition(
 
 remove_attendees = ToolDefinition(
     name="calendar.remove_attendees",
+    display_name="Remove Attendees",
+    group="Calendar",
     description="Remove attendees from a calendar event.",
     parameter_schema={
         "type": "object",
@@ -999,6 +959,8 @@ remove_attendees = ToolDefinition(
 
 rsvp = ToolDefinition(
     name="calendar.rsvp",
+    display_name="RSVP",
+    group="Calendar",
     description=(
         "Update the current user's attendance status for an event "
         "(accept, tentatively accept, or decline)."
@@ -1020,6 +982,8 @@ rsvp = ToolDefinition(
 
 list_categories = ToolDefinition(
     name="calendar.list_categories",
+    display_name="List Categories",
+    group="Calendar",
     description=(
         "List available event categories for the organization. "
         "Categories provide color coding and filtering for events."
@@ -1029,6 +993,253 @@ list_categories = ToolDefinition(
         "properties": {},
     },
     executor=_execute_list_categories,
+    read_only=True,
+)
+
+
+async def _member_display_names(ctx: ToolContext, user_ids: list[UUID]) -> dict[UUID, str]:
+    from sqlalchemy import select
+
+    from uniffy.core.models.login.user import User
+
+    result = await ctx.session.execute(select(User).where(User.id.in_(user_ids)))
+    return {u.id: u.full_name or u.email for u in result.scalars().all()}
+
+
+def _fmt_local(dt: datetime, tz: ZoneInfo) -> str:
+    local = dt.astimezone(tz)
+    return local.strftime("%a %Y-%m-%dT%H:%M")
+
+
+async def _execute_get_free_busy(ctx: ToolContext, args: dict) -> ToolResult:
+    from uniffy.domains.calendar.availability import get_busy_intervals
+
+    raw_users = args.get("user_ids")
+    if not raw_users or not isinstance(raw_users, list):
+        return ToolResult(success=False, data="", error="user_ids is required")
+    user_ids, err = parse_uuid_list(raw_users, "user_ids")
+    if err:
+        return ToolResult(success=False, data="", error=err)
+
+    tz_name = ctx.user_timezone or "UTC"
+    start = _parse_datetime(args.get("start_time", ""), tz_name)
+    if start is None:
+        return ToolResult(success=False, data="", error="start_time is required (ISO 8601)")
+    end = None
+    if args.get("end_time"):
+        end = _parse_datetime(args["end_time"], tz_name)
+        if end is None:
+            return ToolResult(success=False, data="", error="Invalid end_time format")
+    if end is None:
+        end = start + timedelta(days=7)
+
+    busy = await get_busy_intervals(
+        ctx.session, ctx.organization_id, user_ids, start, end
+    )
+    names = await _member_display_names(ctx, user_ids)
+    try:
+        tz = ZoneInfo(tz_name)
+    except (KeyError, ValueError):
+        tz = ZoneInfo("UTC")
+
+    lines = [f"Busy times {_fmt_local(start, tz)} to {_fmt_local(end, tz)} ({tz.key}):"]
+    for uid in user_ids:
+        lines.append(f"\n{names.get(uid, str(uid))}:")
+        intervals = busy.get(uid, [])
+        if not intervals:
+            lines.append("  free for the whole range")
+        for s, e in intervals:
+            lines.append(f"  {_fmt_local(s, tz)} to {_fmt_local(e, tz)}")
+    return ToolResult(success=True, data="\n".join(lines))
+
+
+async def _execute_find_time(ctx: ToolContext, args: dict) -> ToolResult:
+    from uniffy.domains.calendar.availability import compute_free_slots, get_busy_intervals
+
+    raw_attendees = args.get("attendee_ids")
+    if not raw_attendees or not isinstance(raw_attendees, list):
+        return ToolResult(success=False, data="", error="attendee_ids is required")
+    attendee_ids, err = parse_uuid_list(raw_attendees, "attendee_ids")
+    if err:
+        return ToolResult(success=False, data="", error=err)
+    participant_ids = list(dict.fromkeys([ctx.user_id, *attendee_ids]))
+
+    duration_minutes = int(args.get("duration_minutes") or 30)
+    if not 5 <= duration_minutes <= 480:
+        return ToolResult(
+            success=False, data="", error="duration_minutes must be between 5 and 480"
+        )
+
+    tz_name = ctx.user_timezone or "UTC"
+    now = datetime.now(UTC)
+    window_start = now
+    if args.get("window_start"):
+        parsed = _parse_datetime(args["window_start"], tz_name)
+        if parsed is None:
+            return ToolResult(success=False, data="", error="Invalid window_start format")
+        window_start = max(parsed, now)
+    if args.get("window_end"):
+        window_end = _parse_datetime(args["window_end"], tz_name)
+        if window_end is None:
+            return ToolResult(success=False, data="", error="Invalid window_end format")
+    else:
+        window_end = window_start + timedelta(days=7)
+    if window_end <= window_start:
+        return ToolResult(success=False, data="", error="window_end must be after window_start")
+
+    earliest_hour = int(args.get("earliest_hour") or 9)
+    latest_hour = int(args.get("latest_hour") or 18)
+    include_weekends = bool(args.get("include_weekends", False))
+    max_results = min(10, max(1, int(args.get("max_results") or 5)))
+
+    busy_by_user = await get_busy_intervals(
+        ctx.session, ctx.organization_id, participant_ids, window_start, window_end
+    )
+    all_busy = [iv for intervals in busy_by_user.values() for iv in intervals]
+
+    try:
+        tz = ZoneInfo(tz_name)
+    except (KeyError, ValueError):
+        tz = ZoneInfo("UTC")
+        tz_name = "UTC"
+
+    slots = compute_free_slots(
+        all_busy,
+        window_start,
+        window_end,
+        timedelta(minutes=duration_minutes),
+        tz_name,
+        earliest_hour=earliest_hour,
+        latest_hour=latest_hour,
+        include_weekends=include_weekends,
+        max_results=max_results,
+    )
+
+    names = await _member_display_names(ctx, participant_ids)
+    who = ", ".join(names.get(uid, str(uid)) for uid in participant_ids)
+
+    if not slots:
+        return ToolResult(
+            success=True,
+            data=(
+                f"No open {duration_minutes}-minute slot for {who} between "
+                f"{_fmt_local(window_start, tz)} and {_fmt_local(window_end, tz)} "
+                f"within {earliest_hour:02d}:00-{latest_hour:02d}:00 {tz.key}. "
+                "Try a wider window, different hours, or include_weekends=true."
+            ),
+        )
+
+    lines = [
+        f"Open {duration_minutes}-minute slots for {who} (times in {tz.key}; "
+        "pass start/end exactly as shown to calendar.create_event):"
+    ]
+    for i, (s, e) in enumerate(slots, start=1):
+        local_s = s.astimezone(tz)
+        local_e = e.astimezone(tz)
+        lines.append(
+            f"{i}. {local_s.strftime('%a')} {local_s.strftime('%Y-%m-%dT%H:%M:%S')} "
+            f"to {local_e.strftime('%Y-%m-%dT%H:%M:%S')}"
+        )
+    return ToolResult(success=True, data="\n".join(lines))
+
+
+_USER_IDS_SCHEMA = {
+    "type": "array",
+    "items": {"type": "string"},
+    "description": (
+        "User UUIDs of organization members. Resolve names to ids with the "
+        "search or user tools first."
+    ),
+}
+
+get_free_busy = ToolDefinition(
+    name="calendar.get_free_busy",
+    display_name="Get Free/Busy",
+    group="Calendar",
+    description=(
+        "Busy time blocks for organization members over a date range. "
+        "Returns only intervals - never event titles or details. Use before "
+        "proposing meeting times; for direct slot suggestions prefer "
+        "calendar.find_time."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "user_ids": _USER_IDS_SCHEMA,
+            "start_time": {
+                "type": "string",
+                "description": f"Range start. {_DATETIME_DESC}",
+            },
+            "end_time": {
+                "type": "string",
+                "description": f"Range end. Defaults to 7 days after start. {_DATETIME_DESC}",
+            },
+        },
+        "required": ["user_ids", "start_time"],
+    },
+    executor=_execute_get_free_busy,
+    read_only=True,
+)
+
+find_time = ToolDefinition(
+    name="calendar.find_time",
+    display_name="Find Meeting Time",
+    group="Calendar",
+    description=(
+        "Suggest open meeting slots that work for the current user plus the "
+        "given attendees, based on everyone's calendars. Working hours default "
+        "to 09:00-18:00 weekdays in the user's timezone. Follow up with "
+        "calendar.create_event using a suggested slot."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "attendee_ids": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "User UUIDs of the other participants. The current user is "
+                    "always included automatically."
+                ),
+            },
+            "duration_minutes": {
+                "type": "integer",
+                "description": "Meeting length in minutes (5-480). Default 30.",
+            },
+            "window_start": {
+                "type": "string",
+                "description": (
+                    f"Earliest acceptable time. Defaults to now; past values are "
+                    f"clamped to now. {_DATETIME_DESC}"
+                ),
+            },
+            "window_end": {
+                "type": "string",
+                "description": (
+                    "Latest acceptable time. Defaults to window_start + 7 days. "
+                    f"{_DATETIME_DESC}"
+                ),
+            },
+            "earliest_hour": {
+                "type": "integer",
+                "description": "Earliest slot start hour (0-23) in the user's timezone. Default 9.",
+            },
+            "latest_hour": {
+                "type": "integer",
+                "description": "Latest slot end hour (1-24) in the user's timezone. Default 18.",
+            },
+            "include_weekends": {
+                "type": "boolean",
+                "description": "Consider Saturday and Sunday. Default false.",
+            },
+            "max_results": {
+                "type": "integer",
+                "description": "Maximum suggestions to return (1-10). Default 5.",
+            },
+        },
+        "required": ["attendee_ids"],
+    },
+    executor=_execute_find_time,
     read_only=True,
 )
 
@@ -1042,4 +1253,6 @@ CALENDAR_TOOLS: list[ToolDefinition] = [
     remove_attendees,
     rsvp,
     list_categories,
+    get_free_busy,
+    find_time,
 ]
