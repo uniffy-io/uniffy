@@ -80,7 +80,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 ./manage.py landing build|preview|deploy     # preview on :8788; deploy needs CLOUDFLARE_API_TOKEN in host env
 ```
 
-Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed). Backend tests live in `src/uniffy/tests/`, frontend tests in `src/ui/`.
+Before committing: `./manage.py proto` (if protos changed) and `./manage.py lint -s backend` (if Python changed). Backend unit tests live in `src/uniffy/tests/unit/{domain}/`, benchmarks in `src/uniffy/tests/benchmarks/`, local-only live-service tests in `src/uniffy/tests/integration/{suite}/` (`test -s integration`); frontend tests in `src/ui/`.
 
 Stack and container invariants:
 

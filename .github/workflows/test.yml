@@ -264,8 +264,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          uv run pytest src/uniffy/tests/ \
-            --ignore=src/uniffy/tests/benchmarks/ \
+          uv run pytest src/uniffy/tests/unit/ \
             --junitxml=reports/pytest-report.xml \
             --color=yes -vv
 

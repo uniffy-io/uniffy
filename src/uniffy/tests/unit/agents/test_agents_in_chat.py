@@ -706,6 +706,7 @@ def _binding_row(
         model_override=model_override,
         model_params_override=model_params_override,
         image_params_override=image_params_override,
+        loaded_tool_groups=[],
     )
 
 

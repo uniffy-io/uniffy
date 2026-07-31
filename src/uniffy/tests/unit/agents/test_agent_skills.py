@@ -76,7 +76,6 @@ class TestPromptSplit:
             agent_name="A",
             soul_prompt="soul",
             org_name="Org",
-            enabled_tools=["search.query"],
             skills=[always, lazy],
         )
         assert "FULLBODY" in prompt  # always-active is fully injected

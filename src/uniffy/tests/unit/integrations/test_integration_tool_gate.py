@@ -144,22 +144,6 @@ def test_absent_schema_lists_pass_through_unchanged(monkeypatch, schemas) -> Non
     assert result is schemas
 
 
-def test_prompt_filter_drops_unadvertised_integration_tools() -> None:
-    kept = tool_gate.filter_enabled_tools_for_prompt(
-        ["github.search_issues", "notes.search_notes"],
-        [PLATFORM_SCHEMA],
-    )
-    assert kept == ["notes.search_notes"]
-
-
-def test_prompt_filter_keeps_advertised_integration_tools() -> None:
-    kept = tool_gate.filter_enabled_tools_for_prompt(
-        ["github.search_issues", "notes.search_notes"],
-        [READ_SCHEMA, PLATFORM_SCHEMA],
-    )
-    assert kept == ["github.search_issues", "notes.search_notes"]
-
-
 def test_has_advertised_integration_tools() -> None:
     assert tool_gate.has_advertised_integration_tools([READ_SCHEMA, PLATFORM_SCHEMA])
     assert not tool_gate.has_advertised_integration_tools([PLATFORM_SCHEMA])

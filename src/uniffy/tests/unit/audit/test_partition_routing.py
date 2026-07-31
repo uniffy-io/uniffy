@@ -14,7 +14,7 @@ import importlib.util
 from pathlib import Path
 
 MIGRATION_PATH = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "db"
     / "migrations"
     / "versions"

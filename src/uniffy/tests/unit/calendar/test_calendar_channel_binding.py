@@ -169,9 +169,6 @@ class TestValidateChannelBinding:
 class TestCreateMutualExclusion:
     def test_create_rejects_meeting_url_and_channel_both_set(self) -> None:
         ops = _make_ops()
-        ops._resolve_access_policy = AsyncMock(
-            return_value=(AccessMode.OWNER_ONLY, None)
-        )
         now = datetime.now(UTC)
         with pytest.raises(ValidationError):
             _run(
@@ -189,9 +186,6 @@ class TestCreateMutualExclusion:
 
     def test_create_validates_channel_when_no_meeting_url(self) -> None:
         ops = _make_ops()
-        ops._resolve_access_policy = AsyncMock(
-            return_value=(AccessMode.OWNER_ONLY, None)
-        )
         ops._validate_channel_binding = AsyncMock(
             side_effect=ValidationError("channel_id", "denied")
         )

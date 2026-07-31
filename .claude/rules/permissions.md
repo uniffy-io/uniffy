@@ -138,4 +138,4 @@ Chat uses channel membership, not `access_mode`. `ChatAccessChecker` (`domains/c
 - `BLOCKED` always wins, even over ownership-of-content and even for admins.
 - Adding a content type to the system: extend `BaseContentOperations`, register a loader with `ContentMembersOperations`, add it to `_CONTENT_TYPE_TO_DOMAIN` in `checker.py` if it has a domain admin, seed `ORG_PERMISSION_DEFAULTS`, and index the sharing fields.
 
-Guard tests: `tests/core/test_effective_role.py`, `tests/core/test_access_query.py`, `tests/core/test_visible_sets.py`, `tests/core/test_member_ops.py`, `tests/core/test_deactivated_membership.py`, `tests/test_notes_access_filter.py`.
+Guard tests: `tests/unit/core/test_effective_role.py`, `tests/unit/core/test_access_query.py`, `tests/unit/core/test_visible_sets.py`, `tests/unit/core/test_member_ops.py`, `tests/unit/core/test_deactivated_membership.py`, `tests/unit/notes/test_notes_access_filter.py`.
