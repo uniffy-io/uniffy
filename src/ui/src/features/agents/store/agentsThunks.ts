@@ -237,7 +237,7 @@ export const cloneAgent = createAsyncThunk<
             imageStylePrompt: source.imageStylePrompt || undefined,
             integrationConnections:
                 Object.keys(source.integrationConnections).length > 0
-                    ? source.integrationConnections
+                    ? JSON.stringify(source.integrationConnections)
                     : undefined,
         });
         if (!createResponse.agent) throw new Error('No agent in response');
