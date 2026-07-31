@@ -14,14 +14,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import Svg, { Line } from "react-native-svg";
 import * as Haptics from "expo-haptics";
-import {
-  Plus,
-  CaretLeft,
-  CaretRight,
-  Funnel,
-  Target,
-  Warning,
-} from "phosphor-react-native";
+import { Plus, CaretLeft, CaretRight, Funnel, Target, Warning } from "phosphor-react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
