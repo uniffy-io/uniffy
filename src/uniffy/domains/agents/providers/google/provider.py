@@ -341,7 +341,7 @@ class GoogleProvider(LLMProvider):
                             )
                         )
 
-        stop_reason = self._determine_stop_reason(response, tool_calls)
+        stop_reason = "tool_use" if tool_calls else "end_turn"
 
         prompt_tokens, cached_tokens, output_tokens = _split_google_usage(
             response.usage_metadata
