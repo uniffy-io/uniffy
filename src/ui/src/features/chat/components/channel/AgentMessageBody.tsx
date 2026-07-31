@@ -16,6 +16,7 @@ import {
 import { useAgentsBuilderAccess } from '@/features/agents/hooks/useAgentsBuilderAccess';
 import { ThinkingPane } from '@/features/agents/components/ThinkingPane';
 import { ToolActivityPane, type ToolStep } from '@/features/agents/components/ToolActivityPane';
+import { internalToolName, toolActionLabel } from '@/features/agents/config/toolLabels';
 import { persistedThinkingBlocks } from '@/features/agents/utils/thinkingBlocks';
 import { GeneratedImageCard } from '@/features/chat/components/channel/GeneratedImageCard';
 import { parseImageMeta, type ImageGenerationMeta } from '@/features/chat/utils/imageMeta';
@@ -38,12 +39,6 @@ function readBoolean(metadata: Record<string, unknown>, key: string): boolean {
         return value === 'true' || value === 'True';
     }
     return false;
-}
-
-function humanizeToolName(toolName: string): string {
-    const [, action] = toolName.split('.', 2);
-    const verb = (action ?? toolName).replace(/_/g, ' ');
-    return verb.charAt(0).toUpperCase() + verb.slice(1);
 }
 
 export function AgentMessageBody({ message }: AgentMessageBodyProps) {
@@ -166,20 +161,6 @@ function ReplyFeedbackRow({ message }: { message: ChatMessage }) {
 
 const TOOL_ERROR_RE = /^(Error|Permission denied|Not found|Validation error)/i;
 
-/** Present-tense phrase for the running state, e.g. "Generating image". */
-function toolRunningLabel(toolName: string): string {
-    const [, rawAction] = toolName.split('.', 2);
-    const action = rawAction ?? toolName;
-    if (action.includes('image')) return 'Generating image';
-    if (action.includes('search')) return 'Searching';
-    if (action.startsWith('create')) return 'Creating';
-    if (action.startsWith('update')) return 'Updating';
-    if (action.startsWith('delete')) return 'Deleting';
-    if (action.startsWith('move')) return 'Moving';
-    if (action.startsWith('read') || action.startsWith('get') || action.startsWith('list')) return 'Reading';
-    return humanizeToolName(toolName);
-}
-
 /** Groups a run of tool calls into one reasoning-pane-styled timeline, evolving
  * running -> completed / failed as each call's result row and the agent's typing
  * state arrive. Consecutive tool-call rows are folded into a single instance by
@@ -211,12 +192,11 @@ export function AgentToolActivityPane({ toolMessages }: { toolMessages: ChatMess
         const failed = !!resultMsg && TOOL_ERROR_RE.test(result);
         const running = !resultMsg && agentActive;
         const interrupted = !resultMsg && !agentActive;
-        const isImage = toolName.includes('image');
+        const isImage = internalToolName(toolName).includes('image');
         return {
             id: message.id,
             toolName,
-            label: humanizeToolName(toolName),
-            runningLabel: toolRunningLabel(toolName),
+            label: toolActionLabel(toolName),
             args: readString(message.metadata, 'tool_args'),
             result: result || undefined,
             status: running ? 'running' : interrupted ? 'interrupted' : failed ? 'failed' : 'completed',
@@ -282,7 +262,7 @@ function ToolResultCard({ message }: { message: ChatMessage }) {
         {
             id: message.id,
             toolName,
-            label: humanizeToolName(toolName),
+            label: toolActionLabel(toolName),
             result: result || undefined,
             status: failed ? 'failed' : 'completed',
         },
@@ -448,10 +428,7 @@ function ConfirmationRequestCard({ message }: { message: ChatMessage }) {
                         <Warning size={18} weight="fill" className="text-yellow-500 shrink-0 mt-0.5" />
                         <div className="min-w-0">
                             <p className="text-[13px] font-medium text-foreground">
-                                Approval required: {humanizeToolName(toolName)}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 font-mono truncate">
-                                {toolName}
+                                Approval required: {toolActionLabel(toolName)}
                             </p>
                         </div>
                     </div>
@@ -599,7 +576,7 @@ function ConfirmationResolvedRow({ message }: { message: ChatMessage }) {
                 <XCircle size={14} weight="fill" className="text-red-500 shrink-0" />
             )}
             <span>
-                {approved ? 'Approved' : 'Denied'}: {humanizeToolName(toolName)}
+                {approved ? 'Approved' : 'Denied'}: {toolActionLabel(toolName)}
             </span>
             <ArrowsClockwise size={10} className="opacity-40" />
         </div>

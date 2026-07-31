@@ -16,7 +16,6 @@ import {
     Users,
     Wrench,
 } from "@phosphor-icons/react";
-import { TOOL_SECTIONS } from "@/features/agents/config/toolCatalog";
 import { brandRampStops, type BrandStops } from "@/config/theme/brandGradients";
 
 interface ToolGroupIdentity {
@@ -35,7 +34,11 @@ export interface ToolGroupVisual extends ToolGroupIdentity {
     iconStops: BrandStops;
 }
 
-/** Keyed by `ToolGroup.group` in `toolCatalog.ts`. */
+/**
+ * Keyed by the `group` label the server sends with each tool. A group with no
+ * entry here still renders, with the fallback icon - the server can ship a new
+ * group before the frontend has art for it.
+ */
 const TOOL_GROUP_IDENTITIES: Record<string, ToolGroupIdentity> = {
     Notes: { icon: NotePencil, nouns: ["note", "notes"] },
     Files: { icon: FolderSimple, nouns: ["file", "files"] },
@@ -55,16 +58,24 @@ const TOOL_GROUP_IDENTITIES: Record<string, ToolGroupIdentity> = {
 
 const FALLBACK_IDENTITY: ToolGroupIdentity = { icon: Wrench, nouns: [] };
 
-/** Catalog order, which is also the order the color ramp walks. */
-export const TOOL_GROUP_ORDER = TOOL_SECTIONS.flatMap((section) =>
-    section.groups.map((group) => group.group),
-);
+/**
+ * Ramp order, set from the server's group order once the catalog loads. It is
+ * module state rather than a prop because a tool pill deep in a message list
+ * needs a color without threading the order through every component.
+ */
+let groupOrder: string[] = Object.keys(TOOL_GROUP_IDENTITIES);
+
+export function setToolGroupOrder(order: string[]): void {
+    if (order.length > 0) {
+        groupOrder = order;
+    }
+}
 
 export function toolGroupVisual(group: string): ToolGroupVisual {
     const identity = TOOL_GROUP_IDENTITIES[group] ?? FALLBACK_IDENTITY;
-    const index = TOOL_GROUP_ORDER.indexOf(group);
-    const slot = index < 0 ? TOOL_GROUP_ORDER.length : index;
-    const total = TOOL_GROUP_ORDER.length + 1;
+    const index = groupOrder.indexOf(group);
+    const slot = index < 0 ? groupOrder.length : index;
+    const total = groupOrder.length + 1;
 
     return {
         ...identity,

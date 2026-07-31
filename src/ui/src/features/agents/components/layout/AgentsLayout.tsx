@@ -36,6 +36,7 @@ import {
   fetchIntegrationProviders,
 } from "@/features/integrations/store/integrationsThunks";
 import { fetchAgentTemplates } from "@/features/agents/store/agentTemplatesThunks";
+import { fetchAgentTools } from "@/features/agents/store/agentToolsThunks";
 import { AgentsModuleSidebar } from "@/features/agents/components/layout/AgentsModuleSidebar";
 import { AgentsView } from "@/features/agents/components/views/AgentsView";
 import { CatalogView } from "@/features/agents/components/views/CatalogView";
@@ -77,6 +78,7 @@ export function AgentsLayout() {
     dispatch(fetchProviderKeys());
     dispatch(fetchAvailableModels());
     dispatch(fetchAgentTemplates());
+    dispatch(fetchAgentTools());
     dispatch(fetchIntegrationProviders());
     dispatch(fetchConnections());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

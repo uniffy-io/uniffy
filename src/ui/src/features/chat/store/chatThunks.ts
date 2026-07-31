@@ -68,6 +68,7 @@ import {
   fetchAvailableModels,
   fetchProviderKeys,
 } from '@/features/agents/store/agentProvidersThunks';
+import { fetchAgentTools } from '@/features/agents/store/agentToolsThunks';
 import { sessionsApi } from '@/features/agents/api/sessionsApi';
 import { markNotificationsReadBySource } from '@/features/notifications/store/notificationsSlice';
 import type { RootState } from '@/app/store';
@@ -1427,6 +1428,8 @@ export const initializeChat = createAsyncThunk<
       dispatch(fetchAgents()).unwrap().catch(() => {}),
       dispatch(fetchProviderKeys()).unwrap().catch(() => {}),
       dispatch(fetchAvailableModels()).unwrap().catch(() => {}),
+      // Labels the tool-activity pane shows while an agent run streams.
+      dispatch(fetchAgentTools()).unwrap().catch(() => {}),
     ]);
 
     const state = getState();

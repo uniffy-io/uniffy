@@ -16,9 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
-import { TOOL_SECTIONS } from "@/features/agents/config/toolCatalog";
 import {
-    TOOL_GROUP_ORDER,
     toolGroupVisual,
     toolVerbLabels,
 } from "@/features/agents/config/toolGroupVisuals";
@@ -30,38 +28,26 @@ import {
     selectAgentTemplatesLoaded,
 } from "@/features/agents/store/agentTemplatesSlice";
 import type { SerializedAgentTemplate } from "@/features/agents/store/agentTemplatesThunks";
+import {
+    selectToolGroupOrder,
+    selectToolsByName,
+} from "@/features/agents/store/agentToolsSlice";
+import type { SerializedTool } from "@/features/agents/store/agentToolsThunks";
 
 interface CatalogViewProps {
     onUseTemplate: (templateKey?: string) => void;
 }
 
-interface ToolMeta {
-    displayName: string;
-    description: string;
-    destructive: boolean;
-    group: string;
-}
+type ToolMeta = SerializedTool;
 
-const TOOL_META: Record<string, ToolMeta> = Object.fromEntries(
-    TOOL_SECTIONS.flatMap((section) =>
-        section.groups.flatMap((group) =>
-            group.tools.map((tool) => [
-                tool.name,
-                {
-                    displayName: tool.displayName,
-                    description: tool.description,
-                    destructive: tool.destructive,
-                    group: group.group,
-                },
-            ]),
-        ),
-    ),
-);
-
-function groupTools(toolNames: string[]) {
+function groupTools(
+    toolNames: string[],
+    toolsByName: Map<string, ToolMeta>,
+    groupOrder: string[],
+) {
     const groups = new Map<string, { name: string; meta: ToolMeta }[]>();
     for (const name of toolNames) {
-        const meta = TOOL_META[name];
+        const meta = toolsByName.get(name);
         if (!meta) continue;
         const bucket = groups.get(meta.group) ?? [];
         bucket.push({ name, meta });
@@ -70,7 +56,7 @@ function groupTools(toolNames: string[]) {
     // Catalog order, not the order the template happens to list its tools in,
     // so the tiles also come out in ramp order.
     return [...groups.entries()].sort(
-        ([a], [b]) => TOOL_GROUP_ORDER.indexOf(a) - TOOL_GROUP_ORDER.indexOf(b),
+        ([a], [b]) => groupOrder.indexOf(a) - groupOrder.indexOf(b),
     );
 }
 
@@ -150,9 +136,11 @@ function TemplateCard({
     onOpen: () => void;
     onUse: () => void;
 }) {
+    const toolsByName = useAppSelector(selectToolsByName);
+    const groupOrder = useAppSelector(selectToolGroupOrder);
     const groupNames = useMemo(
-        () => groupTools(template.enabledTools).map(([group]) => group),
-        [template.enabledTools],
+        () => groupTools(template.enabledTools, toolsByName, groupOrder).map(([group]) => group),
+        [template.enabledTools, toolsByName, groupOrder],
     );
     const shownGroups = groupNames.slice(0, 5);
     const hiddenGroupCount = groupNames.length - shownGroups.length;
@@ -248,9 +236,14 @@ function TemplateDetail({
     onBack: () => void;
     onUse: () => void;
 }) {
-    const toolGroups = useMemo(() => groupTools(template.enabledTools), [template.enabledTools]);
+    const toolsByName = useAppSelector(selectToolsByName);
+    const groupOrder = useAppSelector(selectToolGroupOrder);
+    const toolGroups = useMemo(
+        () => groupTools(template.enabledTools, toolsByName, groupOrder),
+        [template.enabledTools, toolsByName, groupOrder],
+    );
     const destructiveCount = template.enabledTools.filter(
-        (name) => TOOL_META[name]?.destructive,
+        (name) => toolsByName.get(name)?.destructive,
     ).length;
     const availableModels = useAppSelector(selectAvailableModels);
     const recommendedModel = template.recommendedModel

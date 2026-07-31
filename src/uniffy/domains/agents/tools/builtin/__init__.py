@@ -2,6 +2,7 @@
 
 from uniffy.domains.agents.tools.builtin.calendar import CALENDAR_TOOLS
 from uniffy.domains.agents.tools.builtin.cron import CRON_TOOLS
+from uniffy.domains.agents.tools.builtin.discovery import DISCOVERY_TOOLS
 from uniffy.domains.agents.tools.builtin.files import FILES_TOOLS
 from uniffy.domains.agents.tools.builtin.images import IMAGES_TOOLS
 from uniffy.domains.agents.tools.builtin.memory import MEMORY_TOOLS
@@ -48,6 +49,8 @@ def register_all(registry: ToolRegistry) -> None:
     for tool in SKILL_TOOLS:
         registry.register(tool)
     for tool in SYSTEM_TOOLS:
+        registry.register(tool)
+    for tool in DISCOVERY_TOOLS:
         registry.register(tool)
 
     # Integration tool packs live with their integration (domains/integrations/

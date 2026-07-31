@@ -66,6 +66,8 @@ async def _execute_list_members(ctx: ToolContext, args: dict) -> ToolResult:
 
 search_query = ToolDefinition(
     name="search.query",
+    display_name="Search Content",
+    group="Search",
     description=(
         "Search across all content types (notes, files, projects, tasks, events, users). "
         "Returns matching items with titles and URNs."
@@ -99,6 +101,8 @@ search_query = ToolDefinition(
 
 list_members = ToolDefinition(
     name="people.list_members",
+    display_name="List Members",
+    group="People",
     description="List organization members. Optionally search by name or email.",
     parameter_schema={
         "type": "object",

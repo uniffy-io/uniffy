@@ -152,6 +152,13 @@ Destructive tools are marked and require approval in chat (see above).
 
 Full list in **Agents > New Agent > Tools**.
 
+Enabling many tools does not bloat every conversation: an agent with a large
+tool set starts with its core groups (memory, search, people, skills, system
+time) and loads other groups on demand the first time a request needs one.
+You may see a brief `Load Group` step in the tool activity pane; after that
+the group stays loaded for the rest of that conversation. This keeps replies
+fast and context lean without changing what the agent is allowed to do.
+
 ---
 
 ## Skills

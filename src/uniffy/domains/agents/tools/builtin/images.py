@@ -14,7 +14,12 @@ from uniffy.domains.agents.providers.catalog import (
     get_image_parameter_schema,
     resolve_image_params,
 )
-from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+from uniffy.domains.agents.tools.definitions import (
+    CATEGORY_EXTERNAL,
+    ToolContext,
+    ToolDefinition,
+    ToolResult,
+)
 
 logger = logger.bind(component="agents.tools.builtin.images")
 
@@ -397,6 +402,9 @@ def build_image_tool_schema(provider: str, model_id: str) -> dict:
 
 generate_image = ToolDefinition(
     name="images.generate_image",
+    display_name="Generate Image",
+    group="Images",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Generate an image from a text prompt using AI. "
         "The image is saved as a file in the user's Attachments folder. "

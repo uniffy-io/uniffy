@@ -40,6 +40,9 @@ service AgentsService {
 
   // List the shipped agent templates that prefill the create flow
   rpc ListAgentTemplates(ListAgentTemplatesRequest) returns (ListAgentTemplatesResponse) {}
+
+  // List the tools an agent can be given, as the builder groups them
+  rpc ListTools(ListToolsRequest) returns (ListToolsResponse) {}
 }
 
 // Agent configuration info returned to clients
@@ -273,4 +276,31 @@ message ListAgentTemplatesRequest {
 
 message ListAgentTemplatesResponse {
   repeated AgentTemplate templates = 1;
+}
+
+// One selectable capability in the agent builder. The server owns this copy;
+// clients render what they receive instead of keeping their own tool list.
+message ToolInfo {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  // Builder grouping label, e.g. "Notes" or "GitHub".
+  string group = 4;
+  // "platform" for tools that run against this deployment, "external" for
+  // tools that call a third-party API.
+  string category = 5;
+  bool destructive = 6;
+  // Integration provider id whose org connection this tool calls through;
+  // empty for platform tools.
+  string requires_connection = 7;
+}
+
+message ListToolsRequest {
+  string organization_id = 1;
+}
+
+// Ordered as the builder renders them: category, then group, then registration
+// order within the group.
+message ListToolsResponse {
+  repeated ToolInfo tools = 1;
 }

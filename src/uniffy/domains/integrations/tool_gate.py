@@ -64,20 +64,6 @@ async def filter_integration_tool_schemas(
     return filtered
 
 
-def filter_enabled_tools_for_prompt(
-    enabled_tools: list[str],
-    schemas: list[dict] | None,
-) -> list[str]:
-    """Keep the prompt's tool section aligned with the advertised schemas."""
-    registry = get_integration_registry()
-    advertised = {from_api_name(s.get("name", "")) for s in schemas or []}
-    return [
-        name
-        for name in enabled_tools
-        if registry.get(name.split(".", 1)[0]) is None or name in advertised
-    ]
-
-
 def has_advertised_integration_tools(schemas: list[dict] | None) -> bool:
     if not schemas:
         return False

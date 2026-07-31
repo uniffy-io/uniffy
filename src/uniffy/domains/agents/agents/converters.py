@@ -2,7 +2,7 @@
 
 import json
 
-from uniffy_proto.agents.v1.agents_pb2 import AgentInfo
+from uniffy_proto.agents.v1.agents_pb2 import AgentInfo, ToolInfo
 from uniffy_proto.agents.v1.agents_pb2 import AgentTemplate as AgentTemplateProto
 
 from uniffy.core.avatars import get_avatar_url
@@ -14,6 +14,7 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.types import AccessMode, ContentRole
 from uniffy.domains.agents.templates import AgentTemplate
+from uniffy.domains.agents.tools.catalog import ToolCatalogEntry
 from uniffy.domains.tags import Tag
 from uniffy.domains.tags.converters import tag_to_proto
 
@@ -105,4 +106,16 @@ def agent_template_to_proto(
         enabled_skill_ids=enabled_skill_ids,
         recommended_model=template.recommended_model,
         recommended_image_model=template.recommended_image_model,
+    )
+
+
+def tool_catalog_entry_to_proto(entry: ToolCatalogEntry) -> ToolInfo:
+    return ToolInfo(
+        name=entry.name,
+        display_name=entry.display_name,
+        description=entry.description,
+        group=entry.group,
+        category=entry.category,
+        destructive=entry.destructive,
+        requires_connection=entry.requires_connection,
     )

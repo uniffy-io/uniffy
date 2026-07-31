@@ -93,6 +93,10 @@ class ToolRegistry:
             tool = self._tools.get(from_api_name(name))
         return tool
 
+    def all(self) -> list[ToolDefinition]:
+        """Every registered tool, in registration order."""
+        return list(self._tools.values())
+
     def get_for_agent(self, enabled_tools: list[str]) -> list[ToolDefinition]:
         """Return tool definitions for an agent's enabled tool list.
 

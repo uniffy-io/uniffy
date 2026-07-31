@@ -62,6 +62,8 @@ const (
 	// AgentsServiceListAgentTemplatesProcedure is the fully-qualified name of the AgentsService's
 	// ListAgentTemplates RPC.
 	AgentsServiceListAgentTemplatesProcedure = "/agents.v1.AgentsService/ListAgentTemplates"
+	// AgentsServiceListToolsProcedure is the fully-qualified name of the AgentsService's ListTools RPC.
+	AgentsServiceListToolsProcedure = "/agents.v1.AgentsService/ListTools"
 )
 
 // AgentsServiceClient is a client for the agents.v1.AgentsService service.
@@ -87,6 +89,8 @@ type AgentsServiceClient interface {
 	PreviewSystemPrompt(context.Context, *connect.Request[v1.PreviewSystemPromptRequest]) (*connect.Response[v1.PreviewSystemPromptResponse], error)
 	// List the shipped agent templates that prefill the create flow
 	ListAgentTemplates(context.Context, *connect.Request[v1.ListAgentTemplatesRequest]) (*connect.Response[v1.ListAgentTemplatesResponse], error)
+	// List the tools an agent can be given, as the builder groups them
+	ListTools(context.Context, *connect.Request[v1.ListToolsRequest]) (*connect.Response[v1.ListToolsResponse], error)
 }
 
 // NewAgentsServiceClient constructs a client for the agents.v1.AgentsService service. By default,
@@ -160,6 +164,12 @@ func NewAgentsServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(agentsServiceMethods.ByName("ListAgentTemplates")),
 			connect.WithClientOptions(opts...),
 		),
+		listTools: connect.NewClient[v1.ListToolsRequest, v1.ListToolsResponse](
+			httpClient,
+			baseURL+AgentsServiceListToolsProcedure,
+			connect.WithSchema(agentsServiceMethods.ByName("ListTools")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -175,6 +185,7 @@ type agentsServiceClient struct {
 	deleteAgentAvatar   *connect.Client[v1.DeleteAgentAvatarRequest, v1.DeleteAgentAvatarResponse]
 	previewSystemPrompt *connect.Client[v1.PreviewSystemPromptRequest, v1.PreviewSystemPromptResponse]
 	listAgentTemplates  *connect.Client[v1.ListAgentTemplatesRequest, v1.ListAgentTemplatesResponse]
+	listTools           *connect.Client[v1.ListToolsRequest, v1.ListToolsResponse]
 }
 
 // CreateAgent calls agents.v1.AgentsService.CreateAgent.
@@ -227,6 +238,11 @@ func (c *agentsServiceClient) ListAgentTemplates(ctx context.Context, req *conne
 	return c.listAgentTemplates.CallUnary(ctx, req)
 }
 
+// ListTools calls agents.v1.AgentsService.ListTools.
+func (c *agentsServiceClient) ListTools(ctx context.Context, req *connect.Request[v1.ListToolsRequest]) (*connect.Response[v1.ListToolsResponse], error) {
+	return c.listTools.CallUnary(ctx, req)
+}
+
 // AgentsServiceHandler is an implementation of the agents.v1.AgentsService service.
 type AgentsServiceHandler interface {
 	// Create a new agent configuration
@@ -250,6 +266,8 @@ type AgentsServiceHandler interface {
 	PreviewSystemPrompt(context.Context, *connect.Request[v1.PreviewSystemPromptRequest]) (*connect.Response[v1.PreviewSystemPromptResponse], error)
 	// List the shipped agent templates that prefill the create flow
 	ListAgentTemplates(context.Context, *connect.Request[v1.ListAgentTemplatesRequest]) (*connect.Response[v1.ListAgentTemplatesResponse], error)
+	// List the tools an agent can be given, as the builder groups them
+	ListTools(context.Context, *connect.Request[v1.ListToolsRequest]) (*connect.Response[v1.ListToolsResponse], error)
 }
 
 // NewAgentsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -319,6 +337,12 @@ func NewAgentsServiceHandler(svc AgentsServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(agentsServiceMethods.ByName("ListAgentTemplates")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentsServiceListToolsHandler := connect.NewUnaryHandler(
+		AgentsServiceListToolsProcedure,
+		svc.ListTools,
+		connect.WithSchema(agentsServiceMethods.ByName("ListTools")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agents.v1.AgentsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentsServiceCreateAgentProcedure:
@@ -341,6 +365,8 @@ func NewAgentsServiceHandler(svc AgentsServiceHandler, opts ...connect.HandlerOp
 			agentsServicePreviewSystemPromptHandler.ServeHTTP(w, r)
 		case AgentsServiceListAgentTemplatesProcedure:
 			agentsServiceListAgentTemplatesHandler.ServeHTTP(w, r)
+		case AgentsServiceListToolsProcedure:
+			agentsServiceListToolsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -388,4 +414,8 @@ func (UnimplementedAgentsServiceHandler) PreviewSystemPrompt(context.Context, *c
 
 func (UnimplementedAgentsServiceHandler) ListAgentTemplates(context.Context, *connect.Request[v1.ListAgentTemplatesRequest]) (*connect.Response[v1.ListAgentTemplatesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.ListAgentTemplates is not implemented"))
+}
+
+func (UnimplementedAgentsServiceHandler) ListTools(context.Context, *connect.Request[v1.ListToolsRequest]) (*connect.Response[v1.ListToolsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.AgentsService.ListTools is not implemented"))
 }

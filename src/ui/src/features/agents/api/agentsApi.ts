@@ -12,6 +12,7 @@ import {
     DeleteAgentAvatarRequestSchema,
     PreviewSystemPromptRequestSchema,
     ListAgentTemplatesRequestSchema,
+    ListToolsRequestSchema,
 } from '@uniffy/proto/agents/v1/agents_pb';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
@@ -47,5 +48,8 @@ export const agentsApi = {
     },
     listAgentTemplates: async (request: MessageInitShape<typeof ListAgentTemplatesRequestSchema>) => {
         return client.listAgentTemplates(request);
+    },
+    listTools: async (request: MessageInitShape<typeof ListToolsRequestSchema>) => {
+        return client.listTools(request);
     },
 };

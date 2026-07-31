@@ -12,10 +12,12 @@ import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Select } from "@/components/ui/select";
-import { TOOL_SECTIONS } from "@/features/agents/config/toolCatalog";
 import type { ToolGroup, ToolCategorySection } from "@/features/agents/config/toolCatalog";
+import { toolSummary } from "@/features/agents/config/toolLabels";
 import { selectAllSkills, selectSkillsLoading } from "@/features/agents/store/agentSkillsSlice";
 import { fetchSkills } from "@/features/agents/store/agentSkillsThunks";
+import { selectToolSections, selectAgentToolsLoading } from "@/features/agents/store/agentToolsSlice";
+import { fetchAgentTools } from "@/features/agents/store/agentToolsThunks";
 import { selectIntegrationConnections } from "@/features/integrations/store/integrationsSlice";
 import type { ConnectionPlain } from "@/features/integrations/store/integrationsThunks";
 import { integrationLabel } from "@/features/integrations/config/integrationBrands";
@@ -145,8 +147,11 @@ function ToolGroupRows({
                                         />
                                     )}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    {tool.description}
+                                <p
+                                    className="text-xs text-muted-foreground mt-0.5"
+                                    title={tool.description}
+                                >
+                                    {toolSummary(tool.description)}
                                 </p>
                             </div>
                             <ToggleSwitch
@@ -317,9 +322,12 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
 
     const skills = useMemo(() => Object.values(skillsMap), [skillsMap]);
     const connections = useAppSelector(selectIntegrationConnections);
+    const toolSections = useAppSelector(selectToolSections);
+    const toolsLoading = useAppSelector(selectAgentToolsLoading);
 
     useEffect(() => {
         dispatch(fetchSkills());
+        dispatch(fetchAgentTools());
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const usableConnections = useMemo(
@@ -339,7 +347,7 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
 
     const sectionCounts = useMemo(() => {
         const counts: Record<string, { enabled: number; total: number }> = {};
-        for (const section of TOOL_SECTIONS) {
+        for (const section of toolSections) {
             let total = 0;
             let enabled = 0;
             for (const group of section.groups) {
@@ -349,7 +357,7 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
             counts[section.category] = { enabled, total };
         }
         return counts;
-    }, [enabledTools]);
+    }, [enabledTools, toolSections]);
 
     const handleToolToggle = useCallback(
         (toolName: string, enabled: boolean) => {
@@ -417,7 +425,12 @@ export function CapabilitiesTab({ agent }: { agent: SerializedAgent }) {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            {TOOL_SECTIONS.map((section) => {
+            {toolSections.length === 0 && toolsLoading && (
+                <div className="flex items-center justify-center py-8">
+                    <CircleNotch size={20} className="animate-spin text-muted-foreground" />
+                </div>
+            )}
+            {toolSections.map((section) => {
                 const counts = sectionCounts[section.category] ?? { enabled: 0, total: 0 };
                 return (
                     <ToolCategory

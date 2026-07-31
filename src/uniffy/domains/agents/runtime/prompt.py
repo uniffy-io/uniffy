@@ -5,7 +5,8 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from uniffy.domains.agents.runtime.workspace_prompt import WORKSPACE_PROMPT
-from uniffy.domains.agents.tools.registry import get_tool_registry
+from uniffy.domains.agents.tools.deferral import LOAD_GROUP_TOOL
+from uniffy.domains.agents.tools.registry import to_api_name
 
 SKILL_VIEW_TOOL = "skills.view_skill"
 
@@ -110,7 +111,7 @@ def build_system_prompt(
     org_name: str,
     user_name: str | None = None,
     user_role: str | None = None,
-    enabled_tools: list[str] | None = None,
+    deferred_tools: dict[str, list[str]] | None = None,
     skills: list[SkillPromptEntry] | None = None,
     invoked_skill: SkillPromptEntry | None = None,
     memory_context: str | None = None,
@@ -179,8 +180,11 @@ def build_system_prompt(
     # explicitly.
     sections.append(_OUTPUT_FORMATTING_RULES)
 
-    # Section 8: Tool descriptions (last so tools are near the conversation)
-    tool_section = _build_tool_section(enabled_tools)
+    # Section 8: Deferred-tool index (last so tools are near the conversation).
+    # Advertised tools are NOT repeated here: the provider's native tools
+    # param already carries name + description + schema, and a prose copy
+    # doubles their token cost.
+    tool_section = _build_tool_section(deferred_tools)
     if tool_section:
         sections.append(tool_section)
 
@@ -380,36 +384,22 @@ def _build_user_section(
     return parts[0]
 
 
-def _build_tool_section(enabled_tools: list[str] | None) -> str | None:
-    """Build the tool descriptions section for the system prompt.
-
-    Parameters
-    ----------
-    enabled_tools : list[str] | None
-        Tool names the agent has enabled.
-
-    Returns
-    -------
-    str | None
-        Formatted tool description section, or None if no tools.
-
-    """
-    if not enabled_tools:
-        return None
-
-    registry = get_tool_registry()
-    tools = registry.get_for_agent(enabled_tools)
-    if not tools:
+def _build_tool_section(deferred_tools: dict[str, list[str]] | None) -> str | None:
+    """Render the names-only index of tool groups loadable via tools.load_group."""
+    if not deferred_tools:
         return None
 
     lines = [
-        "### Tools",
+        "### More tools available on demand",
         "",
-        "You have access to the following tools to help the user. "
-        "Use them when appropriate to answer questions or perform actions:",
+        "These tool groups are enabled for this agent but not loaded yet. "
+        f"Call the `{to_api_name(LOAD_GROUP_TOOL)}` tool with a group name to "
+        "make its tools callable. When a request touches anything the names "
+        "below cover, load that group and use its tools instead of saying "
+        "you cannot do it or answering from memory:",
         "",
     ]
-    for tool in tools:
-        lines.append(f"- {tool.name}: {tool.description}")
+    for group, names in deferred_tools.items():
+        lines.append(f"- {group} ({len(names)} tools): " + ", ".join(names))
 
     return "\n".join(lines)

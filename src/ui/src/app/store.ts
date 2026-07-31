@@ -32,6 +32,7 @@ import { agentSessionsReducer } from '@/features/agents/store/agentSessionsSlice
 import { agentMessagesReducer } from '@/features/agents/store/agentMessagesSlice';
 import { agentSkillsReducer } from '@/features/agents/store/agentSkillsSlice';
 import { agentTemplatesReducer } from '@/features/agents/store/agentTemplatesSlice';
+import { agentToolsReducer } from '@/features/agents/store/agentToolsSlice';
 import { agentRunnableSkillsReducer } from '@/features/agents/store/agentRunnableSkillsSlice';
 import { agentSkillDraftsReducer } from '@/features/agents/store/agentSkillDraftsSlice';
 import { agentSkillVersionsReducer } from '@/features/agents/store/agentSkillVersionsSlice';
@@ -172,6 +173,7 @@ const rootReducer = combineReducers({
   agentMessages: agentMessagesReducer,
   agentSkills: agentSkillsReducer,
   agentTemplates: agentTemplatesReducer,
+  agentTools: agentToolsReducer,
   agentRunnableSkills: agentRunnableSkillsReducer,
   agentSkillDrafts: agentSkillDraftsReducer,
   agentSkillVersions: agentSkillVersionsReducer,

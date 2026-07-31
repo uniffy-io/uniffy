@@ -3,7 +3,8 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, text
+from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -38,6 +39,14 @@ class AgentSession(SQLModel, table=True):
     )
     is_archived: bool = Field(default=False, nullable=False)
     is_test: bool = Field(default=False, nullable=False)
+    loaded_tool_groups: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(
+            PG_JSONB,
+            nullable=False,
+            server_default=text("'[]'::jsonb"),
+        ),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

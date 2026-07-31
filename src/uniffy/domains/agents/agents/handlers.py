@@ -21,6 +21,8 @@ from uniffy_proto.agents.v1.agents_pb2 import (
     ListAgentsResponse,
     ListAgentTemplatesRequest,
     ListAgentTemplatesResponse,
+    ListToolsRequest,
+    ListToolsResponse,
     PreviewSystemPromptRequest,
     PreviewSystemPromptResponse,
     RestoreAgentRequest,
@@ -44,7 +46,11 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.db import open_session
 from uniffy.domains.agents.access import require_agents_builder
-from uniffy.domains.agents.agents.converters import agent_template_to_proto, agent_to_proto
+from uniffy.domains.agents.agents.converters import (
+    agent_template_to_proto,
+    agent_to_proto,
+    tool_catalog_entry_to_proto,
+)
 from uniffy.domains.agents.agents.operations import AgentOperations
 from uniffy.domains.agents.cache import fetch_memory_index
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
@@ -57,7 +63,11 @@ from uniffy.domains.agents.runtime.prompt import (
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.templates import AGENT_TEMPLATES
+from uniffy.domains.agents.tools.catalog import list_tool_catalog
+from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
+from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.integrations.tool_gate import filter_integration_tool_schemas
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.tags import Tag, TagOperations
 from uniffy.domains.users.operations import UserOperations
@@ -404,6 +414,32 @@ class AgentsHandlers:
         except Exception as exc:
             raise _map_domain_error("list_agent_templates", exc) from exc
 
+    async def list_tools(
+        self,
+        request: ListToolsRequest,
+        ctx: RequestContext,
+    ) -> ListToolsResponse:
+        """List the builder-selectable tools, ordered as the builder renders them.
+
+        Member-level rather than builder-gated: the catalog is shipped content
+        with no tenant data in it, and the chat tool-activity pane labels tool
+        steps for every member, not just builders.
+        """
+        user_id = get_user_id_from_context(ctx)
+        org_id = _parse_uuid(request.organization_id, "organization_id")
+
+        try:
+            async with open_session() as session:
+                await OrganizationOperations(session).require_org_member(user_id, org_id)
+
+                return ListToolsResponse(
+                    tools=[tool_catalog_entry_to_proto(entry) for entry in list_tool_catalog()]
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("list_tools", exc) from exc
+
     async def update_agent(
         self,
         request: UpdateAgentRequest,
@@ -704,13 +740,21 @@ class AgentsHandlers:
                     organization_id=org_id,
                 )
 
+                # Preview shows the run's initial state: no groups loaded yet.
+                registry = get_tool_registry()
+                schemas = registry.get_anthropic_schemas(agent.enabled_tools or [])
+                schemas = await filter_integration_tool_schemas(
+                    session, org_id, schemas
+                )
+                plan = plan_tool_advertisement(registry, schemas, [])
+
                 system_prompt = build_system_prompt(
                     agent_name=agent.name,
                     soul_prompt=agent.soul_prompt,
                     org_name=org.name,
                     user_name=user.full_name or user.username,
                     user_role=user_role,
-                    enabled_tools=agent.enabled_tools or [],
+                    deferred_tools=plan.deferred_names() or None,
                     skills=skill_entries or None,
                     memory_context=memory_context,
                 )

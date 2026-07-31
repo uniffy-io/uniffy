@@ -85,12 +85,21 @@ from uniffy.domains.agents.sessions.operations import (
 )
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.usage import record_skill_event, record_skill_injections
+from uniffy.domains.agents.tools.deferral import (
+    LOAD_GROUP_TOOL,
+    LOADED_GROUPS_METADATA_KEY,
+    plan_tool_advertisement,
+)
 from uniffy.domains.agents.tools.definitions import ToolContext, ToolResult
 from uniffy.domains.agents.tools.executor import ToolExecutor
-from uniffy.domains.agents.tools.registry import ToolRegistry, get_tool_registry, to_api_name
+from uniffy.domains.agents.tools.registry import (
+    ToolRegistry,
+    from_api_name,
+    get_tool_registry,
+    to_api_name,
+)
 from uniffy.domains.chat.sender_resolver import SenderResolver
 from uniffy.domains.integrations.tool_gate import (
-    filter_enabled_tools_for_prompt,
     filter_integration_tool_schemas,
     has_advertised_integration_tools,
 )
@@ -100,6 +109,10 @@ from uniffy.domains.users.operations import UserOperations
 logger = logger.bind(component="agents.runtime.operations")
 
 MAX_TOOL_ITERATIONS = 10
+# Turns whose only calls are tools.load_group don't consume the work budget;
+# loads are idempotent per group, so this cap only guards a model stuck in a
+# load-call loop.
+MAX_LOAD_ONLY_ITERATIONS = 3
 READ_TOOL_POOL_SIZE = 5
 
 
@@ -126,6 +139,30 @@ def _resolve_tool_schemas(
     if advertises and SKILL_VIEW_TOOL not in enabled_tools:
         schemas.extend(registry.get_anthropic_schemas([SKILL_VIEW_TOOL]))
     return schemas or None
+
+
+def _is_load_only_turn(tool_calls: list) -> bool:
+    """True when every call in the turn is tools.load_group."""
+    return bool(tool_calls) and all(
+        from_api_name(tc.name) == LOAD_GROUP_TOOL for tc in tool_calls
+    )
+
+
+def _expand_loaded_schemas(
+    tool_schemas: list[dict],
+    deferred_pool: dict[str, list[dict]] | None,
+    tool_results: dict[str, ToolResult],
+) -> None:
+    """Append schemas for groups a load_group call advertised this turn.
+
+    Append-only, in load order: the advertised prefix stays byte-stable so the
+    provider prompt cache is invalidated once per load, not per turn.
+    """
+    if not deferred_pool:
+        return
+    for res in tool_results.values():
+        for group in (res.metadata or {}).get(LOADED_GROUPS_METADATA_KEY, []):
+            tool_schemas.extend(deferred_pool.pop(group, []))
 
 
 def _split_read_write(
@@ -486,7 +523,13 @@ class RuntimeOperations:
         tool_schemas = await filter_integration_tool_schemas(
             self._session, organization_id, tool_schemas
         )
-        enabled_tools = filter_enabled_tools_for_prompt(enabled_tools, tool_schemas)
+        # The external-content note keys off the full enabled set: a deferred
+        # integration group can surface mid-run via tools.load_group.
+        external_note = has_advertised_integration_tools(tool_schemas)
+        loaded_tool_groups = list(agent_session.loaded_tool_groups or [])
+        plan = plan_tool_advertisement(registry, tool_schemas, loaded_tool_groups)
+        tool_schemas = plan.tool_schemas or None
+        deferred_pool = dict(plan.deferred)
 
         memory_scope = await self._resolve_memory_scope(
             destination=SessionDestination(session_id=session_id),
@@ -512,12 +555,12 @@ class RuntimeOperations:
             org_name=org.name,
             user_name=user.full_name or user.username,
             user_role=user_role,
-            enabled_tools=enabled_tools,
+            deferred_tools=plan.deferred_names() or None,
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
             memory_context=memory_context,
             user_timezone=user_timezone,
-            external_content_note=has_advertised_integration_tools(tool_schemas),
+            external_content_note=external_note,
         )
 
         request_params = resolve_request_params(
@@ -638,6 +681,8 @@ class RuntimeOperations:
                     ),
                     image_max_quality=image_config.max_quality if image_config else None,
                     integration_connections=agent.integration_connections or {},
+                    deferred_tool_groups=plan.deferred_names(),
+                    loaded_tool_groups=loaded_tool_groups,
                 )
                 executor = ToolExecutor(registry, tool_ctx)
 
@@ -655,6 +700,7 @@ class RuntimeOperations:
                     executor=executor,
                     run_tool_calls=run_tool_calls,
                     model_params=request_params,
+                    deferred_pool=deferred_pool,
                 )
                 tool_iterations = len(run_tool_calls)
 
@@ -729,6 +775,7 @@ class RuntimeOperations:
         executor: ToolExecutor,
         run_tool_calls: list[dict] | None = None,
         model_params: dict | None = None,
+        deferred_pool: dict[str, list[dict]] | None = None,
     ) -> CompletionResult:
         """Run the tool-use loop until the LLM produces a final response.
 
@@ -772,10 +819,20 @@ class RuntimeOperations:
             If the loop exceeds MAX_TOOL_ITERATIONS.
 
         """
-        for iteration in range(MAX_TOOL_ITERATIONS):
+        work_iterations = 0
+        load_iterations = 0
+        while True:
+            if _is_load_only_turn(result.tool_calls):
+                load_iterations += 1
+            else:
+                work_iterations += 1
+            if work_iterations > MAX_TOOL_ITERATIONS or (
+                load_iterations > MAX_LOAD_ONLY_ITERATIONS
+            ):
+                break
             logger.debug(
                 "Tool loop iteration",
-                iteration=iteration + 1,
+                iteration=work_iterations,
                 tool_calls=len(result.tool_calls),
             )
 
@@ -866,6 +923,8 @@ class RuntimeOperations:
                 "role": "user",
                 "content": tool_result_blocks,
             })
+
+            _expand_loaded_schemas(tool_schemas, deferred_pool, tool_results)
 
             # Re-invoke LLM with updated conversation
             result = await provider.chat_completion(
@@ -1160,8 +1219,10 @@ class RuntimeOperations:
             )
             agent_id = agent_session.agent_id
             model_override = agent_session.model_override
+            loaded_tool_groups = list(agent_session.loaded_tool_groups or [])
         else:
             agent_id = destination.agent_id
+            loaded_tool_groups = []
             binding = (
                 await self._session.execute(
                     select(AgentChannelBinding).where(
@@ -1174,6 +1235,7 @@ class RuntimeOperations:
                 model_override = binding.model_override
                 params_override = binding.model_params_override
                 image_params_override = binding.image_params_override
+                loaded_tool_groups = list(binding.loaded_tool_groups or [])
 
         agent = await self._agent_ops.get_for_runtime(
             user_id,
@@ -1239,7 +1301,12 @@ class RuntimeOperations:
         tool_schemas = await filter_integration_tool_schemas(
             self._session, organization_id, tool_schemas
         )
-        enabled_tools = filter_enabled_tools_for_prompt(enabled_tools, tool_schemas)
+        # The external-content note keys off the full enabled set: a deferred
+        # integration group can surface mid-run via tools.load_group.
+        external_note = has_advertised_integration_tools(tool_schemas)
+        plan = plan_tool_advertisement(registry, tool_schemas, loaded_tool_groups)
+        tool_schemas = plan.tool_schemas or None
+        deferred_pool = dict(plan.deferred)
 
         memory_scope = await self._resolve_memory_scope(
             destination=destination,
@@ -1273,13 +1340,13 @@ class RuntimeOperations:
             org_name=org.name,
             user_name=user.full_name or user.username,
             user_role=user_role,
-            enabled_tools=enabled_tools,
+            deferred_tools=plan.deferred_names() or None,
             skills=skill_entries or None,
             invoked_skill=invoked_entry,
             memory_context=memory_context,
             user_timezone=user_timezone,
             chat_context=chat_context_block,
-            external_content_note=has_advertised_integration_tools(tool_schemas),
+            external_content_note=external_note,
         )
 
         request_params = resolve_request_params(
@@ -1482,6 +1549,9 @@ class RuntimeOperations:
                 ),
                 image_max_quality=image_config.max_quality if image_config else None,
                 integration_connections=agent.integration_connections or {},
+                channel_id=channel_id,
+                deferred_tool_groups=plan.deferred_names(),
+                loaded_tool_groups=loaded_tool_groups,
             )
             executor = ToolExecutor(registry, tool_ctx)
 
@@ -1502,6 +1572,7 @@ class RuntimeOperations:
                     else None
                 ),
                 model_params=request_params,
+                deferred_pool=deferred_pool,
             ):
                 if event.type is EventType.DONE:
                     # The tool loop yielded a done event with the final result;
@@ -1602,6 +1673,7 @@ class RuntimeOperations:
         run_tool_calls: list[dict] | None = None,
         pending_thinking: list[dict] | None = None,
         model_params: dict | None = None,
+        deferred_pool: dict[str, list[dict]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the streaming tool-use loop until the LLM produces a final response.
 
@@ -1639,10 +1711,20 @@ class RuntimeOperations:
             If the loop exceeds MAX_TOOL_ITERATIONS.
 
         """
-        for iteration in range(MAX_TOOL_ITERATIONS):
+        work_iterations = 0
+        load_iterations = 0
+        while True:
+            if _is_load_only_turn(result.tool_calls):
+                load_iterations += 1
+            else:
+                work_iterations += 1
+            if work_iterations > MAX_TOOL_ITERATIONS or (
+                load_iterations > MAX_LOAD_ONLY_ITERATIONS
+            ):
+                break
             logger.debug(
                 "Stream tool loop iteration",
-                iteration=iteration + 1,
+                iteration=work_iterations,
                 tool_calls=len(result.tool_calls),
             )
 
@@ -1713,6 +1795,7 @@ class RuntimeOperations:
 
             results_content: dict[str, str] = {}
             results_success: dict[str, bool] = {}
+            turn_tool_results: dict[str, ToolResult] = dict(read_results)
 
             for tc in read_calls:
                 res = read_results[tc.id]
@@ -1784,6 +1867,7 @@ class RuntimeOperations:
                         continue
 
                 tool_result = await executor.execute(tc)
+                turn_tool_results[tc.id] = tool_result
                 content = (
                     tool_result.data if tool_result.success
                     else f"Error: {tool_result.error}"
@@ -1825,6 +1909,8 @@ class RuntimeOperations:
                 "role": "user",
                 "content": tool_result_blocks,
             })
+
+            _expand_loaded_schemas(tool_schemas, deferred_pool, turn_tool_results)
 
             # Re-invoke LLM with streaming
             stream_iter = await provider.chat_completion(

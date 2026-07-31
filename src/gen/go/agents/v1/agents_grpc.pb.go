@@ -29,6 +29,7 @@ const (
 	AgentsService_DeleteAgentAvatar_FullMethodName   = "/agents.v1.AgentsService/DeleteAgentAvatar"
 	AgentsService_PreviewSystemPrompt_FullMethodName = "/agents.v1.AgentsService/PreviewSystemPrompt"
 	AgentsService_ListAgentTemplates_FullMethodName  = "/agents.v1.AgentsService/ListAgentTemplates"
+	AgentsService_ListTools_FullMethodName           = "/agents.v1.AgentsService/ListTools"
 )
 
 // AgentsServiceClient is the client API for AgentsService service.
@@ -58,6 +59,8 @@ type AgentsServiceClient interface {
 	PreviewSystemPrompt(ctx context.Context, in *PreviewSystemPromptRequest, opts ...grpc.CallOption) (*PreviewSystemPromptResponse, error)
 	// List the shipped agent templates that prefill the create flow
 	ListAgentTemplates(ctx context.Context, in *ListAgentTemplatesRequest, opts ...grpc.CallOption) (*ListAgentTemplatesResponse, error)
+	// List the tools an agent can be given, as the builder groups them
+	ListTools(ctx context.Context, in *ListToolsRequest, opts ...grpc.CallOption) (*ListToolsResponse, error)
 }
 
 type agentsServiceClient struct {
@@ -168,6 +171,16 @@ func (c *agentsServiceClient) ListAgentTemplates(ctx context.Context, in *ListAg
 	return out, nil
 }
 
+func (c *agentsServiceClient) ListTools(ctx context.Context, in *ListToolsRequest, opts ...grpc.CallOption) (*ListToolsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListToolsResponse)
+	err := c.cc.Invoke(ctx, AgentsService_ListTools_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentsServiceServer is the server API for AgentsService service.
 // All implementations must embed UnimplementedAgentsServiceServer
 // for forward compatibility.
@@ -195,6 +208,8 @@ type AgentsServiceServer interface {
 	PreviewSystemPrompt(context.Context, *PreviewSystemPromptRequest) (*PreviewSystemPromptResponse, error)
 	// List the shipped agent templates that prefill the create flow
 	ListAgentTemplates(context.Context, *ListAgentTemplatesRequest) (*ListAgentTemplatesResponse, error)
+	// List the tools an agent can be given, as the builder groups them
+	ListTools(context.Context, *ListToolsRequest) (*ListToolsResponse, error)
 	mustEmbedUnimplementedAgentsServiceServer()
 }
 
@@ -234,6 +249,9 @@ func (UnimplementedAgentsServiceServer) PreviewSystemPrompt(context.Context, *Pr
 }
 func (UnimplementedAgentsServiceServer) ListAgentTemplates(context.Context, *ListAgentTemplatesRequest) (*ListAgentTemplatesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAgentTemplates not implemented")
+}
+func (UnimplementedAgentsServiceServer) ListTools(context.Context, *ListToolsRequest) (*ListToolsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTools not implemented")
 }
 func (UnimplementedAgentsServiceServer) mustEmbedUnimplementedAgentsServiceServer() {}
 func (UnimplementedAgentsServiceServer) testEmbeddedByValue()                       {}
@@ -436,6 +454,24 @@ func _AgentsService_ListAgentTemplates_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentsService_ListTools_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListToolsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentsServiceServer).ListTools(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentsService_ListTools_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentsServiceServer).ListTools(ctx, req.(*ListToolsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentsService_ServiceDesc is the grpc.ServiceDesc for AgentsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -482,6 +518,10 @@ var AgentsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAgentTemplates",
 			Handler:    _AgentsService_ListAgentTemplates_Handler,
+		},
+		{
+			MethodName: "ListTools",
+			Handler:    _AgentsService_ListTools_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -203,6 +203,8 @@ async def _execute_cron_get_runs(ctx: ToolContext, args: dict) -> ToolResult:
 
 cron_create = ToolDefinition(
     name="cron.create",
+    display_name="Create Scheduled Task",
+    group="Scheduling",
     description=(
         "Create a recurring scheduled task. The task will execute on the "
         "specified schedule, sending the prompt to yourself (this agent) "
@@ -248,6 +250,8 @@ cron_create = ToolDefinition(
 
 cron_list = ToolDefinition(
     name="cron.list",
+    display_name="List Scheduled Tasks",
+    group="Scheduling",
     description=(
         "List all scheduled tasks. Shows name, schedule, status, "
         "next run time, and execution history summary."
@@ -267,6 +271,8 @@ cron_list = ToolDefinition(
 
 cron_update = ToolDefinition(
     name="cron.update",
+    display_name="Update Scheduled Task",
+    group="Scheduling",
     description=(
         "Update a scheduled task's name, prompt, schedule, timezone, "
         "or enabled status. Use this to pause/resume, change the schedule, "
@@ -307,6 +313,8 @@ cron_update = ToolDefinition(
 
 cron_delete = ToolDefinition(
     name="cron.delete",
+    display_name="Delete Scheduled Task",
+    group="Scheduling",
     description="Delete a scheduled task permanently.",
     parameter_schema={
         "type": "object",
@@ -324,6 +332,8 @@ cron_delete = ToolDefinition(
 
 cron_get_runs = ToolDefinition(
     name="cron.get_runs",
+    display_name="View Run History",
+    group="Scheduling",
     description=(
         "View the execution history of a scheduled task. "
         "Shows status, timestamps, and token usage; the run output itself "

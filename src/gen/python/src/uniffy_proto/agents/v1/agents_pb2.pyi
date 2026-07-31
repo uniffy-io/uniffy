@@ -320,3 +320,33 @@ class ListAgentTemplatesResponse(_message.Message):
     TEMPLATES_FIELD_NUMBER: _ClassVar[int]
     templates: _containers.RepeatedCompositeFieldContainer[AgentTemplate]
     def __init__(self, templates: _Optional[_Iterable[_Union[AgentTemplate, _Mapping]]] = ...) -> None: ...
+
+class ToolInfo(_message.Message):
+    __slots__ = ("name", "display_name", "description", "group", "category", "destructive", "requires_connection")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    GROUP_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    DESTRUCTIVE_FIELD_NUMBER: _ClassVar[int]
+    REQUIRES_CONNECTION_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    display_name: str
+    description: str
+    group: str
+    category: str
+    destructive: bool
+    requires_connection: str
+    def __init__(self, name: _Optional[str] = ..., display_name: _Optional[str] = ..., description: _Optional[str] = ..., group: _Optional[str] = ..., category: _Optional[str] = ..., destructive: _Optional[bool] = ..., requires_connection: _Optional[str] = ...) -> None: ...
+
+class ListToolsRequest(_message.Message):
+    __slots__ = ("organization_id",)
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    def __init__(self, organization_id: _Optional[str] = ...) -> None: ...
+
+class ListToolsResponse(_message.Message):
+    __slots__ = ("tools",)
+    TOOLS_FIELD_NUMBER: _ClassVar[int]
+    tools: _containers.RepeatedCompositeFieldContainer[ToolInfo]
+    def __init__(self, tools: _Optional[_Iterable[_Union[ToolInfo, _Mapping]]] = ...) -> None: ...

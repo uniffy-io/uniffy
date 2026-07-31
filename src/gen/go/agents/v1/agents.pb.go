@@ -1777,6 +1777,195 @@ func (x *ListAgentTemplatesResponse) GetTemplates() []*AgentTemplate {
 	return nil
 }
 
+// One selectable capability in the agent builder. The server owns this copy;
+// clients render what they receive instead of keeping their own tool list.
+type ToolInfo struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Builder grouping label, e.g. "Notes" or "GitHub".
+	Group string `protobuf:"bytes,4,opt,name=group,proto3" json:"group,omitempty"`
+	// "platform" for tools that run against this deployment, "external" for
+	// tools that call a third-party API.
+	Category    string `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"`
+	Destructive bool   `protobuf:"varint,6,opt,name=destructive,proto3" json:"destructive,omitempty"`
+	// Integration provider id whose org connection this tool calls through;
+	// empty for platform tools.
+	RequiresConnection string `protobuf:"bytes,7,opt,name=requires_connection,json=requiresConnection,proto3" json:"requires_connection,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ToolInfo) Reset() {
+	*x = ToolInfo{}
+	mi := &file_agents_v1_agents_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ToolInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ToolInfo) ProtoMessage() {}
+
+func (x *ToolInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ToolInfo.ProtoReflect.Descriptor instead.
+func (*ToolInfo) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ToolInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetGroup() string {
+	if x != nil {
+		return x.Group
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *ToolInfo) GetDestructive() bool {
+	if x != nil {
+		return x.Destructive
+	}
+	return false
+}
+
+func (x *ToolInfo) GetRequiresConnection() string {
+	if x != nil {
+		return x.RequiresConnection
+	}
+	return ""
+}
+
+type ListToolsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListToolsRequest) Reset() {
+	*x = ListToolsRequest{}
+	mi := &file_agents_v1_agents_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListToolsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListToolsRequest) ProtoMessage() {}
+
+func (x *ListToolsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListToolsRequest.ProtoReflect.Descriptor instead.
+func (*ListToolsRequest) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ListToolsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+// Ordered as the builder renders them: category, then group, then registration
+// order within the group.
+type ListToolsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tools         []*ToolInfo            `protobuf:"bytes,1,rep,name=tools,proto3" json:"tools,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListToolsResponse) Reset() {
+	*x = ListToolsResponse{}
+	mi := &file_agents_v1_agents_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListToolsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListToolsResponse) ProtoMessage() {}
+
+func (x *ListToolsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agents_v1_agents_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListToolsResponse.ProtoReflect.Descriptor instead.
+func (*ListToolsResponse) Descriptor() ([]byte, []int) {
+	return file_agents_v1_agents_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ListToolsResponse) GetTools() []*ToolInfo {
+	if x != nil {
+		return x.Tools
+	}
+	return nil
+}
+
 var File_agents_v1_agents_proto protoreflect.FileDescriptor
 
 const file_agents_v1_agents_proto_rawDesc = "" +
@@ -1980,7 +2169,19 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x19ListAgentTemplatesRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"T\n" +
 	"\x1aListAgentTemplatesResponse\x126\n" +
-	"\ttemplates\x18\x01 \x03(\v2\x18.agents.v1.AgentTemplateR\ttemplates2\xf7\x06\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x18.agents.v1.AgentTemplateR\ttemplates\"\xe8\x01\n" +
+	"\bToolInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
+	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1a\n" +
+	"\bcategory\x18\x05 \x01(\tR\bcategory\x12 \n" +
+	"\vdestructive\x18\x06 \x01(\bR\vdestructive\x12/\n" +
+	"\x13requires_connection\x18\a \x01(\tR\x12requiresConnection\";\n" +
+	"\x10ListToolsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\">\n" +
+	"\x11ListToolsResponse\x12)\n" +
+	"\x05tools\x18\x01 \x03(\v2\x13.agents.v1.ToolInfoR\x05tools2\xc1\a\n" +
 	"\rAgentsService\x12N\n" +
 	"\vCreateAgent\x12\x1d.agents.v1.CreateAgentRequest\x1a\x1e.agents.v1.CreateAgentResponse\"\x00\x12E\n" +
 	"\bGetAgent\x12\x1a.agents.v1.GetAgentRequest\x1a\x1b.agents.v1.GetAgentResponse\"\x00\x12K\n" +
@@ -1992,7 +2193,8 @@ const file_agents_v1_agents_proto_rawDesc = "" +
 	"\x11UploadAgentAvatar\x12#.agents.v1.UploadAgentAvatarRequest\x1a$.agents.v1.UploadAgentAvatarResponse\"\x00\x12`\n" +
 	"\x11DeleteAgentAvatar\x12#.agents.v1.DeleteAgentAvatarRequest\x1a$.agents.v1.DeleteAgentAvatarResponse\"\x00\x12f\n" +
 	"\x13PreviewSystemPrompt\x12%.agents.v1.PreviewSystemPromptRequest\x1a&.agents.v1.PreviewSystemPromptResponse\"\x00\x12c\n" +
-	"\x12ListAgentTemplates\x12$.agents.v1.ListAgentTemplatesRequest\x1a%.agents.v1.ListAgentTemplatesResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
+	"\x12ListAgentTemplates\x12$.agents.v1.ListAgentTemplatesRequest\x1a%.agents.v1.ListAgentTemplatesResponse\"\x00\x12H\n" +
+	"\tListTools\x12\x1b.agents.v1.ListToolsRequest\x1a\x1c.agents.v1.ListToolsResponse\"\x00B9Z7github.com/uniffy-io/uniffy-proto-go/agents/v1;agentsv1b\x06proto3"
 
 var (
 	file_agents_v1_agents_proto_rawDescOnce sync.Once
@@ -2006,7 +2208,7 @@ func file_agents_v1_agents_proto_rawDescGZIP() []byte {
 	return file_agents_v1_agents_proto_rawDescData
 }
 
-var file_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_agents_v1_agents_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_agents_v1_agents_proto_goTypes = []any{
 	(*AgentInfo)(nil),                   // 0: agents.v1.AgentInfo
 	(*CreateAgentRequest)(nil),          // 1: agents.v1.CreateAgentRequest
@@ -2031,60 +2233,66 @@ var file_agents_v1_agents_proto_goTypes = []any{
 	(*AgentTemplate)(nil),               // 20: agents.v1.AgentTemplate
 	(*ListAgentTemplatesRequest)(nil),   // 21: agents.v1.ListAgentTemplatesRequest
 	(*ListAgentTemplatesResponse)(nil),  // 22: agents.v1.ListAgentTemplatesResponse
-	(*timestamppb.Timestamp)(nil),       // 23: google.protobuf.Timestamp
-	(v1.AccessMode)(0),                  // 24: common.v1.AccessMode
-	(v1.ContentRole)(0),                 // 25: common.v1.ContentRole
-	(*v11.Tag)(nil),                     // 26: tags.v1.Tag
-	(*v1.PaginationRequest)(nil),        // 27: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),       // 28: common.v1.PaginationResponse
+	(*ToolInfo)(nil),                    // 23: agents.v1.ToolInfo
+	(*ListToolsRequest)(nil),            // 24: agents.v1.ListToolsRequest
+	(*ListToolsResponse)(nil),           // 25: agents.v1.ListToolsResponse
+	(*timestamppb.Timestamp)(nil),       // 26: google.protobuf.Timestamp
+	(v1.AccessMode)(0),                  // 27: common.v1.AccessMode
+	(v1.ContentRole)(0),                 // 28: common.v1.ContentRole
+	(*v11.Tag)(nil),                     // 29: tags.v1.Tag
+	(*v1.PaginationRequest)(nil),        // 30: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),       // 31: common.v1.PaginationResponse
 }
 var file_agents_v1_agents_proto_depIdxs = []int32{
-	23, // 0: agents.v1.AgentInfo.created_at:type_name -> google.protobuf.Timestamp
-	23, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
-	24, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
-	25, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
-	25, // 4: agents.v1.AgentInfo.user_role:type_name -> common.v1.ContentRole
-	26, // 5: agents.v1.AgentInfo.tags:type_name -> tags.v1.Tag
-	23, // 6: agents.v1.AgentInfo.deleted_at:type_name -> google.protobuf.Timestamp
-	24, // 7: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
-	25, // 8: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
+	26, // 0: agents.v1.AgentInfo.created_at:type_name -> google.protobuf.Timestamp
+	26, // 1: agents.v1.AgentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 2: agents.v1.AgentInfo.access_mode:type_name -> common.v1.AccessMode
+	28, // 3: agents.v1.AgentInfo.baseline_role:type_name -> common.v1.ContentRole
+	28, // 4: agents.v1.AgentInfo.user_role:type_name -> common.v1.ContentRole
+	29, // 5: agents.v1.AgentInfo.tags:type_name -> tags.v1.Tag
+	26, // 6: agents.v1.AgentInfo.deleted_at:type_name -> google.protobuf.Timestamp
+	27, // 7: agents.v1.CreateAgentRequest.access_mode:type_name -> common.v1.AccessMode
+	28, // 8: agents.v1.CreateAgentRequest.baseline_role:type_name -> common.v1.ContentRole
 	0,  // 9: agents.v1.CreateAgentResponse.agent:type_name -> agents.v1.AgentInfo
 	0,  // 10: agents.v1.GetAgentResponse.agent:type_name -> agents.v1.AgentInfo
 	0,  // 11: agents.v1.UpdateAgentResponse.agent:type_name -> agents.v1.AgentInfo
 	0,  // 12: agents.v1.UploadAgentAvatarResponse.agent:type_name -> agents.v1.AgentInfo
 	0,  // 13: agents.v1.DeleteAgentAvatarResponse.agent:type_name -> agents.v1.AgentInfo
-	27, // 14: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
-	24, // 15: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
+	30, // 14: agents.v1.ListAgentsRequest.pagination:type_name -> common.v1.PaginationRequest
+	27, // 15: agents.v1.ListAgentsRequest.access_mode:type_name -> common.v1.AccessMode
 	0,  // 16: agents.v1.ListAgentsResponse.agents:type_name -> agents.v1.AgentInfo
-	28, // 17: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
+	31, // 17: agents.v1.ListAgentsResponse.pagination:type_name -> common.v1.PaginationResponse
 	11, // 18: agents.v1.UpdateAgentRequest.tag_ids:type_name -> agents.v1.AgentTagIds
 	0,  // 19: agents.v1.RestoreAgentResponse.agent:type_name -> agents.v1.AgentInfo
 	20, // 20: agents.v1.ListAgentTemplatesResponse.templates:type_name -> agents.v1.AgentTemplate
-	1,  // 21: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
-	7,  // 22: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
-	8,  // 23: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
-	10, // 24: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
-	12, // 25: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
-	14, // 26: agents.v1.AgentsService.RestoreAgent:input_type -> agents.v1.RestoreAgentRequest
-	16, // 27: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
-	17, // 28: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
-	18, // 29: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
-	21, // 30: agents.v1.AgentsService.ListAgentTemplates:input_type -> agents.v1.ListAgentTemplatesRequest
-	2,  // 31: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.CreateAgentResponse
-	3,  // 32: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.GetAgentResponse
-	9,  // 33: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
-	4,  // 34: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.UpdateAgentResponse
-	13, // 35: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
-	15, // 36: agents.v1.AgentsService.RestoreAgent:output_type -> agents.v1.RestoreAgentResponse
-	5,  // 37: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.UploadAgentAvatarResponse
-	6,  // 38: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.DeleteAgentAvatarResponse
-	19, // 39: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
-	22, // 40: agents.v1.AgentsService.ListAgentTemplates:output_type -> agents.v1.ListAgentTemplatesResponse
-	31, // [31:41] is the sub-list for method output_type
-	21, // [21:31] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	23, // 21: agents.v1.ListToolsResponse.tools:type_name -> agents.v1.ToolInfo
+	1,  // 22: agents.v1.AgentsService.CreateAgent:input_type -> agents.v1.CreateAgentRequest
+	7,  // 23: agents.v1.AgentsService.GetAgent:input_type -> agents.v1.GetAgentRequest
+	8,  // 24: agents.v1.AgentsService.ListAgents:input_type -> agents.v1.ListAgentsRequest
+	10, // 25: agents.v1.AgentsService.UpdateAgent:input_type -> agents.v1.UpdateAgentRequest
+	12, // 26: agents.v1.AgentsService.DeleteAgent:input_type -> agents.v1.DeleteAgentRequest
+	14, // 27: agents.v1.AgentsService.RestoreAgent:input_type -> agents.v1.RestoreAgentRequest
+	16, // 28: agents.v1.AgentsService.UploadAgentAvatar:input_type -> agents.v1.UploadAgentAvatarRequest
+	17, // 29: agents.v1.AgentsService.DeleteAgentAvatar:input_type -> agents.v1.DeleteAgentAvatarRequest
+	18, // 30: agents.v1.AgentsService.PreviewSystemPrompt:input_type -> agents.v1.PreviewSystemPromptRequest
+	21, // 31: agents.v1.AgentsService.ListAgentTemplates:input_type -> agents.v1.ListAgentTemplatesRequest
+	24, // 32: agents.v1.AgentsService.ListTools:input_type -> agents.v1.ListToolsRequest
+	2,  // 33: agents.v1.AgentsService.CreateAgent:output_type -> agents.v1.CreateAgentResponse
+	3,  // 34: agents.v1.AgentsService.GetAgent:output_type -> agents.v1.GetAgentResponse
+	9,  // 35: agents.v1.AgentsService.ListAgents:output_type -> agents.v1.ListAgentsResponse
+	4,  // 36: agents.v1.AgentsService.UpdateAgent:output_type -> agents.v1.UpdateAgentResponse
+	13, // 37: agents.v1.AgentsService.DeleteAgent:output_type -> agents.v1.DeleteAgentResponse
+	15, // 38: agents.v1.AgentsService.RestoreAgent:output_type -> agents.v1.RestoreAgentResponse
+	5,  // 39: agents.v1.AgentsService.UploadAgentAvatar:output_type -> agents.v1.UploadAgentAvatarResponse
+	6,  // 40: agents.v1.AgentsService.DeleteAgentAvatar:output_type -> agents.v1.DeleteAgentAvatarResponse
+	19, // 41: agents.v1.AgentsService.PreviewSystemPrompt:output_type -> agents.v1.PreviewSystemPromptResponse
+	22, // 42: agents.v1.AgentsService.ListAgentTemplates:output_type -> agents.v1.ListAgentTemplatesResponse
+	25, // 43: agents.v1.AgentsService.ListTools:output_type -> agents.v1.ListToolsResponse
+	33, // [33:44] is the sub-list for method output_type
+	22, // [22:33] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_agents_v1_agents_proto_init() }
@@ -2102,7 +2310,7 @@ func file_agents_v1_agents_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agents_v1_agents_proto_rawDesc), len(file_agents_v1_agents_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   23,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

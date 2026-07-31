@@ -505,6 +505,34 @@ the agent bound (`(both products)`).
 - [ ] LIKE metacharacters: `memory.read` with query `%` returns "no matching
       memories", not the whole store.
 
+## Agents: deferred tool loading
+
+Agents with more than 16 enabled tools advertise only core groups (Memory,
+Search, People, Skills, System) up front; the rest load on demand via
+`tools.load_group`. Needs one agent with most tool groups enabled ("big")
+and one with only a handful ("small") (`(both products)`).
+
+- [ ] Big agent, deferred flow: in a fresh DM ask something a deferred group
+      covers (e.g. "create a note titled X") -> the tool pane shows a
+      `Load Group` step first, then the notes tool runs and the reply
+      completes normally.
+- [ ] Load persists per conversation: in the SAME DM ask another notes
+      question -> no second load step; a DIFFERENT DM with the same agent
+      loads again on first use.
+- [ ] Channel destination: mention the big agent in a channel and trigger a
+      deferred tool -> load + run work; a second trigger in the same channel
+      skips the load.
+- [ ] Small agent unaffected: the small agent never shows a load step and
+      answers tool questions directly.
+- [ ] No capability invention: ask the big agent for something NO enabled
+      group covers -> it says it cannot, without a load attempt loop.
+- [ ] Integration groups stay gated: with the GitHub connection disabled,
+      the big agent's load index does not offer GitHub and asking for a repo
+      does not load it.
+- [ ] Tool labels: every step in the chat tool pane, the approval card, and
+      the approved/denied row shows the catalog display name ("Create Note"),
+      never a raw `notes-create_note` style name.
+
 ## Agents: builder surface, org defaults, builder gating
 
 `/agents` is the builder page (3 tabs: Agents, Skills, Automations),

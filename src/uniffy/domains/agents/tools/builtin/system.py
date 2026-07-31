@@ -23,6 +23,8 @@ async def _execute_current_time(ctx: ToolContext, args: dict) -> ToolResult:
 
 current_time = ToolDefinition(
     name="system.current_time",
+    display_name="Current Time (UTC)",
+    group="System",
     description=(
         "Get the current date and time in UTC. Use this whenever you need the "
         "real current time rather than the date snapshot in the conversation context."

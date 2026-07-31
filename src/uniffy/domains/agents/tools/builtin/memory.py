@@ -273,6 +273,8 @@ async def _execute_memory_forget(ctx: ToolContext, args: dict) -> ToolResult:
 
 memory_save = ToolDefinition(
     name="memory.save",
+    display_name="Save Memory",
+    group="Memory",
     description=(
         "Save information to remember across conversations. By default the "
         "memory's audience matches where you are: the user's personal "
@@ -343,6 +345,8 @@ memory_save = ToolDefinition(
 
 memory_read = ToolDefinition(
     name="memory.read",
+    display_name="Read Memory",
+    group="Memory",
     description=(
         "Read memories available in this space, including what other "
         "assistants saved for this audience and the organization's memory. "
@@ -377,6 +381,8 @@ memory_read = ToolDefinition(
 
 memory_forget = ToolDefinition(
     name="memory.forget",
+    display_name="Forget Memory",
+    group="Memory",
     description=(
         "Delete a memory saved in this space by its key. Pinned entries and "
         "organization memory cannot be deleted with this tool."

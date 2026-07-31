@@ -2,27 +2,9 @@ import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
 import type { SerializedMessage } from '@/features/agents/store/agentMessagesSerde';
 import type { ToolStep } from '@/features/agents/components/ToolActivityPane';
 import type { ThinkingBlockView } from '@/features/agents/utils/thinkingBlocks';
-import { TOOL_SECTIONS } from '@/features/agents/config/toolCatalog';
+export { toolActionLabel } from '@/features/agents/config/toolLabels';
 
-const TOOL_DISPLAY_NAMES: Record<string, string> = {};
-for (const section of TOOL_SECTIONS) {
-    for (const group of section.groups) {
-        for (const tool of group.tools) {
-            TOOL_DISPLAY_NAMES[tool.name] = tool.displayName;
-        }
-    }
-}
-
-export function toolActionLabel(toolName: string): string {
-    const display = TOOL_DISPLAY_NAMES[toolName];
-    if (display) return display;
-    const parts = toolName.split('.');
-    const action = parts[parts.length - 1];
-    return action
-        .split('_')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
-}
+import { toolActionLabel } from '@/features/agents/config/toolLabels';
 
 const TOOL_FAILURE_RE = /^(Error|Permission denied|Not found|Validation error)/i;
 

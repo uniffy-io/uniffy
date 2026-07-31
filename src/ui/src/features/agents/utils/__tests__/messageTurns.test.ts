@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MessageRole } from '@uniffy/proto/agents/v1/sessions_pb';
+import { rememberToolLabels } from '@/features/agents/config/toolLabels';
 import type { SerializedMessage } from '@/features/agents/store/agentMessagesSerde';
 import {
     foldMessageTurns,
@@ -99,5 +100,15 @@ describe('streamingToolCallsToSteps', () => {
 describe('toolActionLabel', () => {
     it('humanizes unknown tool names from their action segment', () => {
         expect(toolActionLabel('files.share_with_group')).toBe('Share With Group');
+    });
+
+    it('resolves the hyphenated wire form chat rows persist', () => {
+        expect(toolActionLabel('files-share_with_group')).toBe('Share With Group');
+    });
+
+    it('prefers the catalog display name for both name forms', () => {
+        rememberToolLabels([{ name: 'notes.create_note', displayName: 'Create Note' }]);
+        expect(toolActionLabel('notes.create_note')).toBe('Create Note');
+        expect(toolActionLabel('notes-create_note')).toBe('Create Note');
     });
 });

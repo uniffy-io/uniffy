@@ -10,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 if TYPE_CHECKING:
     from uniffy.domains.agents.memories.scope import MemoryScopeRef
 
+CATEGORY_PLATFORM = "platform"
+CATEGORY_EXTERNAL = "external"
+
 
 @dataclass
 class ToolContext:
@@ -47,6 +50,15 @@ class ToolContext:
     # The agent's provider -> connection pin map; the default connection for
     # integration tools when a call passes no `connection` argument.
     integration_connections: dict = field(default_factory=dict)
+    # Chat destination of the run, when there is one. tools.load_group persists
+    # its state on the (channel, agent) binding through this.
+    channel_id: UUID | None = None
+    # Deferred-advertisement state for this run: group label -> internal tool
+    # names still loadable, plus the groups already advertised. Mutated by
+    # tools.load_group; a load can only ever advertise from the agent's
+    # enabled set, so this is routing state, not an authorization surface.
+    deferred_tool_groups: dict = field(default_factory=dict)
+    loaded_tool_groups: list = field(default_factory=list)
 
 
 @dataclass
@@ -92,6 +104,19 @@ class ToolDefinition:
         executor in ``asyncio.wait_for(..., timeout=timeout_seconds)``
         and returns a structured timeout failure when the ceiling is
         exceeded.
+    display_name : str
+        Label the builder UI and the tool-activity pane show. Falls back
+        to a title-cased form of the name when empty.
+    group : str
+        Builder-UI grouping ("Notes", "GitHub", ...). Falls back to the
+        name's prefix when empty.
+    category : str
+        ``platform`` for tools that run against this deployment, or
+        ``external`` for tools that call a third-party API.
+    internal : bool
+        Framework plumbing (``skills.view_skill``): the runtime advertises
+        it to the model on its own terms, so it is never offered as a
+        builder-selectable capability.
 
     """
 
@@ -104,3 +129,7 @@ class ToolDefinition:
     destructive: bool = False
     read_only: bool = False
     timeout_seconds: int = 15
+    display_name: str = ""
+    group: str = ""
+    category: str = CATEGORY_PLATFORM
+    internal: bool = False

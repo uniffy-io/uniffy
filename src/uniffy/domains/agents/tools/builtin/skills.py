@@ -136,6 +136,8 @@ async def _execute_propose_skill(ctx: ToolContext, args: dict) -> ToolResult:
 
 propose_skill = ToolDefinition(
     name="skills.propose_skill",
+    display_name="Propose Skill",
+    group="Skills",
     description=(
         "Propose a reusable skill (a set of markdown instructions) for the user to review "
         "and save. Use this when the user teaches you a repeatable workflow, a preference, or "
@@ -186,6 +188,9 @@ propose_skill = ToolDefinition(
 
 view_skill = ToolDefinition(
     name="skills.view_skill",
+    display_name="View Skill",
+    group="Skills",
+    internal=True,
     description=(
         "Load the full instructions for one of the skills advertised as available "
         "in your system prompt. Call this with the skill's name before using it, then "

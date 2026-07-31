@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from uniffy.domains.agents.tools.definitions import ToolContext, ToolDefinition, ToolResult
+from uniffy.domains.agents.tools.definitions import (
+    CATEGORY_EXTERNAL,
+    ToolContext,
+    ToolDefinition,
+    ToolResult,
+)
 from uniffy.domains.integrations.base import IntegrationAuthError
 from uniffy.domains.integrations.format import (
     BODY_CAP,
@@ -814,6 +819,9 @@ async def _execute_list_releases(ctx: ToolContext, args: dict) -> ToolResult:
 
 search_issues = ToolDefinition(
     name="github.search_issues",
+    display_name="Search Issues",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Search issues and pull requests on GitHub. The query supports GitHub search "
         "syntax qualifiers such as repo:owner/name, is:pr, is:issue, state:open, "
@@ -843,6 +851,9 @@ search_issues = ToolDefinition(
 
 search_repos = ToolDefinition(
     name="github.search_repos",
+    display_name="Search Repositories",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Search repositories on GitHub by name or keywords. Use this first to resolve "
         "a bare repository name to its full owner/repo form. The query supports "
@@ -870,6 +881,9 @@ search_repos = ToolDefinition(
 
 list_repos = ToolDefinition(
     name="github.list_repos",
+    display_name="List Repositories",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "List repositories the connected GitHub account can access, most recently updated first."
     ),
@@ -888,6 +902,9 @@ list_repos = ToolDefinition(
 
 get_issue = ToolDefinition(
     name="github.get_issue",
+    display_name="Read Issue",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description="Read a GitHub issue: title, state, labels, body, and its most recent comments.",
     parameter_schema={
         "type": "object",
@@ -906,6 +923,9 @@ get_issue = ToolDefinition(
 
 list_pull_requests = ToolDefinition(
     name="github.list_pull_requests",
+    display_name="List Pull Requests",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description="List pull requests in a GitHub repository.",
     parameter_schema={
         "type": "object",
@@ -930,6 +950,9 @@ list_pull_requests = ToolDefinition(
 
 get_pull_request = ToolDefinition(
     name="github.get_pull_request",
+    display_name="Read Pull Request",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Read a GitHub pull request: title, state, branches, body, and the list of "
         "changed files with additions and deletions."
@@ -951,6 +974,9 @@ get_pull_request = ToolDefinition(
 
 get_file = ToolDefinition(
     name="github.get_file",
+    display_name="Read File",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description="Read a file or list a directory from a GitHub repository.",
     parameter_schema={
         "type": "object",
@@ -976,6 +1002,9 @@ get_file = ToolDefinition(
 
 get_pull_request_diff = ToolDefinition(
     name="github.get_pull_request_diff",
+    display_name="Read Pull Request Diff",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Read a GitHub pull request's diff as per-file patch hunks, 50 files per page. "
         "Long patches are truncated; use github.get_file for full file context."
@@ -998,6 +1027,9 @@ get_pull_request_diff = ToolDefinition(
 
 list_commits = ToolDefinition(
     name="github.list_commits",
+    display_name="List Commits",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "List commits in a GitHub repository, optionally filtered to a branch or SHA, "
         "a file path, or an author."
@@ -1029,6 +1061,9 @@ list_commits = ToolDefinition(
 
 get_commit = ToolDefinition(
     name="github.get_commit",
+    display_name="Read Commit",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Read a GitHub commit: author, full message, stats, and changed file paths. "
         "No patch hunks; github.get_pull_request_diff serves those for a pull request."
@@ -1050,6 +1085,9 @@ get_commit = ToolDefinition(
 
 get_checks = ToolDefinition(
     name="github.get_checks",
+    display_name="Read CI Checks",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Read CI results for a commit ref: the combined status plus every check run, "
         "failing runs first."
@@ -1071,6 +1109,9 @@ get_checks = ToolDefinition(
 
 list_pr_reviews = ToolDefinition(
     name="github.list_pr_reviews",
+    display_name="Read Reviews",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description="Read a GitHub pull request's reviews and inline review comments.",
     parameter_schema={
         "type": "object",
@@ -1089,6 +1130,9 @@ list_pr_reviews = ToolDefinition(
 
 search_code = ToolDefinition(
     name="github.search_code",
+    display_name="Search Code",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Search file contents on GitHub. Matches default branches only and shares a "
         "10 requests/minute pool, so batch queries with qualifiers such as repo:owner/name, "
@@ -1111,6 +1155,9 @@ search_code = ToolDefinition(
 
 compare = ToolDefinition(
     name="github.compare",
+    display_name="Compare Refs",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Compare two refs in a GitHub repository (base...head): ahead/behind counts, "
         "commits, and changed files."
@@ -1133,6 +1180,9 @@ compare = ToolDefinition(
 
 get_repo = ToolDefinition(
     name="github.get_repo",
+    display_name="Read Repository",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description=(
         "Read GitHub repository metadata: description, topics, activity, and the "
         "default branch github.get_file reads when ref is omitted."
@@ -1153,6 +1203,9 @@ get_repo = ToolDefinition(
 
 list_branches = ToolDefinition(
     name="github.list_branches",
+    display_name="List Branches",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description="List branches in a GitHub repository.",
     parameter_schema={
         "type": "object",
@@ -1172,6 +1225,9 @@ list_branches = ToolDefinition(
 
 list_releases = ToolDefinition(
     name="github.list_releases",
+    display_name="List Releases",
+    group="GitHub",
+    category=CATEGORY_EXTERNAL,
     description="List releases in a GitHub repository with their notes, newest first.",
     parameter_schema={
         "type": "object",
