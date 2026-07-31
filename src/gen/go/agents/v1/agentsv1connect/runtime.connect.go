@@ -359,8 +359,8 @@ func (UnimplementedRuntimeServiceHandler) RegenerateImage(context.Context, *conn
 
 // RuntimeSettingsServiceClient is a client for the agents.v1.RuntimeSettingsService service.
 type RuntimeSettingsServiceClient interface {
-	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
-	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
+	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error)
+	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error)
 }
 
 // NewRuntimeSettingsServiceClient constructs a client for the agents.v1.RuntimeSettingsService
@@ -374,13 +374,13 @@ func NewRuntimeSettingsServiceClient(httpClient connect.HTTPClient, baseURL stri
 	baseURL = strings.TrimRight(baseURL, "/")
 	runtimeSettingsServiceMethods := v1.File_agents_v1_runtime_proto.Services().ByName("RuntimeSettingsService").Methods()
 	return &runtimeSettingsServiceClient{
-		getRuntimeSettings: connect.NewClient[v1.GetRuntimeSettingsRequest, v1.RuntimeSettingsResponse](
+		getRuntimeSettings: connect.NewClient[v1.GetRuntimeSettingsRequest, v1.GetRuntimeSettingsResponse](
 			httpClient,
 			baseURL+RuntimeSettingsServiceGetRuntimeSettingsProcedure,
 			connect.WithSchema(runtimeSettingsServiceMethods.ByName("GetRuntimeSettings")),
 			connect.WithClientOptions(opts...),
 		),
-		updateRuntimeSettings: connect.NewClient[v1.UpdateRuntimeSettingsRequest, v1.RuntimeSettingsResponse](
+		updateRuntimeSettings: connect.NewClient[v1.UpdateRuntimeSettingsRequest, v1.UpdateRuntimeSettingsResponse](
 			httpClient,
 			baseURL+RuntimeSettingsServiceUpdateRuntimeSettingsProcedure,
 			connect.WithSchema(runtimeSettingsServiceMethods.ByName("UpdateRuntimeSettings")),
@@ -391,25 +391,25 @@ func NewRuntimeSettingsServiceClient(httpClient connect.HTTPClient, baseURL stri
 
 // runtimeSettingsServiceClient implements RuntimeSettingsServiceClient.
 type runtimeSettingsServiceClient struct {
-	getRuntimeSettings    *connect.Client[v1.GetRuntimeSettingsRequest, v1.RuntimeSettingsResponse]
-	updateRuntimeSettings *connect.Client[v1.UpdateRuntimeSettingsRequest, v1.RuntimeSettingsResponse]
+	getRuntimeSettings    *connect.Client[v1.GetRuntimeSettingsRequest, v1.GetRuntimeSettingsResponse]
+	updateRuntimeSettings *connect.Client[v1.UpdateRuntimeSettingsRequest, v1.UpdateRuntimeSettingsResponse]
 }
 
 // GetRuntimeSettings calls agents.v1.RuntimeSettingsService.GetRuntimeSettings.
-func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, req *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, req *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error) {
 	return c.getRuntimeSettings.CallUnary(ctx, req)
 }
 
 // UpdateRuntimeSettings calls agents.v1.RuntimeSettingsService.UpdateRuntimeSettings.
-func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, req *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, req *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error) {
 	return c.updateRuntimeSettings.CallUnary(ctx, req)
 }
 
 // RuntimeSettingsServiceHandler is an implementation of the agents.v1.RuntimeSettingsService
 // service.
 type RuntimeSettingsServiceHandler interface {
-	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
-	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error)
+	GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error)
+	UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error)
 }
 
 // NewRuntimeSettingsServiceHandler builds an HTTP handler from the service implementation. It
@@ -446,10 +446,10 @@ func NewRuntimeSettingsServiceHandler(svc RuntimeSettingsServiceHandler, opts ..
 // UnimplementedRuntimeSettingsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedRuntimeSettingsServiceHandler struct{}
 
-func (UnimplementedRuntimeSettingsServiceHandler) GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+func (UnimplementedRuntimeSettingsServiceHandler) GetRuntimeSettings(context.Context, *connect.Request[v1.GetRuntimeSettingsRequest]) (*connect.Response[v1.GetRuntimeSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeSettingsService.GetRuntimeSettings is not implemented"))
 }
 
-func (UnimplementedRuntimeSettingsServiceHandler) UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.RuntimeSettingsResponse], error) {
+func (UnimplementedRuntimeSettingsServiceHandler) UpdateRuntimeSettings(context.Context, *connect.Request[v1.UpdateRuntimeSettingsRequest]) (*connect.Response[v1.UpdateRuntimeSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agents.v1.RuntimeSettingsService.UpdateRuntimeSettings is not implemented"))
 }

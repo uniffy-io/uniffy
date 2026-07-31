@@ -450,8 +450,8 @@ const (
 // RuntimeSettingsService manages the per-org agent runtime settings blob.
 // Both methods require org admin.
 type RuntimeSettingsServiceClient interface {
-	GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error)
-	UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error)
+	GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*GetRuntimeSettingsResponse, error)
+	UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*UpdateRuntimeSettingsResponse, error)
 }
 
 type runtimeSettingsServiceClient struct {
@@ -462,9 +462,9 @@ func NewRuntimeSettingsServiceClient(cc grpc.ClientConnInterface) RuntimeSetting
 	return &runtimeSettingsServiceClient{cc}
 }
 
-func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error) {
+func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, in *GetRuntimeSettingsRequest, opts ...grpc.CallOption) (*GetRuntimeSettingsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RuntimeSettingsResponse)
+	out := new(GetRuntimeSettingsResponse)
 	err := c.cc.Invoke(ctx, RuntimeSettingsService_GetRuntimeSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -472,9 +472,9 @@ func (c *runtimeSettingsServiceClient) GetRuntimeSettings(ctx context.Context, i
 	return out, nil
 }
 
-func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*RuntimeSettingsResponse, error) {
+func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context, in *UpdateRuntimeSettingsRequest, opts ...grpc.CallOption) (*UpdateRuntimeSettingsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RuntimeSettingsResponse)
+	out := new(UpdateRuntimeSettingsResponse)
 	err := c.cc.Invoke(ctx, RuntimeSettingsService_UpdateRuntimeSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -489,8 +489,8 @@ func (c *runtimeSettingsServiceClient) UpdateRuntimeSettings(ctx context.Context
 // RuntimeSettingsService manages the per-org agent runtime settings blob.
 // Both methods require org admin.
 type RuntimeSettingsServiceServer interface {
-	GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*RuntimeSettingsResponse, error)
-	UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*RuntimeSettingsResponse, error)
+	GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*GetRuntimeSettingsResponse, error)
+	UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*UpdateRuntimeSettingsResponse, error)
 	mustEmbedUnimplementedRuntimeSettingsServiceServer()
 }
 
@@ -501,10 +501,10 @@ type RuntimeSettingsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedRuntimeSettingsServiceServer struct{}
 
-func (UnimplementedRuntimeSettingsServiceServer) GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*RuntimeSettingsResponse, error) {
+func (UnimplementedRuntimeSettingsServiceServer) GetRuntimeSettings(context.Context, *GetRuntimeSettingsRequest) (*GetRuntimeSettingsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRuntimeSettings not implemented")
 }
-func (UnimplementedRuntimeSettingsServiceServer) UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*RuntimeSettingsResponse, error) {
+func (UnimplementedRuntimeSettingsServiceServer) UpdateRuntimeSettings(context.Context, *UpdateRuntimeSettingsRequest) (*UpdateRuntimeSettingsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateRuntimeSettings not implemented")
 }
 func (UnimplementedRuntimeSettingsServiceServer) mustEmbedUnimplementedRuntimeSettingsServiceServer() {

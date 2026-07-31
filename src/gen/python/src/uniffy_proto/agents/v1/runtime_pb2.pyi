@@ -46,7 +46,15 @@ class UpdateRuntimeSettingsRequest(_message.Message):
     settings: RuntimeSettings
     def __init__(self, organization_id: _Optional[str] = ..., settings: _Optional[_Union[RuntimeSettings, _Mapping]] = ...) -> None: ...
 
-class RuntimeSettingsResponse(_message.Message):
+class GetRuntimeSettingsResponse(_message.Message):
+    __slots__ = ("settings", "configured")
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    CONFIGURED_FIELD_NUMBER: _ClassVar[int]
+    settings: RuntimeSettings
+    configured: bool
+    def __init__(self, settings: _Optional[_Union[RuntimeSettings, _Mapping]] = ..., configured: _Optional[bool] = ...) -> None: ...
+
+class UpdateRuntimeSettingsResponse(_message.Message):
     __slots__ = ("settings", "configured")
     SETTINGS_FIELD_NUMBER: _ClassVar[int]
     CONFIGURED_FIELD_NUMBER: _ClassVar[int]

@@ -8,9 +8,10 @@ from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.agents.v1.runtime_pb2 import (
     GetRuntimeSettingsRequest,
+    GetRuntimeSettingsResponse,
     RuntimeSettings,
-    RuntimeSettingsResponse,
     UpdateRuntimeSettingsRequest,
+    UpdateRuntimeSettingsResponse,
 )
 
 from uniffy.core.errors import PermissionDeniedError, ValidationError
@@ -50,7 +51,7 @@ class RuntimeSettingsHandlers:
         self,
         request: GetRuntimeSettingsRequest,
         ctx: RequestContext,
-    ) -> RuntimeSettingsResponse:
+    ) -> GetRuntimeSettingsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -63,7 +64,7 @@ class RuntimeSettingsHandlers:
                 resolved, configured = await ops.get(
                     user_id=user_id, organization_id=org_id
                 )
-                return RuntimeSettingsResponse(
+                return GetRuntimeSettingsResponse(
                     settings=_to_proto(resolved), configured=configured
                 )
         except PermissionDeniedError as e:
@@ -78,7 +79,7 @@ class RuntimeSettingsHandlers:
         self,
         request: UpdateRuntimeSettingsRequest,
         ctx: RequestContext,
-    ) -> RuntimeSettingsResponse:
+    ) -> UpdateRuntimeSettingsResponse:
         user_id = get_user_id_from_context(ctx)
         try:
             org_id = UUID(request.organization_id)
@@ -103,7 +104,7 @@ class RuntimeSettingsHandlers:
                     image_max_resolution=s.image_max_resolution,
                     image_max_quality=s.image_max_quality,
                 )
-                return RuntimeSettingsResponse(
+                return UpdateRuntimeSettingsResponse(
                     settings=_to_proto(resolved), configured=configured
                 )
         except ValidationError as e:

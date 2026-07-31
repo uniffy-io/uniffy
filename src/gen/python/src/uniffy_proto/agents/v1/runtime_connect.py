@@ -303,10 +303,10 @@ class RuntimeServiceClient(ConnectClient):
         )
 
 class RuntimeSettingsService(Protocol):
-    async def get_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    async def get_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
-    async def update_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    async def update_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -320,7 +320,7 @@ class RuntimeSettingsServiceASGIApplication(ConnectASGIApplication[RuntimeSettin
                         name="GetRuntimeSettings",
                         service_name="agents.v1.RuntimeSettingsService",
                         input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
-                        output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                        output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_runtime_settings,
@@ -330,7 +330,7 @@ class RuntimeSettingsServiceASGIApplication(ConnectASGIApplication[RuntimeSettin
                         name="UpdateRuntimeSettings",
                         service_name="agents.v1.RuntimeSettingsService",
                         input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
-                        output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                        output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_runtime_settings,
@@ -355,14 +355,14 @@ class RuntimeSettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    ) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetRuntimeSettings",
                 service_name="agents.v1.RuntimeSettingsService",
                 input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
-                output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -375,14 +375,14 @@ class RuntimeSettingsServiceClient(ConnectClient):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    ) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateRuntimeSettings",
                 service_name="agents.v1.RuntimeSettingsService",
                 input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
-                output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -671,9 +671,9 @@ class RuntimeServiceClientSync(ConnectClientSync):
         )
 
 class RuntimeSettingsServiceSync(Protocol):
-    def get_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    def get_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
-    def update_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    def update_runtime_settings(self, request: agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest, ctx: RequestContext) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -686,7 +686,7 @@ class RuntimeSettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="GetRuntimeSettings",
                         service_name="agents.v1.RuntimeSettingsService",
                         input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
-                        output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                        output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_runtime_settings,
@@ -696,7 +696,7 @@ class RuntimeSettingsServiceWSGIApplication(ConnectWSGIApplication):
                         name="UpdateRuntimeSettings",
                         service_name="agents.v1.RuntimeSettingsService",
                         input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
-                        output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                        output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_runtime_settings,
@@ -721,14 +721,14 @@ class RuntimeSettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    ) -> agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="GetRuntimeSettings",
                 service_name="agents.v1.RuntimeSettingsService",
                 input=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsRequest,
-                output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                output=agents_dot_v1_dot_runtime__pb2.GetRuntimeSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -741,14 +741,14 @@ class RuntimeSettingsServiceClientSync(ConnectClientSync):
         *,
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
-    ) -> agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse:
+    ) -> agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse:
         return self.execute_unary(
             request=request,
             method=MethodInfo(
                 name="UpdateRuntimeSettings",
                 service_name="agents.v1.RuntimeSettingsService",
                 input=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsRequest,
-                output=agents_dot_v1_dot_runtime__pb2.RuntimeSettingsResponse,
+                output=agents_dot_v1_dot_runtime__pb2.UpdateRuntimeSettingsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

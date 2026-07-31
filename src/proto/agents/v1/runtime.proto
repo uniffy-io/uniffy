@@ -41,8 +41,8 @@ service RuntimeService {
 // RuntimeSettingsService manages the per-org agent runtime settings blob.
 // Both methods require org admin.
 service RuntimeSettingsService {
-  rpc GetRuntimeSettings(GetRuntimeSettingsRequest) returns (RuntimeSettingsResponse) {}
-  rpc UpdateRuntimeSettings(UpdateRuntimeSettingsRequest) returns (RuntimeSettingsResponse) {}
+  rpc GetRuntimeSettings(GetRuntimeSettingsRequest) returns (GetRuntimeSettingsResponse) {}
+  rpc UpdateRuntimeSettings(UpdateRuntimeSettingsRequest) returns (UpdateRuntimeSettingsResponse) {}
 }
 
 message RuntimeSettings {
@@ -72,9 +72,14 @@ message UpdateRuntimeSettingsRequest {
   RuntimeSettings settings = 2;
 }
 
-message RuntimeSettingsResponse {
+message GetRuntimeSettingsResponse {
   RuntimeSettings settings = 1;
   // Whether an org-level settings row exists (vs pure code defaults).
+  bool configured = 2;
+}
+
+message UpdateRuntimeSettingsResponse {
+  RuntimeSettings settings = 1;
   bool configured = 2;
 }
 
