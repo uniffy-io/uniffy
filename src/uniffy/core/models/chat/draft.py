@@ -1,10 +1,12 @@
 """Chat draft model."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, text
 from sqlmodel import Field, SQLModel
+
+from uniffy.core.types import generate_id
 
 
 class ChatDraft(SQLModel, table=True):
@@ -30,7 +32,7 @@ class ChatDraft(SQLModel, table=True):
         ),
     )
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    id: UUID = Field(default_factory=generate_id, primary_key=True)
     user_id: UUID = Field(
         sa_column=Column(ForeignKey("login_users.id", ondelete="CASCADE"), nullable=False),
     )
