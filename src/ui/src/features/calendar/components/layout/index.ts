@@ -2,4 +2,3 @@ export { CalendarLayout } from '@/features/calendar/components/layout/CalendarLa
 export { CalendarHeader } from '@/features/calendar/components/layout/CalendarHeader';
 export { LeftSidebar } from '@/features/calendar/components/layout/LeftSidebar';
 export { MainContent } from '@/features/calendar/components/layout/MainContent';
-export { DetailPanel } from '@/features/calendar/components/layout/DetailPanel';

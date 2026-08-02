@@ -5,12 +5,11 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useShortcutHandler } from '@/features/settings';
 import { cn } from '@/shared/utils/cn';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { CalendarLayout, LeftSidebar, MainContent, DetailPanel } from '@/features/calendar/components/layout';
+import { CalendarLayout, LeftSidebar, MainContent } from '@/features/calendar/components/layout';
 import { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
 import { AddCategoryModal } from '@/features/calendar/components/modals/AddCategoryModal';
 import { CreateTemplateModal } from '@/features/calendar/components/modals/CreateTemplateModal';
-import { EventEditor } from '@/features/calendar/components/modals/EventEditor';
-import { closeEventModal, closeAddCategoryModal, closeCreateTemplateModal, closeEditEvent, selectEvent, setCurrentDate, toggleSidebar } from '@/features/calendar/store';
+import { closeEventModal, closeAddCategoryModal, closeCreateTemplateModal, selectEvent, setCurrentDate, toggleSidebar } from '@/features/calendar/store';
 import { fetchEventsInRange, fetchCategories, fetchEvent } from '@/features/calendar/store/calendarThunks';
 import { toDateString } from '@/features/calendar/utils';
 import { useContentAccessRefetch } from '@/features/notifications/hooks/useContentAccessRefetch';
@@ -29,7 +28,6 @@ export function CalendarPage() {
     isEventModalOpen,
     isAddCategoryModalOpen,
     isCreateTemplateModalOpen,
-    isEditingEventOpen,
     selectedEventId,
     eventModalPrefill,
   } = useAppSelector((state) => state.calendarUi);
@@ -70,7 +68,7 @@ export function CalendarPage() {
         }
       })
       .catch(() => {
-        // Detail panel surfaces fetch errors.
+        // The detail modal surfaces fetch errors.
       });
   }, [dispatch, eventId, currentOrganizationId, currentDate]);
 
@@ -105,7 +103,6 @@ export function CalendarPage() {
         <CalendarLayout
           sidebar={<LeftSidebar />}
           mainContent={<MainContent />}
-          detailPanel={<DetailPanel />}
         />
       </div>
 
@@ -130,14 +127,6 @@ export function CalendarPage() {
         isOpen={isCreateTemplateModalOpen}
         onClose={() => dispatch(closeCreateTemplateModal())}
       />
-
-      {isEditingEventOpen && selectedEvent && (
-        <EventEditor
-          event={selectedEvent}
-          isOpen={isEditingEventOpen}
-          onClose={() => dispatch(closeEditEvent())}
-        />
-      )}
     </>
   );
 }

@@ -7,7 +7,7 @@ import { DayHeadersRow } from '@/features/calendar/components/calendar/DayHeader
 import { GridLines } from '@/features/calendar/components/calendar/GridLines';
 import { CurrentTimeIndicator } from '@/features/calendar/components/calendar/CurrentTimeIndicator';
 import { EventBlock } from '@/features/calendar/components/calendar/EventBlock';
-import { GRID, LAYOUT } from '@/features/calendar/constants';
+import { GRID, LAYOUT, ACCENT_EVENT_COLOR, eventTint } from '@/features/calendar/constants';
 import { positionAllDayEvents } from '@/features/calendar/utils/eventPositioning';
 import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
 import { cn } from '@/shared/utils/cn';
@@ -261,7 +261,7 @@ export function WeekView() {
                   if (adjustedSpan <= 0) return null;
 
                   const category = event.categoryId ? categories[event.categoryId] : null;
-                  const color = category?.color ?? '#3B82F6';
+                  const color = category?.color ?? ACCENT_EVENT_COLOR;
                   const isSelected = selectedEventId === event.id;
 
                   return (
@@ -278,7 +278,7 @@ export function WeekView() {
                         width: `${(adjustedSpan / columnCount) * 100 - 0.5}%`,
                         top: row * allDayRowHeight + 3,
                         height: allDayRowHeight - 4,
-                        backgroundColor: `${color}20`,
+                        backgroundColor: eventTint(color, 12),
                         color: color,
                         borderLeft: `3px solid ${color}`,
                       }}

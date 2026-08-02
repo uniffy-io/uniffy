@@ -1,12 +1,11 @@
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { selectEvent, startDrag, endDrag, openEditEvent } from '@/features/calendar/store';
+import { selectEvent, startDrag, endDrag } from '@/features/calendar/store';
 import type { PositionedEvent } from '@/features/calendar/types';
-import { hexToRgba, CATEGORY_COLORS } from '@/features/calendar/constants';
+import { ACCENT_EVENT_COLOR, eventTint } from '@/features/calendar/constants';
 import { formatTimeRange } from '@/features/calendar/utils';
 import { cn } from '@/shared/utils/cn';
 import { Warning, Users, ArrowsClockwise } from '@phosphor-icons/react';
-
-const DEFAULT_COLOR = CATEGORY_COLORS[0].value;
+import { SubjectAvatar, SUBJECT_TYPE } from '@/components/subject';
 
 interface EventBlockProps {
   event: PositionedEvent;
@@ -36,15 +35,11 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   const showContent = multiDayPosition === 'start' || multiDayPosition === 'single';
 
   const category = event.categoryId ? categories[event.categoryId] : null;
-  const categoryColor = category?.color ?? DEFAULT_COLOR;
-  const backgroundColor = hexToRgba(categoryColor, isSharedEvent ? 0.07 : 0.1);
+  const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
+  const backgroundColor = eventTint(categoryColor, isSharedEvent ? 7 : 10);
 
   const handleClick = () => {
     dispatch(selectEvent(event.id));
-  };
-
-  const handleDoubleClick = () => {
-    dispatch(openEditEvent(event.id));
   };
 
   const leftPercent = event.left * columnWidth;
@@ -124,7 +119,6 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
   return (
     <button
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
       draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -224,22 +218,22 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
 
           {event.height > 80 && event.attendees.length > 0 && (
             <div className="mt-2 flex -space-x-1.5">
-              {event.attendees.slice(0, 3).map((attendee, index) => (
-                <div
+              {event.attendees.slice(0, 3).map((attendee) => (
+                <SubjectAvatar
                   key={attendee.id}
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-medium border-2 border-white"
-                  style={{
-                    backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981'][
-                      index % 3
-                    ],
-                    zIndex: 3 - index,
+                  subject={{
+                    id: attendee.id,
+                    type: SUBJECT_TYPE.USER,
+                    name: attendee.name,
+                    email: attendee.email,
+                    avatarUrl: attendee.avatarUrl,
                   }}
-                >
-                  {attendee.initials}
-                </div>
+                  size="xs"
+                  bordered
+                />
               ))}
               {event.attendees.length > 3 && (
-                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-medium bg-gray-400 border-2 border-white">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium bg-muted text-muted-foreground border-2 border-card">
                   +{event.attendees.length - 3}
                 </div>
               )}

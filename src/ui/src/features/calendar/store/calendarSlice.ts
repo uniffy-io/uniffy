@@ -5,6 +5,7 @@ import type {
   Category,
   EventTemplate,
   EventFilters,
+  EventActivity,
 } from '@/features/calendar/types';
 import { DEFAULT_CATEGORIES } from '@/features/calendar/constants';
 import {
@@ -24,6 +25,7 @@ import {
   updateEventTemplate,
   deleteEventTemplate,
   listEventTemplates,
+  fetchEventActivities,
 } from '@/features/calendar/store/calendarThunks';
 
 interface CalendarState {
@@ -31,9 +33,12 @@ interface CalendarState {
   visibleEventIds: string[];
   categories: Record<string, Category>;
   templates: Record<string, EventTemplate>;
+  /** Activity log per event id, newest first. */
+  activities: Record<string, EventActivity[]>;
   filters: EventFilters;
   loading: {
     events: boolean;
+    eventDetail: boolean;
     categories: boolean;
     templates: boolean;
     creating: boolean;
@@ -77,6 +82,7 @@ const initialState: CalendarState = {
   visibleEventIds: [],
   categories: createDefaultCategories(),
   templates: {},
+  activities: {},
   filters: {
     calendarIds: [],
     categoryIds: [],
@@ -86,6 +92,7 @@ const initialState: CalendarState = {
   },
   loading: {
     events: false,
+    eventDetail: false,
     categories: false,
     templates: false,
     creating: false,
@@ -140,18 +147,10 @@ const calendarSlice = createSlice({
       );
     },
 
-    addCategory: (state, action: PayloadAction<Category>) => {
-      state.categories[action.payload.id] = action.payload;
-    },
-
     updateCategory: (state, action: PayloadAction<Category>) => {
       if (state.categories[action.payload.id]) {
         state.categories[action.payload.id] = action.payload;
       }
-    },
-
-    removeCategory: (state, action: PayloadAction<string>) => {
-      delete state.categories[action.payload];
     },
 
     setFilters: (state, action: PayloadAction<Partial<EventFilters>>) => {
@@ -186,30 +185,6 @@ const calendarSlice = createSlice({
       } else {
         state.filters.tagIds.splice(index, 1);
       }
-    },
-
-    setEventsLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading.events = action.payload;
-    },
-
-    setCreatingLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading.creating = action.payload;
-    },
-
-    setUpdatingLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading.updating = action.payload;
-    },
-
-    setDeletingLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading.deleting = action.payload;
-    },
-
-    setEventsError: (state, action: PayloadAction<string | null>) => {
-      state.errors.events = action.payload;
-    },
-
-    setCreatingError: (state, action: PayloadAction<string | null>) => {
-      state.errors.creating = action.payload;
     },
 
     clearErrors: (state) => {
@@ -247,11 +222,18 @@ const calendarSlice = createSlice({
       });
 
     builder
+      .addCase(fetchEvent.pending, (state) => {
+        state.loading.eventDetail = true;
+      })
       .addCase(fetchEvent.fulfilled, (state, action) => {
+        state.loading.eventDetail = false;
         state.events[action.payload.id] = action.payload;
         if (!state.visibleEventIds.includes(action.payload.id)) {
           state.visibleEventIds.push(action.payload.id);
         }
+      })
+      .addCase(fetchEvent.rejected, (state) => {
+        state.loading.eventDetail = false;
       });
 
     builder
@@ -391,6 +373,11 @@ const calendarSlice = createSlice({
         state.loading.templates = false;
         state.errors.templates = action.payload || 'Failed to fetch templates';
       });
+
+    builder
+      .addCase(fetchEventActivities.fulfilled, (state, action) => {
+        state.activities[action.payload.eventId] = action.payload.activities;
+      });
   },
 });
 
@@ -399,20 +386,12 @@ export const {
   addEvent,
   updateEvent,
   removeEvent,
-  addCategory,
   updateCategory,
-  removeCategory,
   setFilters,
   clearFilters,
   setSearchQuery,
   toggleCategoryFilter,
   toggleTagFilter,
-  setEventsLoading,
-  setCreatingLoading,
-  setUpdatingLoading,
-  setDeletingLoading,
-  setEventsError,
-  setCreatingError,
   clearErrors,
   setPagination,
   resetCalendarState,

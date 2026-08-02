@@ -251,17 +251,72 @@ direct media), nothing changes anywhere.
 - [ ] VM/compose mode with TURN env unset: calls still connect via LiveKit's embedded TURN,
       responses carry no ice_servers, and webrtc-internals shows the usual candidate mix.
 
+## Calendar inline event editing
+
+The event detail modal is the only event surface and edits every field in place; there is no
+separate edit modal, no right-sidebar mode, and no view-mode toggle in the header. Needs the
+organizer (A) and an attendee who is not the organizer (B).
+
+- [ ] As A, click an event. Title, date, times, repeat, reminders, location, meeting mode, room,
+      category, tags and focus time are all editable in place. No pencil button anywhere.
+- [ ] Each committed change fires exactly ONE `UpdateEvent`. Typing in the title or location does
+      NOT fire per keystroke - the write lands on blur or Enter.
+- [ ] Escape in a text field reverts the draft and does not close the modal.
+- [ ] Move the start past the end: the end shifts by 30 minutes and both ride one request.
+- [ ] On a recurring event, changing title / time / location / category / focus opens the scope
+      dialog once. Picking a scope applies it; cancelling discards the change.
+- [ ] On a recurring event, changing the channel binding, room, tags, reminders or attendees does
+      NOT prompt for scope - those are series-level and the backend ignores a per-occurrence
+      scope for them. Bind a channel on a recurring event: no dialog, and "Join meeting" appears.
+- [ ] Open the description editor, type, and close it (Done, Escape, or backdrop). One write, and
+      re-opening with no edits writes nothing.
+- [ ] The modal scrolls internally - long descriptions do not overflow it, and the delete confirm
+      and recurrence-scope dialogs render ABOVE the modal, not behind it.
+- [ ] Escape closes the innermost surface first: with the scope dialog open it cancels the dialog
+      and leaves the modal open; pressing it again closes the modal.
+- [ ] Closing the modal (X, backdrop, Escape) clears the selection - reopening any event starts
+      clean and the page behind never scrolls while the modal is open.
+- [ ] At 375px and 768px the modal still fits: it slides up from the bottom edge on mobile and no
+      right-hand panel appears at any width.
+- [ ] As attendee B, open the same event. Every field is read-only text, the delete button is
+      gone, and the description has no Edit affordance. The RSVP buttons still work.
+- [ ] Remove B's access entirely, then have B open a stale tab and try to edit: the write is
+      rejected and the global error toast explains it.
+
+## Calendar activity log
+
+Every event carries an activity log at the bottom of the detail modal: field edits, attendee
+changes, and RSVP responses, newest first. Needs the organizer (A) and an attendee (B).
+
+- [ ] Create an event. Open it: the log shows "created this event" by A.
+- [ ] Rename it, move the start time, change the location, and edit the description. Each lands as
+      its own entry with the new value inline; the description entry does NOT print the body.
+- [ ] Add attendee B and save. One "invited B" entry. Remove B: one "removed B" entry. Adding two
+      people at once produces ONE entry naming both.
+- [ ] As B, RSVP Accept. As A, reopen the event: the log shows "B accepted the invite" with a green
+      check and the time. B changes to Decline: a second entry, red, both kept in order.
+- [ ] Clicking the same RSVP answer twice adds nothing - only real changes are recorded.
+- [ ] With more than 6 entries, only the newest 6 render behind a "Show N earlier entries" toggle
+      that expands and collapses.
+- [ ] On a recurring event, open any occurrence: the log is the SERIES log (same entries from every
+      occurrence). Cancel one occurrence and edit another: each adds a distinct recurrence entry
+      naming the date.
+- [ ] As B (viewer), the log is visible and read-only. Remove B's access: `ListEventActivities`
+      is denied and the modal surfaces the error rather than an empty log.
+- [ ] Delete an event permanently: its activity rows go with it (no orphans in
+      `calendar_activities`).
+
 ## Calendar meetings (channel-bound)
 
 An event can bind to a chat channel as a Uniffy online meeting. Join rides the existing calls
 stack through the global pre-join modal; the calendar copies nothing into channel membership.
 Needs user A (organizer + channel member), user B (attendee to add), and user C (non-member).
 
-- [ ] As user A, open the event editor, switch the meeting section to "Uniffy meeting", pick a
-      private channel A belongs to, save. The detail panel shows a "Join meeting" button.
+- [ ] As user A, open the event detail, switch the meeting section to "Uniffy meeting", pick a
+      private channel A belongs to. The detail panel shows a "Join meeting" button.
 - [ ] Flip the section to "Link": the channel binding clears and the URL input returns. Flip to
-      "None": both the URL and the binding clear on save.
-- [ ] Add an attendee (B) who is NOT in the picked channel. The editor shows "N attendees cannot
+      "None": both the URL and the binding clear.
+- [ ] Add an attendee (B) who is NOT in the picked channel. The picker shows "N attendees cannot
       access <channel>". Add B to the channel; the warning drops.
 - [ ] As attendee B (a channel member), open the event and click "Join meeting". The global
       pre-join modal opens and join lands in the channel's call.
@@ -274,7 +329,7 @@ Needs user A (organizer + channel member), user B (attendee to add), and user C 
 - [ ] Delete the bound channel. The event silently becomes a non-meeting event (FK SET NULL) with
       no error on the detail panel.
 - [ ] Send both a meeting URL and a channel_id on one event via the API: the backend rejects with
-      a validation error (the editor already enforces one mode).
+      a validation error (the detail panel already enforces one mode).
 - [ ] Mobile: open a channel-bound event. It shows a read-only "Online meeting" row with no join
       affordance (native calls are not shipped).
 - [ ] In the editor's Uniffy-meeting mode, click "Create a meeting room from attendees". A PRIVATE

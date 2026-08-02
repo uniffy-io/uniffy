@@ -30,6 +30,7 @@ import {
 import { uploadService } from "@/features/files/upload";
 import { clearChatChannels, clearChatMessages, clearChatThreads, clearChatUi } from '@/features/chat/store';
 import { clearTags } from '@/features/tags/store/tagsSlice';
+import { resetCalendarState, resetCalendarUiState } from '@/features/calendar/store';
 import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { unaryTransport, setMemoryAccessToken, clearMemoryAccessToken } from "@/config";
@@ -217,6 +218,8 @@ export function OrganizationPicker() {
     dispatch(clearChatThreads());
     dispatch(clearChatUi());
     dispatch(clearTags());
+    dispatch(resetCalendarState());
+    dispatch(resetCalendarUiState());
     clearBlobCache();
     navigate('/auth');
   };

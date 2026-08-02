@@ -41,20 +41,30 @@ class AttendeeStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ATTENDEE_STATUS_TENTATIVE: _ClassVar[AttendeeStatus]
     ATTENDEE_STATUS_DECLINED: _ClassVar[AttendeeStatus]
 
+class EventActivityAction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    EVENT_ACTIVITY_ACTION_UNSPECIFIED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_CREATED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_TITLE_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_SCHEDULE_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_LOCATION_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_MEETING_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_DESCRIPTION_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_CATEGORY_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_CALENDAR_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_RECURRENCE_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_REMINDERS_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_ATTENDEES_ADDED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED: _ClassVar[EventActivityAction]
+    EVENT_ACTIVITY_ACTION_FIELD_UPDATED: _ClassVar[EventActivityAction]
+
 class AttendeeRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ATTENDEE_ROLE_UNSPECIFIED: _ClassVar[AttendeeRole]
     ATTENDEE_ROLE_ORGANIZER: _ClassVar[AttendeeRole]
     ATTENDEE_ROLE_REQUIRED: _ClassVar[AttendeeRole]
     ATTENDEE_ROLE_OPTIONAL: _ClassVar[AttendeeRole]
-
-class CalendarType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
-    __slots__ = ()
-    CALENDAR_TYPE_UNSPECIFIED: _ClassVar[CalendarType]
-    CALENDAR_TYPE_PERSONAL: _ClassVar[CalendarType]
-    CALENDAR_TYPE_WORK: _ClassVar[CalendarType]
-    CALENDAR_TYPE_TEAM: _ClassVar[CalendarType]
-    CALENDAR_TYPE_SHARED: _ClassVar[CalendarType]
 
 class ResourceType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -89,15 +99,25 @@ ATTENDEE_STATUS_PENDING: AttendeeStatus
 ATTENDEE_STATUS_ACCEPTED: AttendeeStatus
 ATTENDEE_STATUS_TENTATIVE: AttendeeStatus
 ATTENDEE_STATUS_DECLINED: AttendeeStatus
+EVENT_ACTIVITY_ACTION_UNSPECIFIED: EventActivityAction
+EVENT_ACTIVITY_ACTION_CREATED: EventActivityAction
+EVENT_ACTIVITY_ACTION_TITLE_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_SCHEDULE_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_LOCATION_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_MEETING_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_DESCRIPTION_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_CATEGORY_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_CALENDAR_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_RECURRENCE_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_REMINDERS_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_ATTENDEES_ADDED: EventActivityAction
+EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED: EventActivityAction
+EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED: EventActivityAction
+EVENT_ACTIVITY_ACTION_FIELD_UPDATED: EventActivityAction
 ATTENDEE_ROLE_UNSPECIFIED: AttendeeRole
 ATTENDEE_ROLE_ORGANIZER: AttendeeRole
 ATTENDEE_ROLE_REQUIRED: AttendeeRole
 ATTENDEE_ROLE_OPTIONAL: AttendeeRole
-CALENDAR_TYPE_UNSPECIFIED: CalendarType
-CALENDAR_TYPE_PERSONAL: CalendarType
-CALENDAR_TYPE_WORK: CalendarType
-CALENDAR_TYPE_TEAM: CalendarType
-CALENDAR_TYPE_SHARED: CalendarType
 RESOURCE_TYPE_UNSPECIFIED: ResourceType
 RESOURCE_TYPE_NOTE: ResourceType
 RESOURCE_TYPE_FILE: ResourceType
@@ -108,7 +128,7 @@ RECURRENCE_EDIT_SCOPE_ALL_EVENTS: RecurrenceEditScope
 RECURRENCE_EDIT_SCOPE_THIS_AND_FOLLOWING: RecurrenceEditScope
 
 class CalendarEvent(_message.Message):
-    __slots__ = ("id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendees", "organizer_id", "recurrence", "is_focus_time", "linked_resources", "is_deleted", "outgoing_references", "created_at", "updated_at", "deleted_at", "reminders", "is_recurring", "recurrence_id", "occurrence_date", "room_id", "room_name", "room_location", "room_capacity", "room_amenities", "tags", "channel_id", "channel_auto_created")
+    __slots__ = ("id", "organization_id", "title", "description", "start_time", "end_time", "is_all_day", "timezone", "location", "meeting_url", "calendar_id", "category_id", "attendees", "organizer_id", "recurrence", "is_focus_time", "linked_resources", "is_deleted", "outgoing_references", "created_at", "updated_at", "deleted_at", "reminders", "is_recurring", "recurrence_id", "occurrence_date", "room_id", "room_name", "room_location", "room_capacity", "room_amenities", "tags", "channel_id", "channel_auto_created", "user_role")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
@@ -143,6 +163,7 @@ class CalendarEvent(_message.Message):
     TAGS_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_ID_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_AUTO_CREATED_FIELD_NUMBER: _ClassVar[int]
+    USER_ROLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     title: str
@@ -177,7 +198,8 @@ class CalendarEvent(_message.Message):
     tags: _containers.RepeatedCompositeFieldContainer[_tags_pb2.Tag]
     channel_id: str
     channel_auto_created: bool
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reminders: _Optional[_Iterable[int]] = ..., is_recurring: _Optional[bool] = ..., recurrence_id: _Optional[str] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ..., room_name: _Optional[str] = ..., room_location: _Optional[str] = ..., room_capacity: _Optional[int] = ..., room_amenities: _Optional[_Iterable[str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., channel_id: _Optional[str] = ..., channel_auto_created: _Optional[bool] = ...) -> None: ...
+    user_role: _common_pb2.ContentRole
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., is_all_day: _Optional[bool] = ..., timezone: _Optional[str] = ..., location: _Optional[str] = ..., meeting_url: _Optional[str] = ..., calendar_id: _Optional[str] = ..., category_id: _Optional[str] = ..., attendees: _Optional[_Iterable[_Union[Attendee, _Mapping]]] = ..., organizer_id: _Optional[str] = ..., recurrence: _Optional[_Union[RecurrenceConfig, _Mapping]] = ..., is_focus_time: _Optional[bool] = ..., linked_resources: _Optional[_Iterable[_Union[LinkedResource, _Mapping]]] = ..., is_deleted: _Optional[bool] = ..., outgoing_references: _Optional[_Iterable[str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reminders: _Optional[_Iterable[int]] = ..., is_recurring: _Optional[bool] = ..., recurrence_id: _Optional[str] = ..., occurrence_date: _Optional[str] = ..., room_id: _Optional[str] = ..., room_name: _Optional[str] = ..., room_location: _Optional[str] = ..., room_capacity: _Optional[int] = ..., room_amenities: _Optional[_Iterable[str]] = ..., tags: _Optional[_Iterable[_Union[_tags_pb2.Tag, _Mapping]]] = ..., channel_id: _Optional[str] = ..., channel_auto_created: _Optional[bool] = ..., user_role: _Optional[_Union[_common_pb2.ContentRole, str]] = ...) -> None: ...
 
 class Attendee(_message.Message):
     __slots__ = ("id", "name", "email", "avatar_url", "initials", "status", "role", "timezone")
@@ -447,118 +469,6 @@ class GetEventsInRangeResponse(_message.Message):
     events: _containers.RepeatedCompositeFieldContainer[CalendarEvent]
     def __init__(self, events: _Optional[_Iterable[_Union[CalendarEvent, _Mapping]]] = ...) -> None: ...
 
-class Calendar(_message.Message):
-    __slots__ = ("id", "organization_id", "name", "color", "is_visible", "is_default", "owner_id", "type", "created_at", "updated_at")
-    ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    COLOR_FIELD_NUMBER: _ClassVar[int]
-    IS_VISIBLE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
-    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
-    TYPE_FIELD_NUMBER: _ClassVar[int]
-    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
-    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
-    id: str
-    organization_id: str
-    name: str
-    color: str
-    is_visible: bool
-    is_default: bool
-    owner_id: str
-    type: CalendarType
-    created_at: _timestamp_pb2.Timestamp
-    updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., color: _Optional[str] = ..., is_visible: _Optional[bool] = ..., is_default: _Optional[bool] = ..., owner_id: _Optional[str] = ..., type: _Optional[_Union[CalendarType, str]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
-
-class CreateCalendarRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "color", "type", "is_default")
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    COLOR_FIELD_NUMBER: _ClassVar[int]
-    TYPE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
-    organization_id: str
-    name: str
-    color: str
-    type: CalendarType
-    is_default: bool
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., color: _Optional[str] = ..., type: _Optional[_Union[CalendarType, str]] = ..., is_default: _Optional[bool] = ...) -> None: ...
-
-class GetCalendarRequest(_message.Message):
-    __slots__ = ("calendar_id", "organization_id")
-    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    calendar_id: str
-    organization_id: str
-    def __init__(self, calendar_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
-
-class UpdateCalendarRequest(_message.Message):
-    __slots__ = ("calendar_id", "organization_id", "name", "color", "is_visible", "is_default", "type")
-    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    COLOR_FIELD_NUMBER: _ClassVar[int]
-    IS_VISIBLE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
-    TYPE_FIELD_NUMBER: _ClassVar[int]
-    calendar_id: str
-    organization_id: str
-    name: str
-    color: str
-    is_visible: bool
-    is_default: bool
-    type: CalendarType
-    def __init__(self, calendar_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., color: _Optional[str] = ..., is_visible: _Optional[bool] = ..., is_default: _Optional[bool] = ..., type: _Optional[_Union[CalendarType, str]] = ...) -> None: ...
-
-class DeleteCalendarRequest(_message.Message):
-    __slots__ = ("calendar_id", "organization_id")
-    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    calendar_id: str
-    organization_id: str
-    def __init__(self, calendar_id: _Optional[str] = ..., organization_id: _Optional[str] = ...) -> None: ...
-
-class DeleteCalendarResponse(_message.Message):
-    __slots__ = ("success", "message")
-    SUCCESS_FIELD_NUMBER: _ClassVar[int]
-    MESSAGE_FIELD_NUMBER: _ClassVar[int]
-    success: bool
-    message: str
-    def __init__(self, success: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
-
-class CreateCalendarResponse(_message.Message):
-    __slots__ = ("calendar",)
-    CALENDAR_FIELD_NUMBER: _ClassVar[int]
-    calendar: Calendar
-    def __init__(self, calendar: _Optional[_Union[Calendar, _Mapping]] = ...) -> None: ...
-
-class GetCalendarResponse(_message.Message):
-    __slots__ = ("calendar",)
-    CALENDAR_FIELD_NUMBER: _ClassVar[int]
-    calendar: Calendar
-    def __init__(self, calendar: _Optional[_Union[Calendar, _Mapping]] = ...) -> None: ...
-
-class UpdateCalendarResponse(_message.Message):
-    __slots__ = ("calendar",)
-    CALENDAR_FIELD_NUMBER: _ClassVar[int]
-    calendar: Calendar
-    def __init__(self, calendar: _Optional[_Union[Calendar, _Mapping]] = ...) -> None: ...
-
-class ListCalendarsRequest(_message.Message):
-    __slots__ = ("organization_id", "visible_only")
-    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
-    VISIBLE_ONLY_FIELD_NUMBER: _ClassVar[int]
-    organization_id: str
-    visible_only: bool
-    def __init__(self, organization_id: _Optional[str] = ..., visible_only: _Optional[bool] = ...) -> None: ...
-
-class ListCalendarsResponse(_message.Message):
-    __slots__ = ("calendars",)
-    CALENDARS_FIELD_NUMBER: _ClassVar[int]
-    calendars: _containers.RepeatedCompositeFieldContainer[Calendar]
-    def __init__(self, calendars: _Optional[_Iterable[_Union[Calendar, _Mapping]]] = ...) -> None: ...
-
 class Category(_message.Message):
     __slots__ = ("id", "organization_id", "name", "color", "icon", "is_default", "sort_order", "created_at", "updated_at")
     ID_FIELD_NUMBER: _ClassVar[int]
@@ -702,6 +612,44 @@ class RemoveAttendeesRequest(_message.Message):
     organization_id: str
     user_ids: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, event_id: _Optional[str] = ..., organization_id: _Optional[str] = ..., user_ids: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class EventActivity(_message.Message):
+    __slots__ = ("id", "event_id", "actor_id", "action", "timestamp", "field_id", "previous_value", "new_value")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_ID_FIELD_NUMBER: _ClassVar[int]
+    ACTION_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    FIELD_ID_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_VALUE_FIELD_NUMBER: _ClassVar[int]
+    NEW_VALUE_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    event_id: str
+    actor_id: str
+    action: EventActivityAction
+    timestamp: _timestamp_pb2.Timestamp
+    field_id: str
+    previous_value: str
+    new_value: str
+    def __init__(self, id: _Optional[str] = ..., event_id: _Optional[str] = ..., actor_id: _Optional[str] = ..., action: _Optional[_Union[EventActivityAction, str]] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., field_id: _Optional[str] = ..., previous_value: _Optional[str] = ..., new_value: _Optional[str] = ...) -> None: ...
+
+class ListEventActivitiesRequest(_message.Message):
+    __slots__ = ("organization_id", "event_id", "pagination")
+    ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    PAGINATION_FIELD_NUMBER: _ClassVar[int]
+    organization_id: str
+    event_id: str
+    pagination: _common_pb2.PaginationRequest
+    def __init__(self, organization_id: _Optional[str] = ..., event_id: _Optional[str] = ..., pagination: _Optional[_Union[_common_pb2.PaginationRequest, _Mapping]] = ...) -> None: ...
+
+class ListEventActivitiesResponse(_message.Message):
+    __slots__ = ("activities", "pagination")
+    ACTIVITIES_FIELD_NUMBER: _ClassVar[int]
+    PAGINATION_FIELD_NUMBER: _ClassVar[int]
+    activities: _containers.RepeatedCompositeFieldContainer[EventActivity]
+    pagination: _common_pb2.PaginationResponse
+    def __init__(self, activities: _Optional[_Iterable[_Union[EventActivity, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ...) -> None: ...
 
 class EventTemplate(_message.Message):
     __slots__ = ("id", "organization_id", "title", "description", "duration_minutes", "location", "meeting_url", "category_id", "tags", "access_mode", "created_by", "created_at", "updated_at", "baseline_role")

@@ -1,7 +1,7 @@
-import { CaretLeft, CaretRight, GlobeHemisphereWest, SidebarSimple, FrameCorners } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, GlobeHemisphereWest, SidebarSimple } from '@phosphor-icons/react';
 import { useCalendarNavigation } from '@/features/calendar/hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { toggleSidebar, setDetailViewMode } from '@/features/calendar/store';
+import { toggleSidebar } from '@/features/calendar/store';
 import { getTimezoneOffset } from '@/features/calendar/utils';
 import { cn } from '@/shared/utils/cn';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
@@ -25,10 +25,6 @@ export function CalendarHeader() {
   const isSidebarCollapsed = useAppSelector(
     (state) => state.calendarUi.isSidebarCollapsed
   );
-  const detailViewMode = useAppSelector(
-    (state) => state.calendarUi.detailViewMode
-  );
-
   const timezoneOffset = getTimezoneOffset(displayTimezone);
 
   const viewModes: ViewMode[] = ['day', 'week', 'month', 'agenda'];
@@ -85,34 +81,6 @@ export function CalendarHeader() {
           <GlobeHemisphereWest size={16} weight="duotone" />
           <span>{timezoneOffset}</span>
         </span>
-
-        <div className={cn(
-          "items-center gap-0.5 border border-border rounded-md p-0.5 shrink-0",
-          isMobile ? "hidden" : "flex"
-        )}>
-          <button
-            type="button"
-            onClick={() => dispatch(setDetailViewMode('sidebar'))}
-            className={cn(
-              'p-1 rounded transition-colors',
-              detailViewMode === 'sidebar' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
-            )}
-            title="Sidebar panel"
-          >
-            <SidebarSimple size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch(setDetailViewMode('modal'))}
-            className={cn(
-              'p-1 rounded transition-colors',
-              detailViewMode === 'modal' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
-            )}
-            title="Modal view"
-          >
-            <FrameCorners size={14} />
-          </button>
-        </div>
 
         <div className="flex items-center gap-0.5">
           {viewModes.map((mode) => (

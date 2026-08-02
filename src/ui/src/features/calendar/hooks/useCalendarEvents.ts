@@ -12,7 +12,12 @@ import {
   closeEventModal,
 } from '@/features/calendar/store/calendarUiSlice';
 import type { CalendarEvent, EventModalPrefill, PositionedEvent } from '@/features/calendar/types';
-import { getPositionedEventsForDay, getPositionedEventsForWeek, areSameDay } from '@/features/calendar/utils';
+import {
+  getPositionedEventsForDay,
+  getPositionedEventsForWeek,
+  areSameDay,
+  matchesQuickAccess,
+} from '@/features/calendar/utils';
 import { GRID } from '@/features/calendar/constants';
 
 export function useCalendarEvents() {
@@ -22,6 +27,11 @@ export function useCalendarEvents() {
   const filters = useAppSelector((state) => state.calendar.filters);
   const loading = useAppSelector((state) => state.calendar.loading);
   const errors = useAppSelector((state) => state.calendar.errors);
+
+  const quickAccessFilter = useAppSelector(
+    (state) => state.calendarUi.quickAccessFilter
+  );
+  const bookmarkedUrns = useAppSelector((state) => state.bookmarks.bookmarkedUrns);
 
   const selectedEventId = useAppSelector(
     (state) => state.calendarUi.selectedEventId
@@ -38,8 +48,16 @@ export function useCalendarEvents() {
 
   const visibleEvents = useMemo(() => {
     const allEvents = Object.values(events);
+    const now = new Date();
 
     return allEvents.filter((event) => {
+      if (
+        quickAccessFilter &&
+        !matchesQuickAccess(event, quickAccessFilter, now, bookmarkedUrns)
+      ) {
+        return false;
+      }
+
       if (
         filters.categoryIds.length > 0 &&
         !filters.categoryIds.includes(event.categoryId)
@@ -74,7 +92,7 @@ export function useCalendarEvents() {
 
       return true;
     });
-  }, [events, filters]);
+  }, [events, filters, quickAccessFilter, bookmarkedUrns]);
 
   const getEventsForDate = useCallback(
     (date: Date | string) => {

@@ -34,6 +34,7 @@ import { clearIntegrations } from '@/features/integrations/store/integrationsSli
 import { clearTags } from '@/features/tags/store/tagsSlice';
 import { clearCalls } from '@/features/calls/store/callsSlice';
 import { clearRooms } from '@/features/rooms/store/roomsSlice';
+import { resetCalendarState, resetCalendarUiState } from '@/features/calendar/store';
 import { clearMemoryAccessToken } from '@/config/api';
 import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
@@ -134,6 +135,8 @@ export function UserMenu() {
         dispatch(clearTags());
         dispatch(clearCalls());
         dispatch(clearRooms());
+        dispatch(resetCalendarState());
+        dispatch(resetCalendarUiState());
         clearNotesCache().catch(console.error);
         clearBlobCache();
         navigate('/auth');

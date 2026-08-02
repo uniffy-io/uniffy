@@ -26,6 +26,7 @@ from uniffy.core.events import (
     emit_notification,
     extract_mentioned_user_ids,
 )
+from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -49,6 +50,40 @@ from uniffy.domains.calendar.recurrence import expand_recurrence
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="calendar.operations")
+
+
+_ACTIVITY_VALUE_LIMIT = 500
+
+# Fields whose edits are recorded in the event activity log, and the action each
+# maps to. Fields carrying long or structured values are recorded without a
+# before/after pair - the entry says what changed, the event row holds the value.
+_ACTIVITY_TRACKED_FIELDS: tuple[tuple[str, str, bool], ...] = (
+    ("title", "title_changed", True),
+    ("start_time", "schedule_changed", True),
+    ("end_time", "schedule_changed", True),
+    ("is_all_day", "schedule_changed", True),
+    ("timezone", "schedule_changed", True),
+    ("location", "location_changed", True),
+    ("meeting_url", "meeting_changed", True),
+    ("channel_id", "meeting_changed", False),
+    ("description", "description_changed", False),
+    ("category_id", "category_changed", True),
+    ("calendar_id", "calendar_changed", True),
+    ("recurrence_config", "recurrence_changed", False),
+    ("reminders", "reminders_changed", True),
+    ("is_focus_time", "field_updated", True),
+)
+
+
+def _activity_value(value: object) -> str | None:
+    """Render a field value for the activity log, or None when there is nothing to show."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, list):
+        return ",".join(str(item) for item in value) or None
+    return str(value)[:_ACTIVITY_VALUE_LIMIT]
 
 
 def _master_event_id(event: CalendarEvent) -> UUID:
@@ -331,6 +366,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 start_time=start_time,
             )
 
+        await self._log_activity(event.id, user_id, "created")
+
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -476,6 +513,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         old_title = event.title
         old_start_time = event.start_time
         old_end_time = event.end_time
+        activity_before = self._activity_snapshot(event)
 
         title_changed = title is not None and title != event.title
 
@@ -582,6 +620,22 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     newly_invited_ids.append(uid)
 
         event.updated_at = datetime.now(UTC)
+
+        await self._log_field_changes(event, user_id, activity_before)
+        if newly_invited_ids:
+            await self._log_activity(
+                event.id,
+                user_id,
+                "attendees_added",
+                new_value=",".join(str(uid) for uid in newly_invited_ids),
+            )
+        if removed_attendee_ids:
+            await self._log_activity(
+                event.id,
+                user_id,
+                "attendees_removed",
+                previous_value=",".join(str(uid) for uid in removed_attendee_ids),
+            )
 
         await self.session.commit()
         await self.session.refresh(event)
@@ -979,6 +1033,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             is_cancelled=True,
         )
         self.session.add(exception)
+
+        await self._log_activity(
+            event_id,
+            user_id,
+            "recurrence_changed",
+            field_id="cancelled_occurrence",
+            new_value=occurrence_date.isoformat(),
+        )
+
         await self.session.commit()
 
     async def edit_single_occurrence(
@@ -998,6 +1061,14 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
+
+        # Only the explicitly requested fields are diffed; the override's own
+        # start/end come from the occurrence date, which is not a user edit.
+        edited_before = {
+            name: value
+            for name, value in self._activity_snapshot(master).items()
+            if name in updates
+        }
 
         duration = master.end_time - master.start_time
         occ_start = datetime(
@@ -1070,6 +1141,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             target_event_id=override.id,
         )
 
+        await self._log_activity(
+            master.id,
+            user_id,
+            "recurrence_changed",
+            field_id="occurrence_override",
+            new_value=occurrence_date.isoformat(),
+        )
+        await self._log_activity(override.id, user_id, "created")
+        await self._log_field_changes(override, user_id, edited_before)
+
         await self._index_for_search(override, skip_member_lookup=True)
         await self.session.commit()
 
@@ -1092,6 +1173,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
+
+        edited_before = {
+            name: value
+            for name, value in self._activity_snapshot(master).items()
+            if name in updates
+        }
 
         config = dict(master.recurrence_config or {})
         end_dt = datetime(
@@ -1173,6 +1260,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             source_event_id=master.id,
             target_event_id=new_event.id,
         )
+
+        await self._log_activity(
+            master.id,
+            user_id,
+            "recurrence_changed",
+            field_id="series_split",
+            new_value=occurrence_date.isoformat(),
+        )
+        await self._log_activity(new_event.id, user_id, "created")
+        await self._log_field_changes(new_event, user_id, edited_before)
 
         await self._index_for_search(new_event, skip_member_lookup=True)
         await self.session.commit()
@@ -1297,6 +1394,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
         event.updated_at = datetime.now(UTC)
+
+        if added_ids:
+            await self._log_activity(
+                event_id,
+                user_id,
+                "attendees_added",
+                new_value=",".join(str(uid) for uid in added_ids),
+            )
+
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -1350,6 +1456,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self._delete_reminder_rows(event_id, user_ids=attendee_ids)
 
         event.updated_at = datetime.now(UTC)
+
+        if removed_ids:
+            await self._log_activity(
+                event_id,
+                user_id,
+                "attendees_removed",
+                previous_value=",".join(str(uid) for uid in removed_ids),
+            )
+
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -1403,6 +1518,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 start_time=event.start_time,
             )
 
+        if old_status != status:
+            await self._log_activity(
+                event_id,
+                user_id,
+                "response_changed",
+                field_id="status",
+                previous_value=old_status.value,
+                new_value=status.value,
+            )
+
         await self.session.commit()
 
         if event.organizer_id != user_id:
@@ -1419,6 +1544,90 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
         return True
+
+    async def list_activities(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        event_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[EventActivity], int]:
+        """Read an event's activity log, newest first. Requires VIEW on the event."""
+        master_id = self._parse_master_event_id(event_id)
+        event = await self._fetch_by_id(master_id, organization_id)
+        if not event:
+            raise NotFoundError("CalendarEvent", master_id)
+
+        await self._require_view(user_id, organization_id, event)
+
+        total = await self.session.scalar(
+            select(func.count())
+            .select_from(EventActivity)
+            .where(EventActivity.event_id == master_id)
+        )
+
+        result = await self.session.execute(
+            select(EventActivity)
+            .where(EventActivity.event_id == master_id)
+            .order_by(EventActivity.timestamp.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        return list(result.scalars().all()), int(total or 0)
+
+    async def _log_activity(
+        self,
+        event_id: UUID,
+        actor_id: UUID,
+        action: str,
+        field_id: str | None = None,
+        previous_value: str | None = None,
+        new_value: str | None = None,
+    ) -> EventActivity:
+        activity = EventActivity(
+            event_id=self._parse_master_event_id(event_id),
+            actor_id=actor_id,
+            action=action,
+            field_id=field_id,
+            previous_value=previous_value,
+            new_value=new_value,
+        )
+        self.session.add(activity)
+        await self.session.flush()
+        return activity
+
+    async def _log_field_changes(
+        self,
+        event: CalendarEvent,
+        actor_id: UUID,
+        before: dict[str, object],
+    ) -> None:
+        """Emit one activity entry per tracked field that actually changed."""
+        for field_name, action, keep_values in _ACTIVITY_TRACKED_FIELDS:
+            if field_name not in before:
+                continue
+            old_value = before[field_name]
+            new_value = getattr(event, field_name, None)
+            if old_value == new_value:
+                continue
+
+            await self._log_activity(
+                event.id,
+                actor_id,
+                action,
+                field_id=field_name,
+                previous_value=_activity_value(old_value) if keep_values else None,
+                new_value=_activity_value(new_value) if keep_values else None,
+            )
+
+    @staticmethod
+    def _activity_snapshot(event: CalendarEvent) -> dict[str, object]:
+        return {
+            field_name: copy.deepcopy(getattr(event, field_name, None))
+            for field_name, _, _ in _ACTIVITY_TRACKED_FIELDS
+        }
 
     async def _create_reminder_rows(
         self,

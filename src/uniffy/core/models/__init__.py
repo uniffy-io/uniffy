@@ -11,6 +11,7 @@ from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
+from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
@@ -174,6 +175,7 @@ __all__ = [
     "Calendar",
     "Category",
     "CalendarEvent",
+    "EventActivity",
     "EventAttendee",
     "EventReminder",
     # Permission models

@@ -5,7 +5,6 @@ export {
   CalendarHeader,
   LeftSidebar,
   MainContent,
-  DetailPanel,
 } from '@/features/calendar/components/layout';
 
 export {
@@ -30,7 +29,6 @@ export {
 } from '@/features/calendar/components/sidebar';
 
 export { QuickEventModal } from '@/features/calendar/components/modals/QuickEventModal';
-export { EventEditor } from '@/features/calendar/components/modals/EventEditor';
 
 export {
   calendarReducer,
@@ -39,9 +37,7 @@ export {
   addEvent,
   updateEvent,
   removeEvent,
-  addCategory,
   updateCategory,
-  removeCategory,
   setFilters,
   clearFilters,
   setSearchQuery,
@@ -53,18 +49,11 @@ export {
   setQuickAccessFilter,
   selectEvent,
   deselectEvent,
-  toggleDetailPanel,
-  openDetailPanel,
-  closeDetailPanel,
   openEventModal,
   closeEventModal,
   toggleSidebar,
   setSidebarCollapsed,
   toggleSectionCollapse,
-  openQuickCapture,
-  closeQuickCapture,
-  openTimezoneModal,
-  closeTimezoneModal,
 } from '@/features/calendar/store';
 
 export { calendarApi } from '@/features/calendar/api/calendarApi';
@@ -90,14 +79,12 @@ export {
   useCalendarNavigation,
   useCalendarEvents,
   useCurrentTime,
-  useIsToday,
   useTodayEvents,
 } from '@/features/calendar/hooks';
 
 export {
   getWeekDates,
   getWeekColumns,
-  getMonthDates,
   getMonthColumns,
   formatDate,
   formatDateWithDay,
@@ -117,13 +104,8 @@ export {
   CATEGORY_COLORS,
   DEFAULT_CATEGORIES,
   getCategoryColor,
-  getCategoryBackgroundColor,
   LAYOUT,
   GRID,
-  ANIMATION,
-  WORKING_HOURS,
-  DEFAULT_DURATIONS,
-  DEFAULT_TEMPLATES,
 } from '@/features/calendar/constants';
 
 export type {
@@ -137,7 +119,5 @@ export type {
   RecurrencePattern,
   DayOfWeek,
   LinkedResource,
-  EventFormData,
-  CalendarUIState,
   EventFilters,
 } from '@/features/calendar/types';

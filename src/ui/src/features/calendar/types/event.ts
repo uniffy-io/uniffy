@@ -80,54 +80,11 @@ export interface CalendarEvent {
   roomLocation?: string;
   roomCapacity?: number;
   roomAmenities?: string[];
+  /** Caller's effective role, resolved server-side. Drives read-only affordances. */
+  userRole: number;
 }
 
 export type RecurrenceEditScope = 'this_event' | 'all_events' | 'this_and_following';
-
-export interface CreateEventRequest {
-  title: string;
-  description?: string;
-  startTime: string;
-  endTime: string;
-  isAllDay?: boolean;
-  timezone?: string;
-  location?: string;
-  meetingUrl?: string;
-  channelId?: string;
-  channelAutoCreated?: boolean;
-  calendarId: string;
-  categoryId?: string;
-  attendeeIds?: string[];
-  recurrence?: RecurrenceConfig;
-  isFocusTime?: boolean;
-  tagIds?: string[];
-  linkedResourceIds?: string[];
-  reminders?: number[];
-}
-
-export interface UpdateEventRequest {
-  id: string;
-  title?: string;
-  description?: string;
-  startTime?: string;
-  endTime?: string;
-  isAllDay?: boolean;
-  timezone?: string;
-  location?: string;
-  meetingUrl?: string;
-  /** Empty string clears the binding; undefined leaves it untouched. */
-  channelId?: string;
-  calendarId?: string;
-  categoryId?: string;
-  attendeeIds?: string[];
-  recurrence?: RecurrenceConfig;
-  isFocusTime?: boolean;
-  tagIds?: string[];
-  linkedResourceIds?: string[];
-  reminders?: number[];
-  recurrenceEditScope?: RecurrenceEditScope;
-  occurrenceDate?: string;
-}
 
 export type MultiDayPosition = 'start' | 'middle' | 'end' | 'single';
 
