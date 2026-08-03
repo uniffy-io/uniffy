@@ -11,7 +11,6 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
 )
-from uniffy.core.avatars import get_avatar_url
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.files.file import File
@@ -239,7 +238,6 @@ class SearchOperations:
         note_ids: list[UUID] = []
         chat_ids: list[UUID] = []
         agent_ids: list[UUID] = []
-        user_ids: list[UUID] = []
         tag_ids: list[UUID] = []
 
         urn_to_id: dict[str, UUID] = {}
@@ -267,8 +265,6 @@ class SearchOperations:
                     chat_ids.append(content_id)
                 elif et == "agent":
                     agent_ids.append(content_id)
-                elif et == "user":
-                    user_ids.append(content_id)
                 elif et == "tag":
                     tag_ids.append(content_id)
             except (ValueError, IndexError):
@@ -288,8 +284,6 @@ class SearchOperations:
             await self._enrich_channels(results, chat_ids, urn_to_id)
         if agent_ids:
             await self._enrich_agents(results, agent_ids, urn_to_id)
-        if user_ids:
-            await self._enrich_users(results, user_ids, urn_to_id)
         if tag_ids:
             await self._enrich_tags(
                 results, tag_ids, urn_to_id, user_id, organization_id
@@ -638,31 +632,6 @@ class SearchOperations:
                 results[urn].agent_theme_color = row.theme_color
         except Exception:
             logger.opt(exception=True).warning("Failed to enrich agent live state")
-
-    async def _enrich_users(
-        self,
-        results: dict[str, SearchResult],
-        user_ids_list: list[UUID],
-        urn_to_id: dict[str, UUID],
-    ) -> None:
-        try:
-            stmt = select(
-                User.id,
-                User.email,
-                User.avatar_key,
-            ).where(User.id.in_(user_ids_list))
-            result = await self.session.execute(stmt)
-            id_to_urn = {v: k for k, v in urn_to_id.items()}
-            for row in result.all():
-                urn = id_to_urn.get(row.id)
-                if not urn or urn not in results:
-                    continue
-                sr = results[urn]
-                sr.user_email = row.email
-                if row.avatar_key:
-                    sr.user_avatar_url = get_avatar_url(row.id, row.avatar_key)
-        except Exception:
-            logger.opt(exception=True).warning("Failed to enrich user live state")
 
     async def _get_user_group_ids(self, user_id: UUID) -> list[UUID]:
         result = await self.session.execute(

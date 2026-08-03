@@ -11,6 +11,7 @@ from uniffy.core.models.agents.skill_usage import AgentSkillUsage
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
+from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
@@ -52,7 +53,7 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.integrations.connection import IntegrationConnection
-from uniffy.core.models.login.group import Group
+from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
@@ -68,6 +69,8 @@ from uniffy.core.models.mail.suppression import EmailSuppression, EmailSuppressi
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
+from uniffy.core.models.people.identity import IdentityLink, IdentitySource, IdentitySourceKind
+from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
@@ -113,6 +116,7 @@ __all__ = [
     "OrganizationMember",
     "OrganizationRole",
     "Group",
+    "GroupKind",
     "GroupMember",
     "GroupRole",
     "SSOConfiguration",
@@ -174,8 +178,14 @@ __all__ = [
     "Calendar",
     "Category",
     "CalendarEvent",
+    "EventActivity",
     "EventAttendee",
     "EventReminder",
+    # People models
+    "PeopleProfile",
+    "IdentitySource",
+    "IdentitySourceKind",
+    "IdentityLink",
     # Permission models
     "ContentMember",
     "DomainAdmin",

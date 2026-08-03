@@ -8,6 +8,7 @@ export const UrnType = {
   AGENT_FOLDER: 'agent_folder',
   CHAT_MESSAGE: 'chat_message',
   USER: 'user',
+  TEAM: 'team',
   CALENDAR_EVENT: 'calendar_event',
   PROJECT: 'project',
   TASK: 'task',

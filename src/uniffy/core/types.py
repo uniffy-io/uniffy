@@ -61,6 +61,7 @@ class ContentType(str, Enum):
     AGENT_FOLDER = "AGENT_FOLDER"
     ROOM = "ROOM"
     TAG = "TAG"
+    TEAM = "TEAM"
 
 
 class SubjectType(str, Enum):

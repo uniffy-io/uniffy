@@ -102,6 +102,7 @@ class SearchResult:
                 updated_at = datetime.fromtimestamp(hit["updated_at"])
 
         formatted = hit.get("_formatted") or {}
+        metadata = hit.get("metadata") or {}
 
         return cls(
             urn=hit.get("urn", ""),
@@ -120,6 +121,10 @@ class SearchResult:
             updated_at=updated_at,
             rank_score=hit.get("rank_score", 1.0),
             search_score=hit.get("_rankingScore"),
+            # User docs denormalize these at index time, tier-gated there;
+            # resolve must not re-read them from the database.
+            user_avatar_url=metadata.get("avatar_url"),
+            user_email=metadata.get("user_email"),
         )
 
 

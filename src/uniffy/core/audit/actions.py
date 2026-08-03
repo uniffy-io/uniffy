@@ -83,6 +83,16 @@ class Action:
     GROUP_MEMBER_REMOVED = "group.member_removed"
     GROUP_MEMBER_ROLE_CHANGED = "group.member_role_changed"
 
+    # People
+    PERSON_PROFILE_UPDATED = "person.profile_updated"
+    PERSON_MANAGER_CHANGED = "person.manager_changed"
+    TEAM_LEAD_CHANGED = "team.lead_changed"
+    TEAM_PARENT_CHANGED = "team.parent_changed"
+    IDENTITY_SOURCE_CREATED = "identity_source.created"
+    IDENTITY_SOURCE_UPDATED = "identity_source.updated"
+    IDENTITY_SOURCE_DELETED = "identity_source.deleted"
+    IDENTITY_SYNC_COMPLETED = "identity_source.sync_completed"
+
     # Domain admin
     DOMAIN_ADMIN_GRANTED = "domain_admin.granted"
     DOMAIN_ADMIN_REVOKED = "domain_admin.revoked"

@@ -119,7 +119,7 @@ class SearchHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error performing search: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_references(
         self,
@@ -166,7 +166,7 @@ class SearchHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error getting references: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def resolve_urns(
         self,
@@ -207,4 +207,4 @@ class SearchHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error resolving URNs: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
