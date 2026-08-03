@@ -46,7 +46,10 @@ from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.events import NotificationEvent, emit_notification
 from uniffy.core.models.audit.event import AuditEvent
-from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.organization_member import (
+    OrganizationMember,
+    OrganizationRole,
+)
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
@@ -257,6 +260,9 @@ class ContentMembersOperations:
                 "subject",
                 "Owner cannot be added as a member",
             )
+
+        if subject_type == SubjectType.GROUP:
+            await self._require_group_subject(actor_user_id, organization_id, subject_id)
 
         existing = await self._get_existing_member(
             organization_id, content_type, content_id, subject_type, subject_id
@@ -1051,7 +1057,9 @@ class ContentMembersOperations:
     ) -> None:
         if role == ContentRole.BLOCKED:
             return
-        target_ids = await self._resolve_notification_targets(subject_type, subject_id)
+        target_ids = await self._resolve_notification_targets(
+            organization_id, subject_type, subject_id
+        )
         try:
             await emit_notification(
                 NotificationEvent(
@@ -1078,7 +1086,9 @@ class ContentMembersOperations:
         subject_type: SubjectType,
         subject_id: UUID,
     ) -> None:
-        target_ids = await self._resolve_notification_targets(subject_type, subject_id)
+        target_ids = await self._resolve_notification_targets(
+            organization_id, subject_type, subject_id
+        )
         try:
             await emit_notification(
                 NotificationEvent(
@@ -1106,7 +1116,9 @@ class ContentMembersOperations:
         action: str,
     ) -> None:
         """Signal the affected users' sidebars to refresh after an explicit grant/revoke."""
-        target_ids = await self._resolve_notification_targets(subject_type, subject_id)
+        target_ids = await self._resolve_notification_targets(
+            organization_id, subject_type, subject_id
+        )
         if not target_ids:
             return
         await publish_content_access_changed(
@@ -1117,20 +1129,79 @@ class ContentMembersOperations:
             target_user_ids=target_ids,
         )
 
+    async def _require_group_subject(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+        group_id: UUID,
+    ) -> None:
+        """A GROUP grant hands the whole roster the content, so the subject must
+        be a real group of THIS org that the actor can see. A private group the
+        actor cannot see reports "not found" - existence is the leak."""
+        from uniffy.core.models.login.group import Group
+        from uniffy.core.models.login.group_member import GroupMember
+
+        result = await self.session.execute(
+            select(Group.is_private).where(
+                Group.id == group_id,
+                Group.organization_id == organization_id,
+            )
+        )
+        row = result.one_or_none()
+        if row is None:
+            raise NotFoundError("Group", str(group_id))
+        if not row[0]:
+            return
+
+        member = await self.session.execute(
+            select(GroupMember.id).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == actor_user_id,
+                GroupMember.is_active == True,  # noqa: E712
+            )
+        )
+        if member.scalar_one_or_none() is not None:
+            return
+
+        admin = await self.session.execute(
+            select(OrganizationMember.id).where(
+                OrganizationMember.user_id == actor_user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active == True,  # noqa: E712
+                OrganizationMember.role.in_(
+                    [OrganizationRole.OWNER, OrganizationRole.ADMIN]
+                ),
+            )
+        )
+        if admin.scalar_one_or_none() is not None:
+            return
+        raise NotFoundError("Group", str(group_id))
+
     async def _resolve_notification_targets(
         self,
+        organization_id: UUID,
         subject_type: SubjectType,
         subject_id: UUID,
     ) -> list[UUID]:
         if subject_type == SubjectType.USER:
             return [subject_id]
 
+        from uniffy.core.models.login.group import Group
         from uniffy.core.models.login.group_member import GroupMember
 
         result = await self.session.execute(
-            select(GroupMember.user_id).where(
+            select(GroupMember.user_id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .join(
+                OrganizationMember,
+                OrganizationMember.user_id == GroupMember.user_id,
+            )
+            .where(
                 GroupMember.group_id == subject_id,
                 GroupMember.is_active == True,  # noqa: E712
+                Group.organization_id == organization_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active == True,  # noqa: E712
             )
         )
         return [row[0] for row in result.all()]

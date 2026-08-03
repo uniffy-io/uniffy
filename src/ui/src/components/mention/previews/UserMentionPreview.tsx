@@ -13,6 +13,8 @@ import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
 import { getInitials } from '@/components/subject/utils';
 import { formatTimeRemaining } from '@/shared/utils/dateFormatting';
+import { navigateTo } from '@/shared/utils/navigation';
+import { ParentBadge, MetaSeparator } from '@/components/mention/previews/ParentBadge';
 import type { MentionLiveState } from '@/components/mention/types';
 
 interface UserMentionPreviewProps {
@@ -60,7 +62,7 @@ export function UserMentionPreview({
 
   return (
     <>
-      <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-emerald-500/10 via-emerald-500/5 to-transparent pointer-events-none" />
+      <span className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
 
       {/* Header */}
       <span className="block relative px-4 pr-10 pt-3.5 pb-2 pl-5">
@@ -106,6 +108,24 @@ export function UserMentionPreview({
                   </span>
                 </>
               )}
+              {liveState.userTeamName && (
+                <>
+                  <MetaSeparator />
+                  <ParentBadge label={liveState.userTeamName} />
+                </>
+              )}
+              {liveState.userJobTitle && (
+                <>
+                  <MetaSeparator />
+                  <span className="text-xs text-muted-foreground truncate">{liveState.userJobTitle}</span>
+                </>
+              )}
+              {liveState.userDepartment && (
+                <>
+                  <MetaSeparator />
+                  <span className="text-xs text-muted-foreground truncate">{liveState.userDepartment}</span>
+                </>
+              )}
             </span>
           </span>
         </span>
@@ -113,13 +133,13 @@ export function UserMentionPreview({
 
       {/* Footer */}
       <span className="flex px-4 py-2.5 pl-5 bg-muted/30 border-t border-border/50 items-center gap-2">
-        <a
-          href="/admin/members"
+        <button
+          onClick={(e) => { e.stopPropagation(); navigateTo(`/people/${userId}`); }}
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowSquareOut size={12} />
-          <span>Profile</span>
-        </a>
+          <span>View profile</span>
+        </button>
         <span className="flex-1" />
         <button
           onClick={(e) => { e.stopPropagation(); handleCopy(); }}

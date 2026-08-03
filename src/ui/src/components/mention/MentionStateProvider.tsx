@@ -120,9 +120,16 @@ function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLiveState {
       state.agentThemeColor = meta.agentThemeColor || undefined;
       break;
 
+    case UrnType.TEAM:
+      if (m.member_count) state.teamMemberCount = parseInt(m.member_count, 10) || 0;
+      break;
+
     case UrnType.USER:
       state.userAvatarUrl = meta.userAvatarUrl || undefined;
       state.userEmail = meta.userEmail || undefined;
+      state.userJobTitle = m.job_title || undefined;
+      state.userDepartment = m.department || undefined;
+      state.userTeamName = m.team_name || undefined;
       break;
 
     case UrnType.TAG:
@@ -232,17 +239,29 @@ export function streamChangesToLiveState(changes: Record<string, string>): Parti
       case 'total_tasks':
         patch.projectTotalTasks = value ? parseInt(value, 10) || 0 : 0; break;
 
-      // CHAT
+      // CHAT + TEAM share the key; each chip type reads only its own field.
       case 'channel_type':
         patch.channelType = value || undefined; break;
       case 'member_count':
-        patch.memberCount = value ? parseInt(value, 10) || 0 : 0; break;
+        patch.memberCount = value ? parseInt(value, 10) || 0 : 0;
+        patch.teamMemberCount = value ? parseInt(value, 10) || 0 : 0;
+        break;
 
       // CHAT_MESSAGE
       case 'sender_name':
         patch.chatSenderName = value || undefined; break;
       case 'channel_id':
         patch.chatChannelId = value || undefined; break;
+
+      // USER
+      case 'user_email':
+        patch.userEmail = value || undefined; break;
+      case 'job_title':
+        patch.userJobTitle = value || undefined; break;
+      case 'department':
+        patch.userDepartment = value || undefined; break;
+      case 'team_name':
+        patch.userTeamName = value || undefined; break;
 
       // TAG
       case 'slug':

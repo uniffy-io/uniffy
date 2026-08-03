@@ -260,6 +260,8 @@ function MentionChipInner({
 
   const isTaskDone = isTaskDoneStatus(resolvedLiveState?.taskStatus);
   const isLive = isLiveContent(resolvedLiveState?.updatedAt);
+  // The live title wins over the markdown label so renames land without a reload.
+  const displayLabel = resolvedLiveState?.title || label;
 
   const [userToggled, setUserToggled] = useState<boolean | null>(() => readToggle(urn));
   const persistToggle = useCallback((value: boolean) => {
@@ -386,7 +388,7 @@ function MentionChipInner({
         ref={chipRef}
         role="link"
         tabIndex={0}
-        aria-label={`${typeLabel}: ${label}${resolvedLiveState?.taskStatus ? `, status: ${resolvedLiveState.taskStatus}` : ''}`}
+        aria-label={`${typeLabel}: ${displayLabel}${resolvedLiveState?.taskStatus ? `, status: ${resolvedLiveState.taskStatus}` : ''}`}
         className={cn(
           'mention-chip group/chip inline-flex items-center align-middle',
           'gap-1.5 px-2 py-1 mx-0.5 my-0.5',
@@ -407,7 +409,7 @@ function MentionChipInner({
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
         onMouseEnter={canExpand ? undefined : handleMouseEnter}
         onMouseLeave={canExpand ? undefined : handleMouseLeave}
-        title={`Open ${typeLabel}: ${label} (Cmd/Ctrl+Click for new tab)`}
+        title={`Open ${typeLabel}: ${displayLabel} (Cmd/Ctrl+Click for new tab)`}
       >
         {isUser ? (
           <span className="relative flex items-center justify-center shrink-0 w-5 h-5 rounded-full overflow-visible">
@@ -477,7 +479,7 @@ function MentionChipInner({
               isTaskDone && 'line-through text-muted-foreground',
             )}
           >
-            {label}
+            {displayLabel}
           </span>
         </span>
 
@@ -552,6 +554,7 @@ function MentionChipCompactInner({
   const resolvedLiveState = liveState ?? contextState;
   const isTaskDone = isTaskDoneStatus(resolvedLiveState?.taskStatus);
   const isDeleted = resolvedLiveState?.status === 'deleted';
+  const displayLabel = resolvedLiveState?.title || label;
 
   const [showPreview, setShowPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
@@ -614,7 +617,7 @@ function MentionChipCompactInner({
         ref={chipRef}
         role="link"
         tabIndex={0}
-        aria-label={`${typeLabel}: ${label}`}
+        aria-label={`${typeLabel}: ${displayLabel}`}
         className={cn(
           'mention-chip-compact group/chip inline-flex items-center align-middle',
           'gap-1 px-1.5 py-0.5 mx-0.5',
@@ -632,7 +635,7 @@ function MentionChipCompactInner({
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        title={`Open ${typeLabel}: ${label}`}
+        title={`Open ${typeLabel}: ${displayLabel}`}
       >
         {isUser ? (
           <span className="relative flex items-center justify-center shrink-0 w-3.5 h-3.5 rounded-full overflow-visible">
@@ -683,7 +686,7 @@ function MentionChipCompactInner({
             isTaskDone && 'line-through text-muted-foreground',
           )}
         >
-          {label}
+          {displayLabel}
         </span>
 
         {hasLiveIndicator && resolvedLiveState && (

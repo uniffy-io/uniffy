@@ -6,7 +6,10 @@ import { parseUrn, UrnType } from '@/shared/utils/urn';
 import { SearchResultType } from '@uniffy/proto/search/v1/search_pb';
 import { getContentTypeLabel } from '@/config/theme/contentTypes';
 import { useAppSelector } from '@/app/hooks';
-import { publishMentionState } from '@/components/mention/mentionStateEmitter';
+import {
+  onMentionStateChange,
+  publishMentionState,
+} from '@/components/mention/mentionStateEmitter';
 import type { MentionLiveState } from '@/components/mention/types';
 
 export interface UrnPreviewData {
@@ -22,6 +25,37 @@ export interface UrnPreviewData {
 
 const previewCache = new Map<string, UrnPreviewData>();
 
+/**
+ * Returns a fresh entry when the patch carries renamed copy, `null` when nothing
+ * relevant changed. Stream payloads (snake_case) and emitter payloads (camelCase)
+ * both spell these two fields the same way, so one merge serves both.
+ */
+function mergePreviewChanges(
+  cached: UrnPreviewData,
+  changes: Partial<MentionLiveState>,
+): UrnPreviewData | null {
+  const title = typeof changes.title === 'string' ? changes.title : undefined;
+  const description = typeof changes.description === 'string' ? changes.description : undefined;
+  if (title === undefined && description === undefined) return null;
+
+  const next: UrnPreviewData = {
+    ...cached,
+    title: title || cached.title,
+    description: description ?? cached.description,
+  };
+  if (next.title === cached.title && next.description === cached.description) return null;
+  return next;
+}
+
+// Live patches must reach the cache, not just the chips: the hover popover reads
+// the cached entry, so an unpatched rename resurfaces on the next hover.
+onMentionStateChange((urn, changes) => {
+  const cached = previewCache.get(urn);
+  if (!cached) return;
+  const next = mergePreviewChanges(cached, changes);
+  if (next) previewCache.set(urn, next);
+});
+
 let pendingByUrn = new Map<string, Array<(data: UrnPreviewData | null) => void>>();
 let pendingOrgId: string | null = null;
 let scheduled = false;
@@ -32,6 +66,7 @@ function searchResultTypeToUrnType(type: SearchResultType): UrnType {
     case SearchResultType.FILE: return UrnType.FILE;
     case SearchResultType.CHAT: return UrnType.CHAT;
     case SearchResultType.USER: return UrnType.USER;
+    case SearchResultType.TEAM: return UrnType.TEAM;
     case SearchResultType.CALENDAR_EVENT: return UrnType.CALENDAR_EVENT;
     case SearchResultType.PROJECT: return UrnType.PROJECT;
     case SearchResultType.TASK: return UrnType.TASK;
@@ -173,9 +208,15 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
       state.agentEmoji = m['agent_emoji'] || undefined;
       state.agentThemeColor = m['agent_theme_color'] || undefined;
       break;
+    case UrnType.TEAM:
+      if (m['member_count']) state.teamMemberCount = parseInt(m['member_count'], 10) || 0;
+      break;
     case UrnType.USER:
-      state.userAvatarUrl = m['user_avatar_url'] || undefined;
+      state.userAvatarUrl = m['user_avatar_url'] || m['avatar_url'] || undefined;
       state.userEmail = m['user_email'] || undefined;
+      state.userJobTitle = m['job_title'] || undefined;
+      state.userDepartment = m['department'] || undefined;
+      state.userTeamName = m['team_name'] || undefined;
       break;
     case UrnType.TAG:
       state.tagColor = m['color'] || undefined;

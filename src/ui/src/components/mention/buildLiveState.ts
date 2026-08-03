@@ -42,14 +42,22 @@ export function buildLiveStateFromMetadata(
 
   if (metadata.node_type) state.noteNodeType = metadata.node_type;
 
+  if (metadata.parent_label) state.parentLabel = metadata.parent_label;
+
   if (metadata.channel_type) state.channelType = metadata.channel_type;
-  if (metadata.member_count) state.memberCount = parseInt(metadata.member_count, 10) || 0;
+  if (metadata.member_count) {
+    state.memberCount = parseInt(metadata.member_count, 10) || 0;
+    state.teamMemberCount = parseInt(metadata.member_count, 10) || 0;
+  }
 
   if (metadata.agent_emoji) state.agentEmoji = metadata.agent_emoji;
   if (metadata.agent_theme_color) state.agentThemeColor = metadata.agent_theme_color;
 
   if (metadata.user_avatar_url) state.userAvatarUrl = metadata.user_avatar_url;
   if (metadata.user_email) state.userEmail = metadata.user_email;
+  if (metadata.job_title) state.userJobTitle = metadata.job_title;
+  if (metadata.department) state.userDepartment = metadata.department;
+  if (metadata.team_name) state.userTeamName = metadata.team_name;
 
   if (metadata.completed_tasks) state.projectCompletedTasks = parseInt(metadata.completed_tasks, 10) || 0;
   if (metadata.total_tasks) state.projectTotalTasks = parseInt(metadata.total_tasks, 10) || 0;

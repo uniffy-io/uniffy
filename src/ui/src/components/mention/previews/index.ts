@@ -4,6 +4,7 @@ export { ProjectMentionPreview } from '@/components/mention/previews/ProjectMent
 export { FileMentionPreview } from '@/components/mention/previews/FileMentionPreview';
 export { NoteMentionPreview } from '@/components/mention/previews/NoteMentionPreview';
 export { UserMentionPreview } from '@/components/mention/previews/UserMentionPreview';
+export { TeamMentionPreview } from '@/components/mention/previews/TeamMentionPreview';
 export { ChatMentionPreview } from '@/components/mention/previews/ChatMentionPreview';
 export { ChatMessageMentionPreview } from '@/components/mention/previews/ChatMessageMentionPreview';
 export { AgentMentionPreview } from '@/components/mention/previews/AgentMentionPreview';
