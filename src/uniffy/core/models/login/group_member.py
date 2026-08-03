@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -21,6 +21,9 @@ class GroupMember(SQLModel, table=True):
     """User membership in a group with a `GroupRole`."""
 
     __tablename__ = "login_group_members"
+    __table_args__ = (
+        UniqueConstraint("group_id", "user_id", name="uq_login_group_members_group_user"),
+    )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)

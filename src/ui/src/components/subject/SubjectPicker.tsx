@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { MagnifyingGlass, Check } from '@phosphor-icons/react';
+import { MagnifyingGlass, Check, LockSimple } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import {
     SUBJECT_TYPE,
@@ -9,6 +9,7 @@ import {
     type SubjectTypeFilter,
 } from '@/components/subject/types';
 import { SubjectAvatar } from '@/components/subject/SubjectAvatar';
+import { partitionSubjects } from '@/components/subject/utils';
 import { useSubjectSearch } from '@/components/subject/hooks/useSubjectSearch';
 import { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';
 
@@ -146,7 +147,62 @@ export function SubjectPicker({
         ? 'Search members...'
         : subjectTypes === 'groups'
             ? 'Search groups...'
-            : 'Search users or groups...';
+            : 'Search people, teams or groups...';
+
+    const renderResultRow = (subject: Subject) => {
+        const isSelected = value.includes(subject.id);
+        const badgeLabel = subject.type === SUBJECT_TYPE.USER
+            ? 'User'
+            : subject.kind === 'team'
+                ? 'Team'
+                : 'Group';
+        return (
+            <button
+                key={subject.id}
+                type="button"
+                onClick={() => handleSelect(subject)}
+                className={cn(
+                    'flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors',
+                    isSelected ? 'bg-primary/10' : 'hover:bg-muted'
+                )}
+            >
+                <SubjectAvatar subject={subject} size="sm" showPresence />
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 text-foreground truncate">
+                        <span className="truncate">{subject.name}</span>
+                        {subject.isPrivate && (
+                            <span title="Private" className="shrink-0 inline-flex text-muted-foreground">
+                                <LockSimple size={11} />
+                            </span>
+                        )}
+                    </div>
+                    {subject.type === SUBJECT_TYPE.USER && subject.email && (
+                        <div className="text-xs text-muted-foreground truncate">{subject.email}</div>
+                    )}
+                    {subject.type === SUBJECT_TYPE.GROUP && subject.memberCount != null && subject.memberCount > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                            {subject.memberCount} member{subject.memberCount !== 1 ? 's' : ''}
+                        </div>
+                    )}
+                </div>
+                {subjectTypes === 'all' && (
+                    <span
+                        className={cn(
+                            'text-xs px-2 py-0.5 rounded-full shrink-0',
+                            badgeLabel === 'Group'
+                                ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                                : 'bg-primary/10 text-primary'
+                        )}
+                    >
+                        {badgeLabel}
+                    </span>
+                )}
+                {isSelected && (
+                    <Check size={14} className="text-primary shrink-0" />
+                )}
+            </button>
+        );
+    };
 
     const dropdownContent = (
         <div
@@ -210,49 +266,17 @@ export function SubjectPicker({
                             </button>
                         );
                     })
+                ) : subjectTypes === 'all' ? (
+                    partitionSubjects(results).map((section) => (
+                        <div key={section.label}>
+                            <div className="text-xs uppercase text-muted-foreground px-3 pt-2 pb-1">
+                                {section.label}
+                            </div>
+                            {section.subjects.map(renderResultRow)}
+                        </div>
+                    ))
                 ) : (
-                    results.map((subject) => {
-                        const isSelected = value.includes(subject.id);
-                        return (
-                            <button
-                                key={subject.id}
-                                type="button"
-                                onClick={() => handleSelect(subject)}
-                                className={cn(
-                                    'flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors',
-                                    isSelected ? 'bg-primary/10' : 'hover:bg-muted'
-                                )}
-                            >
-                                <SubjectAvatar subject={subject} size="sm" showPresence />
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-foreground truncate">{subject.name}</div>
-                                    {subject.type === SUBJECT_TYPE.USER && subject.email && (
-                                        <div className="text-xs text-muted-foreground truncate">{subject.email}</div>
-                                    )}
-                                    {subject.type === SUBJECT_TYPE.GROUP && subject.memberCount != null && subject.memberCount > 0 && (
-                                        <div className="text-xs text-muted-foreground">
-                                            {subject.memberCount} member{subject.memberCount !== 1 ? 's' : ''}
-                                        </div>
-                                    )}
-                                </div>
-                                {subjectTypes === 'all' && (
-                                    <span
-                                        className={cn(
-                                            'text-xs px-2 py-0.5 rounded-full shrink-0',
-                                            subject.type === SUBJECT_TYPE.USER
-                                                ? 'bg-primary/10 text-primary'
-                                                : 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
-                                        )}
-                                    >
-                                        {subject.type === SUBJECT_TYPE.USER ? 'User' : 'Group'}
-                                    </span>
-                                )}
-                                {isSelected && (
-                                    <Check size={14} className="text-primary shrink-0" />
-                                )}
-                            </button>
-                        );
-                    })
+                    results.map(renderResultRow)
                 )}
             </div>
 

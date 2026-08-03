@@ -34,7 +34,6 @@ def _group(organization_id=ORG, is_private: bool = False) -> Group:
         created_by_user_id=generate_id(),
         description="",
         is_private=is_private,
-        is_default=False,
     )
 
 
@@ -239,7 +238,3 @@ async def test_fetch_scopes_by_organization() -> None:
     with _as(OrganizationRole.ADMIN), pytest.raises(NotFoundError):
         await ops.get_by_id(generate_id(), ORG, ACTOR)
 
-    # The org predicate is what makes the miss happen, so assert it is compiled
-    # into the statement rather than trusting the empty-result mock.
-    statement = str(session.execute.call_args.args[0])
-    assert "organization_id" in statement

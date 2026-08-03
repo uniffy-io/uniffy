@@ -3,6 +3,7 @@ import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { fetchMembers, fetchGroups } from '@/features/admin/store/adminThunks';
 import type { SerializedMemberInfo, SerializedGroupInfo } from '@/features/admin/store/adminSlice';
 import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
+import { subjectKindFromGroupKind } from '@/components/subject/utils';
 
 /** Resolves IDs against admin.members/groups; unresolved IDs get a truncated-ID fallback Subject. */
 export function useSubjectResolver(ids: string[]): {
@@ -64,6 +65,8 @@ export function useSubjectResolver(ids: string[]): {
                     type: SUBJECT_TYPE.GROUP,
                     name: group.name,
                     memberCount: group.memberCount,
+                    kind: subjectKindFromGroupKind(group.kind),
+                    isPrivate: group.isPrivate || undefined,
                 };
             }
             return {

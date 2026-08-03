@@ -20,6 +20,10 @@ export { SubjectAvatar, SubjectAvatarById } from '@/components/subject/SubjectAv
 export { SubjectAvatarStack } from '@/components/subject/SubjectAvatarStack';
 export { SubjectChip } from '@/components/subject/SubjectChip';
 export { SubjectPicker } from '@/components/subject/SubjectPicker';
+export {
+    SubjectSearchInput,
+    SubjectSearchResults,
+} from '@/components/subject/SubjectSearch';
 export { UserHoverCard } from '@/components/subject/UserHoverCard';
 
 export { useSubjectResolver } from '@/components/subject/hooks/useSubjectResolver';

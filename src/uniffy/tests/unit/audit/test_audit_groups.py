@@ -31,7 +31,6 @@ def _make_group() -> Group:
         created_by_user_id=generate_id(),
         description="",
         is_private=False,
-        is_default=False,
     )
 
 
@@ -64,6 +63,7 @@ async def test_create_emits_group_created() -> None:
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
     ops = GroupOperations(session)
     actor = generate_id()
@@ -93,6 +93,7 @@ async def test_update_emits_changed_keys() -> None:
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
     ops = GroupOperations(session)
     with _permitted(group):
@@ -155,6 +156,7 @@ async def test_add_member_emits_group_member_added() -> None:
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
+    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
     ops = GroupOperations(session)
     target = generate_id()

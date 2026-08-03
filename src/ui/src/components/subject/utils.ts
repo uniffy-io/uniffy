@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
+import { GroupKind } from '@uniffy/proto/common/v1/common_pb';
 import type { SerializedMemberInfo, SerializedGroupInfo } from '@/features/admin/store/adminSlice';
-import { SUBJECT_TYPE, type Subject } from '@/components/subject/types';
+import { SUBJECT_TYPE, type Subject, type SubjectGroupKind } from '@/components/subject/types';
 
 export function getInitials(name: string): string {
     if (!name) return '??';
@@ -69,12 +70,18 @@ export function memberToSubject(m: SerializedMemberInfo): Subject {
     };
 }
 
+export function subjectKindFromGroupKind(kind: number): SubjectGroupKind {
+    return kind === GroupKind.TEAM ? 'team' : 'access';
+}
+
 export function groupToSubject(g: SerializedGroupInfo): Subject {
     return {
         id: g.id,
         type: SUBJECT_TYPE.GROUP,
         name: g.name,
         memberCount: g.memberCount,
+        kind: subjectKindFromGroupKind(g.kind),
+        isPrivate: g.isPrivate || undefined,
     };
 }
 
@@ -84,4 +91,31 @@ export function isUserSubject(s: Subject): boolean {
 
 export function isGroupSubject(s: Subject): boolean {
     return s.type === SUBJECT_TYPE.GROUP;
+}
+
+export interface SubjectSection {
+    label: 'People' | 'Teams' | 'Groups';
+    subjects: Subject[];
+}
+
+/** Sections for the mixed picker; empty sections are dropped. */
+export function partitionSubjects(subjects: Subject[]): SubjectSection[] {
+    const people: Subject[] = [];
+    const teams: Subject[] = [];
+    const groups: Subject[] = [];
+    for (const subject of subjects) {
+        if (subject.type === SUBJECT_TYPE.USER) {
+            people.push(subject);
+        } else if (subject.kind === 'team') {
+            teams.push(subject);
+        } else {
+            groups.push(subject);
+        }
+    }
+    const sections: SubjectSection[] = [
+        { label: 'People', subjects: people },
+        { label: 'Teams', subjects: teams },
+        { label: 'Groups', subjects: groups },
+    ];
+    return sections.filter((section) => section.subjects.length > 0);
 }

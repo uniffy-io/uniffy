@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/app/hooks';
 import { adminApi } from '@/features/admin/api/adminApi';
 import { SUBJECT_TYPE, type Subject, type SubjectTypeFilter } from '@/components/subject/types';
+import { subjectKindFromGroupKind } from '@/components/subject/utils';
 
 interface UseSubjectSearchOptions {
     subjectTypes?: SubjectTypeFilter;
@@ -85,6 +86,8 @@ export function useSubjectSearch(options: UseSubjectSearchOptions = {}): UseSubj
                                     type: SUBJECT_TYPE.GROUP,
                                     name: g.name,
                                     memberCount: g.memberCount,
+                                    kind: subjectKindFromGroupKind(g.kind),
+                                    isPrivate: g.isPrivate || undefined,
                                 })),
                             ),
                     );
