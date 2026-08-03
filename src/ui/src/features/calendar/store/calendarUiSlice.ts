@@ -6,7 +6,6 @@ import type {
   EventModalPrefill,
   DropTarget,
   SidebarSectionId,
-  DetailPanelTab,
 } from '@/features/calendar/types';
 import { LAYOUT, SIDEBAR_SECTIONS } from '@/features/calendar/constants';
 import { toDateString } from '@/features/calendar/utils';
@@ -16,14 +15,9 @@ interface CalendarUiState {
   currentDate: string;
   quickAccessFilter: QuickAccessFilter | null;
   selectedEventId: string | null;
-  isDetailPanelOpen: boolean;
-  detailPanelWidth: number;
-  activeDetailTab: DetailPanelTab;
-  detailViewMode: 'sidebar' | 'modal';
   isEventModalOpen: boolean;
   eventModalMode: 'create' | 'edit';
   eventModalPrefill: EventModalPrefill | null;
-  isEditingEventOpen: boolean;
   isSidebarCollapsed: boolean;
   sidebarWidth: number;
   collapsedSections: SidebarSectionId[];
@@ -31,15 +25,10 @@ interface CalendarUiState {
   dropTarget: DropTarget | null;
   isDragging: boolean;
   displayTimezone: string;
-  isTravelingMode: boolean;
-  isQuickCaptureOpen: boolean;
-  isTimezoneModalOpen: boolean;
   isAddCategoryModalOpen: boolean;
   editingCategoryId: string | null;
   isCreateTemplateModalOpen: boolean;
   editingTemplateId: string | null;
-  isMobileView: boolean;
-  activeMobilePanel: 'sidebar' | 'calendar' | 'detail';
 }
 
 function getDefaultCollapsedSections(): SidebarSectionId[] {
@@ -53,14 +42,9 @@ const initialState: CalendarUiState = {
   currentDate: toDateString(new Date()),
   quickAccessFilter: null,
   selectedEventId: null,
-  isDetailPanelOpen: false,
-  detailPanelWidth: LAYOUT.DETAIL_PANEL_WIDTH,
-  activeDetailTab: 'outline',
-  detailViewMode: 'sidebar',
   isEventModalOpen: false,
   eventModalMode: 'create',
   eventModalPrefill: null,
-  isEditingEventOpen: false,
   isSidebarCollapsed: false,
   sidebarWidth: LAYOUT.SIDEBAR_WIDTH,
   collapsedSections: getDefaultCollapsedSections(),
@@ -68,15 +52,10 @@ const initialState: CalendarUiState = {
   dropTarget: null,
   isDragging: false,
   displayTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  isTravelingMode: false,
-  isQuickCaptureOpen: false,
-  isTimezoneModalOpen: false,
   isAddCategoryModalOpen: false,
   editingCategoryId: null,
   isCreateTemplateModalOpen: false,
   editingTemplateId: null,
-  isMobileView: false,
-  activeMobilePanel: 'calendar',
 };
 
 const calendarUiSlice = createSlice({
@@ -104,45 +83,10 @@ const calendarUiSlice = createSlice({
 
     selectEvent: (state, action: PayloadAction<string | null>) => {
       state.selectedEventId = action.payload;
-      if (action.payload) {
-        state.isDetailPanelOpen = true;
-      }
     },
 
     deselectEvent: (state) => {
       state.selectedEventId = null;
-      state.isDetailPanelOpen = false;
-    },
-
-    toggleDetailPanel: (state) => {
-      state.isDetailPanelOpen = !state.isDetailPanelOpen;
-      if (!state.isDetailPanelOpen) {
-        state.selectedEventId = null;
-      }
-    },
-
-    openDetailPanel: (state) => {
-      state.isDetailPanelOpen = true;
-    },
-
-    closeDetailPanel: (state) => {
-      state.isDetailPanelOpen = false;
-      state.selectedEventId = null;
-    },
-
-    setDetailViewMode: (state, action: PayloadAction<'sidebar' | 'modal'>) => {
-      state.detailViewMode = action.payload;
-    },
-
-    setDetailPanelWidth: (state, action: PayloadAction<number>) => {
-      state.detailPanelWidth = Math.max(
-        LAYOUT.DETAIL_PANEL_MIN_WIDTH,
-        Math.min(action.payload, LAYOUT.DETAIL_PANEL_MAX_WIDTH)
-      );
-    },
-
-    setActiveDetailTab: (state, action: PayloadAction<DetailPanelTab>) => {
-      state.activeDetailTab = action.payload;
     },
 
     openEventModal: (
@@ -160,15 +104,6 @@ const calendarUiSlice = createSlice({
     closeEventModal: (state) => {
       state.isEventModalOpen = false;
       state.eventModalPrefill = null;
-    },
-
-    openEditEvent: (state, action: PayloadAction<string>) => {
-      state.selectedEventId = action.payload;
-      state.isEditingEventOpen = true;
-    },
-
-    closeEditEvent: (state) => {
-      state.isEditingEventOpen = false;
     },
 
     toggleSidebar: (state) => {
@@ -197,20 +132,6 @@ const calendarUiSlice = createSlice({
       }
     },
 
-    setSectionCollapsed: (
-      state,
-      action: PayloadAction<{ sectionId: SidebarSectionId; collapsed: boolean }>
-    ) => {
-      const { sectionId, collapsed } = action.payload;
-      const index = state.collapsedSections.indexOf(sectionId);
-
-      if (collapsed && index === -1) {
-        state.collapsedSections.push(sectionId);
-      } else if (!collapsed && index !== -1) {
-        state.collapsedSections.splice(index, 1);
-      }
-    },
-
     startDrag: (state, action: PayloadAction<string>) => {
       state.draggedEventId = action.payload;
       state.isDragging = true;
@@ -224,34 +145,6 @@ const calendarUiSlice = createSlice({
       state.draggedEventId = null;
       state.dropTarget = null;
       state.isDragging = false;
-    },
-
-    setDisplayTimezone: (state, action: PayloadAction<string>) => {
-      state.displayTimezone = action.payload;
-    },
-
-    toggleTravelingMode: (state) => {
-      state.isTravelingMode = !state.isTravelingMode;
-    },
-
-    setTravelingMode: (state, action: PayloadAction<boolean>) => {
-      state.isTravelingMode = action.payload;
-    },
-
-    openQuickCapture: (state) => {
-      state.isQuickCaptureOpen = true;
-    },
-
-    closeQuickCapture: (state) => {
-      state.isQuickCaptureOpen = false;
-    },
-
-    openTimezoneModal: (state) => {
-      state.isTimezoneModalOpen = true;
-    },
-
-    closeTimezoneModal: (state) => {
-      state.isTimezoneModalOpen = false;
     },
 
     openAddCategoryModal: (state) => {
@@ -284,20 +177,6 @@ const calendarUiSlice = createSlice({
       state.editingTemplateId = null;
     },
 
-    setMobileView: (state, action: PayloadAction<boolean>) => {
-      state.isMobileView = action.payload;
-      if (action.payload) {
-        state.activeMobilePanel = 'calendar';
-      }
-    },
-
-    setActiveMobilePanel: (
-      state,
-      action: PayloadAction<'sidebar' | 'calendar' | 'detail'>
-    ) => {
-      state.activeMobilePanel = action.payload;
-    },
-
     resetCalendarUiState: () => initialState,
   },
 });
@@ -309,39 +188,21 @@ export const {
   setQuickAccessFilter,
   selectEvent,
   deselectEvent,
-  toggleDetailPanel,
-  openDetailPanel,
-  closeDetailPanel,
-  setDetailViewMode,
-  setDetailPanelWidth,
-  setActiveDetailTab,
   openEventModal,
   closeEventModal,
-  openEditEvent,
-  closeEditEvent,
   toggleSidebar,
   setSidebarCollapsed,
   setSidebarWidth,
   toggleSectionCollapse,
-  setSectionCollapsed,
   startDrag,
   setDropTarget,
   endDrag,
-  setDisplayTimezone,
-  toggleTravelingMode,
-  setTravelingMode,
-  openQuickCapture,
-  closeQuickCapture,
-  openTimezoneModal,
-  closeTimezoneModal,
   openAddCategoryModal,
   openEditCategoryModal,
   closeAddCategoryModal,
   openCreateTemplateModal,
   openEditTemplateModal,
   closeCreateTemplateModal,
-  setMobileView,
-  setActiveMobilePanel,
   resetCalendarUiState,
 } = calendarUiSlice.actions;
 

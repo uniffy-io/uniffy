@@ -21,6 +21,12 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     DayOfWeek as ProtoDayOfWeek,
 )
 from uniffy_proto.cal.v1.calendar_pb2 import (
+    EventActivity as ProtoEventActivity,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
+    EventActivityAction as ProtoEventActivityAction,
+)
+from uniffy_proto.cal.v1.calendar_pb2 import (
     EventTemplate as ProtoEventTemplate,
 )
 from uniffy_proto.cal.v1.calendar_pb2 import (
@@ -44,6 +50,7 @@ from uniffy.core.converters.common_proto import (
     content_role_to_proto,
 )
 from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
+from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -114,13 +121,6 @@ RESOURCE_TYPE_TO_PROTO = {
     ResourceType.CHAT: ProtoResourceType.RESOURCE_TYPE_CHAT,
 }
 
-RESOURCE_TYPE_FROM_PROTO = {
-    ProtoResourceType.RESOURCE_TYPE_UNSPECIFIED: ResourceType.NOTE,
-    ProtoResourceType.RESOURCE_TYPE_NOTE: ResourceType.NOTE,
-    ProtoResourceType.RESOURCE_TYPE_FILE: ResourceType.FILE,
-    ProtoResourceType.RESOURCE_TYPE_CHAT: ResourceType.CHAT,
-}
-
 DAY_OF_WEEK_MAP = {
     "MONDAY": ProtoDayOfWeek.DAY_OF_WEEK_MONDAY,
     "TUESDAY": ProtoDayOfWeek.DAY_OF_WEEK_TUESDAY,
@@ -132,6 +132,23 @@ DAY_OF_WEEK_MAP = {
 }
 
 DAY_OF_WEEK_FROM_PROTO = {v: k for k, v in DAY_OF_WEEK_MAP.items()}
+
+ACTIVITY_ACTION_TO_PROTO = {
+    "created": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_CREATED,
+    "title_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_TITLE_CHANGED,
+    "schedule_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_SCHEDULE_CHANGED,
+    "location_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_LOCATION_CHANGED,
+    "meeting_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_MEETING_CHANGED,
+    "description_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_DESCRIPTION_CHANGED,
+    "category_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_CATEGORY_CHANGED,
+    "calendar_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_CALENDAR_CHANGED,
+    "recurrence_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_RECURRENCE_CHANGED,
+    "reminders_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_REMINDERS_CHANGED,
+    "attendees_added": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_ATTENDEES_ADDED,
+    "attendees_removed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED,
+    "response_changed": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED,
+    "field_updated": ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_FIELD_UPDATED,
+}
 
 RECURRENCE_EDIT_SCOPE_FROM_PROTO = {
     ProtoRecurrenceEditScope.RECURRENCE_EDIT_SCOPE_UNSPECIFIED: "all_events",
@@ -156,14 +173,30 @@ def attendee_role_from_proto(proto_role: ProtoAttendeeRole) -> AttendeeRole:
     return ATTENDEE_ROLE_FROM_PROTO.get(proto_role, AttendeeRole.REQUIRED)
 
 
-def resource_type_from_proto(proto_type: ProtoResourceType) -> ResourceType:
-    """Convert proto ResourceType to the domain enum."""
-    return RESOURCE_TYPE_FROM_PROTO.get(proto_type, ResourceType.NOTE)
-
-
 def recurrence_edit_scope_from_proto(proto_scope: ProtoRecurrenceEditScope.ValueType) -> str:
     """Convert proto RecurrenceEditScope to a string code."""
     return RECURRENCE_EDIT_SCOPE_FROM_PROTO.get(proto_scope, "all_events")
+
+
+def activity_to_proto(activity: EventActivity) -> ProtoEventActivity:
+    proto = ProtoEventActivity(
+        id=str(activity.id),
+        event_id=str(activity.event_id),
+        actor_id=str(activity.actor_id),
+        action=ACTIVITY_ACTION_TO_PROTO.get(
+            activity.action,
+            ProtoEventActivityAction.EVENT_ACTIVITY_ACTION_UNSPECIFIED,
+        ),
+        timestamp=datetime_to_timestamp(activity.timestamp),
+    )
+
+    if activity.field_id:
+        proto.field_id = activity.field_id
+    if activity.previous_value:
+        proto.previous_value = activity.previous_value
+    if activity.new_value:
+        proto.new_value = activity.new_value
+    return proto
 
 
 def event_to_proto(
@@ -176,6 +209,7 @@ def event_to_proto(
     room_location: str | None = None,
     room_capacity: int = 0,
     room_amenities: list[str] | None = None,
+    user_role: ContentRole | None = None,
 ) -> ProtoCalendarEvent:
     """Convert a ``CalendarEvent`` row to its proto representation.
 
@@ -211,6 +245,9 @@ def event_to_proto(
         created_at=datetime_to_timestamp(event.created_at),
         updated_at=datetime_to_timestamp(event.updated_at),
     )
+
+    if user_role is not None:
+        proto_event.user_role = content_role_to_proto(user_role)
 
     proto_event.is_recurring = event.recurrence_pattern != RecurrencePattern.NONE
 
@@ -288,6 +325,8 @@ def event_to_proto(
                 proto_attendee.avatar_url = user_info["avatar_url"]
             if user_info.get("timezone"):
                 proto_attendee.timezone = user_info["timezone"]
+            if attendee.invited_via_group_id:
+                proto_attendee.invited_via_group_id = str(attendee.invited_via_group_id)
             proto_event.attendees.append(proto_attendee)
 
     if room_id:

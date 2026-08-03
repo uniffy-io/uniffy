@@ -88,37 +88,11 @@ export function getCategoryColor(categoryId: string): string {
   return category?.color ?? CATEGORY_COLORS[0].value;
 }
 
-export function getCategoryBackgroundColor(categoryId: string, isDark = false): string {
-  const category = DEFAULT_CATEGORIES.find((c) => c.id === categoryId);
-  const color = category?.color ?? CATEGORY_COLORS[0].value;
+/** Events without a category follow the user's accent so the grid tracks the active theme. */
+export const ACCENT_EVENT_COLOR = 'hsl(var(--primary))';
 
-  const colorOption = CATEGORY_COLORS.find((c) => c.value === color);
-
-  if (colorOption) {
-    if (isDark) {
-      return colorOption.light.replace('0.1', '0.2');
-    }
-    return colorOption.light;
-  }
-
-  const opacity = isDark ? 0.2 : 0.1;
-  return hexToRgba(color, opacity);
+/** Accepts hex category colors and CSS color functions alike, so callers never concatenate alpha onto a hex. */
+export function eventTint(color: string, percent: number): string {
+  return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 }
 
-export function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-export const CALENDAR_COLORS = {
-  personal: '#3B82F6',
-  work: '#8B5CF6',
-  team: '#10B981',
-  shared: '#F59E0B',
-};
-
-export const FOCUS_TIME_COLOR = '#8B5CF6';
-
-export const CURRENT_TIME_COLOR = '#EF4444';

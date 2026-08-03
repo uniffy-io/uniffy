@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getCurrentTimeInfo, isDateToday } from '@/features/calendar/utils';
+import { getCurrentTimeInfo } from '@/features/calendar/utils';
 import { GRID } from '@/features/calendar/constants';
 
 interface CurrentTimeInfo {
@@ -57,17 +57,3 @@ export function useCurrentTime(
   };
 }
 
-export function useIsToday(date: Date | string): boolean {
-  const [today, setToday] = useState(() => isDateToday(date));
-
-  useEffect(() => {
-    // Re-check every minute to handle midnight rollover.
-    const interval = setInterval(() => {
-      setToday(isDateToday(date));
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [date]);
-
-  return today;
-}

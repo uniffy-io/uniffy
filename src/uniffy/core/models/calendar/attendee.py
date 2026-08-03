@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum
+from sqlalchemy import Column, DateTime, Enum, ForeignKey
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.models.shared import AttendeeRole, AttendeeStatus
@@ -39,6 +39,12 @@ class EventAttendee(SQLModel, table=True):
             ),
             nullable=False,
         ),
+    )
+    # Snapshot at insert time: the group whose expansion produced this row.
+    # Later roster changes never touch it; a deleted group nulls it.
+    invited_via_group_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("login_groups.id", ondelete="SET NULL"), nullable=True),
     )
     responded_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     created_at: datetime = Field(

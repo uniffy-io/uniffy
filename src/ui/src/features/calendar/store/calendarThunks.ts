@@ -35,6 +35,7 @@ import type {
     EventTemplate,
     CreateTemplatePayload,
     UpdateTemplatePayload,
+    EventActivity,
 } from '@/features/calendar/types';
 import {
     RecurrenceEditScope as ProtoRecurrenceEditScope,
@@ -153,6 +154,7 @@ const attendeeFromProto = (proto: ProtoAttendee): Attendee => ({
     status: ATTENDEE_STATUS_FROM_PROTO[proto.status] || 'pending',
     role: ATTENDEE_ROLE_FROM_PROTO[proto.role] || 'required',
     timezone: proto.timezone || undefined,
+    invitedViaGroupId: proto.invitedViaGroupId || undefined,
 });
 
 const linkedResourceFromProto = (proto: ProtoLinkedResource): LinkedResource => ({
@@ -207,6 +209,7 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
     roomLocation: proto.roomLocation || undefined,
     roomCapacity: proto.roomCapacity || undefined,
     roomAmenities: proto.roomAmenities?.length ? [...proto.roomAmenities] : undefined,
+    userRole: proto.userRole,
 });
 
 /** Push hydrated tag rows into tags-slice cache so chips render without a follow-up RPC. */
@@ -464,6 +467,8 @@ export const updateEvent = createAsyncThunk<
             }));
         }
 
+        dispatch(fetchEventActivities(params.eventId));
+
         return updated;
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to update event');
@@ -623,6 +628,7 @@ export const updateAttendeeStatus = createAsyncThunk<
 
         // Ensure full event lands in the store (notification accept may target an unloaded event).
         dispatch(fetchEvent(params.eventId));
+        dispatch(fetchEventActivities(params.eventId));
 
         return {
             eventId: params.eventId,
@@ -784,5 +790,22 @@ export const listEventTemplates = createAsyncThunk<
         return (response.templates || []).map(templateFromProto);
     } catch (error) {
         return rejectWithValue(error instanceof Error ? error.message : 'Failed to list templates');
+    }
+});
+
+export const fetchEventActivities = createAsyncThunk<
+    { eventId: string; activities: EventActivity[] },
+    string,
+    { state: RootState; rejectValue: string }
+>('calendar/fetchEventActivities', async (eventId, { getState, rejectWithValue }) => {
+    try {
+        const organizationId = getOrganizationId(getState());
+        const activities = await calendarApi.listEventActivities({
+            eventId,
+            organizationId,
+        });
+        return { eventId, activities };
+    } catch (error) {
+        return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch activity');
     }
 });

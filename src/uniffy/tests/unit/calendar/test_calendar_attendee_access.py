@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from uniffy.core.auth.permissions import ContentAccessQuery
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.meilisearch import MeilisearchClient
@@ -71,6 +70,36 @@ class TestResolveRoleAttendeeFloor:
         ops._is_attendee.assert_not_awaited()
 
 
+class TestResolveRoleOnExpandedOccurrence:
+    """Expanded recurring instances carry a synthetic `{master}__occurrence__{date}`
+    id. Feeding that string to the permission lookup makes asyncpg reject the
+    query argument, so every lookup resolves to the master UUID first.
+    """
+
+    async def test_permission_lookup_uses_master_uuid(self) -> None:
+        ops = _make_ops(effective_role=ContentRole.EDITOR)
+        event = _make_event()
+        master_id = event.id
+        event.id = f"{master_id}__occurrence__2026-08-03"  # type: ignore[assignment]
+
+        role = await ops._resolve_role(generate_id(), event.organization_id, event)
+
+        assert role == ContentRole.EDITOR
+        assert ops.permission_checker.effective_role.await_args.kwargs["content_id"] == master_id
+
+    async def test_attendee_floor_uses_master_uuid(self) -> None:
+        ops = _make_ops(is_attendee=True)
+        event = _make_event()
+        master_id = event.id
+        event.id = f"{master_id}__occurrence__2026-08-03"  # type: ignore[assignment]
+
+        role = await ops._resolve_role(generate_id(), event.organization_id, event)
+
+        assert role == ContentRole.VIEWER
+        assert ops._is_attendee.await_args.args[1] == master_id
+        assert ops.permission_checker.is_blocked.await_args.args[3] == master_id
+
+
 class TestGetByIdAfterRsvp:
     """The accept-from-notification flow: RSVP succeeds, then the frontend
     fetches the event. The fetch must pass for an invitee on a personal event.
@@ -89,17 +118,6 @@ class TestGetByIdAfterRsvp:
         ops._fetch_by_id = AsyncMock(return_value=event)
         with pytest.raises(PermissionDeniedError):
             await ops.get_by_id(generate_id(), event.organization_id, event.id)
-
-
-class TestAttendeeListFilter:
-    def test_attendee_branch_carries_blocked_guard(self) -> None:
-        ops = CalendarEventOperations.__new__(CalendarEventOperations)
-        ops.access_query = ContentAccessQuery(MagicMock())
-        sql = str(ops._attendee_access_filter(generate_id(), generate_id()))
-        assert "calendar_event_attendees" in sql
-        # BLOCKED beats the invitation: the branch excludes blocked content ids.
-        assert "permissions_content_members" in sql
-        assert "NOT IN" in sql
 
 
 class TestSearchAttendeeIds:

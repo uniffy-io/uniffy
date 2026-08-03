@@ -11,8 +11,8 @@ import { LAYOUT } from '@/features/calendar/constants';
 import { loadPanelLayout, savePanelLayout } from '@/shared/utils/panelStorage';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { Drawer } from '@/components/ui/drawer';
-import { toggleSidebar, closeDetailPanel } from '@/features/calendar/store';
-import { EventDetailModal } from '@/features/calendar/components/modals/EventDetailModal';
+import { toggleSidebar } from '@/features/calendar/store';
+import { EventDetailModal } from '@/features/calendar/components/detail/EventDetailModal';
 import { cn } from '@/shared/utils/cn';
 import {
   CollapsibleSidebarRail,
@@ -29,16 +29,11 @@ const CALENDAR_SECTIONS: SidebarSection[] = [
 interface CalendarLayoutProps {
   sidebar: ReactNode;
   mainContent: ReactNode;
-  detailPanel?: ReactNode;
 }
 
-export function CalendarLayout({
-  sidebar,
-  mainContent,
-  detailPanel,
-}: CalendarLayoutProps) {
+export function CalendarLayout({ sidebar, mainContent }: CalendarLayoutProps) {
   const dispatch = useAppDispatch();
-  const { isSidebarCollapsed, isDetailPanelOpen, detailViewMode } = useAppSelector(
+  const { isSidebarCollapsed, selectedEventId } = useAppSelector(
     (state) => state.calendarUi
   );
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
@@ -55,18 +50,11 @@ export function CalendarLayout({
     }
   }, [dispatch, isSidebarCollapsed]);
 
-  const handleCloseDetailPanel = useCallback(() => {
-    dispatch(closeDetailPanel());
-  }, [dispatch]);
-
   const handleExpandSidebar = useCallback(() => {
     dispatch(toggleSidebar());
   }, [dispatch]);
 
   const sidebarAsDrawer = isMobile;
-  const detailAsDrawer = isMobileOrTablet;
-  // Modal mode is desktop-only; mobile/tablet always use the drawer.
-  const useModalForDetail = !isMobileOrTablet && detailViewMode === 'modal';
   const showSidebar = !isZenMode && !isSidebarCollapsed;
   const showCollapsedRail = !isZenMode && isSidebarCollapsed && !sidebarAsDrawer;
 
@@ -110,23 +98,6 @@ export function CalendarLayout({
             {mainContent}
           </div>
         </Panel>
-
-        {!isZenMode && isDetailPanelOpen && detailPanel && !detailAsDrawer && !useModalForDetail && (
-          <>
-            <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors cursor-col-resize data-[resize-handle-state=drag]:bg-primary" />
-            <Panel
-              id="calendar-detail"
-              defaultSize={LAYOUT.DETAIL_PANEL_WIDTH}
-              minSize={LAYOUT.DETAIL_PANEL_MIN_WIDTH}
-              maxSize={LAYOUT.DETAIL_PANEL_MAX_WIDTH}
-              className="overflow-hidden"
-            >
-              <div className="h-full bg-card">
-                {detailPanel}
-              </div>
-            </Panel>
-          </>
-        )}
       </Group>
 
       {sidebarAsDrawer && (
@@ -141,22 +112,7 @@ export function CalendarLayout({
         </Drawer>
       )}
 
-      {detailAsDrawer && (
-        <Drawer
-          open={!isZenMode && isDetailPanelOpen && !!detailPanel}
-          onClose={handleCloseDetailPanel}
-          side="right"
-          className="w-80"
-          showClose={false}
-          ariaLabel="Event details"
-        >
-          {detailPanel}
-        </Drawer>
-      )}
-
-      {!isZenMode && isDetailPanelOpen && useModalForDetail && (
-        <EventDetailModal />
-      )}
+      {!isZenMode && selectedEventId && <EventDetailModal />}
     </div>
   );
 }

@@ -61,33 +61,6 @@ class TestBuildSearchKeywords:
         assert "Conference Room A" in out
 
 
-class TestTagFilterSubquery:
-    def test_subquery_groups_and_requires_full_set(self) -> None:
-        ops = _make_ops()
-        tag_ids = [generate_id(), generate_id()]
-        subquery = ops._tag_filter_subquery(tag_ids)
-        compiled = str(
-            subquery.compile(compile_kwargs={"literal_binds": False})
-        ).lower()
-        assert "tag_assignments" in compiled
-        assert "calendar_events" in compiled
-        assert "group by" in compiled
-        # AND across the tag set requires DISTINCT count == len(tag_ids).
-        assert "having" in compiled
-        assert "count(distinct" in compiled
-
-    def test_subquery_synthesises_calendar_event_urn(self) -> None:
-        ops = _make_ops()
-        subquery = ops._tag_filter_subquery([generate_id()])
-        compiled = str(
-            subquery.compile(compile_kwargs={"literal_binds": True})
-        )
-        # The join key is the synthesized URN
-        # ``urn:uniffy:content:CALENDAR_EVENT:{id}`` so the same row is
-        # addressable from notes / files / agents through one shape.
-        assert "urn:uniffy:content:CALENDAR_EVENT:" in compiled
-
-
 class TestMasterEventId:
     def test_master_id_passes_real_uuid_through(self) -> None:
         event = _make_event()

@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { SubjectPicker, SubjectChip, SUBJECT_TYPE, type Subject } from '@/components/subject';
+import { useMemo, useState } from 'react';
+import { SubjectPicker, SubjectChip, useSubjectResolver, type Subject } from '@/components/subject';
+import { attendeeChipSubject } from '@/features/calendar/components/modals/attendeeChipSubject';
 import type { Attendee } from '@/features/calendar/types';
 
 interface AttendeesSelectorProps {
@@ -11,6 +12,12 @@ interface AttendeesSelectorProps {
 export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelectorProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const existingIds = attendees.map(a => a.id);
+
+  const { subjects: resolvedSubjects } = useSubjectResolver(existingIds);
+  const resolvedById = useMemo(
+    () => new Map(resolvedSubjects.map((subject) => [subject.id, subject])),
+    [resolvedSubjects],
+  );
 
   const handleSelect = (_ids: string[], subjects: Subject[]) => {
     const subject = subjects[0];
@@ -32,7 +39,7 @@ export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelec
             value={existingIds}
             onChange={handleSelect}
             onClose={() => setIsPickerOpen(false)}
-            placeholder="Add people or groups..."
+            placeholder="Add people, teams or groups..."
             autoFocus
           />
         ) : (
@@ -41,28 +48,20 @@ export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelec
             onClick={() => setIsPickerOpen(true)}
             className="w-full pl-3 pr-3 py-1.5 text-sm text-left bg-muted/50 border border-border rounded-md text-muted-foreground hover:bg-muted transition-colors"
           >
-            Add people or groups...
+            Add people, teams or groups...
           </button>
         )}
       </div>
 
       {attendees.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
-          {attendees.map((attendee) => {
-            const chipSubject: Subject = {
-              id: attendee.id,
-              type: SUBJECT_TYPE.USER,
-              name: attendee.name || attendee.email,
-              email: attendee.email,
-            };
-            return (
-              <SubjectChip
-                key={attendee.id}
-                subject={chipSubject}
-                onRemove={() => onRemove(attendee.id)}
-              />
-            );
-          })}
+          {attendees.map((attendee) => (
+            <SubjectChip
+              key={attendee.id}
+              subject={attendeeChipSubject(attendee, resolvedById.get(attendee.id))}
+              onRemove={() => onRemove(attendee.id)}
+            />
+          ))}
         </div>
       )}
     </div>

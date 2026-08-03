@@ -16,6 +16,7 @@ from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.content.references import extract_all_outgoing_references
+from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
@@ -24,15 +25,20 @@ from uniffy.core.errors import (
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
+    extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
+from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
-from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.organization_member import (
+    OrganizationMember,
+    OrganizationRole,
+)
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -49,6 +55,40 @@ from uniffy.domains.calendar.recurrence import expand_recurrence
 from uniffy.domains.tags import TagAssignment, TagOperations
 
 logger = logger.bind(component="calendar.operations")
+
+
+_ACTIVITY_VALUE_LIMIT = 500
+
+# Fields whose edits are recorded in the event activity log, and the action each
+# maps to. Fields carrying long or structured values are recorded without a
+# before/after pair - the entry says what changed, the event row holds the value.
+_ACTIVITY_TRACKED_FIELDS: tuple[tuple[str, str, bool], ...] = (
+    ("title", "title_changed", True),
+    ("start_time", "schedule_changed", True),
+    ("end_time", "schedule_changed", True),
+    ("is_all_day", "schedule_changed", True),
+    ("timezone", "schedule_changed", True),
+    ("location", "location_changed", True),
+    ("meeting_url", "meeting_changed", True),
+    ("channel_id", "meeting_changed", False),
+    ("description", "description_changed", False),
+    ("category_id", "category_changed", True),
+    ("calendar_id", "calendar_changed", True),
+    ("recurrence_config", "recurrence_changed", False),
+    ("reminders", "reminders_changed", True),
+    ("is_focus_time", "field_updated", True),
+)
+
+
+def _activity_value(value: object) -> str | None:
+    """Render a field value for the activity log, or None when there is nothing to show."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, list):
+        return ",".join(str(item) for item in value) or None
+    return str(value)[:_ACTIVITY_VALUE_LIMIT]
 
 
 def _master_event_id(event: CalendarEvent) -> UUID:
@@ -134,11 +174,21 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         VIEW an event regardless of its access mode - mirroring the attendee
         bypass in the list queries. An explicit BLOCKED grant still wins.
         """
-        role = await super()._resolve_role(user_id, organization_id, content)
+        # Expanded occurrences carry a synthetic string id; permissions live on
+        # the master row, so every lookup below resolves to the master UUID.
+        master_id = _master_event_id(content)
+        role = await self.permission_checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id=master_id,
+            owner_id=content.owner_id,
+            access_mode=content.access_mode,
+            baseline_role=content.baseline_role,
+        )
         if role is not None:
             return role
 
-        master_id = _master_event_id(content)
         if not await self._is_attendee(user_id, master_id):
             return None
 
@@ -199,6 +249,40 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             logger.opt(exception=True).warning(
                 "Failed to refresh attendee search sharing"
             )
+
+    async def _emit_team_mention_notifications(
+        self,
+        event: CalendarEvent,
+        actor_id: UUID,
+        organization_id: UUID,
+        team_ids: list[UUID],
+        excluded_ids: set[UUID],
+    ) -> None:
+        """One CONTENT_MENTIONED per newly mentioned team; the notification
+        worker filters each recipient against the event itself."""
+        if not team_ids:
+            return
+        notified = set(excluded_ids)
+        expansions = await expand_team_mentions(self.session, organization_id, team_ids)
+        for expansion in expansions:
+            targets = [uid for uid in expansion.member_ids if uid not in notified]
+            if not targets:
+                continue
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=actor_id,
+                    title=f"Mentioned {expansion.name} in: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=targets,
+                    metadata={
+                        "team_id": str(expansion.team_id),
+                        "team_name": expansion.name,
+                    },
+                )
+            )
+            notified.update(targets)
 
     async def create(
         self,
@@ -261,8 +345,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
             await self._validate_channel_binding(user_id, organization_id, channel_id)
 
+        invited_via: dict[UUID, UUID] = {}
         if attendee_ids:
-            attendee_ids = await self._expand_group_attendees(attendee_ids)
+            attendee_ids, invited_via = await self._expand_group_attendees(
+                user_id, organization_id, attendee_ids
+            )
 
         outgoing_refs = (
             extract_all_outgoing_references(description, organization_id) if description else None
@@ -317,6 +404,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         user_id=attendee_id,
                         status=AttendeeStatus.PENDING,
                         role=AttendeeRole.REQUIRED,
+                        invited_via_group_id=invited_via.get(attendee_id),
                     )
                     self.session.add(attendee)
 
@@ -330,6 +418,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 intervals=reminders,
                 start_time=start_time,
             )
+
+        await self._log_activity(event.id, user_id, "created")
 
         await self.session.commit()
         await self.session.refresh(event)
@@ -360,10 +450,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     )
                 )
 
-        mentioned_ids = extract_mentioned_user_ids(outgoing_refs)
-        mentioned_ids.discard(user_id)
-        if attendee_ids:
-            mentioned_ids -= set(attendee_ids)
+        excluded_from_mentions = {user_id} | set(attendee_ids or [])
+        mentioned_ids = extract_mentioned_user_ids(outgoing_refs) - excluded_from_mentions
         if mentioned_ids:
             await emit_notification(
                 NotificationEvent(
@@ -375,6 +463,14 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     target_user_ids=list(mentioned_ids),
                 )
             )
+
+        await self._emit_team_mention_notifications(
+            event,
+            user_id,
+            organization_id,
+            extract_mentioned_team_ids(outgoing_refs),
+            excluded_from_mentions | mentioned_ids,
+        )
 
         if room_id:
             from uniffy.domains.rooms.operations import BookingOperations
@@ -476,12 +572,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         old_title = event.title
         old_start_time = event.start_time
         old_end_time = event.end_time
+        activity_before = self._activity_snapshot(event)
 
         title_changed = title is not None and title != event.title
 
         old_mentioned: set[UUID] = set()
+        old_mentioned_teams: set[UUID] = set()
         if description is not None:
             old_mentioned = extract_mentioned_user_ids(event.outgoing_references)
+            old_mentioned_teams = set(extract_mentioned_team_ids(event.outgoing_references))
 
         if title is not None:
             event.title = title
@@ -555,7 +654,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         newly_invited_ids: list[UUID] = []
         removed_attendee_ids: list[UUID] = []
         if attendee_ids is not None:
-            attendee_ids = await self._expand_group_attendees(attendee_ids)
+            attendee_ids, invited_via = await self._expand_group_attendees(
+                user_id, organization_id, attendee_ids
+            )
             stmt = select(EventAttendee).where(EventAttendee.event_id == event.id)
             result = await self.session.execute(stmt)
             existing_attendees = result.scalars().all()
@@ -577,11 +678,28 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         user_id=uid,
                         status=AttendeeStatus.PENDING,
                         role=AttendeeRole.REQUIRED,
+                        invited_via_group_id=invited_via.get(uid),
                     )
                     self.session.add(attendee)
                     newly_invited_ids.append(uid)
 
         event.updated_at = datetime.now(UTC)
+
+        await self._log_field_changes(event, user_id, activity_before)
+        if newly_invited_ids:
+            await self._log_activity(
+                event.id,
+                user_id,
+                "attendees_added",
+                new_value=",".join(str(uid) for uid in newly_invited_ids),
+            )
+        if removed_attendee_ids:
+            await self._log_activity(
+                event.id,
+                user_id,
+                "attendees_removed",
+                previous_value=",".join(str(uid) for uid in removed_attendee_ids),
+            )
 
         await self.session.commit()
         await self.session.refresh(event)
@@ -627,14 +745,17 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
         if description is not None:
-            new_mentioned = extract_mentioned_user_ids(event.outgoing_references)
-            new_mentioned.discard(user_id)
             if attendee_ids is not None:
-                new_mentioned -= set(attendee_ids)
+                current_attendee_ids = set(attendee_ids)
             else:
                 stmt = select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
                 result = await self.session.execute(stmt)
-                new_mentioned -= set(result.scalars().all())
+                current_attendee_ids = set(result.scalars().all())
+            excluded_from_mentions = {user_id} | current_attendee_ids
+
+            new_mentioned = (
+                extract_mentioned_user_ids(event.outgoing_references) - excluded_from_mentions
+            )
             newly_mentioned = new_mentioned - old_mentioned
             if newly_mentioned:
                 await emit_notification(
@@ -647,6 +768,18 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         target_user_ids=list(newly_mentioned),
                     )
                 )
+
+            await self._emit_team_mention_notifications(
+                event,
+                user_id,
+                organization_id,
+                [
+                    tid
+                    for tid in extract_mentioned_team_ids(event.outgoing_references)
+                    if tid not in old_mentioned_teams
+                ],
+                excluded_from_mentions | newly_mentioned,
+            )
 
         mention_changes: dict[str, str] = {}
         if event.title != old_title:
@@ -979,6 +1112,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             is_cancelled=True,
         )
         self.session.add(exception)
+
+        await self._log_activity(
+            event_id,
+            user_id,
+            "recurrence_changed",
+            field_id="cancelled_occurrence",
+            new_value=occurrence_date.isoformat(),
+        )
+
         await self.session.commit()
 
     async def edit_single_occurrence(
@@ -998,6 +1140,14 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
+
+        # Only the explicitly requested fields are diffed; the override's own
+        # start/end come from the occurrence date, which is not a user edit.
+        edited_before = {
+            name: value
+            for name, value in self._activity_snapshot(master).items()
+            if name in updates
+        }
 
         duration = master.end_time - master.start_time
         occ_start = datetime(
@@ -1060,6 +1210,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 status=att.status,
                 role=att.role,
                 responded_at=att.responded_at,
+                invited_via_group_id=att.invited_via_group_id,
             )
             self.session.add(new_att)
 
@@ -1069,6 +1220,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             source_event_id=master.id,
             target_event_id=override.id,
         )
+
+        await self._log_activity(
+            master.id,
+            user_id,
+            "recurrence_changed",
+            field_id="occurrence_override",
+            new_value=occurrence_date.isoformat(),
+        )
+        await self._log_activity(override.id, user_id, "created")
+        await self._log_field_changes(override, user_id, edited_before)
 
         await self._index_for_search(override, skip_member_lookup=True)
         await self.session.commit()
@@ -1092,6 +1253,12 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
+
+        edited_before = {
+            name: value
+            for name, value in self._activity_snapshot(master).items()
+            if name in updates
+        }
 
         config = dict(master.recurrence_config or {})
         end_dt = datetime(
@@ -1164,6 +1331,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 status=att.status,
                 role=att.role,
                 responded_at=att.responded_at,
+                invited_via_group_id=att.invited_via_group_id,
             )
             self.session.add(new_att)
 
@@ -1173,6 +1341,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             source_event_id=master.id,
             target_event_id=new_event.id,
         )
+
+        await self._log_activity(
+            master.id,
+            user_id,
+            "recurrence_changed",
+            field_id="series_split",
+            new_value=occurrence_date.isoformat(),
+        )
+        await self._log_activity(new_event.id, user_id, "created")
+        await self._log_field_changes(new_event, user_id, edited_before)
 
         await self._index_for_search(new_event, skip_member_lookup=True)
         await self.session.commit()
@@ -1269,7 +1447,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_edit(user_id, organization_id, event)
 
-        attendee_ids = await self._expand_group_attendees(attendee_ids)
+        attendee_ids, invited_via = await self._expand_group_attendees(
+            user_id, organization_id, attendee_ids
+        )
 
         result = await self.session.execute(
             select(EventAttendee.user_id).where(EventAttendee.event_id == event_id)
@@ -1284,6 +1464,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     user_id=attendee_id,
                     status=AttendeeStatus.PENDING,
                     role=role,
+                    invited_via_group_id=invited_via.get(attendee_id),
                 )
                 self.session.add(attendee)
                 added_ids.append(attendee_id)
@@ -1297,6 +1478,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
         event.updated_at = datetime.now(UTC)
+
+        if added_ids:
+            await self._log_activity(
+                event_id,
+                user_id,
+                "attendees_added",
+                new_value=",".join(str(uid) for uid in added_ids),
+            )
+
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -1350,6 +1540,15 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         await self._delete_reminder_rows(event_id, user_ids=attendee_ids)
 
         event.updated_at = datetime.now(UTC)
+
+        if removed_ids:
+            await self._log_activity(
+                event_id,
+                user_id,
+                "attendees_removed",
+                previous_value=",".join(str(uid) for uid in removed_ids),
+            )
+
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -1403,6 +1602,16 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 start_time=event.start_time,
             )
 
+        if old_status != status:
+            await self._log_activity(
+                event_id,
+                user_id,
+                "response_changed",
+                field_id="status",
+                previous_value=old_status.value,
+                new_value=status.value,
+            )
+
         await self.session.commit()
 
         if event.organizer_id != user_id:
@@ -1419,6 +1628,90 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
         return True
+
+    async def list_activities(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        event_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[EventActivity], int]:
+        """Read an event's activity log, newest first. Requires VIEW on the event."""
+        master_id = self._parse_master_event_id(event_id)
+        event = await self._fetch_by_id(master_id, organization_id)
+        if not event:
+            raise NotFoundError("CalendarEvent", master_id)
+
+        await self._require_view(user_id, organization_id, event)
+
+        total = await self.session.scalar(
+            select(func.count())
+            .select_from(EventActivity)
+            .where(EventActivity.event_id == master_id)
+        )
+
+        result = await self.session.execute(
+            select(EventActivity)
+            .where(EventActivity.event_id == master_id)
+            .order_by(EventActivity.timestamp.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        return list(result.scalars().all()), int(total or 0)
+
+    async def _log_activity(
+        self,
+        event_id: UUID,
+        actor_id: UUID,
+        action: str,
+        field_id: str | None = None,
+        previous_value: str | None = None,
+        new_value: str | None = None,
+    ) -> EventActivity:
+        activity = EventActivity(
+            event_id=self._parse_master_event_id(event_id),
+            actor_id=actor_id,
+            action=action,
+            field_id=field_id,
+            previous_value=previous_value,
+            new_value=new_value,
+        )
+        self.session.add(activity)
+        await self.session.flush()
+        return activity
+
+    async def _log_field_changes(
+        self,
+        event: CalendarEvent,
+        actor_id: UUID,
+        before: dict[str, object],
+    ) -> None:
+        """Emit one activity entry per tracked field that actually changed."""
+        for field_name, action, keep_values in _ACTIVITY_TRACKED_FIELDS:
+            if field_name not in before:
+                continue
+            old_value = before[field_name]
+            new_value = getattr(event, field_name, None)
+            if old_value == new_value:
+                continue
+
+            await self._log_activity(
+                event.id,
+                actor_id,
+                action,
+                field_id=field_name,
+                previous_value=_activity_value(old_value) if keep_values else None,
+                new_value=_activity_value(new_value) if keep_values else None,
+            )
+
+    @staticmethod
+    def _activity_snapshot(event: CalendarEvent) -> dict[str, object]:
+        return {
+            field_name: copy.deepcopy(getattr(event, field_name, None))
+            for field_name, _, _ in _ACTIVITY_TRACKED_FIELDS
+        }
 
     async def _create_reminder_rows(
         self,
@@ -1496,44 +1789,109 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
     async def _expand_group_attendees(
         self,
+        acting_user_id: UUID,
+        organization_id: UUID,
         attendee_ids: list[UUID],
-    ) -> list[UUID]:
+    ) -> tuple[list[UUID], dict[UUID, UUID]]:
+        """Replace group ids with their active rosters, then keep only active org members.
+
+        A group expands only from this org, and a private group only for an
+        actor who can see its roster (group member or org admin) - reported
+        as "not found" so existence does not leak. Ids that are neither an
+        org group nor an active org member are dropped.
+
+        Returns ``(resolved ids, user_id -> source group id)``. Direct user
+        ids stay out of the map; a user in two invited groups keeps the first.
+        """
         if not attendee_ids:
-            return []
+            return [], {}
 
         from uniffy.core.models.login.group import Group
         from uniffy.core.models.login.group_member import GroupMember
 
-        result = await self.session.execute(select(Group.id).where(Group.id.in_(attendee_ids)))
-        group_ids = {row[0] for row in result.all()}
-
-        if not group_ids:
-            return attendee_ids
-
         result = await self.session.execute(
-            select(GroupMember.user_id).where(
-                and_(
-                    GroupMember.group_id.in_(group_ids),
-                    GroupMember.is_active.is_(True),
-                )
+            select(Group.id, Group.is_private).where(
+                Group.id.in_(attendee_ids),
+                Group.organization_id == organization_id,
             )
         )
-        group_member_ids = [row[0] for row in result.all()]
+        groups = {row[0]: row[1] for row in result.all()}
+        group_ids = set(groups)
+
+        if group_ids:
+            private_ids = {gid for gid, is_private in groups.items() if is_private}
+            if private_ids and not await self._is_org_admin(acting_user_id, organization_id):
+                memberships = await self.session.execute(
+                    select(GroupMember.group_id).where(
+                        GroupMember.group_id.in_(private_ids),
+                        GroupMember.user_id == acting_user_id,
+                        GroupMember.is_active.is_(True),
+                    )
+                )
+                visible = {row[0] for row in memberships.all()}
+                hidden = private_ids - visible
+                if hidden:
+                    raise ValidationError("attendees", "group not found")
+
+            result = await self.session.execute(
+                select(GroupMember.group_id, GroupMember.user_id).where(
+                    and_(
+                        GroupMember.group_id.in_(group_ids),
+                        GroupMember.is_active.is_(True),
+                    )
+                )
+            )
+            members_by_group: dict[UUID, list[UUID]] = {}
+            for gid, uid in result.all():
+                members_by_group.setdefault(gid, []).append(uid)
+        else:
+            members_by_group = {}
 
         seen: set[UUID] = set()
         resolved: list[UUID] = []
+        provenance: dict[UUID, UUID] = {}
         for uid in attendee_ids:
             if uid in group_ids:
                 continue
             if uid not in seen:
                 seen.add(uid)
                 resolved.append(uid)
-        for uid in group_member_ids:
-            if uid not in seen:
-                seen.add(uid)
-                resolved.append(uid)
+        for gid in attendee_ids:
+            if gid not in group_ids:
+                continue
+            for uid in members_by_group.get(gid, []):
+                if uid not in seen:
+                    seen.add(uid)
+                    resolved.append(uid)
+                    provenance[uid] = gid
 
-        return resolved
+        if not resolved:
+            return [], {}
+        active = await self.session.execute(
+            select(OrganizationMember.user_id).where(
+                OrganizationMember.user_id.in_(resolved),
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+            )
+        )
+        active_ids = {row[0] for row in active.all()}
+        return (
+            [uid for uid in resolved if uid in active_ids],
+            {uid: gid for uid, gid in provenance.items() if uid in active_ids},
+        )
+
+    async def _is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
+        result = await self.session.execute(
+            select(OrganizationMember.id).where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+                OrganizationMember.role.in_(
+                    [OrganizationRole.OWNER, OrganizationRole.ADMIN]
+                ),
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     async def _validate_channel_binding(
         self,

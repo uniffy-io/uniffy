@@ -4,7 +4,7 @@ import { cn } from '@/shared/utils/cn';
 import { Select } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import type { RecurrenceConfig, RecurrencePattern, DayOfWeek } from '@/features/calendar/types';
-import { RECURRENCE_LABELS, DAY_OF_WEEK_LABELS } from '@/features/calendar/types';
+import { RECURRENCE_LABELS, DAY_OF_WEEK_LABELS } from '@/features/calendar/constants';
 
 type EndCondition = 'never' | 'after' | 'on_date';
 

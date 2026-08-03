@@ -1,8 +1,6 @@
 import {
   format,
   parseISO,
-  startOfDay,
-  endOfDay,
   startOfWeek,
   endOfWeek,
   startOfMonth,
@@ -17,13 +15,9 @@ import {
   isSameMonth,
   isToday,
   isWeekend,
-  isBefore,
-  isAfter,
   differenceInMinutes,
-  differenceInDays,
   getDay,
   getDate,
-  getMonth,
   getYear,
   getHours,
   getMinutes,
@@ -31,7 +25,7 @@ import {
   setMinutes,
   eachDayOfInterval,
 } from 'date-fns';
-import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz';
 import type { DayColumn, ViewMode } from '@/features/calendar/types';
 
 export function getWeekDates(
@@ -66,7 +60,7 @@ export function getWeekColumns(
 }
 
 /** Always returns 42 dates (6 weeks) including overflow from prev/next month. */
-export function getMonthDates(
+function getMonthDates(
   date: Date | string,
   weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1
 ): Date[] {
@@ -185,16 +179,6 @@ export function isDateToday(date: Date | string): boolean {
   return isToday(d);
 }
 
-export function getDayStart(date: Date | string): Date {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  return startOfDay(d);
-}
-
-export function getDayEnd(date: Date | string): Date {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  return endOfDay(d);
-}
-
 export function getDurationMinutes(
   start: Date | string,
   end: Date | string
@@ -239,11 +223,6 @@ export function toDateString(date: Date | string): string {
   return format(d, 'yyyy-MM-dd');
 }
 
-export function toTimeString(date: Date | string): string {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  return format(d, 'HH:mm');
-}
-
 export function getCurrentTimeInfo(): {
   hour: number;
   minutes: number;
@@ -257,48 +236,6 @@ export function getCurrentTimeInfo(): {
     minutes,
     percentOfHour: minutes / 60,
   };
-}
-
-export function getTimePosition(
-  date: Date | string,
-  hourHeight: number,
-  startHour: number = 0
-): number {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  const hours = getHours(d);
-  const minutes = getMinutes(d);
-  const totalMinutes = (hours - startHour) * 60 + minutes;
-  return (totalMinutes / 60) * hourHeight;
-}
-
-export function getTimeFromPosition(
-  position: number,
-  hourHeight: number,
-  startHour: number = 0
-): { hours: number; minutes: number } {
-  const totalMinutes = (position / hourHeight) * 60;
-  const hours = Math.floor(totalMinutes / 60) + startHour;
-  const minutes = Math.round(totalMinutes % 60);
-  return { hours, minutes };
-}
-
-export function roundTimeToInterval(
-  date: Date | string,
-  intervalMinutes: number = 15
-): Date {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  const minutes = getMinutes(d);
-  const roundedMinutes = Math.round(minutes / intervalMinutes) * intervalMinutes;
-  return setMinutes(d, roundedMinutes);
-}
-
-export function isMultiDayEvent(
-  start: Date | string,
-  end: Date | string
-): boolean {
-  const startDate = typeof start === 'string' ? parseISO(start) : start;
-  const endDate = typeof end === 'string' ? parseISO(end) : end;
-  return differenceInDays(endDate, startDate) >= 1;
 }
 
 export function getDateRangeLabel(
@@ -325,28 +262,5 @@ export function getTimezoneOffset(timezone: string = Intl.DateTimeFormat().resol
   return `GMT${formatted.replace(':', '')}`;
 }
 
-export function convertTimezone(
-  date: Date | string,
-  fromTimezone: string,
-  toTimezone: string
-): Date {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  const utcDate = fromZonedTime(d, fromTimezone);
-  return toZonedTime(utcDate, toTimezone);
-}
+export { parseISO, format, addMonths };
 
-export {
-  parseISO,
-  format,
-  isToday,
-  isBefore,
-  isAfter,
-  addDays,
-  addWeeks,
-  addMonths,
-  getHours,
-  getMinutes,
-  getDate,
-  getMonth,
-  getYear,
-};

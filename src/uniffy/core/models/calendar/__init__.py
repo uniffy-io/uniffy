@@ -1,5 +1,6 @@
 """Calendar models for the calendar feature."""
 
+from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
@@ -12,6 +13,7 @@ __all__ = [
     "Calendar",
     "Category",
     "CalendarEvent",
+    "EventActivity",
     "EventAttendee",
     "EventReminder",
     "EventTemplate",

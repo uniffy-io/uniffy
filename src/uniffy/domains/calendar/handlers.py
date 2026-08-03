@@ -34,6 +34,8 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     GetEventTemplateResponse,
     ListCategoriesRequest,
     ListCategoriesResponse,
+    ListEventActivitiesRequest,
+    ListEventActivitiesResponse,
     ListEventsRequest,
     ListEventsResponse,
     ListEventTemplatesRequest,
@@ -49,6 +51,7 @@ from uniffy_proto.cal.v1.calendar_pb2 import (
     UpdateEventTemplateRequest,
     UpdateEventTemplateResponse,
 )
+from uniffy_proto.common.v1.common_pb2 import PaginationResponse
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
@@ -60,11 +63,12 @@ from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import ContentType, RecurrencePattern
+from uniffy.core.types import ContentRole, ContentType, RecurrencePattern
 from uniffy.db import open_session
 from uniffy.domains.auth.context import get_user_id_from_context
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.converters import (
+    activity_to_proto,
     attendee_role_from_proto,
     attendee_status_from_proto,
     category_to_proto,
@@ -92,6 +96,15 @@ def _parse_uuid(value: str, field: str) -> UUID:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
 
 
+def _parse_event_id(value: str) -> UUID:
+    """Parse a request's event id, resolving an occurrence id to its series master.
+
+    Recurring occurrences are expanded as ``{master}__occurrence__{date}``; attendees,
+    activity and the row itself live on the master.
+    """
+    return _parse_uuid(value.split("__occurrence__")[0], "event_id")
+
+
 def _parse_tag_id_list(values) -> list[UUID]:
     """Parse a list of tag id strings, raising ``INVALID_ARGUMENT`` on any miss."""
     parsed: list[UUID] = []
@@ -101,14 +114,6 @@ def _parse_tag_id_list(values) -> list[UUID]:
         except ValueError as exc:
             raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid tag_id: {exc}") from exc
     return parsed
-
-
-def _occurrence_master_id(event_id) -> UUID:
-    """Strip ``__occurrence__{date}`` from a synthetic recurring instance id."""
-    raw = str(event_id)
-    if "__occurrence__" in raw:
-        return UUID(raw.split("__occurrence__")[0])
-    return UUID(raw) if not isinstance(event_id, UUID) else event_id
 
 
 async def _hydrate_event_tags(
@@ -282,6 +287,7 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        user_role=await ops._resolve_role(user_id, organization_id, event),
                         **room_info,
                     )
                 )
@@ -298,7 +304,7 @@ class CalendarHandlers:
         """Get a single event (requires view access)."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
-        event_id = _parse_uuid(request.event_id, "event_id")
+        event_id = _parse_event_id(request.event_id)
 
         try:
             async with open_session() as session:
@@ -318,6 +324,7 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        user_role=await ops._resolve_role(user_id, organization_id, event),
                         **room_info,
                     )
                 )
@@ -419,6 +426,7 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        user_role=await ops._resolve_role(user_id, organization_id, event),
                         **room_info,
                     )
                 )
@@ -533,6 +541,9 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                                 [],
                             ),
+                            user_role=await ops._resolve_role(
+                                user_id, organization_id, event
+                            ),
                             **room_info,
                         )
                     )
@@ -580,16 +591,18 @@ class CalendarHandlers:
 
                 attendees_cache: dict[str, list] = {}
                 room_info_cache: dict[str, dict] = {}
+                # Expanded occurrences inherit the master's policy, so key by master id.
+                role_cache: dict[str, ContentRole | None] = {}
                 master_ids: set[UUID] = set()
                 for event in events:
-                    master_ids.add(_occurrence_master_id(event.id))
+                    master_ids.add(_parse_event_id(str(event.id)))
                 tags_by_urn = await _hydrate_event_tags(
                     session, organization_id, list(master_ids)
                 )
 
                 proto_events = []
                 for event in events:
-                    real_id = _occurrence_master_id(event.id)
+                    real_id = _parse_event_id(str(event.id))
                     real_id_str = str(real_id)
                     if real_id_str not in attendees_cache:
                         attendees_cache[real_id_str] = await queries.get_event_attendees(
@@ -601,6 +614,10 @@ class CalendarHandlers:
                             session,
                             real_id,
                         )
+                    if real_id_str not in role_cache:
+                        role_cache[real_id_str] = await ops._resolve_role(
+                            user_id, organization_id, event
+                        )
                     proto_events.append(
                         event_to_proto(
                             event,
@@ -609,6 +626,7 @@ class CalendarHandlers:
                                 build_content_urn(ContentType.CALENDAR_EVENT, real_id),
                                 [],
                             ),
+                            user_role=role_cache[real_id_str],
                             **room_info_cache[real_id_str],
                         )
                     )
@@ -620,26 +638,6 @@ class CalendarHandlers:
             raise _map_domain_error("get_events_in_range", exc) from exc
 
     # Calendar operations (deprecated)
-
-    async def create_calendar(self, request, ctx: RequestContext):
-        """Deprecated. Calendars are auto-created per user."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
-
-    async def get_calendar(self, request, ctx: RequestContext):
-        """Deprecated. Calendars are auto-created per user."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
-
-    async def update_calendar(self, request, ctx: RequestContext):
-        """Deprecated. Calendars are auto-created per user."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
-
-    async def delete_calendar(self, request, ctx: RequestContext):
-        """Deprecated. Calendars are auto-created per user."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
-
-    async def list_calendars(self, request, ctx: RequestContext):
-        """Deprecated. Calendars are auto-created per user."""
-        raise ConnectError(Code.UNIMPLEMENTED, "Calendar management is deprecated")
 
     # Category operations
 
@@ -766,7 +764,7 @@ class CalendarHandlers:
         """Update current user's attendee status for an event."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
-        event_id = _parse_uuid(request.event_id, "event_id")
+        event_id = _parse_event_id(request.event_id)
 
         try:
             async with open_session() as session:
@@ -792,7 +790,7 @@ class CalendarHandlers:
         """Add attendees to an event."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
-        event_id = _parse_uuid(request.event_id, "event_id")
+        event_id = _parse_event_id(request.event_id)
 
         try:
             async with open_session() as session:
@@ -819,6 +817,7 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        user_role=await ops._resolve_role(user_id, organization_id, event),
                     )
                 )
         except ConnectError:
@@ -834,7 +833,7 @@ class CalendarHandlers:
         """Remove attendees from an event."""
         user_id = get_user_id_from_context(ctx)
         organization_id = _parse_uuid(request.organization_id, "organization_id")
-        event_id = _parse_uuid(request.event_id, "event_id")
+        event_id = _parse_event_id(request.event_id)
 
         try:
             async with open_session() as session:
@@ -859,12 +858,63 @@ class CalendarHandlers:
                             build_content_urn(ContentType.CALENDAR_EVENT, event.id),
                             [],
                         ),
+                        user_role=await ops._resolve_role(user_id, organization_id, event),
                     )
                 )
         except ConnectError:
             raise
         except Exception as exc:
             raise _map_domain_error("remove_attendees", exc) from exc
+
+    # Activity operations
+
+    async def list_event_activities(
+        self,
+        request: ListEventActivitiesRequest,
+        ctx: RequestContext,
+    ) -> ListEventActivitiesResponse:
+        """List an event's activity log, newest first."""
+        user_id = get_user_id_from_context(ctx)
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+
+        try:
+            event_id = UUID(request.event_id.split("__occurrence__")[0])
+        except ValueError as exc:
+            raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid event_id: {exc}") from exc
+
+        page = 1
+        page_size = 50
+        if request.HasField("pagination"):
+            page = request.pagination.page if request.pagination.page > 0 else 1
+            if request.pagination.page_size > 0:
+                page_size = min(request.pagination.page_size, 200)
+
+        try:
+            async with open_session() as session:
+                ops = CalendarEventOperations(session)
+                activities, total = await ops.list_activities(
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    event_id=event_id,
+                    limit=page_size,
+                    offset=(page - 1) * page_size,
+                )
+
+                total_pages = (total + page_size - 1) // page_size
+
+                return ListEventActivitiesResponse(
+                    activities=[activity_to_proto(a) for a in activities],
+                    pagination=PaginationResponse(
+                        page=page,
+                        page_size=page_size,
+                        total_count=total,
+                        total_pages=total_pages,
+                    ),
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error("list_event_activities", exc) from exc
 
     # Template operations
 

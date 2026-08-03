@@ -7,6 +7,8 @@ interface TimeSelectProps {
   value: number;
   onChange: (value: number) => void;
   className?: string;
+  /** Tighter trigger for narrow hosts like the event detail panel. */
+  compact?: boolean;
 }
 
 /** Decimal hours -> "9:15 AM". */
@@ -57,7 +59,8 @@ interface DropdownPosition {
   openUpward: boolean;
 }
 
-export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
+export function TimeSelect({ value, onChange, className, compact = false }: TimeSelectProps) {
+  const triggerSize = compact ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm';
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [position, setPosition] = useState<DropdownPosition | null>(null);
@@ -266,10 +269,11 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
           placeholder={displayValue}
           className={cn(
             'flex w-full items-center rounded-md border border-primary bg-background',
-            'px-3 py-2 text-sm font-medium',
+            triggerSize,
+            'font-medium',
             'outline-none ring-2 ring-primary/50 ring-offset-1 ring-offset-background',
             'placeholder:text-muted-foreground',
-            'min-w-[100px]'
+            compact ? 'min-w-0' : 'min-w-[100px]'
           )}
         />
       ) : (
@@ -278,14 +282,15 @@ export function TimeSelect({ value, onChange, className }: TimeSelectProps) {
           onClick={handleOpen}
           className={cn(
             'flex w-full items-center justify-between gap-2 rounded-md border border-border bg-background',
-            'px-3 py-2 text-sm font-medium transition-colors',
+            triggerSize,
+            'font-medium transition-colors',
             'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background',
             'hover:bg-muted/50',
-            'min-w-[100px]'
+            compact ? 'min-w-0' : 'min-w-[100px]'
           )}
         >
           <span className="truncate">{displayValue}</span>
-          <CaretDown size={16} weight="bold" className="text-muted-foreground" />
+          <CaretDown size={compact ? 12 : 16} weight="bold" className="text-muted-foreground shrink-0" />
         </button>
       )}
 

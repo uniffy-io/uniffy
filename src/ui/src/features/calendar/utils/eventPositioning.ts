@@ -25,7 +25,7 @@ function getLocalDateString(isoString: string): string {
 }
 
 /** Multi-day events repeat the same hour band on each day; geometry uses local clock-time only. */
-export function calculateEventPosition(
+function calculateEventPosition(
   event: CalendarEvent,
   startHour: number = GRID.START_HOUR,
   hourHeight: number = GRID.HOUR_HEIGHT,
@@ -47,7 +47,7 @@ export function calculateEventPosition(
   return { top, height };
 }
 
-export function eventsOverlap(event1: CalendarEvent, event2: CalendarEvent): boolean {
+function eventsOverlap(event1: CalendarEvent, event2: CalendarEvent): boolean {
   const start1 = parseISO(event1.startTime);
   const end1 = parseISO(event1.endTime);
   const start2 = parseISO(event2.startTime);
@@ -56,7 +56,7 @@ export function eventsOverlap(event1: CalendarEvent, event2: CalendarEvent): boo
   return start1 < end2 && start2 < end1;
 }
 
-export function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[][] {
+function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[][] {
   if (events.length === 0) return [];
 
   const sorted = [...events].sort(
@@ -85,7 +85,7 @@ export function groupOverlappingEvents(events: CalendarEvent[]): CalendarEvent[]
 }
 
 /** Greedy column packing - longer events first to minimize total columns. */
-export function assignEventColumns(
+function assignEventColumns(
   events: CalendarEvent[]
 ): { event: CalendarEvent; column: number; totalColumns: number }[] {
   if (events.length === 0) return [];
@@ -332,8 +332,3 @@ export function positionAllDayEvents(
   return positions;
 }
 
-export function getAllDayRowHeight(eventCount: number): number {
-  const rowHeight = 24;
-  const padding = 4;
-  return Math.max(rowHeight, eventCount * (rowHeight + 2) + padding);
-}

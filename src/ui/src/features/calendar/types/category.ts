@@ -12,20 +12,6 @@ export interface Category {
   updatedAt: string;
 }
 
-export interface CreateCategoryRequest {
-  name: string;
-  color: string;
-  icon?: string;
-}
-
-export interface UpdateCategoryRequest {
-  id: string;
-  name?: string;
-  color?: string;
-  icon?: string;
-  sortOrder?: number;
-}
-
 export interface CategoryColorOption {
   name: string;
   /** Hex. */
@@ -33,12 +19,3 @@ export interface CategoryColorOption {
   /** Lighter variant for backgrounds. */
   light: string;
 }
-
-export const DEFAULT_CATEGORY_IDS = {
-  MEETINGS: 'meetings',
-  DEEP_WORK: 'deep_work',
-  PERSONAL: 'personal',
-  DEADLINE: 'deadline',
-} as const;
-
-export type DefaultCategoryId = typeof DEFAULT_CATEGORY_IDS[keyof typeof DEFAULT_CATEGORY_IDS];

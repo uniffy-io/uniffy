@@ -3,12 +3,10 @@ import { CalendarBlank, MapPin, Clock, Users, ArrowsClockwise } from '@phosphor-
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { selectEvent } from '@/features/calendar/store/calendarUiSlice';
 import { useCalendarEvents } from '@/features/calendar/hooks';
-import { CATEGORY_COLORS } from '@/features/calendar/constants';
+import { ACCENT_EVENT_COLOR } from '@/features/calendar/constants';
 import { formatTimeRange } from '@/features/calendar/utils';
 import { formatDateWithWeekday } from '@/shared/utils/dateFormatting';
 import { cn } from '@/shared/utils/cn';
-
-const DEFAULT_COLOR = CATEGORY_COLORS[0].value;
 
 function getDateLabel(dateStr: string): string {
   const today = new Date();
@@ -98,7 +96,7 @@ export function AgendaView() {
         endTime: event.endTime,
         isAllDay: event.isAllDay,
         location: event.location,
-        categoryColor: category?.color ?? DEFAULT_COLOR,
+        categoryColor: category?.color ?? ACCENT_EVENT_COLOR,
         attendeeCount: event.attendees.length,
         isRecurring: event.isRecurring ?? false,
       });

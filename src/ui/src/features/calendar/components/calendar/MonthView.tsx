@@ -2,14 +2,12 @@ import { useMemo, useState } from 'react';
 import { useCalendarNavigation, useCalendarEvents } from '@/features/calendar/hooks';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setCurrentDate, setViewMode, startDrag, endDrag, updateEventThunk } from '@/features/calendar/store';
-import { CATEGORY_COLORS } from '@/features/calendar/constants';
+import { ACCENT_EVENT_COLOR, eventTint } from '@/features/calendar/constants';
 import { cn } from '@/shared/utils/cn';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_HEADERS_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-const DEFAULT_COLOR = CATEGORY_COLORS[0].value;
 
 export function MonthView() {
   const dispatch = useAppDispatch();
@@ -145,7 +143,7 @@ export function MonthView() {
                   <div className="space-y-0.5">
                     {displayEvents.map((event) => {
                       const eventCategory = event.categoryId ? categories[event.categoryId] : null;
-                      const eventColor = eventCategory?.color ?? DEFAULT_COLOR;
+                      const eventColor = eventCategory?.color ?? ACCENT_EVENT_COLOR;
                       const attendee = currentUserId
                         ? event.attendees.find((a) => a.id === currentUserId)
                         : null;
@@ -164,7 +162,7 @@ export function MonthView() {
                             declined && 'line-through',
                           )}
                           style={{
-                            backgroundColor: `${eventColor}20`,
+                            backgroundColor: eventTint(eventColor, 12),
                             color: eventColor,
                             opacity: declined ? 0.35 : pendingOrTentative ? 0.6 : 1,
                           }}

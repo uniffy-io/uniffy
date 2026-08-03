@@ -10,9 +10,11 @@ const REMINDER_OPTIONS = [
 interface ReminderSelectorProps {
   value: number[];
   onChange: (reminders: number[]) => void;
+  /** Tighter chips for narrow hosts like the event detail panel. */
+  compact?: boolean;
 }
 
-export function ReminderSelector({ value, onChange }: ReminderSelectorProps) {
+export function ReminderSelector({ value, onChange, compact = false }: ReminderSelectorProps) {
   const handleToggle = (minutes: number) => {
     if (value.includes(minutes)) {
       onChange(value.filter((v) => v !== minutes));
@@ -22,7 +24,7 @@ export function ReminderSelector({ value, onChange }: ReminderSelectorProps) {
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className={cn('flex flex-wrap', compact ? 'gap-1.5' : 'gap-2')}>
       {REMINDER_OPTIONS.map((option) => {
         const isSelected = value.includes(option.value);
         return (
@@ -31,7 +33,8 @@ export function ReminderSelector({ value, onChange }: ReminderSelectorProps) {
             type="button"
             onClick={() => handleToggle(option.value)}
             className={cn(
-              'px-3 py-1.5 text-sm rounded-lg border transition-all',
+              'rounded-lg border transition-all',
+              compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm',
               isSelected
                 ? 'border-primary bg-primary/10 text-foreground'
                 : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'
