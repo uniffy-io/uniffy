@@ -34,6 +34,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { FileThumb } from "@features/files/components/FileThumb";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useAuth } from "@core/providers/AuthContext";
@@ -922,46 +923,39 @@ export function FilesListScreen() {
       </Modal>
 
       {/* Move-to-folder modal (single item or bulk selection) */}
-      <Modal
+      <BottomSheet
         visible={!!moveTarget || bulkMoveOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={closeMove}
+        onClose={closeMove}
+        style={styles.moveSheet}
       >
-        <TouchableOpacity style={styles.moveBackdrop} activeOpacity={1} onPress={closeMove}>
-          <View />
-        </TouchableOpacity>
-        <View style={[styles.moveSheet, { backgroundColor: T.surface }]}>
-          <View style={[styles.handle, { backgroundColor: T.border }]} />
-          <Text style={[styles.moveTitle, { color: T.textBright }]}>{moveTitle}</Text>
-          <ScrollView style={{ maxHeight: 360 }}>
+        <Text style={[styles.moveTitle, { color: T.textBright }]}>{moveTitle}</Text>
+        <ScrollView style={{ maxHeight: 360 }}>
+          <TouchableOpacity
+            style={[styles.moveRow, { borderBottomColor: T.border }]}
+            onPress={() => onPickMoveTarget(undefined)}
+            activeOpacity={0.7}
+          >
+            <FolderSimple size={20} color={T.accent} weight="fill" />
+            <Text style={[styles.moveRowText, { color: T.textBright }]}>Files (root)</Text>
+          </TouchableOpacity>
+          {flattenFolders(filesTree.data ?? [], moveExcludeIds).map((opt) => (
             <TouchableOpacity
-              style={[styles.moveRow, { borderBottomColor: T.border }]}
-              onPress={() => onPickMoveTarget(undefined)}
+              key={opt.id}
+              style={[
+                styles.moveRow,
+                { borderBottomColor: T.border, paddingLeft: 16 + opt.depth * 18 },
+              ]}
+              onPress={() => onPickMoveTarget(opt.id)}
               activeOpacity={0.7}
             >
               <FolderSimple size={20} color={T.accent} weight="fill" />
-              <Text style={[styles.moveRowText, { color: T.textBright }]}>Files (root)</Text>
+              <Text style={[styles.moveRowText, { color: T.textBright }]} numberOfLines={1}>
+                {opt.name}
+              </Text>
             </TouchableOpacity>
-            {flattenFolders(filesTree.data ?? [], moveExcludeIds).map((opt) => (
-              <TouchableOpacity
-                key={opt.id}
-                style={[
-                  styles.moveRow,
-                  { borderBottomColor: T.border, paddingLeft: 16 + opt.depth * 18 },
-                ]}
-                onPress={() => onPickMoveTarget(opt.id)}
-                activeOpacity={0.7}
-              >
-                <FolderSimple size={20} color={T.accent} weight="fill" />
-                <Text style={[styles.moveRowText, { color: T.textBright }]} numberOfLines={1}>
-                  {opt.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </Modal>
+          ))}
+        </ScrollView>
+      </BottomSheet>
 
       {/* Item action sheet (dots menu / long press) */}
       <ActionSheet
@@ -1432,21 +1426,7 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: "flex-end",
   },
-  moveBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  moveSheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 28,
-    maxHeight: "70%",
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
+  moveSheet: { maxHeight: "70%" },
   moveTitle: {
     fontSize: 15,
     fontFamily: FONT.semibold,

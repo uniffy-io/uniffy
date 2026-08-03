@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,22 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Keyboard,
   type NativeSyntheticEvent,
   type TextInputSelectionChangeEventData,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { Image } from "expo-image";
 import {
   At,
   Check,
   Code,
+  Faders,
   PaperPlaneRight,
   Paperclip,
   Plus,
@@ -33,8 +41,31 @@ export type ComposerTools = {
   onWrap: (marker: string) => void;
 };
 
+/** The model an agent DM is talking to, and the way to change it. */
+export type ComposerModel = {
+  label: string;
+  onPress: () => void;
+  /** Keeps the composer open while the picker covers it. */
+  pickerOpen?: boolean;
+};
+
+// Vertical space the action row claims when the composer is open: the round
+// buttons plus the padding that separates them from the input and the card
+// edge. Collapsing animates this to zero, so it has to be a constant.
+const ACTIONS_HEIGHT = 38 + 4 + 6;
+const COLLAPSE_MS = 160;
+const LINE_HEIGHT = 21;
+const COLLAPSED_INPUT_HEIGHT = 30;
+// Height the 15pt face actually draws on with no leading and no font padding.
+// The collapsed field centres its single line against this, so it is the knob
+// to turn if the placeholder sits high or low in the pill.
+const NATURAL_LINE_HEIGHT = 18;
+
 // Rounded composer card: input on top, action row below. The + button
 // holds the formatting tools; the input grows to 7 rows, then scrolls.
+// At rest the card is a bare one-line pill - the + and send buttons only
+// unfold once the input is engaged, so browsing a channel is not taxed with
+// controls that have nothing to act on yet.
 export function ChatComposer({
   T,
   inputRef,
@@ -46,6 +77,7 @@ export function ChatComposer({
   editing = false,
   onSend,
   tools,
+  model,
   attachments = [],
   onRemoveAttachment,
 }: {
@@ -59,10 +91,55 @@ export function ChatComposer({
   editing?: boolean;
   onSend: () => void;
   tools: ComposerTools;
+  model?: ComposerModel;
   attachments?: PendingAttachment[];
   onRemoveAttachment?: (localId: string) => void;
 }) {
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  // Anything the action row could still act on keeps it open. toolsOpen matters
+  // most: reaching the emoji picker, the @ overlay or the attach sheet blurs the
+  // input, and the composer must not fold away underneath the sheet the user
+  // just asked for.
+  const expanded = focused || toolsOpen || editing || draft.length > 0 || attachments.length > 0;
+
+  // Tapping the message list or the Android back key hides the keyboard without
+  // always blurring the input, which would leave the composer open with a live
+  // cursor - and a second tap on an already-focused input fires no onFocus, so
+  // it could never be re-expanded. Blurring on hide keeps the two in step.
+  useEffect(() => {
+    const sub = Keyboard.addListener("keyboardDidHide", () => {
+      setFocused(false);
+      inputRef?.current?.blur();
+    });
+    return () => sub.remove();
+  }, [inputRef]);
+
+  // Opening the model picker blurs the input, so the keyboard has to be asked
+  // back once the picker is gone - the pill is only reachable from the open
+  // composer, so the user was mid-compose either way.
+  const pickerWasOpen = useRef(false);
+  useEffect(() => {
+    const open = !!model?.pickerOpen;
+    if (pickerWasOpen.current && !open) inputRef?.current?.focus();
+    pickerWasOpen.current = open;
+  }, [model?.pickerOpen, inputRef]);
+
+  const progress = useSharedValue(expanded ? 1 : 0);
+  useEffect(() => {
+    const target = expanded ? 1 : 0;
+    progress.value = reducedMotion ? target : withTiming(target, { duration: COLLAPSE_MS });
+  }, [expanded, reducedMotion, progress]);
+
+  // Height and opacity only - the card holds a GlassSurface, and an animated
+  // transform on any ancestor of a GlassView silently degrades it to a plain
+  // view (expo/expo#41024). The row is a sibling of that surface, not a parent.
+  const actionsStyle = useAnimatedStyle(() => ({
+    height: ACTIONS_HEIGHT * progress.value,
+    opacity: progress.value,
+  }));
 
   return (
     <View style={[styles.card, { borderColor: T.border }]}>
@@ -118,13 +195,24 @@ export function ChatComposer({
         value={draft}
         onChangeText={onChangeDraft}
         onSelectionChange={onSelectionChange}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={placeholder}
         placeholderTextColor={T.textDim}
-        style={[styles.input, { color: T.textBright }]}
+        style={[
+          styles.input,
+          expanded ? styles.inputExpanded : styles.inputCollapsed,
+          { color: T.textBright },
+        ]}
         multiline
       />
 
-      <View style={styles.actions}>
+      <Animated.View
+        style={[styles.actions, actionsStyle]}
+        pointerEvents={expanded ? "auto" : "none"}
+        accessibilityElementsHidden={!expanded}
+        importantForAccessibility={expanded ? "auto" : "no-hide-descendants"}
+      >
         <TouchableOpacity
           style={[styles.roundBtn, { backgroundColor: T.bg, borderColor: T.border }]}
           onPress={() => setToolsOpen((v) => !v)}
@@ -158,6 +246,20 @@ export function ChatComposer({
           </View>
         ) : null}
         <View style={styles.spacer} />
+        {model ? (
+          <TouchableOpacity
+            style={[styles.modelChip, { backgroundColor: T.bg, borderColor: T.border }]}
+            onPress={model.onPress}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Model: ${model.label}. Change model`}
+          >
+            <Faders size={13} color={T.textDim} weight="bold" />
+            <Text style={[styles.modelChipText, { color: T.textDim }]} numberOfLines={1}>
+              {model.label}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity
           style={[
             styles.roundBtn,
@@ -174,7 +276,7 @@ export function ChatComposer({
             <PaperPlaneRight size={18} color={canSend ? "#fff" : T.textDim} weight="fill" />
           )}
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -202,17 +304,34 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 12,
     paddingTop: 4,
-    paddingBottom: 10,
+    paddingBottom: 4,
   },
   actions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingTop: 4,
+    paddingBottom: 6,
+    // The buttons keep their intrinsic size while the row's height animates to
+    // zero, so the collapse has to clip them rather than squash them.
+    overflow: "hidden",
   },
   toolRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   toolBtn: { padding: 6, borderRadius: 8 },
   spacer: { flex: 1 },
+  // Shrinks ahead of the buttons: with the tool row open there is little width
+  // left, and a truncated model name beats a wrapped or clipped send button.
+  modelChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    flexShrink: 1,
+    paddingHorizontal: 10,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  modelChipText: { fontSize: 11, fontFamily: FONT.semibold, flexShrink: 1 },
   roundBtn: {
     width: 38,
     height: 38,
@@ -222,17 +341,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sendBtn: { borderWidth: 0 },
+  // lineHeight and the vertical padding deliberately live in the two state
+  // styles rather than here, so neither leaks into the other: a collapsed field
+  // that inherits lineHeight cannot be centred (see inputCollapsed).
   input: {
     fontSize: 15,
     fontFamily: FONT.regular,
-    lineHeight: 21,
     // 7 rows of text plus vertical padding; beyond that it scrolls inside.
-    maxHeight: 21 * 7 + 16,
-    minHeight: 21 + 16,
+    maxHeight: LINE_HEIGHT * 7 + 16,
     paddingHorizontal: 6,
+  },
+  inputExpanded: {
+    lineHeight: LINE_HEIGHT,
+    minHeight: LINE_HEIGHT + 16,
     paddingTop: 8,
     paddingBottom: 8,
     textAlignVertical: "top",
+  },
+  // At rest the field is exactly one line tall with the text centred in it, so
+  // the closed composer reads as a slim pill rather than an empty text area.
+  // The height is fixed because collapsed implies an empty draft - there is
+  // never a second line to make room for.
+  //
+  // Both the line box and its placement are pinned by hand rather than left to
+  // the platform. No lineHeight: React Native's Android line-height span pays
+  // the extra leading out below the glyphs, so a line box taller than the text
+  // hangs the text above centre however the box is aligned. No textAlignVertical
+  // either - top alignment plus an explicit padding puts the glyphs at a known
+  // offset, where centre alignment would only re-centre whatever box the font
+  // reports. What is left is arithmetic: an even split of the slack.
+  inputCollapsed: {
+    height: COLLAPSED_INPUT_HEIGHT,
+    paddingTop: (COLLAPSED_INPUT_HEIGHT - NATURAL_LINE_HEIGHT) / 2,
+    paddingBottom: 0,
+    textAlignVertical: "top",
+    // Android otherwise pads the glyph box out to the font's full ascender and
+    // descender, which is what NATURAL_LINE_HEIGHT is measured without.
+    includeFontPadding: false,
   },
   attachBarContent: { gap: 8, paddingHorizontal: 4, paddingTop: 8 },
   attachChip: {

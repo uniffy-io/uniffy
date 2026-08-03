@@ -1,5 +1,6 @@
 import React from "react";
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import type { ThemeColors } from "@theme/theme";
 
 const EMOJI_PALETTE = [
@@ -57,38 +58,24 @@ export function EmojiPickerSheet({
   onPick: (emoji: string) => void;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <ScrollView contentContainerStyle={styles.emojiGrid}>
-          {EMOJI_PALETTE.map((emoji) => (
-            <TouchableOpacity
-              key={emoji}
-              style={[styles.emojiGridBtn, { backgroundColor: T.bg }]}
-              onPress={() => onPick(emoji)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.emojiGridText}>{emoji}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    </Modal>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <ScrollView contentContainerStyle={styles.emojiGrid}>
+        {EMOJI_PALETTE.map((emoji) => (
+          <TouchableOpacity
+            key={emoji}
+            style={[styles.emojiGridBtn, { backgroundColor: T.bg }]}
+            onPress={() => onPick(emoji)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.emojiGridText}>{emoji}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32 },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
   emojiGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

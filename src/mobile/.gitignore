@@ -9,9 +9,11 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
-ios/
-android/
+# Native - the prebuild output only. Leading slash anchors these to the package
+# root: unanchored, they also swallow the hand-written native sources of local
+# Expo modules under modules/*/android and modules/*/ios.
+/ios/
+/android/
 *.orig.*
 *.jks
 *.p8

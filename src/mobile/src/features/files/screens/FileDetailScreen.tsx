@@ -24,6 +24,7 @@ import {
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { CommentButton } from "@shared/comments/CommentsSheet";
@@ -476,56 +477,46 @@ function VersionsModal({
   restoring: boolean;
 }) {
   const T = useTheme();
-  const insets = useSafeAreaInsets();
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.moveBackdrop} activeOpacity={1} onPress={onClose}>
-        <View />
-      </TouchableOpacity>
-      <View
-        style={[styles.versionsSheet, { backgroundColor: T.surface, paddingBottom: bottomPad + 8 }]}
-      >
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <Text style={[styles.moveTitle, { color: T.textBright }]}>Version history</Text>
-        {loading ? (
-          <View style={{ padding: 24 }}>
-            <ActivityIndicator size="small" color={T.accent} />
-          </View>
-        ) : versions.length === 0 ? (
-          <Text style={[styles.versionEmpty, { color: T.textDim }]}>No previous versions</Text>
-        ) : (
-          <ScrollView style={{ maxHeight: 360 }}>
-            {versions.map((v) => {
-              const isCurrent = v.versionNumber === currentVersion;
-              return (
-                <View key={v.id} style={[styles.versionRow, { borderBottomColor: T.border }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.versionName, { color: T.textBright }]}>
-                      Version {v.versionNumber}
-                      {isCurrent ? " (current)" : ""}
-                    </Text>
-                    <Text style={[styles.versionMeta, { color: T.textDim }]}>
-                      {v.size} · {fmtDate(v.createdAt)}
-                    </Text>
-                  </View>
-                  {!isCurrent && (
-                    <TouchableOpacity
-                      style={[styles.versionRestore, { borderColor: T.border }]}
-                      onPress={() => onRestore(v.id)}
-                      disabled={restoring}
-                    >
-                      <ArrowCounterClockwise size={14} color={T.accent} weight="bold" />
-                      <Text style={[styles.versionRestoreText, { color: T.accent }]}>Restore</Text>
-                    </TouchableOpacity>
-                  )}
+    <BottomSheet visible={visible} onClose={onClose} style={styles.versionsSheet}>
+      <Text style={[styles.moveTitle, { color: T.textBright }]}>Version history</Text>
+      {loading ? (
+        <View style={{ padding: 24 }}>
+          <ActivityIndicator size="small" color={T.accent} />
+        </View>
+      ) : versions.length === 0 ? (
+        <Text style={[styles.versionEmpty, { color: T.textDim }]}>No previous versions</Text>
+      ) : (
+        <ScrollView style={{ maxHeight: 360 }}>
+          {versions.map((v) => {
+            const isCurrent = v.versionNumber === currentVersion;
+            return (
+              <View key={v.id} style={[styles.versionRow, { borderBottomColor: T.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.versionName, { color: T.textBright }]}>
+                    Version {v.versionNumber}
+                    {isCurrent ? " (current)" : ""}
+                  </Text>
+                  <Text style={[styles.versionMeta, { color: T.textDim }]}>
+                    {v.size} · {fmtDate(v.createdAt)}
+                  </Text>
                 </View>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
-    </Modal>
+                {!isCurrent && (
+                  <TouchableOpacity
+                    style={[styles.versionRestore, { borderColor: T.border }]}
+                    onPress={() => onRestore(v.id)}
+                    disabled={restoring}
+                  >
+                    <ArrowCounterClockwise size={14} color={T.accent} weight="bold" />
+                    <Text style={[styles.versionRestoreText, { color: T.accent }]}>Restore</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -639,20 +630,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalBtnText: { fontSize: 14, fontFamily: FONT.semibold },
-  moveBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  versionsSheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
+  versionsSheet: { maxHeight: "70%" },
   moveTitle: {
     fontSize: 15,
     fontFamily: FONT.semibold,

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   Alert,
 } from "react-native";
@@ -28,6 +27,7 @@ import {
   Gauge,
 } from "phosphor-react-native";
 import { Avatar } from "@shared/components/Avatar";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import type { ChatMemberSubject } from "@features/chat/useChatMutations";
@@ -139,231 +139,227 @@ export function ChannelDetailsSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <View style={[styles.typeIcon, { backgroundColor: T.accentSoft }]}>
-              <TypeIcon size={20} color={T.accent} weight="duotone" />
-            </View>
-            <View style={{ flex: 1 }}>
-              {renaming ? (
-                <View style={styles.renameRow}>
-                  <TextInput
-                    value={nameDraft}
-                    onChangeText={setNameDraft}
-                    autoFocus
-                    style={[
-                      styles.renameInput,
-                      { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
-                    ]}
-                  />
+    <BottomSheet visible={visible} onClose={onClose}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <View style={[styles.typeIcon, { backgroundColor: T.accentSoft }]}>
+            <TypeIcon size={20} color={T.accent} weight="duotone" />
+          </View>
+          <View style={{ flex: 1 }}>
+            {renaming ? (
+              <View style={styles.renameRow}>
+                <TextInput
+                  value={nameDraft}
+                  onChangeText={setNameDraft}
+                  autoFocus
+                  style={[
+                    styles.renameInput,
+                    { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+                  ]}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    const trimmed = nameDraft.trim();
+                    if (trimmed && trimmed !== channel.displayName) onRename(trimmed);
+                    setRenaming(false);
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Check size={18} color={T.green} weight="bold" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.titleRow}>
+                <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
+                  {channel.displayName}
+                </Text>
+                {canRename ? (
                   <TouchableOpacity
                     onPress={() => {
-                      const trimmed = nameDraft.trim();
-                      if (trimmed && trimmed !== channel.displayName) onRename(trimmed);
-                      setRenaming(false);
+                      setNameDraft(channel.isAgentDm ? channel.displayName : channel.name);
+                      setRenaming(true);
                     }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Check size={18} color={T.green} weight="bold" />
+                    <PencilSimple size={15} color={T.textDim} weight="duotone" />
                   </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.titleRow}>
-                  <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
-                    {channel.displayName}
-                  </Text>
-                  {canRename ? (
-                    <TouchableOpacity
-                      onPress={() => {
-                        setNameDraft(channel.isAgentDm ? channel.displayName : channel.name);
-                        setRenaming(true);
-                      }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <PencilSimple size={15} color={T.textDim} weight="duotone" />
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              )}
-              <Text style={[styles.subtitle, { color: T.textDim }]}>
-                {channel.channelType === "PUBLIC"
-                  ? "Public channel"
-                  : channel.channelType === "PRIVATE"
-                    ? "Private channel"
-                    : channel.channelType === "GROUP_DM"
-                      ? "Group message"
-                      : "Direct message"}
-                {" · "}
-                {channel.memberCount} {channel.memberCount === 1 ? "member" : "members"}
-              </Text>
-            </View>
+                ) : null}
+              </View>
+            )}
+            <Text style={[styles.subtitle, { color: T.textDim }]}>
+              {channel.channelType === "PUBLIC"
+                ? "Public channel"
+                : channel.channelType === "PRIVATE"
+                  ? "Private channel"
+                  : channel.channelType === "GROUP_DM"
+                    ? "Group message"
+                    : "Direct message"}
+              {" · "}
+              {channel.memberCount} {channel.memberCount === 1 ? "member" : "members"}
+            </Text>
           </View>
+        </View>
 
-          {channel.description ? (
-            <Text style={[styles.description, { color: T.text }]}>{channel.description}</Text>
-          ) : null}
+        {channel.description ? (
+          <Text style={[styles.description, { color: T.text }]}>{channel.description}</Text>
+        ) : null}
 
-          <Text style={[styles.sectionLabel, { color: T.textDim }]}>NOTIFICATIONS</Text>
-          <View style={styles.levelRow}>
-            {NOTIFICATION_LEVELS.map(({ key, label }) => {
-              const active = (selfMember?.notificationLevel ?? "ALL") === key;
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[
-                    styles.levelPill,
-                    active
-                      ? { backgroundColor: T.accent }
-                      : {
-                          backgroundColor: T.bg,
-                          borderColor: T.border,
-                          borderWidth: StyleSheet.hairlineWidth,
-                        },
-                  ]}
-                  onPress={() => onSetNotificationLevel(key)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.levelPillText, { color: active ? "#fff" : T.textDim }]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity
-              style={[
-                styles.levelPill,
-                styles.muteBtn,
-                { backgroundColor: T.bg, borderColor: T.border },
-              ]}
-              onPress={() => (selfMember?.isMuted ? onUnmute() : promptMute())}
-              activeOpacity={0.7}
-            >
-              {selfMember?.isMuted ? (
-                <Bell size={13} color={T.textDim} weight="bold" />
-              ) : (
-                <BellSlash size={13} color={T.textDim} weight="bold" />
-              )}
-              <Text style={[styles.levelPillText, { color: T.textDim }]}>
-                {selfMember?.isMuted ? "Unmute" : "Mute"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.membersHeader}>
-            <Text style={[styles.sectionLabel, { color: T.textDim }]}>MEMBERS</Text>
-            {canManage ? (
+        <Text style={[styles.sectionLabel, { color: T.textDim }]}>NOTIFICATIONS</Text>
+        <View style={styles.levelRow}>
+          {NOTIFICATION_LEVELS.map(({ key, label }) => {
+            const active = (selfMember?.notificationLevel ?? "ALL") === key;
+            return (
               <TouchableOpacity
-                onPress={() => setAddingMembers(true)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.addMembersBtn}
+                key={key}
+                style={[
+                  styles.levelPill,
+                  active
+                    ? { backgroundColor: T.accent }
+                    : {
+                        backgroundColor: T.bg,
+                        borderColor: T.border,
+                        borderWidth: StyleSheet.hairlineWidth,
+                      },
+                ]}
+                onPress={() => onSetNotificationLevel(key)}
+                activeOpacity={0.7}
               >
-                <UserPlus size={14} color={T.accent} weight="bold" />
-                <Text style={[styles.addMembersText, { color: T.accent }]}>Add</Text>
+                <Text style={[styles.levelPillText, { color: active ? "#fff" : T.textDim }]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity
+            style={[
+              styles.levelPill,
+              styles.muteBtn,
+              { backgroundColor: T.bg, borderColor: T.border },
+            ]}
+            onPress={() => (selfMember?.isMuted ? onUnmute() : promptMute())}
+            activeOpacity={0.7}
+          >
+            {selfMember?.isMuted ? (
+              <Bell size={13} color={T.textDim} weight="bold" />
+            ) : (
+              <BellSlash size={13} color={T.textDim} weight="bold" />
+            )}
+            <Text style={[styles.levelPillText, { color: T.textDim }]}>
+              {selfMember?.isMuted ? "Unmute" : "Mute"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.membersHeader}>
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>MEMBERS</Text>
+          {canManage ? (
+            <TouchableOpacity
+              onPress={() => setAddingMembers(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.addMembersBtn}
+            >
+              <UserPlus size={14} color={T.accent} weight="bold" />
+              <Text style={[styles.addMembersText, { color: T.accent }]}>Add</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        {members.map((m) => (
+          <View key={m.subjectId} style={[styles.memberRow, { borderTopColor: T.border }]}>
+            <Avatar
+              name={m.displayName}
+              avatarUrl={m.avatarUrl ?? undefined}
+              size={30}
+              presence={
+                m.subjectType === "USER" ? (presenceByUser[m.subjectId] ?? "offline") : null
+              }
+              presenceRingColor={T.surface}
+            />
+            <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
+              {m.displayName}
+              {m.subjectId === currentUserId ? " (you)" : ""}
+            </Text>
+            {m.subjectType === "AGENT" ? (
+              <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
+                <Text style={[styles.roleTagText, { color: T.accent }]}>AGENT</Text>
+              </View>
+            ) : null}
+            {m.role !== "MEMBER" ? (
+              <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
+                <Text style={[styles.roleTagText, { color: T.accent }]}>{m.role}</Text>
+              </View>
+            ) : null}
+            {m.subjectType === "AGENT" && onShowAgentContext ? (
+              <TouchableOpacity
+                onPress={() => onShowAgentContext(m.subjectId)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Context usage for ${m.displayName}`}
+              >
+                <Gauge size={16} color={T.textDim} weight="duotone" />
+              </TouchableOpacity>
+            ) : null}
+            {canManage && m.subjectId !== currentUserId ? (
+              <TouchableOpacity
+                onPress={() =>
+                  Alert.alert("Remove member", `Remove ${m.displayName} from the channel?`, [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Remove",
+                      style: "destructive",
+                      onPress: () => onRemoveMember({ kind: m.subjectType, id: m.subjectId }),
+                    },
+                  ])
+                }
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={15} color={T.textDim} weight="bold" />
               </TouchableOpacity>
             ) : null}
           </View>
-          {members.map((m) => (
-            <View key={m.subjectId} style={[styles.memberRow, { borderTopColor: T.border }]}>
-              <Avatar
-                name={m.displayName}
-                avatarUrl={m.avatarUrl ?? undefined}
-                size={30}
-                presence={
-                  m.subjectType === "USER" ? (presenceByUser[m.subjectId] ?? "offline") : null
-                }
-                presenceRingColor={T.surface}
-              />
-              <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
-                {m.displayName}
-                {m.subjectId === currentUserId ? " (you)" : ""}
-              </Text>
-              {m.subjectType === "AGENT" ? (
-                <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
-                  <Text style={[styles.roleTagText, { color: T.accent }]}>AGENT</Text>
-                </View>
-              ) : null}
-              {m.role !== "MEMBER" ? (
-                <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
-                  <Text style={[styles.roleTagText, { color: T.accent }]}>{m.role}</Text>
-                </View>
-              ) : null}
-              {m.subjectType === "AGENT" && onShowAgentContext ? (
-                <TouchableOpacity
-                  onPress={() => onShowAgentContext(m.subjectId)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Context usage for ${m.displayName}`}
-                >
-                  <Gauge size={16} color={T.textDim} weight="duotone" />
-                </TouchableOpacity>
-              ) : null}
-              {canManage && m.subjectId !== currentUserId ? (
-                <TouchableOpacity
-                  onPress={() =>
-                    Alert.alert("Remove member", `Remove ${m.displayName} from the channel?`, [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Remove",
-                        style: "destructive",
-                        onPress: () => onRemoveMember({ kind: m.subjectType, id: m.subjectId }),
-                      },
-                    ])
-                  }
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <X size={15} color={T.textDim} weight="bold" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ))}
+        ))}
 
-          {canManage || (!isDm && selfMember) ? (
-            <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACTIONS</Text>
-          ) : null}
-          {canManage ? (
-            <>
-              <ActionRow
-                T={T}
-                icon={<FolderSimple size={17} color={T.text} weight="duotone" />}
-                label="Move to category"
-                onPress={() => setPickingCategory(true)}
-              />
-              <ActionRow
-                T={T}
-                icon={<Archive size={17} color={T.text} weight="duotone" />}
-                label="Archive channel"
-                onPress={() => confirmDestructive("Archive channel", onArchive)}
-              />
-              <ActionRow
-                T={T}
-                icon={<Trash size={17} color={T.red} weight="duotone" />}
-                label="Delete channel"
-                danger
-                onPress={() => confirmDestructive("Delete channel", onDelete)}
-              />
-            </>
-          ) : null}
-          {!isDm && selfMember && channel.currentUserRole !== "OWNER" ? (
+        {canManage || (!isDm && selfMember) ? (
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACTIONS</Text>
+        ) : null}
+        {canManage ? (
+          <>
             <ActionRow
               T={T}
-              icon={<SignOut size={17} color={T.red} weight="duotone" />}
-              label="Leave channel"
-              danger
-              onPress={() =>
-                Alert.alert("Leave channel", `Leave #${channel.name}?`, [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Leave", style: "destructive", onPress: onLeave },
-                ])
-              }
+              icon={<FolderSimple size={17} color={T.text} weight="duotone" />}
+              label="Move to category"
+              onPress={() => setPickingCategory(true)}
             />
-          ) : null}
-          <View style={styles.bottomPad} />
-        </ScrollView>
-      </View>
+            <ActionRow
+              T={T}
+              icon={<Archive size={17} color={T.text} weight="duotone" />}
+              label="Archive channel"
+              onPress={() => confirmDestructive("Archive channel", onArchive)}
+            />
+            <ActionRow
+              T={T}
+              icon={<Trash size={17} color={T.red} weight="duotone" />}
+              label="Delete channel"
+              danger
+              onPress={() => confirmDestructive("Delete channel", onDelete)}
+            />
+          </>
+        ) : null}
+        {!isDm && selfMember && channel.currentUserRole !== "OWNER" ? (
+          <ActionRow
+            T={T}
+            icon={<SignOut size={17} color={T.red} weight="duotone" />}
+            label="Leave channel"
+            danger
+            onPress={() =>
+              Alert.alert("Leave channel", `Leave #${channel.name}?`, [
+                { text: "Cancel", style: "cancel" },
+                { text: "Leave", style: "destructive", onPress: onLeave },
+              ])
+            }
+          />
+        ) : null}
+        <View style={styles.bottomPad} />
+      </ScrollView>
 
       <AddMembersModal
         visible={addingMembers}
@@ -388,7 +384,7 @@ export function ChannelDetailsSheet({
           onMoveToCategory(categoryId);
         }}
       />
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -459,92 +455,88 @@ function AddMembersModal({
     });
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.pickerHeader}>
-          <Text style={[styles.pickerTitle, { color: T.textBright }]}>Add members</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <X size={18} color={T.textDim} weight="bold" />
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.searchBox, { backgroundColor: T.bg, borderColor: T.border }]}>
-          <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search people"
-            placeholderTextColor={T.textDim}
-            style={[styles.searchInput, { color: T.textBright }]}
-          />
-        </View>
-        <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
-          {candidates.map((s) => {
-            const active = selected.has(s.id);
-            const isAgent = s.kind === "AGENT";
-            return (
-              <TouchableOpacity
-                key={s.id}
-                style={[styles.memberRow, { borderTopColor: T.border }]}
-                onPress={() => toggle(s.id)}
-                activeOpacity={0.7}
-              >
-                {isAgent ? (
-                  <View style={[styles.agentPickerIcon, { backgroundColor: T.accentSoft }]}>
-                    <Robot size={16} color={T.accent} weight="fill" />
-                  </View>
-                ) : (
-                  <Avatar name={s.name} avatarUrl={s.avatarUrl} size={30} />
-                )}
-                <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
-                  {s.name}
-                </Text>
-                {isAgent ? (
-                  <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
-                    <Text style={[styles.roleTagText, { color: T.accent }]}>AGENT</Text>
-                  </View>
-                ) : null}
-                <View
-                  style={[
-                    styles.checkbox,
-                    active
-                      ? { backgroundColor: T.accent, borderColor: T.accent }
-                      : { borderColor: T.border },
-                  ]}
-                >
-                  {active ? <Check size={12} color="#fff" weight="bold" /> : null}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-          {candidates.length === 0 ? (
-            <Text style={[styles.pickerEmpty, { color: T.textDim }]}>No people found</Text>
-          ) : null}
-        </ScrollView>
-        <TouchableOpacity
-          style={[styles.cta, { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover }]}
-          disabled={selected.size === 0}
-          onPress={() => {
-            const byId = new Map(directory.map((s) => [s.id, s]));
-            onAdd(
-              [...selected].map((id) => ({
-                kind: byId.get(id)?.kind === "AGENT" ? "AGENT" : "USER",
-                id,
-              })),
-            );
-            setSelected(new Set());
-            setSearch("");
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.ctaText, { color: selected.size > 0 ? "#fff" : T.textDim }]}>
-            Add {selected.size > 0 ? `${selected.size} ` : ""}
-            {selected.size === 1 ? "member" : "members"}
-          </Text>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.pickerHeader}>
+        <Text style={[styles.pickerTitle, { color: T.textBright }]}>Add members</Text>
+        <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <X size={18} color={T.textDim} weight="bold" />
         </TouchableOpacity>
       </View>
-    </Modal>
+      <View style={[styles.searchBox, { backgroundColor: T.bg, borderColor: T.border }]}>
+        <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search people"
+          placeholderTextColor={T.textDim}
+          style={[styles.searchInput, { color: T.textBright }]}
+        />
+      </View>
+      <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
+        {candidates.map((s) => {
+          const active = selected.has(s.id);
+          const isAgent = s.kind === "AGENT";
+          return (
+            <TouchableOpacity
+              key={s.id}
+              style={[styles.memberRow, { borderTopColor: T.border }]}
+              onPress={() => toggle(s.id)}
+              activeOpacity={0.7}
+            >
+              {isAgent ? (
+                <View style={[styles.agentPickerIcon, { backgroundColor: T.accentSoft }]}>
+                  <Robot size={16} color={T.accent} weight="fill" />
+                </View>
+              ) : (
+                <Avatar name={s.name} avatarUrl={s.avatarUrl} size={30} />
+              )}
+              <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
+                {s.name}
+              </Text>
+              {isAgent ? (
+                <View style={[styles.roleTag, { backgroundColor: T.accentSoft }]}>
+                  <Text style={[styles.roleTagText, { color: T.accent }]}>AGENT</Text>
+                </View>
+              ) : null}
+              <View
+                style={[
+                  styles.checkbox,
+                  active
+                    ? { backgroundColor: T.accent, borderColor: T.accent }
+                    : { borderColor: T.border },
+                ]}
+              >
+                {active ? <Check size={12} color="#fff" weight="bold" /> : null}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+        {candidates.length === 0 ? (
+          <Text style={[styles.pickerEmpty, { color: T.textDim }]}>No people found</Text>
+        ) : null}
+      </ScrollView>
+      <TouchableOpacity
+        style={[styles.cta, { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover }]}
+        disabled={selected.size === 0}
+        onPress={() => {
+          const byId = new Map(directory.map((s) => [s.id, s]));
+          onAdd(
+            [...selected].map((id) => ({
+              kind: byId.get(id)?.kind === "AGENT" ? "AGENT" : "USER",
+              id,
+            })),
+          );
+          setSelected(new Set());
+          setSearch("");
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.ctaText, { color: selected.size > 0 ? "#fff" : T.textDim }]}>
+          Add {selected.size > 0 ? `${selected.size} ` : ""}
+          {selected.size === 1 ? "member" : "members"}
+        </Text>
+      </TouchableOpacity>
+    </BottomSheet>
   );
 }
 
@@ -564,54 +556,38 @@ function CategoryPickerModal({
   onPick: (categoryId: string | undefined) => void;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.pickerHeader}>
-          <Text style={[styles.pickerTitle, { color: T.textBright }]}>Move to category</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <X size={18} color={T.textDim} weight="bold" />
-          </TouchableOpacity>
-        </View>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.pickerHeader}>
+        <Text style={[styles.pickerTitle, { color: T.textBright }]}>Move to category</Text>
+        <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <X size={18} color={T.textDim} weight="bold" />
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity
+        style={[styles.actionRow, { borderTopColor: T.border }]}
+        onPress={() => onPick(undefined)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.actionLabel, { color: T.textBright }]}>No category</Text>
+        {!currentCategoryId ? <Check size={15} color={T.accent} weight="bold" /> : null}
+      </TouchableOpacity>
+      {categories.map((cat) => (
         <TouchableOpacity
+          key={cat.id}
           style={[styles.actionRow, { borderTopColor: T.border }]}
-          onPress={() => onPick(undefined)}
+          onPress={() => onPick(cat.id)}
           activeOpacity={0.7}
         >
-          <Text style={[styles.actionLabel, { color: T.textBright }]}>No category</Text>
-          {!currentCategoryId ? <Check size={15} color={T.accent} weight="bold" /> : null}
+          <Text style={[styles.actionLabel, { color: T.textBright }]}>{cat.name}</Text>
+          {currentCategoryId === cat.id ? <Check size={15} color={T.accent} weight="bold" /> : null}
         </TouchableOpacity>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={[styles.actionRow, { borderTopColor: T.border }]}
-            onPress={() => onPick(cat.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.actionLabel, { color: T.textBright }]}>{cat.name}</Text>
-            {currentCategoryId === cat.id ? (
-              <Check size={15} color={T.accent} weight="bold" />
-            ) : null}
-          </TouchableOpacity>
-        ))}
-        <View style={styles.bottomPad} />
-      </View>
-    </Modal>
+      ))}
+      <View style={styles.bottomPad} />
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 24, maxHeight: "85%" },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
   scroll: { paddingHorizontal: 20 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 },
   typeIcon: {

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   FlatList,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,6 +21,7 @@ import {
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@shared/components/Avatar";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { MentionLine } from "@shared/components/MarkdownRenderer";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
@@ -161,105 +161,99 @@ function CommentsSheet({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalRoot}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={[styles.sheet, { backgroundColor: T.pageBg }]}
-        >
-          <View style={[styles.sheetHeader, { borderBottomColor: T.border }]}>
-            <View style={[styles.handle, { backgroundColor: T.border }]} />
-            <View style={styles.sheetHeaderRow}>
-              <Text style={[styles.sheetTitle, { color: T.textBright }]}>
-                Comments{thread.data ? ` (${thread.data.totalCount})` : ""}
-              </Text>
-              <TouchableOpacity
-                onPress={onClose}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <X size={20} color={T.textDim} weight="bold" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {thread.isLoading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator color={color} />
-            </View>
-          ) : (
-            <FlatList
-              data={comments}
-              renderItem={renderItem}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={
-                comments.length === 0 ? styles.emptyContent : styles.listContent
-              }
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                <View style={styles.empty}>
-                  <ChatText size={34} color={color} weight="duotone" />
-                  <Text style={[styles.emptyText, { color: T.textDim }]}>
-                    No comments yet. Start the conversation.
-                  </Text>
-                </View>
-              }
-            />
-          )}
-
-          {(replyTo || editing) && (
-            <View
-              style={[styles.contextBar, { backgroundColor: T.surface, borderTopColor: T.border }]}
-            >
-              <Text style={[styles.contextText, { color: T.textDim }]} numberOfLines={1}>
-                {editing ? "Editing comment" : `Replying to ${replyTo?.authorName}`}
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setReplyTo(null);
-                  setEditing(null);
-                  setDraft("");
-                }}
-              >
-                <X size={15} color={T.textDim} weight="bold" />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View
-            style={[
-              styles.composer,
-              {
-                backgroundColor: T.surface,
-                borderTopColor: T.border,
-                paddingBottom: 8 + (insets.bottom || 4),
-              },
-            ]}
-          >
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="Add a comment..."
-              placeholderTextColor={T.textDim}
-              style={[
-                styles.input,
-                { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
-              ]}
-              multiline
-            />
-            <TouchableOpacity
-              style={[styles.sendBtn, { backgroundColor: draft.trim() ? color : T.surfaceHover }]}
-              onPress={submit}
-              disabled={!draft.trim()}
-              activeOpacity={0.8}
-            >
-              <PaperPlaneRight size={18} color={draft.trim() ? "#fff" : T.textDim} weight="fill" />
+    <BottomSheet visible={visible} onClose={onClose} style={styles.sheet} padBottom={false}>
+      {/* The composer has to clear the keyboard, and a sheet is one of the
+          few places a KeyboardAvoidingView is still the right tool - the global
+          KeyboardSpacer only reaches the shell, not a separate modal window. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.fill}
+      >
+        <View style={[styles.sheetHeader, { borderBottomColor: T.border }]}>
+          <View style={styles.sheetHeaderRow}>
+            <Text style={[styles.sheetTitle, { color: T.textBright }]}>
+              Comments{thread.data ? ` (${thread.data.totalCount})` : ""}
+            </Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={20} color={T.textDim} weight="bold" />
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+        </View>
+
+        {thread.isLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={color} />
+          </View>
+        ) : (
+          <FlatList
+            data={comments}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={comments.length === 0 ? styles.emptyContent : styles.listContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <ChatText size={34} color={color} weight="duotone" />
+                <Text style={[styles.emptyText, { color: T.textDim }]}>
+                  No comments yet. Start the conversation.
+                </Text>
+              </View>
+            }
+          />
+        )}
+
+        {(replyTo || editing) && (
+          <View
+            style={[styles.contextBar, { backgroundColor: T.surface, borderTopColor: T.border }]}
+          >
+            <Text style={[styles.contextText, { color: T.textDim }]} numberOfLines={1}>
+              {editing ? "Editing comment" : `Replying to ${replyTo?.authorName}`}
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setReplyTo(null);
+                setEditing(null);
+                setDraft("");
+              }}
+            >
+              <X size={15} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View
+          style={[
+            styles.composer,
+            {
+              backgroundColor: T.surface,
+              borderTopColor: T.border,
+              paddingBottom: 8 + (insets.bottom || 4),
+            },
+          ]}
+        >
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Add a comment..."
+            placeholderTextColor={T.textDim}
+            style={[
+              styles.input,
+              { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+            ]}
+            multiline
+          />
+          <TouchableOpacity
+            style={[styles.sendBtn, { backgroundColor: draft.trim() ? color : T.surfaceHover }]}
+            onPress={submit}
+            disabled={!draft.trim()}
+            activeOpacity={0.8}
+          >
+            <PaperPlaneRight size={18} color={draft.trim() ? "#fff" : T.textDim} weight="fill" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </BottomSheet>
   );
 }
 
@@ -436,18 +430,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerBadgeText: { color: "#fff", fontSize: 9, fontFamily: FONT.bold },
-  modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { height: "86%", borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" },
+  // A fixed tall sheet rather than the shell's content-sized default: the thread
+  // scrolls, and a sheet that resized per comment count would be unusable.
+  sheet: { height: "86%", maxHeight: "86%", overflow: "hidden" },
+  fill: { flex: 1 },
   sheetHeader: { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 10 },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
   sheetHeaderRow: {
     flexDirection: "row",
     alignItems: "center",

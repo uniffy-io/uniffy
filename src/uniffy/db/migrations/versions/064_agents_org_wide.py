@@ -50,7 +50,11 @@ _SCOPE_CHECK = (
 
 
 def upgrade() -> None:
-    op.add_column("agents_memories", sa.Column("scope", sa.String(20), nullable=False))
+    # scope, created_by_user_id and description land NOT NULL, but rows written
+    # before this revision carry no value for them: add nullable, derive each
+    # from the row's existing subject, then tighten. Adding them NOT NULL
+    # outright only survives an empty table.
+    op.add_column("agents_memories", sa.Column("scope", sa.String(20), nullable=True))
     op.add_column(
         "agents_memories",
         sa.Column(
@@ -62,12 +66,41 @@ def upgrade() -> None:
     )
     op.add_column(
         "agents_memories",
-        sa.Column("created_by_user_id", UUID(as_uuid=True), nullable=False),
+        sa.Column("created_by_user_id", UUID(as_uuid=True), nullable=True),
     )
     op.add_column(
         "agents_memories",
-        sa.Column("description", sa.String(255), nullable=False),
+        sa.Column("description", sa.String(255), nullable=True),
     )
+
+    # The pre-revision check only required user_id OR channel_id, so a row may
+    # carry both; agents_memories_scope_consistent below demands exactly one.
+    # A row with both resolves to 'user' - the narrower audience - because
+    # promoting a personal memory to channel scope would widen who can read it.
+    op.execute(
+        sa.text(
+            "UPDATE agents_memories SET scope = 'user', channel_id = NULL "
+            "WHERE user_id IS NOT NULL"
+        )
+    )
+    op.execute(
+        sa.text(
+            "UPDATE agents_memories SET scope = 'channel' "
+            "WHERE user_id IS NULL AND channel_id IS NOT NULL"
+        )
+    )
+    op.execute(
+        sa.text(
+            "UPDATE agents_memories m SET created_by_user_id = COALESCE("
+            "m.user_id, (SELECT a.owner_id FROM agents_agents a WHERE a.id = m.agent_id)"
+            ") WHERE m.created_by_user_id IS NULL"
+        )
+    )
+    op.execute(sa.text("UPDATE agents_memories SET description = key WHERE description IS NULL"))
+
+    op.alter_column("agents_memories", "scope", nullable=False)
+    op.alter_column("agents_memories", "created_by_user_id", nullable=False)
+    op.alter_column("agents_memories", "description", nullable=False)
     op.add_column(
         "agents_memories",
         sa.Column("pinned", sa.Boolean(), nullable=False, server_default=sa.false()),

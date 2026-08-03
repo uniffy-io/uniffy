@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+  <!-- Android 13 shows the service's ongoing-call notification only with this
+       grant. The service runs either way, so a refusal costs visibility, not
+       audio - but an invisible microphone service is what the Play
+       foreground-service policy exists to prevent. -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application>
+    <!-- Fully qualified on purpose: a leading-dot name resolves against the
+         merged application's package, not this library's. -->
+    <service
+      android:name="com.uniffy.callservice.CallForegroundService"
+      android:exported="false"
+      android:foregroundServiceType="microphone" />
+  </application>
+
+</manifest>

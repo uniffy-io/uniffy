@@ -17,8 +17,11 @@ import {
   VideoCamera,
   Prohibit,
   Link,
+  CaretDown,
+  Check,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { RichDescriptionInput } from "@shared/components/RichDescriptionInput";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
 import { TimePicker } from "@features/calendar/components/TimePicker";
@@ -32,6 +35,12 @@ import { useCategories, useEvent } from "@features/calendar/useCalendar";
 import { useCreateEvent, useUpdateEvent } from "@features/calendar/useCalendarMutations";
 
 type MeetingMode = "none" | "link" | "channel";
+
+const MEETING_MODES = [
+  { mode: "none", label: "None", Icon: Prohibit },
+  { mode: "link", label: "Link", Icon: Link },
+  { mode: "channel", label: "Uniffy meeting", Icon: VideoCamera },
+] as const;
 
 function roundToNext30(date: Date): Date {
   const d = new Date(date);
@@ -88,6 +97,8 @@ export function CreateEventScreen() {
   const [location, setLocation] = useState("");
   const [meetingUrl, setMeetingUrl] = useState("");
   const [meetingMode, setMeetingMode] = useState<MeetingMode>("none");
+  const [meetingPickerOpen, setMeetingPickerOpen] = useState(false);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [channelAutoCreated, setChannelAutoCreated] = useState(false);
   const [isAllDay, setIsAllDay] = useState(false);
@@ -124,6 +135,21 @@ export function CreateEventScreen() {
   }, [event]);
 
   const categories = categoriesQuery.data ?? [];
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
+  const activeMeetingMode = MEETING_MODES.find((m) => m.mode === meetingMode) ?? MEETING_MODES[0];
+  const ActiveMeetingIcon = activeMeetingMode.Icon;
+
+  const pickMeetingMode = (mode: MeetingMode) => {
+    setMeetingPickerOpen(false);
+    setMeetingMode(mode);
+    // A link and a channel are mutually exclusive, so switching away drops the
+    // binding the other mode owns rather than leaving it to be saved silently.
+    if (mode !== "link") setMeetingUrl("");
+    if (mode !== "channel") {
+      setSelectedChannelId(null);
+      setChannelAutoCreated(false);
+    }
+  };
 
   const isSaving = createEvent.isPending || updateEvent.isPending;
   const canSave = title.trim().length > 0 && !isSaving;
@@ -303,38 +329,23 @@ export function CreateEventScreen() {
         {/* Category */}
         {categories.length > 0 && (
           <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-            <View style={styles.fieldRow}>
+            <TouchableOpacity
+              style={styles.fieldRow}
+              onPress={() => setCategoryPickerOpen(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Category: ${selectedCategory?.name ?? "None"}. Change`}
+            >
               <Palette size={18} color={T.textDim} weight="duotone" />
               <Text style={[styles.fieldLabel, { color: T.textBright }]}>Category</Text>
-            </View>
-            <View style={styles.categoryGrid}>
-              {categories.map((cat) => {
-                const isSelected = selectedCategoryId === cat.id;
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[
-                      styles.categoryChip,
-                      { borderColor: isSelected ? cat.color : T.border },
-                      isSelected && { backgroundColor: cat.color + "18" },
-                    ]}
-                    onPress={() => setSelectedCategoryId(isSelected ? undefined : cat.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
-                    <Text
-                      style={[
-                        styles.categoryChipText,
-                        { color: isSelected ? T.textBright : T.textDim },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+              {selectedCategory ? (
+                <View style={[styles.categoryDot, { backgroundColor: selectedCategory.color }]} />
+              ) : null}
+              <Text style={[styles.fieldValue, { color: T.textDim }]} numberOfLines={1}>
+                {selectedCategory?.name ?? "None"}
+              </Text>
+              <CaretDown size={14} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -354,52 +365,21 @@ export function CreateEventScreen() {
 
         {/* Online meeting */}
         <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <View style={styles.fieldRow}>
+          <TouchableOpacity
+            style={styles.fieldRow}
+            onPress={() => setMeetingPickerOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Online meeting: ${activeMeetingMode.label}. Change`}
+          >
             <VideoCamera size={18} color={T.textDim} weight="duotone" />
             <Text style={[styles.fieldLabel, { color: T.textBright }]}>Online meeting</Text>
-          </View>
-          <View style={styles.meetingModeRow}>
-            {(
-              [
-                { mode: "none", label: "None", Icon: Prohibit },
-                { mode: "link", label: "Link", Icon: Link },
-                { mode: "channel", label: "Uniffy meeting", Icon: VideoCamera },
-              ] as const
-            ).map(({ mode, label, Icon }) => {
-              const active = meetingMode === mode;
-              return (
-                <TouchableOpacity
-                  key={mode}
-                  style={[
-                    styles.meetingChip,
-                    { borderColor: active ? T.accent : T.border },
-                    active && { backgroundColor: T.accent },
-                  ]}
-                  onPress={() => {
-                    setMeetingMode(mode);
-                    if (mode !== "link") setMeetingUrl("");
-                    if (mode !== "channel") {
-                      setSelectedChannelId(null);
-                      setChannelAutoCreated(false);
-                    }
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Icon
-                    size={15}
-                    color={active ? "#fff" : T.textDim}
-                    weight={active ? "fill" : "duotone"}
-                  />
-                  <Text
-                    style={[styles.meetingChipText, { color: active ? "#fff" : T.textDim }]}
-                    numberOfLines={1}
-                  >
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            <ActiveMeetingIcon size={15} color={T.textDim} weight="duotone" />
+            <Text style={[styles.fieldValue, { color: T.textDim }]} numberOfLines={1}>
+              {activeMeetingMode.label}
+            </Text>
+            <CaretDown size={14} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
 
           {meetingMode === "link" && (
             <View style={styles.meetingBody}>
@@ -451,6 +431,65 @@ export function CreateEventScreen() {
           />
         </View>
       </ScrollView>
+
+      <BottomSheet visible={categoryPickerOpen} onClose={() => setCategoryPickerOpen(false)}>
+        <Text style={[styles.pickerSheetTitle, { color: T.textBright }]}>Category</Text>
+        <TouchableOpacity
+          style={[styles.pickerOption, { borderTopColor: T.border }]}
+          onPress={() => {
+            setCategoryPickerOpen(false);
+            setSelectedCategoryId(undefined);
+          }}
+          activeOpacity={0.7}
+        >
+          <Prohibit size={18} color={T.textDim} weight="duotone" />
+          <Text style={[styles.pickerOptionLabel, { color: T.textBright }]}>None</Text>
+          {!selectedCategoryId ? <Check size={16} color={T.accent} weight="bold" /> : null}
+        </TouchableOpacity>
+        {categories.map((cat) => {
+          const active = cat.id === selectedCategoryId;
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.pickerOption, { borderTopColor: T.border }]}
+              onPress={() => {
+                setCategoryPickerOpen(false);
+                setSelectedCategoryId(cat.id);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
+              <Text style={[styles.pickerOptionLabel, { color: T.textBright }]}>{cat.name}</Text>
+              {active ? <Check size={16} color={cat.color} weight="bold" /> : null}
+            </TouchableOpacity>
+          );
+        })}
+      </BottomSheet>
+
+      <BottomSheet visible={meetingPickerOpen} onClose={() => setMeetingPickerOpen(false)}>
+        <Text style={[styles.pickerSheetTitle, { color: T.textBright }]}>Online meeting</Text>
+        {MEETING_MODES.map(({ mode, label, Icon }) => {
+          const active = mode === meetingMode;
+          return (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.pickerOption, { borderTopColor: T.border }]}
+              onPress={() => pickMeetingMode(mode)}
+              activeOpacity={0.7}
+            >
+              <Icon
+                size={18}
+                color={active ? T.accent : T.textDim}
+                weight={active ? "fill" : "duotone"}
+              />
+              <Text style={[styles.pickerOptionLabel, { color: active ? T.accent : T.textBright }]}>
+                {label}
+              </Text>
+              {active ? <Check size={16} color={T.accent} weight="bold" /> : null}
+            </TouchableOpacity>
+          );
+        })}
+      </BottomSheet>
     </View>
   );
 }
@@ -531,41 +570,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   durationText: { fontSize: 12, fontFamily: FONT.medium },
-  categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-  },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
   categoryDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryChipText: { fontSize: 13, fontFamily: FONT.medium },
-  meetingModeRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingBottom: 12,
-  },
-  meetingChip: {
-    flex: 1,
+  pickerOption: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  meetingChipText: { fontSize: 12, fontFamily: FONT.medium },
+  pickerOptionLabel: { flex: 1, fontSize: 15, fontFamily: FONT.medium },
+  pickerSheetTitle: {
+    fontSize: 15,
+    fontFamily: FONT.semibold,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
   meetingBody: { paddingHorizontal: 14, paddingBottom: 14 },
   meetingInput: {
     fontSize: 14,

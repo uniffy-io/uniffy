@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   ActivityIndicator,
   Alert,
@@ -21,8 +20,8 @@ import {
   Crown,
   UsersThree,
 } from "phosphor-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@shared/components/Avatar";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
@@ -93,7 +92,6 @@ export function ShareSheet({
   color: string;
 }) {
   const T = useTheme();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const membersQuery = useMembers(contentType, contentId);
   const directory = useDirectory();
@@ -133,234 +131,209 @@ export function ShareSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalRoot}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <View
-          style={[styles.sheet, { backgroundColor: T.pageBg, paddingBottom: insets.bottom || 8 }]}
-        >
-          <View style={[styles.header, { borderBottomColor: T.border }]}>
-            <View style={[styles.handle, { backgroundColor: T.border }]} />
-            <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: T.textBright }]}>Share</Text>
-              <TouchableOpacity
-                onPress={onClose}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <X size={20} color={T.textDim} weight="bold" />
-              </TouchableOpacity>
-            </View>
+    <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
+      <View style={[styles.header, { borderBottomColor: T.border }]}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: T.textBright }]}>Share</Text>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <X size={20} color={T.textDim} weight="bold" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {membersQuery.isLoading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={color} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>WHO CAN ACCESS</Text>
+          <View style={styles.modeGroup}>
+            {ACCESS_MODE_META.map((m) => {
+              const Icon = ACCESS_ICON[m.key];
+              const active = accessMode === m.key;
+              return (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[
+                    styles.modeCard,
+                    {
+                      backgroundColor: active ? color + "18" : T.surface,
+                      borderColor: active ? color : T.border,
+                    },
+                  ]}
+                  disabled={!manage}
+                  onPress={() => handleSelectMode(m.key)}
+                  activeOpacity={0.7}
+                >
+                  <Icon
+                    key={active ? "fill" : "regular"}
+                    size={20}
+                    color={active ? color : T.textDim}
+                    weight={active ? "fill" : "regular"}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.modeLabel, { color: active ? color : T.textBright }]}>
+                      {m.label}
+                    </Text>
+                    <Text style={[styles.modeDesc, { color: T.textDim }]}>{m.description}</Text>
+                  </View>
+                  {active ? <Check size={16} color={color} weight="bold" /> : null}
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          {membersQuery.isLoading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator color={color} />
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-              <Text style={[styles.sectionLabel, { color: T.textDim }]}>WHO CAN ACCESS</Text>
-              <View style={styles.modeGroup}>
-                {ACCESS_MODE_META.map((m) => {
-                  const Icon = ACCESS_ICON[m.key];
-                  const active = accessMode === m.key;
+          {accessMode === "OPEN_TO_ORG" && manage ? (
+            <View style={styles.baselineRow}>
+              <Text style={[styles.baselineLabel, { color: T.textDim }]}>Everyone can</Text>
+              <View style={styles.rolePills}>
+                {BASELINE_ROLES.map((r) => {
+                  const active = (policy?.baselineRole ?? "VIEWER") === r;
                   return (
                     <TouchableOpacity
-                      key={m.key}
+                      key={r}
                       style={[
-                        styles.modeCard,
+                        styles.rolePill,
                         {
-                          backgroundColor: active ? color + "18" : T.surface,
+                          backgroundColor: active ? color : T.bg,
                           borderColor: active ? color : T.border,
                         },
                       ]}
-                      disabled={!manage}
-                      onPress={() => handleSelectMode(m.key)}
+                      onPress={() => setAccessMode.mutate({ mode: "OPEN_TO_ORG", baselineRole: r })}
                       activeOpacity={0.7}
                     >
-                      <Icon
-                        key={active ? "fill" : "regular"}
-                        size={20}
-                        color={active ? color : T.textDim}
-                        weight={active ? "fill" : "regular"}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.modeLabel, { color: active ? color : T.textBright }]}>
-                          {m.label}
-                        </Text>
-                        <Text style={[styles.modeDesc, { color: T.textDim }]}>{m.description}</Text>
-                      </View>
-                      {active ? <Check size={16} color={color} weight="bold" /> : null}
+                      <Text style={[styles.rolePillText, { color: active ? "#fff" : T.textDim }]}>
+                        {ROLE_LABEL[r]}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
+            </View>
+          ) : null}
 
-              {accessMode === "OPEN_TO_ORG" && manage ? (
-                <View style={styles.baselineRow}>
-                  <Text style={[styles.baselineLabel, { color: T.textDim }]}>Everyone can</Text>
-                  <View style={styles.rolePills}>
-                    {BASELINE_ROLES.map((r) => {
-                      const active = (policy?.baselineRole ?? "VIEWER") === r;
-                      return (
-                        <TouchableOpacity
-                          key={r}
-                          style={[
-                            styles.rolePill,
-                            {
-                              backgroundColor: active ? color : T.bg,
-                              borderColor: active ? color : T.border,
-                            },
-                          ]}
-                          onPress={() =>
-                            setAccessMode.mutate({ mode: "OPEN_TO_ORG", baselineRole: r })
-                          }
-                          activeOpacity={0.7}
-                        >
-                          <Text
-                            style={[styles.rolePillText, { color: active ? "#fff" : T.textDim }]}
-                          >
-                            {ROLE_LABEL[r]}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ) : null}
+          <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 22 }]}>PEOPLE</Text>
 
-              <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 22 }]}>PEOPLE</Text>
+          <View style={[styles.ownerRow, { borderBottomColor: T.border }]}>
+            <Avatar
+              name={ownerName}
+              avatarUrl={directory.byId.get(policy?.ownerId ?? "")?.avatarUrl}
+              size={34}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
+                {ownerName}
+                {policy?.ownerId === user?.id ? " (you)" : ""}
+              </Text>
+              <Text style={[styles.memberSub, { color: T.textDim }]}>Owner</Text>
+            </View>
+            <Crown size={16} color="#f59e0b" weight="fill" />
+          </View>
 
-              <View style={[styles.ownerRow, { borderBottomColor: T.border }]}>
-                <Avatar
-                  name={ownerName}
-                  avatarUrl={directory.byId.get(policy?.ownerId ?? "")?.avatarUrl}
-                  size={34}
+          {members.map((m) => (
+            <MemberRow
+              key={`${m.subjectType}:${m.subjectId}`}
+              member={m}
+              name={resolveName(m.subjectId)}
+              avatarUrl={directory.byId.get(m.subjectId)?.avatarUrl}
+              T={T}
+              color={color}
+              manage={manage}
+              callerIsOwner={callerIsOwner}
+              expanded={expandedId === m.subjectId}
+              onToggleExpand={() =>
+                setExpandedId((id) => (id === m.subjectId ? null : m.subjectId))
+              }
+              onChangeRole={(role) => {
+                updateRole.mutate({ subjectId: m.subjectId, subjectKind: m.subjectType, role });
+                setExpandedId(null);
+              }}
+              onRemove={() => {
+                removeMember.mutate({ subjectId: m.subjectId, subjectKind: m.subjectType });
+                setExpandedId(null);
+              }}
+              onTransfer={() => {
+                setExpandedId(null);
+                Alert.alert(
+                  "Transfer ownership",
+                  `Make ${resolveName(m.subjectId)} the owner? You will become an admin.`,
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Transfer",
+                      style: "destructive",
+                      onPress: () => transferOwnership.mutate(m.subjectId),
+                    },
+                  ],
+                );
+              }}
+            />
+          ))}
+
+          {members.length === 0 ? (
+            <Text style={[styles.noMembers, { color: T.textDim }]}>No one else has access yet</Text>
+          ) : null}
+
+          {manage ? (
+            <>
+              <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 22 }]}>
+                ADD PEOPLE
+              </Text>
+              <View
+                style={[styles.searchRow, { backgroundColor: T.surface, borderColor: T.border }]}
+              >
+                <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
+                <TextInput
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder="Search people and groups..."
+                  placeholderTextColor={T.textDim}
+                  style={[styles.searchInput, { color: T.textBright }]}
+                  autoCapitalize="none"
                 />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
-                    {ownerName}
-                    {policy?.ownerId === user?.id ? " (you)" : ""}
-                  </Text>
-                  <Text style={[styles.memberSub, { color: T.textDim }]}>Owner</Text>
-                </View>
-                <Crown size={16} color="#f59e0b" weight="fill" />
+                {search.length > 0 ? (
+                  <TouchableOpacity onPress={() => setSearch("")}>
+                    <X size={14} color={T.textDim} weight="bold" />
+                  </TouchableOpacity>
+                ) : null}
               </View>
-
-              {members.map((m) => (
-                <MemberRow
-                  key={`${m.subjectType}:${m.subjectId}`}
-                  member={m}
-                  name={resolveName(m.subjectId)}
-                  avatarUrl={directory.byId.get(m.subjectId)?.avatarUrl}
-                  T={T}
-                  color={color}
-                  manage={manage}
-                  callerIsOwner={callerIsOwner}
-                  expanded={expandedId === m.subjectId}
-                  onToggleExpand={() =>
-                    setExpandedId((id) => (id === m.subjectId ? null : m.subjectId))
-                  }
-                  onChangeRole={(role) => {
-                    updateRole.mutate({ subjectId: m.subjectId, subjectKind: m.subjectType, role });
-                    setExpandedId(null);
+              {searchResults.map((s) => (
+                <TouchableOpacity
+                  key={`${s.kind}:${s.id}`}
+                  style={[styles.resultRow, { borderBottomColor: T.border }]}
+                  onPress={() => {
+                    addMember.mutate({ subjectId: s.id, subjectKind: s.kind, role: "VIEWER" });
+                    setSearch("");
                   }}
-                  onRemove={() => {
-                    removeMember.mutate({ subjectId: m.subjectId, subjectKind: m.subjectType });
-                    setExpandedId(null);
-                  }}
-                  onTransfer={() => {
-                    setExpandedId(null);
-                    Alert.alert(
-                      "Transfer ownership",
-                      `Make ${resolveName(m.subjectId)} the owner? You will become an admin.`,
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Transfer",
-                          style: "destructive",
-                          onPress: () => transferOwnership.mutate(m.subjectId),
-                        },
-                      ],
-                    );
-                  }}
-                />
-              ))}
-
-              {members.length === 0 ? (
-                <Text style={[styles.noMembers, { color: T.textDim }]}>
-                  No one else has access yet
-                </Text>
-              ) : null}
-
-              {manage ? (
-                <>
-                  <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 22 }]}>
-                    ADD PEOPLE
-                  </Text>
-                  <View
-                    style={[
-                      styles.searchRow,
-                      { backgroundColor: T.surface, borderColor: T.border },
-                    ]}
-                  >
-                    <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
-                    <TextInput
-                      value={search}
-                      onChangeText={setSearch}
-                      placeholder="Search people and groups..."
-                      placeholderTextColor={T.textDim}
-                      style={[styles.searchInput, { color: T.textBright }]}
-                      autoCapitalize="none"
-                    />
-                    {search.length > 0 ? (
-                      <TouchableOpacity onPress={() => setSearch("")}>
-                        <X size={14} color={T.textDim} weight="bold" />
-                      </TouchableOpacity>
-                    ) : null}
+                  activeOpacity={0.7}
+                >
+                  {s.kind === "GROUP" ? (
+                    <View style={[styles.groupAvatar, { backgroundColor: "#8b5cf622" }]}>
+                      <UsersThree size={16} color="#8b5cf6" weight="fill" />
+                    </View>
+                  ) : (
+                    <Avatar name={s.name} avatarUrl={s.avatarUrl} size={32} />
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.memberName, { color: T.textBright }]} numberOfLines={1}>
+                      {s.name}
+                    </Text>
+                    <Text style={[styles.memberSub, { color: T.textDim }]} numberOfLines={1}>
+                      {s.kind === "GROUP" ? `${s.memberCount ?? 0} members` : s.email}
+                    </Text>
                   </View>
-                  {searchResults.map((s) => (
-                    <TouchableOpacity
-                      key={`${s.kind}:${s.id}`}
-                      style={[styles.resultRow, { borderBottomColor: T.border }]}
-                      onPress={() => {
-                        addMember.mutate({ subjectId: s.id, subjectKind: s.kind, role: "VIEWER" });
-                        setSearch("");
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      {s.kind === "GROUP" ? (
-                        <View style={[styles.groupAvatar, { backgroundColor: "#8b5cf622" }]}>
-                          <UsersThree size={16} color="#8b5cf6" weight="fill" />
-                        </View>
-                      ) : (
-                        <Avatar name={s.name} avatarUrl={s.avatarUrl} size={32} />
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={[styles.memberName, { color: T.textBright }]}
-                          numberOfLines={1}
-                        >
-                          {s.name}
-                        </Text>
-                        <Text style={[styles.memberSub, { color: T.textDim }]} numberOfLines={1}>
-                          {s.kind === "GROUP" ? `${s.memberCount ?? 0} members` : s.email}
-                        </Text>
-                      </View>
-                      <Text style={[styles.addLabel, { color }]}>Add</Text>
-                    </TouchableOpacity>
-                  ))}
-                  {search.trim().length > 0 &&
-                  searchResults.length === 0 &&
-                  !directory.isLoading ? (
-                    <Text style={[styles.noMembers, { color: T.textDim }]}>No matches</Text>
-                  ) : null}
-                </>
+                  <Text style={[styles.addLabel, { color }]}>Add</Text>
+                </TouchableOpacity>
+              ))}
+              {search.trim().length > 0 && searchResults.length === 0 && !directory.isLoading ? (
+                <Text style={[styles.noMembers, { color: T.textDim }]}>No matches</Text>
               ) : null}
-            </ScrollView>
-          )}
-        </View>
-      </View>
-    </Modal>
+            </>
+          ) : null}
+        </ScrollView>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -467,23 +440,9 @@ function MemberRow({
 }
 
 const styles = StyleSheet.create({
-  modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: {
-    maxHeight: "88%",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: "hidden",
-  },
+  // Taller than the shell default: the member list is the point of this sheet.
+  sheet: { maxHeight: "88%", overflow: "hidden" },
   header: { borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 10 },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { NativeModules, Platform } from "react-native";
+import { requireOptionalNativeModule } from "expo";
 import type { ComponentType } from "react";
 import type { VideoTrackViewProps } from "@features/calls/livekitTypes";
 
@@ -49,6 +50,15 @@ export function setupLiveKit(): void {
   globalsRegistered = true;
 }
 
+type CallForegroundService = { start(): void; stop(): void };
+
+// Android only, and absent from any dev client built before the local module
+// existed - iOS keeps the microphone publishing under the "audio" background
+// mode with no service of its own, so a null here is the normal iOS state
+// rather than a failure.
+const foregroundService =
+  requireOptionalNativeModule<CallForegroundService>("CallForegroundService");
+
 export async function startCallAudio(videoEnabled: boolean): Promise<void> {
   const lk = loadSdk();
   if (!lk) return;
@@ -57,9 +67,16 @@ export async function startCallAudio(videoEnabled: boolean): Promise<void> {
     ios: { defaultOutput: videoEnabled ? "speaker" : "earpiece" },
   });
   await lk.AudioSession.startAudioSession();
+  // RECORD_AUDIO is while-in-use, so the service has to start here - on the
+  // connect path, with the app still foregrounded. Starting it from the
+  // AppState background handler is already too late.
+  foregroundService?.start();
 }
 
 export async function stopCallAudio(): Promise<void> {
+  // Ahead of the SDK check: an unsupported client never started the service,
+  // and a supported one must drop the notification even if the SDK went away.
+  foregroundService?.stop();
   const lk = loadSdk();
   if (!lk) return;
   await lk.AudioSession.stopAudioSession();

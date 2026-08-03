@@ -73,6 +73,24 @@ strip, pre-join, ringing toasts, room audio). `CALL_*` events arrive over the ch
 (`ChatStreamProvider`); a stream reconnect resyncs indicator state via `ListActiveCalls`, so that
 snapshot must include every call the user can actually see.
 
+## Mobile background audio
+
+Backgrounding a call disables the camera and keeps the room connected and the microphone publishing.
+Android enforces that with a foreground service: a backgrounded app loses microphone capture unless a
+service of type `microphone` is running, and the failure is silent - inbound audio keeps playing and
+the UI shows no error while the remote side hears nothing. The local `call-foreground-service` Expo
+module (`src/mobile/modules/`) owns that service and the `FOREGROUND_SERVICE_MICROPHONE` permission.
+
+`RECORD_AUDIO` is a while-in-use permission, so the service can only START while the app is still
+foregrounded. It is therefore driven from `startCallAudio`/`stopCallAudio` in
+`features/calls/livekit.native.ts`, which sit on the connect and teardown paths - never from the
+`AppState` background handler, which runs too late. iOS needs no equivalent: `UIBackgroundModes:
+["audio"]` plus the active audio session already keep the microphone alive.
+
+Neither LiveKit's Expo plugin nor `@config-plugins/react-native-webrtc` supplies a service, and
+`expo-audio`'s `mediaPlayback` service does not cover microphone capture. Ringing while the app is
+killed is out of scope on both platforms - it needs push infrastructure the repo does not have.
+
 ## Two product targets
 
 Self-hosted customers run their own LiveKit (embedded TURN), point its `webhook.urls` at their backend,
@@ -98,4 +116,6 @@ path. LiveKit's coordination registry shares the app's Valkey instance.
 | `src/uniffy/workers/tasks/calls.py` | Reconciler + orphan-room cron (the durability backstop) |
 | `src/uniffy/core/models/calls/call.py` | `Call` + `CallParticipant` models |
 | `src/ui/src/features/calls/components/CallProvider.tsx` | Global Room owner, rejoin, teardown |
+| `src/mobile/src/features/calls/livekit.native.ts` | Native LiveKit glue: audio session + mic foreground service |
+| `src/mobile/modules/call-foreground-service/` | Local Expo module: Android `microphone` foreground service |
 | `.docker/compose/core.yaml` | LiveKit service + `webhook.urls`/keys config |

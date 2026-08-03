@@ -8,6 +8,8 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  Keyboard,
+  Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { ChatText } from "phosphor-react-native";
@@ -214,7 +216,7 @@ export function ChatThreadScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           ListFooterComponent={
             root ? (
               <View>
@@ -297,6 +299,7 @@ function ThreadMessageRow({
   return (
     <TouchableOpacity
       onLongPress={onLongPress}
+      onPress={() => Keyboard.dismiss()}
       delayLongPress={250}
       activeOpacity={1}
       style={[styles.msgRow, !showHeader && styles.msgRowGrouped]}

@@ -1,14 +1,7 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { Gauge, ArrowsInLineVertical, ArrowCounterClockwise } from "phosphor-react-native";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import {
@@ -62,92 +55,88 @@ export function AgentContextSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.header}>
-          <Gauge size={18} color={T.accent} weight="duotone" />
-          <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
-            {agentName ? `${agentName} context` : "Agent context"}
-          </Text>
-        </View>
+    <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
+      <View style={styles.header}>
+        <Gauge size={18} color={T.accent} weight="duotone" />
+        <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
+          {agentName ? `${agentName} context` : "Agent context"}
+        </Text>
+      </View>
 
-        {statsQuery.isLoading || !stats ? (
-          <View style={styles.loading}>
-            <ActivityIndicator size="small" color={T.accent} />
-          </View>
-        ) : (
-          <>
-            <View style={styles.meterBlock}>
-              <View style={styles.meterLabels}>
-                <Text style={[styles.meterPercent, { color: T.textBright }]}>
-                  {stats.usedPercent}%
-                </Text>
-                <Text style={[styles.meterDetail, { color: T.textDim }]}>
-                  {formatTokens(stats.activeTokens)} / {formatTokens(stats.tokenBudget)} tokens
-                </Text>
-              </View>
-              <View style={[styles.meterTrack, { backgroundColor: T.bg }]}>
-                <View
-                  style={[
-                    styles.meterFill,
-                    { backgroundColor: meterColor, width: `${Math.max(stats.usedPercent, 2)}%` },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.meterHint, { color: T.textDim }]}>
-                {formatTokens(stats.contextWindowTokens)} token context window
-                {stats.wasReset ? " · conversation was reset" : ""}
+      {statsQuery.isLoading || !stats ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="small" color={T.accent} />
+        </View>
+      ) : (
+        <>
+          <View style={styles.meterBlock}>
+            <View style={styles.meterLabels}>
+              <Text style={[styles.meterPercent, { color: T.textBright }]}>
+                {stats.usedPercent}%
+              </Text>
+              <Text style={[styles.meterDetail, { color: T.textDim }]}>
+                {formatTokens(stats.activeTokens)} / {formatTokens(stats.tokenBudget)} tokens
               </Text>
             </View>
+            <View style={[styles.meterTrack, { backgroundColor: T.bg }]}>
+              <View
+                style={[
+                  styles.meterFill,
+                  { backgroundColor: meterColor, width: `${Math.max(stats.usedPercent, 2)}%` },
+                ]}
+              />
+            </View>
+            <Text style={[styles.meterHint, { color: T.textDim }]}>
+              {formatTokens(stats.contextWindowTokens)} token context window
+              {stats.wasReset ? " · conversation was reset" : ""}
+            </Text>
+          </View>
 
+          <StatRow
+            T={T}
+            label="Active messages"
+            value={`${stats.activeMessages} of ${stats.totalMessages}`}
+          />
+          {stats.compactedMessages > 0 ? (
             <StatRow
               T={T}
-              label="Active messages"
-              value={`${stats.activeMessages} of ${stats.totalMessages}`}
+              label="Rolled into summaries"
+              value={`${stats.compactedMessages} messages · ${stats.summaryCount} ${stats.summaryCount === 1 ? "summary" : "summaries"}`}
             />
-            {stats.compactedMessages > 0 ? (
-              <StatRow
-                T={T}
-                label="Rolled into summaries"
-                value={`${stats.compactedMessages} messages · ${stats.summaryCount} ${stats.summaryCount === 1 ? "summary" : "summaries"}`}
-              />
-            ) : null}
-            {stats.lastInputTokens > 0 || stats.lastOutputTokens > 0 ? (
-              <StatRow
-                T={T}
-                label="Last turn"
-                value={`${formatTokens(stats.lastInputTokens)} in · ${formatTokens(stats.lastOutputTokens)} out${stats.lastCacheReadTokens > 0 ? ` · ${formatTokens(stats.lastCacheReadTokens)} cached` : ""}`}
-              />
-            ) : null}
+          ) : null}
+          {stats.lastInputTokens > 0 || stats.lastOutputTokens > 0 ? (
+            <StatRow
+              T={T}
+              label="Last turn"
+              value={`${formatTokens(stats.lastInputTokens)} in · ${formatTokens(stats.lastOutputTokens)} out${stats.lastCacheReadTokens > 0 ? ` · ${formatTokens(stats.lastCacheReadTokens)} cached` : ""}`}
+            />
+          ) : null}
 
-            <TouchableOpacity
-              style={[styles.action, { backgroundColor: T.bg, borderColor: T.border }]}
-              onPress={() => compact.mutate()}
-              disabled={compact.isPending || stats.activeMessages === 0}
-              activeOpacity={0.7}
-            >
-              <ArrowsInLineVertical size={17} color={T.accent} weight="duotone" />
-              <Text style={[styles.actionLabel, { color: T.textBright }]}>
-                {compact.isPending ? "Compacting..." : "Compact conversation"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.action, { backgroundColor: T.bg, borderColor: T.border }]}
-              onPress={confirmReset}
-              disabled={reset.isPending}
-              activeOpacity={0.7}
-            >
-              <ArrowCounterClockwise size={17} color={T.red} weight="duotone" />
-              <Text style={[styles.actionLabel, { color: T.red }]}>
-                {reset.isPending ? "Resetting..." : "Reset conversation"}
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </Modal>
+          <TouchableOpacity
+            style={[styles.action, { backgroundColor: T.bg, borderColor: T.border }]}
+            onPress={() => compact.mutate()}
+            disabled={compact.isPending || stats.activeMessages === 0}
+            activeOpacity={0.7}
+          >
+            <ArrowsInLineVertical size={17} color={T.accent} weight="duotone" />
+            <Text style={[styles.actionLabel, { color: T.textBright }]}>
+              {compact.isPending ? "Compacting..." : "Compact conversation"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.action, { backgroundColor: T.bg, borderColor: T.border }]}
+            onPress={confirmReset}
+            disabled={reset.isPending}
+            activeOpacity={0.7}
+          >
+            <ArrowCounterClockwise size={17} color={T.red} weight="duotone" />
+            <Text style={[styles.actionLabel, { color: T.red }]}>
+              {reset.isPending ? "Resetting..." : "Reset conversation"}
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -163,21 +152,9 @@ function StatRow({ T, label, value }: { T: ThemeColors; label: string; value: st
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-    paddingHorizontal: 20,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 10,
-  },
+  // The stat rows and buttons sit flush to the sheet edge, so the inset belongs
+  // to the sheet itself rather than to each block.
+  sheet: { paddingHorizontal: 20 },
   header: { flexDirection: "row", alignItems: "center", gap: 8, paddingBottom: 12 },
   title: { fontSize: 16, fontFamily: FONT.semibold, flexShrink: 1 },
   loading: { paddingVertical: 32, alignItems: "center" },

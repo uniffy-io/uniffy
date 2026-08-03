@@ -1,17 +1,15 @@
 import React, { useMemo, useState } from "react";
 import {
-  Modal,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Platform,
   ActivityIndicator,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Hash, LockSimple, Check, Plus, X, MagnifyingGlass } from "phosphor-react-native";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { useChannels } from "@features/chat/useChat";
@@ -35,12 +33,10 @@ export function MeetingChannelPicker({
   accentColor,
 }: MeetingChannelPickerProps) {
   const T = useTheme();
-  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const { channels, isLoading } = useChannels();
   const createChannel = useCreateChannel();
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   // Agent DMs and archived rooms are never valid meeting targets.
   const bindable = useMemo(() => channels.filter((c) => !c.isAgentDm && !c.isArchived), [channels]);
@@ -106,88 +102,82 @@ export function MeetingChannelPicker({
         </TouchableOpacity>
       )}
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setOpen(false)}>
-          <View />
-        </TouchableOpacity>
-        <View style={[styles.sheet, { backgroundColor: T.surface, paddingBottom: bottomPad + 8 }]}>
-          <View style={[styles.handle, { backgroundColor: T.border }]} />
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: T.textBright }]}>Uniffy meeting</Text>
-          </View>
-
-          <View style={[styles.searchBar, { backgroundColor: T.pageBg, borderColor: T.border }]}>
-            <MagnifyingGlass size={15} color={T.textDim} weight="bold" />
-            <TextInput
-              style={[styles.searchInput, { color: T.textBright }]}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search channels"
-              placeholderTextColor={T.textDim}
-              autoCorrect={false}
-              returnKeyType="done"
-            />
-            {query.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setQuery("")}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <X size={15} color={T.textDim} weight="bold" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.createRow, { borderBottomColor: T.border }]}
-            onPress={handleCreateRoom}
-            activeOpacity={0.7}
-            disabled={createChannel.isPending}
-          >
-            <View style={[styles.dot, { backgroundColor: accentColor }]}>
-              {createChannel.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Plus size={12} color="#fff" weight="bold" />
-              )}
-            </View>
-            <Text style={[styles.rowText, { color: T.textBright }]}>
-              {createChannel.isPending ? "Creating room" : "Create a new meeting room"}
-            </Text>
-          </TouchableOpacity>
-
-          <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
-            {filtered.map((channel) => {
-              const isSel = channel.id === selectedChannelId;
-              return (
-                <TouchableOpacity
-                  key={channel.id}
-                  style={[styles.row, { borderBottomColor: T.border }]}
-                  onPress={() => handleSelect(channel.id)}
-                  activeOpacity={0.7}
-                >
-                  {channel.channelType === "PUBLIC" ? (
-                    <Hash size={16} color={T.textDim} weight="duotone" />
-                  ) : (
-                    <LockSimple size={16} color={T.textDim} weight="duotone" />
-                  )}
-                  <Text style={[styles.rowText, { color: T.textBright }]} numberOfLines={1}>
-                    {channel.displayName || channel.name}
-                  </Text>
-                  {isSel && <Check size={18} color={accentColor} weight="bold" />}
-                </TouchableOpacity>
-              );
-            })}
-            {isLoading && (
-              <View style={styles.loading}>
-                <ActivityIndicator size="small" color={accentColor} />
-              </View>
-            )}
-            {!isLoading && filtered.length === 0 && (
-              <Text style={[styles.empty, { color: T.textDim }]}>No channels found</Text>
-            )}
-          </ScrollView>
+      <BottomSheet visible={open} onClose={() => setOpen(false)}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: T.textBright }]}>Uniffy meeting</Text>
         </View>
-      </Modal>
+
+        <View style={[styles.searchBar, { backgroundColor: T.pageBg, borderColor: T.border }]}>
+          <MagnifyingGlass size={15} color={T.textDim} weight="bold" />
+          <TextInput
+            style={[styles.searchInput, { color: T.textBright }]}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search channels"
+            placeholderTextColor={T.textDim}
+            autoCorrect={false}
+            returnKeyType="done"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setQuery("")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <X size={15} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.createRow, { borderBottomColor: T.border }]}
+          onPress={handleCreateRoom}
+          activeOpacity={0.7}
+          disabled={createChannel.isPending}
+        >
+          <View style={[styles.dot, { backgroundColor: accentColor }]}>
+            {createChannel.isPending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Plus size={12} color="#fff" weight="bold" />
+            )}
+          </View>
+          <Text style={[styles.rowText, { color: T.textBright }]}>
+            {createChannel.isPending ? "Creating room" : "Create a new meeting room"}
+          </Text>
+        </TouchableOpacity>
+
+        <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+          {filtered.map((channel) => {
+            const isSel = channel.id === selectedChannelId;
+            return (
+              <TouchableOpacity
+                key={channel.id}
+                style={[styles.row, { borderBottomColor: T.border }]}
+                onPress={() => handleSelect(channel.id)}
+                activeOpacity={0.7}
+              >
+                {channel.channelType === "PUBLIC" ? (
+                  <Hash size={16} color={T.textDim} weight="duotone" />
+                ) : (
+                  <LockSimple size={16} color={T.textDim} weight="duotone" />
+                )}
+                <Text style={[styles.rowText, { color: T.textBright }]} numberOfLines={1}>
+                  {channel.displayName || channel.name}
+                </Text>
+                {isSel && <Check size={18} color={accentColor} weight="bold" />}
+              </TouchableOpacity>
+            );
+          })}
+          {isLoading && (
+            <View style={styles.loading}>
+              <ActivityIndicator size="small" color={accentColor} />
+            </View>
+          )}
+          {!isLoading && filtered.length === 0 && (
+            <Text style={[styles.empty, { color: T.textDim }]}>No channels found</Text>
+          )}
+        </ScrollView>
+      </BottomSheet>
     </>
   );
 }
@@ -213,16 +203,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   selectedName: { flex: 1, fontSize: 14, fontFamily: FONT.medium },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 4,
-  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",

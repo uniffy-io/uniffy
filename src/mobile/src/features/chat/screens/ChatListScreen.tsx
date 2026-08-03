@@ -10,7 +10,6 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Modal,
   Alert,
 } from "react-native";
 import {
@@ -35,6 +34,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { Avatar } from "@shared/components/Avatar";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import type { ThemeColors } from "@theme/theme";
@@ -514,40 +514,36 @@ function CategoryNameModal({
   const [name, setName] = useState(initialName ?? "");
   const trimmed = name.trim();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.sheetHeader}>
-          <FolderPlus size={20} color={T.accent} weight="duotone" />
-          <Text style={[styles.sheetTitle, { color: T.textBright }]}>{title}</Text>
-        </View>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder="Category name"
-          placeholderTextColor={T.textDim}
-          autoFocus
-          style={[
-            styles.modalInput,
-            { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
-          ]}
-        />
-        <TouchableOpacity
-          style={[styles.modalCta, { backgroundColor: trimmed ? T.accent : T.surfaceHover }]}
-          disabled={!trimmed || pending}
-          onPress={() => {
-            onSubmit(trimmed);
-            setName("");
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.modalCtaText, { color: trimmed ? "#fff" : T.textDim }]}>
-            {pending ? "Saving..." : cta}
-          </Text>
-        </TouchableOpacity>
+    <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
+      <View style={styles.sheetHeader}>
+        <FolderPlus size={20} color={T.accent} weight="duotone" />
+        <Text style={[styles.sheetTitle, { color: T.textBright }]}>{title}</Text>
       </View>
-    </Modal>
+      <TextInput
+        value={name}
+        onChangeText={setName}
+        placeholder="Category name"
+        placeholderTextColor={T.textDim}
+        autoFocus
+        style={[
+          styles.modalInput,
+          { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+        ]}
+      />
+      <TouchableOpacity
+        style={[styles.modalCta, { backgroundColor: trimmed ? T.accent : T.surfaceHover }]}
+        disabled={!trimmed || pending}
+        onPress={() => {
+          onSubmit(trimmed);
+          setName("");
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.modalCtaText, { color: trimmed ? "#fff" : T.textDim }]}>
+          {pending ? "Saving..." : cta}
+        </Text>
+      </TouchableOpacity>
+    </BottomSheet>
   );
 }
 
@@ -585,94 +581,90 @@ function NewDmModal({
     });
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, styles.dmSheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.sheetHeader}>
-          <Text style={[styles.sheetTitle, { color: T.textBright }]}>New direct message</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <X size={18} color={T.textDim} weight="bold" />
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.searchBox, { backgroundColor: T.bg, borderColor: T.border }]}>
-          <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search people"
-            placeholderTextColor={T.textDim}
-            style={[styles.searchInput, { color: T.textBright }]}
-          />
-        </View>
-        <FlatList
-          data={users}
-          keyExtractor={(item) => item.id}
-          keyboardShouldPersistTaps="handled"
-          style={styles.dmList}
-          renderItem={({ item }) => {
-            const active = selected.has(item.id);
-            return (
-              <TouchableOpacity
-                style={[styles.dmRow, { borderBottomColor: T.border }]}
-                onPress={() => toggleUser(item.id)}
-                activeOpacity={0.7}
-              >
-                <Avatar name={item.name} avatarUrl={item.avatarUrl} size={36} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.dmName, { color: T.textBright }]} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  {item.email ? (
-                    <Text style={[styles.dmEmail, { color: T.textDim }]} numberOfLines={1}>
-                      {item.email}
-                    </Text>
-                  ) : null}
-                </View>
-                <View
-                  style={[
-                    styles.dmCheckbox,
-                    active
-                      ? { backgroundColor: T.accent, borderColor: T.accent }
-                      : { borderColor: T.border },
-                  ]}
-                >
-                  {active ? <Check size={12} color="#fff" weight="bold" /> : null}
-                </View>
-              </TouchableOpacity>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.sectionEmpty}>
-              <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>
-                {directory.isLoading ? "Loading..." : "No people found"}
-              </Text>
-            </View>
-          }
-        />
-        <TouchableOpacity
-          style={[
-            styles.modalCta,
-            { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover },
-          ]}
-          disabled={selected.size === 0 || pending}
-          onPress={() => {
-            onCreate([...selected]);
-            setSelected(new Set());
-            setSearch("");
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.modalCtaText, { color: selected.size > 0 ? "#fff" : T.textDim }]}>
-            {pending
-              ? "Starting..."
-              : selected.size > 1
-                ? `Start group chat (${selected.size})`
-                : "Start chat"}
-          </Text>
+    <BottomSheet visible={visible} onClose={onClose} style={[styles.sheet, styles.dmSheet]}>
+      <View style={styles.sheetHeader}>
+        <Text style={[styles.sheetTitle, { color: T.textBright }]}>New direct message</Text>
+        <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <X size={18} color={T.textDim} weight="bold" />
         </TouchableOpacity>
       </View>
-    </Modal>
+      <View style={[styles.searchBox, { backgroundColor: T.bg, borderColor: T.border }]}>
+        <MagnifyingGlass size={16} color={T.textDim} weight="bold" />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search people"
+          placeholderTextColor={T.textDim}
+          style={[styles.searchInput, { color: T.textBright }]}
+        />
+      </View>
+      <FlatList
+        data={users}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        style={styles.dmList}
+        renderItem={({ item }) => {
+          const active = selected.has(item.id);
+          return (
+            <TouchableOpacity
+              style={[styles.dmRow, { borderBottomColor: T.border }]}
+              onPress={() => toggleUser(item.id)}
+              activeOpacity={0.7}
+            >
+              <Avatar name={item.name} avatarUrl={item.avatarUrl} size={36} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.dmName, { color: T.textBright }]} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                {item.email ? (
+                  <Text style={[styles.dmEmail, { color: T.textDim }]} numberOfLines={1}>
+                    {item.email}
+                  </Text>
+                ) : null}
+              </View>
+              <View
+                style={[
+                  styles.dmCheckbox,
+                  active
+                    ? { backgroundColor: T.accent, borderColor: T.accent }
+                    : { borderColor: T.border },
+                ]}
+              >
+                {active ? <Check size={12} color="#fff" weight="bold" /> : null}
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          <View style={styles.sectionEmpty}>
+            <Text style={[styles.sectionEmptyText, { color: T.textDim }]}>
+              {directory.isLoading ? "Loading..." : "No people found"}
+            </Text>
+          </View>
+        }
+      />
+      <TouchableOpacity
+        style={[
+          styles.modalCta,
+          { backgroundColor: selected.size > 0 ? T.accent : T.surfaceHover },
+        ]}
+        disabled={selected.size === 0 || pending}
+        onPress={() => {
+          onCreate([...selected]);
+          setSelected(new Set());
+          setSearch("");
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.modalCtaText, { color: selected.size > 0 ? "#fff" : T.textDim }]}>
+          {pending
+            ? "Starting..."
+            : selected.size > 1
+              ? `Start group chat (${selected.size})`
+              : "Start chat"}
+        </Text>
+      </TouchableOpacity>
+    </BottomSheet>
   );
 }
 
@@ -1055,22 +1047,8 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 14, fontFamily: FONT.regular, textAlign: "center" },
   emptyCta: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 10 },
   emptyCtaText: { fontSize: 14, fontFamily: FONT.semibold, color: "#fff" },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-    paddingHorizontal: 16,
-  },
-  dmSheet: { height: "75%" },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 12,
-  },
+  sheet: { paddingHorizontal: 16 },
+  dmSheet: { height: "75%", maxHeight: "75%" },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",

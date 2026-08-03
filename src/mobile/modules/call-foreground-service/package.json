@@ -1,0 +1,6 @@
+{
+  "name": "call-foreground-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Android microphone foreground service that keeps call audio publishing while the app is backgrounded"
+}

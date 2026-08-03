@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
 import { Check, Faders } from "phosphor-react-native";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAgentModels, type AgentModelOption } from "@features/agents/useAgents";
@@ -52,56 +52,52 @@ export function AgentModelSheet({
   const loading = configQuery.isLoading || modelsQuery.isLoading;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.header}>
-          <Faders size={18} color={T.accent} weight="duotone" />
-          <Text style={[styles.title, { color: T.textBright }]}>Model for this chat</Text>
-        </View>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.header}>
+        <Faders size={18} color={T.accent} weight="duotone" />
+        <Text style={[styles.title, { color: T.textBright }]}>Model for this chat</Text>
+      </View>
 
-        {loading ? (
-          <View style={styles.loading}>
-            <ActivityIndicator size="small" color={T.accent} />
-          </View>
-        ) : (
-          <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
-            <Text style={[styles.sectionLabel, { color: T.textDim }]}>MODEL</Text>
+      {loading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="small" color={T.accent} />
+        </View>
+      ) : (
+        <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+          <Text style={[styles.sectionLabel, { color: T.textDim }]}>MODEL</Text>
+          <ModelRow
+            T={T}
+            title="Agent default"
+            subtitle={agentPrimaryModel || undefined}
+            selected={!modelOverride}
+            onPress={() => pickModel("")}
+          />
+          {overrideInList ? null : (
             <ModelRow
               T={T}
-              title="Agent default"
-              subtitle={agentPrimaryModel || undefined}
-              selected={!modelOverride}
-              onPress={() => pickModel("")}
+              title={modelOverride}
+              subtitle="Unavailable"
+              selected
+              onPress={() => {}}
             />
-            {overrideInList ? null : (
-              <ModelRow
-                T={T}
-                title={modelOverride}
-                subtitle="Unavailable"
-                selected
-                onPress={() => {}}
-              />
-            )}
-            {models.map((m: AgentModelOption) => (
-              <ModelRow
-                key={m.id}
-                T={T}
-                title={m.displayName || m.id}
-                subtitle={m.provider}
-                selected={modelOverride === m.id}
-                onPress={() => pickModel(m.id)}
-              />
-            ))}
-            {models.length === 0 ? (
-              <Text style={[styles.empty, { color: T.textDim }]}>No models available</Text>
-            ) : null}
-            <View style={styles.bottomPad} />
-          </ScrollView>
-        )}
-      </View>
-    </Modal>
+          )}
+          {models.map((m: AgentModelOption) => (
+            <ModelRow
+              key={m.id}
+              T={T}
+              title={m.displayName || m.id}
+              subtitle={m.provider}
+              selected={modelOverride === m.id}
+              onPress={() => pickModel(m.id)}
+            />
+          ))}
+          {models.length === 0 ? (
+            <Text style={[styles.empty, { color: T.textDim }]}>No models available</Text>
+          ) : null}
+          <View style={styles.bottomPad} />
+        </ScrollView>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -140,16 +136,6 @@ function ModelRow({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 24, maxHeight: "85%" },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",

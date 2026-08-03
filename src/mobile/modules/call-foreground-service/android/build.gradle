@@ -1,0 +1,22 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.uniffy.callservice'
+version = '0.1.0'
+
+android {
+  namespace "com.uniffy.callservice"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // NotificationCompat handles the channel-vs-no-channel split across the
+  // minSdk 24 to compileSdk 35 range. Gradle resolves to the highest version in
+  // the graph, which React Native already pins above this floor.
+  implementation 'androidx.core:core-ktx:1.13.1'
+}

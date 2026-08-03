@@ -7,10 +7,11 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  Modal,
   Alert,
   Pressable,
   ScrollView,
+  Keyboard,
+  Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import {
@@ -26,11 +27,12 @@ import {
   PushPinSlash,
   PencilSimple,
   ArrowBendUpLeft,
+  CaretDown,
+  CaretUp,
   WarningCircle,
   X,
   Gauge,
   Phone,
-  Faders,
 } from "phosphor-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,9 +40,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { Avatar } from "@shared/components/Avatar";
+import { BottomSheet } from "@shared/components/BottomSheet";
 import { ChatComposer } from "@features/chat/components/ChatComposer";
 import { TypingIndicator } from "@features/chat/components/TypingIndicator";
 import { EmojiPickerSheet } from "@features/chat/components/EmojiPickerSheet";
+import { SwipeToReply } from "@features/chat/components/SwipeToReply";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { SystemMessage } from "@features/chat/components/SystemMessage";
 import { MessageAttachments } from "@features/chat/components/MessageAttachments";
@@ -87,7 +91,7 @@ import {
   useLeaveChannel,
 } from "@features/chat/useChatMutations";
 import { useDirectory } from "@shared/permissions/usePermissions";
-import { useAgents, useStopAgentRun } from "@features/agents/useAgents";
+import { useAgents, useAgentModels, useStopAgentRun } from "@features/agents/useAgents";
 import {
   useChatStream,
   typingKey,
@@ -111,6 +115,10 @@ import { resolveChannelTitle, type SerializedMessage } from "@features/chat/chat
 
 const GROUP_WINDOW_SECONDS = 300;
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "🙏"];
+// The send path snapshots the quoted message as content[:150], so an expanded
+// quote can only ever show that much of a longer original.
+const REPLY_PREVIEW_MAX_CHARS = 150;
+const REPLY_BODY_GAP = 5;
 type SelectionRange = { start: number; end: number };
 
 const EMOJI_RE = /\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu;
@@ -268,8 +276,17 @@ export function ChatConversationScreen() {
   }, [agentsQuery.data]);
 
   const dmAgentId = channel?.isAgentDm ? (channel.agentId ?? "") : "";
+  const dmAgent = dmAgentId ? agentById.get(dmAgentId) : undefined;
   const agentConfigQuery = useChannelAgentConfig(channelId, dmAgentId, !!dmAgentId);
   const dmModelOverride = agentConfigQuery.data?.modelOverride ?? "";
+  // Shares its cache entry with the model sheet, so naming the active model in
+  // the composer costs no extra request.
+  const dmModelsQuery = useAgentModels(dmAgent?.primaryProviderKeyId ?? "", !!dmAgentId);
+  const dmModelLabel = useMemo(() => {
+    const active = dmModelOverride || dmAgent?.primaryModel || "";
+    if (!active) return "Default";
+    return dmModelsQuery.data?.find((m) => m.id === active)?.displayName || active;
+  }, [dmModelOverride, dmAgent?.primaryModel, dmModelsQuery.data]);
 
   const sheetDirectory = useMemo(
     () => [
@@ -347,9 +364,11 @@ export function ChatConversationScreen() {
     return { name, avatarUrl: member?.avatarUrl ?? subject?.avatarUrl ?? undefined };
   }, [channel, membersQuery.data, directory.byId, user?.id]);
 
-  // DMs and agent chats thread every turn off the previous message, so a reply
-  // quote on each one is noise - suppress it, matching the web MessageItem.
-  const hideReplyContext = channel?.channelType === "DIRECT" || channel?.channelType === "GROUP_DM";
+  // An agent run stamps every turn it writes with the trigger message as its
+  // reply target (see the agent runtime writers), so in an agent chat the quote
+  // repeats the message directly above on every single turn. A human reply_to_id
+  // is only ever set by someone deliberately replying, so those always show.
+  const hideReplyContext = channel?.isAgentDm ?? false;
 
   const title = useMemo(() => {
     if (!channel) return "Channel";
@@ -526,6 +545,19 @@ export function ChatConversationScreen() {
     });
   }, []);
 
+  // Scroll a quoted message into view. Silently a no-op when the target sits in
+  // a page the transcript has not loaded yet - there is no id-addressable fetch
+  // for a single older message, only the page walk that onEndReached drives.
+  const jumpToMessage = useCallback(
+    (messageId: string | undefined) => {
+      if (!messageId) return;
+      const index = messages.findIndex((m) => m.id === messageId);
+      if (index < 0) return;
+      listRef.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
+    },
+    [messages],
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: SerializedMessage; index: number }) => {
       const older = messages[index + 1];
@@ -534,37 +566,48 @@ export function ChatConversationScreen() {
         newDay ||
         older.senderId !== item.senderId ||
         item.createdAtSeconds - older.createdAtSeconds > GROUP_WINDOW_SECONDS;
+      // System notices have nothing to quote, and a message still in flight has
+      // no server id for the reply to point at.
+      const canSwipeReply = item.senderType !== "SYSTEM" && item.metadata?.optimistic !== "1";
       return (
         <View>
           {newDay ? <DaySeparator label={formatDayLabel(item.createdAtSeconds)} T={T} /> : null}
           {item.id === firstUnreadId ? <UnreadDivider T={T} /> : null}
-          <MessageRow
-            message={item}
+          <SwipeToReply
             T={T}
-            organizationId={organizationId ?? ""}
-            showHeader={showHeader}
-            hideReplyContext={hideReplyContext}
-            isOwn={item.senderId === user?.id}
-            senderPresence={
-              item.senderType === "USER" ? (presenceByUser[item.senderId] ?? "offline") : null
-            }
-            agentActive={agentRunning}
-            thinking={item.senderType === "AGENT" ? thinkingByMessage?.[item.id] : undefined}
-            agentEmoji={
-              item.senderType === "AGENT"
-                ? (agentById.get(item.senderId)?.avatarEmoji ?? null)
-                : null
-            }
-            agentName={
-              item.senderType === "AGENT" ? (agentById.get(item.senderId)?.name ?? null) : null
-            }
-            toolResultFor={toolResultFor}
-            onLongPress={() => setActionMessage(item)}
-            onPressFailed={() => promptFailedSend(item)}
-            onPressThread={() => openThread(item.id)}
-            onToggleReaction={(emoji) => handleReact(item, emoji)}
-            onDetailsToggled={adjustScrollForDetails}
-          />
+            enabled={canSwipeReply}
+            hasAvatar={showHeader}
+            onReply={() => startReply(item)}
+          >
+            <MessageRow
+              message={item}
+              T={T}
+              organizationId={organizationId ?? ""}
+              showHeader={showHeader}
+              hideReplyContext={hideReplyContext}
+              isOwn={item.senderId === user?.id}
+              senderPresence={
+                item.senderType === "USER" ? (presenceByUser[item.senderId] ?? "offline") : null
+              }
+              agentActive={agentRunning}
+              thinking={item.senderType === "AGENT" ? thinkingByMessage?.[item.id] : undefined}
+              agentEmoji={
+                item.senderType === "AGENT"
+                  ? (agentById.get(item.senderId)?.avatarEmoji ?? null)
+                  : null
+              }
+              agentName={
+                item.senderType === "AGENT" ? (agentById.get(item.senderId)?.name ?? null) : null
+              }
+              toolResultFor={toolResultFor}
+              onLongPress={() => setActionMessage(item)}
+              onPressFailed={() => promptFailedSend(item)}
+              onPressThread={() => openThread(item.id)}
+              onPressReplyContext={() => jumpToMessage(item.replyContext?.id)}
+              onToggleReaction={(emoji) => handleReact(item, emoji)}
+              onDetailsToggled={adjustScrollForDetails}
+            />
+          </SwipeToReply>
         </View>
       );
     },
@@ -584,6 +627,8 @@ export function ChatConversationScreen() {
       adjustScrollForDetails,
       presenceByUser,
       hideReplyContext,
+      startReply,
+      jumpToMessage,
     ],
   );
 
@@ -710,7 +755,17 @@ export function ChatConversationScreen() {
             { paddingTop: footerHeight + barSpace + 12, paddingBottom: insets.top + 12 },
           ]}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
+          // interactive is iOS-only and degrades to no dismissal at all on
+          // Android, where dragging the transcript has to close the keyboard too.
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          // Rows are variable height and there is no getItemLayout, so a jump to
+          // an unrendered index has to fall back to an estimate.
+          onScrollToIndexFailed={(info) =>
+            listRef.current?.scrollToOffset({
+              offset: info.averageItemLength * info.index,
+              animated: true,
+            })
+          }
           onEndReached={() => void messagesQuery.loadOlder()}
           onEndReachedThreshold={0.4}
           ListFooterComponent={
@@ -775,21 +830,6 @@ export function ChatConversationScreen() {
           onStopAgents={(ids) => ids.forEach((agentId) => stopAgent.mutate({ channelId, agentId }))}
         />
 
-        {dmAgentId ? (
-          <TouchableOpacity
-            style={[styles.modelChip, { backgroundColor: T.surface, borderColor: T.border }]}
-            onPress={() => setModelSheetOpen(true)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Model for this conversation"
-          >
-            <Faders size={13} color={T.textDim} weight="bold" />
-            <Text style={[styles.modelChipText, { color: T.textDim }]} numberOfLines={1}>
-              {dmModelOverride || "Default"}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
         <ChatComposer
           T={T}
           inputRef={inputRef}
@@ -806,6 +846,15 @@ export function ChatConversationScreen() {
             onAttach: attachments.handleAttach,
             onWrap: wrapSelection,
           }}
+          model={
+            dmAgentId
+              ? {
+                  label: dmModelLabel,
+                  onPress: () => setModelSheetOpen(true),
+                  pickerOpen: modelSheetOpen,
+                }
+              : undefined
+          }
           attachments={attachments.pending}
           onRemoveAttachment={attachments.remove}
         />
@@ -985,53 +1034,46 @@ function PinnedMessagesSheet({
   onUnpin: (messageId: string) => void;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.pinnedHeader}>
-          <PushPin size={16} color={T.accent} weight="fill" />
-          <Text style={[styles.pinnedTitle, { color: T.textBright }]}>Pinned messages</Text>
-        </View>
-        {loading ? (
-          <View style={styles.pinnedLoading}>
-            <ActivityIndicator size="small" color={T.accent} />
-          </View>
-        ) : pinned.length === 0 ? (
-          <Text style={[styles.pinnedEmpty, { color: T.textDim }]}>No pinned messages</Text>
-        ) : (
-          <ScrollView style={styles.pinnedList}>
-            {pinned.map((msg) => {
-              const { display } = parseMentions(msg.content);
-              return (
-                <View key={msg.id} style={[styles.pinnedRow, { borderTopColor: T.border }]}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.pinnedRowHeader}>
-                      <Text
-                        style={[styles.pinnedSender, { color: T.textBright }]}
-                        numberOfLines={1}
-                      >
-                        {msg.senderName}
-                      </Text>
-                      <Text style={[styles.pinnedTime, { color: T.textDim }]}>{msg.timeLabel}</Text>
-                    </View>
-                    <Text style={[styles.pinnedContent, { color: T.text }]} numberOfLines={2}>
-                      {display}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => onUnpin(msg.id)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <PushPinSlash size={16} color={T.textDim} weight="duotone" />
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </ScrollView>
-        )}
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.pinnedHeader}>
+        <PushPin size={16} color={T.accent} weight="fill" />
+        <Text style={[styles.pinnedTitle, { color: T.textBright }]}>Pinned messages</Text>
       </View>
-    </Modal>
+      {loading ? (
+        <View style={styles.pinnedLoading}>
+          <ActivityIndicator size="small" color={T.accent} />
+        </View>
+      ) : pinned.length === 0 ? (
+        <Text style={[styles.pinnedEmpty, { color: T.textDim }]}>No pinned messages</Text>
+      ) : (
+        <ScrollView style={styles.pinnedList}>
+          {pinned.map((msg) => {
+            const { display } = parseMentions(msg.content);
+            return (
+              <View key={msg.id} style={[styles.pinnedRow, { borderTopColor: T.border }]}>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.pinnedRowHeader}>
+                    <Text style={[styles.pinnedSender, { color: T.textBright }]} numberOfLines={1}>
+                      {msg.senderName}
+                    </Text>
+                    <Text style={[styles.pinnedTime, { color: T.textDim }]}>{msg.timeLabel}</Text>
+                  </View>
+                  <Text style={[styles.pinnedContent, { color: T.text }]} numberOfLines={2}>
+                    {display}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => onUnpin(msg.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <PushPinSlash size={16} color={T.textDim} weight="duotone" />
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -1117,6 +1159,7 @@ function MessageRow({
   onLongPress,
   onPressFailed,
   onPressThread,
+  onPressReplyContext,
   onToggleReaction,
   onDetailsToggled,
   senderPresence,
@@ -1135,12 +1178,38 @@ function MessageRow({
   onLongPress: () => void;
   onPressFailed: () => void;
   onPressThread: () => void;
+  onPressReplyContext: () => void;
   onToggleReaction: (emoji: string) => void;
   onDetailsToggled?: (heightDelta: number) => void;
   senderPresence?: string | null;
 }) {
   const { display } = useMemo(() => parseMentions(message.content), [message.content]);
+  // The quoted preview is a raw slice of the original's canonical markdown, so
+  // it still carries mention syntax; an attachment-only original slices to "".
+  const replyPreview = useMemo(() => {
+    const preview = message.replyContext?.contentPreview;
+    if (!preview) return "Attachment";
+    const display = parseMentions(preview).display;
+    // Measured on the raw slice: collapsing a mention shortens the display, so
+    // the display length would under-report a preview that really was cut.
+    return preview.length >= REPLY_PREVIEW_MAX_CHARS ? `${display}...` : display;
+  }, [message.replyContext?.contentPreview]);
+  const [replyExpanded, setReplyExpanded] = useState(false);
+  const replyBodyHeightRef = useRef(0);
   const isAgent = message.senderType === "AGENT";
+
+  // Inverted list: the row grows from its top edge, so hand the height change to
+  // the screen and let it hold the viewport still.
+  const toggleReplyExpanded = useCallback(() => {
+    setReplyExpanded((open) => {
+      if (open) {
+        const height = replyBodyHeightRef.current;
+        replyBodyHeightRef.current = 0;
+        if (height > 0) onDetailsToggled?.(-(height + REPLY_BODY_GAP));
+      }
+      return !open;
+    });
+  }, [onDetailsToggled]);
   const senderName = (isAgent && agentName) || message.senderName;
   const isSystem = message.senderType === "SYSTEM";
   const failed = message.metadata?.failed === "1";
@@ -1155,7 +1224,11 @@ function MessageRow({
   return (
     <Pressable
       onLongPress={pending || failed ? undefined : onLongPress}
-      onPress={failed ? onPressFailed : undefined}
+      // A row covers the full width, and keyboardShouldPersistTaps="handled"
+      // treats a tap it catches as handled - so without this the keyboard only
+      // closes on the gaps between messages, and a wall of agent replies leaves
+      // no gap to hit.
+      onPress={failed ? onPressFailed : () => Keyboard.dismiss()}
       delayLongPress={250}
       style={[styles.msgRow, !showHeader && styles.msgRowGrouped]}
     >
@@ -1188,13 +1261,58 @@ function MessageRow({
           </View>
         ) : null}
         {!hideReplyContext && message.replyContext ? (
-          <View style={[styles.replyContext, { borderLeftColor: T.border }]}>
-            <Text style={[styles.replyContextName, { color: T.textDim }]} numberOfLines={1}>
-              {message.replyContext.senderName}
-            </Text>
-            <Text style={[styles.replyContextText, { color: T.textDim }]} numberOfLines={1}>
-              {message.replyContext.contentPreview}
-            </Text>
+          <View
+            style={[
+              styles.replyContext,
+              replyExpanded && styles.replyContextOpen,
+              { backgroundColor: T.surfaceHover },
+            ]}
+          >
+            <View style={styles.replyContextHead}>
+              <TouchableOpacity
+                style={styles.replyContextJump}
+                onPress={onPressReplyContext}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Go to the message from ${message.replyContext.senderName}`}
+              >
+                <Avatar name={message.replyContext.senderName} size={18} circle />
+                <Text style={[styles.replyContextName, { color: T.textBright }]} numberOfLines={1}>
+                  {message.replyContext.senderName}
+                </Text>
+                {replyExpanded ? null : (
+                  <Text style={[styles.replyContextText, { color: T.textDim }]} numberOfLines={1}>
+                    {replyPreview}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={toggleReplyExpanded}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={replyExpanded ? "Collapse quoted message" : "Read it here"}
+              >
+                {replyExpanded ? (
+                  <CaretUp size={12} color={T.textDim} weight="bold" />
+                ) : (
+                  <CaretDown size={12} color={T.textDim} weight="bold" />
+                )}
+              </TouchableOpacity>
+            </View>
+            {replyExpanded ? (
+              <Text
+                style={[styles.replyContextBody, { color: T.textDim }]}
+                onLayout={(e) => {
+                  const height = e.nativeEvent.layout.height;
+                  if (replyBodyHeightRef.current === 0 && height > 0) {
+                    onDetailsToggled?.(height + REPLY_BODY_GAP);
+                  }
+                  replyBodyHeightRef.current = height;
+                }}
+              >
+                {replyPreview}
+              </Text>
+            ) : null}
           </View>
         ) : null}
         {isAgent && !agentSpecial && thinking && thinking.length > 0 ? (
@@ -1310,78 +1428,74 @@ function MessageActionSheet({
 }) {
   const canEdit = isOwn && message?.senderType === "USER";
   return (
-    <Modal visible={!!message} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.surface }]}>
-        <View style={[styles.handle, { backgroundColor: T.border }]} />
-        <View style={styles.emojiRow}>
-          {QUICK_EMOJIS.map((emoji) => (
-            <TouchableOpacity
-              key={emoji}
-              style={[styles.emojiBtn, { backgroundColor: T.bg }]}
-              onPress={() => onReact(emoji)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.emojiText}>{emoji}</Text>
-            </TouchableOpacity>
-          ))}
+    <BottomSheet visible={!!message} onClose={onClose}>
+      <View style={styles.emojiRow}>
+        {QUICK_EMOJIS.map((emoji) => (
           <TouchableOpacity
+            key={emoji}
             style={[styles.emojiBtn, { backgroundColor: T.bg }]}
-            onPress={onMoreEmojis}
+            onPress={() => onReact(emoji)}
             activeOpacity={0.7}
           >
-            <Smiley size={22} color={T.textDim} weight="regular" />
+            <Text style={styles.emojiText}>{emoji}</Text>
           </TouchableOpacity>
-        </View>
-        <SheetAction
-          T={T}
-          onPress={onReply}
-          icon={<ArrowBendUpLeft size={18} color={T.text} weight="duotone" />}
-          label="Reply"
-        />
-        <SheetAction
-          T={T}
-          onPress={onThread}
-          icon={<ChatText size={18} color={T.text} weight="duotone" />}
-          label={message?.replyCount ? "Open thread" : "Reply in thread"}
-        />
-        <SheetAction
-          T={T}
-          onPress={onPin}
-          icon={
-            message?.isPinned ? (
-              <PushPinSlash size={18} color={T.text} weight="duotone" />
-            ) : (
-              <PushPin size={18} color={T.text} weight="duotone" />
-            )
-          }
-          label={message?.isPinned ? "Unpin message" : "Pin message"}
-        />
-        {canEdit ? (
-          <SheetAction
-            T={T}
-            onPress={onEdit}
-            icon={<PencilSimple size={18} color={T.text} weight="duotone" />}
-            label="Edit message"
-          />
-        ) : null}
-        <SheetAction
-          T={T}
-          onPress={onCopy}
-          icon={<Copy size={18} color={T.text} weight="duotone" />}
-          label="Copy text"
-        />
-        {isOwn ? (
-          <SheetAction
-            T={T}
-            onPress={onDelete}
-            icon={<Trash size={18} color="#FA5252" weight="duotone" />}
-            label="Delete message"
-            danger
-          />
-        ) : null}
+        ))}
+        <TouchableOpacity
+          style={[styles.emojiBtn, { backgroundColor: T.bg }]}
+          onPress={onMoreEmojis}
+          activeOpacity={0.7}
+        >
+          <Smiley size={22} color={T.textDim} weight="regular" />
+        </TouchableOpacity>
       </View>
-    </Modal>
+      <SheetAction
+        T={T}
+        onPress={onReply}
+        icon={<ArrowBendUpLeft size={18} color={T.text} weight="duotone" />}
+        label="Reply"
+      />
+      <SheetAction
+        T={T}
+        onPress={onThread}
+        icon={<ChatText size={18} color={T.text} weight="duotone" />}
+        label={message?.replyCount ? "Open thread" : "Reply in thread"}
+      />
+      <SheetAction
+        T={T}
+        onPress={onPin}
+        icon={
+          message?.isPinned ? (
+            <PushPinSlash size={18} color={T.text} weight="duotone" />
+          ) : (
+            <PushPin size={18} color={T.text} weight="duotone" />
+          )
+        }
+        label={message?.isPinned ? "Unpin message" : "Pin message"}
+      />
+      {canEdit ? (
+        <SheetAction
+          T={T}
+          onPress={onEdit}
+          icon={<PencilSimple size={18} color={T.text} weight="duotone" />}
+          label="Edit message"
+        />
+      ) : null}
+      <SheetAction
+        T={T}
+        onPress={onCopy}
+        icon={<Copy size={18} color={T.text} weight="duotone" />}
+        label="Copy text"
+      />
+      {isOwn ? (
+        <SheetAction
+          T={T}
+          onPress={onDelete}
+          icon={<Trash size={18} color="#FA5252" weight="duotone" />}
+          label="Delete message"
+          danger
+        />
+      ) : null}
+    </BottomSheet>
   );
 }
 
@@ -1454,13 +1568,28 @@ const styles = StyleSheet.create({
   },
   unreadLabel: { fontSize: 12, fontFamily: FONT.semibold },
   replyContext: {
-    borderLeftWidth: 2,
-    paddingLeft: 8,
-    paddingVertical: 1,
-    marginBottom: 2,
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    borderRadius: 13,
+    paddingLeft: 4,
+    paddingRight: 10,
+    paddingVertical: 4,
+    marginBottom: 4,
   },
-  replyContextName: { fontSize: 12, fontFamily: FONT.semibold },
-  replyContextText: { fontSize: 12, fontFamily: FONT.regular },
+  // Squarer and roomier once it holds a wrapped paragraph - a tall pill reads
+  // as a mistake.
+  replyContextOpen: { borderRadius: 12, paddingRight: 12, paddingBottom: 8 },
+  replyContextHead: { flexDirection: "row", alignItems: "center", gap: 7 },
+  replyContextJump: { flexDirection: "row", alignItems: "center", gap: 7, flexShrink: 1 },
+  replyContextName: { fontSize: 12, lineHeight: 16, fontFamily: FONT.semibold, flexShrink: 0 },
+  replyContextText: { fontSize: 12, lineHeight: 16, fontFamily: FONT.regular, flexShrink: 1 },
+  replyContextBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: FONT.regular,
+    marginTop: REPLY_BODY_GAP,
+    marginLeft: 4,
+  },
   reactionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
   reactionChip: {
     flexDirection: "row",
@@ -1485,19 +1614,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stopText: { fontSize: 13, fontFamily: FONT.semibold },
-  modelChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    marginLeft: 14,
-    marginTop: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  modelChipText: { fontSize: 11, fontFamily: FONT.semibold, maxWidth: 220 },
   liveCallAction: { flexDirection: "row", alignItems: "center", gap: 3 },
   liveCallCount: { fontSize: 12, fontFamily: FONT.semibold },
   banner: {
@@ -1550,16 +1666,6 @@ const styles = StyleSheet.create({
   bannerAccent: { width: 3, alignSelf: "stretch", borderRadius: 2 },
   bannerLabel: { fontSize: 12, fontFamily: FONT.semibold },
   bannerText: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32 },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
   emojiRow: {
     flexDirection: "row",
     justifyContent: "space-around",

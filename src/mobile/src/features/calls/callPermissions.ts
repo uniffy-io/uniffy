@@ -5,6 +5,8 @@ export interface CallPermissionResult {
   cameraGranted: boolean;
 }
 
+const ANDROID_NOTIFICATION_PERMISSION_SDK = 33;
+
 // iOS prompts natively from getUserMedia inside the WebRTC stack; Android
 // requires an explicit runtime request before capture starts.
 export async function ensureCallPermissions(request: {
@@ -17,6 +19,13 @@ export async function ensureCallPermissions(request: {
   const wanted: Permission[] = [];
   if (request.mic) wanted.push(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
   if (request.camera) wanted.push(PermissionsAndroid.PERMISSIONS.CAMERA);
+  // Asked for on every join, not only when capturing: the call's foreground
+  // service posts an ongoing notification, and Android 13 suppresses it without
+  // this grant - leaving the app holding the microphone with nothing on screen
+  // to say so and no way back into the call.
+  if (Number(Platform.Version) >= ANDROID_NOTIFICATION_PERMISSION_SDK) {
+    wanted.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  }
   if (wanted.length === 0) return { micGranted: true, cameraGranted: true };
   try {
     const results = await PermissionsAndroid.requestMultiple(wanted);
