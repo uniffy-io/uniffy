@@ -30,8 +30,8 @@ RUN playwright-mcp install-browser chrome-for-testing \
 
 EXPOSE 8931
 
-# ``--isolated`` keeps every browsing session in a fresh profile, so
-# auth state from one Claude Code conversation never bleeds into
-# the next.
+# ``--isolated`` keeps every browsing session in a fresh profile, so auth
+# state from one agent session never bleeds into another. Compose overrides
+# this default with separate persistent profiles for its two services.
 ENTRYPOINT ["playwright-mcp"]
 CMD ["--port", "8931", "--host", "0.0.0.0", "--browser", "chromium", "--headless", "--isolated"]

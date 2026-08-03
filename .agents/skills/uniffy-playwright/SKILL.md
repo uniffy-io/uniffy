@@ -1,28 +1,27 @@
 ---
 name: uniffy-playwright
 description: |
-  Use the project MCP infrastructure to inspect the running app from inside Claude Code. Covers the Playwright MCP server (`uniffy-mcp-playwright` container) for headless-browser automation against the dev UI - navigate, snapshot, evaluate JS, capture console + network, and debug runtime state without leaving the conversation.
+  Use the project MCP infrastructure to inspect the running app from a coding agent. Covers the Playwright MCP servers for headless-browser automation against the dev UI - navigate, snapshot, evaluate JS, capture console + network, and debug runtime state without leaving the conversation.
 
-  TRIGGER when: the user asks you to "open the app", "click around", "check the browser", "use playwright", "drive the UI", "screenshot the page", "inspect runtime state in the browser", "check the console", "verify a fix in the running app", "log in as <user> and ..."; the user offers "do you want to connect to mcp"; a bug needs in-browser reproduction and the dev stack is running; you need to read live YDoc / Redux / window state to confirm a hypothesis.
+  TRIGGER when: the user asks you to "open the app", "click around", "check the browser", "use playwright", "drive the UI", "screenshot the page", "inspect runtime state in the browser", "check the console", "verify a fix in the running app", or log in as a named user; the user offers "do you want to connect to mcp"; a bug needs in-browser reproduction and the dev stack is running; you need to read live YDoc / Redux / window state to confirm a hypothesis.
 
   SKIP when: the user is asking about MCP / Playwright in general (not the project's setup); the task is pure backend, code-only, or covered by reading tests/logs; the dev stack is not running and the user hasn't asked you to start it.
-user_invocable: true
 ---
 
 # Uniffy MCP Infrastructure
 
-The project ships a Playwright MCP server inside docker so Claude Code can drive a real Chrome against the dev UI. This skill is the operating manual.
+The project ships Playwright MCP servers inside docker so supported coding agents can drive real Chrome sessions against the dev UI. This skill is the operating manual.
 
 ## What runs
 
 Two identical Playwright MCP containers - the second exists purely to give multi-user tests a **separate browser** (isolated cookie jar + `localStorage`):
 
-| Container | MCP tool prefix | Host port | Purpose |
+| Container | MCP server | Host port | Purpose |
 |---|---|---|---|
-| `uniffy-mcp-playwright` | `mcp__playwright__*` | `8931` (SSE) | Primary browser. Default for single-user work. |
-| `uniffy-mcp-playwright-b` | `mcp__playwright-b__*` | `8932` (SSE) | Second, fully isolated browser. Use as the **second user** in cross-session tests. |
+| `uniffy-mcp-playwright` | `playwright` | `8931` | Primary browser. Default for single-user work. |
+| `uniffy-mcp-playwright-b` | `playwright-b` | `8932` | Second, fully isolated browser. Use as the **second user** in cross-session tests. |
 
-Both run the same baked image `uniffy-mcp-playwright` (`.docker/dev/mcp-playwright.Dockerfile`); the `-b` container just maps host `8932` to the in-container MCP port `8931`. Connection wiring in `.mcp.json` at the repo root:
+Both run the same baked image `uniffy-mcp-playwright` (`.docker/dev/mcp-playwright.Dockerfile`), with separate ports and persistent profile volumes. Claude Code uses the SSE endpoints from `.mcp.json`:
 
 ```json
 { "mcpServers": {
@@ -31,13 +30,23 @@ Both run the same baked image `uniffy-mcp-playwright` (`.docker/dev/mcp-playwrig
 } }
 ```
 
-Both start under the `dev` profile (`docker compose --profile dev up` / `./manage.py stack up`). Compose config: `.docker/compose/dev-tools.yaml`. The image bakes `@playwright/mcp` + `chrome-for-testing` + `chromium-headless-shell` so the first request after a cold start does not stall on a 100MB+ download. Each container launches with `--isolated`, so a fresh profile per session.
+Codex uses the Streamable HTTP endpoints from `.codex/config.toml`:
 
-**After adding/starting a server, Claude Code must reconnect MCP for its tools to appear** (`/mcp` reconnect or restart the session); `mcp__playwright-b__*` is invisible until then.
+```toml
+[mcp_servers.playwright]
+url = "http://localhost:8931/mcp"
+
+[mcp_servers.playwright-b]
+url = "http://localhost:8932/mcp"
+```
+
+Both start under the `dev` profile (`docker compose --profile dev up` / `./manage.py stack up`). Compose config: `.docker/compose/dev-tools.yaml`. The image bakes `@playwright/mcp` + `chrome-for-testing` + `chromium-headless-shell` so the first request after a cold start does not stall on a 100MB+ download. Separate `pw-profile-a` and `pw-profile-b` volumes keep the two browser identities isolated and persistent across container restarts.
+
+After adding or starting a server, refresh MCP connections with `/mcp` when the host supports it, or restart the agent session. Tool namespace prefixes are host-generated; select tools from the `playwright` or `playwright-b` server by their `browser_*` names.
 
 ## Reaching the dev UI
 
-The browser runs inside the docker network. Localhost from Claude's perspective is **not** localhost from the container's perspective. Use the docker-internal hostname:
+The browser runs inside the docker network. Its localhost is **not** the development host's localhost. Use the docker-internal hostname:
 
 - Frontend: `http://host.docker.internal:5173`
 - Backend API: `http://host.docker.internal:8000`
@@ -69,10 +78,10 @@ For anything that needs two users at once - sharing, permission grants, live cro
 
 ### Preferred: two containers (one user per browser)
 
-- **User A → `mcp__playwright__*`** (port 8931). **User B → `mcp__playwright-b__*`** (port 8932).
+- **User A -> `playwright` server** (port 8931). **User B -> `playwright-b` server** (port 8932).
 - Log each user in once in its own browser via the login recipe below. No tab juggling, no identity-swap trap - you may `browser_navigate` / reload freely in either browser.
 - Both browsers hit the same dev UI (`http://host.docker.internal:5173`) and each opens its own notification stream, so a server push fired by A's action arrives in B's browser independently.
-- If `mcp__playwright-b__*` is missing, the `-b` container isn't up or MCP hasn't reconnected - see "Operating the containers".
+- If the `playwright-b` tools are missing, the `-b` container is not up or MCP has not reconnected - see "Operating the containers".
 
 ### Fallback: two tabs in one browser (only if the 2nd container is unavailable)
 
@@ -157,7 +166,7 @@ Both services live in `.docker/compose/dev-tools.yaml`; add `mcp-playwright-b` t
 | Restart (after image rebuild) | `docker compose restart mcp-playwright mcp-playwright-b` |
 | Tear down | `docker compose --profile dev down mcp-playwright mcp-playwright-b` |
 
-After editing the Dockerfile, rebuild and restart - running containers keep the old image until then. **After starting/adding a server, reconnect MCP in Claude Code** (`/mcp`) or the `mcp__playwright-b__*` tools won't be visible.
+After editing the Dockerfile, rebuild and restart - running containers keep the old image until then. After starting or adding a server, reconnect MCP with `/mcp` or restart the agent session so the `playwright-b` tools become visible.
 
 ## Selector gotchas
 

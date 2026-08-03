@@ -1,10 +1,10 @@
 # Developer tooling - Playwright MCP server.
-# Comes up with the dev stack (profile: dev) so Claude Code has it ready.
+# Comes up with the dev stack (profile: dev) for supported coding agents.
 
 services:
-  # Playwright MCP server. Drives a headless chromium inside the container,
-  # reachable from Claude Code via SSE at http://localhost:8931/sse. The
-  # container reaches host-side dev stack via host.docker.internal.
+  # Playwright MCP server. Drives a headless Chromium inside the container.
+  # Claude Code connects through /sse; Codex connects through /mcp. The
+  # container reaches the host-side dev stack via host.docker.internal.
   #
   # Custom image (see .docker/dev/mcp-playwright.Dockerfile) bakes the MCP
   # server + chrome-for-testing browser so the first request after a fresh

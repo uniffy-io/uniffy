@@ -295,9 +295,6 @@ tool cards. The roadmap:
 | Search indexing of agent messages | Phase 2 polish |
 | Long-conversation compaction for channel DMs | Phase 2 polish |
 
-Check `.claude/plans/backlogs/agents-in-chat-integration-backlog.md` for a
-live phase tracker.
-
 ---
 
 ## Troubleshooting
@@ -317,5 +314,3 @@ live phase tracker.
 
 - **Sharing** — how access modes and explicit members work → `docs/documentation/SHARING.md`
 - **Searching** — universal `@` mentions and search filters → `docs/documentation/SEARCHING.md`
-- **Phase plan** — full technical spec → `.claude/plans/agents-in-chat-integration.md`
-- **Manual test plan** — end-to-end test scenarios → `.claude/plans/agents-in-chat-manual-test.md`

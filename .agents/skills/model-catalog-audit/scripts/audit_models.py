@@ -17,7 +17,7 @@ there stay a manual research step (see SKILL.md). Read-only: it never edits
 the catalog.
 
 Run from the repo root via the stack-aware passthrough (add --stack local for a
-host venv):  ./manage.py deps run -s backend run python .claude/skills/model-catalog-audit/scripts/audit_models.py
+host venv):  ./manage.py deps run -s backend run python .agents/skills/model-catalog-audit/scripts/audit_models.py
 """
 
 from __future__ import annotations

@@ -1,12 +1,11 @@
 ---
 name: plan-feature
-description: Create a comprehensive feature plan with deep codebase analysis; output goes to .claude/plans/
-argument-hint: [feature description]
+description: Create a comprehensive Uniffy feature plan in `.agents/plans/` through deep codebase analysis, applicable rules, verified patterns, risks, tests, and executable validation steps. Use when the user asks to plan a feature or prepare implementation work without writing product code.
 ---
 
 # Plan a Feature
 
-Feature: $ARGUMENTS
+Treat the feature description supplied with the request as the planning input. Resolve only ambiguities that materially change the architecture or scope.
 
 Produce an implementation plan good enough for one-pass execution by an agent with no prior context. No code is written in this phase. The plan carries everything: patterns to mirror, files to read, gotchas, validation commands.
 
@@ -20,22 +19,22 @@ Produce an implementation plan good enough for one-pass execution by an agent wi
 
 Read the relevant rules first - they are the source of truth for their areas:
 
-- `.claude/rules/architecture.md` - stack, vertical slices, URNs, Search Integration Checklist
-- `.claude/rules/permissions.md` - access model (`access_mode` + `baseline_role`, `effective_role`, no admin bypass)
-- `.claude/rules/backend.md` / `frontend.md` - conventions for whichever side the feature touches
+- `.agents/rules/architecture.md` - stack, vertical slices, URNs, Search Integration Checklist
+- `.agents/rules/permissions.md` - access model (`access_mode` + `baseline_role`, `effective_role`, no admin bypass)
+- `.agents/rules/backend.md` / `frontend.md` - conventions for whichever side the feature touches
 - The matching domain rule (`chat-domain.md`, `files-domain.md`, `calls-domain.md`, `agents.md`, `notes-realtime.md`, `mentions.md`) when the feature lands in or near one
 
-Then map the territory (use the codebase-memory MCP tools and parallel Explore subagents for breadth):
+Then map the territory with repository search and any available code-intelligence tools. Delegate bounded read-only exploration only when the user or active instructions explicitly allow it.
 
 - Find the most similar existing domain/feature and extract its vertical slice: proto -> model -> operations -> handlers -> service -> frontend api/store/components/pages.
 - Identify integration points: `factory.py` mounts, `App.tsx` routes, `store.ts` reducers, proto files.
 - Content types: does this need a URN, search indexing, permission rows? The Search Integration Checklist in `architecture.md` lists every file a new content type touches.
 - Background work: check ARQ worker patterns if processing is needed.
-- Check `.claude/plans/` for related prior plans and `.claude/plans/backlogs/` for in-flight work that overlaps.
+- Check `.agents/plans/` for related prior plans and `.agents/plans/backlogs/` for in-flight work that overlaps.
 
 ## 3. External research (when the feature pulls in new tech)
 
-Fetch official docs for any new library (with section anchors), note version constraints, known gotchas, and how existing dependencies already integrate. Respect the supply-chain policy (`CLAUDE.md`): no CDN-fetching deps, `minimumReleaseAge` applies.
+Fetch official docs for any new library (with section anchors), note version constraints, known gotchas, and how existing dependencies already integrate. Respect the supply-chain policy in `AGENTS.md`: no CDN-fetching dependencies, and `minimumReleaseAge` applies.
 
 ## 4. Think through the design
 
@@ -43,7 +42,7 @@ Edge cases, race conditions, failure modes, performance (hot path? -> cache + in
 
 ## 5. Write the plan
 
-**Output:** `.claude/plans/{kebab-case-name}.md`. If the plan has 3+ phases or high complexity, also create `.claude/plans/backlogs/{name}-backlog.md` (convention in AGENTS.md).
+**Output:** `.agents/plans/{kebab-case-name}.md`. If the plan has 3+ phases or high complexity, also create `.agents/plans/backlogs/{name}-backlog.md` (convention in AGENTS.md).
 
 Plan structure:
 
@@ -54,7 +53,7 @@ Plan structure:
 
 ## Context References
 - Files to READ before implementing (path + line range + why)
-- Rules that apply (list the specific .claude/rules/ files)
+- Rules that apply (list the specific .agents/rules/ files)
 - New files to create (path + purpose)
 - External docs (URL + section + why)
 

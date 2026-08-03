@@ -35,7 +35,7 @@ Adding a new domain:
 
 - **Async everywhere.** Database I/O goes through `AsyncSession`; the rest of the stack composes around it.
 - **`BaseContentOperations`** (`core/content/base_operations.py`): extending it for content gets permission checking and search indexing for free.
-- **Permission checks live inside domain operations.** The full model is in `.claude/rules/permissions.md` - the single source of truth; do not re-explain it.
+- **Permission checks live inside domain operations.** The full model is in `.agents/rules/permissions.md` - the single source of truth; do not re-explain it.
 - **Multi-tenancy:** all content scoped to `organization_id`; users are global, memberships org-scoped. Verifying org access is part of every domain operation's contract.
 - **Raise domain errors (`core/errors.py`), never leak exception text to clients.** `observability/crpc.py::DOMAIN_ERROR_CODES` maps every `UNIFFYError` subclass to its Connect code for ALL unary RPCs, so a handler without local mapping still returns the right code. Handlers may map locally for precision, but an `except Exception` block must respond with the literal `"Internal server error"` - `str(e)` in a client-facing message is a leak (the `logger.exception` line keeps the details server-side).
 - **Imports at the top.** The one exception is the circular-import case in agent tool executors.
@@ -176,11 +176,11 @@ JWT access/refresh pattern; users authenticate globally, then select an org cont
 - Access token carries `user_id`, `org_id`, `token_version`; refresh token has no org context.
 - `User.token_version` revokes: incrementing it invalidates all existing tokens; validated on every refresh.
 - Key files: `domains/auth/operations.py`, `domains/auth/tokens.py`, `core/models/login/user.py`.
-- The asset-read cookie (GET asset reads for `<img>`/`<video>`/`<audio>`) is owned by `.claude/rules/files-domain.md` - do not add cookie handling elsewhere.
+- The asset-read cookie (GET asset reads for `<img>`/`<video>`/`<audio>`) is owned by `.agents/rules/files-domain.md` - do not add cookie handling elsewhere.
 
 ## HTTP routes vs ConnectRPC
 
-Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/http_routes.py`, mounted in `factory.py` under `/api`) exist for GET asset reads that need browser caching or Range requests: files, thumbnails, media, avatars. Identity comes from `get_current_user_id` (`domains/auth/http_deps.py`), which accepts Bearer OR the asset cookie; permission gating stays in the route handler via the domain operations. Media seeking is a native HTTP Range route - do NOT reintroduce a ConnectRPC media stream. Full contract: `.claude/rules/files-domain.md`.
+Default is ConnectRPC. Plain FastAPI HTTP routes (`domains/{feature}/http_routes.py`, mounted in `factory.py` under `/api`) exist for GET asset reads that need browser caching or Range requests: files, thumbnails, media, avatars. Identity comes from `get_current_user_id` (`domains/auth/http_deps.py`), which accepts Bearer OR the asset cookie; permission gating stays in the route handler via the domain operations. Media seeking is a native HTTP Range route - do NOT reintroduce a ConnectRPC media stream. Full contract: `.agents/rules/files-domain.md`.
 
 ## Attachments (sub-feature of files)
 
@@ -198,4 +198,4 @@ Attachments link a file to content via a generic `(content_type, content_id)` ro
 
 - **Bookmarks** (`domains/bookmarks/`, `bookmarks` table, unique `(user_id, urn)`): no `is_pinned` / `is_starred` / `is_favorite` fields on content models.
 - **Keyboard shortcuts**: backend is the source of truth - `domains/settings/defaults.py::DEFAULT_KEYBOARD_SHORTCUTS`.
-- **Search indexing**: through `BaseContentOperations._index_for_search`; mention live-state contract in `.claude/rules/mentions.md`.
+- **Search indexing**: through `BaseContentOperations._index_for_search`; mention live-state contract in `.agents/rules/mentions.md`.
