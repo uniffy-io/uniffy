@@ -44,6 +44,7 @@ const (
 	ContentType_CONTENT_TYPE_AGENT_CHAT      ContentType = 14
 	ContentType_CONTENT_TYPE_TAG             ContentType = 15
 	ContentType_CONTENT_TYPE_AGENT_FOLDER    ContentType = 16
+	ContentType_CONTENT_TYPE_TEAM            ContentType = 17
 )
 
 // Enum value maps for ContentType.
@@ -66,6 +67,7 @@ var (
 		14: "CONTENT_TYPE_AGENT_CHAT",
 		15: "CONTENT_TYPE_TAG",
 		16: "CONTENT_TYPE_AGENT_FOLDER",
+		17: "CONTENT_TYPE_TEAM",
 	}
 	ContentType_value = map[string]int32{
 		"CONTENT_TYPE_UNSPECIFIED":     0,
@@ -85,6 +87,7 @@ var (
 		"CONTENT_TYPE_AGENT_CHAT":      14,
 		"CONTENT_TYPE_TAG":             15,
 		"CONTENT_TYPE_AGENT_FOLDER":    16,
+		"CONTENT_TYPE_TEAM":            17,
 	}
 )
 
@@ -457,6 +460,57 @@ func (GroupRole) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_common_proto_rawDescGZIP(), []int{6}
 }
 
+// TEAM = org-structure unit (org chart, lead, parent); ACCESS = permission
+// bundle. Both are ContentMember subjects.
+type GroupKind int32
+
+const (
+	GroupKind_GROUP_KIND_UNSPECIFIED GroupKind = 0
+	GroupKind_GROUP_KIND_TEAM        GroupKind = 1
+	GroupKind_GROUP_KIND_ACCESS      GroupKind = 2
+)
+
+// Enum value maps for GroupKind.
+var (
+	GroupKind_name = map[int32]string{
+		0: "GROUP_KIND_UNSPECIFIED",
+		1: "GROUP_KIND_TEAM",
+		2: "GROUP_KIND_ACCESS",
+	}
+	GroupKind_value = map[string]int32{
+		"GROUP_KIND_UNSPECIFIED": 0,
+		"GROUP_KIND_TEAM":        1,
+		"GROUP_KIND_ACCESS":      2,
+	}
+)
+
+func (x GroupKind) Enum() *GroupKind {
+	p := new(GroupKind)
+	*p = x
+	return p
+}
+
+func (x GroupKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GroupKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_common_proto_enumTypes[7].Descriptor()
+}
+
+func (GroupKind) Type() protoreflect.EnumType {
+	return &file_common_v1_common_proto_enumTypes[7]
+}
+
+func (x GroupKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GroupKind.Descriptor instead.
+func (GroupKind) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_common_proto_rawDescGZIP(), []int{7}
+}
+
 // DomainType defines application domains that support domain-level admins.
 type DomainType int32
 
@@ -503,11 +557,11 @@ func (x DomainType) String() string {
 }
 
 func (DomainType) Descriptor() protoreflect.EnumDescriptor {
-	return file_common_v1_common_proto_enumTypes[7].Descriptor()
+	return file_common_v1_common_proto_enumTypes[8].Descriptor()
 }
 
 func (DomainType) Type() protoreflect.EnumType {
-	return &file_common_v1_common_proto_enumTypes[7]
+	return &file_common_v1_common_proto_enumTypes[8]
 }
 
 func (x DomainType) Number() protoreflect.EnumNumber {
@@ -516,7 +570,7 @@ func (x DomainType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DomainType.Descriptor instead.
 func (DomainType) EnumDescriptor() ([]byte, []int) {
-	return file_common_v1_common_proto_rawDescGZIP(), []int{7}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{8}
 }
 
 // RateLimitKind identifies which bucket a rate-limit override applies
@@ -565,11 +619,11 @@ func (x RateLimitKind) String() string {
 }
 
 func (RateLimitKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_common_v1_common_proto_enumTypes[8].Descriptor()
+	return file_common_v1_common_proto_enumTypes[9].Descriptor()
 }
 
 func (RateLimitKind) Type() protoreflect.EnumType {
-	return &file_common_v1_common_proto_enumTypes[8]
+	return &file_common_v1_common_proto_enumTypes[9]
 }
 
 func (x RateLimitKind) Number() protoreflect.EnumNumber {
@@ -578,7 +632,7 @@ func (x RateLimitKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RateLimitKind.Descriptor instead.
 func (RateLimitKind) EnumDescriptor() ([]byte, []int) {
-	return file_common_v1_common_proto_rawDescGZIP(), []int{8}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{9}
 }
 
 // UserInfo represents basic user information.
@@ -768,10 +822,12 @@ type GroupInfo struct {
 	Slug           string                 `protobuf:"bytes,4,opt,name=slug,proto3" json:"slug,omitempty"`
 	Description    *string                `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	IsPrivate      bool                   `protobuf:"varint,6,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"`
-	IsDefault      bool                   `protobuf:"varint,7,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
 	MemberCount    int32                  `protobuf:"varint,8,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Kind           GroupKind              `protobuf:"varint,11,opt,name=kind,proto3,enum=common.v1.GroupKind" json:"kind,omitempty"`
+	ParentGroupId  *string                `protobuf:"bytes,12,opt,name=parent_group_id,json=parentGroupId,proto3,oneof" json:"parent_group_id,omitempty"`
+	LeadUserId     *string                `protobuf:"bytes,13,opt,name=lead_user_id,json=leadUserId,proto3,oneof" json:"lead_user_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -848,13 +904,6 @@ func (x *GroupInfo) GetIsPrivate() bool {
 	return false
 }
 
-func (x *GroupInfo) GetIsDefault() bool {
-	if x != nil {
-		return x.IsDefault
-	}
-	return false
-}
-
 func (x *GroupInfo) GetMemberCount() int32 {
 	if x != nil {
 		return x.MemberCount
@@ -874,6 +923,27 @@ func (x *GroupInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *GroupInfo) GetKind() GroupKind {
+	if x != nil {
+		return x.Kind
+	}
+	return GroupKind_GROUP_KIND_UNSPECIFIED
+}
+
+func (x *GroupInfo) GetParentGroupId() string {
+	if x != nil && x.ParentGroupId != nil {
+		return *x.ParentGroupId
+	}
+	return ""
+}
+
+func (x *GroupInfo) GetLeadUserId() string {
+	if x != nil && x.LeadUserId != nil {
+		return *x.LeadUserId
+	}
+	return ""
 }
 
 // MemberInfo represents a user's membership in an organization.
@@ -1314,7 +1384,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\v\n" +
-	"\t_logo_url\"\xfa\x02\n" +
+	"\t_logo_url\"\xfe\x03\n" +
 	"\tGroupInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x12\n" +
@@ -1322,16 +1392,20 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x04slug\x18\x04 \x01(\tR\x04slug\x12%\n" +
 	"\vdescription\x18\x05 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"is_private\x18\x06 \x01(\bR\tisPrivate\x12\x1d\n" +
-	"\n" +
-	"is_default\x18\a \x01(\bR\tisDefault\x12!\n" +
+	"is_private\x18\x06 \x01(\bR\tisPrivate\x12!\n" +
 	"\fmember_count\x18\b \x01(\x05R\vmemberCount\x129\n" +
 	"\n" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
-	"\f_description\"\xb7\x02\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
+	"\x04kind\x18\v \x01(\x0e2\x14.common.v1.GroupKindR\x04kind\x12+\n" +
+	"\x0fparent_group_id\x18\f \x01(\tH\x01R\rparentGroupId\x88\x01\x01\x12%\n" +
+	"\flead_user_id\x18\r \x01(\tH\x02R\n" +
+	"leadUserId\x88\x01\x01B\x0e\n" +
+	"\f_descriptionB\x12\n" +
+	"\x10_parent_group_idB\x0f\n" +
+	"\r_lead_user_id\"\xb7\x02\n" +
 	"\n" +
 	"MemberInfo\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
@@ -1375,7 +1449,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\vtotal_count\x18\x03 \x01(\x05R\n" +
 	"totalCount\x12\x1f\n" +
 	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
-	"totalPages*\xd3\x03\n" +
+	"totalPages*\xea\x03\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CONTENT_TYPE_NOTE\x10\x01\x12\x15\n" +
@@ -1394,7 +1468,8 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x1cCONTENT_TYPE_AGENT_CRON_TASK\x10\r\x12\x1b\n" +
 	"\x17CONTENT_TYPE_AGENT_CHAT\x10\x0e\x12\x14\n" +
 	"\x10CONTENT_TYPE_TAG\x10\x0f\x12\x1d\n" +
-	"\x19CONTENT_TYPE_AGENT_FOLDER\x10\x10*\x91\x01\n" +
+	"\x19CONTENT_TYPE_AGENT_FOLDER\x10\x10\x12\x15\n" +
+	"\x11CONTENT_TYPE_TEAM\x10\x11*\x91\x01\n" +
 	"\vSubjectType\x12\x1c\n" +
 	"\x18SUBJECT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_TYPE_USER\x10\x01\x12\x16\n" +
@@ -1431,7 +1506,11 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\tGroupRole\x12\x1a\n" +
 	"\x16GROUP_ROLE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11GROUP_ROLE_MEMBER\x10\x01\x12\x14\n" +
-	"\x10GROUP_ROLE_ADMIN\x10\x02*\xb9\x01\n" +
+	"\x10GROUP_ROLE_ADMIN\x10\x02*S\n" +
+	"\tGroupKind\x12\x1a\n" +
+	"\x16GROUP_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fGROUP_KIND_TEAM\x10\x01\x12\x15\n" +
+	"\x11GROUP_KIND_ACCESS\x10\x02*\xb9\x01\n" +
 	"\n" +
 	"DomainType\x12\x1b\n" +
 	"\x17DOMAIN_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
@@ -1461,7 +1540,7 @@ func file_common_v1_common_proto_rawDescGZIP() []byte {
 	return file_common_v1_common_proto_rawDescData
 }
 
-var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
+var file_common_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
 var file_common_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_common_v1_common_proto_goTypes = []any{
 	(ContentType)(0),              // 0: common.v1.ContentType
@@ -1471,35 +1550,37 @@ var file_common_v1_common_proto_goTypes = []any{
 	(ContentMemberAction)(0),      // 4: common.v1.ContentMemberAction
 	(OrganizationRole)(0),         // 5: common.v1.OrganizationRole
 	(GroupRole)(0),                // 6: common.v1.GroupRole
-	(DomainType)(0),               // 7: common.v1.DomainType
-	(RateLimitKind)(0),            // 8: common.v1.RateLimitKind
-	(*UserInfo)(nil),              // 9: common.v1.UserInfo
-	(*OrganizationInfo)(nil),      // 10: common.v1.OrganizationInfo
-	(*GroupInfo)(nil),             // 11: common.v1.GroupInfo
-	(*MemberInfo)(nil),            // 12: common.v1.MemberInfo
-	(*GroupMemberInfo)(nil),       // 13: common.v1.GroupMemberInfo
-	(*DomainAdminInfo)(nil),       // 14: common.v1.DomainAdminInfo
-	(*PaginationRequest)(nil),     // 15: common.v1.PaginationRequest
-	(*PaginationResponse)(nil),    // 16: common.v1.PaginationResponse
-	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
+	(GroupKind)(0),                // 7: common.v1.GroupKind
+	(DomainType)(0),               // 8: common.v1.DomainType
+	(RateLimitKind)(0),            // 9: common.v1.RateLimitKind
+	(*UserInfo)(nil),              // 10: common.v1.UserInfo
+	(*OrganizationInfo)(nil),      // 11: common.v1.OrganizationInfo
+	(*GroupInfo)(nil),             // 12: common.v1.GroupInfo
+	(*MemberInfo)(nil),            // 13: common.v1.MemberInfo
+	(*GroupMemberInfo)(nil),       // 14: common.v1.GroupMemberInfo
+	(*DomainAdminInfo)(nil),       // 15: common.v1.DomainAdminInfo
+	(*PaginationRequest)(nil),     // 16: common.v1.PaginationRequest
+	(*PaginationResponse)(nil),    // 17: common.v1.PaginationResponse
+	(*timestamppb.Timestamp)(nil), // 18: google.protobuf.Timestamp
 }
 var file_common_v1_common_proto_depIdxs = []int32{
-	17, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
-	17, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
-	17, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	17, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	17, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	5,  // 5: common.v1.MemberInfo.role:type_name -> common.v1.OrganizationRole
-	17, // 6: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
-	6,  // 7: common.v1.GroupMemberInfo.role:type_name -> common.v1.GroupRole
-	17, // 8: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
-	7,  // 9: common.v1.DomainAdminInfo.domain:type_name -> common.v1.DomainType
-	17, // 10: common.v1.DomainAdminInfo.granted_at:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	18, // 0: common.v1.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 1: common.v1.OrganizationInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 2: common.v1.OrganizationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 3: common.v1.GroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	18, // 4: common.v1.GroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	7,  // 5: common.v1.GroupInfo.kind:type_name -> common.v1.GroupKind
+	5,  // 6: common.v1.MemberInfo.role:type_name -> common.v1.OrganizationRole
+	18, // 7: common.v1.MemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	6,  // 8: common.v1.GroupMemberInfo.role:type_name -> common.v1.GroupRole
+	18, // 9: common.v1.GroupMemberInfo.joined_at:type_name -> google.protobuf.Timestamp
+	8,  // 10: common.v1.DomainAdminInfo.domain:type_name -> common.v1.DomainType
+	18, // 11: common.v1.DomainAdminInfo.granted_at:type_name -> google.protobuf.Timestamp
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_common_v1_common_proto_init() }
@@ -1518,7 +1599,7 @@ func file_common_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_v1_common_proto_rawDesc), len(file_common_v1_common_proto_rawDesc)),
-			NumEnums:      9,
+			NumEnums:      10,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,

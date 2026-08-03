@@ -420,7 +420,9 @@ type CreateGroupRequest struct {
 	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Description    *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	IsPrivate      bool                   `protobuf:"varint,4,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"`
-	IsDefault      bool                   `protobuf:"varint,5,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"` // Auto-add new org members
+	Kind           v1.GroupKind           `protobuf:"varint,6,opt,name=kind,proto3,enum=common.v1.GroupKind" json:"kind,omitempty"`                      // UNSPECIFIED = ACCESS
+	ParentGroupId  *string                `protobuf:"bytes,7,opt,name=parent_group_id,json=parentGroupId,proto3,oneof" json:"parent_group_id,omitempty"` // TEAM only; parent must be a TEAM
+	LeadUserId     *string                `protobuf:"bytes,8,opt,name=lead_user_id,json=leadUserId,proto3,oneof" json:"lead_user_id,omitempty"`          // TEAM only
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -483,23 +485,41 @@ func (x *CreateGroupRequest) GetIsPrivate() bool {
 	return false
 }
 
-func (x *CreateGroupRequest) GetIsDefault() bool {
+func (x *CreateGroupRequest) GetKind() v1.GroupKind {
 	if x != nil {
-		return x.IsDefault
+		return x.Kind
 	}
-	return false
+	return v1.GroupKind(0)
+}
+
+func (x *CreateGroupRequest) GetParentGroupId() string {
+	if x != nil && x.ParentGroupId != nil {
+		return *x.ParentGroupId
+	}
+	return ""
+}
+
+func (x *CreateGroupRequest) GetLeadUserId() string {
+	if x != nil && x.LeadUserId != nil {
+		return *x.LeadUserId
+	}
+	return ""
 }
 
 type UpdateGroupRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	GroupId        string                 `protobuf:"bytes,2,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	Name           *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Description    *string                `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	IsPrivate      *bool                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3,oneof" json:"is_private,omitempty"`
-	IsDefault      *bool                  `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId   string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	GroupId          string                 `protobuf:"bytes,2,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	Name             *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Description      *string                `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	IsPrivate        *bool                  `protobuf:"varint,5,opt,name=is_private,json=isPrivate,proto3,oneof" json:"is_private,omitempty"`
+	Kind             *v1.GroupKind          `protobuf:"varint,7,opt,name=kind,proto3,enum=common.v1.GroupKind,oneof" json:"kind,omitempty"`
+	ParentGroupId    *string                `protobuf:"bytes,8,opt,name=parent_group_id,json=parentGroupId,proto3,oneof" json:"parent_group_id,omitempty"`
+	LeadUserId       *string                `protobuf:"bytes,9,opt,name=lead_user_id,json=leadUserId,proto3,oneof" json:"lead_user_id,omitempty"`
+	ClearParentGroup bool                   `protobuf:"varint,10,opt,name=clear_parent_group,json=clearParentGroup,proto3" json:"clear_parent_group,omitempty"`
+	ClearLead        bool                   `protobuf:"varint,11,opt,name=clear_lead,json=clearLead,proto3" json:"clear_lead,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *UpdateGroupRequest) Reset() {
@@ -567,9 +587,37 @@ func (x *UpdateGroupRequest) GetIsPrivate() bool {
 	return false
 }
 
-func (x *UpdateGroupRequest) GetIsDefault() bool {
-	if x != nil && x.IsDefault != nil {
-		return *x.IsDefault
+func (x *UpdateGroupRequest) GetKind() v1.GroupKind {
+	if x != nil && x.Kind != nil {
+		return *x.Kind
+	}
+	return v1.GroupKind(0)
+}
+
+func (x *UpdateGroupRequest) GetParentGroupId() string {
+	if x != nil && x.ParentGroupId != nil {
+		return *x.ParentGroupId
+	}
+	return ""
+}
+
+func (x *UpdateGroupRequest) GetLeadUserId() string {
+	if x != nil && x.LeadUserId != nil {
+		return *x.LeadUserId
+	}
+	return ""
+}
+
+func (x *UpdateGroupRequest) GetClearParentGroup() bool {
+	if x != nil {
+		return x.ClearParentGroup
+	}
+	return false
+}
+
+func (x *UpdateGroupRequest) GetClearLead() bool {
+	if x != nil {
+		return x.ClearLead
 	}
 	return false
 }
@@ -1159,29 +1207,41 @@ const file_groups_v1_groups_proto_rawDesc = "" +
 	"\x16AddGroupMemberResponse\x122\n" +
 	"\x06member\x18\x01 \x01(\v2\x1a.common.v1.GroupMemberInfoR\x06member\"O\n" +
 	"\x19UpdateGroupMemberResponse\x122\n" +
-	"\x06member\x18\x01 \x01(\v2\x1a.common.v1.GroupMemberInfoR\x06member\"\xc6\x01\n" +
+	"\x06member\x18\x01 \x01(\v2\x1a.common.v1.GroupMemberInfoR\x06member\"\xca\x02\n" +
 	"\x12CreateGroupRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"is_private\x18\x04 \x01(\bR\tisPrivate\x12\x1d\n" +
-	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefaultB\x0e\n" +
-	"\f_description\"\x97\x02\n" +
+	"is_private\x18\x04 \x01(\bR\tisPrivate\x12(\n" +
+	"\x04kind\x18\x06 \x01(\x0e2\x14.common.v1.GroupKindR\x04kind\x12+\n" +
+	"\x0fparent_group_id\x18\a \x01(\tH\x01R\rparentGroupId\x88\x01\x01\x12%\n" +
+	"\flead_user_id\x18\b \x01(\tH\x02R\n" +
+	"leadUserId\x88\x01\x01B\x0e\n" +
+	"\f_descriptionB\x12\n" +
+	"\x10_parent_group_idB\x0f\n" +
+	"\r_lead_user_id\"\xe2\x03\n" +
 	"\x12UpdateGroupRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\agroupId\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x04 \x01(\tH\x01R\vdescription\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"is_private\x18\x05 \x01(\bH\x02R\tisPrivate\x88\x01\x01\x12\"\n" +
+	"is_private\x18\x05 \x01(\bH\x02R\tisPrivate\x88\x01\x01\x12-\n" +
+	"\x04kind\x18\a \x01(\x0e2\x14.common.v1.GroupKindH\x03R\x04kind\x88\x01\x01\x12+\n" +
+	"\x0fparent_group_id\x18\b \x01(\tH\x04R\rparentGroupId\x88\x01\x01\x12%\n" +
+	"\flead_user_id\x18\t \x01(\tH\x05R\n" +
+	"leadUserId\x88\x01\x01\x12,\n" +
+	"\x12clear_parent_group\x18\n" +
+	" \x01(\bR\x10clearParentGroup\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x06 \x01(\bH\x03R\tisDefault\x88\x01\x01B\a\n" +
+	"clear_lead\x18\v \x01(\bR\tclearLeadB\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_descriptionB\r\n" +
-	"\v_is_privateB\r\n" +
-	"\v_is_default\"X\n" +
+	"\v_is_privateB\a\n" +
+	"\x05_kindB\x12\n" +
+	"\x10_parent_group_idB\x0f\n" +
+	"\r_lead_user_id\"X\n" +
 	"\x12DeleteGroupRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\agroupId\"/\n" +
@@ -1275,7 +1335,8 @@ var file_groups_v1_groups_proto_goTypes = []any{
 	(*v1.GroupInfo)(nil),              // 21: common.v1.GroupInfo
 	(*v1.PaginationResponse)(nil),     // 22: common.v1.PaginationResponse
 	(*v1.GroupMemberInfo)(nil),        // 23: common.v1.GroupMemberInfo
-	(v1.GroupRole)(0),                 // 24: common.v1.GroupRole
+	(v1.GroupKind)(0),                 // 24: common.v1.GroupKind
+	(v1.GroupRole)(0),                 // 25: common.v1.GroupRole
 }
 var file_groups_v1_groups_proto_depIdxs = []int32{
 	20, // 0: groups.v1.ListGroupsRequest.pagination:type_name -> common.v1.PaginationRequest
@@ -1286,38 +1347,40 @@ var file_groups_v1_groups_proto_depIdxs = []int32{
 	21, // 5: groups.v1.UpdateGroupResponse.group:type_name -> common.v1.GroupInfo
 	23, // 6: groups.v1.AddGroupMemberResponse.member:type_name -> common.v1.GroupMemberInfo
 	23, // 7: groups.v1.UpdateGroupMemberResponse.member:type_name -> common.v1.GroupMemberInfo
-	20, // 8: groups.v1.ListGroupMembersRequest.pagination:type_name -> common.v1.PaginationRequest
-	24, // 9: groups.v1.ListGroupMembersRequest.role_filter:type_name -> common.v1.GroupRole
-	23, // 10: groups.v1.ListGroupMembersResponse.members:type_name -> common.v1.GroupMemberInfo
-	22, // 11: groups.v1.ListGroupMembersResponse.pagination:type_name -> common.v1.PaginationResponse
-	24, // 12: groups.v1.AddGroupMemberRequest.role:type_name -> common.v1.GroupRole
-	24, // 13: groups.v1.UpdateGroupMemberRequest.role:type_name -> common.v1.GroupRole
-	21, // 14: groups.v1.GetUserGroupsResponse.groups:type_name -> common.v1.GroupInfo
-	0,  // 15: groups.v1.GroupsService.ListGroups:input_type -> groups.v1.ListGroupsRequest
-	2,  // 16: groups.v1.GroupsService.GetGroup:input_type -> groups.v1.GetGroupRequest
-	8,  // 17: groups.v1.GroupsService.CreateGroup:input_type -> groups.v1.CreateGroupRequest
-	9,  // 18: groups.v1.GroupsService.UpdateGroup:input_type -> groups.v1.UpdateGroupRequest
-	10, // 19: groups.v1.GroupsService.DeleteGroup:input_type -> groups.v1.DeleteGroupRequest
-	12, // 20: groups.v1.GroupsService.ListGroupMembers:input_type -> groups.v1.ListGroupMembersRequest
-	14, // 21: groups.v1.GroupsService.AddGroupMember:input_type -> groups.v1.AddGroupMemberRequest
-	15, // 22: groups.v1.GroupsService.UpdateGroupMember:input_type -> groups.v1.UpdateGroupMemberRequest
-	16, // 23: groups.v1.GroupsService.RemoveGroupMember:input_type -> groups.v1.RemoveGroupMemberRequest
-	18, // 24: groups.v1.GroupsService.GetUserGroups:input_type -> groups.v1.GetUserGroupsRequest
-	1,  // 25: groups.v1.GroupsService.ListGroups:output_type -> groups.v1.ListGroupsResponse
-	3,  // 26: groups.v1.GroupsService.GetGroup:output_type -> groups.v1.GetGroupResponse
-	4,  // 27: groups.v1.GroupsService.CreateGroup:output_type -> groups.v1.CreateGroupResponse
-	5,  // 28: groups.v1.GroupsService.UpdateGroup:output_type -> groups.v1.UpdateGroupResponse
-	11, // 29: groups.v1.GroupsService.DeleteGroup:output_type -> groups.v1.DeleteGroupResponse
-	13, // 30: groups.v1.GroupsService.ListGroupMembers:output_type -> groups.v1.ListGroupMembersResponse
-	6,  // 31: groups.v1.GroupsService.AddGroupMember:output_type -> groups.v1.AddGroupMemberResponse
-	7,  // 32: groups.v1.GroupsService.UpdateGroupMember:output_type -> groups.v1.UpdateGroupMemberResponse
-	17, // 33: groups.v1.GroupsService.RemoveGroupMember:output_type -> groups.v1.RemoveGroupMemberResponse
-	19, // 34: groups.v1.GroupsService.GetUserGroups:output_type -> groups.v1.GetUserGroupsResponse
-	25, // [25:35] is the sub-list for method output_type
-	15, // [15:25] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	24, // 8: groups.v1.CreateGroupRequest.kind:type_name -> common.v1.GroupKind
+	24, // 9: groups.v1.UpdateGroupRequest.kind:type_name -> common.v1.GroupKind
+	20, // 10: groups.v1.ListGroupMembersRequest.pagination:type_name -> common.v1.PaginationRequest
+	25, // 11: groups.v1.ListGroupMembersRequest.role_filter:type_name -> common.v1.GroupRole
+	23, // 12: groups.v1.ListGroupMembersResponse.members:type_name -> common.v1.GroupMemberInfo
+	22, // 13: groups.v1.ListGroupMembersResponse.pagination:type_name -> common.v1.PaginationResponse
+	25, // 14: groups.v1.AddGroupMemberRequest.role:type_name -> common.v1.GroupRole
+	25, // 15: groups.v1.UpdateGroupMemberRequest.role:type_name -> common.v1.GroupRole
+	21, // 16: groups.v1.GetUserGroupsResponse.groups:type_name -> common.v1.GroupInfo
+	0,  // 17: groups.v1.GroupsService.ListGroups:input_type -> groups.v1.ListGroupsRequest
+	2,  // 18: groups.v1.GroupsService.GetGroup:input_type -> groups.v1.GetGroupRequest
+	8,  // 19: groups.v1.GroupsService.CreateGroup:input_type -> groups.v1.CreateGroupRequest
+	9,  // 20: groups.v1.GroupsService.UpdateGroup:input_type -> groups.v1.UpdateGroupRequest
+	10, // 21: groups.v1.GroupsService.DeleteGroup:input_type -> groups.v1.DeleteGroupRequest
+	12, // 22: groups.v1.GroupsService.ListGroupMembers:input_type -> groups.v1.ListGroupMembersRequest
+	14, // 23: groups.v1.GroupsService.AddGroupMember:input_type -> groups.v1.AddGroupMemberRequest
+	15, // 24: groups.v1.GroupsService.UpdateGroupMember:input_type -> groups.v1.UpdateGroupMemberRequest
+	16, // 25: groups.v1.GroupsService.RemoveGroupMember:input_type -> groups.v1.RemoveGroupMemberRequest
+	18, // 26: groups.v1.GroupsService.GetUserGroups:input_type -> groups.v1.GetUserGroupsRequest
+	1,  // 27: groups.v1.GroupsService.ListGroups:output_type -> groups.v1.ListGroupsResponse
+	3,  // 28: groups.v1.GroupsService.GetGroup:output_type -> groups.v1.GetGroupResponse
+	4,  // 29: groups.v1.GroupsService.CreateGroup:output_type -> groups.v1.CreateGroupResponse
+	5,  // 30: groups.v1.GroupsService.UpdateGroup:output_type -> groups.v1.UpdateGroupResponse
+	11, // 31: groups.v1.GroupsService.DeleteGroup:output_type -> groups.v1.DeleteGroupResponse
+	13, // 32: groups.v1.GroupsService.ListGroupMembers:output_type -> groups.v1.ListGroupMembersResponse
+	6,  // 33: groups.v1.GroupsService.AddGroupMember:output_type -> groups.v1.AddGroupMemberResponse
+	7,  // 34: groups.v1.GroupsService.UpdateGroupMember:output_type -> groups.v1.UpdateGroupMemberResponse
+	17, // 35: groups.v1.GroupsService.RemoveGroupMember:output_type -> groups.v1.RemoveGroupMemberResponse
+	19, // 36: groups.v1.GroupsService.GetUserGroups:output_type -> groups.v1.GetUserGroupsResponse
+	27, // [27:37] is the sub-list for method output_type
+	17, // [17:27] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_groups_v1_groups_proto_init() }

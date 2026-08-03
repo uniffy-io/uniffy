@@ -42,21 +42,31 @@ enum AttendeeStatus {
   ATTENDEE_STATUS_DECLINED = 4;
 }
 
+// What an entry in an event's activity log records
+enum EventActivityAction {
+  EVENT_ACTIVITY_ACTION_UNSPECIFIED = 0;
+  EVENT_ACTIVITY_ACTION_CREATED = 1;
+  EVENT_ACTIVITY_ACTION_TITLE_CHANGED = 2;
+  EVENT_ACTIVITY_ACTION_SCHEDULE_CHANGED = 3;
+  EVENT_ACTIVITY_ACTION_LOCATION_CHANGED = 4;
+  EVENT_ACTIVITY_ACTION_MEETING_CHANGED = 5;
+  EVENT_ACTIVITY_ACTION_DESCRIPTION_CHANGED = 6;
+  EVENT_ACTIVITY_ACTION_CATEGORY_CHANGED = 7;
+  EVENT_ACTIVITY_ACTION_CALENDAR_CHANGED = 8;
+  EVENT_ACTIVITY_ACTION_RECURRENCE_CHANGED = 9;
+  EVENT_ACTIVITY_ACTION_REMINDERS_CHANGED = 10;
+  EVENT_ACTIVITY_ACTION_ATTENDEES_ADDED = 11;
+  EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED = 12;
+  EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED = 13;
+  EVENT_ACTIVITY_ACTION_FIELD_UPDATED = 14;
+}
+
 // Attendee role in the event
 enum AttendeeRole {
   ATTENDEE_ROLE_UNSPECIFIED = 0;
   ATTENDEE_ROLE_ORGANIZER = 1;
   ATTENDEE_ROLE_REQUIRED = 2;
   ATTENDEE_ROLE_OPTIONAL = 3;
-}
-
-// Calendar types
-enum CalendarType {
-  CALENDAR_TYPE_UNSPECIFIED = 0;
-  CALENDAR_TYPE_PERSONAL = 1;
-  CALENDAR_TYPE_WORK = 2;
-  CALENDAR_TYPE_TEAM = 3;
-  CALENDAR_TYPE_SHARED = 4;
 }
 
 // Linked resource types
@@ -99,23 +109,6 @@ service CalendarService {
   // Get events for a specific date range (optimized for calendar views)
   rpc GetEventsInRange(GetEventsInRangeRequest) returns (GetEventsInRangeResponse) {}
 
-  // === Calendar Operations ===
-
-  // Create a new calendar
-  rpc CreateCalendar(CreateCalendarRequest) returns (CreateCalendarResponse) {}
-
-  // Get a calendar by ID
-  rpc GetCalendar(GetCalendarRequest) returns (GetCalendarResponse) {}
-
-  // Update a calendar
-  rpc UpdateCalendar(UpdateCalendarRequest) returns (UpdateCalendarResponse) {}
-
-  // Delete a calendar
-  rpc DeleteCalendar(DeleteCalendarRequest) returns (DeleteCalendarResponse) {}
-
-  // List user's calendars
-  rpc ListCalendars(ListCalendarsRequest) returns (ListCalendarsResponse) {}
-
   // === Category Operations ===
 
   // Create a new category
@@ -143,6 +136,11 @@ service CalendarService {
 
   // Remove attendees from an event
   rpc RemoveAttendees(RemoveAttendeesRequest) returns (RemoveAttendeesResponse) {}
+
+  // === Activity Operations ===
+
+  // List the activity log for an event, newest first
+  rpc ListEventActivities(ListEventActivitiesRequest) returns (ListEventActivitiesResponse) {}
 
   // === Template Operations ===
 
@@ -232,6 +230,9 @@ message CalendarEvent {
   optional string channel_id = 35;
   // True when channel_id points at a room auto-created for this event.
   bool channel_auto_created = 36;
+  // Caller's effective role on this event, so the client can render read-only
+  // affordances instead of controls every write would reject.
+  common.v1.ContentRole user_role = 37;
 }
 
 // Event attendee
@@ -252,6 +253,8 @@ message Attendee {
   AttendeeRole role = 7;
   // Timezone
   optional string timezone = 8;
+  // Group that produced this attendee row at invite time (snapshot; empty for direct invites)
+  optional string invited_via_group_id = 9;
 }
 
 // Recurrence configuration
@@ -494,114 +497,6 @@ message GetEventsInRangeResponse {
   repeated CalendarEvent events = 1;
 }
 
-// Calendar Messages
-
-// A user's calendar
-message Calendar {
-  // Unique calendar identifier
-  string id = 1;
-  // Organization ID
-  string organization_id = 2;
-  // Calendar display name
-  string name = 3;
-  // Color for calendar events (hex)
-  string color = 4;
-  // Whether calendar is visible in the grid
-  bool is_visible = 5;
-  // Whether this is the default calendar for new events
-  bool is_default = 6;
-  // Owner user ID
-  string owner_id = 7;
-  // Calendar type
-  CalendarType type = 8;
-  // Created timestamp
-  google.protobuf.Timestamp created_at = 9;
-  // Updated timestamp
-  google.protobuf.Timestamp updated_at = 10;
-}
-
-// Request to create a calendar
-message CreateCalendarRequest {
-  // Organization ID
-  string organization_id = 1;
-  // Calendar name
-  string name = 2;
-  // Color (hex)
-  optional string color = 3;
-  // Calendar type
-  optional CalendarType type = 4;
-  // Is default calendar
-  bool is_default = 5;
-}
-
-// Request to get a calendar
-message GetCalendarRequest {
-  // Calendar ID
-  string calendar_id = 1;
-  // Organization ID
-  string organization_id = 2;
-}
-
-// Request to update a calendar
-message UpdateCalendarRequest {
-  // Calendar ID
-  string calendar_id = 1;
-  // Organization ID
-  string organization_id = 2;
-  // Updated name
-  optional string name = 3;
-  // Updated color
-  optional string color = 4;
-  // Updated is_visible flag (grid display toggle)
-  optional bool is_visible = 5;
-  // Updated default flag
-  optional bool is_default = 6;
-  // Updated type
-  optional CalendarType type = 7;
-}
-
-// Request to delete a calendar
-message DeleteCalendarRequest {
-  // Calendar ID
-  string calendar_id = 1;
-  // Organization ID
-  string organization_id = 2;
-}
-
-// Response for delete calendar operation
-message DeleteCalendarResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-// Response containing a calendar (Create)
-message CreateCalendarResponse {
-  Calendar calendar = 1;
-}
-
-// Response containing a calendar (Get)
-message GetCalendarResponse {
-  Calendar calendar = 1;
-}
-
-// Response containing a calendar (Update)
-message UpdateCalendarResponse {
-  Calendar calendar = 1;
-}
-
-// Request to list calendars
-message ListCalendarsRequest {
-  // Organization ID
-  string organization_id = 1;
-  // Include only visible calendars
-  bool visible_only = 2;
-}
-
-// Response for listing calendars
-message ListCalendarsResponse {
-  repeated Calendar calendars = 1;
-}
-
 // Category Messages
 
 // Event category for color coding and filtering
@@ -740,6 +635,46 @@ message RemoveAttendeesRequest {
   string organization_id = 2;
   // User IDs to remove
   repeated string user_ids = 3;
+}
+
+// Activity Messages
+
+// One entry in an event's activity log
+message EventActivity {
+  // Unique activity identifier
+  string id = 1;
+  // Event the entry belongs to
+  string event_id = 2;
+  // User who performed the action
+  string actor_id = 3;
+  // What happened
+  EventActivityAction action = 4;
+  // When it happened
+  google.protobuf.Timestamp timestamp = 5;
+  // Field the change applies to, when the action is field-scoped
+  optional string field_id = 6;
+  // Value before the change
+  optional string previous_value = 7;
+  // Value after the change
+  optional string new_value = 8;
+}
+
+// Request to list an event's activity log
+message ListEventActivitiesRequest {
+  // Organization ID
+  string organization_id = 1;
+  // Event ID (an occurrence id resolves to its series master)
+  string event_id = 2;
+  // Optional pagination
+  optional common.v1.PaginationRequest pagination = 3;
+}
+
+// Response with the event's activity log, newest first
+message ListEventActivitiesResponse {
+  // Activity entries
+  repeated EventActivity activities = 1;
+  // Pagination info
+  common.v1.PaginationResponse pagination = 2;
 }
 
 // Template Messages

@@ -25,11 +25,6 @@ const (
 	CalendarService_DeleteEvent_FullMethodName          = "/cal.v1.CalendarService/DeleteEvent"
 	CalendarService_ListEvents_FullMethodName           = "/cal.v1.CalendarService/ListEvents"
 	CalendarService_GetEventsInRange_FullMethodName     = "/cal.v1.CalendarService/GetEventsInRange"
-	CalendarService_CreateCalendar_FullMethodName       = "/cal.v1.CalendarService/CreateCalendar"
-	CalendarService_GetCalendar_FullMethodName          = "/cal.v1.CalendarService/GetCalendar"
-	CalendarService_UpdateCalendar_FullMethodName       = "/cal.v1.CalendarService/UpdateCalendar"
-	CalendarService_DeleteCalendar_FullMethodName       = "/cal.v1.CalendarService/DeleteCalendar"
-	CalendarService_ListCalendars_FullMethodName        = "/cal.v1.CalendarService/ListCalendars"
 	CalendarService_CreateCategory_FullMethodName       = "/cal.v1.CalendarService/CreateCategory"
 	CalendarService_GetCategory_FullMethodName          = "/cal.v1.CalendarService/GetCategory"
 	CalendarService_UpdateCategory_FullMethodName       = "/cal.v1.CalendarService/UpdateCategory"
@@ -38,6 +33,7 @@ const (
 	CalendarService_UpdateAttendeeStatus_FullMethodName = "/cal.v1.CalendarService/UpdateAttendeeStatus"
 	CalendarService_AddAttendees_FullMethodName         = "/cal.v1.CalendarService/AddAttendees"
 	CalendarService_RemoveAttendees_FullMethodName      = "/cal.v1.CalendarService/RemoveAttendees"
+	CalendarService_ListEventActivities_FullMethodName  = "/cal.v1.CalendarService/ListEventActivities"
 	CalendarService_CreateEventTemplate_FullMethodName  = "/cal.v1.CalendarService/CreateEventTemplate"
 	CalendarService_GetEventTemplate_FullMethodName     = "/cal.v1.CalendarService/GetEventTemplate"
 	CalendarService_UpdateEventTemplate_FullMethodName  = "/cal.v1.CalendarService/UpdateEventTemplate"
@@ -63,16 +59,6 @@ type CalendarServiceClient interface {
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error)
 	// Get events for a specific date range (optimized for calendar views)
 	GetEventsInRange(ctx context.Context, in *GetEventsInRangeRequest, opts ...grpc.CallOption) (*GetEventsInRangeResponse, error)
-	// Create a new calendar
-	CreateCalendar(ctx context.Context, in *CreateCalendarRequest, opts ...grpc.CallOption) (*CreateCalendarResponse, error)
-	// Get a calendar by ID
-	GetCalendar(ctx context.Context, in *GetCalendarRequest, opts ...grpc.CallOption) (*GetCalendarResponse, error)
-	// Update a calendar
-	UpdateCalendar(ctx context.Context, in *UpdateCalendarRequest, opts ...grpc.CallOption) (*UpdateCalendarResponse, error)
-	// Delete a calendar
-	DeleteCalendar(ctx context.Context, in *DeleteCalendarRequest, opts ...grpc.CallOption) (*DeleteCalendarResponse, error)
-	// List user's calendars
-	ListCalendars(ctx context.Context, in *ListCalendarsRequest, opts ...grpc.CallOption) (*ListCalendarsResponse, error)
 	// Create a new category
 	CreateCategory(ctx context.Context, in *CreateCategoryRequest, opts ...grpc.CallOption) (*CreateCategoryResponse, error)
 	// Get a category by ID
@@ -89,6 +75,8 @@ type CalendarServiceClient interface {
 	AddAttendees(ctx context.Context, in *AddAttendeesRequest, opts ...grpc.CallOption) (*AddAttendeesResponse, error)
 	// Remove attendees from an event
 	RemoveAttendees(ctx context.Context, in *RemoveAttendeesRequest, opts ...grpc.CallOption) (*RemoveAttendeesResponse, error)
+	// List the activity log for an event, newest first
+	ListEventActivities(ctx context.Context, in *ListEventActivitiesRequest, opts ...grpc.CallOption) (*ListEventActivitiesResponse, error)
 	// Create a new event template
 	CreateEventTemplate(ctx context.Context, in *CreateEventTemplateRequest, opts ...grpc.CallOption) (*CreateEventTemplateResponse, error)
 	// Get an event template by ID
@@ -163,56 +151,6 @@ func (c *calendarServiceClient) GetEventsInRange(ctx context.Context, in *GetEve
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetEventsInRangeResponse)
 	err := c.cc.Invoke(ctx, CalendarService_GetEventsInRange_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *calendarServiceClient) CreateCalendar(ctx context.Context, in *CreateCalendarRequest, opts ...grpc.CallOption) (*CreateCalendarResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateCalendarResponse)
-	err := c.cc.Invoke(ctx, CalendarService_CreateCalendar_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *calendarServiceClient) GetCalendar(ctx context.Context, in *GetCalendarRequest, opts ...grpc.CallOption) (*GetCalendarResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCalendarResponse)
-	err := c.cc.Invoke(ctx, CalendarService_GetCalendar_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *calendarServiceClient) UpdateCalendar(ctx context.Context, in *UpdateCalendarRequest, opts ...grpc.CallOption) (*UpdateCalendarResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateCalendarResponse)
-	err := c.cc.Invoke(ctx, CalendarService_UpdateCalendar_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *calendarServiceClient) DeleteCalendar(ctx context.Context, in *DeleteCalendarRequest, opts ...grpc.CallOption) (*DeleteCalendarResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteCalendarResponse)
-	err := c.cc.Invoke(ctx, CalendarService_DeleteCalendar_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *calendarServiceClient) ListCalendars(ctx context.Context, in *ListCalendarsRequest, opts ...grpc.CallOption) (*ListCalendarsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListCalendarsResponse)
-	err := c.cc.Invoke(ctx, CalendarService_ListCalendars_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -299,6 +237,16 @@ func (c *calendarServiceClient) RemoveAttendees(ctx context.Context, in *RemoveA
 	return out, nil
 }
 
+func (c *calendarServiceClient) ListEventActivities(ctx context.Context, in *ListEventActivitiesRequest, opts ...grpc.CallOption) (*ListEventActivitiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListEventActivitiesResponse)
+	err := c.cc.Invoke(ctx, CalendarService_ListEventActivities_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *calendarServiceClient) CreateEventTemplate(ctx context.Context, in *CreateEventTemplateRequest, opts ...grpc.CallOption) (*CreateEventTemplateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateEventTemplateResponse)
@@ -367,16 +315,6 @@ type CalendarServiceServer interface {
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error)
 	// Get events for a specific date range (optimized for calendar views)
 	GetEventsInRange(context.Context, *GetEventsInRangeRequest) (*GetEventsInRangeResponse, error)
-	// Create a new calendar
-	CreateCalendar(context.Context, *CreateCalendarRequest) (*CreateCalendarResponse, error)
-	// Get a calendar by ID
-	GetCalendar(context.Context, *GetCalendarRequest) (*GetCalendarResponse, error)
-	// Update a calendar
-	UpdateCalendar(context.Context, *UpdateCalendarRequest) (*UpdateCalendarResponse, error)
-	// Delete a calendar
-	DeleteCalendar(context.Context, *DeleteCalendarRequest) (*DeleteCalendarResponse, error)
-	// List user's calendars
-	ListCalendars(context.Context, *ListCalendarsRequest) (*ListCalendarsResponse, error)
 	// Create a new category
 	CreateCategory(context.Context, *CreateCategoryRequest) (*CreateCategoryResponse, error)
 	// Get a category by ID
@@ -393,6 +331,8 @@ type CalendarServiceServer interface {
 	AddAttendees(context.Context, *AddAttendeesRequest) (*AddAttendeesResponse, error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *RemoveAttendeesRequest) (*RemoveAttendeesResponse, error)
+	// List the activity log for an event, newest first
+	ListEventActivities(context.Context, *ListEventActivitiesRequest) (*ListEventActivitiesResponse, error)
 	// Create a new event template
 	CreateEventTemplate(context.Context, *CreateEventTemplateRequest) (*CreateEventTemplateResponse, error)
 	// Get an event template by ID
@@ -431,21 +371,6 @@ func (UnimplementedCalendarServiceServer) ListEvents(context.Context, *ListEvent
 func (UnimplementedCalendarServiceServer) GetEventsInRange(context.Context, *GetEventsInRangeRequest) (*GetEventsInRangeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetEventsInRange not implemented")
 }
-func (UnimplementedCalendarServiceServer) CreateCalendar(context.Context, *CreateCalendarRequest) (*CreateCalendarResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateCalendar not implemented")
-}
-func (UnimplementedCalendarServiceServer) GetCalendar(context.Context, *GetCalendarRequest) (*GetCalendarResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetCalendar not implemented")
-}
-func (UnimplementedCalendarServiceServer) UpdateCalendar(context.Context, *UpdateCalendarRequest) (*UpdateCalendarResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateCalendar not implemented")
-}
-func (UnimplementedCalendarServiceServer) DeleteCalendar(context.Context, *DeleteCalendarRequest) (*DeleteCalendarResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteCalendar not implemented")
-}
-func (UnimplementedCalendarServiceServer) ListCalendars(context.Context, *ListCalendarsRequest) (*ListCalendarsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListCalendars not implemented")
-}
 func (UnimplementedCalendarServiceServer) CreateCategory(context.Context, *CreateCategoryRequest) (*CreateCategoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCategory not implemented")
 }
@@ -469,6 +394,9 @@ func (UnimplementedCalendarServiceServer) AddAttendees(context.Context, *AddAtte
 }
 func (UnimplementedCalendarServiceServer) RemoveAttendees(context.Context, *RemoveAttendeesRequest) (*RemoveAttendeesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveAttendees not implemented")
+}
+func (UnimplementedCalendarServiceServer) ListEventActivities(context.Context, *ListEventActivitiesRequest) (*ListEventActivitiesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListEventActivities not implemented")
 }
 func (UnimplementedCalendarServiceServer) CreateEventTemplate(context.Context, *CreateEventTemplateRequest) (*CreateEventTemplateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateEventTemplate not implemented")
@@ -610,96 +538,6 @@ func _CalendarService_GetEventsInRange_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CalendarServiceServer).GetEventsInRange(ctx, req.(*GetEventsInRangeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CalendarService_CreateCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateCalendarRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CalendarServiceServer).CreateCalendar(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CalendarService_CreateCalendar_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CalendarServiceServer).CreateCalendar(ctx, req.(*CreateCalendarRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CalendarService_GetCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCalendarRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CalendarServiceServer).GetCalendar(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CalendarService_GetCalendar_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CalendarServiceServer).GetCalendar(ctx, req.(*GetCalendarRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CalendarService_UpdateCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateCalendarRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CalendarServiceServer).UpdateCalendar(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CalendarService_UpdateCalendar_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CalendarServiceServer).UpdateCalendar(ctx, req.(*UpdateCalendarRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CalendarService_DeleteCalendar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteCalendarRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CalendarServiceServer).DeleteCalendar(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CalendarService_DeleteCalendar_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CalendarServiceServer).DeleteCalendar(ctx, req.(*DeleteCalendarRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CalendarService_ListCalendars_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListCalendarsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CalendarServiceServer).ListCalendars(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CalendarService_ListCalendars_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CalendarServiceServer).ListCalendars(ctx, req.(*ListCalendarsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -848,6 +686,24 @@ func _CalendarService_RemoveAttendees_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CalendarService_ListEventActivities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEventActivitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).ListEventActivities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_ListEventActivities_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).ListEventActivities(ctx, req.(*ListEventActivitiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CalendarService_CreateEventTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateEventTemplateRequest)
 	if err := dec(in); err != nil {
@@ -970,26 +826,6 @@ var CalendarService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CalendarService_GetEventsInRange_Handler,
 		},
 		{
-			MethodName: "CreateCalendar",
-			Handler:    _CalendarService_CreateCalendar_Handler,
-		},
-		{
-			MethodName: "GetCalendar",
-			Handler:    _CalendarService_GetCalendar_Handler,
-		},
-		{
-			MethodName: "UpdateCalendar",
-			Handler:    _CalendarService_UpdateCalendar_Handler,
-		},
-		{
-			MethodName: "DeleteCalendar",
-			Handler:    _CalendarService_DeleteCalendar_Handler,
-		},
-		{
-			MethodName: "ListCalendars",
-			Handler:    _CalendarService_ListCalendars_Handler,
-		},
-		{
 			MethodName: "CreateCategory",
 			Handler:    _CalendarService_CreateCategory_Handler,
 		},
@@ -1020,6 +856,10 @@ var CalendarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveAttendees",
 			Handler:    _CalendarService_RemoveAttendees_Handler,
+		},
+		{
+			MethodName: "ListEventActivities",
+			Handler:    _CalendarService_ListEventActivities_Handler,
 		},
 		{
 			MethodName: "CreateEventTemplate",

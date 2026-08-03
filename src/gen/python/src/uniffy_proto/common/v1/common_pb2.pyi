@@ -28,6 +28,7 @@ class ContentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONTENT_TYPE_AGENT_CHAT: _ClassVar[ContentType]
     CONTENT_TYPE_TAG: _ClassVar[ContentType]
     CONTENT_TYPE_AGENT_FOLDER: _ClassVar[ContentType]
+    CONTENT_TYPE_TEAM: _ClassVar[ContentType]
 
 class SubjectType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -77,6 +78,12 @@ class GroupRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     GROUP_ROLE_MEMBER: _ClassVar[GroupRole]
     GROUP_ROLE_ADMIN: _ClassVar[GroupRole]
 
+class GroupKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    GROUP_KIND_UNSPECIFIED: _ClassVar[GroupKind]
+    GROUP_KIND_TEAM: _ClassVar[GroupKind]
+    GROUP_KIND_ACCESS: _ClassVar[GroupKind]
+
 class DomainType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     DOMAIN_TYPE_UNSPECIFIED: _ClassVar[DomainType]
@@ -112,6 +119,7 @@ CONTENT_TYPE_AGENT_CRON_TASK: ContentType
 CONTENT_TYPE_AGENT_CHAT: ContentType
 CONTENT_TYPE_TAG: ContentType
 CONTENT_TYPE_AGENT_FOLDER: ContentType
+CONTENT_TYPE_TEAM: ContentType
 SUBJECT_TYPE_UNSPECIFIED: SubjectType
 SUBJECT_TYPE_USER: SubjectType
 SUBJECT_TYPE_GROUP: SubjectType
@@ -142,6 +150,9 @@ ORGANIZATION_ROLE_OWNER: OrganizationRole
 GROUP_ROLE_UNSPECIFIED: GroupRole
 GROUP_ROLE_MEMBER: GroupRole
 GROUP_ROLE_ADMIN: GroupRole
+GROUP_KIND_UNSPECIFIED: GroupKind
+GROUP_KIND_TEAM: GroupKind
+GROUP_KIND_ACCESS: GroupKind
 DOMAIN_TYPE_UNSPECIFIED: DomainType
 DOMAIN_TYPE_CHAT: DomainType
 DOMAIN_TYPE_FILES: DomainType
@@ -191,28 +202,32 @@ class OrganizationInfo(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., logo_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class GroupInfo(_message.Message):
-    __slots__ = ("id", "organization_id", "name", "slug", "description", "is_private", "is_default", "member_count", "created_at", "updated_at")
+    __slots__ = ("id", "organization_id", "name", "slug", "description", "is_private", "member_count", "created_at", "updated_at", "kind", "parent_group_id", "lead_user_id")
     ID_FIELD_NUMBER: _ClassVar[int]
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     SLUG_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     IS_PRIVATE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
     MEMBER_COUNT_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    PARENT_GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+    LEAD_USER_ID_FIELD_NUMBER: _ClassVar[int]
     id: str
     organization_id: str
     name: str
     slug: str
     description: str
     is_private: bool
-    is_default: bool
     member_count: int
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., is_default: _Optional[bool] = ..., member_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    kind: GroupKind
+    parent_group_id: str
+    lead_user_id: str
+    def __init__(self, id: _Optional[str] = ..., organization_id: _Optional[str] = ..., name: _Optional[str] = ..., slug: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., member_count: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., kind: _Optional[_Union[GroupKind, str]] = ..., parent_group_id: _Optional[str] = ..., lead_user_id: _Optional[str] = ...) -> None: ...
 
 class MemberInfo(_message.Message):
     __slots__ = ("user_id", "display_name", "email", "avatar_url", "role", "joined_at", "is_active", "has_avatar")

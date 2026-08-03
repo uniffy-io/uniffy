@@ -28,6 +28,7 @@ enum ContentType {
   CONTENT_TYPE_AGENT_CHAT = 14;
   CONTENT_TYPE_TAG = 15;
   CONTENT_TYPE_AGENT_FOLDER = 16;
+  CONTENT_TYPE_TEAM = 17;
 }
 
 // SubjectType defines who can be granted permissions or participate in
@@ -90,6 +91,14 @@ enum GroupRole {
   GROUP_ROLE_ADMIN = 2;
 }
 
+// TEAM = org-structure unit (org chart, lead, parent); ACCESS = permission
+// bundle. Both are ContentMember subjects.
+enum GroupKind {
+  GROUP_KIND_UNSPECIFIED = 0;
+  GROUP_KIND_TEAM = 1;
+  GROUP_KIND_ACCESS = 2;
+}
+
 // DomainType defines application domains that support domain-level admins.
 enum DomainType {
   DOMAIN_TYPE_UNSPECIFIED = 0;
@@ -145,10 +154,12 @@ message GroupInfo {
   string slug = 4;
   optional string description = 5;
   bool is_private = 6;
-  bool is_default = 7;
   int32 member_count = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  GroupKind kind = 11;
+  optional string parent_group_id = 12;
+  optional string lead_user_id = 13;
 }
 
 // MemberInfo represents a user's membership in an organization.

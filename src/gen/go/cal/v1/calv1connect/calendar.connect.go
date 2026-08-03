@@ -51,21 +51,6 @@ const (
 	// CalendarServiceGetEventsInRangeProcedure is the fully-qualified name of the CalendarService's
 	// GetEventsInRange RPC.
 	CalendarServiceGetEventsInRangeProcedure = "/cal.v1.CalendarService/GetEventsInRange"
-	// CalendarServiceCreateCalendarProcedure is the fully-qualified name of the CalendarService's
-	// CreateCalendar RPC.
-	CalendarServiceCreateCalendarProcedure = "/cal.v1.CalendarService/CreateCalendar"
-	// CalendarServiceGetCalendarProcedure is the fully-qualified name of the CalendarService's
-	// GetCalendar RPC.
-	CalendarServiceGetCalendarProcedure = "/cal.v1.CalendarService/GetCalendar"
-	// CalendarServiceUpdateCalendarProcedure is the fully-qualified name of the CalendarService's
-	// UpdateCalendar RPC.
-	CalendarServiceUpdateCalendarProcedure = "/cal.v1.CalendarService/UpdateCalendar"
-	// CalendarServiceDeleteCalendarProcedure is the fully-qualified name of the CalendarService's
-	// DeleteCalendar RPC.
-	CalendarServiceDeleteCalendarProcedure = "/cal.v1.CalendarService/DeleteCalendar"
-	// CalendarServiceListCalendarsProcedure is the fully-qualified name of the CalendarService's
-	// ListCalendars RPC.
-	CalendarServiceListCalendarsProcedure = "/cal.v1.CalendarService/ListCalendars"
 	// CalendarServiceCreateCategoryProcedure is the fully-qualified name of the CalendarService's
 	// CreateCategory RPC.
 	CalendarServiceCreateCategoryProcedure = "/cal.v1.CalendarService/CreateCategory"
@@ -90,6 +75,9 @@ const (
 	// CalendarServiceRemoveAttendeesProcedure is the fully-qualified name of the CalendarService's
 	// RemoveAttendees RPC.
 	CalendarServiceRemoveAttendeesProcedure = "/cal.v1.CalendarService/RemoveAttendees"
+	// CalendarServiceListEventActivitiesProcedure is the fully-qualified name of the CalendarService's
+	// ListEventActivities RPC.
+	CalendarServiceListEventActivitiesProcedure = "/cal.v1.CalendarService/ListEventActivities"
 	// CalendarServiceCreateEventTemplateProcedure is the fully-qualified name of the CalendarService's
 	// CreateEventTemplate RPC.
 	CalendarServiceCreateEventTemplateProcedure = "/cal.v1.CalendarService/CreateEventTemplate"
@@ -121,16 +109,6 @@ type CalendarServiceClient interface {
 	ListEvents(context.Context, *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error)
 	// Get events for a specific date range (optimized for calendar views)
 	GetEventsInRange(context.Context, *connect.Request[v1.GetEventsInRangeRequest]) (*connect.Response[v1.GetEventsInRangeResponse], error)
-	// Create a new calendar
-	CreateCalendar(context.Context, *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error)
-	// Get a calendar by ID
-	GetCalendar(context.Context, *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error)
-	// Update a calendar
-	UpdateCalendar(context.Context, *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error)
-	// Delete a calendar
-	DeleteCalendar(context.Context, *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error)
-	// List user's calendars
-	ListCalendars(context.Context, *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error)
 	// Create a new category
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	// Get a category by ID
@@ -147,6 +125,8 @@ type CalendarServiceClient interface {
 	AddAttendees(context.Context, *connect.Request[v1.AddAttendeesRequest]) (*connect.Response[v1.AddAttendeesResponse], error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error)
+	// List the activity log for an event, newest first
+	ListEventActivities(context.Context, *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error)
 	// Create a new event template
 	CreateEventTemplate(context.Context, *connect.Request[v1.CreateEventTemplateRequest]) (*connect.Response[v1.CreateEventTemplateResponse], error)
 	// Get an event template by ID
@@ -206,36 +186,6 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(calendarServiceMethods.ByName("GetEventsInRange")),
 			connect.WithClientOptions(opts...),
 		),
-		createCalendar: connect.NewClient[v1.CreateCalendarRequest, v1.CreateCalendarResponse](
-			httpClient,
-			baseURL+CalendarServiceCreateCalendarProcedure,
-			connect.WithSchema(calendarServiceMethods.ByName("CreateCalendar")),
-			connect.WithClientOptions(opts...),
-		),
-		getCalendar: connect.NewClient[v1.GetCalendarRequest, v1.GetCalendarResponse](
-			httpClient,
-			baseURL+CalendarServiceGetCalendarProcedure,
-			connect.WithSchema(calendarServiceMethods.ByName("GetCalendar")),
-			connect.WithClientOptions(opts...),
-		),
-		updateCalendar: connect.NewClient[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse](
-			httpClient,
-			baseURL+CalendarServiceUpdateCalendarProcedure,
-			connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendar")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteCalendar: connect.NewClient[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse](
-			httpClient,
-			baseURL+CalendarServiceDeleteCalendarProcedure,
-			connect.WithSchema(calendarServiceMethods.ByName("DeleteCalendar")),
-			connect.WithClientOptions(opts...),
-		),
-		listCalendars: connect.NewClient[v1.ListCalendarsRequest, v1.ListCalendarsResponse](
-			httpClient,
-			baseURL+CalendarServiceListCalendarsProcedure,
-			connect.WithSchema(calendarServiceMethods.ByName("ListCalendars")),
-			connect.WithClientOptions(opts...),
-		),
 		createCategory: connect.NewClient[v1.CreateCategoryRequest, v1.CreateCategoryResponse](
 			httpClient,
 			baseURL+CalendarServiceCreateCategoryProcedure,
@@ -284,6 +234,12 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(calendarServiceMethods.ByName("RemoveAttendees")),
 			connect.WithClientOptions(opts...),
 		),
+		listEventActivities: connect.NewClient[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse](
+			httpClient,
+			baseURL+CalendarServiceListEventActivitiesProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("ListEventActivities")),
+			connect.WithClientOptions(opts...),
+		),
 		createEventTemplate: connect.NewClient[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse](
 			httpClient,
 			baseURL+CalendarServiceCreateEventTemplateProcedure,
@@ -325,11 +281,6 @@ type calendarServiceClient struct {
 	deleteEvent          *connect.Client[v1.DeleteEventRequest, v1.DeleteEventResponse]
 	listEvents           *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
 	getEventsInRange     *connect.Client[v1.GetEventsInRangeRequest, v1.GetEventsInRangeResponse]
-	createCalendar       *connect.Client[v1.CreateCalendarRequest, v1.CreateCalendarResponse]
-	getCalendar          *connect.Client[v1.GetCalendarRequest, v1.GetCalendarResponse]
-	updateCalendar       *connect.Client[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse]
-	deleteCalendar       *connect.Client[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse]
-	listCalendars        *connect.Client[v1.ListCalendarsRequest, v1.ListCalendarsResponse]
 	createCategory       *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
 	getCategory          *connect.Client[v1.GetCategoryRequest, v1.GetCategoryResponse]
 	updateCategory       *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
@@ -338,6 +289,7 @@ type calendarServiceClient struct {
 	updateAttendeeStatus *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
 	addAttendees         *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
 	removeAttendees      *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
+	listEventActivities  *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
 	createEventTemplate  *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
 	getEventTemplate     *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
 	updateEventTemplate  *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
@@ -373,31 +325,6 @@ func (c *calendarServiceClient) ListEvents(ctx context.Context, req *connect.Req
 // GetEventsInRange calls cal.v1.CalendarService.GetEventsInRange.
 func (c *calendarServiceClient) GetEventsInRange(ctx context.Context, req *connect.Request[v1.GetEventsInRangeRequest]) (*connect.Response[v1.GetEventsInRangeResponse], error) {
 	return c.getEventsInRange.CallUnary(ctx, req)
-}
-
-// CreateCalendar calls cal.v1.CalendarService.CreateCalendar.
-func (c *calendarServiceClient) CreateCalendar(ctx context.Context, req *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error) {
-	return c.createCalendar.CallUnary(ctx, req)
-}
-
-// GetCalendar calls cal.v1.CalendarService.GetCalendar.
-func (c *calendarServiceClient) GetCalendar(ctx context.Context, req *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error) {
-	return c.getCalendar.CallUnary(ctx, req)
-}
-
-// UpdateCalendar calls cal.v1.CalendarService.UpdateCalendar.
-func (c *calendarServiceClient) UpdateCalendar(ctx context.Context, req *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error) {
-	return c.updateCalendar.CallUnary(ctx, req)
-}
-
-// DeleteCalendar calls cal.v1.CalendarService.DeleteCalendar.
-func (c *calendarServiceClient) DeleteCalendar(ctx context.Context, req *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error) {
-	return c.deleteCalendar.CallUnary(ctx, req)
-}
-
-// ListCalendars calls cal.v1.CalendarService.ListCalendars.
-func (c *calendarServiceClient) ListCalendars(ctx context.Context, req *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error) {
-	return c.listCalendars.CallUnary(ctx, req)
 }
 
 // CreateCategory calls cal.v1.CalendarService.CreateCategory.
@@ -440,6 +367,11 @@ func (c *calendarServiceClient) RemoveAttendees(ctx context.Context, req *connec
 	return c.removeAttendees.CallUnary(ctx, req)
 }
 
+// ListEventActivities calls cal.v1.CalendarService.ListEventActivities.
+func (c *calendarServiceClient) ListEventActivities(ctx context.Context, req *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error) {
+	return c.listEventActivities.CallUnary(ctx, req)
+}
+
 // CreateEventTemplate calls cal.v1.CalendarService.CreateEventTemplate.
 func (c *calendarServiceClient) CreateEventTemplate(ctx context.Context, req *connect.Request[v1.CreateEventTemplateRequest]) (*connect.Response[v1.CreateEventTemplateResponse], error) {
 	return c.createEventTemplate.CallUnary(ctx, req)
@@ -479,16 +411,6 @@ type CalendarServiceHandler interface {
 	ListEvents(context.Context, *connect.Request[v1.ListEventsRequest]) (*connect.Response[v1.ListEventsResponse], error)
 	// Get events for a specific date range (optimized for calendar views)
 	GetEventsInRange(context.Context, *connect.Request[v1.GetEventsInRangeRequest]) (*connect.Response[v1.GetEventsInRangeResponse], error)
-	// Create a new calendar
-	CreateCalendar(context.Context, *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error)
-	// Get a calendar by ID
-	GetCalendar(context.Context, *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error)
-	// Update a calendar
-	UpdateCalendar(context.Context, *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error)
-	// Delete a calendar
-	DeleteCalendar(context.Context, *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error)
-	// List user's calendars
-	ListCalendars(context.Context, *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error)
 	// Create a new category
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	// Get a category by ID
@@ -505,6 +427,8 @@ type CalendarServiceHandler interface {
 	AddAttendees(context.Context, *connect.Request[v1.AddAttendeesRequest]) (*connect.Response[v1.AddAttendeesResponse], error)
 	// Remove attendees from an event
 	RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error)
+	// List the activity log for an event, newest first
+	ListEventActivities(context.Context, *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error)
 	// Create a new event template
 	CreateEventTemplate(context.Context, *connect.Request[v1.CreateEventTemplateRequest]) (*connect.Response[v1.CreateEventTemplateResponse], error)
 	// Get an event template by ID
@@ -560,36 +484,6 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 		connect.WithSchema(calendarServiceMethods.ByName("GetEventsInRange")),
 		connect.WithHandlerOptions(opts...),
 	)
-	calendarServiceCreateCalendarHandler := connect.NewUnaryHandler(
-		CalendarServiceCreateCalendarProcedure,
-		svc.CreateCalendar,
-		connect.WithSchema(calendarServiceMethods.ByName("CreateCalendar")),
-		connect.WithHandlerOptions(opts...),
-	)
-	calendarServiceGetCalendarHandler := connect.NewUnaryHandler(
-		CalendarServiceGetCalendarProcedure,
-		svc.GetCalendar,
-		connect.WithSchema(calendarServiceMethods.ByName("GetCalendar")),
-		connect.WithHandlerOptions(opts...),
-	)
-	calendarServiceUpdateCalendarHandler := connect.NewUnaryHandler(
-		CalendarServiceUpdateCalendarProcedure,
-		svc.UpdateCalendar,
-		connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendar")),
-		connect.WithHandlerOptions(opts...),
-	)
-	calendarServiceDeleteCalendarHandler := connect.NewUnaryHandler(
-		CalendarServiceDeleteCalendarProcedure,
-		svc.DeleteCalendar,
-		connect.WithSchema(calendarServiceMethods.ByName("DeleteCalendar")),
-		connect.WithHandlerOptions(opts...),
-	)
-	calendarServiceListCalendarsHandler := connect.NewUnaryHandler(
-		CalendarServiceListCalendarsProcedure,
-		svc.ListCalendars,
-		connect.WithSchema(calendarServiceMethods.ByName("ListCalendars")),
-		connect.WithHandlerOptions(opts...),
-	)
 	calendarServiceCreateCategoryHandler := connect.NewUnaryHandler(
 		CalendarServiceCreateCategoryProcedure,
 		svc.CreateCategory,
@@ -638,6 +532,12 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 		connect.WithSchema(calendarServiceMethods.ByName("RemoveAttendees")),
 		connect.WithHandlerOptions(opts...),
 	)
+	calendarServiceListEventActivitiesHandler := connect.NewUnaryHandler(
+		CalendarServiceListEventActivitiesProcedure,
+		svc.ListEventActivities,
+		connect.WithSchema(calendarServiceMethods.ByName("ListEventActivities")),
+		connect.WithHandlerOptions(opts...),
+	)
 	calendarServiceCreateEventTemplateHandler := connect.NewUnaryHandler(
 		CalendarServiceCreateEventTemplateProcedure,
 		svc.CreateEventTemplate,
@@ -682,16 +582,6 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 			calendarServiceListEventsHandler.ServeHTTP(w, r)
 		case CalendarServiceGetEventsInRangeProcedure:
 			calendarServiceGetEventsInRangeHandler.ServeHTTP(w, r)
-		case CalendarServiceCreateCalendarProcedure:
-			calendarServiceCreateCalendarHandler.ServeHTTP(w, r)
-		case CalendarServiceGetCalendarProcedure:
-			calendarServiceGetCalendarHandler.ServeHTTP(w, r)
-		case CalendarServiceUpdateCalendarProcedure:
-			calendarServiceUpdateCalendarHandler.ServeHTTP(w, r)
-		case CalendarServiceDeleteCalendarProcedure:
-			calendarServiceDeleteCalendarHandler.ServeHTTP(w, r)
-		case CalendarServiceListCalendarsProcedure:
-			calendarServiceListCalendarsHandler.ServeHTTP(w, r)
 		case CalendarServiceCreateCategoryProcedure:
 			calendarServiceCreateCategoryHandler.ServeHTTP(w, r)
 		case CalendarServiceGetCategoryProcedure:
@@ -708,6 +598,8 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 			calendarServiceAddAttendeesHandler.ServeHTTP(w, r)
 		case CalendarServiceRemoveAttendeesProcedure:
 			calendarServiceRemoveAttendeesHandler.ServeHTTP(w, r)
+		case CalendarServiceListEventActivitiesProcedure:
+			calendarServiceListEventActivitiesHandler.ServeHTTP(w, r)
 		case CalendarServiceCreateEventTemplateProcedure:
 			calendarServiceCreateEventTemplateHandler.ServeHTTP(w, r)
 		case CalendarServiceGetEventTemplateProcedure:
@@ -751,26 +643,6 @@ func (UnimplementedCalendarServiceHandler) GetEventsInRange(context.Context, *co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GetEventsInRange is not implemented"))
 }
 
-func (UnimplementedCalendarServiceHandler) CreateCalendar(context.Context, *connect.Request[v1.CreateCalendarRequest]) (*connect.Response[v1.CreateCalendarResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.CreateCalendar is not implemented"))
-}
-
-func (UnimplementedCalendarServiceHandler) GetCalendar(context.Context, *connect.Request[v1.GetCalendarRequest]) (*connect.Response[v1.GetCalendarResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.GetCalendar is not implemented"))
-}
-
-func (UnimplementedCalendarServiceHandler) UpdateCalendar(context.Context, *connect.Request[v1.UpdateCalendarRequest]) (*connect.Response[v1.UpdateCalendarResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.UpdateCalendar is not implemented"))
-}
-
-func (UnimplementedCalendarServiceHandler) DeleteCalendar(context.Context, *connect.Request[v1.DeleteCalendarRequest]) (*connect.Response[v1.DeleteCalendarResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.DeleteCalendar is not implemented"))
-}
-
-func (UnimplementedCalendarServiceHandler) ListCalendars(context.Context, *connect.Request[v1.ListCalendarsRequest]) (*connect.Response[v1.ListCalendarsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ListCalendars is not implemented"))
-}
-
 func (UnimplementedCalendarServiceHandler) CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.CreateCategory is not implemented"))
 }
@@ -801,6 +673,10 @@ func (UnimplementedCalendarServiceHandler) AddAttendees(context.Context, *connec
 
 func (UnimplementedCalendarServiceHandler) RemoveAttendees(context.Context, *connect.Request[v1.RemoveAttendeesRequest]) (*connect.Response[v1.RemoveAttendeesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RemoveAttendees is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) ListEventActivities(context.Context, *connect.Request[v1.ListEventActivitiesRequest]) (*connect.Response[v1.ListEventActivitiesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.ListEventActivities is not implemented"))
 }
 
 func (UnimplementedCalendarServiceHandler) CreateEventTemplate(context.Context, *connect.Request[v1.CreateEventTemplateRequest]) (*connect.Response[v1.CreateEventTemplateResponse], error) {

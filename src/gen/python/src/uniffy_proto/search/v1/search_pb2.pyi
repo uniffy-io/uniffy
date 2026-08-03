@@ -24,6 +24,7 @@ class SearchResultType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SEARCH_RESULT_TYPE_TAG: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_FOLDER: _ClassVar[SearchResultType]
     SEARCH_RESULT_TYPE_AGENT_FOLDER: _ClassVar[SearchResultType]
+    SEARCH_RESULT_TYPE_TEAM: _ClassVar[SearchResultType]
 SEARCH_RESULT_TYPE_UNSPECIFIED: SearchResultType
 SEARCH_RESULT_TYPE_NOTE: SearchResultType
 SEARCH_RESULT_TYPE_FILE: SearchResultType
@@ -39,6 +40,7 @@ SEARCH_RESULT_TYPE_AGENT_CHAT: SearchResultType
 SEARCH_RESULT_TYPE_TAG: SearchResultType
 SEARCH_RESULT_TYPE_FOLDER: SearchResultType
 SEARCH_RESULT_TYPE_AGENT_FOLDER: SearchResultType
+SEARCH_RESULT_TYPE_TEAM: SearchResultType
 
 class SearchRequest(_message.Message):
     __slots__ = ("organization_id", "query", "type_filters", "limit", "tag_filters", "project_filters", "my_content_only", "owner_filter", "metadata_filters", "offset", "type_priority")
