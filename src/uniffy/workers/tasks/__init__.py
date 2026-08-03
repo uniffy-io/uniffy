@@ -14,6 +14,7 @@ from uniffy.workers.tasks.agent_cron import (
 )
 from uniffy.workers.tasks.agent_run import delete_run_stream, run_agent_session
 from uniffy.workers.tasks.agent_skill_analysis import analyze_session_for_skills
+from uniffy.workers.tasks.audit_partitions import provision_audit_partitions
 from uniffy.workers.tasks.base import (
     core_on_shutdown,
     core_on_startup,
@@ -25,6 +26,7 @@ from uniffy.workers.tasks.base import (
 from uniffy.workers.tasks.calls import cleanup_orphan_call_rooms, reconcile_calls
 from uniffy.workers.tasks.chat_mute import auto_unmute_channels
 from uniffy.workers.tasks.content_extraction import extract_document_content
+from uniffy.workers.tasks.directory import sync_identity_source
 from uniffy.workers.tasks.extraction import extract_audio_metadata, extract_image_metadata
 from uniffy.workers.tasks.mail import send_email
 from uniffy.workers.tasks.multipart_reaper import reap_expired_multipart_uploads
@@ -80,6 +82,7 @@ EGRESS_TASKS = (
     execute_single_agent_cron_task,
     run_agent_session,
     delete_run_stream,
+    sync_identity_source,
 )
 
 __all__ = [
@@ -113,6 +116,7 @@ __all__ = [
     "on_job_end",
     "on_job_start",
     "process_notification_event",
+    "provision_audit_partitions",
     "reap_expired_multipart_uploads",
     "recalculate_all_storage_usage",
     "reconcile_calls",
@@ -124,5 +128,6 @@ __all__ = [
     "save_realtime_snapshot",
     "send_email",
     "send_email_digest",
+    "sync_identity_source",
     "transcode_video_to_mp4",
 ]

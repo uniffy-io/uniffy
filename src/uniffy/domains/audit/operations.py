@@ -22,6 +22,9 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
+from uniffy.domains.platform.support_session.operations import (
+    SupportSessionOperations,
+)
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
@@ -134,13 +137,15 @@ class AuditOperations:
         actor_user_id: UUID,
         organization_id: UUID,
     ) -> None:
-        """Require org OWNER/ADMIN or global system-admin."""
-        is_system_admin = await self.session.execute(
-            select(User.is_system_admin).where(User.id == actor_user_id)
-        )
-        if bool(is_system_admin.scalar_one_or_none()):
-            return
+        """Require org OWNER/ADMIN, or a non-member operator holding a SupportSession.
 
+        A tenant's audit trail is tenant data: it carries login IPs, resource
+        ids and free-form ``details``. Membership is therefore evaluated first,
+        so a system admin who is also an org member (the self-hosted operator)
+        reaches it through their org role like anyone else. Only a system admin
+        outside the org takes the SupportSession path, mirroring step 1 of
+        ``PermissionChecker.effective_role``.
+        """
         membership = await self.session.execute(
             select(OrganizationMember.role).where(
                 OrganizationMember.user_id == actor_user_id,
@@ -149,8 +154,33 @@ class AuditOperations:
             )
         )
         role = membership.scalar_one_or_none()
-        if role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
+        if role in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
+            return
+        if role is not None:
             raise PermissionDeniedError("view", "audit_events")
+
+        if not await self._is_system_admin(actor_user_id):
+            raise PermissionDeniedError("view", "audit_events")
+        if not await self._has_active_support_session(
+            actor_user_id, organization_id
+        ):
+            raise PermissionDeniedError("view", "audit_events")
+
+    async def _is_system_admin(self, actor_user_id: UUID) -> bool:
+        result = await self.session.execute(
+            select(User.is_system_admin).where(User.id == actor_user_id)
+        )
+        return bool(result.scalar_one_or_none())
+
+    async def _has_active_support_session(
+        self,
+        actor_user_id: UUID,
+        organization_id: UUID,
+    ) -> bool:
+        session = await SupportSessionOperations(self.session).active_session_for(
+            user_id=actor_user_id, organization_id=organization_id
+        )
+        return session is not None
 
 
 def _encode_cursor(created_at: datetime, event_id: UUID) -> str:

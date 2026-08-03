@@ -127,6 +127,11 @@ async def core_on_startup(ctx: dict[str, Any]) -> None:
     except Exception as e:
         logger.warning(f"Core worker: VAPID config not available: {e}")
 
+    from uniffy.workers.tasks.audit_partitions import provision_audit_partitions
+
+    # Cron alone would leave the window between a boot and 01:07 unprovisioned.
+    await provision_audit_partitions(ctx)
+
     from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS
 
     for name, adapter in DELIVERY_ADAPTERS.items():
