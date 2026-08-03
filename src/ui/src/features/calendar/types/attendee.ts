@@ -18,5 +18,7 @@ export interface Attendee {
   status: AttendeeStatus;
   role: AttendeeRole;
   timezone?: string;
+  /** Group whose invite produced this row (snapshot); absent for direct invites. */
+  invitedViaGroupId?: string;
 }
 

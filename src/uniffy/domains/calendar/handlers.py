@@ -65,7 +65,7 @@ from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentRole, ContentType, RecurrencePattern
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.calendar import queries
 from uniffy.domains.calendar.converters import (
     activity_to_proto,
@@ -202,7 +202,7 @@ class CalendarHandlers:
     ) -> CreateEventResponse:
         """Create a new calendar event."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         category_id = None
         if request.HasField("category_id"):
@@ -303,7 +303,7 @@ class CalendarHandlers:
     ) -> GetEventResponse:
         """Get a single event (requires view access)."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         event_id = _parse_event_id(request.event_id)
 
         try:
@@ -340,7 +340,7 @@ class CalendarHandlers:
     ) -> UpdateEventResponse:
         """Update event metadata."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             event_id = UUID(request.event_id.split("__occurrence__")[0])
@@ -442,7 +442,7 @@ class CalendarHandlers:
     ) -> DeleteEventResponse:
         """Delete an event (soft or permanent)."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             event_id = UUID(request.event_id.split("__occurrence__")[0])
@@ -484,7 +484,7 @@ class CalendarHandlers:
     ) -> ListEventsResponse:
         """List events with filters and pagination."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         calendar_id = None
         if request.HasField("calendar_id"):
@@ -567,7 +567,7 @@ class CalendarHandlers:
     ) -> GetEventsInRangeResponse:
         """Fetch events in a date range (optimized for calendar views)."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         calendar_ids = None
         if request.calendar_ids:
@@ -648,7 +648,7 @@ class CalendarHandlers:
     ) -> CreateCategoryResponse:
         """Create a new category."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
@@ -673,7 +673,7 @@ class CalendarHandlers:
     ) -> GetCategoryResponse:
         """Get a category by ID."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         category_id = _parse_uuid(request.category_id, "category_id")
 
         try:
@@ -693,7 +693,7 @@ class CalendarHandlers:
     ) -> UpdateCategoryResponse:
         """Update a category."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         category_id = _parse_uuid(request.category_id, "category_id")
 
         try:
@@ -721,7 +721,7 @@ class CalendarHandlers:
     ) -> DeleteCategoryResponse:
         """Delete a category."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         category_id = _parse_uuid(request.category_id, "category_id")
 
         try:
@@ -741,7 +741,7 @@ class CalendarHandlers:
     ) -> ListCategoriesResponse:
         """List categories for an organization."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:
@@ -763,7 +763,7 @@ class CalendarHandlers:
     ) -> UpdateAttendeeStatusResponse:
         """Update current user's attendee status for an event."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         event_id = _parse_event_id(request.event_id)
 
         try:
@@ -789,7 +789,7 @@ class CalendarHandlers:
     ) -> AddAttendeesResponse:
         """Add attendees to an event."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         event_id = _parse_event_id(request.event_id)
 
         try:
@@ -832,7 +832,7 @@ class CalendarHandlers:
     ) -> RemoveAttendeesResponse:
         """Remove attendees from an event."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         event_id = _parse_event_id(request.event_id)
 
         try:
@@ -875,7 +875,7 @@ class CalendarHandlers:
     ) -> ListEventActivitiesResponse:
         """List an event's activity log, newest first."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             event_id = UUID(request.event_id.split("__occurrence__")[0])
@@ -925,7 +925,7 @@ class CalendarHandlers:
     ) -> CreateEventTemplateResponse:
         """Create an event template."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         access_mode = access_mode_from_proto(request.access_mode) if request.access_mode else None
         baseline_role = (
@@ -975,7 +975,7 @@ class CalendarHandlers:
     ) -> GetEventTemplateResponse:
         """Get an event template by ID."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         template_id = _parse_uuid(request.template_id, "template_id")
 
         try:
@@ -1004,7 +1004,7 @@ class CalendarHandlers:
     ) -> UpdateEventTemplateResponse:
         """Update an event template."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         template_id = _parse_uuid(request.template_id, "template_id")
 
         update_data: dict = {}
@@ -1057,7 +1057,7 @@ class CalendarHandlers:
     ) -> DeleteEventTemplateResponse:
         """Delete an event template."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
         template_id = _parse_uuid(request.template_id, "template_id")
 
         try:
@@ -1077,7 +1077,7 @@ class CalendarHandlers:
     ) -> ListEventTemplatesResponse:
         """List event templates for an organization."""
         user_id = get_user_id_from_context(ctx)
-        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         try:
             async with open_session() as session:

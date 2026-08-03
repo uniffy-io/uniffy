@@ -70,7 +70,9 @@ message CreateGroupRequest {
   string name = 2;
   optional string description = 3;
   bool is_private = 4;
-  bool is_default = 5; // Auto-add new org members
+  common.v1.GroupKind kind = 6; // UNSPECIFIED = ACCESS
+  optional string parent_group_id = 7; // TEAM only; parent must be a TEAM
+  optional string lead_user_id = 8; // TEAM only
 }
 
 message UpdateGroupRequest {
@@ -79,7 +81,11 @@ message UpdateGroupRequest {
   optional string name = 3;
   optional string description = 4;
   optional bool is_private = 5;
-  optional bool is_default = 6;
+  optional common.v1.GroupKind kind = 7;
+  optional string parent_group_id = 8;
+  optional string lead_user_id = 9;
+  bool clear_parent_group = 10;
+  bool clear_lead = 11;
 }
 
 message DeleteGroupRequest {

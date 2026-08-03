@@ -1,24 +1,24 @@
 {
-  "company": "Vitalis Health",
-  "root_folder": "Vitalis Health",
+  "company": "Uniffy",
+  "root_folder": "Uniffy HQ",
   "timezone": "Europe/Sofia",
   "demo_user": {
     "email": "maria@uniffy.io",
     "username": "maria",
     "full_name": "Maria Nikolova",
     "password": "demo",
-    "title": "Clinic coordinator, first week"
+    "title": "Support engineer, first week"
   },
   "tags": [
     { "name": "handbook", "color": "#6366f1" },
     { "name": "policy", "color": "#f97316" },
     { "name": "compliance", "color": "#ef4444" },
-    { "name": "clinical", "color": "#10b981" },
+    { "name": "engineering", "color": "#10b981" },
     { "name": "brand", "color": "#a855f7" },
     { "name": "sofia-office", "color": "#3b82f6" },
-    { "name": "plovdiv-clinic", "color": "#0ea5e9" },
+    { "name": "plovdiv-office", "color": "#0ea5e9" },
     { "name": "onboarding", "color": "#eab308" },
     { "name": "people", "color": "#ec4899" },
-    { "name": "lab", "color": "#14b8a6" }
+    { "name": "infra", "color": "#14b8a6" }
   ]
 }

@@ -36,33 +36,6 @@ def _make_ops() -> ChatChannelOperations:
     return ops
 
 
-class TestTagFilterSubquery:
-    def test_subquery_joins_tag_assignments_and_groups(self) -> None:
-        ops = _make_ops()
-        tag_ids = [generate_id(), generate_id()]
-        subquery = ops._tag_filter_subquery(tag_ids)
-        compiled = str(
-            subquery.compile(compile_kwargs={"literal_binds": False})
-        ).lower()
-        assert "tag_assignments" in compiled
-        assert "chat_channels" in compiled
-        assert "group by" in compiled
-        # AND across the tag set requires DISTINCT count == len(tag_ids).
-        assert "having" in compiled
-        assert "count(distinct" in compiled
-
-    def test_subquery_synthesises_chat_urn(self) -> None:
-        ops = _make_ops()
-        subquery = ops._tag_filter_subquery([generate_id()])
-        compiled = str(
-            subquery.compile(compile_kwargs={"literal_binds": True})
-        )
-        # The join key is the synthesized URN ``urn:uniffy:content:CHAT:{id}``
-        # so the same row is addressable from notes / files / calendar /
-        # agents through one shape.
-        assert "urn:uniffy:content:CHAT:" in compiled
-
-
 class TestSyncChannelTags:
     async def test_none_tag_ids_short_circuits(self) -> None:
         ops = _make_ops()

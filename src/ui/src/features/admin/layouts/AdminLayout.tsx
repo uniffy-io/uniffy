@@ -21,6 +21,8 @@ import {
     LockKey,
     Lifebuoy,
     Plugs,
+    PlugsConnected,
+    TreeStructure,
 } from '@phosphor-icons/react';
 
 interface NavItem {
@@ -41,7 +43,9 @@ const orgGroups: NavGroup[] = [
         title: 'Access',
         items: [
             { name: 'Members', path: '/admin/members', icon: Users },
+            { name: 'Teams', path: '/admin/teams', icon: TreeStructure },
             { name: 'Groups', path: '/admin/groups', icon: UsersThree },
+            { name: 'Directory', path: '/admin/people', icon: PlugsConnected },
             { name: 'Domain Admins', path: '/admin/domain-admins', icon: Crown },
         ],
     },

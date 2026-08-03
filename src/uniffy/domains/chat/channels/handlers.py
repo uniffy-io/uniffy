@@ -1088,7 +1088,7 @@ class ChannelHandlers:
             channel_ids = await ch_ops.list_user_channel_ids(user_id, org_id)
 
             read_ops = ChatReadStateOperations(session)
-            counts = await read_ops.get_unread_counts(user_id, channel_ids)
+            counts = await read_ops.get_unread_counts(user_id, org_id, channel_ids)
 
             prefs_result = await session.execute(
                 sa_select(

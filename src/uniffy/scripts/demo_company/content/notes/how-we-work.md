@@ -1,29 +1,28 @@
 ---
 title: How We Work
-slug: vitalis-how-we-work
+slug: uniffy-how-we-work
 folder: Handbook
 tags:
   - handbook
-  - people
 ---
 
 # How We Work
 
 ## Working hours
 
-Clinics run 07:30 to 19:30 on weekdays and 08:00 to 14:00 on Saturdays. Clinical rotas
-are published two weeks ahead by the clinic managers.
+The support desk covers 08:00 to 20:00 on weekdays and 09:00 to 15:00 on Saturdays.
+Desk rotas are published two weeks ahead by the support lead.
 
-Non-clinical staff keep core hours 10:00 to 16:00 Sofia time and arrange the rest with
+Everyone else keeps core hours 10:00 to 16:00 Sofia time and arranges the rest with
 their team. Remote arrangements are covered in [Remote Work Policy](remote-work-policy.md).
 
 ## Meetings
 
 | Meeting | When | Where |
 | --- | --- | --- |
-| [Clinical huddle](event:Clinical huddle) | Weekdays, 09:00, 30 min | [Rila](room:Rila) |
-| [Clinic managers sync](event:Clinic managers sync) | Wednesday, 09:30 | [Iskar](room:Iskar) |
-| [Patient safety committee](event:Patient safety committee) | Monthly, first Wednesday | [Vitosha](room:Vitosha) |
+| [Daily standup](event:Daily standup) | Weekdays, 09:00, 15 min | [Rila](room:Rila) |
+| [Team leads sync](event:Team leads sync) | Wednesday, 09:30 | [Iskar](room:Iskar) |
+| [Security review board](event:Security review board) | Monthly, first Wednesday | [Vitosha](room:Vitosha) |
 | [Quarterly all-hands](event:Quarterly all-hands) | Quarterly, Thursday afternoon | [Serdica](room:Serdica) |
 
 Meetings without an agenda in the invite get declined without hard feelings. Rooms are
@@ -32,15 +31,17 @@ booked in the workspace calendar; room etiquette is in the
 
 ## Writing things down
 
-Decisions live in notes, not in chat threads. A decision note states the question, the
-options considered, the decision, and who owns the follow-up. Chat is for coordination;
-if a message would matter in three months, it belongs in a note.
+We build Uniffy and we run on it. Decisions live in notes, not in chat threads. A
+decision note states the question, the options considered, the decision, and who owns
+the follow-up; @ mention the owner so it lands in their inbox. Chat is for coordination;
+if a message would matter in three months, it belongs in a note. Search before writing
+a new one; the answer often exists.
 
-Clinical procedures are the exception: they are controlled documents. Only the medical
-director and the QA lead can approve changes to anything under Clinical Operations.
+Runbooks are the exception: they are controlled documents. Only the SRE lead and the
+support lead can approve changes to anything under Engineering Operations.
 
 ## Deciding things
 
 Small reversible decisions are made by whoever is closest to the work. Anything that
-touches patient safety, patient data or money above 5000 BGN goes to the management
-team. Anything touching clinical protocol goes to the patient safety committee.
+touches customer data, production access or money above 5000 BGN goes to the management
+team. Anything touching security posture goes to the security review board.

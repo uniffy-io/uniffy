@@ -24,11 +24,13 @@ from uniffy.core.content.members import (
     register_attachment_cascade_loader,
     register_content_loader,
 )
+from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
+    extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
 from uniffy.core.models.login.group import Group
@@ -1715,19 +1717,52 @@ class TaskOperations(BaseContentOperations[Task]):
         newly_mentioned = new_mentioned - old_mentioned
         newly_mentioned.discard(actor_id)
 
-        if not newly_mentioned:
+        source_urn = build_content_urn(ContentType.TASK, task.id)
+
+        if newly_mentioned:
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=task.organization_id,
+                    actor_id=actor_id,
+                    title=f"Mentioned you in: {task.title}",
+                    source_urn=source_urn,
+                    target_user_ids=list(newly_mentioned),
+                )
+            )
+
+        already_mentioned_teams = set(extract_mentioned_team_ids(old_references))
+        newly_mentioned_teams = [
+            tid
+            for tid in extract_mentioned_team_ids(new_references)
+            if tid not in already_mentioned_teams
+        ]
+        if not newly_mentioned_teams:
             return
 
-        await emit_notification(
-            NotificationEvent(
-                notification_type=NotificationType.CONTENT_MENTIONED,
-                organization_id=task.organization_id,
-                actor_id=actor_id,
-                title=f"Mentioned you in: {task.title}",
-                source_urn=build_content_urn(ContentType.TASK, task.id),
-                target_user_ids=list(newly_mentioned),
-            )
+        notified = {actor_id} | newly_mentioned
+        expansions = await expand_team_mentions(
+            self.session, task.organization_id, newly_mentioned_teams
         )
+        for expansion in expansions:
+            targets = [uid for uid in expansion.member_ids if uid not in notified]
+            if not targets:
+                continue
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=task.organization_id,
+                    actor_id=actor_id,
+                    title=f"Mentioned {expansion.name} in: {task.title}",
+                    source_urn=source_urn,
+                    target_user_ids=targets,
+                    metadata={
+                        "team_id": str(expansion.team_id),
+                        "team_name": expansion.name,
+                    },
+                )
+            )
+            notified.update(targets)
 
     async def _emit_watcher_notifications(
         self,

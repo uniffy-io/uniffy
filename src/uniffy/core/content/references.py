@@ -184,6 +184,33 @@ def extract_mentioned_user_ids_from_content(content: str) -> set[UUID]:
     return result
 
 
+def extract_mentioned_team_ids_from_content(content: str) -> list[UUID]:
+    """TEAM group UUIDs from TEAM mentions, in first-occurrence order.
+
+    Order is load-bearing: a recipient who belongs to two mentioned teams is
+    notified once, under the team that was mentioned first.
+    """
+    if not content:
+        return []
+
+    team_prefix = f"{_URN_PREFIX}TEAM:"
+    seen: set[UUID] = set()
+    result: list[UUID] = []
+    for match in MENTION_PATTERN.finditer(content):
+        urn = match.group(2)
+        if not urn or not urn.startswith(team_prefix):
+            continue
+        try:
+            team_id = UUID(urn[len(team_prefix) :])
+        except ValueError:
+            continue
+        if team_id in seen:
+            continue
+        seen.add(team_id)
+        result.append(team_id)
+    return result
+
+
 def strip_mentions_to_labels(content: str) -> str:
     """Replace each mention with just its label text (for plaintext search / previews)."""
     if not content:

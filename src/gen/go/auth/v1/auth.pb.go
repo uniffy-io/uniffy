@@ -1105,6 +1105,7 @@ type GetCurrentUserResponse struct {
 	FontFamily    *string                `protobuf:"bytes,9,opt,name=font_family,json=fontFamily,proto3,oneof" json:"font_family,omitempty"`
 	AvatarUrl     *string                `protobuf:"bytes,10,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
 	HasAvatar     bool                   `protobuf:"varint,11,opt,name=has_avatar,json=hasAvatar,proto3" json:"has_avatar,omitempty"`
+	Pronouns      *string                `protobuf:"bytes,12,opt,name=pronouns,proto3,oneof" json:"pronouns,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1214,6 +1215,13 @@ func (x *GetCurrentUserResponse) GetHasAvatar() bool {
 		return x.HasAvatar
 	}
 	return false
+}
+
+func (x *GetCurrentUserResponse) GetPronouns() string {
+	if x != nil && x.Pronouns != nil {
+		return *x.Pronouns
+	}
+	return ""
 }
 
 // Logout response
@@ -2409,7 +2417,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x10_organization_idB\x14\n" +
 	"\x12_organization_roleB\r\n" +
 	"\v_session_idB\x14\n" +
-	"\x12_organization_slug\"\xb7\x03\n" +
+	"\x12_organization_slug\"\xe5\x03\n" +
 	"\x16GetCurrentUserResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
@@ -2425,12 +2433,14 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"avatar_url\x18\n" +
 	" \x01(\tH\x03R\tavatarUrl\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"has_avatar\x18\v \x01(\bR\thasAvatarB\f\n" +
+	"has_avatar\x18\v \x01(\bR\thasAvatar\x12\x1f\n" +
+	"\bpronouns\x18\f \x01(\tH\x04R\bpronouns\x88\x01\x01B\f\n" +
 	"\n" +
 	"_full_nameB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
 	"\f_font_familyB\r\n" +
-	"\v_avatar_url\"*\n" +
+	"\v_avatar_urlB\v\n" +
+	"\t_pronouns\"*\n" +
 	"\x0eLogoutResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xc2\x01\n" +
 	"\vSessionInfo\x12\x0e\n" +

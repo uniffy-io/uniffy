@@ -37,6 +37,7 @@ type UserProfile struct {
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	HasAvatar     bool                   `protobuf:"varint,12,opt,name=has_avatar,json=hasAvatar,proto3" json:"has_avatar,omitempty"`
+	Pronouns      *string                `protobuf:"bytes,13,opt,name=pronouns,proto3,oneof" json:"pronouns,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -153,6 +154,13 @@ func (x *UserProfile) GetHasAvatar() bool {
 		return x.HasAvatar
 	}
 	return false
+}
+
+func (x *UserProfile) GetPronouns() string {
+	if x != nil && x.Pronouns != nil {
+		return *x.Pronouns
+	}
+	return ""
 }
 
 type GetMyProfileRequest struct {
@@ -543,13 +551,13 @@ func (x *AddUserToOrganizationResponse) GetMember() *v1.MemberInfo {
 	return nil
 }
 
+// Identity (name, username, email) is NOT self-editable: platform admins and,
+// later, directory sync own it. Self-service covers appearance + pronouns only.
 type UpdateMyProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FullName      *string                `protobuf:"bytes,1,opt,name=full_name,json=fullName,proto3,oneof" json:"full_name,omitempty"`
-	Username      *string                `protobuf:"bytes,2,opt,name=username,proto3,oneof" json:"username,omitempty"`
-	AvatarUrl     *string                `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
-	AccentColor   *string                `protobuf:"bytes,4,opt,name=accent_color,json=accentColor,proto3,oneof" json:"accent_color,omitempty"`
-	FontFamily    *string                `protobuf:"bytes,5,opt,name=font_family,json=fontFamily,proto3,oneof" json:"font_family,omitempty"`
+	AccentColor   *string                `protobuf:"bytes,1,opt,name=accent_color,json=accentColor,proto3,oneof" json:"accent_color,omitempty"`
+	FontFamily    *string                `protobuf:"bytes,2,opt,name=font_family,json=fontFamily,proto3,oneof" json:"font_family,omitempty"`
+	Pronouns      *string                `protobuf:"bytes,3,opt,name=pronouns,proto3,oneof" json:"pronouns,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -584,27 +592,6 @@ func (*UpdateMyProfileRequest) Descriptor() ([]byte, []int) {
 	return file_users_v1_users_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *UpdateMyProfileRequest) GetFullName() string {
-	if x != nil && x.FullName != nil {
-		return *x.FullName
-	}
-	return ""
-}
-
-func (x *UpdateMyProfileRequest) GetUsername() string {
-	if x != nil && x.Username != nil {
-		return *x.Username
-	}
-	return ""
-}
-
-func (x *UpdateMyProfileRequest) GetAvatarUrl() string {
-	if x != nil && x.AvatarUrl != nil {
-		return *x.AvatarUrl
-	}
-	return ""
-}
-
 func (x *UpdateMyProfileRequest) GetAccentColor() string {
 	if x != nil && x.AccentColor != nil {
 		return *x.AccentColor
@@ -615,6 +602,13 @@ func (x *UpdateMyProfileRequest) GetAccentColor() string {
 func (x *UpdateMyProfileRequest) GetFontFamily() string {
 	if x != nil && x.FontFamily != nil {
 		return *x.FontFamily
+	}
+	return ""
+}
+
+func (x *UpdateMyProfileRequest) GetPronouns() string {
+	if x != nil && x.Pronouns != nil {
+		return *x.Pronouns
 	}
 	return ""
 }
@@ -1435,7 +1429,7 @@ var File_users_v1_users_proto protoreflect.FileDescriptor
 
 const file_users_v1_users_proto_rawDesc = "" +
 	"\n" +
-	"\x14users/v1/users.proto\x12\busers.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8d\x04\n" +
+	"\x14users/v1/users.proto\x12\busers.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbb\x04\n" +
 	"\vUserProfile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12 \n" +
@@ -1454,13 +1448,15 @@ const file_users_v1_users_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"has_avatar\x18\f \x01(\bR\thasAvatarB\f\n" +
+	"has_avatar\x18\f \x01(\bR\thasAvatar\x12\x1f\n" +
+	"\bpronouns\x18\r \x01(\tH\x05R\bpronouns\x88\x01\x01B\f\n" +
 	"\n" +
 	"_full_nameB\v\n" +
 	"\t_usernameB\r\n" +
 	"\v_avatar_urlB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
-	"\f_font_family\"\x15\n" +
+	"\f_font_familyB\v\n" +
+	"\t_pronouns\"\x15\n" +
 	"\x13GetMyProfileRequest\"A\n" +
 	"\x14GetMyProfileResponse\x12)\n" +
 	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"D\n" +
@@ -1477,21 +1473,15 @@ const file_users_v1_users_proto_rawDesc = "" +
 	"\x14DeleteAvatarResponse\x12)\n" +
 	"\x04user\x18\x01 \x01(\v2\x15.users.v1.UserProfileR\x04user\"N\n" +
 	"\x1dAddUserToOrganizationResponse\x12-\n" +
-	"\x06member\x18\x01 \x01(\v2\x15.common.v1.MemberInfoR\x06member\"\x98\x02\n" +
-	"\x16UpdateMyProfileRequest\x12 \n" +
-	"\tfull_name\x18\x01 \x01(\tH\x00R\bfullName\x88\x01\x01\x12\x1f\n" +
-	"\busername\x18\x02 \x01(\tH\x01R\busername\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"avatar_url\x18\x03 \x01(\tH\x02R\tavatarUrl\x88\x01\x01\x12&\n" +
-	"\faccent_color\x18\x04 \x01(\tH\x03R\vaccentColor\x88\x01\x01\x12$\n" +
-	"\vfont_family\x18\x05 \x01(\tH\x04R\n" +
-	"fontFamily\x88\x01\x01B\f\n" +
-	"\n" +
-	"_full_nameB\v\n" +
-	"\t_usernameB\r\n" +
-	"\v_avatar_urlB\x0f\n" +
+	"\x06member\x18\x01 \x01(\v2\x15.common.v1.MemberInfoR\x06member\"\xb5\x01\n" +
+	"\x16UpdateMyProfileRequest\x12&\n" +
+	"\faccent_color\x18\x01 \x01(\tH\x00R\vaccentColor\x88\x01\x01\x12$\n" +
+	"\vfont_family\x18\x02 \x01(\tH\x01R\n" +
+	"fontFamily\x88\x01\x01\x12\x1f\n" +
+	"\bpronouns\x18\x03 \x01(\tH\x02R\bpronouns\x88\x01\x01B\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
-	"\f_font_family\"\xd1\x01\n" +
+	"\f_font_familyB\v\n" +
+	"\t_pronouns\"\xd1\x01\n" +
 	"\x10ListUsersRequest\x12A\n" +
 	"\n" +
 	"pagination\x18\x01 \x01(\v2\x1c.common.v1.PaginationRequestH\x00R\n" +

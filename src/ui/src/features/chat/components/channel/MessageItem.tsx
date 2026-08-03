@@ -15,8 +15,8 @@ import { AgentAvatar } from '@/features/agents/components/AgentAvatar';
 import { CustomStatusDisplay } from '@/features/presence/components/CustomStatusDisplay';
 import { cn } from '@/shared/utils/cn';
 import { useAppSelector, useAppDispatch } from '@/app/hooks';
-import { addReaction, removeReaction } from '@/features/chat/store/chatThunks';
-import { setReplyToMessage, setEditingMessage, jumpToMessage } from '@/features/chat/store/chatUiSlice';
+import { addReaction, removeReaction, jumpToChannelMessage } from '@/features/chat/store/chatThunks';
+import { setReplyToMessage, setEditingMessage } from '@/features/chat/store/chatUiSlice';
 import { stripMarkdown } from '@/features/search/utils/stripMarkdown';
 
 function formatMessageTime(dateStr: string): string {
@@ -391,7 +391,12 @@ function MessageItemInner({
             <button
               type="button"
               className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer max-w-full"
-              onClick={() => dispatch(jumpToMessage(message.replyContext!.id))}
+              onClick={() =>
+                dispatch(jumpToChannelMessage({
+                  channelId: message.channelId,
+                  messageId: message.replyContext!.id,
+                }))
+              }
             >
               <ArrowBendUpLeft size={12} className="shrink-0 text-primary/60" />
               <span className="font-semibold text-foreground/70 shrink-0">{message.replyContext.senderName}</span>

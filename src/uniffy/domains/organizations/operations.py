@@ -20,6 +20,7 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 from uniffy.core.valkey.cache import cache_invalidate_by_tag
@@ -83,6 +84,16 @@ class OrganizationOperations:
             role=OrganizationRole.OWNER,
         )
         self._session.add(membership)
+
+        # Every org carries a LOCAL identity source so identity links always
+        # have a source row; existing orgs got theirs from the backfill.
+        self._session.add(
+            IdentitySource(
+                organization_id=org.id,
+                kind=IdentitySourceKind.LOCAL,
+                name="Local",
+            )
+        )
 
         await self._session.commit()
         await self._session.refresh(org)

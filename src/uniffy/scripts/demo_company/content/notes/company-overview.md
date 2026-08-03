@@ -1,44 +1,46 @@
 ---
 title: Company Overview
-slug: vitalis-company-overview
+slug: uniffy-company-overview
 folder: Handbook
 tags:
   - handbook
 ---
 
-# Vitalis Health
+# Uniffy
 
-Vitalis Health AD is an outpatient healthcare group founded in Sofia in 2016. We run
-primary care and specialist clinics, an accredited diagnostics laboratory, and a
-telehealth service that covers the whole country.
+Uniffy is a software company founded in Sofia in 2016. We build the Uniffy unified
+workspace: notes, files, chat, AI agents, calendar and projects in one application,
+shipped as a hosted service and as a self-hosted product our customers run themselves.
 
 ## What we operate
 
 | Unit | Location | Notes |
 | --- | --- | --- |
-| Sofia HQ and clinic | bul. Tsarigradsko shose 115G, Sofia 1784 | 4 floors, clinic on floors 1 and 2 |
-| Vitalis Lab | Sofia HQ, floor 1 | ISO 15189 accredited, serves both clinics |
-| Plovdiv clinic | Trakia district, Plovdiv | Opened 2021, 9 consulting rooms |
-| Vitalis Connect | Remote | Telehealth consultations, 07:00 to 21:00 daily |
-| MyVitalis | Remote | Patient portal: results, referrals, appointments |
+| Sofia HQ | bul. Tsarigradsko shose 115G, Sofia 1784 | Floors 0 to 4, engineering on 4 |
+| Plovdiv office | Trakia district, Plovdiv | Opened 2021, support and QA pod, device lab |
+| Uniffy Cloud | cloud.uniffy.io | Hosted multi-tenant service, EU region |
+| Uniffy Self-hosted | Customer infrastructure | Licensed deployment, runs air-gapped |
+| Support desk | Sofia and Plovdiv | 08:00 to 20:00 weekdays, 09:00 to 15:00 Saturdays |
 
 ## People
 
-About 180 people work here. Roughly 70 are clinical staff, 25 work in the lab, 25 build
-our software, and the rest cover operations, finance, marketing and administration.
+Just over 40 people work here. Roughly half build the product, a quarter run support
+and QA, and the rest cover product management, marketing, finance and administration.
+We run our own company on Uniffy: every rota, decision and runbook below lives in this
+workspace.
 
-The management team meets weekly. Clinic managers from Sofia and Plovdiv sync every
-Wednesday morning at the [Clinic managers sync](event:Clinic managers sync), and the
+The management team meets weekly. Team leads from Sofia and Plovdiv sync every
+Wednesday morning at the [Team leads sync](event:Team leads sync), and the
 whole company gathers for the [Quarterly all-hands](event:Quarterly all-hands) in
 [Serdica](room:Serdica).
 
-## Who regulates us
+## Who we answer to
 
-We answer to the Ministry of Health and the Executive Agency for Medical Supervision.
-Reimbursed care is settled with the National Health Insurance Fund. Patient data sits
-under GDPR and the Bulgarian Personal Data Protection Act, supervised by the Commission
-for Personal Data Protection. Details live in
-[Patient Data Protection Policy](patient-data-protection-policy.md).
+Customer workspace data sits under GDPR and the Bulgarian Personal Data Protection Act,
+supervised by the Commission for Personal Data Protection. On Uniffy Cloud we are a
+processor for customer content and a controller for staff and billing data; self-hosted
+customers hold their own data entirely. Details live in
+[Customer Data Protection Policy](customer-data-protection-policy.md).
 
 ## Where to start
 

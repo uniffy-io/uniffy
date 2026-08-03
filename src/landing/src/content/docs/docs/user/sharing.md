@@ -30,9 +30,11 @@ When you let someone in, you give them a role. The role decides how far they can
 
 You stay the **owner**. There is one owner per item, and the owner can do everything. If you want to hand something off for good, you can transfer ownership to someone else.
 
-## Sharing with a group
+## Sharing with a team or group
 
-You can share with a group instead of one person at a time. Add the Design group as an editor and everyone in it can edit. Add a new person to that group next month and they inherit the same access automatically. Take them out of the group and the access goes with them.
+You can share with a whole set of people instead of one person at a time. A [team](/docs/user/people/) is an organizational unit like Engineering. A group is a sharing list an admin made, like Release Approvers. Both show up in the picker, labeled so you can tell them apart.
+
+Add the Design team as an editor and everyone in it can edit. Add a new person to that team next month and they inherit the same access automatically. Take them out and the access goes with them.
 
 ## Keeping one person out
 

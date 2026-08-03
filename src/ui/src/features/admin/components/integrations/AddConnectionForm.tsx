@@ -3,7 +3,7 @@ import { CircleNotch, Plus, Warning } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { IntegrationProviderPicker } from '@/features/integrations/components/IntegrationProviderPicker';
 import { addConnection } from '@/features/integrations/store/integrationsThunks';
 import type { IntegrationProviderPlain } from '@/features/integrations/store/integrationsThunks';
 
@@ -28,11 +28,6 @@ export function AddConnectionForm({
     const descriptor = useMemo(
         () => providers.find((p) => p.id === provider) ?? null,
         [providers, provider],
-    );
-
-    const providerOptions = useMemo(
-        () => providers.map((p) => ({ value: p.id, label: p.label })),
-        [providers],
     );
 
     const canSubmit = Boolean(provider) && Boolean(name.trim()) && Boolean(credential.trim()) && !submitting;
@@ -65,13 +60,13 @@ export function AddConnectionForm({
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm text-muted-foreground mb-1">
-                    Provider
+                <label className="block text-sm text-muted-foreground mb-1.5">
+                    Service
                 </label>
-                <Select
+                <IntegrationProviderPicker
+                    providers={providers}
                     value={provider}
                     onChange={setProviderChoice}
-                    options={providerOptions}
                 />
             </div>
             <div>

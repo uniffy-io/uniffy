@@ -23,6 +23,9 @@ interface ChatMessagesState {
   idSetByChannel: Record<string, Record<string, true>>;
   pinnedCountByChannel: Record<string, number>;
   hasMoreByChannel: Record<string, boolean>;
+  // True while a channel shows a history window around a jump target instead of
+  // the live tail, so the view can offer a way back to the newest messages.
+  windowedByChannel: Record<string, boolean>;
   unreadSeparatorByChannel: Record<string, string | null>;
   isLoadingByChannel: Record<string, boolean>;
   typingByChannel: Record<string, TypingEntry[]>;
@@ -38,6 +41,7 @@ const initialState: ChatMessagesState = {
   idSetByChannel: {},
   pinnedCountByChannel: {},
   hasMoreByChannel: {},
+  windowedByChannel: {},
   unreadSeparatorByChannel: {},
   isLoadingByChannel: {},
   typingByChannel: {},
@@ -55,9 +59,9 @@ export const chatMessagesSlice = createSlice({
   reducers: {
     setMessages: (
       state,
-      action: PayloadAction<{ channelId: string; messages: ChatMessage[] }>,
+      action: PayloadAction<{ channelId: string; messages: ChatMessage[]; windowed?: boolean }>,
     ) => {
-      const { channelId, messages } = action.payload;
+      const { channelId, messages, windowed = false } = action.payload;
       const ids: string[] = [];
       const set: Record<string, true> = {};
       let pinned = 0;
@@ -71,6 +75,7 @@ export const chatMessagesSlice = createSlice({
       state.idsByChannel[channelId] = ids;
       state.idSetByChannel[channelId] = set;
       state.pinnedCountByChannel[channelId] = pinned;
+      state.windowedByChannel[channelId] = windowed;
     },
     appendMessage: (
       state,
@@ -229,6 +234,7 @@ export const chatMessagesSlice = createSlice({
       delete state.idSetByChannel[channelId];
       delete state.pinnedCountByChannel[channelId];
       delete state.hasMoreByChannel[channelId];
+      delete state.windowedByChannel[channelId];
       delete state.unreadSeparatorByChannel[channelId];
       delete state.isLoadingByChannel[channelId];
       delete state.typingByChannel[channelId];
@@ -593,6 +599,11 @@ export const selectHasMoreForChannel = (
   state: RootState,
   channelId: string,
 ): boolean => state.chatMessages.hasMoreByChannel[channelId] ?? false;
+
+export const selectIsWindowedForChannel = (
+  state: RootState,
+  channelId: string,
+): boolean => state.chatMessages.windowedByChannel[channelId] ?? false;
 
 export const selectUnreadSeparatorForChannel = (
   state: RootState,

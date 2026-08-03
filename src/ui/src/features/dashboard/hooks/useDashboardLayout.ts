@@ -7,6 +7,7 @@ export type WidgetId =
   | 'recent-activity'
   | 'quick-actions'
   | 'team-presence'
+  | 'people'
   | 'notifications'
   | 'recent-notes'
   | 'recent-files'
@@ -28,6 +29,7 @@ const DEFAULT_LAYOUT: WidgetPreference[] = [
   { id: 'recent-activity', visible: true, size: 'expanded' },
   { id: 'quick-actions', visible: true, size: 'expanded' },
   { id: 'team-presence', visible: true, size: 'compact' },
+  { id: 'people', visible: true, size: 'compact' },
   { id: 'notifications', visible: true, size: 'compact' },
   { id: 'recent-notes', visible: true, size: 'expanded' },
   { id: 'recent-files', visible: true, size: 'expanded' },

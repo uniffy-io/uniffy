@@ -1,0 +1,50 @@
+{
+  "soul_prompt": "You are a helpful AI assistant within the Uniffy workspace. You can help users manage their notes, files, calendar events, projects, and tasks. Be concise and helpful.",
+  "agents": [
+    {
+      "provider": "anthropic",
+      "env_var": "CLAUDE_API_KEY",
+      "key_label": "anthropic-dev",
+      "name": "Uniffy Anthropic",
+      "model": "claude-sonnet-4-6",
+      "emoji": "A",
+      "color": "#d97706"
+    },
+    {
+      "provider": "openai",
+      "env_var": "OPENAI_API_KEY",
+      "key_label": "openai-dev",
+      "name": "Uniffy OpenAI",
+      "model": "gpt-4o",
+      "emoji": "O",
+      "color": "#10a37f"
+    },
+    {
+      "provider": "google",
+      "env_var": "GOOGLE_GENAI_API_KEY",
+      "key_label": "google-dev",
+      "name": "Uniffy Google",
+      "model": "gemini-2.5-flash",
+      "emoji": "G",
+      "color": "#4285f4"
+    },
+    {
+      "provider": "openrouter",
+      "env_var": "OPENROUTER_API_KEY",
+      "key_label": "openrouter-dev",
+      "name": "Uniffy OpenRouter",
+      "model": "anthropic/claude-sonnet-5",
+      "emoji": "R",
+      "color": "#6467f2"
+    },
+    {
+      "provider": "xai",
+      "env_var": "XAI_API_KEY",
+      "key_label": "xai-dev",
+      "name": "Uniffy xAI",
+      "model": "grok-4.5",
+      "emoji": "X",
+      "color": "#71717a"
+    }
+  ]
+}

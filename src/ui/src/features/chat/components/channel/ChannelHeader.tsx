@@ -45,9 +45,8 @@ import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 import { SplitChannelPicker } from '@/features/chat/components/channel/SplitChannelPicker';
 import { PinnedMessagesPanel } from '@/features/chat/components/channel/PinnedMessagesPanel';
 import { selectPinnedCountForChannel } from '@/features/chat/store/chatMessagesSlice';
-import { jumpToMessage } from '@/features/chat/store/chatUiSlice';
 import { Input } from '@/components/ui/input';
-import { renameAgentChat } from '@/features/chat/store/chatThunks';
+import { renameAgentChat, jumpToChannelMessage } from '@/features/chat/store/chatThunks';
 import { getChannelDisplayName } from '@/features/chat/utils/channelDisplay';
 import { TagChip } from '@/features/tags';
 import {
@@ -418,7 +417,9 @@ export function ChannelHeader({ channelId, showCloseButton, onClose }: ChannelHe
               channelId={activeChannel.id}
               anchorRef={pinnedBtnRef}
               onClose={() => setShowPinned(false)}
-              onJumpToMessage={(messageId) => dispatch(jumpToMessage(messageId))}
+              onJumpToMessage={(messageId) =>
+                dispatch(jumpToChannelMessage({ channelId: activeChannel.id, messageId }))
+              }
             />
           )}
 

@@ -2,22 +2,28 @@
 
 from uuid import UUID
 
+from connectrpc.code import Code
+from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from uniffy_proto.common.v1 import common_pb2 as common
 from uniffy_proto.groups.v1 import groups_pb2 as pb
 
 from uniffy.core.converters import (
     group_info_to_proto,
+    group_kind_from_proto,
     group_member_info_to_proto,
     group_role_from_proto,
 )
+from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.models.login.group import GroupKind
+from uniffy.core.models.login.group_member import GroupRole
 from uniffy.db import open_session
 from uniffy.domains.auth.context import (
     get_user_id_from_context,
     resolve_organization_id,
 )
 from uniffy.domains.groups.converters import group_with_count_to_proto
-from uniffy.domains.groups.operations import GroupOperations
+from uniffy.domains.groups.operations import UNSET, GroupOperations
 
 
 class GroupsHandlers:
@@ -83,16 +89,29 @@ class GroupsHandlers:
         user_id = get_user_id_from_context(ctx)
         org_id = resolve_organization_id(ctx, request.organization_id)
 
-        async with open_session() as session:
-            ops = GroupOperations(session)
-            group = await ops.create(
-                organization_id=org_id,
-                name=request.name,
-                created_by_user_id=user_id,
-                description=request.description if request.HasField("description") else None,
-                is_private=request.is_private,
-                is_default=request.is_default,
-            )
+        try:
+            async with open_session() as session:
+                ops = GroupOperations(session)
+                group = await ops.create(
+                    organization_id=org_id,
+                    name=request.name,
+                    created_by_user_id=user_id,
+                    description=request.description if request.HasField("description") else None,
+                    is_private=request.is_private,
+                    kind=group_kind_from_proto(request.kind) or GroupKind.ACCESS,
+                    parent_group_id=(
+                        UUID(request.parent_group_id)
+                        if request.HasField("parent_group_id")
+                        else None
+                    ),
+                    lead_user_id=(
+                        UUID(request.lead_user_id) if request.HasField("lead_user_id") else None
+                    ),
+                )
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except (ValidationError, ValueError) as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
 
         return pb.CreateGroupResponse(group=group_info_to_proto(group))
 
@@ -105,17 +124,39 @@ class GroupsHandlers:
         org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
 
-        async with open_session() as session:
-            ops = GroupOperations(session)
-            group = await ops.update(
-                group_id=group_id,
-                organization_id=org_id,
-                actor_user_id=user_id,
-                name=request.name if request.HasField("name") else None,
-                description=request.description if request.HasField("description") else None,
-                is_private=request.is_private if request.HasField("is_private") else None,
-                is_default=request.is_default if request.HasField("is_default") else None,
-            )
+        if request.clear_parent_group:
+            parent_group_id: UUID | None | object = None
+        elif request.HasField("parent_group_id"):
+            parent_group_id = UUID(request.parent_group_id)
+        else:
+            parent_group_id = UNSET
+        if request.clear_lead:
+            lead_user_id: UUID | None | object = None
+        elif request.HasField("lead_user_id"):
+            lead_user_id = UUID(request.lead_user_id)
+        else:
+            lead_user_id = UNSET
+
+        try:
+            async with open_session() as session:
+                ops = GroupOperations(session)
+                group = await ops.update(
+                    group_id=group_id,
+                    organization_id=org_id,
+                    actor_user_id=user_id,
+                    name=request.name if request.HasField("name") else None,
+                    description=request.description if request.HasField("description") else None,
+                    is_private=request.is_private if request.HasField("is_private") else None,
+                    kind=(
+                        group_kind_from_proto(request.kind) if request.HasField("kind") else None
+                    ),
+                    parent_group_id=parent_group_id,
+                    lead_user_id=lead_user_id,
+                )
+        except NotFoundError as e:
+            raise ConnectError(Code.NOT_FOUND, str(e))
+        except (ValidationError, ValueError) as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
 
         return pb.UpdateGroupResponse(group=group_info_to_proto(group))
 
@@ -183,7 +224,7 @@ class GroupsHandlers:
         org_id = resolve_organization_id(ctx, request.organization_id)
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
-        role = group_role_from_proto(request.role)
+        role = group_role_from_proto(request.role) or GroupRole.MEMBER
 
         async with open_session() as session:
             ops = GroupOperations(session)
@@ -208,6 +249,8 @@ class GroupsHandlers:
         group_id = UUID(request.group_id)
         target_user_id = UUID(request.user_id)
         role = group_role_from_proto(request.role)
+        if role is None:
+            raise ValidationError("role", "A group role is required")
 
         async with open_session() as session:
             ops = GroupOperations(session)

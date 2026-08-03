@@ -2,12 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChatCircle, ArrowSquareOut } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
+import { useAppSelector } from '@/app/hooks';
 import { usePresence } from '@/features/presence/hooks/usePresence';
 import { useCustomStatus } from '@/features/presence/hooks/useCustomStatus';
 import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 import { PresenceIndicator } from '@/components/subject/PresenceIndicator';
-import { usersApi } from '@/features/settings/api/usersApi';
+import { getAvatarGradientStyle, getInitials } from '@/components/subject/utils';
+import { peopleApi } from '@/features/people/api/peopleApi';
 import { formatTimeRemaining } from '@/shared/utils/dateFormatting';
+import { navigateTo } from '@/shared/utils/navigation';
 import { useBreakpoint } from '@/shared/hooks/useBreakpoint';
 
 interface UserHoverCardProps {
@@ -22,9 +25,12 @@ interface UserHoverCardProps {
 }
 
 interface UserProfileData {
-  fullName?: string;
+  displayName?: string;
   email?: string;
   username?: string;
+  jobTitle?: string;
+  department?: string;
+  teamNames: string[];
 }
 
 const GAP = 8;
@@ -41,6 +47,7 @@ export function UserHoverCard({
   onSendMessage,
 }: UserHoverCardProps) {
   const { isMobile } = useBreakpoint();
+  const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [fetchedUserId, setFetchedUserId] = useState('');
@@ -48,17 +55,21 @@ export function UserHoverCard({
   const presenceStatus = usePresence(userId);
   const customStatus = useCustomStatus(userId);
   const avatarUrl = useAvatarUrl(userId, 'md');
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
-    if (!isVisible || !userId || fetchedUserId === userId) return;
+    if (!isVisible || !userId || !organizationId || fetchedUserId === userId) return;
     let cancelled = false;
 
-    usersApi.getUser(userId).then((res) => {
+    peopleApi.getPerson(organizationId, userId).then((person) => {
       if (cancelled) return;
       setProfile({
-        fullName: res.fullName,
-        email: res.email,
-        username: res.username,
+        displayName: person.displayName,
+        email: person.email,
+        username: person.username,
+        jobTitle: person.jobTitle,
+        department: person.department,
+        teamNames: person.teams.map((team) => team.name),
       });
       setFetchedUserId(userId);
     }).catch(() => {
@@ -66,7 +77,7 @@ export function UserHoverCard({
     });
 
     return () => { cancelled = true; };
-  }, [isVisible, userId, fetchedUserId]);
+  }, [isVisible, userId, organizationId, fetchedUserId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -85,6 +96,11 @@ export function UserHoverCard({
     onClose();
   }, [onSendMessage, onClose]);
 
+  const handleOpenProfile = useCallback(() => {
+    onClose();
+    navigateTo(`/people/${userId}`);
+  }, [onClose, userId]);
+
   const isLoading = isVisible && fetchedUserId !== userId && !profile;
 
   if (!isVisible || isMobile) return null;
@@ -92,7 +108,8 @@ export function UserHoverCard({
   const adjustedLeft = Math.min(Math.max(position.x, 8), window.innerWidth - CARD_WIDTH - 8);
   const opensDownward = position.y + GAP + 220 <= window.innerHeight;
 
-  const name = profile?.fullName || displayName;
+  const name = profile?.displayName || displayName;
+  const roleLine = [profile?.jobTitle, profile?.department].filter(Boolean).join(' · ');
   const subtitle = profile?.email || profile?.username;
 
   const presenceLabel =
@@ -133,9 +150,9 @@ export function UserHoverCard({
           opensDownward ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2',
         )}
       >
-        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500" />
+        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary" />
 
-        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-emerald-500/10 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none" />
 
         {isLoading ? (
           <div className="p-4">
@@ -152,15 +169,19 @@ export function UserHoverCard({
             <div className="relative px-4 pt-3.5 pb-2 pl-5">
               <div className="flex items-start gap-3">
                 <div className="relative shrink-0">
-                  {avatarUrl ? (
+                  {avatarUrl && !avatarFailed ? (
                     <img
                       src={avatarUrl}
                       alt=""
+                      onError={() => setAvatarFailed(true)}
                       className="w-12 h-12 rounded-xl object-cover shadow-lg ring-2 ring-background"
                     />
                   ) : (
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl shadow-lg bg-emerald-500 text-white text-sm font-semibold">
-                      {name.charAt(0).toUpperCase()}
+                    <div
+                      className="flex items-center justify-center w-12 h-12 rounded-xl shadow-lg text-white text-sm font-semibold"
+                      style={getAvatarGradientStyle(name || userId)}
+                    >
+                      {getInitials(name)}
                     </div>
                   )}
                   <PresenceIndicator status={presenceStatus} size="lg" />
@@ -168,6 +189,9 @@ export function UserHoverCard({
 
                 <div className="flex-1 min-w-0 pt-0.5">
                   <h4 className="font-semibold text-sm truncate">{name}</h4>
+                  {roleLine && (
+                    <p className="text-xs text-muted-foreground truncate">{roleLine}</p>
+                  )}
                   {subtitle && (
                     <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
                   )}
@@ -192,6 +216,18 @@ export function UserHoverCard({
                       </>
                     )}
                   </div>
+                  {profile && profile.teamNames.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {profile.teamNames.map((teamName) => (
+                        <span
+                          key={teamName}
+                          className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-foreground"
+                        >
+                          {teamName}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -210,13 +246,14 @@ export function UserHoverCard({
                   <span>Message</span>
                 </button>
               )}
-              <a
-                href={`/admin/members`}
+              <button
+                type="button"
+                onClick={handleOpenProfile}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ArrowSquareOut size={12} />
                 <span>Profile</span>
-              </a>
+              </button>
             </div>
           </>
         )}

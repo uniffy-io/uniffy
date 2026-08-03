@@ -22,6 +22,9 @@ from uniffy_proto.common.v1.common_pb2 import (
     GroupInfo as ProtoGroupInfo,
 )
 from uniffy_proto.common.v1.common_pb2 import (
+    GroupKind as ProtoGroupKind,
+)
+from uniffy_proto.common.v1.common_pb2 import (
     GroupMemberInfo as ProtoGroupMemberInfo,
 )
 from uniffy_proto.common.v1.common_pb2 import (
@@ -46,6 +49,7 @@ from uniffy_proto.common.v1.common_pb2 import (
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.models.login.group import Group
+from uniffy.core.models.login.group import GroupKind as DomainGroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.group_member import GroupRole as DomainGroupRole
 from uniffy.core.models.login.organization import Organization
@@ -77,6 +81,7 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType.ValueType] = {
     DomainContentType.ROOM: ProtoContentType.CONTENT_TYPE_ROOM,
     DomainContentType.AGENT_CRON_TASK: ProtoContentType.CONTENT_TYPE_AGENT_CRON_TASK,
     DomainContentType.TAG: ProtoContentType.CONTENT_TYPE_TAG,
+    DomainContentType.TEAM: ProtoContentType.CONTENT_TYPE_TEAM,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType.ValueType, DomainContentType] = {
@@ -284,19 +289,43 @@ def org_info_to_proto(org: Organization) -> ProtoOrgInfo:
     )
 
 
+GROUP_KIND_TO_PROTO: dict[DomainGroupKind, ProtoGroupKind.ValueType] = {
+    DomainGroupKind.TEAM: ProtoGroupKind.GROUP_KIND_TEAM,
+    DomainGroupKind.ACCESS: ProtoGroupKind.GROUP_KIND_ACCESS,
+}
+
+GROUP_KIND_FROM_PROTO: dict[ProtoGroupKind.ValueType, DomainGroupKind] = {
+    ProtoGroupKind.GROUP_KIND_TEAM: DomainGroupKind.TEAM,
+    ProtoGroupKind.GROUP_KIND_ACCESS: DomainGroupKind.ACCESS,
+}
+
+
+def group_kind_to_proto(kind: DomainGroupKind) -> ProtoGroupKind.ValueType:
+    return GROUP_KIND_TO_PROTO[kind]
+
+
+def group_kind_from_proto(kind: ProtoGroupKind.ValueType) -> DomainGroupKind | None:
+    return GROUP_KIND_FROM_PROTO.get(kind)
+
+
 def group_info_to_proto(group: Group, member_count: int = 0) -> ProtoGroupInfo:
-    return ProtoGroupInfo(
+    info = ProtoGroupInfo(
         id=str(group.id),
         organization_id=str(group.organization_id),
         name=group.name,
         slug=group.slug,
         description=group.description or "",
         is_private=group.is_private,
-        is_default=group.is_default,
         member_count=member_count,
         created_at=datetime_to_timestamp(group.created_at),
         updated_at=datetime_to_timestamp(group.updated_at),
+        kind=group_kind_to_proto(group.kind),
     )
+    if group.parent_group_id:
+        info.parent_group_id = str(group.parent_group_id)
+    if group.lead_user_id:
+        info.lead_user_id = str(group.lead_user_id)
+    return info
 
 
 def member_info_to_proto(

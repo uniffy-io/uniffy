@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from uniffy.core.content.references import parse_urn
 from uniffy.core.search import get_meilisearch_client
 
 
@@ -102,6 +103,7 @@ class SearchResult:
                 updated_at = datetime.fromtimestamp(hit["updated_at"])
 
         formatted = hit.get("_formatted") or {}
+        metadata = hit.get("metadata") or {}
 
         return cls(
             urn=hit.get("urn", ""),
@@ -120,6 +122,10 @@ class SearchResult:
             updated_at=updated_at,
             rank_score=hit.get("rank_score", 1.0),
             search_score=hit.get("_rankingScore"),
+            # User docs denormalize these at index time, tier-gated there;
+            # resolve must not re-read them from the database.
+            user_avatar_url=metadata.get("avatar_url"),
+            user_email=metadata.get("user_email"),
         )
 
 
@@ -197,6 +203,12 @@ async def get_documents_by_urns(
     user_group_ids: list[UUID] | None = None,
 ) -> dict[str, SearchResult]:
     """Fetch URNs from Meilisearch, optionally filtered by the user's permissions."""
+    # A URN is interpolated into the filter expression next to the permission
+    # clause. ``parse_urn`` rejects anything that is not
+    # ``urn:uniffy:content:{TYPE}:{uuid}``, which excludes the quote needed to
+    # break out of the literal. Dropped entries fall through to the caller's
+    # tombstone synthesis.
+    urns = [urn for urn in urns if parse_urn(urn) is not None]
     if not urns:
         return {}
 

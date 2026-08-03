@@ -7,6 +7,8 @@ export const SUBJECT_TYPE = {
 
 export type SubjectTypeValue = typeof SUBJECT_TYPE[keyof typeof SUBJECT_TYPE];
 
+export type SubjectGroupKind = 'team' | 'access';
+
 export interface Subject {
     id: string;
     type: SubjectTypeValue;
@@ -14,6 +16,10 @@ export interface Subject {
     email?: string;
     avatarUrl?: string;
     memberCount?: number;
+    /** Display-level distinction for GROUP subjects; the wire type stays USER/GROUP. */
+    kind?: SubjectGroupKind;
+    /** Private group visible to the actor through their own membership. */
+    isPrivate?: boolean;
 }
 
 export type SubjectPickerMode = 'single' | 'multi';

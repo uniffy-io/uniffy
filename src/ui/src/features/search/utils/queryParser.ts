@@ -40,6 +40,8 @@ const TYPE_KEYWORD_MAP: Record<string, SearchResultType> = {
     'agent-folders': SearchResultType.AGENT_FOLDER,
     'user': SearchResultType.USER,
     'users': SearchResultType.USER,
+    'team': SearchResultType.TEAM,
+    'teams': SearchResultType.TEAM,
     'calendar': SearchResultType.CALENDAR_EVENT,
     'event': SearchResultType.CALENDAR_EVENT,
     'events': SearchResultType.CALENDAR_EVENT,
@@ -184,6 +186,8 @@ export function getTypeFilterLabel(type: SearchResultType): string {
             return 'Agent Chat Folders';
         case SearchResultType.USER:
             return 'Users';
+        case SearchResultType.TEAM:
+            return 'Teams';
         case SearchResultType.CALENDAR_EVENT:
             return 'Events';
         case SearchResultType.CHAT:
@@ -219,6 +223,8 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
             return 'agentfolder';
         case SearchResultType.USER:
             return 'user';
+        case SearchResultType.TEAM:
+            return 'team';
         case SearchResultType.CALENDAR_EVENT:
             return 'calendar';
         case SearchResultType.CHAT:

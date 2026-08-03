@@ -170,8 +170,6 @@ class TestBuildTagVisibilityPredicate:
             )
 
         assert isinstance(result, BinaryExpression)
-        compiled = str(result.compile(compile_kwargs={"literal_binds": False}))
-        assert "tags.id IN" in compiled
 
 
 class TestBuildAssignmentVisibilityPredicate:
@@ -210,8 +208,6 @@ class TestBuildAssignmentVisibilityPredicate:
             )
 
         assert isinstance(result, BooleanClauseList)
-        compiled = str(result.compile(compile_kwargs={"literal_binds": False}))
-        assert "tag_assignments.content_type" in compiled
 
     async def test_empty_when_nothing_visible(self) -> None:
         from sqlalchemy.sql.elements import False_

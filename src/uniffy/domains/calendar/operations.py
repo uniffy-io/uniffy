@@ -16,6 +16,7 @@ from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.content.cascade import propagate_rename
 from uniffy.core.content.members import register_content_loader
 from uniffy.core.content.references import extract_all_outgoing_references
+from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.errors import (
     NotFoundError,
     PermissionDeniedError,
@@ -24,6 +25,7 @@ from uniffy.core.errors import (
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
+    extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
 from uniffy.core.models.calendar.activity import EventActivity
@@ -33,7 +35,10 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
-from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.organization_member import (
+    OrganizationMember,
+    OrganizationRole,
+)
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AccessMode,
@@ -169,12 +174,22 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         VIEW an event regardless of its access mode - mirroring the attendee
         bypass in the list queries. An explicit BLOCKED grant still wins.
         """
-        role = await super()._resolve_role(user_id, organization_id, content)
+        # Expanded occurrences carry a synthetic string id; permissions live on
+        # the master row, so every lookup below resolves to the master UUID.
+        master_id = _master_event_id(content)
+        role = await self.permission_checker.effective_role(
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=self.content_type,
+            content_id=master_id,
+            owner_id=content.owner_id,
+            access_mode=content.access_mode,
+            baseline_role=content.baseline_role,
+        )
         if role is not None:
             return role
 
-        master_id = _master_event_id(content)
-        if not await self._is_attendee(user_id, master_id):
+        if not await self._is_attendee(user_id, organization_id, master_id):
             return None
 
         if await self.permission_checker.is_blocked(
@@ -184,24 +199,53 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         return ContentRole.VIEWER
 
-    async def _is_attendee(self, user_id: UUID, event_id: UUID) -> bool:
+    async def _is_attendee(self, user_id: UUID, organization_id: UUID, event_id: UUID) -> bool:
+        """An invitation is a grant only while the invitee is still an active
+        member of the org.
+
+        ``effective_role`` has already returned ``None`` by the time this runs,
+        and lost membership is one of the reasons it does. Without the join,
+        removal would leave every event the user was ever invited to readable,
+        because ``remove_member`` does not delete attendee rows.
+        """
         result = await self.session.execute(
             select(EventAttendee.id)
+            .join(
+                OrganizationMember,
+                OrganizationMember.user_id == EventAttendee.user_id,
+            )
             .where(
                 EventAttendee.event_id == event_id,
                 EventAttendee.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
             )
             .limit(1)
         )
         return result.scalar_one_or_none() is not None
 
     def _attendee_access_filter(self, user_id: UUID, organization_id: UUID):
-        """WHERE branch granting invitees visibility, minus explicit BLOCKED grants."""
+        """WHERE branch granting invitees visibility, minus explicit BLOCKED grants.
+
+        The membership EXISTS is uncorrelated, so it collapses to a constant
+        for the query rather than running per row. It mirrors the same
+        condition in ``_is_attendee``.
+        """
         attendee_subquery = select(EventAttendee.event_id).where(
             EventAttendee.user_id == user_id,
         )
+        active_membership = (
+            select(OrganizationMember.id)
+            .where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+            )
+            .exists()
+        )
         return and_(
             CalendarEvent.id.in_(attendee_subquery),
+            active_membership,
             self.access_query.build_not_blocked_filter(
                 user_id=user_id,
                 organization_id=organization_id,
@@ -234,6 +278,40 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             logger.opt(exception=True).warning(
                 "Failed to refresh attendee search sharing"
             )
+
+    async def _emit_team_mention_notifications(
+        self,
+        event: CalendarEvent,
+        actor_id: UUID,
+        organization_id: UUID,
+        team_ids: list[UUID],
+        excluded_ids: set[UUID],
+    ) -> None:
+        """One CONTENT_MENTIONED per newly mentioned team; the notification
+        worker filters each recipient against the event itself."""
+        if not team_ids:
+            return
+        notified = set(excluded_ids)
+        expansions = await expand_team_mentions(self.session, organization_id, team_ids)
+        for expansion in expansions:
+            targets = [uid for uid in expansion.member_ids if uid not in notified]
+            if not targets:
+                continue
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=actor_id,
+                    title=f"Mentioned {expansion.name} in: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=targets,
+                    metadata={
+                        "team_id": str(expansion.team_id),
+                        "team_name": expansion.name,
+                    },
+                )
+            )
+            notified.update(targets)
 
     async def create(
         self,
@@ -296,8 +374,11 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 )
             await self._validate_channel_binding(user_id, organization_id, channel_id)
 
+        invited_via: dict[UUID, UUID] = {}
         if attendee_ids:
-            attendee_ids = await self._expand_group_attendees(attendee_ids)
+            attendee_ids, invited_via = await self._expand_group_attendees(
+                user_id, organization_id, attendee_ids
+            )
 
         outgoing_refs = (
             extract_all_outgoing_references(description, organization_id) if description else None
@@ -352,6 +433,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         user_id=attendee_id,
                         status=AttendeeStatus.PENDING,
                         role=AttendeeRole.REQUIRED,
+                        invited_via_group_id=invited_via.get(attendee_id),
                     )
                     self.session.add(attendee)
 
@@ -397,10 +479,8 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     )
                 )
 
-        mentioned_ids = extract_mentioned_user_ids(outgoing_refs)
-        mentioned_ids.discard(user_id)
-        if attendee_ids:
-            mentioned_ids -= set(attendee_ids)
+        excluded_from_mentions = {user_id} | set(attendee_ids or [])
+        mentioned_ids = extract_mentioned_user_ids(outgoing_refs) - excluded_from_mentions
         if mentioned_ids:
             await emit_notification(
                 NotificationEvent(
@@ -412,6 +492,14 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     target_user_ids=list(mentioned_ids),
                 )
             )
+
+        await self._emit_team_mention_notifications(
+            event,
+            user_id,
+            organization_id,
+            extract_mentioned_team_ids(outgoing_refs),
+            excluded_from_mentions | mentioned_ids,
+        )
 
         if room_id:
             from uniffy.domains.rooms.operations import BookingOperations
@@ -518,8 +606,10 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         title_changed = title is not None and title != event.title
 
         old_mentioned: set[UUID] = set()
+        old_mentioned_teams: set[UUID] = set()
         if description is not None:
             old_mentioned = extract_mentioned_user_ids(event.outgoing_references)
+            old_mentioned_teams = set(extract_mentioned_team_ids(event.outgoing_references))
 
         if title is not None:
             event.title = title
@@ -593,7 +683,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         newly_invited_ids: list[UUID] = []
         removed_attendee_ids: list[UUID] = []
         if attendee_ids is not None:
-            attendee_ids = await self._expand_group_attendees(attendee_ids)
+            attendee_ids, invited_via = await self._expand_group_attendees(
+                user_id, organization_id, attendee_ids
+            )
             stmt = select(EventAttendee).where(EventAttendee.event_id == event.id)
             result = await self.session.execute(stmt)
             existing_attendees = result.scalars().all()
@@ -615,6 +707,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         user_id=uid,
                         status=AttendeeStatus.PENDING,
                         role=AttendeeRole.REQUIRED,
+                        invited_via_group_id=invited_via.get(uid),
                     )
                     self.session.add(attendee)
                     newly_invited_ids.append(uid)
@@ -681,14 +774,17 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
             )
 
         if description is not None:
-            new_mentioned = extract_mentioned_user_ids(event.outgoing_references)
-            new_mentioned.discard(user_id)
             if attendee_ids is not None:
-                new_mentioned -= set(attendee_ids)
+                current_attendee_ids = set(attendee_ids)
             else:
                 stmt = select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
                 result = await self.session.execute(stmt)
-                new_mentioned -= set(result.scalars().all())
+                current_attendee_ids = set(result.scalars().all())
+            excluded_from_mentions = {user_id} | current_attendee_ids
+
+            new_mentioned = (
+                extract_mentioned_user_ids(event.outgoing_references) - excluded_from_mentions
+            )
             newly_mentioned = new_mentioned - old_mentioned
             if newly_mentioned:
                 await emit_notification(
@@ -701,6 +797,18 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                         target_user_ids=list(newly_mentioned),
                     )
                 )
+
+            await self._emit_team_mention_notifications(
+                event,
+                user_id,
+                organization_id,
+                [
+                    tid
+                    for tid in extract_mentioned_team_ids(event.outgoing_references)
+                    if tid not in old_mentioned_teams
+                ],
+                excluded_from_mentions | newly_mentioned,
+            )
 
         mention_changes: dict[str, str] = {}
         if event.title != old_title:
@@ -1131,6 +1239,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 status=att.status,
                 role=att.role,
                 responded_at=att.responded_at,
+                invited_via_group_id=att.invited_via_group_id,
             )
             self.session.add(new_att)
 
@@ -1251,6 +1360,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                 status=att.status,
                 role=att.role,
                 responded_at=att.responded_at,
+                invited_via_group_id=att.invited_via_group_id,
             )
             self.session.add(new_att)
 
@@ -1366,7 +1476,9 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         await self._require_edit(user_id, organization_id, event)
 
-        attendee_ids = await self._expand_group_attendees(attendee_ids)
+        attendee_ids, invited_via = await self._expand_group_attendees(
+            user_id, organization_id, attendee_ids
+        )
 
         result = await self.session.execute(
             select(EventAttendee.user_id).where(EventAttendee.event_id == event_id)
@@ -1381,6 +1493,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
                     user_id=attendee_id,
                     status=AttendeeStatus.PENDING,
                     role=role,
+                    invited_via_group_id=invited_via.get(attendee_id),
                 )
                 self.session.add(attendee)
                 added_ids.append(attendee_id)
@@ -1705,44 +1818,109 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
     async def _expand_group_attendees(
         self,
+        acting_user_id: UUID,
+        organization_id: UUID,
         attendee_ids: list[UUID],
-    ) -> list[UUID]:
+    ) -> tuple[list[UUID], dict[UUID, UUID]]:
+        """Replace group ids with their active rosters, then keep only active org members.
+
+        A group expands only from this org, and a private group only for an
+        actor who can see its roster (group member or org admin) - reported
+        as "not found" so existence does not leak. Ids that are neither an
+        org group nor an active org member are dropped.
+
+        Returns ``(resolved ids, user_id -> source group id)``. Direct user
+        ids stay out of the map; a user in two invited groups keeps the first.
+        """
         if not attendee_ids:
-            return []
+            return [], {}
 
         from uniffy.core.models.login.group import Group
         from uniffy.core.models.login.group_member import GroupMember
 
-        result = await self.session.execute(select(Group.id).where(Group.id.in_(attendee_ids)))
-        group_ids = {row[0] for row in result.all()}
-
-        if not group_ids:
-            return attendee_ids
-
         result = await self.session.execute(
-            select(GroupMember.user_id).where(
-                and_(
-                    GroupMember.group_id.in_(group_ids),
-                    GroupMember.is_active.is_(True),
-                )
+            select(Group.id, Group.is_private).where(
+                Group.id.in_(attendee_ids),
+                Group.organization_id == organization_id,
             )
         )
-        group_member_ids = [row[0] for row in result.all()]
+        groups = {row[0]: row[1] for row in result.all()}
+        group_ids = set(groups)
+
+        if group_ids:
+            private_ids = {gid for gid, is_private in groups.items() if is_private}
+            if private_ids and not await self._is_org_admin(acting_user_id, organization_id):
+                memberships = await self.session.execute(
+                    select(GroupMember.group_id).where(
+                        GroupMember.group_id.in_(private_ids),
+                        GroupMember.user_id == acting_user_id,
+                        GroupMember.is_active.is_(True),
+                    )
+                )
+                visible = {row[0] for row in memberships.all()}
+                hidden = private_ids - visible
+                if hidden:
+                    raise ValidationError("attendees", "group not found")
+
+            result = await self.session.execute(
+                select(GroupMember.group_id, GroupMember.user_id).where(
+                    and_(
+                        GroupMember.group_id.in_(group_ids),
+                        GroupMember.is_active.is_(True),
+                    )
+                )
+            )
+            members_by_group: dict[UUID, list[UUID]] = {}
+            for gid, uid in result.all():
+                members_by_group.setdefault(gid, []).append(uid)
+        else:
+            members_by_group = {}
 
         seen: set[UUID] = set()
         resolved: list[UUID] = []
+        provenance: dict[UUID, UUID] = {}
         for uid in attendee_ids:
             if uid in group_ids:
                 continue
             if uid not in seen:
                 seen.add(uid)
                 resolved.append(uid)
-        for uid in group_member_ids:
-            if uid not in seen:
-                seen.add(uid)
-                resolved.append(uid)
+        for gid in attendee_ids:
+            if gid not in group_ids:
+                continue
+            for uid in members_by_group.get(gid, []):
+                if uid not in seen:
+                    seen.add(uid)
+                    resolved.append(uid)
+                    provenance[uid] = gid
 
-        return resolved
+        if not resolved:
+            return [], {}
+        active = await self.session.execute(
+            select(OrganizationMember.user_id).where(
+                OrganizationMember.user_id.in_(resolved),
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+            )
+        )
+        active_ids = {row[0] for row in active.all()}
+        return (
+            [uid for uid in resolved if uid in active_ids],
+            {uid: gid for uid, gid in provenance.items() if uid in active_ids},
+        )
+
+    async def _is_org_admin(self, user_id: UUID, organization_id: UUID) -> bool:
+        result = await self.session.execute(
+            select(OrganizationMember.id).where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+                OrganizationMember.role.in_(
+                    [OrganizationRole.OWNER, OrganizationRole.ADMIN]
+                ),
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     async def _validate_channel_binding(
         self,

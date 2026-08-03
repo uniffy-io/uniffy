@@ -167,6 +167,7 @@ export {
   fetchPinnedMessages,
   addReaction,
   removeReaction,
+  jumpToChannelMessage,
   fetchThread,
   fetchThreadMessages,
   fetchThreadsInbox,

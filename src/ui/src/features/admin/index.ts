@@ -1,7 +1,6 @@
 export { adminApi } from '@/features/admin/api/adminApi';
 
 export { PermissionDefaultsSection } from '@/features/admin/components/permissions/PermissionDefaultsSection';
-export { GroupsSection } from '@/features/admin/components/groups/GroupsSection';
 export { MembersSection } from '@/features/admin/components/members/MembersSection';
 
 export {

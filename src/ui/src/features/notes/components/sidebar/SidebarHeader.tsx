@@ -2,7 +2,6 @@ import { useLocation } from 'react-router-dom';
 import {
     CaretDoubleLeft,
     Atom,
-    Tag,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch } from '@/app/hooks';
@@ -19,7 +18,6 @@ interface NotesNavItem {
 
 const notesNavItems: NotesNavItem[] = [
     { name: 'Graph', path: '/notes/graph', icon: Atom },
-    { name: 'Tags', path: '/tags?domain=note', icon: Tag },
 ];
 
 interface SidebarHeaderProps {

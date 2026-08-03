@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
@@ -51,7 +51,9 @@ const Dashboard = lazyImport(() => import('@/features/dashboard/components/Dashb
 // Admin
 const AdminLayout = lazyImport(() => import('@/features/admin/layouts/AdminLayout'), 'AdminLayout');
 const MembersPage = lazyImport(() => import('@/features/admin/pages/MembersPage'), 'MembersPage');
-const GroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
+const AdminPeoplePage = lazyImport(() => import('@/features/admin/pages/PeoplePage'), 'PeoplePage');
+const AdminTeamsPage = lazyImport(() => import('@/features/admin/pages/TeamsPage'), 'TeamsPage');
+const AdminGroupsPage = lazyImport(() => import('@/features/admin/pages/GroupsPage'), 'GroupsPage');
 const DomainAdminsPage = lazyImport(() => import('@/features/admin/pages/DomainAdminsPage'), 'DomainAdminsPage');
 const PermissionsPage = lazyImport(() => import('@/features/admin/pages/PermissionsPage'), 'PermissionsPage');
 const SupportAccessPage = lazyImport(() => import('@/features/admin/pages/SupportAccessPage'), 'SupportAccessPage');
@@ -92,6 +94,8 @@ const ChatPage = lazyImport(() => import('@/features/chat/pages/ChatPage'), 'Cha
 const UserSettingsPage = lazyImport(() => import('@/features/settings/pages/SettingsPage'), 'SettingsPage');
 const NotificationsPage = lazyImport(() => import('@/features/notifications/pages/NotificationsPage'), 'NotificationsPage');
 const TagsExplorerPage = lazyImport(() => import('@/features/tags/pages/TagsExplorerPage'), 'TagsExplorerPage');
+const OrgChartPage = lazyImport(() => import('@/features/people/pages/OrgChartPage'), 'OrgChartPage');
+const PersonProfilePage = lazyImport(() => import('@/features/people/pages/PersonProfilePage'), 'PersonProfilePage');
 
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
@@ -232,6 +236,15 @@ function ChatIndexRedirect() {
 }
 
 /**
+ * TeamChartRedirect - Gives team URNs a `/route/{id}` shape for urnToPath;
+ * the real destination is the org chart filtered to the team.
+ */
+function TeamChartRedirect() {
+    const { teamId } = useParams<{ teamId: string }>();
+    return <Navigate to={teamId ? `/people?team=${teamId}` : '/people'} replace />;
+}
+
+/**
  * PushNotificationRedirect - Landing route for web-push clicks.
  * The service worker cannot map a URN to a route, so it sends the notification
  * fields here and the shared resolver picks the destination.
@@ -364,7 +377,9 @@ export function App() {
 
                             {/* Organization Admin Pages */}
                             <Route path="members" element={<LazyRoute><MembersPage /></LazyRoute>} />
-                            <Route path="groups" element={<LazyRoute><GroupsPage /></LazyRoute>} />
+                            <Route path="people" element={<LazyRoute><AdminPeoplePage /></LazyRoute>} />
+                            <Route path="teams" element={<LazyRoute><AdminTeamsPage /></LazyRoute>} />
+                            <Route path="groups" element={<LazyRoute><AdminGroupsPage /></LazyRoute>} />
                             <Route path="domain-admins" element={<LazyRoute><DomainAdminsPage /></LazyRoute>} />
                             <Route path="permissions" element={<LazyRoute><PermissionsPage /></LazyRoute>} />
                             <Route path="support-access" element={<LazyRoute><SupportAccessPage /></LazyRoute>} />
@@ -698,6 +713,32 @@ export function App() {
                             }
                         />
 
+                        {/* People = the org chart; the redirect must precede /people/:userId */}
+                        <Route
+                            path="/people"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><OrgChartPage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/people/chart"
+                            element={<Navigate to="/people" replace />}
+                        />
+                        <Route
+                            path="/people/teams/:teamId"
+                            element={<TeamChartRedirect />}
+                        />
+                        <Route
+                            path="/people/:userId"
+                            element={
+                                <ProtectedRoute>
+                                    <LazyRoute><PersonProfilePage /></LazyRoute>
+                                </ProtectedRoute>
+                            }
+                        />
+
                         {/* User settings (personal preferences only) */}
                         <Route
                             path="/settings"
@@ -712,7 +753,7 @@ export function App() {
 
                         {/* Redirect old routes */}
                         <Route path="/preferences" element={<Navigate to="/settings" replace />} />
-                        <Route path="/organization" element={<Navigate to="/admin/groups" replace />} />
+                        <Route path="/organization" element={<Navigate to="/admin/members" replace />} />
 
                         {/* Fallback for 404s */}
                         <Route path="*" element={<NotFoundPage />} />

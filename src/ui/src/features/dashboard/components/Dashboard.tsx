@@ -11,6 +11,12 @@ import { MyTasksWidget } from '@/features/dashboard/components/widgets/MyTasksWi
 import { BookmarkedItemsWidget } from '@/features/dashboard/components/widgets/BookmarkedItemsWidget';
 import { RecentActivityWidget } from '@/features/dashboard/components/widgets/RecentActivityWidget';
 import { AgentQuickAccessWidget } from '@/features/dashboard/components/widgets/AgentQuickAccessWidget';
+import { PeopleWidget } from '@/features/dashboard/components/widgets/PeopleWidget';
+import { TeamPresenceWidget } from '@/features/dashboard/components/widgets/TeamPresenceWidget';
+import { NotificationsSummaryWidget } from '@/features/dashboard/components/widgets/NotificationsSummaryWidget';
+import { RecentNotesWidget } from '@/features/dashboard/components/widgets/RecentNotesWidget';
+import { RecentFilesWidget } from '@/features/dashboard/components/widgets/RecentFilesWidget';
+import { PersonalAnalyticsWidget } from '@/features/dashboard/components/widgets/PersonalAnalyticsWidget';
 import { DashboardCustomizerButton, DashboardCustomizerPanel } from '@/features/dashboard/components/DashboardCustomizer';
 import { useDashboardRefresh } from '@/features/dashboard/hooks/useDashboardRefresh';
 import { useDashboardLayout } from '@/features/dashboard/hooks/useDashboardLayout';
@@ -190,11 +196,14 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {isWidgetVisible('quick-actions') && <QuickActionsWidget />}
+        {isWidgetVisible('team-presence') && <TeamPresenceWidget />}
+        {isWidgetVisible('people') && <PeopleWidget />}
+        {isWidgetVisible('recent-notes') && <RecentNotesWidget />}
+        {isWidgetVisible('recent-files') && <RecentFilesWidget />}
         {isWidgetVisible('bookmarks') && <BookmarkedItemsWidget />}
+        {isWidgetVisible('analytics') && <PersonalAnalyticsWidget />}
         {isWidgetVisible('agents') && <AgentQuickAccessWidget />}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        {isWidgetVisible('notifications') && <NotificationsSummaryWidget />}
         {isWidgetVisible('recent-activity') && <RecentActivityWidget />}
       </div>
     </div>

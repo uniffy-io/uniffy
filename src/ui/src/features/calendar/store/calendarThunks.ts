@@ -154,6 +154,7 @@ const attendeeFromProto = (proto: ProtoAttendee): Attendee => ({
     status: ATTENDEE_STATUS_FROM_PROTO[proto.status] || 'pending',
     role: ATTENDEE_ROLE_FROM_PROTO[proto.role] || 'required',
     timezone: proto.timezone || undefined,
+    invitedViaGroupId: proto.invitedViaGroupId || undefined,
 });
 
 const linkedResourceFromProto = (proto: ProtoLinkedResource): LinkedResource => ({

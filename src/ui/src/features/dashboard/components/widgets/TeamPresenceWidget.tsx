@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Users, CaretDown, CaretUp } from '@phosphor-icons/react';
 import { useAppSelector } from '@/app/hooks';
 import { WidgetCard, EmptyWidget } from '@/features/dashboard/components/widgets/WidgetCard';
@@ -74,13 +75,17 @@ export function TeamPresenceWidget() {
                 const status = presenceStatuses[subject.id] ?? 'offline';
                 const custom = customStatuses[subject.id];
                 return (
-                  <div key={subject.id} className="flex items-center gap-2.5 py-1">
+                  <Link
+                    key={subject.id}
+                    to={`/people/${subject.id}`}
+                    className="group flex items-center gap-2.5 rounded-md py-1 transition-colors hover:bg-muted/50"
+                  >
                     <div className="relative">
                       <SubjectAvatar subject={subject} size="sm" />
                       <PresenceIndicator status={status} size="sm" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground truncate">
+                      <p className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">
                         {subject.name}
                       </p>
                       {custom?.text && (
@@ -89,7 +94,7 @@ export function TeamPresenceWidget() {
                         </p>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

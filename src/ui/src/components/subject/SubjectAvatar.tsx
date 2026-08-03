@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { TreeStructure } from '@phosphor-icons/react';
 import { cn } from '@/shared/utils/cn';
 import { useAvatarUrl } from '@/shared/hooks/useAvatarUrl';
 
@@ -21,6 +22,13 @@ const INDICATOR_SIZE_MAP: Record<SubjectAvatarSize, 'sm' | 'md' | 'lg'> = {
     sm: 'sm',
     md: 'md',
     lg: 'lg',
+};
+
+const TEAM_ICON_SIZES: Record<SubjectAvatarSize, number> = {
+    xs: 10,
+    sm: 12,
+    md: 16,
+    lg: 20,
 };
 
 interface SubjectAvatarProps {
@@ -58,6 +66,22 @@ export function SubjectAvatar({
         showPresence && subject.type === SUBJECT_TYPE.USER;
 
     if (subject.type === SUBJECT_TYPE.GROUP) {
+        if (subject.kind === 'team') {
+            return (
+                <div
+                    className={cn(
+                        'rounded-full flex items-center justify-center shrink-0',
+                        'bg-primary/15 text-primary',
+                        sizeClass,
+                        bordered && 'border-2 border-card',
+                        className
+                    )}
+                    title={subject.name}
+                >
+                    <TreeStructure size={TEAM_ICON_SIZES[size]} weight="duotone" />
+                </div>
+            );
+        }
         const groupInitials = getInitials(subject.name || subject.id.slice(0, 2));
         return (
             <div

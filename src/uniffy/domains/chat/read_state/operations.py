@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.chat.read_cursor import ChatReadCursor, ChatThreadReadCursor
+from uniffy.domains.people.teams import user_team_ids
 
 _EPOCH = datetime(1, 1, 1, tzinfo=UTC)
 
@@ -131,6 +132,7 @@ class ChatReadStateOperations:
     async def get_unread_counts(
         self,
         user_id: UUID,
+        organization_id: UUID,
         channel_ids: list[UUID],
     ) -> dict[UUID, dict]:
         """Batched unread counts; Valkey MGET cursors + one SQL aggregate per request."""
@@ -188,7 +190,15 @@ class ChatReadStateOperations:
 
         # One query: chat_messages joined with unnest(channel_ids, last_read_ats); mention
         # FILTER hits the partial GIN ix_chat_messages_mentioned_urns. No cursor -> epoch.
-        user_mention_urn = f"urn:uniffy:content:USER:{user_id}"
+        # Team mentions are matched at read time, so joining or leaving a team
+        # moves the badge for history the user already has. SYSTEM rows are
+        # excluded from the mention count only: the urn in "X added Y to the
+        # channel" is copy, not a ping, but the row is still unread.
+        mention_urns = [f"urn:uniffy:content:USER:{user_id}"]
+        mention_urns += [
+            f"urn:uniffy:content:TEAM:{team_id}"
+            for team_id in await user_team_ids(self.session, organization_id, user_id)
+        ]
 
         ordered_channel_ids: list[UUID] = list(channel_ids)
         last_read_ats: list[datetime] = []
@@ -208,7 +218,8 @@ class ChatReadStateOperations:
                     AS unread,
                 COUNT(*) FILTER (
                     WHERE m.created_at > c.last_read_at
-                      AND m.mentioned_urns @> ARRAY[:user_mention_urn]::text[]
+                      AND m.sender_type <> 'SYSTEM'
+                      AND m.mentioned_urns && CAST(:mention_urns AS text[])
                 ) AS unread_mentions
             FROM unnest(
                 CAST(:channel_ids AS UUID[]),
@@ -226,7 +237,7 @@ class ChatReadStateOperations:
             {
                 "channel_ids": ordered_channel_ids,
                 "read_ats": last_read_ats,
-                "user_mention_urn": user_mention_urn,
+                "mention_urns": mention_urns,
                 "user_id": user_id,
             },
         )

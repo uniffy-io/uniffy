@@ -24,6 +24,7 @@ const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.AGENT_FOLDER]: UrnType.AGENT_FOLDER,
   [SearchResultType.CHAT_MESSAGE]: UrnType.CHAT_MESSAGE,
   [SearchResultType.USER]: UrnType.USER,
+  [SearchResultType.TEAM]: UrnType.TEAM,
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
   [SearchResultType.PROJECT]: UrnType.PROJECT,
   [SearchResultType.TASK]: UrnType.TASK,
@@ -230,6 +231,20 @@ export function SearchResultsList({
               // Chat messages index their content as both title and description;
               // the duplicate line is noise unless the crop adds context.
               const showDescription = !!description && description !== result.title;
+              const personRole = result.type === SearchResultType.USER
+                ? [result.metadata['job_title'], result.metadata['department']]
+                    .filter(Boolean)
+                    .join(' · ')
+                : result.type === SearchResultType.TEAM
+                  ? [
+                      result.metadata['member_count']
+                        ? `${result.metadata['member_count']} member${result.metadata['member_count'] === '1' ? '' : 's'}`
+                        : '',
+                      result.metadata['parent_label'],
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : '';
 
               return (
                 <li
@@ -305,6 +320,11 @@ export function SearchResultsList({
                             ? renderHighlightedText(result.titleHighlighted)
                             : result.title}
                         </span>
+                        {personRole && (
+                          <span className="text-xs text-muted-foreground/70 truncate min-w-0">
+                            {personRole}
+                          </span>
+                        )}
                         <span className={cn(
                           'text-[10px] font-medium shrink-0 px-1.5 py-0.5 rounded',
                           isSelected ? theme.badgeBg + ' ' + theme.accentText : 'text-muted-foreground/60'

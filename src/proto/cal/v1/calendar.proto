@@ -253,6 +253,8 @@ message Attendee {
   AttendeeRole role = 7;
   // Timezone
   optional string timezone = 8;
+  // Group that produced this attendee row at invite time (snapshot; empty for direct invites)
+  optional string invited_via_group_id = 9;
 }
 
 // Recurrence configuration

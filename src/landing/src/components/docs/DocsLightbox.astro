@@ -1,0 +1,378 @@
+---
+---
+
+<dialog class="lightbox" data-lightbox>
+  <div class="lightbox-stage" data-lightbox-stage>
+    <img class="lightbox-image" data-lightbox-image alt="" draggable="false" />
+  </div>
+
+  <p class="lightbox-caption" data-lightbox-caption></p>
+
+  <div class="lightbox-controls">
+    <button type="button" data-lightbox-zoom="-1" aria-label="Zoom out">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+    </button>
+    <span class="lightbox-level" data-lightbox-level aria-live="polite">100%</span>
+    <button type="button" data-lightbox-zoom="1" aria-label="Zoom in">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+    </button>
+    <button type="button" data-lightbox-reset aria-label="Reset zoom">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
+      </svg>
+    </button>
+    <button type="button" data-lightbox-close aria-label="Close image viewer">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+    </button>
+  </div>
+</dialog>
+
+<style>
+  /* A modal dialog paints in the top layer, so it clears the docs header,
+     sidebar, and table of contents without competing on z-index. */
+  .lightbox {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  .lightbox::backdrop {
+    background: rgba(6, 8, 16, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .lightbox-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  .lightbox-stage[data-grabbing="true"] {
+    cursor: grabbing;
+  }
+
+  .lightbox-image {
+    position: absolute;
+    transform-origin: center center;
+    border-radius: 10px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+    user-select: none;
+    -webkit-user-drag: none;
+    will-change: transform;
+  }
+
+  .lightbox-caption {
+    position: absolute;
+    bottom: 4.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: min(46rem, 88vw);
+    margin: 0;
+    /* The caption sits over the image once zoomed, so it carries its own
+       backing. The scrim is dark in both themes, so the chrome is pinned. */
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(13, 17, 30, 0.82);
+    color: #c9d1d9;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-align: center;
+    text-wrap: balance;
+    pointer-events: none;
+  }
+
+  .lightbox-caption:empty {
+    display: none;
+  }
+
+  .lightbox-controls {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3125rem;
+    border: 1px solid #30363d;
+    border-radius: 999px;
+    background: #151b23;
+  }
+
+  .lightbox-controls button {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #c9d1d9;
+    cursor: pointer;
+  }
+
+  .lightbox-controls button:hover {
+    background: #30363d;
+    color: #e6edf3;
+  }
+
+  .lightbox-controls button:focus-visible {
+    outline: 2px solid #694aff;
+    outline-offset: 1px;
+  }
+
+  .lightbox-controls svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .lightbox-level {
+    min-width: 3rem;
+    color: #8b949e;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+</style>
+
+<style is:global>
+  .sl-markdown-content img:not(:where(a img, .not-content *)) {
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 8px;
+    cursor: zoom-in;
+  }
+</style>
+
+<script>
+  const MIN_SCALE = 1;
+  const MAX_SCALE = 8;
+
+  function init(
+    root: HTMLDialogElement,
+    stage: HTMLElement,
+    image: HTMLImageElement,
+    caption: HTMLElement,
+    level: HTMLElement,
+  ) {
+    let scale = 1;
+    let x = 0;
+    let y = 0;
+    // Size the image fills at scale 1, so pan clamping has a frame of reference.
+    let baseWidth = 0;
+    let baseHeight = 0;
+    let dragged = false;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let pinchDistance = 0;
+
+    const clamp = (value: number, min: number, max: number) =>
+      Math.min(Math.max(value, min), max);
+
+    const centerZoom = (factor: number) =>
+      zoomTo(scale * factor, window.innerWidth / 2, window.innerHeight / 2);
+
+    function render() {
+      // At scale 1 the image is fully visible, so there is nothing to pan to.
+      const overflowX = Math.max(0, (baseWidth * scale - window.innerWidth) / 2);
+      const overflowY = Math.max(0, (baseHeight * scale - window.innerHeight) / 2);
+      x = clamp(x, -overflowX, overflowX);
+      y = clamp(y, -overflowY, overflowY);
+
+      image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      image.style.cursor = scale > 1 ? "grab" : "zoom-in";
+      level.textContent = `${Math.round(scale * 100)}%`;
+    }
+
+    function reset() {
+      scale = 1;
+      x = 0;
+      y = 0;
+      render();
+    }
+
+    function fit() {
+      const ratio = image.naturalWidth / image.naturalHeight;
+      const maxWidth = window.innerWidth * 0.94;
+      const maxHeight = window.innerHeight * 0.84;
+
+      baseWidth = Math.min(maxWidth, maxHeight * ratio);
+      baseHeight = baseWidth / ratio;
+
+      image.style.width = `${baseWidth}px`;
+      image.style.height = `${baseHeight}px`;
+      render();
+    }
+
+    function zoomTo(next: number, originX: number, originY: number) {
+      const target = clamp(next, MIN_SCALE, MAX_SCALE);
+      if (target === scale) return;
+
+      // Keep the point under the cursor pinned while the scale changes.
+      const dx = originX - window.innerWidth / 2;
+      const dy = originY - window.innerHeight / 2;
+      x = dx - (dx - x) * (target / scale);
+      y = dy - (dy - y) * (target / scale);
+      scale = target;
+      render();
+    }
+
+    function open(source: HTMLImageElement) {
+      scale = 1;
+      x = 0;
+      y = 0;
+
+      image.src = source.currentSrc || source.src;
+      image.alt = source.alt;
+      caption.textContent = source.alt;
+      root.setAttribute("aria-label", source.alt || "Image viewer");
+      root.showModal();
+      document.body.style.overflow = "hidden";
+
+      if (image.complete && image.naturalWidth > 0) fit();
+      else image.addEventListener("load", fit, { once: true });
+    }
+
+    root.addEventListener("close", () => {
+      document.body.style.overflow = "";
+      image.removeAttribute("src");
+      pointers.clear();
+      pinchDistance = 0;
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const hit = target.closest<HTMLImageElement>(".sl-markdown-content img");
+      // An image inside a link belongs to the link, and .not-content opts out.
+      if (!hit || hit.closest("a") || hit.closest(".not-content")) return;
+
+      event.preventDefault();
+      open(hit);
+    });
+
+    root.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+
+      if (target.closest("[data-lightbox-close]")) {
+        root.close();
+        return;
+      }
+      if (target.closest("[data-lightbox-reset]")) {
+        reset();
+        return;
+      }
+
+      const step = target.closest<HTMLElement>("[data-lightbox-zoom]");
+      if (step) {
+        centerZoom(Number(step.dataset.lightboxZoom) > 0 ? 1.4 : 1 / 1.4);
+        return;
+      }
+
+      // Clicking the empty area around the image closes, but only when the
+      // pointer did not just finish a pan.
+      if (target === stage && !dragged) root.close();
+    });
+
+    stage.addEventListener("dblclick", (event) => {
+      zoomTo(scale > 1 ? 1 : 2.5, event.clientX, event.clientY);
+    });
+
+    stage.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        // Firefox reports lines and pages rather than pixels, and a fast scroll
+        // can land one huge delta, so normalise then cap the per event step.
+        const unit =
+          event.deltaMode === WheelEvent.DOM_DELTA_LINE
+            ? 16
+            : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+              ? window.innerHeight
+              : 1;
+        const delta = clamp(event.deltaY * unit, -160, 160);
+        zoomTo(scale * Math.exp(-delta / 320), event.clientX, event.clientY);
+      },
+      { passive: false },
+    );
+
+    stage.addEventListener("pointerdown", (event) => {
+      dragged = false;
+      stage.setPointerCapture(event.pointerId);
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size === 1) stage.dataset.grabbing = "true";
+    });
+
+    stage.addEventListener("pointermove", (event) => {
+      const previous = pointers.get(event.pointerId);
+      if (!previous) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (pointers.size === 1) {
+        const dx = event.clientX - previous.x;
+        const dy = event.clientY - previous.y;
+        // Track the drag even when there is nothing to pan, so releasing the
+        // pointer over the empty area is not mistaken for a click to close.
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragged = true;
+        if (scale === 1) return;
+
+        x += dx;
+        y += dy;
+        render();
+        return;
+      }
+
+      dragged = true;
+      const [a, b] = [...pointers.values()];
+      const distance = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinchDistance > 0) {
+        zoomTo(scale * (distance / pinchDistance), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      }
+      pinchDistance = distance;
+    });
+
+    const release = (event: PointerEvent) => {
+      pointers.delete(event.pointerId);
+      if (pointers.size < 2) pinchDistance = 0;
+      if (pointers.size === 0) delete stage.dataset.grabbing;
+    };
+    stage.addEventListener("pointerup", release);
+    stage.addEventListener("pointercancel", release);
+
+    // Escape is handled natively by the dialog.
+    document.addEventListener("keydown", (event) => {
+      if (!root.open) return;
+
+      if (event.key === "+" || event.key === "=") centerZoom(1.4);
+      else if (event.key === "-") centerZoom(1 / 1.4);
+      else if (event.key === "0") reset();
+    });
+
+    window.addEventListener("resize", () => {
+      if (root.open) fit();
+    });
+  }
+
+  const root = document.querySelector<HTMLDialogElement>("[data-lightbox]");
+  const stage = document.querySelector<HTMLElement>("[data-lightbox-stage]");
+  const image = document.querySelector<HTMLImageElement>("[data-lightbox-image]");
+  const caption = document.querySelector<HTMLElement>("[data-lightbox-caption]");
+  const level = document.querySelector<HTMLElement>("[data-lightbox-level]");
+
+  if (root && stage && image && caption && level) {
+    init(root, stage, image, caption, level);
+  }
+</script>

@@ -75,15 +75,14 @@ def _admin_session(*, count: int, batches: list[list[AuditEvent]]):
 
     Sequence per stream_export call (when first batch is non-empty):
 
-    1. is_system_admin SELECT  -> False
-    2. OrganizationMember role -> ADMIN
-    3. COUNT(*) row-cap check  -> count
-    4. SELECT rows batch       -> batch
-    5. SELECT emails batch     -> []   (no IDs to resolve -> still issued)
-    6. (repeat 4 + 5 until a SELECT rows batch comes back empty)
+    1. OrganizationMember role -> ADMIN
+    2. COUNT(*) row-cap check  -> count
+    3. SELECT rows batch       -> batch
+    4. SELECT emails batch     -> []   (no IDs to resolve -> still issued)
+    5. (repeat 3 + 4 until a SELECT rows batch comes back empty)
     """
     session = MagicMock()
-    side_effects: list = [_scalar(False), _scalar(OrganizationRole.ADMIN), _scalar(count)]
+    side_effects: list = [_scalar(OrganizationRole.ADMIN), _scalar(count)]
     for batch in batches:
         side_effects.append(_rows(batch))
         if batch:
@@ -167,7 +166,6 @@ async def test_row_cap_blocks_filters_that_would_dump_too_many_rows() -> None:
     session = MagicMock()
     session.execute = AsyncMock(
         side_effect=[
-            _scalar(False),
             _scalar(OrganizationRole.ADMIN),
             _scalar(MAX_EXPORT_ROWS + 1),
         ]
@@ -190,12 +188,7 @@ async def test_row_cap_blocks_filters_that_would_dump_too_many_rows() -> None:
 
 async def test_regular_member_denied_before_export_begins() -> None:
     session = MagicMock()
-    session.execute = AsyncMock(
-        side_effect=[
-            _scalar(False),
-            _scalar(OrganizationRole.MEMBER),
-        ]
-    )
+    session.execute = AsyncMock(side_effect=[_scalar(OrganizationRole.MEMBER)])
     ops = ExportOperations(session)
 
     async def _run() -> None:
@@ -212,18 +205,43 @@ async def test_regular_member_denied_before_export_begins() -> None:
         await _run()
 
 
-async def test_system_admin_can_export_without_org_membership() -> None:
+async def test_system_admin_cannot_export_without_a_support_session() -> None:
+    session = MagicMock()
+    session.execute = AsyncMock(
+        side_effect=[_scalar(None), _scalar(True)]  # no membership, is_system_admin
+    )
+    ops = ExportOperations(session)
+    ops._read_ops._has_active_support_session = AsyncMock(return_value=False)
+
+    async def _run() -> None:
+        async for _ in ops.stream_export(
+            generate_id(),
+            ExportFilter(
+                filter=ListEventsFilter(organization_id=generate_id()),
+                format="csv",
+            ),
+        ):
+            return
+
+    with pytest.raises(PermissionDeniedError):
+        await _run()
+
+
+async def test_system_admin_exports_through_an_active_support_session() -> None:
     event = _make_event()
     session = MagicMock()
-    side_effects = [
-        _scalar(True),  # is_system_admin -> True (skips membership check)
-        _scalar(1),  # row count
-        _rows([event]),
-        _emails([]),
-        _rows([]),
-    ]
-    session.execute = AsyncMock(side_effect=side_effects)
+    session.execute = AsyncMock(
+        side_effect=[
+            _scalar(None),  # not a member of the org
+            _scalar(True),  # is_system_admin
+            _scalar(1),  # row count
+            _rows([event]),
+            _emails([]),
+            _rows([]),
+        ]
+    )
     ops = ExportOperations(session)
+    ops._read_ops._has_active_support_session = AsyncMock(return_value=True)
 
     output = await _collect_csv(
         ops,

@@ -42,6 +42,7 @@ from uniffy_proto.mail.v1.mail_connect import OrgMailServiceASGIApplication
 from uniffy_proto.notes.v1.notes_connect import NotesServiceASGIApplication
 from uniffy_proto.notifications.v1.notifications_connect import NotificationsServiceASGIApplication
 from uniffy_proto.organizations.v1.organizations_connect import OrganizationsServiceASGIApplication
+from uniffy_proto.people.v1.people_connect import PeopleServiceASGIApplication
 from uniffy_proto.permissions.v1.permissions_connect import MembersServiceASGIApplication
 from uniffy_proto.presence.v1.presence_connect import PresenceServiceASGIApplication
 from uniffy_proto.projects.v1.projects_connect import ProjectsServiceASGIApplication
@@ -151,6 +152,7 @@ from uniffy.domains.notes.service import NotesServiceImpl
 from uniffy.domains.notifications.middleware import StreamDisconnectMiddleware
 from uniffy.domains.notifications.service import NotificationsServiceImpl
 from uniffy.domains.organizations.service import OrganizationsServiceImpl
+from uniffy.domains.people.service import PeopleServiceImpl
 from uniffy.domains.permissions.service import MembersServiceImpl
 from uniffy.domains.platform.audit.service import PlatformAuditServiceImpl
 from uniffy.domains.platform.directory.service import (
@@ -570,6 +572,10 @@ def _create_api_dispatcher() -> ConnectRPCDispatcher:
     dispatcher.add_service(
         "/groups.v1.GroupsService",
         GroupsServiceASGIApplication(GroupsServiceImpl(), interceptors=interceptors),
+    )
+    dispatcher.add_service(
+        "/people.v1.PeopleService",
+        PeopleServiceASGIApplication(PeopleServiceImpl(), interceptors=interceptors),
     )
     dispatcher.add_service(
         "/cal.v1.CalendarService",

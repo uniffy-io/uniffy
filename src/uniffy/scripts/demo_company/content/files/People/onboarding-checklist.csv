@@ -1,19 +1,20 @@
 day,task,owner,role_scope,mandatory
 1,Badge and building access issued,Office manager,All,Yes
-1,Laptop handover and MFA enrolment,IT,All,Yes
+1,Laptop handover and 2FA enrolment,IT,All,Yes
+1,Uniffy workspace account activated,IT,All,Yes
 1,Read Company Overview and Mission and Values,New joiner,All,Yes
 1,Information Security Policy acknowledged,New joiner,All,Yes
 1,Fire exits and assembly point walkthrough,Office manager,All,Yes
-2,System accounts provisioned,IT,All,Yes
+2,System accounts provisioned (repo, CI, monitoring),IT,All,Yes
 2,Payroll and contract paperwork,People,All,Yes
 2,Buddy assigned and first 1:1 booked,Line manager,All,Yes
-3,Licence and registration verified,People,Clinical,Yes
-3,Clinical record system training,Clinic manager,Clinical,Yes
-3,Cold chain induction,Laboratory manager,Lab,Yes
-4,Shadow two clinics,Clinic manager,Clinical,Yes
-4,Telehealth induction,Telehealth lead,Telehealth rota,Yes
+3,Dev environment running and first build green,Buddy,Engineering,Yes
+3,Support tooling and ticket queue access verified,Support lead,Support,Yes
+3,Device lab induction,QA lead,QA,Yes
+4,Shadow two customer calls,Support lead,Support,Yes
+4,First ticket or PR merged with buddy review,Buddy,"Engineering, Support",Yes
 5,Data protection training completed,DPO,All,Yes
 5,Working pattern reflected in calendar,New joiner,All,Yes
-5,Out-of-hours contacts confirmed,Line manager,All,Yes
+5,On-call and escalation contacts confirmed,Line manager,All,Yes
 30,Probation check-in,Line manager,All,Yes
-90,Competency assessment,Clinic or lab manager,"Clinical, Lab",Yes
+90,Role competency review,Line manager,All,Yes

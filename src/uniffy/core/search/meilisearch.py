@@ -18,6 +18,7 @@ from meilisearch_python_sdk.models.settings import (
     TypoTolerance,
 )
 
+from uniffy.core.content.references import parse_urn
 from uniffy.observability.metrics import (
     SEARCH_OPERATION_DURATION,
     SEARCH_OPERATION_ERRORS_TOTAL,
@@ -139,6 +140,25 @@ INDEX_SETTINGS = MeilisearchSettings(
         "directory": ["folder"],
     },
 )
+
+# Metadata keys accepted in a filter expression. The key is interpolated
+# unquoted, so an arbitrary key is an injection point as well as a 400 from
+# Meili. Derived from the declared attributes so the two cannot drift.
+FILTERABLE_METADATA_KEYS = frozenset(
+    attr.removeprefix("metadata.")
+    for attr in INDEX_SETTINGS.filterable_attributes or []
+    if attr.startswith("metadata.")
+)
+
+
+def escape_filter_value(value: str) -> str:
+    """Escape a value for interpolation into a double-quoted filter literal.
+
+    An unescaped quote closes the literal early, and Meili binds AND tighter
+    than OR, so a caller could append a disjunct that sits outside the
+    permission clause entirely. Every interpolated value goes through this.
+    """
+    return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def build_document_id(urn: str, organization_id: UUID) -> str:
@@ -397,18 +417,25 @@ class MeilisearchClient:
         )
 
         if type_filters:
-            type_filter = " OR ".join(f'entity_type = "{t}"' for t in type_filters)
+            type_filter = " OR ".join(
+                f'entity_type = "{escape_filter_value(t)}"' for t in type_filters
+            )
             filters = f"({filters}) AND ({type_filter})"
 
         if tag_filters:
-            tag_conditions = " AND ".join(f'tags = "{tag}"' for tag in tag_filters)
+            tag_conditions = " AND ".join(
+                f'tags = "{escape_filter_value(tag)}"' for tag in tag_filters
+            )
             filters = f"({filters}) AND ({tag_conditions})"
 
         if metadata_filters:
             meta_conditions = " AND ".join(
-                f'metadata.{key} = "{value}"' for key, value in metadata_filters.items()
+                f'metadata.{key} = "{escape_filter_value(value)}"'
+                for key, value in metadata_filters.items()
+                if key in FILTERABLE_METADATA_KEYS
             )
-            filters = f"({filters}) AND ({meta_conditions})"
+            if meta_conditions:
+                filters = f"({filters}) AND ({meta_conditions})"
 
         start = time.perf_counter()
         # With a text query the sort keys act as tiebreakers via the "sort"
@@ -450,14 +477,12 @@ class MeilisearchClient:
     ) -> str:
         """Build a filter that mirrors ``effective_role``: org match, not
         blocked, and an allow condition.
+
+        The owner narrowings AND onto that base rather than replacing it.
+        ``owner_filter`` is client-supplied, so returning it alone would let
+        any caller read every document owned by the id they name.
         """
         org_filter = f'organization_id = "{organization_id}"'
-
-        if my_content_only:
-            return f'{org_filter} AND owner_id = "{user_id}"'
-
-        if owner_filter:
-            return f'{org_filter} AND owner_id = "{owner_filter}"'
 
         permission_conditions = [
             f'owner_id = "{user_id}"',
@@ -475,7 +500,15 @@ class MeilisearchClient:
             block_conditions.extend(f'NOT blocked_group_ids = "{gid}"' for gid in user_group_ids)
         block_filter = " AND ".join(block_conditions)
 
-        return f"{org_filter} AND ({block_filter}) AND ({permission_filter})"
+        base = f"{org_filter} AND ({block_filter}) AND ({permission_filter})"
+
+        if my_content_only:
+            return f'{base} AND owner_id = "{user_id}"'
+
+        if owner_filter:
+            return f'{base} AND owner_id = "{owner_filter}"'
+
+        return base
 
     async def update_document_sharing(
         self,
@@ -648,6 +681,7 @@ class MeilisearchClient:
         organization_id: UUID,
     ) -> dict[str, dict[str, Any]]:
         """Map ``urn -> document`` for the requested URNs in one org via chunked filter lookups."""
+        urns = [urn for urn in urns if parse_urn(urn) is not None]
         if not urns:
             return {}
 

@@ -52,6 +52,8 @@ TYPE_KEYWORD_MAP: dict[str, str] = {
     "agent-folders": "agent_folder",
     "user": "user",
     "users": "user",
+    "team": "team",
+    "teams": "team",
     "calendar": "calendar_event",
     "event": "calendar_event",
     "events": "calendar_event",

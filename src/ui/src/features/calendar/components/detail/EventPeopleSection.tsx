@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Check, X, Question } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { cn } from '@/shared/utils/cn';
-import { SubjectAvatar, SUBJECT_TYPE } from '@/components/subject';
+import { SubjectAvatar, SUBJECT_TYPE, useSubjectResolver } from '@/components/subject';
 import { getInitials } from '@/components/subject/utils';
 import { updateAttendeeStatus } from '@/features/calendar/store/calendarThunks';
 import { AttendeesSelector } from '@/features/calendar/components/modals/AttendeesSelector';
@@ -35,6 +35,20 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
     if (!currentUserId) return null;
     return event.attendees.find((a) => a.id === currentUserId && a.role !== 'organizer') ?? null;
   }, [event.attendees, currentUserId]);
+
+  const invitedViaGroupIds = useMemo(
+    () => [...new Set(event.attendees.map((a) => a.invitedViaGroupId).filter(Boolean))] as string[],
+    [event.attendees],
+  );
+  const { subjects: viaSubjects } = useSubjectResolver(invitedViaGroupIds);
+  // A deleted group resolves to the truncated-ID fallback (type USER); show nothing then.
+  const viaGroupNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const subject of viaSubjects) {
+      if (subject.type === SUBJECT_TYPE.GROUP) names.set(subject.id, subject.name);
+    }
+    return names;
+  }, [viaSubjects]);
 
   const handleRsvp = (status: 'accepted' | 'tentative' | 'declined') => {
     dispatch(updateAttendeeStatus({ eventId: event.id, status }));
@@ -134,7 +148,11 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
           />
         ) : (
           <div className="space-y-2">
-            {event.attendees.map((attendee) => (
+            {event.attendees.map((attendee) => {
+              const viaName = attendee.invitedViaGroupId
+                ? viaGroupNames.get(attendee.invitedViaGroupId)
+                : undefined;
+              return (
               <div key={attendee.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <SubjectAvatar
@@ -147,7 +165,14 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
                     }}
                     size="sm"
                   />
-                  <span className="text-sm text-foreground">{attendee.name}</span>
+                  <div className="min-w-0">
+                    <span className="block text-sm text-foreground truncate">{attendee.name}</span>
+                    {viaName && (
+                      <span className="block text-xs text-muted-foreground truncate">
+                        via {viaName}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {attendee.role === 'organizer' ? (
                   <span className="text-xs text-muted-foreground">Organizer</span>
@@ -155,7 +180,8 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
                   <AttendeeStatusLabel status={attendee.status} />
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

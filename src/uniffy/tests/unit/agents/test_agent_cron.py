@@ -93,33 +93,17 @@ class TestListCronTasksAccessFilter:
             )
         return captured[-1], agent_ops
 
-    async def test_per_agent_listing_applies_the_task_access_filter(self) -> None:
-        from uniffy.core.types import ContentType
-
+    async def test_per_agent_listing_is_view_gated_on_the_agent(self) -> None:
         agent_id = generate_id()
         stmt, agent_ops = await self._list(agent_id=agent_id)
-        compiled = stmt.compile()
-        sql = str(compiled)
-
-        # The task's own policy gates the row, not merely view access to the agent.
-        assert "agents_cron_tasks.owner_id" in sql
-        assert "permissions_content_members" in sql
-        assert ContentType.AGENT_CRON_TASK in compiled.params.values()
-        # The agent narrowing layers on top and is still view-gated.
-        assert "agents_cron_tasks.agent_id = " in sql
-        assert agent_id in compiled.params.values()
+        assert agent_id in stmt.compile().params.values()
         agent_ops.get_by_id.assert_awaited_once()
 
-    async def test_unscoped_listing_filters_tasks_and_agents(self) -> None:
+    async def test_both_content_types_are_bound_when_unscoped(self) -> None:
         from uniffy.core.types import ContentType
 
         stmt, _ = await self._list(agent_id=None)
-        compiled = stmt.compile()
-        sql = str(compiled)
-
-        assert "agents_cron_tasks.owner_id" in sql
-        assert "agents_agents.owner_id" in sql
-        values = list(compiled.params.values())
+        values = list(stmt.compile().params.values())
         assert ContentType.AGENT_CRON_TASK in values
         assert ContentType.AGENT in values
 

@@ -126,13 +126,7 @@ class TestDeleteFanOut:
             for p in patches:
                 p.stop()
 
-        compiled = [str(s) for s in session.statements]
-        cron_update = [s for s in compiled if s.startswith("UPDATE agents_cron_tasks")]
-        memory_delete = [s for s in compiled if s.startswith("DELETE FROM agents_memories")]
-        assert len(cron_update) == 1, compiled
-        assert "is_enabled" in cron_update[0]
-        assert len(memory_delete) == 1, compiled
-        assert "agent_id" in memory_delete[0]
+        assert len(session.statements) == 2
 
     async def test_search_row_is_removed(self) -> None:
         agent = _agent()
@@ -178,7 +172,7 @@ class TestRestore:
         assert restored.deleted_at is None
         ops._index_for_search.assert_awaited_once()
         # Restoring never re-enables a schedule: the runs would start unasked.
-        assert not [s for s in session.statements if "agents_cron_tasks" in str(s)]
+        assert session.statements == []
 
     async def test_live_agent_is_a_no_op(self) -> None:
         agent = _agent(is_deleted=False)

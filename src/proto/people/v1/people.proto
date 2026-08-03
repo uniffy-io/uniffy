@@ -1,0 +1,303 @@
+syntax = "proto3";
+
+package people.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/people/v1;peoplev1";
+
+// PeopleService - org-scoped directory, profiles, org chart, teams, identity sources.
+// users.v1 stays the global platform-admin surface; every RPC here gates on org membership.
+
+service PeopleService {
+  rpc ListPeople(ListPeopleRequest) returns (ListPeopleResponse);
+  rpc GetPerson(GetPersonRequest) returns (GetPersonResponse);
+  rpc UpdateMyProfile(UpdateMyProfileRequest) returns (UpdateMyProfileResponse);
+  rpc UpdatePersonProfile(UpdatePersonProfileRequest) returns (UpdatePersonProfileResponse);
+
+  rpc GetOrgChart(GetOrgChartRequest) returns (GetOrgChartResponse);
+  rpc SetManager(SetManagerRequest) returns (SetManagerResponse);
+
+  rpc ListTeams(ListTeamsRequest) returns (ListTeamsResponse);
+  rpc GetTeam(GetTeamRequest) returns (GetTeamResponse);
+  rpc UpdateTeam(UpdateTeamRequest) returns (UpdateTeamResponse);
+
+  rpc GetProfilePolicy(GetProfilePolicyRequest) returns (GetProfilePolicyResponse);
+  rpc UpdateProfilePolicy(UpdateProfilePolicyRequest) returns (UpdateProfilePolicyResponse);
+
+  rpc ListIdentitySources(ListIdentitySourcesRequest) returns (ListIdentitySourcesResponse);
+  rpc CreateIdentitySource(CreateIdentitySourceRequest) returns (CreateIdentitySourceResponse);
+  rpc UpdateIdentitySource(UpdateIdentitySourceRequest) returns (UpdateIdentitySourceResponse);
+  rpc DeleteIdentitySource(DeleteIdentitySourceRequest) returns (DeleteIdentitySourceResponse);
+  rpc TriggerDirectorySync(TriggerDirectorySyncRequest) returns (TriggerDirectorySyncResponse);
+}
+
+enum IdentitySourceKind {
+  IDENTITY_SOURCE_KIND_UNSPECIFIED = 0;
+  IDENTITY_SOURCE_KIND_LOCAL = 1;
+  IDENTITY_SOURCE_KIND_SCIM = 2;
+  IDENTITY_SOURCE_KIND_LDAP = 3;
+  IDENTITY_SOURCE_KIND_OIDC = 4;
+}
+
+message ProfileLink {
+  string label = 1;
+  string url = 2;
+}
+
+// Wrapper so an update request can distinguish "replace the list" from "leave it alone".
+message ProfileLinks {
+  repeated ProfileLink links = 1;
+}
+
+message TeamRef {
+  string group_id = 1;
+  string name = 2;
+  optional string lead_user_id = 3;
+}
+
+// An unset field is ABSENT, never empty-string, so clients can tell "not set"
+// from "empty".
+message PersonProfile {
+  string user_id = 1;
+  string display_name = 2;
+  optional string username = 3;
+  optional string avatar_url = 4;
+  bool has_avatar = 5;
+  common.v1.OrganizationRole org_role = 6;
+  bool is_active = 7;
+
+  optional string job_title = 10;
+  optional string department = 11;
+  optional string email = 12;
+  optional string work_phone = 13;
+  optional string mobile_phone = 14;
+  optional string office_location = 15;
+  optional string timezone = 16;
+  optional string pronouns = 17;
+  optional string bio = 18;
+  optional google.protobuf.Timestamp start_date = 19;
+  optional string birthday = 20; // MM-DD; no year, it is not needed and is PII
+  repeated ProfileLink links = 21;
+
+  optional string manager_user_id = 30;
+  repeated TeamRef teams = 31;
+  int32 direct_report_count = 32;
+
+  repeated string managed_fields = 40; // directory-owned, client renders read-only
+  bool is_self = 42;
+  bool can_edit = 43; // self or org admin
+}
+
+message ListPeopleRequest {
+  string organization_id = 1;
+  optional common.v1.PaginationRequest pagination = 2;
+  optional string search = 3;
+  optional string department = 4;
+  optional string team_id = 5;
+  optional bool include_inactive = 6; // org-admin-only
+}
+
+message ListPeopleResponse {
+  repeated PersonProfile people = 1;
+  optional common.v1.PaginationResponse pagination = 2;
+}
+
+message GetPersonRequest {
+  string organization_id = 1;
+  string user_id = 2;
+}
+
+message GetPersonResponse {
+  PersonProfile person = 1;
+}
+
+// Present field = set it; empty string clears. Absent field = unchanged.
+// Self-service covers personal fields only; org facts (title, department,
+// office, start date) are admin-set via UpdatePersonProfile, and pronouns
+// are global on the account (users.v1 UpdateMyProfile).
+message UpdateMyProfileRequest {
+  string organization_id = 1;
+  optional string work_phone = 2;
+  optional string mobile_phone = 3;
+  optional string timezone = 4;
+  optional string bio = 5;
+  optional string birthday = 6;
+  optional ProfileLinks links = 7;
+}
+
+message UpdateMyProfileResponse {
+  PersonProfile person = 1;
+}
+
+// Org-admin edit of another member; restricted to org-fact fields.
+message UpdatePersonProfileRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  optional string job_title = 3;
+  optional string department = 4;
+  optional string office_location = 5;
+  optional string work_phone = 6;
+  optional string mobile_phone = 7;
+  optional google.protobuf.Timestamp start_date = 8;
+}
+
+message UpdatePersonProfileResponse {
+  PersonProfile person = 1;
+}
+
+message GetOrgChartRequest {
+  string organization_id = 1;
+}
+
+message OrgChartNode {
+  string user_id = 1;
+  string display_name = 2;
+  optional string avatar_url = 3;
+  optional string job_title = 4;
+  optional string department = 5;
+  optional string manager_user_id = 6;
+  repeated TeamRef teams = 7;
+  int32 descendant_count = 8;
+}
+
+message TeamNode {
+  string group_id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional string parent_group_id = 4;
+  optional string lead_user_id = 5;
+}
+
+message GetOrgChartResponse {
+  repeated OrgChartNode nodes = 1;
+  repeated string root_user_ids = 2;
+  repeated TeamNode teams = 3;
+  bool truncated = 4; // depth cap hit or a cycle was broken
+  bool enabled = 5; // false = org_chart_enabled off; distinguishes "disabled" from "no managers set"
+}
+
+message SetManagerRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  optional string manager_user_id = 3; // absent = clear the manager edge
+}
+
+message SetManagerResponse {
+  PersonProfile person = 1;
+}
+
+message ListTeamsRequest {
+  string organization_id = 1;
+}
+
+message ListTeamsResponse {
+  repeated TeamNode teams = 1;
+}
+
+message GetTeamRequest {
+  string organization_id = 1;
+  string group_id = 2;
+}
+
+message GetTeamResponse {
+  TeamNode team = 1;
+  repeated string member_user_ids = 2; // ACTIVE members; a team is bounded, no pagination
+}
+
+message UpdateTeamRequest {
+  string organization_id = 1;
+  string group_id = 2;
+  optional string lead_user_id = 3;
+  optional string parent_group_id = 4;
+  bool clear_lead = 5;
+  bool clear_parent = 6;
+}
+
+message UpdateTeamResponse {
+  TeamNode team = 1;
+}
+
+message ProfilePolicy {
+  bool directory_enabled = 1;
+  bool org_chart_enabled = 2;
+}
+
+message GetProfilePolicyRequest {
+  string organization_id = 1;
+}
+
+message GetProfilePolicyResponse {
+  ProfilePolicy policy = 1;
+}
+
+message UpdateProfilePolicyRequest {
+  string organization_id = 1;
+  ProfilePolicy policy = 2;
+}
+
+message UpdateProfilePolicyResponse {
+  ProfilePolicy policy = 1;
+}
+
+message IdentitySource {
+  string id = 1;
+  IdentitySourceKind kind = 2;
+  string name = 3;
+  bool is_active = 4;
+  string config_json = 5; // non-secret provider config; secrets live in org_settings
+  optional google.protobuf.Timestamp last_sync_at = 6;
+  optional string last_sync_status = 7;
+  optional string last_sync_error = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message ListIdentitySourcesRequest {
+  string organization_id = 1;
+}
+
+message ListIdentitySourcesResponse {
+  repeated IdentitySource sources = 1;
+}
+
+message CreateIdentitySourceRequest {
+  string organization_id = 1;
+  IdentitySourceKind kind = 2;
+  string name = 3;
+  string config_json = 4;
+  optional string secret = 5; // stored encrypted via org_settings, never returned
+}
+
+message CreateIdentitySourceResponse {
+  IdentitySource source = 1;
+}
+
+message UpdateIdentitySourceRequest {
+  string organization_id = 1;
+  string source_id = 2;
+  optional string name = 3;
+  optional bool is_active = 4;
+  optional string config_json = 5;
+  optional string secret = 6;
+}
+
+message UpdateIdentitySourceResponse {
+  IdentitySource source = 1;
+}
+
+message DeleteIdentitySourceRequest {
+  string organization_id = 1;
+  string source_id = 2;
+}
+
+message DeleteIdentitySourceResponse {}
+
+message TriggerDirectorySyncRequest {
+  string organization_id = 1;
+  string source_id = 2;
+}
+
+message TriggerDirectorySyncResponse {
+  bool enqueued = 1;
+}

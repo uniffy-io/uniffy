@@ -63,6 +63,7 @@ import {
   removeReactionFromThreadMessage,
   setThreadMessageFeedback,
 } from '@/features/chat/store/chatThreadsSlice';
+import { jumpToMessage, clearJumpToMessage } from '@/features/chat/store/chatUiSlice';
 import { fetchAgents } from '@/features/agents/store/agentsThunks';
 import {
   fetchAvailableModels,
@@ -358,6 +359,13 @@ export const fetchMessages = createAsyncThunk<
 
     if (params.beforeId) {
       dispatch(prependMessages({ channelId: params.channelId, messages }));
+    } else if (params.aroundId) {
+      // The window ends mid-history, so the last row here is not the newest message: marking
+      // the channel read off it would move the read cursor backwards. An unusable target makes
+      // the server serve the latest page instead, which is a live tail like any other.
+      const windowed = messages.some((m) => m.id === params.aroundId);
+      dispatch(setMessages({ channelId: params.channelId, messages, windowed }));
+      dispatch(fetchChannelPendingApprovals({ channelId: params.channelId }));
     } else {
       // Compute unread separator before marking the channel as read.
       const state = getState();
@@ -759,6 +767,31 @@ export const resolveThreadForMessage = createAsyncThunk<
   }
 
   return { rootMessageId: rootId, targetMessageId: params.messageId };
+});
+
+/** Scroll a channel to a message, loading the page it sits on when it is outside the current window. */
+export const jumpToChannelMessage = createAsyncThunk<
+  void,
+  { channelId: string; messageId: string },
+  { state: RootState; rejectValue: string }
+>('chat/jumpToChannelMessage', async ({ channelId, messageId }, { getState, dispatch }) => {
+  const state = getState();
+  if (state.chatChannels.activeChannelId !== channelId) {
+    dispatch(setActiveChannel(channelId));
+  }
+
+  // Claim the target before loading: the list reads the pending jump to decide where a freshly
+  // loaded window opens, which beats mounting at the tail and scrolling back against it.
+  dispatch(jumpToMessage(messageId));
+
+  // Without the around-fetch an older target is simply absent from the list and the scroll is a silent no-op.
+  if (state.chatMessages.idSetByChannel[channelId]?.[messageId] !== true) {
+    const { messages } = await dispatch(fetchMessages({ channelId, aroundId: messageId })).unwrap();
+    // A deleted or purged target leaves the channel on its latest page with nothing to scroll to.
+    if (!messages.some((m) => m.id === messageId)) {
+      dispatch(clearJumpToMessage());
+    }
+  }
 });
 
 export const fetchThreadsInbox = createAsyncThunk<
@@ -1437,10 +1470,11 @@ export const initializeChat = createAsyncThunk<
 
     if (targetChannelId) {
       dispatch(setActiveChannel(targetChannelId));
-      dispatch(fetchMessages({
-        channelId: targetChannelId,
-        aroundId: messageId,
-      }));
+      // A deep link loads its own window through jumpToChannelMessage; fetching the latest
+      // page here too would race it and could overwrite the window holding the target.
+      if (!messageId) {
+        dispatch(fetchMessages({ channelId: targetChannelId }));
+      }
     }
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to initialize chat');

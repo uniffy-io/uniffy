@@ -222,6 +222,7 @@ message GetCurrentUserResponse {
   optional string font_family = 9;
   optional string avatar_url = 10;
   bool has_avatar = 11;
+  optional string pronouns = 12;
 }
 
 // Logout response

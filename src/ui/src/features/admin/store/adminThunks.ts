@@ -208,7 +208,7 @@ export const removeMember = createAsyncThunk<
 
 export const fetchGroups = createAsyncThunk<
     { groups: SerializedGroupInfo[]; totalCount: number },
-    { page?: number; pageSize?: number },
+    { page?: number; pageSize?: number; includePrivate?: boolean },
     { state: RootState }
 >('admin/fetchGroups', async (args, { getState }) => {
     const { auth } = getState();
@@ -224,6 +224,7 @@ export const fetchGroups = createAsyncThunk<
             page: args.page || 1,
             pageSize: args.pageSize || 50,
         },
+        includePrivate: args.includePrivate,
     });
 
     return {
@@ -234,9 +235,16 @@ export const fetchGroups = createAsyncThunk<
 
 export const createGroup = createAsyncThunk<
     SerializedGroupInfo,
-    { name: string; description?: string },
+    {
+        name: string;
+        description?: string;
+        kind?: number;
+        parentGroupId?: string;
+        leadUserId?: string;
+        isPrivate?: boolean;
+    },
     { state: RootState }
->('admin/createGroup', async ({ name, description }, { getState }) => {
+>('admin/createGroup', async ({ name, description, kind, parentGroupId, leadUserId, isPrivate }, { getState }) => {
     const { auth } = getState();
     const organizationId = auth.currentOrganizationId;
 
@@ -248,6 +256,10 @@ export const createGroup = createAsyncThunk<
         organizationId,
         name,
         description: description || '',
+        kind,
+        parentGroupId,
+        leadUserId,
+        isPrivate,
     });
 
     if (!response.group) throw new Error('group missing in CreateGroup response');
@@ -256,9 +268,22 @@ export const createGroup = createAsyncThunk<
 
 export const updateGroup = createAsyncThunk<
     SerializedGroupInfo,
-    { groupId: string; name?: string; description?: string },
+    {
+        groupId: string;
+        name?: string;
+        description?: string;
+        kind?: number;
+        parentGroupId?: string;
+        leadUserId?: string;
+        isPrivate?: boolean;
+        clearParentGroup?: boolean;
+        clearLead?: boolean;
+    },
     { state: RootState }
->('admin/updateGroup', async ({ groupId, name, description }, { getState }) => {
+>('admin/updateGroup', async (
+    { groupId, name, description, kind, parentGroupId, leadUserId, isPrivate, clearParentGroup, clearLead },
+    { getState },
+) => {
     const { auth } = getState();
     const organizationId = auth.currentOrganizationId;
 
@@ -271,6 +296,12 @@ export const updateGroup = createAsyncThunk<
         groupId,
         name,
         description,
+        kind,
+        parentGroupId,
+        leadUserId,
+        isPrivate,
+        clearParentGroup: clearParentGroup ?? false,
+        clearLead: clearLead ?? false,
     });
 
     if (!response.group) throw new Error('group missing in UpdateGroup response');

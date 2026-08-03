@@ -125,6 +125,12 @@ Granting or revoking a `DomainAdmin` row MUST drop the perm cache (`invalidate_d
 
 Chat uses channel membership, not `access_mode`. `ChatAccessChecker` (`domains/chat/access.py`): `check_access` (view), `require_send`, `require_elevated` (moderate). PUBLIC channels are open to the org; otherwise membership is required. Org admins and chat domain admins bypass (moderation - the kept exception). Domains with custom membership semantics override `_require_*` on `BaseContentOperations` to delegate to their own checker.
 
+## People profiles (member-record data, not content)
+
+A `people_profiles` row - job title, department, manager edge, phones, bio - is **member-record data governed by org role, not content**. It carries no `access_mode`, no `baseline_role` and no `ContentMember` rows, and it never routes through `PermissionChecker`. Reads gate on `require_org_member` and writes on `require_org_admin` (org facts) or self (personal fields); `ViewerRelation` / `relation_for` (`domains/people/access.py`) decides edit affordances only, never what a viewer may read - every field a member fills in is readable by the whole org, and the only privacy knobs are the org-level `directory_enabled` / `org_chart_enabled` toggles plus leaving a field empty.
+
+The consequence that matters here: an org admin editing someone's profile gains **zero** content access. Nothing in the people domain may add a branch to `effective_role` or `build_accessible_filter`, touch `_build_permission_filter` / `visible_sets.py`, or register a `register_manage_override`. `tests/unit/people/test_people_access.py` asserts both halves - the admin still resolves to `None` on that member's `OWNER_ONLY` note, and an AST walk over `domains/people/` fails the build if any of those names appears there.
+
 ## Frontend mirror (advisory only)
 
 `src/ui/src/shared/utils/contentRoles.ts` mirrors the backend: `roleCanView/...` predicates, `accessModeLabel/accessModeDescription`, and `bucketForContent` (sorts content into `personal` / `shared` / `organization` sidebar buckets). The frontend is for labelling and affordances only - **the backend is the gate.** An admin page may render a control on content the backend will deny; that is safe, not a bypass.
@@ -138,4 +144,6 @@ Chat uses channel membership, not `access_mode`. `ChatAccessChecker` (`domains/c
 - `BLOCKED` always wins, even over ownership-of-content and even for admins.
 - Adding a content type to the system: extend `BaseContentOperations`, register a loader with `ContentMembersOperations`, add it to `_CONTENT_TYPE_TO_DOMAIN` in `checker.py` if it has a domain admin, seed `ORG_PERMISSION_DEFAULTS`, and index the sharing fields.
 
-Guard tests: `tests/unit/core/test_effective_role.py`, `tests/unit/core/test_access_query.py`, `tests/unit/core/test_visible_sets.py`, `tests/unit/core/test_member_ops.py`, `tests/unit/core/test_deactivated_membership.py`, `tests/unit/notes/test_notes_access_filter.py`.
+Guard tests, unit: `tests/unit/core/test_effective_role.py`, `tests/unit/core/test_access_query.py`, `tests/unit/core/test_visible_sets.py`, `tests/unit/core/test_member_ops.py`, `tests/unit/people/test_people_access.py`.
+
+Guard tests, integration (`tests/integration/access/`, real Postgres): the filters are asserted on the ROWS they return, never on the text of the generated SQL - a query string can read correct and still leak. `test_notes_access_filter.py` proves an org admin's `list_notes` excludes another member's `OWNER_ONLY` note; `test_deactivated_membership.py` proves a deactivated member reaches nothing.

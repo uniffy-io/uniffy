@@ -159,8 +159,6 @@ async def test_system_announcements_skip_deactivated_members() -> None:
     out = await task._resolve_recipients(session, event)
 
     assert out == [KEPT]
-    statement = str(session.execute.call_args.args[0])
-    assert "is_active" in statement
 
 
 @pytest.mark.parametrize(

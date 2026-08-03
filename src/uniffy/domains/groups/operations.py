@@ -2,20 +2,34 @@
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
+from sqlalchemy import update as sql_update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.cache import invalidate_user as invalidate_perm_user
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.login.group import Group
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
+from uniffy.domains.groups.naming import ensure_name_available, resolve_slug
+from uniffy.domains.groups.search import TeamSearchIndexer
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.people.cache import (
+    invalidate_chart,
+    invalidate_org_people,
+    invalidate_person,
+)
+from uniffy.domains.people.search_sync import sync_people_search
 
 _ADMIN_ROLES = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
+
+_MAX_TREE_DEPTH = 64
+
+UNSET = object()
 
 
 class GroupOperations:
@@ -61,11 +75,25 @@ class GroupOperations:
         created_by_user_id: UUID,
         description: str | None = None,
         is_private: bool = False,
-        is_default: bool = False,
+        kind: GroupKind = GroupKind.ACCESS,
+        parent_group_id: UUID | None = None,
+        lead_user_id: UUID | None = None,
     ) -> Group:
         await self._org_ops.require_org_admin(created_by_user_id, organization_id)
 
-        slug = name.lower().replace(" ", "-")
+        if kind is not GroupKind.TEAM and (parent_group_id or lead_user_id):
+            raise ValidationError("kind", "only a TEAM carries a parent or a lead")
+        if kind is GroupKind.TEAM and is_private:
+            # Team facts are org-visible everywhere (chart, mentions, search
+            # metadata); a private TEAM would leak its name and roster.
+            raise ValidationError("is_private", "a TEAM is always org-visible")
+        if parent_group_id is not None:
+            await self.require_team_parent(organization_id, parent_group_id)
+        if lead_user_id is not None:
+            await self.require_active_member(organization_id, lead_user_id, "lead_user_id")
+
+        await ensure_name_available(self._session, organization_id, name)
+        slug = await resolve_slug(self._session, organization_id, name)
 
         group = Group(
             organization_id=organization_id,
@@ -74,10 +102,20 @@ class GroupOperations:
             created_by_user_id=created_by_user_id,
             description=description,
             is_private=is_private,
-            is_default=is_default,
+            kind=kind,
+            parent_group_id=parent_group_id,
+            lead_user_id=lead_user_id,
         )
         self._session.add(group)
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError:
+            # Concurrent create raced the pre-check; same answer, typed.
+            await self._session.rollback()
+            raise ValidationError(
+                "name",
+                f'a team or group named "{name}" already exists in this organization',
+            ) from None
         await self._session.refresh(group)
 
         await write_audit_event(
@@ -87,10 +125,47 @@ class GroupOperations:
             action=Action.GROUP_CREATED,
             resource_type="GROUP",
             resource_id=group.id,
-            details={"name": name, "is_private": is_private, "is_default": is_default},
+            details={
+                "name": name,
+                "is_private": is_private,
+                "kind": kind.value,
+            },
         )
         await self._session.commit()
+
+        if kind is GroupKind.TEAM:
+            await invalidate_chart(organization_id)
+            await TeamSearchIndexer(self._session).index_team(group)
         return group
+
+    async def require_team_parent(self, organization_id: UUID, parent_id: UUID) -> Group:
+        parent = await self._fetch(parent_id, organization_id)
+        if parent.kind is not GroupKind.TEAM:
+            raise ValidationError("parent_group_id", "parent must be a TEAM")
+        return parent
+
+    async def require_active_member(
+        self, organization_id: UUID, user_id: UUID, field: str
+    ) -> None:
+        membership = await self._org_ops.get_membership(user_id, organization_id)
+        if not membership or not membership.is_active:
+            raise ValidationError(field, "must be an active member of the organization")
+
+    async def reject_parent_cycle(
+        self, organization_id: UUID, group_id: UUID, parent_id: UUID
+    ) -> None:
+        current: UUID | None = parent_id
+        for _ in range(_MAX_TREE_DEPTH):
+            if current is None:
+                return
+            if current == group_id:
+                raise ValidationError("parent_group_id", "this parent would create a cycle")
+            result = await self._session.execute(
+                select(Group.parent_group_id).where(
+                    Group.id == current, Group.organization_id == organization_id
+                )
+            )
+            current = result.scalar_one_or_none()
 
     async def update(
         self,
@@ -100,15 +175,38 @@ class GroupOperations:
         name: str | None = None,
         description: str | None = None,
         is_private: bool | None = None,
-        is_default: bool | None = None,
+        kind: GroupKind | None = None,
+        parent_group_id: UUID | None | object = UNSET,
+        lead_user_id: UUID | None | object = UNSET,
     ) -> Group:
         await self._org_ops.require_org_admin(actor_user_id, organization_id)
         group = await self._fetch(group_id, organization_id)
 
+        managed = set(group.managed_fields or [])
+        if "name" in managed and name is not None and name != group.name:
+            raise ValidationError("name", "field is managed by the directory")
+        if "kind" in managed and kind is not None and kind is not group.kind:
+            raise ValidationError("kind", "field is managed by the directory")
+
+        was_team = group.kind is GroupKind.TEAM
+        effective_kind = kind if kind is not None else group.kind
+        effective_private = is_private if is_private is not None else group.is_private
+
+        if effective_kind is GroupKind.TEAM and effective_private:
+            raise ValidationError("is_private", "a TEAM is always org-visible")
+        if effective_kind is not GroupKind.TEAM:
+            if parent_group_id not in (UNSET, None) or lead_user_id not in (UNSET, None):
+                raise ValidationError("kind", "only a TEAM carries a parent or a lead")
+
         changed_keys: list[str] = []
         if name is not None and group.name != name:
+            await ensure_name_available(
+                self._session, organization_id, name, exclude_group_id=group_id
+            )
             group.name = name
-            group.slug = name.lower().replace(" ", "-")
+            group.slug = await resolve_slug(
+                self._session, organization_id, name, exclude_group_id=group_id
+            )
             changed_keys.append("name")
         if description is not None and group.description != description:
             group.description = description
@@ -116,9 +214,42 @@ class GroupOperations:
         if is_private is not None and group.is_private != is_private:
             group.is_private = is_private
             changed_keys.append("is_private")
-        if is_default is not None and group.is_default != is_default:
-            group.is_default = is_default
-            changed_keys.append("is_default")
+
+        team_indexer = TeamSearchIndexer(self._session)
+        detached_children = False
+        detached_child_ids: list[UUID] = []
+        if kind is not None and group.kind is not kind:
+            group.kind = kind
+            changed_keys.append("kind")
+            if was_team and kind is not GroupKind.TEAM:
+                # Demotion strips org structure: no parent, no lead, and the
+                # children detach rather than dangling under a non-team.
+                group.parent_group_id = None
+                group.lead_user_id = None
+                detached_child_ids = await team_indexer.child_team_ids(group_id)
+                await self._session.execute(
+                    sql_update(Group)
+                    .where(Group.parent_group_id == group_id)
+                    .values(parent_group_id=None)
+                )
+                detached_children = True
+
+        if parent_group_id is not UNSET and not detached_children:
+            new_parent = parent_group_id if parent_group_id is not None else None
+            if group.parent_group_id != new_parent:
+                if new_parent is not None:
+                    await self.require_team_parent(organization_id, new_parent)
+                    await self.reject_parent_cycle(organization_id, group_id, new_parent)
+                group.parent_group_id = new_parent
+                changed_keys.append("parent_group_id")
+
+        if lead_user_id is not UNSET and not detached_children:
+            new_lead = lead_user_id if lead_user_id is not None else None
+            if group.lead_user_id != new_lead:
+                if new_lead is not None:
+                    await self.require_active_member(organization_id, new_lead, "lead_user_id")
+                group.lead_user_id = new_lead
+                changed_keys.append("lead_user_id")
 
         if changed_keys:
             await write_audit_event(
@@ -131,9 +262,45 @@ class GroupOperations:
                 details={"changed_keys": changed_keys},
             )
 
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError:
+            # Concurrent rename raced the pre-check; same answer, typed.
+            await self._session.rollback()
+            raise ValidationError(
+                "name",
+                f'a team or group named "{name}" already exists in this organization',
+            ) from None
         await self._session.refresh(group)
+
+        # Team facts are denormalized into person payloads and the chart;
+        # any mutation that was or is a TEAM invalidates them org-wide.
+        if changed_keys and (was_team or group.kind is GroupKind.TEAM):
+            await invalidate_org_people(organization_id)
+            # Members' search documents and mention chips carry the team name.
+            if "name" in changed_keys or "kind" in changed_keys:
+                member_ids = await self._active_member_ids(group_id)
+                await sync_people_search(self._session, organization_id, member_ids)
+
+            if group.kind is GroupKind.TEAM:
+                await team_indexer.index_team(group)
+                # Child team docs denormalize this team's name as parent_label.
+                if "name" in changed_keys:
+                    child_ids = await team_indexer.child_team_ids(group_id)
+                    await team_indexer.sync_teams(organization_id, child_ids)
+            elif was_team:
+                await team_indexer.remove_team(group_id, organization_id)
+                await team_indexer.sync_teams(organization_id, detached_child_ids)
         return group
+
+    async def _active_member_ids(self, group_id: UUID) -> list[UUID]:
+        result = await self._session.execute(
+            select(GroupMember.user_id).where(
+                GroupMember.group_id == group_id,
+                GroupMember.is_active == True,  # noqa: E712
+            )
+        )
+        return [row[0] for row in result.all()]
 
     async def delete(
         self,
@@ -144,7 +311,7 @@ class GroupOperations:
         await self._org_ops.require_org_admin(actor_user_id, organization_id)
         group = await self._fetch(group_id, organization_id)
 
-        # Capture members before cascade so cached perm entries can be wiped.
+        # Capture members first so cached perm entries can be wiped.
         member_ids_result = await self._session.execute(
             select(GroupMember.user_id).where(
                 GroupMember.group_id == group_id,
@@ -163,11 +330,26 @@ class GroupOperations:
             details={"name": group.name, "member_count": len(member_user_ids)},
         )
 
+        was_team = group.kind is GroupKind.TEAM
+        team_indexer = TeamSearchIndexer(self._session)
+        # The parent FK is ON DELETE SET NULL, so child teams detach at the DB
+        # level; snapshot them first to clear their denormalized parent_label.
+        child_team_ids = await team_indexer.child_team_ids(group_id) if was_team else []
+        # The membership FK carries no ON DELETE CASCADE; remove the rows
+        # explicitly or the group delete fails on any populated group.
+        await self._session.execute(
+            delete(GroupMember).where(GroupMember.group_id == group_id)
+        )
         await self._session.delete(group)
         await self._session.commit()
 
         for user_id in member_user_ids:
             await invalidate_perm_user(user_id)
+        if was_team:
+            await invalidate_org_people(organization_id)
+            await sync_people_search(self._session, organization_id, member_user_ids)
+            await team_indexer.remove_team(group_id, organization_id)
+            await team_indexer.sync_teams(organization_id, child_team_ids)
 
     async def list_in_organization(
         self,
@@ -182,7 +364,8 @@ class GroupOperations:
 
         ``include_private`` is admin-only. A private group's roster is the
         subject list of whatever content it holds grants on, so exposing it
-        to ordinary members leaks the sharing graph.
+        to NON-members leaks the sharing graph; a member of the group already
+        knows it exists and gets their own private groups back.
         """
         await self._org_ops.require_org_member(actor_user_id, organization_id)
         if include_private:
@@ -195,10 +378,22 @@ class GroupOperations:
             .scalar_subquery()
         )
 
+        own_active_membership = (
+            select(GroupMember.id)
+            .where(
+                GroupMember.group_id == Group.id,
+                GroupMember.user_id == actor_user_id,
+                GroupMember.is_active == True,  # noqa: E712
+            )
+            .correlate(Group)
+            .exists()
+        )
+        visibility = (Group.is_private == False) | own_active_membership  # noqa: E712
+
         query = select(Group, member_count).where(Group.organization_id == organization_id)
 
         if not include_private:
-            query = query.where(Group.is_private == False)  # noqa: E712
+            query = query.where(visibility)
 
         if search:
             pattern = f"%{search}%"
@@ -206,7 +401,7 @@ class GroupOperations:
 
         count_base = select(Group.id).where(Group.organization_id == organization_id)
         if not include_private:
-            count_base = count_base.where(Group.is_private == False)  # noqa: E712
+            count_base = count_base.where(visibility)
         if search:
             count_base = count_base.where(
                 Group.name.ilike(f"%{search}%") | Group.description.ilike(f"%{search}%")
@@ -236,12 +431,21 @@ class GroupOperations:
         # already be an active member of the same org.
         await self._org_ops.require_org_member(user_id, organization_id)
 
-        membership = GroupMember(
-            group_id=group_id,
-            user_id=user_id,
-            role=role,
+        # Idempotent against the (group_id, user_id) unique constraint: an
+        # existing row is updated and reactivated instead of duplicated.
+        result = await self._session.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+            )
         )
-        self._session.add(membership)
+        membership = result.scalar_one_or_none()
+        if membership is not None:
+            membership.role = role
+            membership.is_active = True
+        else:
+            membership = GroupMember(group_id=group_id, user_id=user_id, role=role)
+            self._session.add(membership)
         await self._session.commit()
         await self._session.refresh(membership)
 
@@ -257,8 +461,19 @@ class GroupOperations:
         await self._session.commit()
 
         await invalidate_perm_user(user_id)
+        await self._invalidate_team_membership(group, user_id)
 
         return membership
+
+    async def _invalidate_team_membership(self, group: Group, user_id: UUID) -> None:
+        """A TEAM roster change is denormalized into the member's person
+        payload, the org chart, their search document and mention chips,
+        plus the team's own doc (member_count)."""
+        if group.kind is GroupKind.TEAM:
+            await invalidate_person(group.organization_id, user_id)
+            await invalidate_chart(group.organization_id)
+            await sync_people_search(self._session, group.organization_id, [user_id])
+            await TeamSearchIndexer(self._session).index_team(group)
 
     async def update_member_role(
         self,
@@ -301,6 +516,7 @@ class GroupOperations:
         await self._session.commit()
         await self._session.refresh(membership)
         await invalidate_perm_user(user_id)
+        await self._invalidate_team_membership(group, user_id)
         return membership
 
     async def remove_member(
@@ -339,6 +555,7 @@ class GroupOperations:
 
             await self._session.commit()
             await invalidate_perm_user(user_id)
+            await self._invalidate_team_membership(group, user_id)
 
     async def get_member(
         self,

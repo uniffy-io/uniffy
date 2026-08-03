@@ -92,7 +92,7 @@ class AttachmentsHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error attaching file: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def detach_file(
         self,
@@ -129,7 +129,7 @@ class AttachmentsHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error detaching file: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_attachments(
         self,
@@ -170,7 +170,7 @@ class AttachmentsHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error listing attachments: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def batch_list_attachments(
         self,
@@ -220,7 +220,7 @@ class AttachmentsHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error batch-listing attachments: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_attachments_folder(
         self,
@@ -250,4 +250,4 @@ class AttachmentsHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error getting attachments folder: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")

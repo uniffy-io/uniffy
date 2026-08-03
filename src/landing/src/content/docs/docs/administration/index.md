@@ -1,6 +1,6 @@
 ---
 title: Administration Guide
-description: Manage an organization on Uniffy. Members, permissions, encryption, audit, email, agents, rooms, storage.
+description: Manage an organization on Uniffy. Members, teams, groups, permissions, encryption, audit, email, agents, rooms, storage.
 sidebar:
   label: Overview
   order: 0
@@ -16,8 +16,8 @@ The admin pages group everything by intent. These docs follow the same grouping,
 
 | Group | Pages | What it covers |
 |-------|-------|----------------|
-| Access | Members, Groups, Domain Admins | Who is in the org and what role they hold |
-| Security | Default Permissions, Authentication, Encryption, Audit Log | How access is granted, proven, encrypted, and recorded |
+| Access | [Members](/docs/administration/access/members/), [Teams, Groups](/docs/administration/access/teams-and-groups/), Directory, Domain Admins | Who is in the org, what role they hold, and how people are organized |
+| Security | [Default Permissions](/docs/administration/security/access-model/), Authentication, Encryption, Audit Log | How access is granted, proven, encrypted, and recorded |
 | Workspace | Agents, Rooms, Storage, Email | Infrastructure and integrations scoped to your org |
 
 ## Who can open them

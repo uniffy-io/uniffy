@@ -66,34 +66,46 @@ class UpdateGroupMemberResponse(_message.Message):
     def __init__(self, member: _Optional[_Union[_common_pb2.GroupMemberInfo, _Mapping]] = ...) -> None: ...
 
 class CreateGroupRequest(_message.Message):
-    __slots__ = ("organization_id", "name", "description", "is_private", "is_default")
+    __slots__ = ("organization_id", "name", "description", "is_private", "kind", "parent_group_id", "lead_user_id")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     IS_PRIVATE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    PARENT_GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+    LEAD_USER_ID_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     name: str
     description: str
     is_private: bool
-    is_default: bool
-    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., is_default: _Optional[bool] = ...) -> None: ...
+    kind: _common_pb2.GroupKind
+    parent_group_id: str
+    lead_user_id: str
+    def __init__(self, organization_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., kind: _Optional[_Union[_common_pb2.GroupKind, str]] = ..., parent_group_id: _Optional[str] = ..., lead_user_id: _Optional[str] = ...) -> None: ...
 
 class UpdateGroupRequest(_message.Message):
-    __slots__ = ("organization_id", "group_id", "name", "description", "is_private", "is_default")
+    __slots__ = ("organization_id", "group_id", "name", "description", "is_private", "kind", "parent_group_id", "lead_user_id", "clear_parent_group", "clear_lead")
     ORGANIZATION_ID_FIELD_NUMBER: _ClassVar[int]
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     IS_PRIVATE_FIELD_NUMBER: _ClassVar[int]
-    IS_DEFAULT_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    PARENT_GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+    LEAD_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CLEAR_PARENT_GROUP_FIELD_NUMBER: _ClassVar[int]
+    CLEAR_LEAD_FIELD_NUMBER: _ClassVar[int]
     organization_id: str
     group_id: str
     name: str
     description: str
     is_private: bool
-    is_default: bool
-    def __init__(self, organization_id: _Optional[str] = ..., group_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., is_default: _Optional[bool] = ...) -> None: ...
+    kind: _common_pb2.GroupKind
+    parent_group_id: str
+    lead_user_id: str
+    clear_parent_group: bool
+    clear_lead: bool
+    def __init__(self, organization_id: _Optional[str] = ..., group_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_private: _Optional[bool] = ..., kind: _Optional[_Union[_common_pb2.GroupKind, str]] = ..., parent_group_id: _Optional[str] = ..., lead_user_id: _Optional[str] = ..., clear_parent_group: _Optional[bool] = ..., clear_lead: _Optional[bool] = ...) -> None: ...
 
 class DeleteGroupRequest(_message.Message):
     __slots__ = ("organization_id", "group_id")

@@ -21,6 +21,7 @@ import {
   FileMentionPreview,
   NoteMentionPreview,
   UserMentionPreview,
+  TeamMentionPreview,
   ChatMentionPreview,
   AgentMentionPreview,
   TagMentionPreview,
@@ -65,7 +66,7 @@ function getTypeTheme(type: UrnType): TypeTheme {
 
 const KNOWN_PREVIEW_TYPES = new Set<UrnType>([
   UrnType.TASK, UrnType.CALENDAR_EVENT, UrnType.PROJECT, UrnType.FILE,
-  UrnType.NOTE, UrnType.USER, UrnType.CHAT, UrnType.AGENT, UrnType.TAG,
+  UrnType.NOTE, UrnType.USER, UrnType.TEAM, UrnType.CHAT, UrnType.AGENT, UrnType.TAG,
 ]);
 
 export function MentionPreview({
@@ -229,6 +230,16 @@ export function MentionPreview({
           <UserMentionPreview
             urn={preview.urn}
             title={preview.title}
+            liveState={effectiveLiveState!}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.TEAM && (
+          <TeamMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            description={preview.description ? stripMarkdown(preview.description) : undefined}
             liveState={effectiveLiveState!}
             onClose={onClose}
             onCopyLink={handleCopyLink}

@@ -77,9 +77,15 @@ export interface MentionLiveState {
   agentEmoji?: string;
   agentThemeColor?: string;
 
+  // TEAM (parent team name rides the generic parentLabel)
+  teamMemberCount?: number;
+
   // USER
   userAvatarUrl?: string;
   userEmail?: string;
+  userJobTitle?: string;
+  userDepartment?: string;
+  userTeamName?: string;
 
   // TAG
   /** Hex / palette slug used for the tag chip swatch (already stored on tag). */

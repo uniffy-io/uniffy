@@ -325,6 +325,8 @@ def event_to_proto(
                 proto_attendee.avatar_url = user_info["avatar_url"]
             if user_info.get("timezone"):
                 proto_attendee.timezone = user_info["timezone"]
+            if attendee.invited_via_group_id:
+                proto_attendee.invited_via_group_id = str(attendee.invited_via_group_id)
             proto_event.attendees.append(proto_attendee)
 
     if room_id:

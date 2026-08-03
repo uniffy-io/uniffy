@@ -9,6 +9,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.AGENT_CHAT]: '#06b6d4',     // cyan-500 (matches AGENT)
   [UrnType.AGENT_FOLDER]: '#06b6d4',   // cyan-500 (container of agent chats)
   [UrnType.USER]: '#10b981',           // emerald-500
+  [UrnType.TEAM]: '#a855f7',           // purple-500 (people-adjacent, near violet)
   [UrnType.CALENDAR_EVENT]: '#f43f5e', // rose-500
   [UrnType.PROJECT]: '#f97316',        // orange-500
   [UrnType.TASK]: '#14b8a6',           // teal-500
@@ -94,6 +95,16 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: 'border-emerald-500/40 dark:border-emerald-500/20',
     shadow: 'shadow-emerald-500/50',
     glow: 'inset-shadow-[0_2px_4px_rgb(16_185_129_/_0.45)]',
+  },
+  [UrnType.TEAM]: {
+    gradient: 'from-purple-500/10 via-purple-500/5 to-transparent',
+    iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
+    iconBoxAccent: 'border border-primary/55 bg-primary/10 text-primary',
+    accentText: 'text-purple-600 dark:text-purple-400',
+    badgeBg: 'bg-purple-500/10',
+    border: 'border-purple-500/40 dark:border-purple-500/20',
+    shadow: 'shadow-purple-500/50',
+    glow: 'inset-shadow-sm inset-shadow-purple-500/30',
   },
   [UrnType.CALENDAR_EVENT]: {
     gradient: 'from-rose-500/10 via-rose-500/5 to-transparent',
@@ -203,6 +214,7 @@ export const URN_TYPE_LEGEND: Array<{
 }> = [
   { type: UrnType.NOTE, label: 'Notes', hexColor: URN_TYPE_HEX_COLORS[UrnType.NOTE], tailwindBg: 'bg-primary' },
   { type: UrnType.USER, label: 'Users', hexColor: URN_TYPE_HEX_COLORS[UrnType.USER], tailwindBg: 'bg-emerald-500' },
+  { type: UrnType.TEAM, label: 'Teams', hexColor: URN_TYPE_HEX_COLORS[UrnType.TEAM], tailwindBg: 'bg-purple-500' },
   { type: UrnType.FILE, label: 'Files', hexColor: URN_TYPE_HEX_COLORS[UrnType.FILE], tailwindBg: 'bg-blue-500' },
   { type: UrnType.FOLDER, label: 'Folders', hexColor: URN_TYPE_HEX_COLORS[UrnType.FOLDER], tailwindBg: 'bg-amber-500' },
   { type: UrnType.CHAT, label: 'Chats', hexColor: URN_TYPE_HEX_COLORS[UrnType.CHAT], tailwindBg: 'bg-violet-500' },

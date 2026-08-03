@@ -21,12 +21,16 @@ import {
   collapseSidebar,
   deactivateSplit,
   setFocusedPane,
-  jumpToMessage,
   openThreadPanel,
 } from '@/features/chat/store/chatUiSlice';
 import { setActiveThread } from '@/features/chat/store/chatThreadsSlice';
 import { clearSplitChannel } from '@/features/chat/store/chatChannelsSlice';
-import { initializeChat, fetchMessages, resolveThreadForMessage } from '@/features/chat/store/chatThunks';
+import {
+  initializeChat,
+  fetchMessages,
+  resolveThreadForMessage,
+  jumpToChannelMessage,
+} from '@/features/chat/store/chatThunks';
 import { CreateChannelModal } from '@/features/chat/components/modals/CreateChannelModal';
 import { CreateCategoryModal } from '@/features/chat/components/modals/CreateCategoryModal';
 import { BrowseChannelsModal } from '@/features/chat/components/modals/BrowseChannelsModal';
@@ -133,19 +137,18 @@ export function ChatPage() {
     if (channelId && channelId !== prevChannelIdRef.current) {
       prevChannelIdRef.current = channelId;
       dispatch(setActiveChannel(channelId));
-      dispatch(fetchMessages({ channelId }));
+      // With a hash the deep-link effect below loads the window around the target instead.
+      if (!hashMessageId) {
+        dispatch(fetchMessages({ channelId }));
+      }
     }
-  }, [channelId, dispatch]);
+  }, [channelId, hashMessageId, dispatch]);
 
   const hashHandledRef = useRef<string | null>(null);
-  const channelMessageIds = useAppSelector((state) =>
-    channelId ? state.chatMessages.idsByChannel[channelId] : undefined,
-  );
-  const messagesLoaded = (channelMessageIds?.length ?? 0) > 0;
   useEffect(() => {
-    if (!hashMessageId || !messagesLoaded || !channelId) return;
-    // Keyed on the target so a second deep link into an already-open channel still jumps.
-    const target = `${channelId}#${hashMessageId}`;
+    if (!hashMessageId || !channelId) return;
+    // Keyed on the history entry so clicking the same search result twice jumps again.
+    const target = `${location.key}:${channelId}#${hashMessageId}`;
     if (hashHandledRef.current === target) return;
     hashHandledRef.current = target;
 
@@ -158,9 +161,11 @@ export function ChatPage() {
         dispatch(setActiveThread(result.rootMessageId));
         dispatch(openThreadPanel());
       }
-      dispatch(jumpToMessage(hashMessageId));
+      // Thread replies never appear in the channel list, so the list scrolls to their root.
+      const listTarget = result ? result.rootMessageId : hashMessageId;
+      await dispatch(jumpToChannelMessage({ channelId, messageId: listTarget }));
     })();
-  }, [hashMessageId, messagesLoaded, channelId, dispatch]);
+  }, [hashMessageId, channelId, location.key, dispatch]);
 
   useEffect(() => {
     if (splitChannelId) {

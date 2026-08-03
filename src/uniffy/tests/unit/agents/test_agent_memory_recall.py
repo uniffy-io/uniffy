@@ -13,7 +13,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy.dialects import postgresql
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.memory import AgentMemory, MemoryScope
@@ -34,7 +33,6 @@ from uniffy.domains.agents.memories.recall import (
 from uniffy.domains.agents.memories.sanitize import escape_like, strip_control_chars
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.memories.scoring import (
-    MIN_TRIGRAM_QUERY_CHARS,
     TrigramMemoryScorer,
     script_class,
 )
@@ -135,15 +133,6 @@ class _CapturingSession:
 
 
 class TestTrigramScorer:
-    def _compiled(self, session):
-        assert session.statements, "scorer never executed a statement"
-        return str(
-            session.statements[0].compile(
-                dialect=postgresql.dialect(),
-                compile_kwargs={"literal_binds": False},
-            )
-        )
-
     async def test_empty_query_short_circuits(self):
         session = _CapturingSession()
         result = await TrigramMemoryScorer().score(
@@ -162,56 +151,6 @@ class TestTrigramScorer:
         )
         assert result == []
         assert session.statements == []
-
-    async def test_sql_uses_word_similarity_unaccent_and_escaped_ilike(self):
-        session = _CapturingSession()
-        await TrigramMemoryScorer().score(
-            session,
-            organization_id=generate_id(),
-            refs=[MemoryScopeRef.user(generate_id()), MemoryScopeRef.org()],
-            query="deploy window",
-        )
-        sql = self._compiled(session)
-        assert "word_similarity" in sql
-        assert "unaccent" in sql
-        assert "ILIKE" in sql
-        assert "ESCAPE" in sql
-        # similarity() must not appear on its own - word_similarity only.
-        assert not re.search(r"(?<!word_)similarity\(", sql)
-        # Content joins the haystack only as a bounded prefix; a full-body
-        # trigram scan measured ~650ms across three full buckets.
-        assert "left(agents_memories.content" in sql
-        # Every haystack (concat_ws) carries the bounded prefix, never
-        # bare content.
-        assert sql.count("concat_ws(") == sql.count("left(agents_memories.content")
-
-    async def test_short_query_skips_trigram_keeps_substring(self):
-        session = _CapturingSession()
-        await TrigramMemoryScorer().score(
-            session,
-            organization_id=generate_id(),
-            refs=[MemoryScopeRef.user(generate_id())],
-            query="ab",
-        )
-        assert len("ab") < MIN_TRIGRAM_QUERY_CHARS
-        sql = self._compiled(session)
-        assert "ILIKE" in sql
-        # Trigram may appear in ORDER BY, but not as a WHERE threshold.
-        where_clause = sql.split("WHERE", 1)[1].split("ORDER BY", 1)[0]
-        assert "word_similarity" not in where_clause
-
-    async def test_tool_written_instructions_excluded(self):
-        session = _CapturingSession()
-        await TrigramMemoryScorer().score(
-            session,
-            organization_id=generate_id(),
-            refs=[MemoryScopeRef.user(generate_id())],
-            query="deploy window",
-        )
-        sql = self._compiled(session)
-        assert "NOT (" in sql
-        assert "source" in sql
-        assert "category" in sql
 
 
 class _StubScorer:

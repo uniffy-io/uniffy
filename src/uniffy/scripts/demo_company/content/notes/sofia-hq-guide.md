@@ -1,10 +1,9 @@
 ---
 title: Sofia HQ Guide
-slug: vitalis-sofia-hq-guide
+slug: uniffy-sofia-hq-guide
 folder: Handbook/Offices
 tags:
   - sofia-office
-  - handbook
 ---
 
 # Sofia HQ Guide
@@ -18,26 +17,26 @@ Metro line 1 to Mladost 1, then a seven minute walk. Bus 88 and 305 stop at the 
 park entrance. Cycle racks are in the covered area behind the building; the code is on
 the intranet, not in this note.
 
-Parking has 40 spaces. Twelve are reserved for patients, four for accessible use, and
-the rest are first come. Do not park in the ambulance bay, ever, including for two
-minutes while you unload.
+Parking has 40 spaces. Six are reserved for visitors, four for accessible use, and the
+rest are first come. Do not park in the loading bay, ever, including for two minutes
+while you unload.
 
 ## The floors
 
 | Floor | What is there |
 | --- | --- |
-| 0 | Reception, patient waiting, pharmacy pickup, Vitosha boardroom |
-| 1 | Vitalis Lab, sample reception, cold storage |
-| 2 | Consulting rooms 1 to 12, nurses station |
+| 0 | Reception, visitor area, Vitosha boardroom |
+| 1 | Support desk, customer success, quiet focus corner |
+| 2 | Call Booth 1 and 2, interview rooms, design corner |
 | 3 | Offices, meeting rooms Rila, Pirin, Iskar, phone booths |
-| 4 | Engineering, Serdica training room, roof terrace |
+| 4 | Engineering, Serdica training room, rack room, roof terrace |
 
 ## Badges and access
 
 Badges are issued by reception on the first day and cover the floors your role needs.
-Floor 1 needs a lab-specific badge because of sample integrity and cold chain. Never
-hold a door for someone without a badge, including someone you recognise. Visitors sign
-in at reception and are escorted.
+The rack room on floor 4 needs a separate badge because the build runners and network
+gear live there. Never hold a door for someone without a badge, including someone you
+recognise. Visitors sign in at reception and are escorted.
 
 ## Rooms
 
@@ -53,22 +52,23 @@ Rules that keep it civil:
 - A room free for 10 minutes past the start is fair game.
 - The two phone booths, [Studena](room:Studena) and [Bistritsa](room:Bistritsa), are
   for calls, not for meetings.
-- [Telehealth Booth 1](room:Telehealth Booth 1) and
-  [Telehealth Booth 2](room:Telehealth Booth 2) on floor 2 are reserved for patient
-  consultations and are never booked for internal meetings. This is a confidentiality
-  rule, see [Telehealth Consultation SOP](telehealth-consultation-sop.md).
+- [Call Booth 1](room:Call Booth 1) and
+  [Call Booth 2](room:Call Booth 2) on floor 2 are reserved for customer calls and
+  interviews and are never booked for internal meetings. This is a confidentiality
+  rule, see [Support Escalation Runbook](support-escalation-runbook.md).
 
 ## Kitchen and quiet
 
 Kitchens are on floors 3 and 4. Coffee is free, the dishwasher is not self-emptying.
-Floor 2 is a clinical floor: no phone calls in the corridor, no food, and voices down.
-Patients can hear more than you think.
+Floor 1 is a live desk floor: no loud calls in the corridor while the desk is open, and
+voices down. Customers on the line can hear more than you think.
 
 ## Emergencies
 
-Assembly point is the far end of the car park by the flagpoles. First aid kits are at
-every nurses station and in both kitchens. Defibrillator is at reception. Fire drill is
-twice a year, announced.
+Assembly point is the far end of the car park by the flagpoles. First aid kits are in
+both kitchens and at reception. Defibrillator is at reception. Fire drill is twice a
+year, announced.
 
-Facilities issues go to the office manager. Anything patient-facing that breaks, from a
-blocked toilet to a failed printer at reception, is treated as urgent.
+Facilities issues go to the office manager in #sofia-hq. Anything customer-facing that
+breaks, from a dead headset in a call booth to a failed badge reader at reception, is
+treated as urgent.

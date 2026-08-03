@@ -17,6 +17,7 @@ const WIDGET_LABELS: Record<WidgetId, string> = {
   'recent-activity': 'Recent Activity',
   'quick-actions': 'Quick Actions',
   'team-presence': 'Team Online',
+  people: 'People',
   notifications: 'Notifications',
   'recent-notes': 'Recent Notes',
   'recent-files': 'Recent Files',

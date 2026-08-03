@@ -39,6 +39,7 @@ const (
 	SearchResultType_SEARCH_RESULT_TYPE_TAG            SearchResultType = 12
 	SearchResultType_SEARCH_RESULT_TYPE_FOLDER         SearchResultType = 13
 	SearchResultType_SEARCH_RESULT_TYPE_AGENT_FOLDER   SearchResultType = 14
+	SearchResultType_SEARCH_RESULT_TYPE_TEAM           SearchResultType = 15
 )
 
 // Enum value maps for SearchResultType.
@@ -59,6 +60,7 @@ var (
 		12: "SEARCH_RESULT_TYPE_TAG",
 		13: "SEARCH_RESULT_TYPE_FOLDER",
 		14: "SEARCH_RESULT_TYPE_AGENT_FOLDER",
+		15: "SEARCH_RESULT_TYPE_TEAM",
 	}
 	SearchResultType_value = map[string]int32{
 		"SEARCH_RESULT_TYPE_UNSPECIFIED":    0,
@@ -76,6 +78,7 @@ var (
 		"SEARCH_RESULT_TYPE_TAG":            12,
 		"SEARCH_RESULT_TYPE_FOLDER":         13,
 		"SEARCH_RESULT_TYPE_AGENT_FOLDER":   14,
+		"SEARCH_RESULT_TYPE_TEAM":           15,
 	}
 )
 
@@ -1140,7 +1143,7 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"urn_status\x180 \x01(\tR\turnStatus\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xf1\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x8e\x04\n" +
 	"\x10SearchResultType\x12\"\n" +
 	"\x1eSEARCH_RESULT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SEARCH_RESULT_TYPE_NOTE\x10\x01\x12\x1b\n" +
@@ -1157,7 +1160,8 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x1dSEARCH_RESULT_TYPE_AGENT_CHAT\x10\v\x12\x1a\n" +
 	"\x16SEARCH_RESULT_TYPE_TAG\x10\f\x12\x1d\n" +
 	"\x19SEARCH_RESULT_TYPE_FOLDER\x10\r\x12#\n" +
-	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0e2\xf6\x01\n" +
+	"\x1fSEARCH_RESULT_TYPE_AGENT_FOLDER\x10\x0e\x12\x1b\n" +
+	"\x17SEARCH_RESULT_TYPE_TEAM\x10\x0f2\xf6\x01\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00\x12T\n" +
 	"\rGetReferences\x12\x1f.search.v1.GetReferencesRequest\x1a .search.v1.GetReferencesResponse\"\x00\x12N\n" +

@@ -1,12 +1,12 @@
-room,floor,type,capacity,amenities,bookable,notes
-Vitosha,0,Conference room,14,"video, projector, phone, catering",Yes,Board and committee meetings
-Rila,3,Meeting room,8,"video, whiteboard, tv",Yes,Default clinical huddle room
-Pirin,3,Meeting room,6,"whiteboard, tv",Yes,
-Iskar,3,Meeting room,4,"whiteboard",Yes,
-Studena,3,Phone booth,1,"phone, soundproof",Yes,"Calls only, no meetings"
-Bistritsa,3,Phone booth,1,"phone, soundproof",Yes,"Calls only, no meetings"
-Serdica,4,Conference room,20,"video, projector, whiteboard, live-stream",Yes,Training and all-hands
-Telehealth Booth 1,2,Office,1,"soundproof, video, headset",Yes,Patient consultations only
-Telehealth Booth 2,2,Office,1,"soundproof, video, headset",Yes,Patient consultations only
-Consulting rooms 1-12,2,Clinical,2,"exam couch, sink",No,Rota managed by clinic manager
-Sample reception,1,Lab,4,"cold storage",No,Floor 1 badge required
+room,building,floor,type,capacity,amenities,bookable,notes
+Vitosha,Sofia HQ,0,Conference room,14,"video, projector, phone, catering",Yes,Board and committee meetings
+Rila,Sofia HQ,3,Meeting room,8,"video, whiteboard, tv",Yes,Default daily standup room
+Pirin,Sofia HQ,3,Meeting room,6,"whiteboard, tv",Yes,
+Iskar,Sofia HQ,3,Meeting room,4,"whiteboard",Yes,
+Studena,Sofia HQ,3,Phone booth,1,"phone, soundproof",Yes,"Calls only, no meetings"
+Bistritsa,Sofia HQ,3,Phone booth,1,"phone, soundproof",Yes,"Calls only, no meetings"
+Serdica,Sofia HQ,4,Conference room,20,"video, projector, whiteboard, live-stream",Yes,Training and all-hands
+Call Booth 1,Sofia HQ,2,Office,1,"soundproof, video, headset",Yes,Customer calls and interviews only
+Call Booth 2,Sofia HQ,2,Office,1,"soundproof, video, headset",Yes,Customer calls and interviews only
+Maritsa,Plovdiv office,1,Meeting room,6,"video, whiteboard",Yes,Weekly Sofia sync runs here
+Trakia Training Room,Plovdiv office,1,Conference room,16,"projector, whiteboard, video",Yes,Community webinar every Wednesday evening

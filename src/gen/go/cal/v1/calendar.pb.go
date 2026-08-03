@@ -821,9 +821,11 @@ type Attendee struct {
 	// Role in the event
 	Role AttendeeRole `protobuf:"varint,7,opt,name=role,proto3,enum=cal.v1.AttendeeRole" json:"role,omitempty"`
 	// Timezone
-	Timezone      *string `protobuf:"bytes,8,opt,name=timezone,proto3,oneof" json:"timezone,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Timezone *string `protobuf:"bytes,8,opt,name=timezone,proto3,oneof" json:"timezone,omitempty"`
+	// Group that produced this attendee row at invite time (snapshot; empty for direct invites)
+	InvitedViaGroupId *string `protobuf:"bytes,9,opt,name=invited_via_group_id,json=invitedViaGroupId,proto3,oneof" json:"invited_via_group_id,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Attendee) Reset() {
@@ -908,6 +910,13 @@ func (x *Attendee) GetRole() AttendeeRole {
 func (x *Attendee) GetTimezone() string {
 	if x != nil && x.Timezone != nil {
 		return *x.Timezone
+	}
+	return ""
+}
+
+func (x *Attendee) GetInvitedViaGroupId() string {
+	if x != nil && x.InvitedViaGroupId != nil {
+		return *x.InvitedViaGroupId
 	}
 	return ""
 }
@@ -4340,7 +4349,7 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"_room_nameB\x10\n" +
 	"\x0e_room_locationB\x10\n" +
 	"\x0e_room_capacityB\r\n" +
-	"\v_channel_id\"\x9b\x02\n" +
+	"\v_channel_id\"\xea\x02\n" +
 	"\bAttendee\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -4350,9 +4359,11 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"\binitials\x18\x05 \x01(\tR\binitials\x12.\n" +
 	"\x06status\x18\x06 \x01(\x0e2\x16.cal.v1.AttendeeStatusR\x06status\x12(\n" +
 	"\x04role\x18\a \x01(\x0e2\x14.cal.v1.AttendeeRoleR\x04role\x12\x1f\n" +
-	"\btimezone\x18\b \x01(\tH\x01R\btimezone\x88\x01\x01B\r\n" +
+	"\btimezone\x18\b \x01(\tH\x01R\btimezone\x88\x01\x01\x124\n" +
+	"\x14invited_via_group_id\x18\t \x01(\tH\x02R\x11invitedViaGroupId\x88\x01\x01B\r\n" +
 	"\v_avatar_urlB\v\n" +
-	"\t_timezone\"\xdb\x02\n" +
+	"\t_timezoneB\x17\n" +
+	"\x15_invited_via_group_id\"\xdb\x02\n" +
 	"\x10RecurrenceConfig\x123\n" +
 	"\apattern\x18\x01 \x01(\x0e2\x19.cal.v1.RecurrencePatternR\apattern\x12\x1a\n" +
 	"\binterval\x18\x02 \x01(\x05R\binterval\x123\n" +

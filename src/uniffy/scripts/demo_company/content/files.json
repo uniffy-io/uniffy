@@ -1,26 +1,26 @@
 {
-  "Brand/vitalis-logo.svg": {
-    "description": "Vitalis Health primary logo mark. Teal plate, amber pulse line.",
+  "Brand/uniffy-logo.svg": {
+    "description": "Uniffy primary logo mark. Unity Violet plate, white pane mark and wordmark.",
     "tags": ["brand"]
   },
   "Brand/brand-palette.csv": {
     "description": "Machine-readable brand palette with usage rules per colour.",
     "tags": ["brand"]
   },
-  "Clinical/patient-intake-form.md": {
-    "description": "Printable intake form matching the Patient Intake SOP.",
-    "tags": ["clinical"]
+  "Engineering/incident-report-template.md": {
+    "description": "Fill-in incident report matching the Incident Response Runbook.",
+    "tags": ["engineering", "compliance"]
   },
-  "Clinical/lab-panel-reference-ranges.csv": {
-    "description": "Reference and critical ranges by panel and analyte, Vitalis Lab.",
-    "tags": ["clinical", "lab"]
+  "Engineering/service-slo-reference.csv": {
+    "description": "Availability and latency SLOs with alert thresholds, per service.",
+    "tags": ["engineering", "infra"]
   },
   "Compliance/data-processing-register.csv": {
     "description": "GDPR Article 30 processing register. Reviewed twice a year by the DPO.",
     "tags": ["compliance", "policy"]
   },
   "Facilities/sofia-hq-room-directory.csv": {
-    "description": "Every room at Sofia HQ with floor, capacity and booking status.",
+    "description": "Every bookable room with building, floor, capacity and booking status.",
     "tags": ["sofia-office"]
   },
   "People/onboarding-checklist.csv": {
@@ -29,6 +29,6 @@
   },
   "IT/device-asset-register.csv": {
     "description": "Managed device register with encryption status and warranty dates.",
-    "tags": ["compliance"]
+    "tags": ["infra", "compliance"]
   }
 }

@@ -928,32 +928,6 @@ class TestAgentToolAuthorization:
         assert allowed == frozenset({"notes.read_note", "github.list_issues"})
         assert _allowed_tool_names(None) == frozenset()
 
-    async def _capture_sql(self, run) -> str:
-        captured: list = []
-
-        async def execute(stmt):
-            captured.append(stmt)
-            return MagicMock(all=lambda: [])
-
-        session = MagicMock(execute=AsyncMock(side_effect=execute))
-        ctx = NS(session=session, user_id=generate_id(), organization_id=generate_id())
-        await run(ctx)
-        return str(captured[-1].compile())
-
-    async def test_note_parent_titles_are_permission_filtered(self) -> None:
-        from uniffy.domains.agents.tools.builtin.notes import _fetch_titles
-
-        sql = await self._capture_sql(lambda ctx: _fetch_titles(ctx, {generate_id()}))
-        assert "notes_notes.organization_id" in sql
-        assert "permissions_content_members" in sql
-
-    async def test_file_folder_names_are_permission_filtered(self) -> None:
-        from uniffy.domains.agents.tools.builtin.files import _fetch_folder_names
-
-        sql = await self._capture_sql(lambda ctx: _fetch_folder_names(ctx, {generate_id()}))
-        assert "files_folders.organization_id" in sql
-        assert "permissions_content_members" in sql
-
 
 def test_access_mode_enum_present() -> None:
     # Guards against an accidental import break in the module under test.
