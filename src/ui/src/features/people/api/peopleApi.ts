@@ -10,6 +10,7 @@ import type {
     IdentitySourceKind,
     ListTeamsResponse,
     PersonProfile,
+    UpdateProfilePolicyResponse,
 } from '@uniffy/proto/people/v1/people_pb';
 
 const peopleClient = createClient(PeopleService, unaryTransport);
@@ -75,7 +76,7 @@ export const peopleApi = {
     updateProfilePolicy: async (
         organizationId: string,
         policy: { directoryEnabled: boolean; orgChartEnabled: boolean },
-    ): Promise<GetProfilePolicyResponse> => {
+    ): Promise<UpdateProfilePolicyResponse> => {
         return peopleClient.updateProfilePolicy({ organizationId, policy });
     },
 
