@@ -8,6 +8,7 @@ import {
     Trash,
     Warning,
     HardDrives,
+    IdentificationCard,
     Wallet,
     UserPlus,
 } from '@phosphor-icons/react';
@@ -26,6 +27,8 @@ import { ReasonDialog } from '@/components/ui/reason-dialog';
 import { friendlyErrorMessage } from '@/config';
 import { mfaClient } from '@/features/mfa/api/mfaApi';
 import { MemberAgentQuotaDialog } from '@/features/admin/components/members/MemberAgentQuotaDialog';
+import { MemberProfileDialog } from '@/features/admin/components/members/MemberProfileDialog';
+import { SubjectAvatarById } from '@/components/subject';
 import { InviteMemberDialog } from '@/features/admin/components/members/InviteMemberDialog';
 import { InvitationsTable } from '@/features/admin/components/members/InvitationsTable';
 import {
@@ -74,6 +77,7 @@ function MemberRow({
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [showInvalidateCachesConfirm, setShowInvalidateCachesConfirm] = useState(false);
     const [showQuotaDialog, setShowQuotaDialog] = useState(false);
+    const [showProfileDialog, setShowProfileDialog] = useState(false);
     const [showMfaResetDialog, setShowMfaResetDialog] = useState(false);
     const [mfaResetting, setMfaResetting] = useState(false);
 
@@ -149,19 +153,12 @@ function MemberRow({
             <TableRow className={removing ? 'opacity-50' : ''}>
                 <TableCell>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                            {member.avatarUrl ? (
-                                <img
-                                    src={member.avatarUrl}
-                                    alt={member.displayName}
-                                    className="w-full h-full rounded-full object-cover"
-                                />
-                            ) : (
-                                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                    {member.displayName.slice(0, 2).toUpperCase()}
-                                </span>
-                            )}
-                        </div>
+                        <SubjectAvatarById
+                            userId={member.userId}
+                            displayName={member.displayName}
+                            avatarUrl={member.avatarUrl || undefined}
+                            size="lg"
+                        />
                         <div>
                             <div className="flex items-center gap-2">
                                 <p className="font-semibold text-foreground">{member.displayName}</p>
@@ -206,8 +203,18 @@ function MemberRow({
                 </TableCell>
 
                 <TableCell align="right">
-                    {!isOwner && !isCurrentUser && (
-                        <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1">
+                        <button
+                            type="button"
+                            onClick={() => setShowProfileDialog(true)}
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent
+                                opacity-0 group-hover:opacity-100 transition-all"
+                            title="Edit profile"
+                        >
+                            <IdentificationCard size={16} />
+                        </button>
+                        {!isOwner && !isCurrentUser && (
+                            <>
                             <button
                                 type="button"
                                 onClick={() => setShowQuotaDialog(true)}
@@ -250,8 +257,9 @@ function MemberRow({
                             >
                                 <Trash size={16} />
                             </button>
-                        </div>
-                    )}
+                            </>
+                        )}
+                    </div>
                 </TableCell>
             </TableRow>
 
@@ -301,6 +309,14 @@ function MemberRow({
                 displayName={member.displayName}
                 onClose={() => setShowQuotaDialog(false)}
             />
+
+            {showProfileDialog && (
+                <MemberProfileDialog
+                    userId={member.userId}
+                    displayName={member.displayName}
+                    onClose={() => setShowProfileDialog(false)}
+                />
+            )}
         </>
     );
 }

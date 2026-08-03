@@ -12,6 +12,16 @@ export const usersApi = {
         return response.user;
     },
 
+    updateMyProfile: async (fields: {
+        pronouns?: string;
+        accentColor?: string;
+        fontFamily?: string;
+    }): Promise<UserProfile> => {
+        const response = await usersClient.updateMyProfile(fields);
+        if (!response.user) throw new Error('user missing in UpdateMyProfile response');
+        return response.user;
+    },
+
     uploadAvatar: async (imageData: Uint8Array, filename: string): Promise<UserProfile> => {
         const response = await usersClient.uploadAvatar({ imageData: new Uint8Array(imageData), filename });
         if (!response.user) throw new Error('user missing in UploadAvatar response');

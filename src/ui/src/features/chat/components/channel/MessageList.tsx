@@ -16,6 +16,7 @@ import {
   selectTypingUsers,
   selectHasMoreForChannel,
   selectIsChannelLoading,
+  selectIsWindowedForChannel,
   evictOldestMessages,
   evictExpiredTyping,
 } from '@/features/chat/store/chatMessagesSlice';
@@ -34,6 +35,10 @@ const GROUPING_THRESHOLD_MS = 5 * 60 * 1000;
 const START_INDEX = 100_000_000;
 const EVICTION_THRESHOLD = 2000;
 const EVICTION_DROP = 500;
+// A freshly loaded window scrolls off estimated row heights, so the first scroll to a target
+// lands short. Re-issue it while the rows around it measure, then release the bottom-pin.
+const JUMP_SCROLL_ATTEMPTS = 8;
+const JUMP_RETRY_MS = 120;
 
 function isSameDay(a: string, b: string): boolean {
   return a.slice(0, 10) === b.slice(0, 10);
@@ -263,6 +268,10 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const isLoadingMore = useAppSelector((state) =>
     effectiveChannelId ? selectIsChannelLoading(state, effectiveChannelId) : false,
   );
+  // A jump loads a window around its target, so the bottom of the list is not the live tail.
+  const isWindowed = useAppSelector((state) =>
+    effectiveChannelId ? selectIsWindowedForChannel(state, effectiveChannelId) : false,
+  );
   const hasLoaded = useAppSelector((state) =>
     effectiveChannelId ? state.chatMessages.idsByChannel[effectiveChannelId] !== undefined : false,
   );
@@ -303,6 +312,11 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
 
   const grouped = useMemo(() => groupMessages(rootMessages), [rootMessages]);
 
+  const jumpIndex = useMemo(
+    () => (jumpToMessageId ? grouped.findIndex((g) => g.message.id === jumpToMessageId) : -1),
+    [jumpToMessageId, grouped],
+  );
+
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX);
   const prevFirstIdRef = useRef<string | undefined>(undefined);
@@ -314,7 +328,30 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
+  // Swapping between a jump window and the live tail replaces the whole list, so it remounts
+  // the virtualiser rather than trying to anchor across two unrelated slices of history.
+  const listKey = `${effectiveChannelId ?? 'none'}:${isWindowed ? 'window' : 'live'}`;
+
+  // Kept in a ref, and synced first, so the list-swap reset below can read it without
+  // re-running on every jump.
+  const jumpIndexRef = useRef(jumpIndex);
   useEffect(() => {
+    jumpIndexRef.current = jumpIndex;
+  }, [jumpIndex]);
+
+  // Rows measure only once they render, and each measurement re-pins a list that reports itself
+  // at the bottom - which walks the view straight back off a jump target. Hold that off until
+  // the jump settles; the list reports its real position again afterwards.
+  const jumpingRef = useRef(false);
+  const jumpTimerRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (jumpTimerRef.current !== null) window.clearTimeout(jumpTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    // A list that opens on a jump target is not at its bottom, and claiming otherwise lets the
+    // height-change pin below drag the view off the target while rows are still measuring.
+    const opensOnJump = jumpIndexRef.current >= 0;
     /* eslint-disable react-hooks/set-state-in-effect -- per-channel reset on switch is intentional */
     setFirstItemIndex(START_INDEX);
     prevFirstIdRef.current = undefined;
@@ -323,10 +360,10 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     prevLastIdRef.current = undefined;
     setNewMessageCount(0);
     setHighlightedId(null);
-    isAtBottomRef.current = true;
-    setAtBottom(true);
+    isAtBottomRef.current = !opensOnJump;
+    setAtBottom(!opensOnJump);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [effectiveChannelId]);
+  }, [listKey]);
 
   useEffect(() => {
     const firstId = grouped[0]?.message.id;
@@ -366,19 +403,35 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   }, [grouped.length, effectiveChannelId, dispatch]);
 
   useEffect(() => {
-    if (!jumpToMessageId) return;
-    const idx = grouped.findIndex((g) => g.message.id === jumpToMessageId);
-    if (idx === -1) return;
-    requestAnimationFrame(() => {
+    // Target not loaded yet: the pending jump stays claimed so the window that loads it opens there.
+    if (!jumpToMessageId || jumpIndex === -1) return;
+    jumpingRef.current = true;
+    if (jumpTimerRef.current !== null) window.clearTimeout(jumpTimerRef.current);
+
+    let attempt = 0;
+    const scrollToTarget = () => {
+      isAtBottomRef.current = false;
       virtuosoRef.current?.scrollToIndex({
-        index: idx,
+        index: jumpIndex,
         align: 'center',
-        behavior: 'smooth',
+        behavior: 'auto',
       });
+      attempt += 1;
+      if (attempt < JUMP_SCROLL_ATTEMPTS) {
+        jumpTimerRef.current = window.setTimeout(scrollToTarget, JUMP_RETRY_MS);
+        return;
+      }
+      jumpingRef.current = false;
+      jumpTimerRef.current = null;
+    };
+
+    requestAnimationFrame(() => {
+      setAtBottom(false);
+      scrollToTarget();
       setHighlightedId(jumpToMessageId);
     });
     dispatch(clearJumpToMessage());
-  }, [jumpToMessageId, grouped, dispatch]);
+  }, [jumpToMessageId, jumpIndex, dispatch]);
 
   const startReached = useCallback(() => {
     if (
@@ -401,6 +454,8 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   }, [effectiveChannelId, dispatch]);
 
   const handleAtBottomChange = useCallback((bottom: boolean) => {
+    // A jump in flight gets one stale "still at the bottom" report from the pre-scroll position.
+    if (jumpingRef.current && bottom) return;
     isAtBottomRef.current = bottom;
     setAtBottom(bottom);
     if (bottom) {
@@ -412,18 +467,24 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     // A streaming reply grows the last row's height without adding an item, so
     // followOutput never re-fires. Re-pin to the bottom on every height change
     // while we're tracking it, so the view stays glued through the whole stream.
+    if (jumpingRef.current) return;
     if (!isAtBottomRef.current) return;
     virtuosoRef.current?.scrollToIndex({ index: 'LAST', align: 'end', behavior: 'auto' });
   }, []);
 
   const scrollToBottom = useCallback(() => {
+    // The newest messages are not in a jump window, so going live means refetching them.
+    if (isWindowed && effectiveChannelId) {
+      dispatch(fetchMessages({ channelId: effectiveChannelId }));
+      return;
+    }
     if (grouped.length === 0) return;
     virtuosoRef.current?.scrollToIndex({
       index: grouped.length - 1,
       align: 'end',
       behavior: 'smooth',
     });
-  }, [grouped.length]);
+  }, [grouped.length, isWindowed, effectiveChannelId, dispatch]);
 
   const components = useMemo(
     () => ({
@@ -553,12 +614,12 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
     <div className="flex-1 flex flex-col relative min-h-0" data-testid="chat-message-list" data-empty="false">
       <Virtuoso
         ref={virtuosoRef}
-        key={effectiveChannelId}
+        key={listKey}
         className="flex-1"
         data={grouped}
         firstItemIndex={firstItemIndex}
-        initialTopMostItemIndex={Math.max(0, grouped.length - 1)}
-        followOutput={(isAtBottom) => (isAtBottom ? 'auto' : false)}
+        initialTopMostItemIndex={jumpIndex >= 0 ? jumpIndex : Math.max(0, grouped.length - 1)}
+        followOutput={(isAtBottom) => (isAtBottom && !isWindowed ? 'auto' : false)}
         startReached={startReached}
         atBottomStateChange={handleAtBottomChange}
         atBottomThreshold={100}
@@ -568,7 +629,7 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
         computeItemKey={(_idx, g) => g.message.id}
       />
 
-      <NewMessagesPill count={newMessageCount} showJump={!atBottom} onClick={scrollToBottom} />
+      <NewMessagesPill count={newMessageCount} showJump={!atBottom || isWindowed} onClick={scrollToBottom} />
       <TypingIndicator typingUsers={typingUsers} onStopAgent={handleStopAgent} />
     </div>
   );

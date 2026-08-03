@@ -1,13 +1,31 @@
-/** Returns null when `hasAvatar === false`, a constructed URL when the member is loaded with an avatar or not yet loaded. Callers must tolerate 404 via `onError` in the latter case. */
+/** Resolves a user's avatar URL against the org member directory, which is the authority on
+ *  who has one. A user the directory does not cover gets `null` (initials) rather than a URL
+ *  that is guaranteed to 404. Callers keep `onError` as a race guard for deleted avatars. */
 
-import { useMemo } from 'react';
-import { useAppSelector } from '@/app/hooks';
+import { useEffect, useMemo } from 'react';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { fetchMembers } from '@/features/admin/store/adminThunks';
 import { buildAvatarUrl } from '@/shared/utils/fileUrls';
 import type { SerializedMemberInfo } from '@/features/admin/store/adminSlice';
 
+// A page full of avatars mounts every effect in one commit, before any of them can
+// observe the pending flag, so the single-flight latch has to live at module scope.
+let directoryInFlight = false;
+
 export function useAvatarUrl(userId: string, size: string = 'sm'): string | null {
+    const dispatch = useAppDispatch();
     const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
+    const membersFetched = useAppSelector((state) => state.admin.membersFetched);
+    const membersLoading = useAppSelector((state) => state.admin.membersLoading);
     const currentUser = useAppSelector((state) => state.auth.user);
+
+    useEffect(() => {
+        if (!userId || membersFetched || membersLoading || directoryInFlight) return;
+        directoryInFlight = true;
+        void dispatch(fetchMembers({ pageSize: 200 })).finally(() => {
+            directoryInFlight = false;
+        });
+    }, [dispatch, userId, membersFetched, membersLoading]);
 
     return useMemo(() => {
         if (!userId) return null;
@@ -17,10 +35,8 @@ export function useAvatarUrl(userId: string, size: string = 'sm'): string | null
         }
 
         const member = members.find((m) => m.userId === userId);
-        if (member) {
-            return member.hasAvatar ? (member.avatarUrl || buildAvatarUrl(userId, size)) : null;
-        }
+        if (!member) return null;
 
-        return buildAvatarUrl(userId, size);
+        return member.hasAvatar ? member.avatarUrl || buildAvatarUrl(userId, size) : null;
     }, [userId, size, members, currentUser]);
 }

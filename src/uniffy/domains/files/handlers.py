@@ -212,7 +212,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error initiating upload: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def upload_chunk(
         self,
@@ -270,7 +270,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error uploading chunk: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def complete_upload(
         self,
@@ -326,7 +326,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error completing upload: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def upload_chunks(
         self,
@@ -402,7 +402,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error in upload_chunks: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_upload_status(
         self,
@@ -441,7 +441,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error getting upload status: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def abort_upload(
         self,
@@ -474,7 +474,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error aborting upload: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def download_file(
         self,
@@ -528,7 +528,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error downloading file: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_file(
         self,
@@ -570,7 +570,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error getting file: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_file(
         self,
@@ -652,7 +652,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error updating file: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_file(
         self,
@@ -689,7 +689,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error deleting file: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def restore_file(
         self,
@@ -734,7 +734,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error restoring file: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_files(
         self,
@@ -842,7 +842,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error listing files: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def create_folder(
         self,
@@ -899,7 +899,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error creating folder: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_folder(
         self,
@@ -981,7 +981,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error updating folder: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_folder(
         self,
@@ -1023,7 +1023,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error deleting folder: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_files_tree(
         self,
@@ -1148,7 +1148,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error getting files tree: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def empty_trash(
         self,
@@ -1182,7 +1182,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error emptying trash: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_trash(
         self,
@@ -1246,7 +1246,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error listing trash: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def restore_folder(
         self,
@@ -1289,7 +1289,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error restoring folder: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_file_versions(
         self,
@@ -1327,7 +1327,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error listing file versions: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def create_folder_tree(
         self,
@@ -1398,7 +1398,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error creating folder tree: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def ensure_recordings_folder(
         self,
@@ -1435,7 +1435,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error ensuring recordings folder: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def move_items(
         self,
@@ -1591,7 +1591,7 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error moving items: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def copy_items(
         self,
@@ -1655,4 +1655,4 @@ class FilesHandlers:
             raise
         except Exception as e:
             logger.exception(f"Error restoring file version: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")

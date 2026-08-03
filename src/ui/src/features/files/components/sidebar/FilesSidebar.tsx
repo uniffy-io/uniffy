@@ -20,7 +20,6 @@ import {
     CloudArrowDown,
     UsersThree,
     Funnel,
-    Tag,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -77,7 +76,6 @@ interface FilesNavItem {
 
 const filesNavItems: FilesNavItem[] = [
     { name: 'All Files', path: '/files', icon: SquaresFour },
-    { name: 'Tags', path: '/tags?domain=file', icon: Tag },
     { name: 'Filters', path: '/files/filters', icon: Funnel },
 ];
 

@@ -28,7 +28,7 @@ import {
     toggleConnection,
     validateConnection,
 } from '@/features/integrations/store/integrationsThunks';
-import { integrationBrand } from '@/features/integrations/config/integrationBrands';
+import { integrationIcon } from '@/features/integrations/config/integrationBrands';
 import { AddConnectionForm } from '@/features/admin/components/integrations/AddConnectionForm';
 import { ConnectionDetailPanel } from '@/features/admin/components/integrations/ConnectionDetailPanel';
 
@@ -55,7 +55,7 @@ export function IntegrationsSection() {
         [connections, selectedId],
     );
     const SelectedBrandIcon = selectedConnection
-        ? integrationBrand(selectedConnection.provider) ?? Plugs
+        ? integrationIcon(selectedConnection.provider) ?? Plugs
         : Plugs;
 
     const handleValidate = async (connectionId: string) => {
@@ -160,7 +160,7 @@ export function IntegrationsSection() {
                                 <div className="flex-1 overflow-y-auto">
                                     {connections.map((connection) => {
                                         const isSelected = connection.id === selectedId;
-                                        const BrandIcon = integrationBrand(connection.provider) ?? Plugs;
+                                        const BrandIcon = integrationIcon(connection.provider) ?? Plugs;
                                         return (
                                             <button
                                                 key={connection.id}

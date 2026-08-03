@@ -9,7 +9,10 @@ interface ExpandableEditorProps {
   contentType: ContentType;
   contentId: string;
   value: string;
-  onChange: (markdown: string) => void;
+  /** Fires on every keystroke. Hosts that only want one write per edit can skip it and use `onDone`. */
+  onChange?: (markdown: string) => void;
+  /** Fires once when the overlay closes, carrying the final markdown. */
+  onDone?: (markdown: string) => void;
   placeholder?: string;
   /** Defaults to true when `contentId` is provided. */
   enableUpload?: boolean;
@@ -29,6 +32,7 @@ export function ExpandableEditor({
   contentId,
   value,
   onChange,
+  onDone,
   placeholder = 'Click to add a description...',
   enableUpload = !!contentId,
   readonly = false,
@@ -42,10 +46,12 @@ export function ExpandableEditor({
   const [editorReady, setEditorReady] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
   const [draftInitial, setDraftInitial] = useState(value);
+  const latestMarkdownRef = useRef(value);
 
   const handleOpen = useCallback(() => {
     if (readonly) return;
     setDraftInitial(value);
+    latestMarkdownRef.current = value;
     setEditorReady(false);
     setEditorKey((k) => k + 1);
     setIsExpanded(true);
@@ -59,10 +65,12 @@ export function ExpandableEditor({
   const handleClose = useCallback(() => {
     setIsExpanded(false);
     setEditorReady(false);
-  }, []);
+    onDone?.(latestMarkdownRef.current);
+  }, [onDone]);
 
   const handleEditorChange = useCallback((markdown: string) => {
-    onChange(markdown);
+    latestMarkdownRef.current = markdown;
+    onChange?.(markdown);
   }, [onChange]);
 
   const editorPanelRef = useRef<HTMLDivElement>(null);

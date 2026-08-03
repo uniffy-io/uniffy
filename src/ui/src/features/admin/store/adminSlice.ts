@@ -64,7 +64,9 @@ export interface SerializedGroupInfo {
     memberCount: number;
     organizationId: string;
     isPrivate: boolean;
-    isDefault: boolean;
+    kind: number;
+    parentGroupId: string | null;
+    leadUserId: string | null;
     createdAt: { seconds: number; nanos: number } | null;
     updatedAt: { seconds: number; nanos: number } | null;
 }
@@ -118,7 +120,9 @@ export function serializeGroupInfo(g: GroupInfo): SerializedGroupInfo {
         memberCount: g.memberCount,
         organizationId: g.organizationId,
         isPrivate: g.isPrivate,
-        isDefault: g.isDefault,
+        kind: g.kind,
+        parentGroupId: g.parentGroupId ?? null,
+        leadUserId: g.leadUserId ?? null,
         createdAt: g.createdAt ? { seconds: Number(g.createdAt.seconds), nanos: g.createdAt.nanos } : null,
         updatedAt: g.updatedAt ? { seconds: Number(g.updatedAt.seconds), nanos: g.updatedAt.nanos } : null,
     };

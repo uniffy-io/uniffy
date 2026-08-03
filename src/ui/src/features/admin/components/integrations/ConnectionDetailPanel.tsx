@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { CheckCircle, Plugs, XCircle } from '@phosphor-icons/react';
 import { formatRelativeTime } from '@/shared/utils/dateFormatting';
-import { integrationBrand, integrationLabel } from '@/features/integrations/config/integrationBrands';
+import { integrationIcon, integrationLabel } from '@/features/integrations/config/integrationBrands';
 import type { ConnectionPlain } from '@/features/integrations/store/integrationsThunks';
 
 function protoTimestampToDateStr(ts?: { seconds: number; nanos: number }): string | undefined {
@@ -18,7 +18,7 @@ export function ConnectionDetailPanel({ connection }: { connection: ConnectionPl
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Provider</span>
                     <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                        {createElement(integrationBrand(connection.provider) ?? Plugs, { size: 16 })}
+                        {createElement(integrationIcon(connection.provider) ?? Plugs, { size: 16 })}
                         {integrationLabel(connection.provider)}
                     </span>
                 </div>

@@ -4,6 +4,7 @@ import { updateUser } from '@/features/auth/store/authSlice';
 import { usersApi } from '@/features/settings/api/usersApi';
 import { getInitials } from '@/components/subject/utils';
 import { AvatarUpload } from '@/components/ui/avatar-upload';
+import { ProfileFieldsSection } from '@/features/settings/components/ProfileFieldsSection';
 
 export function AccountSection() {
     const dispatch = useAppDispatch();
@@ -39,7 +40,8 @@ export function AccountSection() {
             <div>
                 <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Account</h1>
                 <p className="text-sm text-muted-foreground">
-                    View your account information.
+                    View your account information and edit your profile. Name and email are
+                    managed by your administrator.
                 </p>
             </div>
 
@@ -80,6 +82,8 @@ export function AccountSection() {
                     </div>
                 </div>
             </section>
+
+            <ProfileFieldsSection />
 
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground">Status</h2>

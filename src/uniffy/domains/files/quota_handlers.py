@@ -87,7 +87,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error getting org storage quota: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def set_org_storage_quota(
         self,
@@ -143,7 +143,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error setting org storage quota: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_user_storage_quota(
         self,
@@ -195,7 +195,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error getting user storage quota: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def set_user_storage_quota_override(
         self,
@@ -234,7 +234,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error setting user quota override: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def remove_user_storage_quota_override(
         self,
@@ -269,7 +269,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error removing user quota override: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_user_storage_quota_overrides(
         self,
@@ -302,7 +302,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error listing user quota overrides: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_storage_usage(
         self,
@@ -350,7 +350,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error getting storage usage: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_org_storage_usage(
         self,
@@ -388,7 +388,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error listing org storage usage: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def recalculate_storage_usage(
         self,
@@ -442,7 +442,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error recalculating storage usage: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def check_storage_quota(
         self,
@@ -485,7 +485,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error checking storage quota: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_org_file_version_policy(
         self,
@@ -518,7 +518,7 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error getting file version policy: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_org_file_version_policy(
         self,
@@ -555,4 +555,4 @@ class QuotaHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error updating file version policy: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")

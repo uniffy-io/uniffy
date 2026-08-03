@@ -30,6 +30,12 @@ import { AgentModelPicker } from '@/features/chat/components/compose/AgentModelP
 import { AgentParamsPopover } from '@/features/chat/components/compose/AgentParamsPopover';
 import { useChannelAgentConfig } from '@/features/chat/hooks/useChannelAgentConfig';
 import { AttachmentPreviewBar } from '@/features/chat/components/compose/AttachmentPreviewBar';
+import {
+  needsTeamMentionConfirm,
+  resolveTeamMentionTotal,
+  teamMentionsIn,
+} from '@/features/chat/utils/teamMentionGuard';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { uploadService } from '@/features/files/upload';
 import { attachmentsApi } from '@/features/files/api/attachmentsApi';
 import { randomUUID } from '@/shared/utils/uuid';
@@ -42,6 +48,14 @@ interface PendingFile {
   progress: number;
   fileId?: string;
   aborted?: boolean;
+}
+
+interface PendingTeamSend {
+  content: string;
+  fileIds: string[];
+  metadata?: Record<string, string>;
+  total: number;
+  labels: string[];
 }
 
 interface MessageComposeProps {
@@ -228,6 +242,7 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
   const mentionStartNodeRef = useRef<Node | null>(null);
   const mentionStartOffsetRef = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [pendingTeamSend, setPendingTeamSend] = useState<PendingTeamSend | null>(null);
   const editLastBinding = useKeybinding('chat.editLast');
   // "/skill" typeahead, agent DMs only. The composer is a contentEditable, so
   // the token is tracked against the caret's text node like @-mentions rather
@@ -568,7 +583,21 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
     editorRef.current?.focus();
   }, [closeSlash]);
 
-  const handleSend = useCallback(() => {
+  const performSend = useCallback((
+    content: string,
+    fileIds: string[],
+    metadata?: Record<string, string>,
+  ) => {
+    onSend?.(content, fileIds, metadata);
+    const el = editorRef.current;
+    if (el) el.innerHTML = '';
+    setPendingFiles([]);
+    setPendingInvokedSkill(null);
+    closeSlash();
+    updateState();
+  }, [onSend, closeSlash, updateState]);
+
+  const handleSend = useCallback(async () => {
     const el = editorRef.current;
     if (!el) return;
 
@@ -618,13 +647,31 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
         }
       : undefined;
 
-    onSend?.(content, fileIds, metadata);
-    el.innerHTML = '';
-    setPendingFiles([]);
-    setPendingInvokedSkill(null);
-    closeSlash();
-    updateState();
-  }, [onSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit, pendingInvokedSkill, runnableSkills, closeSlash]);
+    // Nothing is cleared before the user confirms: the host's draft flush only
+    // runs on `onSend`, so cancelling leaves the composer exactly as it was.
+    const mentionedTeams = teamMentionsIn(content);
+    if (mentionedTeams.length > 0 && organizationId) {
+      const { total, labels } = await resolveTeamMentionTotal(mentionedTeams, organizationId);
+      if (needsTeamMentionConfirm(total)) {
+        setPendingTeamSend({ content, fileIds, metadata, total, labels });
+        return;
+      }
+    }
+
+    performSend(content, fileIds, metadata);
+  }, [performSend, updateState, pendingFiles, editingMessage, onSaveEdit, onCancelEdit, pendingInvokedSkill, runnableSkills, organizationId]);
+
+  const handleTeamSendConfirm = useCallback(() => {
+    if (!pendingTeamSend) return;
+    const { content, fileIds, metadata } = pendingTeamSend;
+    setPendingTeamSend(null);
+    performSend(content, fileIds, metadata);
+  }, [pendingTeamSend, performSend]);
+
+  const handleTeamSendCancel = useCallback(() => {
+    setPendingTeamSend(null);
+    editorRef.current?.focus();
+  }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     // Backspace after a chip deletes it; contentEditable=false elements aren't auto-removed.
@@ -1098,6 +1145,18 @@ export function MessageCompose({ channelName, channelId, placeholder, organizati
           initialQuery={mentionQuery}
           onSelect={handleMentionSelect}
           onClose={handleMentionClose}
+        />
+      )}
+
+      {pendingTeamSend && (
+        <ConfirmDialog
+          isOpen
+          onClose={handleTeamSendCancel}
+          onConfirm={handleTeamSendConfirm}
+          title="Notify team members?"
+          message={`This mentions ${pendingTeamSend.labels.join(', ')}. Up to ${pendingTeamSend.total} people will be notified.`}
+          confirmLabel="Send"
+          variant="default"
         />
       )}
     </>

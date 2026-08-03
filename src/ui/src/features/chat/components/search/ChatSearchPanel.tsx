@@ -6,8 +6,7 @@ import { useAppDispatch } from '@/app/hooks';
 import { useChatSearch } from '@/features/chat/hooks/useChatSearch';
 import { ChatSearchFilters, type ChatSearchFilterValues } from '@/features/chat/components/search/ChatSearchFilters';
 import { ChatSearchResultItem } from '@/features/chat/components/search/ChatSearchResultItem';
-import { setActiveChannel } from '@/features/chat/store/chatChannelsSlice';
-import { jumpToMessage } from '@/features/chat/store/chatUiSlice';
+import { jumpToChannelMessage } from '@/features/chat/store/chatThunks';
 
 interface ChatSearchPanelProps {
   channelId?: string;
@@ -78,8 +77,7 @@ export function ChatSearchPanel({ channelId, channelName, anchorRef, onClose }: 
   }, [onClose]);
 
   const handleNavigate = useCallback((targetChannelId: string, messageId: string) => {
-    dispatch(setActiveChannel(targetChannelId));
-    dispatch(jumpToMessage(messageId));
+    dispatch(jumpToChannelMessage({ channelId: targetChannelId, messageId }));
     onClose();
   }, [dispatch, onClose]);
 

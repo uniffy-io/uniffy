@@ -77,7 +77,7 @@ class SavedFilterHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error creating saved filter: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_saved_filter(
         self,
@@ -106,7 +106,7 @@ class SavedFilterHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error getting saved filter: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def update_saved_filter(
         self,
@@ -155,7 +155,7 @@ class SavedFilterHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error updating saved filter: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def delete_saved_filter(
         self,
@@ -187,7 +187,7 @@ class SavedFilterHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error deleting saved filter: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def list_saved_filters(
         self,
@@ -218,4 +218,4 @@ class SavedFilterHandlersMixin:
             raise
         except Exception as e:
             logger.exception(f"Error listing saved filters: {e}")
-            raise ConnectError(Code.INTERNAL, f"Internal server error: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")

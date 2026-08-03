@@ -13,13 +13,16 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_mentioned_agent_ids_from_content,
+    extract_mentioned_team_ids_from_content,
 )
+from uniffy.core.content.team_mentions import TeamExpansion, expand_team_mentions
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThread, ChatThreadParticipant, ChatThreadStats
 from uniffy.core.models.chat.thread_follow import ChatThreadFollow
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.core.valkey.mentions import publish_mention_state
 from uniffy.db import open_session
@@ -301,7 +304,28 @@ class ChatMessageOperations:
         """
         from uniffy.core.content.references import extract_mentioned_user_ids_from_content
 
-        mentioned_user_ids = extract_mentioned_user_ids_from_content(message.content)
+        # Membership and join messages embed a mention urn for the member the
+        # event is about. That urn is the copy, not a ping: nobody gets
+        # "Mentioned you" or a mention badge for their own membership event.
+        visible_mentioned: set[UUID] = set()
+        team_mentions: list[tuple[TeamExpansion, list[UUID]]] = []
+        if message.sender_type != SenderType.SYSTEM:
+            mentioned_user_ids = extract_mentioned_user_ids_from_content(message.content)
+            team_ids = extract_mentioned_team_ids_from_content(message.content)
+            team_expansions = (
+                await expand_team_mentions(self.session, channel.organization_id, team_ids)
+                if team_ids
+                else []
+            )
+            visible_mentioned, team_mentions = await self._visible_mention_targets(
+                channel,
+                member_ids,
+                mentioned_user_ids,
+                team_expansions,
+            )
+        team_recipient_ids: set[UUID] = set()
+        for _, recipients in team_mentions:
+            team_recipient_ids.update(recipients)
 
         await self._index_message(message, channel, member_ids, sender_name=sender_name)
 
@@ -342,7 +366,7 @@ class ChatMessageOperations:
             channel,
             user_id,
             member_ids,
-            mentioned_user_ids,
+            visible_mentioned | team_recipient_ids,
             muted_user_ids | none_notification_ids,
             mentions_only_ids,
         )
@@ -354,7 +378,8 @@ class ChatMessageOperations:
             root_id,
             sender_name,
             member_ids,
-            mentioned_user_ids,
+            visible_mentioned,
+            team_mentions,
         )
 
         if message.sender_type == SenderType.USER:
@@ -363,6 +388,47 @@ class ChatMessageOperations:
             await ChatDraftOperations(self.session).clear_for_send(
                 user_id, channel.organization_id, channel.id, root_id
             )
+
+    async def _visible_mention_targets(
+        self,
+        channel: ChatChannel,
+        member_ids: list[UUID],
+        mentioned_user_ids: set[UUID],
+        team_expansions: list[TeamExpansion],
+    ) -> tuple[set[UUID], list[tuple[TeamExpansion, list[UUID]]]]:
+        """Narrow mention recipients to whoever can already see the channel.
+
+        The notification worker has no CHAT access loader, so this is the only
+        filter between a mention and a 200-char preview of a channel the
+        recipient is not in. Set math against the member ids the send pipeline
+        already fetched; no per-recipient access check.
+        """
+        if channel.channel_type != ChannelType.PUBLIC:
+            member_set = set(member_ids)
+            team_mentions = [
+                (exp, [uid for uid in exp.member_ids if uid in member_set])
+                for exp in team_expansions
+            ]
+            return (
+                mentioned_user_ids & member_set,
+                [(exp, uids) for exp, uids in team_mentions if uids],
+            )
+
+        # PUBLIC access IS active org membership, which the expansion query
+        # already joined; only the direct targets still need checking.
+        visible_direct: set[UUID] = set()
+        if mentioned_user_ids:
+            result = await self.session.execute(
+                select(OrganizationMember.user_id).where(
+                    OrganizationMember.organization_id == channel.organization_id,
+                    OrganizationMember.user_id.in_(mentioned_user_ids),
+                    OrganizationMember.is_active == True,  # noqa: E712
+                )
+            )
+            visible_direct = {row[0] for row in result.all()}
+        return visible_direct, [
+            (exp, list(exp.member_ids)) for exp in team_expansions if exp.member_ids
+        ]
 
     async def _get_channel_member_ids(self, channel_id: UUID) -> list[UUID]:
         # USER-only; AGENT rows have NULL user_id which would crash _event_to_json on deserialize.
@@ -603,6 +669,7 @@ class ChatMessageOperations:
         sender_name: str,
         member_ids: list[UUID],
         mentioned_user_ids: set[UUID] | None = None,
+        team_mentions: list[tuple[TeamExpansion, list[UUID]]] | None = None,
     ) -> None:
         """Emit notifications + stream events for mentions, DMs, and thread replies."""
         try:
@@ -639,6 +706,34 @@ class ChatMessageOperations:
                     )
                 )
                 notified_ids.update(mention_targets)
+
+            # One event per team so each recipient sees the team that pinged
+            # them; a directly mentioned user keeps the "Mentioned you" copy.
+            team_targets: list[UUID] = []
+            for expansion, recipients in team_mentions or ():
+                targets = [
+                    uid for uid in recipients if uid != user_id and uid not in notified_ids
+                ]
+                if not targets:
+                    continue
+                await emit_notification(
+                    NotificationEvent(
+                        notification_type=NotificationType.CHAT_MENTION,
+                        organization_id=channel.organization_id,
+                        actor_id=user_id,
+                        title=f"Mentioned {expansion.name} in #{channel.name}",
+                        body=preview,
+                        source_urn=channel_urn,
+                        target_user_ids=targets,
+                        metadata={
+                            **notif_metadata,
+                            "team_id": str(expansion.team_id),
+                            "team_name": expansion.name,
+                        },
+                    )
+                )
+                notified_ids.update(targets)
+                team_targets.extend(targets)
 
             if channel.channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
                 dm_recipients = [
@@ -698,7 +793,8 @@ class ChatMessageOperations:
                         thread_payload,
                     )
 
-            if mention_targets:
+            mention_stream_targets = mention_targets + team_targets
+            if mention_stream_targets:
                 from uniffy.domains.chat.streaming.events import MENTION_RECEIVED
                 from uniffy.domains.chat.streaming.publisher import (
                     publish_user_chat_event as pub_user,
@@ -710,7 +806,7 @@ class ChatMessageOperations:
                     "sender_id": str(user_id),
                     "content_preview": message.content[:150],
                 }
-                for mid in mention_targets:
+                for mid in mention_stream_targets:
                     await pub_user(mid, MENTION_RECEIVED, mention_payload)
         except Exception:
             logger.warning(f"Notification emit failed for message {message.id}")
@@ -733,12 +829,16 @@ class ChatMessageOperations:
         limit = min(max(limit, 1), 100)
 
         if around_id:
-            return await self._get_messages_around(
+            around = await self._get_messages_around(
                 channel_id,
                 around_id,
                 limit,
                 root_only,
             )
+            if around is not None:
+                return around
+            # Target is gone or belongs elsewhere (stale search hit, old deep link);
+            # the latest page beats handing back an empty channel.
 
         query = select(ChatMessage).where(
             ChatMessage.channel_id == channel_id,
@@ -786,10 +886,11 @@ class ChatMessageOperations:
         target_id: UUID,
         limit: int,
         root_only: bool,
-    ) -> tuple[list[ChatMessage], bool]:
+    ) -> tuple[list[ChatMessage], bool] | None:
+        """None when the target cannot anchor a window, so the caller can serve the latest page."""
         target = await self._get_message_by_id(target_id)
-        if not target:
-            return [], False
+        if not target or target.channel_id != channel_id or target.is_deleted:
+            return None
 
         half = limit // 2
         base_where = [
@@ -806,10 +907,16 @@ class ChatMessageOperations:
                 (ChatMessage.created_at, ChatMessage.id) < (target.created_at, target.id),
             )
             .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
-            .limit(half)
+            .limit(half + 1)
         )
         before_result = await self.session.execute(before_q)
         before_msgs = list(before_result.scalars().all())
+
+        # has_more reports the OLDER side, matching before_id pagination: clients page backwards
+        # from a window, and a target near the tail would otherwise disable that.
+        has_more = len(before_msgs) > half
+        if has_more:
+            before_msgs = before_msgs[:half]
         before_msgs.reverse()
 
         after_q = (
@@ -819,14 +926,10 @@ class ChatMessageOperations:
                 (ChatMessage.created_at, ChatMessage.id) > (target.created_at, target.id),
             )
             .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
-            .limit(half + 1)
+            .limit(half)
         )
         after_result = await self.session.execute(after_q)
         after_msgs = list(after_result.scalars().all())
-
-        has_more = len(after_msgs) > half
-        if has_more:
-            after_msgs = after_msgs[:half]
 
         return before_msgs + [target] + after_msgs, has_more
 

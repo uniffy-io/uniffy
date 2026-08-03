@@ -26,10 +26,12 @@ from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
+from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.errors import ConflictError, NotFoundError, ValidationError
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
+    extract_mentioned_team_ids,
     extract_mentioned_user_ids,
 )
 from uniffy.core.models.login.group import Group
@@ -964,19 +966,52 @@ class NoteOperations(BaseContentOperations[Note]):
             new_mentioned.discard(writer_id)
         if old_refs is not None:
             new_mentioned -= extract_mentioned_user_ids(old_refs)
-        if not new_mentioned:
+
+        source_urn = build_content_urn(self.content_type, note.id)
+
+        if new_mentioned:
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Mentioned you in: {note.title}",
+                    source_urn=source_urn,
+                    target_user_ids=list(new_mentioned),
+                )
+            )
+
+        new_teams = extract_mentioned_team_ids(note.outgoing_references)
+        if old_refs is not None:
+            already_mentioned = set(extract_mentioned_team_ids(old_refs))
+            new_teams = [tid for tid in new_teams if tid not in already_mentioned]
+        if not new_teams:
             return
 
-        await emit_notification(
-            NotificationEvent(
-                notification_type=NotificationType.CONTENT_MENTIONED,
-                organization_id=organization_id,
-                actor_id=user_id,
-                title=f"Mentioned you in: {note.title}",
-                source_urn=build_content_urn(self.content_type, note.id),
-                target_user_ids=list(new_mentioned),
+        # Per-recipient access is the notification worker's job for NOTE; here we
+        # only avoid telling someone twice about the same edit.
+        notified = set(new_mentioned)
+        if writer_id is not None:
+            notified.add(writer_id)
+        for expansion in await expand_team_mentions(self.session, organization_id, new_teams):
+            targets = [uid for uid in expansion.member_ids if uid not in notified]
+            if not targets:
+                continue
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.CONTENT_MENTIONED,
+                    organization_id=organization_id,
+                    actor_id=user_id,
+                    title=f"Mentioned {expansion.name} in: {note.title}",
+                    source_urn=source_urn,
+                    target_user_ids=targets,
+                    metadata={
+                        "team_id": str(expansion.team_id),
+                        "team_name": expansion.name,
+                    },
+                )
             )
-        )
+            notified.update(targets)
 
     async def _emit_shared_notification(
         self,

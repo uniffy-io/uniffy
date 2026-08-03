@@ -8,6 +8,7 @@ import {
     Sun,
     Desktop,
     UserCircle,
+    UsersThree,
     Tag as TagIcon,
 } from '@phosphor-icons/react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -32,8 +33,11 @@ import { clearAgentProviders } from '@/features/agents/store/agentProvidersSlice
 import { clearAgentRuntimeSettings } from '@/features/admin/store/agentRuntimeSettingsSlice';
 import { clearIntegrations } from '@/features/integrations/store/integrationsSlice';
 import { clearTags } from '@/features/tags/store/tagsSlice';
+import { clearPeople } from '@/features/people/store/peopleSlice';
+import { fetchProfilePolicyThunk } from '@/features/people/store/peopleThunks';
 import { clearCalls } from '@/features/calls/store/callsSlice';
 import { clearRooms } from '@/features/rooms/store/roomsSlice';
+import { resetCalendarState, resetCalendarUiState } from '@/features/calendar/store';
 import { clearMemoryAccessToken } from '@/config/api';
 import { teardownStorageEncryption } from '@/shared/crypto/storageEncryption';
 import { createClient } from '@connectrpc/connect';
@@ -57,6 +61,14 @@ export function UserMenu() {
     const [confirmingLogout, setConfirmingLogout] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const currentCustomStatus = useCustomStatus(user?.id ?? '');
+    const orgChartEnabled = useAppSelector((state) => state.people.policy.orgChartEnabled);
+    const peoplePolicyStatus = useAppSelector((state) => state.people.policy.status);
+
+    useEffect(() => {
+        if (isOpen && peoplePolicyStatus === 'idle') {
+            dispatch(fetchProfilePolicyThunk());
+        }
+    }, [isOpen, peoplePolicyStatus, dispatch]);
 
     const RECORDING_ACTIVE_STATES = new Set([
         'requesting', 'initiating-upload', 'recording', 'paused',
@@ -132,8 +144,11 @@ export function UserMenu() {
         dispatch(clearAgentRuntimeSettings());
         dispatch(clearIntegrations());
         dispatch(clearTags());
+        dispatch(clearPeople());
         dispatch(clearCalls());
         dispatch(clearRooms());
+        dispatch(resetCalendarState());
+        dispatch(resetCalendarUiState());
         clearNotesCache().catch(console.error);
         clearBlobCache();
         navigate('/auth');
@@ -239,6 +254,20 @@ export function UserMenu() {
                     </div>
 
                     <div className="py-1.5 px-1.5">
+                        {orgChartEnabled && (
+                            <button
+                                onClick={() => {
+                                    navigate('/people');
+                                    setIsOpen(false);
+                                }}
+                                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+                            >
+                                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                                <UsersThree size={16} weight="duotone" className="text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+                                <span>People</span>
+                            </button>
+                        )}
+
                         <button
                             onClick={() => {
                                 navigate('/tags');

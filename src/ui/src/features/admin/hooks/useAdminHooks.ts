@@ -145,21 +145,40 @@ export function useGroups() {
     const totalCount = useAppSelector((state) => state.admin.groupsTotalCount);
 
     const refresh = useCallback(
-        (options?: { page?: number; pageSize?: number }) => {
+        (options?: { page?: number; pageSize?: number; includePrivate?: boolean }) => {
             dispatch(fetchGroups(options || {}));
         },
         [dispatch]
     );
 
     const create = useCallback(
-        async (name: string, description?: string) => {
-            return await dispatch(createGroup({ name, description })).unwrap();
+        async (params: {
+            name: string;
+            description?: string;
+            kind?: number;
+            parentGroupId?: string;
+            leadUserId?: string;
+            isPrivate?: boolean;
+        }) => {
+            return await dispatch(createGroup(params)).unwrap();
         },
         [dispatch]
     );
 
     const update = useCallback(
-        async (groupId: string, updates: { name?: string; description?: string }) => {
+        async (
+            groupId: string,
+            updates: {
+                name?: string;
+                description?: string;
+                kind?: number;
+                parentGroupId?: string;
+                leadUserId?: string;
+                isPrivate?: boolean;
+                clearParentGroup?: boolean;
+                clearLead?: boolean;
+            }
+        ) => {
             await dispatch(updateGroup({ groupId, ...updates })).unwrap();
         },
         [dispatch]
