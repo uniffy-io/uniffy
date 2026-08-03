@@ -19,6 +19,9 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.audit.event import AuditEvent
+from uniffy.core.models.calendar.attendee import EventAttendee
+from uniffy.core.models.calendar.calendar import Calendar
+from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.login.group import Group, GroupKind
@@ -242,6 +245,21 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
         delete(ContentMember).where(ContentMember.organization_id.in_(env.org_ids))
     )
     await db_session.execute(delete(Note).where(Note.organization_id.in_(env.org_ids)))
+    event_ids = (
+        (
+            await db_session.execute(
+                select(CalendarEvent.id).where(CalendarEvent.organization_id.in_(env.org_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if event_ids:
+        await db_session.execute(
+            delete(EventAttendee).where(EventAttendee.event_id.in_(event_ids))
+        )
+        await db_session.execute(delete(CalendarEvent).where(CalendarEvent.id.in_(event_ids)))
+    await db_session.execute(delete(Calendar).where(Calendar.organization_id.in_(env.org_ids)))
     await db_session.execute(delete(GroupMember).where(GroupMember.group_id.in_(env.group_ids)))
     await db_session.execute(delete(Group).where(Group.organization_id.in_(env.org_ids)))
     # audit_events is append-only; teardown is maintenance, so it opts out.

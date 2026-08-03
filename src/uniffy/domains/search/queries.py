@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from uniffy.core.content.references import parse_urn
 from uniffy.core.search import get_meilisearch_client
 
 
@@ -202,6 +203,12 @@ async def get_documents_by_urns(
     user_group_ids: list[UUID] | None = None,
 ) -> dict[str, SearchResult]:
     """Fetch URNs from Meilisearch, optionally filtered by the user's permissions."""
+    # A URN is interpolated into the filter expression next to the permission
+    # clause. ``parse_urn`` rejects anything that is not
+    # ``urn:uniffy:content:{TYPE}:{uuid}``, which excludes the quote needed to
+    # break out of the literal. Dropped entries fall through to the caller's
+    # tombstone synthesis.
+    urns = [urn for urn in urns if parse_urn(urn) is not None]
     if not urns:
         return {}
 

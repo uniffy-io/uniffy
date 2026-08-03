@@ -96,7 +96,7 @@ class TestResolveRoleOnExpandedOccurrence:
         role = await ops._resolve_role(generate_id(), event.organization_id, event)
 
         assert role == ContentRole.VIEWER
-        assert ops._is_attendee.await_args.args[1] == master_id
+        assert ops._is_attendee.await_args.args[2] == master_id
         assert ops.permission_checker.is_blocked.await_args.args[3] == master_id
 
 
@@ -188,10 +188,26 @@ class TestMeiliPermissionFilter:
         # The allow branch stays inside the AND with the blocked exclusion.
         assert f'NOT blocked_user_ids = "{user_id}"' in filter_expr
 
-    def test_my_content_only_skips_attendee_branch(self) -> None:
+    def test_my_content_only_narrows_to_owned(self) -> None:
         client = MeilisearchClient.__new__(MeilisearchClient)
         user_id = generate_id()
         filter_expr = client._build_permission_filter(
             generate_id(), user_id, my_content_only=True
         )
-        assert "attendee_user_ids" not in filter_expr
+        # The narrowing is an extra conjunct, so an attendee-only event cannot
+        # satisfy it, and the blocked exclusion still applies to owned rows.
+        assert filter_expr.endswith(f'AND owner_id = "{user_id}"')
+        assert f'NOT blocked_user_ids = "{user_id}"' in filter_expr
+
+    def test_owner_filter_keeps_permission_and_block_clauses(self) -> None:
+        client = MeilisearchClient.__new__(MeilisearchClient)
+        user_id = generate_id()
+        victim_id = generate_id()
+        filter_expr = client._build_permission_filter(
+            generate_id(), user_id, owner_filter=victim_id
+        )
+        # owner_filter is client-supplied: it narrows what the caller may
+        # already reach, it does not replace the permission clause.
+        assert filter_expr.endswith(f'AND owner_id = "{victim_id}"')
+        assert f'NOT blocked_user_ids = "{user_id}"' in filter_expr
+        assert '(access_mode = "OPEN_TO_ORG" AND baseline_role EXISTS)' in filter_expr

@@ -189,7 +189,7 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
         if role is not None:
             return role
 
-        if not await self._is_attendee(user_id, master_id):
+        if not await self._is_attendee(user_id, organization_id, master_id):
             return None
 
         if await self.permission_checker.is_blocked(
@@ -199,24 +199,53 @@ class CalendarEventOperations(BaseContentOperations[CalendarEvent]):
 
         return ContentRole.VIEWER
 
-    async def _is_attendee(self, user_id: UUID, event_id: UUID) -> bool:
+    async def _is_attendee(self, user_id: UUID, organization_id: UUID, event_id: UUID) -> bool:
+        """An invitation is a grant only while the invitee is still an active
+        member of the org.
+
+        ``effective_role`` has already returned ``None`` by the time this runs,
+        and lost membership is one of the reasons it does. Without the join,
+        removal would leave every event the user was ever invited to readable,
+        because ``remove_member`` does not delete attendee rows.
+        """
         result = await self.session.execute(
             select(EventAttendee.id)
+            .join(
+                OrganizationMember,
+                OrganizationMember.user_id == EventAttendee.user_id,
+            )
             .where(
                 EventAttendee.event_id == event_id,
                 EventAttendee.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
             )
             .limit(1)
         )
         return result.scalar_one_or_none() is not None
 
     def _attendee_access_filter(self, user_id: UUID, organization_id: UUID):
-        """WHERE branch granting invitees visibility, minus explicit BLOCKED grants."""
+        """WHERE branch granting invitees visibility, minus explicit BLOCKED grants.
+
+        The membership EXISTS is uncorrelated, so it collapses to a constant
+        for the query rather than running per row. It mirrors the same
+        condition in ``_is_attendee``.
+        """
         attendee_subquery = select(EventAttendee.event_id).where(
             EventAttendee.user_id == user_id,
         )
+        active_membership = (
+            select(OrganizationMember.id)
+            .where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+            )
+            .exists()
+        )
         return and_(
             CalendarEvent.id.in_(attendee_subquery),
+            active_membership,
             self.access_query.build_not_blocked_filter(
                 user_id=user_id,
                 organization_id=organization_id,

@@ -14,8 +14,9 @@ from uniffy_proto.search.v1.search_pb2 import (
     SearchResponse,
 )
 
+from uniffy.core.errors import PermissionDeniedError
 from uniffy.db import open_session
-from uniffy.domains.auth.context import get_user_id_from_context
+from uniffy.domains.auth.context import get_user_id_from_context, resolve_organization_id
 from uniffy.domains.search.converters import (
     proto_to_entity_type,
     search_result_to_proto,
@@ -33,12 +34,8 @@ class SearchHandlers:
         request: SearchRequest,
         ctx: RequestContext,
     ) -> SearchResponse:
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
-
         user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         parsed = parse_search_query(request.query)
         query_text = parsed.text
@@ -117,6 +114,8 @@ class SearchHandlers:
 
         except ConnectError:
             raise
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.exception(f"Error performing search: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
@@ -127,15 +126,11 @@ class SearchHandlers:
         ctx: RequestContext,
     ) -> GetReferencesResponse:
         # Universal backlinks: returns content whose outgoing_references contain target_urn.
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+        user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if not request.target_urn:
             raise ConnectError(Code.INVALID_ARGUMENT, "target_urn is required")
-
-        user_id = get_user_id_from_context(ctx)
 
         type_filters: list[str] | None = None
         if request.type_filters:
@@ -164,6 +159,8 @@ class SearchHandlers:
 
         except ConnectError:
             raise
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.exception(f"Error getting references: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
@@ -175,18 +172,14 @@ class SearchHandlers:
     ) -> ResolveUrnsResponse:
         # URNs the user cannot view or that are missing are returned as tombstones
         # by SearchOperations.resolve_urns so chip rendering can show a deleted state.
-        try:
-            organization_id = UUID(request.organization_id)
-        except ValueError:
-            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+        user_id = get_user_id_from_context(ctx)
+        organization_id = resolve_organization_id(ctx, request.organization_id)
 
         if not request.urns:
             return ResolveUrnsResponse(resolved={})
 
         if len(request.urns) > 100:
             raise ConnectError(Code.INVALID_ARGUMENT, "Maximum 100 URNs allowed per request")
-
-        user_id = get_user_id_from_context(ctx)
 
         try:
             async with open_session() as session:
@@ -205,6 +198,8 @@ class SearchHandlers:
 
         except ConnectError:
             raise
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.exception(f"Error resolving URNs: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

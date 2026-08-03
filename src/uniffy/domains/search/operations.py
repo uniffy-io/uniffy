@@ -22,6 +22,7 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import Tag, TagAssignment
 from uniffy.core.types import AccessMode, ContentType
+from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.search.queries import (
     SearchResult,
     apply_type_priority,
@@ -53,6 +54,8 @@ class SearchOperations:
         offset: int = 0,
         type_priority: list[str] | None = None,
     ) -> tuple[list[SearchResult], int]:
+        await self._require_org_member(user_id, organization_id)
+
         user_group_ids = await self._get_user_group_ids(user_id)
 
         # Type-priority re-ranking needs a window larger than the page: the
@@ -185,7 +188,7 @@ class SearchOperations:
         """Missing URNs return a tombstone with ``urn_status='DELETED'``;
         callers always get one entry per input URN.
 
-        Access decisions live entirely in the Meilisearch filter built by
+        Per-URN access decisions live in the Meilisearch filter built by
         ``_build_permission_filter`` (see ``core/search/meilisearch.py``).
         That filter mirrors ``PermissionChecker.effective_role`` for the
         user path: org match, not blocked, ownership OR explicit member
@@ -193,13 +196,17 @@ class SearchOperations:
         tenant membership cannot resolve tenant URNs through this RPC -
         the index never granted them ``shared_user_ids`` membership, so
         the filter excludes them, which is the intended cloud privacy
-        posture. Re-checking against PostgreSQL here would regress the
+        posture. Re-checking each URN against PostgreSQL would regress the
         no-DB-read contract documented in ``rules/mentions.md``; instead,
         any new access field must be denormalised into the index at
-        write time.
+        write time. The one DB read is the org-membership precondition,
+        which is per request rather than per URN and which the filter
+        cannot express.
         """
         if not urns:
             return {}
+
+        await self._require_org_member(user_id, organization_id)
 
         urns = urns[:100]
 
@@ -632,6 +639,13 @@ class SearchOperations:
                 results[urn].agent_theme_color = row.theme_color
         except Exception:
             logger.opt(exception=True).warning("Failed to enrich agent live state")
+
+    async def _require_org_member(self, user_id: UUID, organization_id: UUID) -> None:
+        """Meili's permission filter matches on ``organization_id`` alone, so its
+        ``OPEN_TO_ORG`` branch is true for any caller who names the org. Active
+        membership is the precondition the filter cannot express.
+        """
+        await OrganizationOperations(self.session).require_org_member(user_id, organization_id)
 
     async def _get_user_group_ids(self, user_id: UUID) -> list[UUID]:
         result = await self.session.execute(

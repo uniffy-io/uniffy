@@ -7,6 +7,8 @@ rows. Asserting that a query mentions `is_active` proves none of it - these
 call the gates with a real deactivated row and check what happens.
 """
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy import select
 
@@ -14,6 +16,9 @@ from uniffy.core.auth.domain_admin import get_user_domain_admins, is_domain_admi
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.models.calendar.attendee import EventAttendee
+from uniffy.core.models.calendar.calendar import Calendar
+from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
@@ -28,6 +33,7 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.agents.access import is_agents_builder, require_agents_builder
+from uniffy.domains.calendar.operations import CalendarEventOperations
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.organizations.operations import OrganizationOperations
 
@@ -59,6 +65,34 @@ async def _deactivate(session, access, user_id) -> None:
     ).scalar_one()
     membership.is_active = False
     await session.commit()
+
+
+async def _event_with_attendee(session, access, attendee_id) -> CalendarEvent:
+    """An OWNER_ONLY event the attendee reaches only through the invitation floor."""
+    now = datetime.now(UTC)
+    calendar = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name=f"cal-{generate_id().hex[:8]}",
+    )
+    session.add(calendar)
+    await session.flush()
+
+    event = CalendarEvent(
+        organization_id=access.org_id,
+        organizer_id=access.member_id,
+        calendar_id=calendar.id,
+        title="1:1 Sync",
+        start_time=now,
+        end_time=now,
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    session.add(event)
+    await session.flush()
+
+    session.add(EventAttendee(event_id=event.id, user_id=attendee_id))
+    await session.commit()
+    return event
 
 
 async def _channel(session, access, channel_type=ChannelType.PRIVATE) -> ChatChannel:
@@ -315,3 +349,61 @@ class TestChatModerationGate:
         await session.commit()
 
         await ChatAccessChecker(session).check_access(access.ghost_id, access.org_id, channel)
+
+
+class TestCalendarAttendeeFloor:
+    """An invitation is a grant, so the attendee floor sits outside
+    `effective_role` and re-grants VIEWER after it denied. Membership has to be
+    rechecked there or removal leaves every event the user was invited to
+    readable: `remove_member` does not delete attendee rows.
+    """
+
+    async def test_an_active_attendee_reaches_an_owner_only_event(self, session, access) -> None:
+        event = await _event_with_attendee(session, access, access.peer_id)
+        ops = CalendarEventOperations(session)
+
+        role = await ops._resolve_role(access.peer_id, access.org_id, event)
+
+        assert role == ContentRole.VIEWER
+
+    async def test_a_deactivated_attendee_loses_the_floor(self, session, access) -> None:
+        event = await _event_with_attendee(session, access, access.peer_id)
+        await _deactivate(session, access, access.peer_id)
+        ops = CalendarEventOperations(session)
+
+        role = await ops._resolve_role(access.peer_id, access.org_id, event)
+
+        assert role is None
+
+    async def test_a_deactivated_attendee_drops_out_of_the_list_filter(
+        self, session, access
+    ) -> None:
+        event = await _event_with_attendee(session, access, access.peer_id)
+        ops = CalendarEventOperations(session)
+
+        visible = await session.execute(
+            select(CalendarEvent.id).where(
+                CalendarEvent.organization_id == access.org_id,
+                ops._attendee_access_filter(access.peer_id, access.org_id),
+            )
+        )
+        assert event.id in set(visible.scalars().all())
+
+        await _deactivate(session, access, access.peer_id)
+
+        visible = await session.execute(
+            select(CalendarEvent.id).where(
+                CalendarEvent.organization_id == access.org_id,
+                ops._attendee_access_filter(access.peer_id, access.org_id),
+            )
+        )
+        assert visible.scalars().all() == []
+
+    async def test_an_attendee_row_in_another_org_confers_nothing(self, session, access) -> None:
+        """The floor is org-scoped: a membership elsewhere is not a membership here."""
+        event = await _event_with_attendee(session, access, access.outsider_id)
+        ops = CalendarEventOperations(session)
+
+        role = await ops._resolve_role(access.outsider_id, access.org_id, event)
+
+        assert role is None
