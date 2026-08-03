@@ -6,7 +6,7 @@ description: Audit the in-tree model catalog against each provider's live API (A
 Keep `src/uniffy/data/models/catalog.json` current by diffing
 it against what the providers actually serve. The catalog is the source of truth
 for the model list, pricing, capabilities, and image-gen support (see
-`.claude/rules/agents.md`), so it drifts as providers ship and retire models.
+`.agents/rules/agents.md`), so it drifts as providers ship and retire models.
 
 ## When to use
 
@@ -17,7 +17,7 @@ for the model list, pricing, capabilities, and image-gen support (see
 
 ## Steps
 
-1. **Detect the stack** (same protocol as the stack notes in `CLAUDE.md`) - never
+1. **Detect the stack** (same protocol as the stack notes in `AGENTS.md`) - never
    assume:
 
    ```bash
@@ -38,10 +38,10 @@ for the model list, pricing, capabilities, and image-gen support (see
 
    ```bash
    # docker stack (default)
-   ./manage.py deps run -s backend run python .claude/skills/model-catalog-audit/scripts/audit_models.py
+   ./manage.py deps run -s backend run python .agents/skills/model-catalog-audit/scripts/audit_models.py
 
    # local stack
-   ./manage.py deps run -s backend --stack local run python .claude/skills/model-catalog-audit/scripts/audit_models.py
+   ./manage.py deps run -s backend --stack local run python .agents/skills/model-catalog-audit/scripts/audit_models.py
    ```
 
    It loads provider keys from `.env` (`CLAUDE_API_KEY`, `OPENAI_API_KEY`,

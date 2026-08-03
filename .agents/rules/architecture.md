@@ -35,7 +35,7 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 
 **Multi-tenancy**: All content is scoped to `organization_id`. Users are global; memberships are org-scoped.
 
-**Permission system**: Every content row carries an `access_mode` + optional `baseline_role`, resolved by `PermissionChecker.effective_role`. Personal content is private until shared - org/domain admins get no content bypass. Full model, enforcement points, caching, search/tag filtering, chat's separate model, and the hard rules live in **`.claude/rules/permissions.md`** (the single source of truth - do not duplicate it here).
+**Permission system**: Every content row carries an `access_mode` + optional `baseline_role`, resolved by `PermissionChecker.effective_role`. Personal content is private until shared - org/domain admins get no content bypass. Full model, enforcement points, caching, search/tag filtering, chat's separate model, and the hard rules live in **`.agents/rules/permissions.md`** (the single source of truth - do not duplicate it here).
 
 **Background tasks**: ARQ workers with Valkey for async job processing (file processing, indexing, etc.).
 

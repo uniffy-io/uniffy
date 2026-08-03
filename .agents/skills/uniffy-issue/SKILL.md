@@ -1,12 +1,7 @@
 ---
 name: uniffy-issue
 description: |
-  Create or refine a GitHub issue in `uniffy-io/uniffy` following project conventions: `[TYPE] Domain: desc` title format, `domain:*` + `area:*` + type labels, the four issue-template body shapes (bug / feature / security / performance), pre-creation recon with file:line pointers, native `addBlockedBy` GraphQL dependency links, project assignment to "Uniffy V1", and the image-attach workaround.
-
-  TRIGGER when: the user asks to "create an issue", "open an issue", "file a bug", "draft a feature", "report a perf issue", "log a security issue", "make a gh issue"; the user writes a message starting with `[BUG]`, `[FEATURE]`, `[SECURITY]`, or `[PERFORMANCE]`; the user asks to rename existing issues to follow the title convention; the user pastes a screenshot of a bug or feature gap and asks to track it; the user describes a defect, missing capability, perf regression, or security weakness in this repo and asks to capture it.
-
-  SKIP when: the user is creating a Pull Request the user is writing a commit message (use `commit`); the user is planning implementation work without filing a tracking issue (use `plan-feature`); the request is about a non-Uniffy repo; the user is asking general GitHub CLI questions unrelated to issue creation in this repo.
-user_invocable: true
+  Create or refine GitHub issues in `uniffy-io/uniffy` using the project's title, label, template, dependency, project, and image-attachment conventions. Use when asked to create, open, file, draft, report, rename, or track a bug, feature, security issue, or performance issue in this repository, including requests that begin with `[BUG]`, `[FEATURE]`, `[SECURITY]`, or `[PERFORMANCE]`. Skip for pull requests, commit messages, implementation plans that do not need a tracking issue, other repositories, or general GitHub CLI questions.
 ---
 
 # Uniffy Issue Creation
@@ -98,10 +93,10 @@ For PERFORMANCE: Current Measurement (numbers + how measured) / Target (threshol
 
 Before writing the body, do enough recon to make "Additional Notes - First-Glance Pointers" accurate. Verify the gap is real:
 
-1. `Glob` / `Grep` the affected domain to confirm the claimed missing behaviour really is missing - never assert "code does not handle X" without searching.
+1. Search the affected domain with `rg` and `rg --files` to confirm the claimed missing behaviour really is missing - never assert "code does not handle X" without searching.
 2. Read the key files referenced in the body. Cite `file_path:line_number`.
-3. Cross-check `.claude/rules/<domain>.md` for established patterns.
-4. Check memory (`MEMORY.md`) for relevant project state, prior decisions, or feedback rules.
+3. Cross-check `.agents/rules/<domain>.md` for established patterns.
+4. Check `.agents/plans/backlogs/` and any available project memory for relevant state, prior decisions, or feedback rules.
 
 If the user says "first analyse" or "don't create yet", deliver findings as a regular response and wait for the go-ahead. Otherwise proceed to create after recon.
 
@@ -136,20 +131,20 @@ After creation, capture the issue number from the URL output. Then:
    Use the native dependency, NOT a plain comment or markdown link. The dependency shows in the sidebar and filters like `is:open is:issue -blocked:*`.
 
 3. **If the user wants an image attached**: `gh` CLI cannot upload binary attachments. Two paths:
-   - Default: create the issue without the image, tell the user to drag-drop into the issue in the browser (path stays at `/tmp/claude-imgs/...`).
+   - Default: create the issue without the image, tell the user to drag-drop it into the issue in the browser, and preserve its temporary path for handoff.
    - Persistent: commit the image to a tracked location and reference via raw URL. Only with explicit user OK - polluting the repo for an issue asset is rarely worth it.
 
 ## Style and content rules
 
-These come from `CLAUDE.md` and the feedback memory. Apply when drafting body text:
+Apply `AGENTS.md`, the relevant `.agents/rules/`, and these issue-specific conventions when drafting body text:
 
-- **No emojis anywhere** (CLAUDE.md rule 0). Not in titles, not in bodies, not in commit messages, not in PR descriptions.
-- **Single hyphens only** - never em-dashes or double-hyphens (CLAUDE.md rule 0). Use ` - ` or `,` to separate clauses.
+- **No emojis anywhere.** Not in titles, bodies, commit messages, or PR descriptions.
+- **Single hyphens only.** Never use em dashes or double hyphens; use ` - ` or a comma to separate clauses.
 - **Cite file:line** for "where this lands" pointers. Never invent paths. If you cannot verify, say "look around `domains/<x>/`" instead of fabricating a specific file.
 - **No comments-style narration**. Body sections describe the work, not the conversation that led to it. Do not write "as discussed", "per the user", "from our chat earlier".
 - **Acceptance Criteria boxes must be verifiable**. "Works correctly" is not a criterion. "`SUM(token_estimate)` query returns under 50ms p95 on 100k-row session" is.
-- **Honour the no-backwards-compat rule** when scoping (memory: feedback_no_backwards_compat). If the issue introduces a breaking shape, scope says "update all call sites", not "add compat shim".
-- **Rules-driven boxes**: when an issue touches a domain with rules in `.claude/rules/<x>.md`, fold the relevant rules into the acceptance criteria so they cannot be forgotten in implementation. Examples: chat changes must keep hot reads through Valkey caches; agents changes must populate `token_estimate` at INSERT; UI changes must use the theme system + responsive breakpoints + `useDocumentTitle`.
+- **Honor explicit compatibility direction.** If the current instructions rule out backward compatibility and the issue introduces a breaking shape, scope it as "update all call sites", not "add a compatibility shim".
+- **Rules-driven boxes**: when an issue touches a domain with rules in `.agents/rules/<x>.md`, fold the relevant rules into the acceptance criteria so they cannot be forgotten in implementation. Examples: chat changes must keep hot reads through Valkey caches; agents changes must populate `token_estimate` at INSERT; UI changes must use the theme system + responsive breakpoints + `useDocumentTitle`.
 
 ## Renaming existing issues
 
@@ -157,12 +152,12 @@ When asked to rename to follow the convention:
 ```bash
 gh issue edit <num> --title "[TYPE] Domain: new title"
 ```
-The convention applies to both issues and PRs (memory: feedback_pr_title_convention).
+Apply the title convention above to both issues and PRs.
 
 ## Working backwards from a screenshot
 
 If the user shares a screenshot showing a bug or feature request:
-1. Read the image with the `Read` tool.
+1. Inspect the image with the available image viewer.
 2. Recon the relevant code path.
 3. Draft the body with concrete pointers.
 4. Create the issue.

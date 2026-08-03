@@ -1,17 +1,16 @@
 ---
 name: execute
-description: Execute an implementation plan from .claude/plans/
-argument-hint: [path-to-plan]
+description: Execute or resume an implementation plan from `.agents/plans/`, keeping its companion backlog and validation evidence current. Use when the user asks to implement a saved plan or continue planned multi-phase work.
 ---
 
 # Execute: Implement from Plan
 
-Plan file: `$ARGUMENTS`
+Use the plan path supplied with the request. If no path is supplied, proceed only when one plan is the unambiguous subject of the conversation; otherwise ask which plan to execute.
 
 ## 1. Read and understand
 
-- Read the ENTIRE plan. Path-scoped rules in `.claude/rules/` auto-load as you touch files; the plan may also name specific rule files as mandatory reading - read those up front.
-- Check `.claude/plans/backlogs/` for an existing backlog. If one exists, resume from the first `[ ]` or `[~]` item instead of starting over.
+- Read the ENTIRE plan. Read the always-on rules and every path-scoped rule in `.agents/rules/` that matches the files in scope; the plan may name additional mandatory rule files.
+- Check `.agents/plans/backlogs/` for an existing backlog. If one exists, resume from the first `[ ]` or `[~]` item instead of starting over.
 - If the plan is multi-phase and no backlog exists, create one (convention in AGENTS.md "Plans, Backlogs and Reviews").
 - Validate the plan against the current codebase before writing code: file paths, symbol names, and patterns it references may have drifted since it was written. Fix the plan's assumptions, not the codebase, when they disagree on facts.
 
@@ -49,4 +48,4 @@ Fix and re-run until green. Do not skip validation steps.
 
 ## 6. Report
 
-Summarize: tasks completed, files created/modified, tests added with results, validation output, deviations from the plan. State plainly whether the work is ready for `/commit`.
+Summarize: tasks completed, files created/modified, tests added with results, validation output, deviations from the plan. State plainly whether the work is ready for the `commit` skill.

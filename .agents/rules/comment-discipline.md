@@ -29,7 +29,7 @@ Comments that reference process artifacts or history tend to rot fast.
 
 - Plan names, phase numbers, step numbers: `Phase 3`, `step 2`, `P5 wires this`, `plan §6.4`, `shipped as P8`, `lands in P7`, `(P2)`.
 - Backlog items, ticket IDs, PR numbers, session work, commit shas: `see backlog`, `tracked in INGEST-142`, `from PR #99`, `added in this session`.
-- Plan file paths: `.claude/plans/foo.md`, `.claude/plans/backlogs/bar-backlog.md`.
+- Plan file paths: `.agents/plans/foo.md`, `.agents/plans/backlogs/bar-backlog.md`.
 - Legacy / prior-implementation narration: `previously used X`, `was a class before`, `old method returned Y`, `renamed from Z`, `replaces the old handler`, `formerly the visibility scope`, `legacy color picker`, `before this binding landed`.
 - Tense-of-the-fix narration: `this change`, `we now`, `as of this commit`, `the new approach`.
 
@@ -86,8 +86,8 @@ Baking process artifacts into file names, test names, function names, class name
 
 Names work best when they describe what the thing IS or DOES, not which plan / phase / migration introduced it or what it replaced.
 
-## 5. When spawning subagents that write code
+## 5. When delegating code-writing work
 
-Subagents do not auto-load the repo's `.claude/rules/`. When delegating code-writing work, the spawning agent is responsible for carrying this discipline into the subagent prompt - either by quoting the relevant rules inline or by pointing the subagent at this file as required reading before it edits. A prompt that just says "write the handler" tends to produce numpydoc blocks, trivial restate-the-name docstrings, and paragraph-long module headers because that is the default training-data style. Subagents that fan out in parallel each need the rule in their own prompt; one agent's adherence does not propagate to its siblings.
+Delegated agents do not reliably load the repo's `.agents/rules/`. The delegating agent is responsible for carrying this discipline into the task prompt, either by quoting the relevant rules or requiring this file to be read before editing. A prompt that just says "write the handler" tends to produce numpydoc blocks, trivial restate-the-name docstrings, and paragraph-long module headers because that is the default training-data style. Every parallel task needs the rule independently; one agent's adherence does not propagate to siblings.
 
 Reference `src/uniffy/_metrics_bootstrap.py` as the in-repo "good" example and call out the docstring patterns to avoid (`Args:` / `Returns:` / `Attributes:` blocks, trivial restate-the-name docstrings, multi-paragraph module headers narrating flow). Concrete file-path anchors are more reliable than abstract style guidance.

@@ -1,0 +1,15 @@
+prefix_rule(
+    pattern = ["./manage.py", ["lint", "test", "bench", "proto"]],
+    decision = "allow",
+    justification = "Allow the repository's standard validation and code-generation commands.",
+    match = [
+        "./manage.py lint -s backend",
+        "./manage.py test -s ui",
+        "./manage.py bench",
+        "./manage.py proto",
+    ],
+    not_match = [
+        "./manage.py stack reset-data",
+        "./manage.py deps install -s all",
+    ],
+)

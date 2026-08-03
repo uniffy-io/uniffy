@@ -1,11 +1,7 @@
 ---
 name: uniffy-e2e-flows
 description: |
-  Drive the project's Playwright MCP infrastructure to run END-TO-END flow tests against the live dev app: authentication (register / login / logout / org-select / refresh), content CREATION across every domain, and the PERMISSION / sharing model in each domain (the three access modes, add-member, role changes, group grants, BLOCKED, narrow-to-personal) - including the critical step of logging in as a SECOND user to confirm a grant actually took. This is the test-methodology layer on top of `uniffy-playwright` (which owns the MCP connection and low-level tooling).
-
-  TRIGGER when: the user asks to "test auth", "test login/register/logout", "test the permissions flow", "test sharing", "test access control", "test creation/CRUD", "run an e2e flow", "smoke-test the app", "verify the permission model across domains", "test each domain's sharing", "create X and confirm another user can/can't see it", or asks to exercise a full create -> share -> verify-as-another-user loop in the running app.
-
-  SKIP when: the request is a unit/integration test (use pytest / vitest, not the browser); the dev stack is not running and the user has not asked to start it; it is a one-off in-browser inspection or single-bug repro (use `uniffy-playwright` directly); the work is backend/code-only with no UI flow to exercise.
+  Run disciplined end-to-end flows against the live Uniffy app through the project's Playwright MCP infrastructure. Covers authentication, content creation across domains, and the full permission and sharing model, including verification as a second user. Use when asked to test auth, login, permissions, sharing, access control, creation or CRUD, smoke-test the app, exercise each domain, or run a create-and-share flow. Use `uniffy-playwright` instead for a one-off browser inspection or single-bug reproduction. Skip for unit or integration tests, backend-only work, or when the dev stack is not running and the user has not asked to start it.
 ---
 
 # Uniffy End-to-End Flow Testing
@@ -14,7 +10,7 @@ This skill turns the Playwright MCP browser into a disciplined E2E tester for th
 
 ## Preflight (do this before any flow)
 
-1. Confirm the dev stack is up: `docker ps | grep uniffy-dev` and `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173` (expect 200). Backend on `:8000`. **Two MCP browser containers**: `uniffy-mcp-playwright` (`:8931`, tools `mcp__playwright__*`) and `uniffy-mcp-playwright-b` (`:8932`, tools `mcp__playwright-b__*`). The second is a fully isolated browser for multi-user flows - see "Two-browser setup" below. If `mcp__playwright-b__*` is missing, start it (`docker compose --profile dev up -d mcp-playwright-b`) and reconnect MCP (`/mcp`).
+1. Confirm the dev stack is up: `docker ps | grep uniffy-dev` and `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173` (expect 200). Backend on `:8000`. **Two MCP browser containers**: `uniffy-mcp-playwright` (`playwright` server on `:8931`) and `uniffy-mcp-playwright-b` (`playwright-b` server on `:8932`). The second is a fully isolated browser for multi-user flows - see "Two-browser setup" below. If the `playwright-b` tools are missing, start it (`docker compose --profile dev up -d mcp-playwright-b`) and reconnect MCP (`/mcp`) or restart the agent session.
 2. The browser reaches the UI at `http://host.docker.internal:5173` (NOT localhost - that's the container's localhost). Backend at `http://host.docker.internal:8000`.
 3. **Do NOT edit backend or frontend source while a flow is running.** The dev backend auto-reloads on any file save and will drop your auth session mid-test (you bounce to `/auth`). The Vite dev server HMRs frontend edits the same way. If you must change code, expect to re-login afterward.
 4. **Never `docker restart uniffy-dev-backend` to pick up a code change** - it auto-reloads, and a manual restart drops every session (and can 500 in-flight requests during the reload window). Only restart for a genuinely stuck container.
@@ -62,8 +58,8 @@ Then `browser_click [data-testid="auth-submit-login"]`, then select the workspac
 
 Use the two MCP containers as two independent users. Each is a separate Chromium with its own cookie jar + `localStorage`, so the sessions never collide - no sign-out churn, and you can `browser_navigate`/reload either browser freely.
 
-- **Browser A = `mcp__playwright__*`** (`:8931`): the persistent **actor/owner** (e.g. `admin` or `alice`). Stays logged in for the whole flow.
-- **Browser B = `mcp__playwright-b__*`** (`:8932`): the **subject/observer**. Log in whichever grantee or control user you're currently checking.
+- **Browser A = `playwright` server** (`:8931`): the persistent **actor/owner** (e.g. `admin` or `alice`). Stays logged in for the whole flow.
+- **Browser B = `playwright-b` server** (`:8932`): the **subject/observer**. Log in whichever grantee or control user you're currently checking.
 
 Log each in once with the recipe above (each browser navigates to `http://host.docker.internal:5173` independently). To check a *different* subject, just re-login browser B - browser A is untouched. **This is REQUIRED, not optional, for live cross-session updates** (e.g. A shares/creates -> B's sidebar/board must update without a reload): both sessions have to be live at the same time, which a single browser cannot do.
 
@@ -224,7 +220,7 @@ Proof method: snapshot B's relevant section **before**, do A's action, then read
 ## Multi-user verification (do not skip)
 A grant is NOT tested until you have confirmed the expected access **as the grantee** AND denial **as a control user**. The admin-side "member added" toast only proves the write, not the effect.
 
-Run it across the two browsers: keep the **actor/owner in browser A** (`mcp__playwright__*`) and the **subject in browser B** (`mcp__playwright-b__*`). Loop: in A grant/change -> read the effect in B (re-login B to swap which subject) -> never touch A's session. For **live cross-session** assertions (the change must land in B *without* a reload), this two-browser setup is mandatory - keep B parked on the relevant page and watch its DOM update after A's action; only reload B as a last-resort sanity check, since a passing test must show the update arriving on its own.
+Run it across the two browsers: keep the **actor/owner in browser A** (`playwright` server) and the **subject in browser B** (`playwright-b` server). Loop: in A grant/change -> read the effect in B (re-login B to swap which subject) -> never touch A's session. For **live cross-session** assertions (the change must land in B *without* a reload), this two-browser setup is mandatory - keep B parked on the relevant page and watch its DOM update after A's action; only reload B as a last-resort sanity check, since a passing test must show the update arriving on its own.
 
 ## Cleanup discipline (MANDATORY)
 You are mutating real dev data. Track everything you create/change and reverse it at the end of the session:

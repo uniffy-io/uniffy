@@ -1,7 +1,6 @@
 ---
 name: pr
 description: Check the current branch for an existing PR and either update or create one with an auto-generated description based on all commits since diverging from main.
-user_invocable: true
 ---
 
 Create or update a GitHub Pull Request for the current branch.

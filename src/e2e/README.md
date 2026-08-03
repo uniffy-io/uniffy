@@ -11,8 +11,8 @@ The same suite runs in three modes:
 | Local headless | `playwright test` | `./manage.py stack up` (live) | Pre-commit smoke check, full suite locally |
 | CI | `playwright test` inside Docker | `docker-compose.e2e.yml` (ephemeral) | PRs labelled `[e2e]`, nightly runs |
 
-The full plan lives at `.claude/plans/e2e-browser-tests.md`. Open issues
-and active work track in `.claude/plans/backlogs/e2e-browser-tests-backlog.md`.
+The full plan lives at `.agents/plans/e2e-browser-tests.md`. Open issues
+and active work track in `.agents/plans/backlogs/e2e-browser-tests-backlog.md`.
 
 ---
 
@@ -116,7 +116,7 @@ inside the container. After the container is healthy:
 3. **Restart Claude Code** so it loads `.mcp.json` and connects to the
    MCP server. You should see `playwright` in the MCP tool list afterwards.
 4. Drop a request like *"test chat features one by one"* and Claude will
-   walk the checklist in `.claude/plans/chat-manual-test-via-mcp.md`,
+   walk the checklist in `.agents/plans/chat-manual-test-via-mcp.md`,
    driving the app via the `browser_*` MCP tools.
 
 ### Network notes

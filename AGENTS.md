@@ -13,7 +13,7 @@ Every feature must work in BOTH deployment modes. The same codebase ships as:
 
 - **Keep cloud-only assumptions out.** Anything needing an external service is either optional with a sane local fallback, or env-configurable so a self-hoster can point it at their own infra (their SMTP, their S3-compatible storage, their LLM keys).
 - **Keep self-hosted-only assumptions out too.** New flows hold up on multi-tenant; anything touching shared resources carries an `organization_id` scope from day one.
-- **Configuration tiers are layered, not branched:** per-org row in DB -> env default -> typed error. See `core/mail/resolver.py` and the settings-stores section in `.claude/rules/backend.md`.
+- **Configuration tiers are layered, not branched:** per-org row in DB -> env default -> typed error. See `core/mail/resolver.py` and the settings-stores section in `.agents/rules/backend.md`.
 - **Admin surfaces are scoped:** `/admin/*` = org admin (one tenant). `/platform/*` = platform admin (cloud operator, cross-tenant). New admin pages belong under the matching surface; separation is enforced via `PlatformLayout` + permission gates, not hidden nav.
 - **Privacy posture on cloud.** Platform operators do not auto-bypass `PermissionChecker`. Access to tenant content MUST go through a time-bound, audit-logged `SupportSession` the org owner can see live and revoke. No code path lets `is_system_admin=true` read tenant content without one - this is a hard line.
 - **Secrets at rest belong to the tenant.** Per-org secrets are encrypted with `OrgCipher`, never a shared key. Self-hosters get the same envelope encryption; only the master KEK holder differs.
@@ -96,7 +96,7 @@ Stack and container invariants:
 
 ## Rules
 
-Path-scoped rules in `.claude/rules/` auto-load when you touch matching files and are the source of truth for their area - do not duplicate their content elsewhere:
+Shared path-scoped rules live in `.agents/rules/` and are the source of truth for their area - do not duplicate their content elsewhere. Claude Code reaches them through `.claude/rules/` and loads matching rules automatically. Codex reaches the same source through `.codex/hooks.json`: the hook injects every `**/*` rule at session and subagent startup, parses each rule's `paths` frontmatter, and blocks the first edit to a newly matched path while injecting the complete matching rules for reassessment. Project-local Codex hooks require one-time trust through `/hooks`; if hooks are disabled or unavailable, manually read the three always-on rules and every rule whose `paths` match before editing.
 
 - `architecture.md`, `permissions.md`, `comment-discipline.md` - always on (stack, permission model, comment/naming discipline)
 - `backend.md`, `frontend.md`, `mobile.md` - conventions per side (backend, web app, Expo mobile app)
@@ -107,13 +107,13 @@ Repo-wide basics not covered by a scoped rule:
 - No emojis in code, docs, comments, or commit messages.
 - `uv` runs Python; `pnpm` is the frontend package manager.
 - All content carries a URN and is searchable; user-editable text is Markdown with `[[[label|urn]]]` mentions (see `architecture.md`).
-- Authenticated asset reads (`<img>`/`<video>`/`<audio>`) ride the asset-read cookie; `.claude/rules/files-domain.md` owns that contract.
-- Subagents do not auto-load these rules - carry the relevant ones into subagent prompts (see `comment-discipline.md` section 5).
+- Authenticated asset reads (`<img>`/`<video>`/`<audio>`) ride the asset-read cookie; `.agents/rules/files-domain.md` owns that contract.
+- Delegated agents do not reliably load these rules - require them to read the relevant files in their task prompt (see `comment-discipline.md` section 5).
 
 ## Plans, Backlogs and Reviews
 
-All plans and backlogs live in `.claude/plans/`, kebab-case filenames. **Plans** are pre-implementation blueprints. **Backlogs** (`.claude/plans/backlogs/{name}-backlog.md`) are living progress trackers for work spanning multiple phases, sessions, or 5-10+ files. **Shipped work moves to `.claude/plans/archive/`** (plan + backlog together) so the active set stays scannable.
+All plans and backlogs live in `.agents/plans/`, kebab-case filenames. **Plans** are pre-implementation blueprints. **Backlogs** (`.agents/plans/backlogs/{name}-backlog.md`) are living progress trackers for work spanning multiple phases, sessions, or 5-10+ files. **Shipped work moves to `.agents/plans/archive/`** (plan + backlog together) so the active set stays scannable.
 
-Backlog contents: progress summary table (`[ ]`/`[~]`/`[x]`/`[!]` with reason), how-to-resume instructions, per-phase checklists, dated session notes (absolute dates). Update it after every meaningful change and commit it alongside the work. When resuming a feature, check `.claude/plans/backlogs/` first. When `/execute` runs a multi-phase plan, create a companion backlog if none exists.
+Backlog contents: progress summary table (`[ ]`/`[~]`/`[x]`/`[!]` with reason), how-to-resume instructions, per-phase checklists, dated session notes (absolute dates). Update it after every meaningful change and commit it alongside the work. When resuming a feature, check `.agents/plans/backlogs/` first. When the `execute` skill runs a multi-phase plan, create a companion backlog if none exists.
 
-**Reviews** (security, performance, implementation, ...) are saved to `.claude/reviews/{kebab-case}.md` and the same content is the reply to the user. Findings are a few sentences each with file/function/line specifics and a fix proposal that was actually verified during the review - no guesses.
+**Reviews** (security, performance, implementation, ...) are saved to `.agents/reviews/{kebab-case}.md` and the same content is the reply to the user. Findings are a few sentences each with file/function/line specifics and a fix proposal that was actually verified during the review - no guesses.

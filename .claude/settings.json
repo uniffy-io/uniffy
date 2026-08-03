@@ -28,11 +28,10 @@
             "WebFetch(domain:docs.anthropic.com)",
             "WebFetch(domain:connectrpc.com)",
             "WebFetch(domain:reactflow.dev)",
-            "Edit(.claude/plans/**)",
-            "Edit(.claude/plans/**)",
-            "Edit(.claude/reviews/**)",
-            "Edit(.claude/reviews/**)",
-            "mcp__playwright__*"
+            "Edit(.agents/plans/**)",
+            "Edit(.agents/reviews/**)",
+            "mcp__playwright__*",
+            "mcp__playwright-b__*"
         ],
         "deny": [
             "Read(.env)",
