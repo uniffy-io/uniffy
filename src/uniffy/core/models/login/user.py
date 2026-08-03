@@ -33,6 +33,11 @@ class User(SQLModel, table=True):
         nullable=False,
         description="Token version for immediate token revocation. Incremented on security events.",
     )
+    pronouns: str | None = Field(
+        default=None,
+        max_length=50,
+        description="Self-set pronouns shown beside the name, org-independent.",
+    )
     accent_color: str | None = Field(
         default=None,
         max_length=50,

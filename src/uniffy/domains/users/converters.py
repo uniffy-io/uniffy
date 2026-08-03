@@ -16,6 +16,7 @@ def user_to_profile(user: User) -> UserProfile:
         avatar_url=get_avatar_url(user.id, user.avatar_key),
         accent_color=user.accent_color or "",
         font_family=user.font_family or "",
+        pronouns=user.pronouns or "",
         is_active=user.is_active,
         is_system_admin=user.is_system_admin,
         created_at=datetime_to_timestamp(user.created_at),

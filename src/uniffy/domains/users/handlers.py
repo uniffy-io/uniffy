@@ -75,14 +75,15 @@ class UsersHandlers:
                 ops = UserOperations(session)
                 user = await ops.update_profile(
                     user_id=user_id,
-                    full_name=request.full_name if request.HasField("full_name") else None,
-                    username=request.username if request.HasField("username") else None,
                     accent_color=request.accent_color if request.HasField("accent_color") else None,
                     font_family=request.font_family if request.HasField("font_family") else None,
+                    pronouns=request.pronouns if request.HasField("pronouns") else None,
                 )
                 return UpdateMyProfileResponse(user=user_to_profile(user))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
             logger.exception(f"Error updating profile: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

@@ -10,20 +10,6 @@ from uniffy.core.models.login.user_session import UserSession
 
 
 def user_to_current_user_response(user: User) -> GetCurrentUserResponse:
-    """
-    Convert User model to GetCurrentUserResponse proto.
-
-    Parameters
-    ----------
-    user : User
-        User model instance.
-
-    Returns
-    -------
-    GetCurrentUserResponse
-        Proto message.
-
-    """
     return GetCurrentUserResponse(
         id=str(user.id),
         email=user.email,
@@ -34,6 +20,7 @@ def user_to_current_user_response(user: User) -> GetCurrentUserResponse:
         email_verified=user.email_verified,
         accent_color=user.accent_color or "",
         font_family=user.font_family or "",
+        pronouns=user.pronouns or "",
         avatar_url=get_avatar_url(user.id, user.avatar_key),
         has_avatar=user.avatar_key is not None,
     )

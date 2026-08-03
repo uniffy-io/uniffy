@@ -8,11 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.realtime.publisher import publish_token_revoke
 from uniffy.core.users.cache import invalidate_user_profile
+from uniffy.core.valkey.cache import cache_invalidate_by_tag
 from uniffy.domains.users.avatars import (
     delete_avatar as s3_delete_avatar,
 )
@@ -67,32 +68,33 @@ class UserOperations:
     async def update_profile(
         self,
         user_id: UUID,
-        full_name: str | None = None,
-        username: str | None = None,
         accent_color: str | None = None,
         font_family: str | None = None,
+        pronouns: str | None = None,
     ) -> User:
+        """Self-service covers appearance + pronouns; identity (name, username,
+        email) is platform-admin / directory-sync territory, never self-edit.
+        """
         user = await self.get_by_id(user_id)
 
-        searchable_changed = full_name is not None or username is not None
-
-        if full_name is not None:
-            user.full_name = full_name
-        if username is not None:
-            user.username = username
+        pronouns_changed = False
         if accent_color is not None:
             user.accent_color = accent_color
         if font_family is not None:
             user.font_family = font_family
+        if pronouns is not None:
+            if len(pronouns) > 50:
+                raise ValidationError("pronouns", "at most 50 characters")
+            pronouns_changed = user.pronouns != (pronouns or None)
+            user.pronouns = pronouns or None
 
         await self._session.commit()
         await self._session.refresh(user)
 
-        if searchable_changed:
-            await self._user_indexer.index_for_all_organizations(user)
-            await self._session.commit()
-
         await invalidate_user_profile(user_id)
+        if pronouns_changed:
+            # People payload caches carry pronouns and are tagged per user.
+            await cache_invalidate_by_tag(f"user:{user_id}")
 
         return user
 
