@@ -175,7 +175,7 @@ message GetOrgChartResponse {
   repeated string root_user_ids = 2;
   repeated TeamNode teams = 3;
   bool truncated = 4; // depth cap hit or a cycle was broken
-  bool enabled = 5;   // false = org_chart_enabled off; distinguishes "disabled" from "no managers set"
+  bool enabled = 5; // false = org_chart_enabled off; distinguishes "disabled" from "no managers set"
 }
 
 message SetManagerRequest {
