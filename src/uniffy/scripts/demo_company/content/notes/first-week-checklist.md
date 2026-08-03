@@ -1,6 +1,6 @@
 ---
 title: First Week Checklist
-slug: vitalis-first-week-checklist
+slug: uniffy-first-week-checklist
 folder: Onboarding
 tags:
   - onboarding
@@ -33,25 +33,25 @@ The same list, in spreadsheet form for managers, is
 - [ ] Payroll, bank details and contract paperwork with People
 - [ ] Book your first 1:1 with your manager
 
-## Clinical roles only
+## Support roles only
 
-- [ ] Licence and registration verified by People before any patient contact
-- [ ] [Patient Intake SOP](patient-intake-sop.md) and
-      [Adverse Event Reporting](adverse-event-reporting-sop.md) read and acknowledged
-- [ ] Shadow two clinics before consulting alone
-- [ ] Clinical record system training, signed off by the clinic manager
-- [ ] Telehealth induction if your rota includes Vitalis Connect,
-      see [Telehealth Consultation SOP](telehealth-consultation-sop.md)
+- [ ] Desk account and headset set up, added to the #support channel
+- [ ] [Customer Onboarding Runbook](customer-onboarding-runbook.md) and
+      [Support Escalation Runbook](support-escalation-runbook.md) read and acknowledged
+- [ ] Shadow two desk shifts before answering tickets alone
+- [ ] Ticket system training, signed off by the support lead
+- [ ] Call induction if your rota includes customer calls,
+      see [Support Escalation Runbook](support-escalation-runbook.md)
 
-## Lab roles only
+## Engineering roles only
 
-- [ ] Floor 1 badge and cold chain induction
-- [ ] [Lab Sample Handling SOP](lab-sample-handling-sop.md) read and acknowledged
-- [ ] Competency assessment scheduled with the lab manager
+- [ ] Repository, CI and staging access provisioned
+- [ ] [Release and Deploy Runbook](release-and-deploy-runbook.md) read and acknowledged
+- [ ] First supervised deploy scheduled with the SRE lead
 
 ## By the end of week one
 
-- [ ] [GDPR and patient data refresher](event:GDPR and patient data refresher) booked
+- [ ] [GDPR and customer data refresher](event:GDPR and customer data refresher) booked
 - [ ] Data protection training completed, recorded by the DPO
 - [ ] Calendar reflects your working pattern
 - [ ] You know who to call out of hours, and they know you

@@ -11,7 +11,7 @@
   },
   {
     "name": "Rila",
-    "description": "Main meeting room on the office floor. Default room for the clinical huddle.",
+    "description": "Main meeting room on the office floor. Default room for the daily standup.",
     "room_type": "MEETING_ROOM",
     "capacity": 8,
     "building": "Sofia HQ",
@@ -70,18 +70,18 @@
     "amenities": ["video", "projector", "whiteboard", "live-stream"]
   },
   {
-    "name": "Telehealth Booth 1",
-    "description": "Soundproof consultation booth. Patient consultations only.",
+    "name": "Call Booth 1",
+    "description": "Soundproof call booth. Customer calls and interviews only.",
     "room_type": "OFFICE",
     "capacity": 1,
     "building": "Sofia HQ",
     "floor": "2",
-    "location": "Sofia HQ, floor 2, by the nurses station",
+    "location": "Sofia HQ, floor 2, by the support desk",
     "amenities": ["soundproof", "video", "headset"]
   },
   {
-    "name": "Telehealth Booth 2",
-    "description": "Second consultation booth. Patient consultations only.",
+    "name": "Call Booth 2",
+    "description": "Second call booth. Customer calls and interviews only.",
     "room_type": "OFFICE",
     "capacity": 1,
     "building": "Sofia HQ",
@@ -91,20 +91,20 @@
   },
   {
     "name": "Maritsa",
-    "description": "Meeting room at the Plovdiv clinic.",
+    "description": "Meeting room at the Plovdiv office.",
     "room_type": "MEETING_ROOM",
     "capacity": 6,
-    "building": "Plovdiv clinic",
+    "building": "Plovdiv office",
     "floor": "1",
     "location": "Plovdiv, Trakia district, first floor",
     "amenities": ["video", "whiteboard"]
   },
   {
     "name": "Trakia Training Room",
-    "description": "Training space in Plovdiv. Patient education every Wednesday evening.",
+    "description": "Training space in Plovdiv. Community webinar every Wednesday evening.",
     "room_type": "CONFERENCE_ROOM",
     "capacity": 16,
-    "building": "Plovdiv clinic",
+    "building": "Plovdiv office",
     "floor": "1",
     "location": "Plovdiv, Trakia district, first floor, rear",
     "amenities": ["projector", "whiteboard", "video"]

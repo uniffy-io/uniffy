@@ -39,7 +39,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 ./manage.py stack rebuild [services...]      # --no-cache image rebuild, then recreate them + image-siblings
 ./manage.py stack recreate <services...>     # force-recreate just these (apply an edited command/env, no data loss)
 ./manage.py stack recreate                   # no args = DESTRUCTIVE full reset: down --volumes ALL profiles, then up
-./manage.py stack reset-data                 # wipe only data volumes (pg/valkey/meili/rustfs), restart backend
+./manage.py stack reset-data                 # wipe only data volumes (pg/valkey/meili/rustfs), restart backend + demo seeder
 
 # Logs
 ./manage.py logs                             # tail all docker services

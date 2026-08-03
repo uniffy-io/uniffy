@@ -118,6 +118,17 @@ services:
         ports:
             - "9092:9092"
 
+    # One-shot demo seeder. Runs on every `stack up`: waits for the backend
+    # bootstrap, seeds the demo company into a fresh database, and exits fast
+    # on later starts (a deployment_settings sentinel marks a completed run).
+    # `stack reset-data` starts it again after the volume wipe. Refuses to run
+    # outside ENVIRONMENT=development.
+    seeder:
+        <<: *backend-base
+        container_name: uniffy-dev-seeder
+        restart: "no"
+        command: uv run python -m uniffy.scripts.demo_company --fresh-only
+
     # Shared base for every Node workspace dev container (ui, landing, ...).
     # Each service overrides command, ports, and PNPM_FILTER.
     ui:

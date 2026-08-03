@@ -1,14 +1,14 @@
 [
   {
-    "title": "Clinical huddle",
-    "description": "Overnight escalations, today's rota, patients needing a second look. Runs off the [Patient Intake SOP](patient-intake-sop.md). 30 minutes, standing, in [Rila](room:Rila).",
+    "title": "Daily standup",
+    "description": "Overnight alerts, open PRs, today's focus, tickets needing a second look. Runs off [How We Work](how-we-work.md). 30 minutes, standing, in [Rila](room:Rila).",
     "day_offset": 0,
     "start": "09:00",
     "duration_minutes": 30,
     "recurrence": { "pattern": "DAILY", "interval": 1, "days_of_week": ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] },
     "room": "Rila",
     "location": "Sofia HQ, floor 3",
-    "tags": ["clinical"],
+    "tags": ["engineering"],
     "attendees": ["alice@uniffy.io", "bob@uniffy.io"]
   },
   {
@@ -23,8 +23,8 @@
     "attendees": ["charlie@uniffy.io", "maria@uniffy.io"]
   },
   {
-    "title": "Sprint planning: MyVitalis portal",
-    "description": "Two week sprint for the patient portal. Theme is results readability, measured against [Voice and Tone](voice-and-tone.md).",
+    "title": "Sprint planning: Uniffy Cloud",
+    "description": "Two week sprint for cloud.uniffy.io. Theme is onboarding flow copy, measured against [Voice and Tone](voice-and-tone.md).",
     "day_offset": 0,
     "start": "13:00",
     "duration_minutes": 60,
@@ -35,8 +35,8 @@
     "attendees": ["diana@uniffy.io", "eve@uniffy.io"]
   },
   {
-    "title": "GDPR and patient data refresher",
-    "description": "Mandatory yearly session with the DPO on [Patient Data Protection Policy](patient-data-protection-policy.md): retention, subject requests, the 72-hour breach clock. Register reviewed live from [data-processing-register.csv](file:Compliance/data-processing-register.csv).",
+    "title": "GDPR and customer data refresher",
+    "description": "Mandatory yearly session with the DPO on [Customer Data Protection Policy](customer-data-protection-policy.md): retention, subject requests, the 72-hour breach clock. Register reviewed live from [data-processing-register.csv](file:Compliance/data-processing-register.csv).",
     "day_offset": 1,
     "start": "11:00",
     "duration_minutes": 90,
@@ -46,64 +46,65 @@
     "attendees": ["alice@uniffy.io", "bob@uniffy.io", "charlie@uniffy.io", "maria@uniffy.io"]
   },
   {
-    "title": "Cardiology clinic, Plovdiv",
-    "description": "Sofia cardiologist consulting in Plovdiv. Booked slots only, no walk-ins. Logistics in the [Plovdiv Clinic Guide](plovdiv-clinic-guide.md).",
+    "title": "QA regression day, Plovdiv",
+    "description": "Full regression sweep on the device lab before the release cut. Booked builds only, no ad-hoc installs. Logistics in the [Plovdiv Office Guide](plovdiv-office-guide.md).",
     "day_offset": 1,
     "start": "08:00",
     "duration_minutes": 480,
     "recurrence": { "pattern": "WEEKLY", "interval": 1 },
-    "location": "Plovdiv clinic, Trakia district",
-    "tags": ["clinical", "plovdiv-clinic"]
+    "location": "Plovdiv office, Trakia district",
+    "tags": ["engineering", "plovdiv-office"]
   },
   {
-    "title": "Clinic managers sync",
-    "description": "Sofia and Plovdiv managers in [Iskar](room:Iskar): rota, waiting times, equipment, complaints, courier timings from the [Plovdiv Clinic Guide](plovdiv-clinic-guide.md).",
+    "title": "Team leads sync",
+    "description": "Sofia and Plovdiv leads in [Iskar](room:Iskar): review rotation, ticket queues, hardware, hiring, courier timings from the [Plovdiv Office Guide](plovdiv-office-guide.md).",
     "day_offset": 2,
     "start": "09:30",
     "duration_minutes": 45,
     "recurrence": { "pattern": "WEEKLY", "interval": 1 },
     "room": "Iskar",
     "location": "Sofia HQ, floor 3",
-    "tags": ["clinical", "sofia-office"],
-    "attendees": ["bob@uniffy.io"]
+    "tags": ["engineering", "sofia-office"],
+    "attendees": ["bob@uniffy.io", "sofia@uniffy.io", "georgi@uniffy.io", "anna@uniffy.io", "petar@uniffy.io"]
   },
   {
-    "title": "Patient safety committee",
-    "description": "Incident review and protocol changes per [Adverse Event Reporting](adverse-event-reporting-sop.md). Medical director chairs, in [Vitosha](room:Vitosha).",
+    "title": "Security review board",
+    "description": "Incident review and control changes per the [Incident Response Runbook](incident-response-runbook.md). Security lead chairs, in [Vitosha](room:Vitosha).",
     "day_offset": 2,
     "start": "14:00",
     "duration_minutes": 90,
     "recurrence": { "pattern": "MONTHLY", "interval": 1 },
     "room": "Vitosha",
     "location": "Sofia HQ, ground floor",
-    "tags": ["clinical", "compliance"],
-    "attendees": ["alice@uniffy.io"]
+    "tags": ["compliance", "engineering"],
+    "attendees": ["alice@uniffy.io", "viktor@uniffy.io", "milena@uniffy.io", "vasil@uniffy.io"]
   },
   {
-    "title": "Patient education evening",
-    "description": "Open session for patients on managing type 2 diabetes. [Trakia Training Room](room:Trakia Training Room) is blocked from 17:00.",
+    "title": "Community webinar evening",
+    "description": "Open session for self-hosted admins on upgrades and backups. [Trakia Training Room](room:Trakia Training Room) is blocked from 17:00.",
     "day_offset": 2,
     "start": "17:00",
     "duration_minutes": 120,
     "recurrence": { "pattern": "WEEKLY", "interval": 1 },
     "room": "Trakia Training Room",
-    "location": "Plovdiv clinic",
-    "tags": ["plovdiv-clinic", "clinical"]
+    "location": "Plovdiv office",
+    "tags": ["plovdiv-office", "brand"]
   },
   {
     "title": "Board meeting",
-    "description": "Quarterly numbers, clinic expansion, lab accreditation status against [Lab Sample Handling SOP](lab-sample-handling-sop.md).",
+    "description": "Quarterly numbers, Plovdiv office expansion, security audit status against the [Information Security Policy](information-security-policy.md).",
     "day_offset": 3,
     "start": "09:00",
     "duration_minutes": 120,
     "recurrence": { "pattern": "MONTHLY", "interval": 1 },
     "room": "Vitosha",
     "location": "Sofia HQ, ground floor",
-    "tags": ["handbook"]
+    "tags": ["handbook"],
+    "attendees": ["elena@uniffy.io", "viktor@uniffy.io", "martin@uniffy.io", "diana@uniffy.io", "maria@uniffy.io"]
   },
   {
     "title": "Quarterly all-hands",
-    "description": "Where we are against the plan, what changed in the clinics, questions taken live and remote. Grounded in [Mission and Values](mission-and-values.md).",
+    "description": "Where we are against the plan, what changed in the product, questions taken live and remote. Grounded in [Mission and Values](mission-and-values.md).",
     "day_offset": 3,
     "start": "16:00",
     "duration_minutes": 60,
@@ -113,30 +114,31 @@
     "attendees": ["alice@uniffy.io", "bob@uniffy.io", "charlie@uniffy.io", "diana@uniffy.io", "eve@uniffy.io"]
   },
   {
-    "title": "Lab QA review",
-    "description": "Rejections, turnaround times, QC breaches and external quality assessment, against [lab-panel-reference-ranges.csv](file:Clinical/lab-panel-reference-ranges.csv) and the [Lab Sample Handling SOP](lab-sample-handling-sop.md).",
+    "title": "Release review",
+    "description": "Rollbacks, deploy durations, SLO breaches and flaky suites, against [service-slo-reference.csv](file:Engineering/service-slo-reference.csv) and the [Release and Deploy Runbook](release-and-deploy-runbook.md).",
     "day_offset": 4,
     "start": "10:00",
     "duration_minutes": 45,
     "recurrence": { "pattern": "WEEKLY", "interval": 1 },
     "room": "Pirin",
     "location": "Sofia HQ, floor 3",
-    "tags": ["lab", "clinical"],
+    "tags": ["infra", "engineering"],
     "attendees": ["eve@uniffy.io"]
   },
   {
-    "title": "First aid and resuscitation training",
-    "description": "Hands-on session with the training mannequins in [Serdica](room:Serdica). Mandatory every two years for clinical staff, CPD days per [Leave and Time Off](leave-and-time-off-policy.md).",
+    "title": "Incident response drill",
+    "description": "Tabletop exercise in [Serdica](room:Serdica): a mock sev1 run end to end against the [Incident Response Runbook](incident-response-runbook.md). Mandatory yearly for on-call staff, training days per [Leave and Time Off](leave-and-time-off-policy.md).",
     "day_offset": 4,
     "start": "13:00",
     "duration_minutes": 180,
     "room": "Serdica",
     "location": "Sofia HQ, floor 4",
-    "tags": ["clinical", "people"]
+    "tags": ["engineering", "people"],
+    "attendees": ["georgi@uniffy.io", "milena@uniffy.io", "vasil@uniffy.io", "hristo@uniffy.io", "bob@uniffy.io", "charlie@uniffy.io"]
   },
   {
-    "title": "Flu vaccination day",
-    "description": "Free vaccination for all staff in the ground floor lobby. Drop in, no booking. Parking and access notes in the [Sofia HQ Guide](sofia-hq-guide.md).",
+    "title": "Hack day",
+    "description": "One day to build anything on Uniffy, demos at 16:00 in the ground floor lobby. Drop in, no sign-up. Parking and access notes in the [Sofia HQ Guide](sofia-hq-guide.md).",
     "day_offset": 9,
     "start": "09:00",
     "duration_minutes": 480,

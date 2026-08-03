@@ -1,10 +1,9 @@
 ---
 title: Visual Identity
-slug: vitalis-visual-identity
+slug: uniffy-visual-identity
 folder: Handbook/Brand Book
 tags:
   - brand
-  - handbook
 ---
 
 # Visual Identity
@@ -13,39 +12,42 @@ tags:
 
 | Role | Name | Hex | Where |
 | --- | --- | --- | --- |
-| Primary | Vitalis Teal | `#0F766E` | Logo, primary buttons, links |
-| Ink | Deep Ink | `#0B1F2A` | Body text, headings |
-| Accent | Signal Amber | `#F59E0B` | Warnings, appointment reminders |
-| Surface | Clinical White | `#FBFDFC` | Page and card backgrounds |
-| Support | Mist Grey | `#E2E8E6` | Dividers, disabled states |
-| Alert | Alert Coral | `#DC2626` | Abnormal results, errors only |
+| Primary | Unity Violet | `#694AFF` | Logo, primary buttons, links |
+| Ink | Night Ink | `#16121E` | Body text, headings |
+| Accent | Spectrum Cyan | `#0EA5E9` | Highlights, callouts, charts |
+| Surface | Paper White | `#FAFAFF` | Page and card backgrounds |
+| Support | Mist Grey | `#E4E2EE` | Dividers, disabled states |
+| Alert | Alert Coral | `#DC2626` | Destructive actions, errors only |
 
-Alert Coral is reserved for clinically abnormal values and hard errors. Using it for
-marketing emphasis is the single most common brand violation we catch.
+Alert Coral is reserved for destructive actions and hard errors. Using it for marketing
+emphasis is the single most common brand violation we catch.
 
 The machine-readable palette lives in
 [brand-palette.csv](file:Brand/brand-palette.csv).
 
 ## Logo
 
-The master file is [vitalis-logo.svg](file:Brand/vitalis-logo.svg). The mark is a
-rounded cross whose vertical stroke doubles as a pulse line. Clear space
-around it is at least the height of the cross bar. Minimum size is 24 px on screen and
-8 mm in print.
+The master file is [uniffy-logo.svg](file:Brand/uniffy-logo.svg). The mark is a rounded
+cube in Unity Violet whose front face carries the U. Clear space around it is at least
+the width of one cube edge. Minimum size is 24 px on screen and 8 mm in print.
 
-Never recolour the mark, never place it on a photograph without the solid teal plate,
+Never recolour the mark, never place it on a photograph without the solid violet plate,
 never stretch it, and never pair it with a second logo inside the same lockup unless
-the partnership is contractual.
+the partnership is contractual. Slide and desktop backgrounds come from
+[brand-wallpaper.png](file:Brand/brand-wallpaper.png), not from screenshots of the
+gradient.
 
 ## Type
 
 Headings use Inter Tight, Semibold. Body text uses Inter, Regular, 16 px minimum on
-screen. Clinical documents, including lab reports, use 12 pt minimum in print. Patients
-reading results are often over 65 and often stressed; small type is a clinical problem,
-not an aesthetic one.
+screen. Docs and release notes keep the same floor. People read release notes while
+something is broken and they are stressed; small type is a support problem, not an
+aesthetic one.
 
-## Photography
+## Screenshots and photography
 
-Real clinicians, real rooms, natural light, no models in unbuttoned white coats. Faces
-of patients require a signed image consent, filed with the clinic manager. When in
-doubt, photograph hands, corridors and equipment instead.
+Product screenshots come from the demo workspace with fictional data, never from a
+customer workspace. Customer logos and quotes require written approval, filed with
+marketing. For people, use real team photos in real rooms, natural light, no models
+pointing at whiteboards. The approved team photograph is
+[team-offsite-2026.jpg](file:Brand/team-offsite-2026.jpg).

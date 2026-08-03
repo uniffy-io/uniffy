@@ -1,31 +1,30 @@
 ---
 title: Remote Work Policy
-slug: vitalis-remote-work-policy
+slug: uniffy-remote-work-policy
 folder: Handbook/Policies
 tags:
   - policy
-  - people
 ---
 
 # Remote Work Policy
 
-Owner: Head of People. Applies to non-clinical roles and to telehealth clinicians.
+Owner: Head of People. Applies to every role, including the support desk and on-call.
 
 ## Who can work remotely
 
 | Group | Arrangement |
 | --- | --- |
-| Clinic and lab staff | On site, by rota |
-| Reception and patient support | On site, one remote day per week by agreement |
+| Support desk | Rota-based; remote is fine, customer calls from a private room only |
+| QA pod, Plovdiv | On site on device-lab days, flexible otherwise |
 | Engineering, product, marketing, finance | Remote-first, two office days per month |
-| Telehealth clinicians | Remote, from a private room only |
+| On-call engineers | Anywhere with a laptop, a headset and reliable connectivity |
 
-## Conditions for telehealth from home
+## Conditions for customer calls from home
 
-A consultation from home requires a closed room, no other household member within
-earshot, a wired or stable connection, and a headset. Consultations from cafes, cars,
-airports or coworking desks are not permitted. This is a confidentiality requirement
-under [Patient Data Protection Policy](patient-data-protection-policy.md), not a
+A customer call from home requires a closed room, no other household member within
+earshot, a wired or stable connection, and a headset. Calls from cafes, cars, airports
+or coworking desks are not permitted. This is a confidentiality requirement under
+[Customer Data Protection Policy](customer-data-protection-policy.md), not a
 preference.
 
 ## Equipment
@@ -37,8 +36,9 @@ is reimbursed at 30 BGN per month for remote-first roles. Furniture is not reimb
 
 Up to 20 working days per calendar year from another EU country, approved by the line
 manager and notified to People at least two weeks ahead. Outside the EU requires
-written approval because of tax residency and data transfer rules. Clinical staff cannot
-consult with Bulgarian patients from outside Bulgaria without a licensing review.
+written approval because of tax residency and data transfer rules. On-call engineers
+cannot take a rotation from a timezone more than three hours off Sofia without the SRE
+lead's sign-off.
 
 ## Availability
 

@@ -1,13 +1,13 @@
-activity,data_subjects,data_categories,legal_basis,processor,location,retention,last_review
-Outpatient care records,Patients,"Identity, health, insurance",Art 9(2)(h),In house,Sofia HQ,5 years after last contact,2026-03-12
-Laboratory results,Patients,"Identity, health",Art 9(2)(h),In house,Sofia HQ,5 years,2026-03-12
-Imaging,Patients,"Identity, health",Art 9(2)(h),Radiology partner,Sofia,10 years,2026-02-20
-Telehealth consultations,Patients,"Identity, health",Art 9(2)(h),Vitalis Connect,EU (Frankfurt),Note only; no recording,2026-03-12
-Patient portal accounts,Patients,"Identity, contact",Art 6(1)(b),In house,Sofia HQ,Until account closure + 1 year,2026-03-12
-Appointment reminders,Patients,"Contact, appointment",Art 6(1)(b),SMS gateway,EU (Sofia),12 months,2026-01-30
-NHIF reimbursement,Patients,"Identity, treatment codes",Art 6(1)(c),In house,Sofia HQ,10 years,2026-01-30
-Marketing newsletter,Subscribers,"Contact",Consent,Email platform,EU (Dublin),Until withdrawal,2026-02-20
-Employee records,Staff,"Identity, payroll, contract",Art 6(1)(b) and (c),In house,Sofia HQ,50 years payroll per law,2026-03-01
-CCTV,"Patients, staff, visitors","Image",Legitimate interest,In house,Sofia HQ,30 days,2026-03-01
-Incident reports,"Patients, staff","Health, incident detail",Art 9(2)(h),In house,Sofia HQ,10 years,2026-03-12
-Job applications,Candidates,"Identity, CV",Consent,ATS vendor,EU (Amsterdam),6 months after decision,2026-02-05
+activity,data_subjects,data_categories,legal_basis,role,processor,location,retention,last_review
+Employee records,Staff,"Identity, contract, payroll",Art 6(1)(b) and (c),Controller,In house,Sofia HQ,50 years payroll per law,2026-03-01
+Recruitment,Candidates,"Identity, CV",Consent,Controller,ATS vendor,EU (Amsterdam),6 months after decision,2026-02-05
+Customer billing,Customer admins,"Identity, contact, invoicing",Art 6(1)(b),Controller,Payment provider,EU (Dublin),10 years per accounting law,2026-03-12
+Customer account data,Workspace users,"Identity, contact, login events",Art 6(1)(b),Controller,In house,EU (Frankfurt),Until account closure + 1 year,2026-03-12
+Customer workspace content,Workspace users,"Notes, files, chat, calendar",Customer instruction (DPA),Processor,In house,EU (Frankfurt),Per customer contract; deleted 30 days after termination,2026-03-12
+Support sessions,Workspace users,"Content accessed under audit",Customer instruction (DPA),Processor,In house,EU (Frankfurt),Audit log 2 years; time-bound access revocable by org owner,2026-03-12
+Support tickets,Customer contacts,"Identity, ticket detail",Art 6(1)(b),Controller,Helpdesk vendor,EU (Dublin),3 years after closure,2026-01-30
+Transactional mail,Workspace users,"Contact, delivery metadata",Art 6(1)(b),Controller,SMTP relay subprocessor,EU (Frankfurt),90 days logs,2026-01-30
+Object storage,Workspace users,"Uploaded files (encrypted)",Customer instruction (DPA),Processor,Cloud storage subprocessor,EU (Frankfurt),Per customer contract,2026-03-12
+Marketing newsletter,Subscribers,"Contact",Consent,Controller,Email platform,EU (Dublin),Until withdrawal,2026-02-20
+Product telemetry (opt-in),Self-hosted operators,"Instance metrics, no content",Consent,Controller,In house,EU (Frankfurt),12 months,2026-02-20
+Office CCTV,"Staff, visitors","Image",Legitimate interest,Controller,In house,Sofia HQ,30 days,2026-03-01

@@ -1,10 +1,9 @@
 ---
 title: Systems and Access
-slug: vitalis-systems-and-access
+slug: uniffy-systems-and-access
 folder: Onboarding
 tags:
   - onboarding
-  - compliance
 ---
 
 # Systems and Access
@@ -16,13 +15,17 @@ Who gets what, and how it is requested. Access is role-based; nobody gets an acc
 
 | System | Purpose | Owner | Typical access |
 | --- | --- | --- | --- |
-| Clinical record | Patient records, prescribing | Medical Director | Clinical staff, by speciality |
-| Vitalis Lab LIS | Sample registration, results | Laboratory Manager | Lab staff, clinicians read-only |
-| Vitalis Connect | Telehealth consultations | Head of Product | Telehealth rota clinicians |
-| MyVitalis admin | Patient portal support | Head of Product | Patient support team |
-| Workspace | Notes, files, chat, calendar | Head of IT | Everyone |
-| Finance system | Invoicing, payroll | Finance Director | Finance, managers read-only |
-| NHIF reporting | Reimbursement submissions | Finance Director | Two named people |
+| Workspace | Notes, files, chat, calendar, agents | Head of IT | Everyone |
+| Code repository | Source, reviews | SRE lead | Engineering, QA read-only |
+| CI and deploy | Pipelines, releases | SRE lead | Engineering |
+| Production, cloud.uniffy.io | Tenant infrastructure | SRE lead | On-call engineers, audited |
+| Support desk | Customer tickets | Support lead | Support, engineers read-only |
+| Observability | Metrics, logs, alerts | SRE lead | Engineering, support read-only |
+| Finance system | Invoicing, payroll | Finance | Finance, managers read-only |
+
+Support access to a customer workspace is not a system grant at all: it goes through a
+time-bound, audited support session the customer approves, per
+[Customer Data Protection Policy](customer-data-protection-policy.md).
 
 ## Requesting access
 
@@ -30,8 +33,8 @@ The line manager raises the request, the system owner approves, IT provisions. R
 name the role, not the person's curiosity. Temporary access carries an end date at the
 moment it is granted.
 
-Locum and contractor accounts are created with an expiry equal to the contract end. They
-are never extended by editing the expiry without a new approval.
+Contractor accounts are created with an expiry equal to the contract end. They are
+never extended by editing the expiry without a new approval.
 
 ## Leavers and movers
 
@@ -51,5 +54,6 @@ list is treated as a control failure under
 
 ## Getting help
 
-IT support is reachable in the workspace during office hours, and by the on-call number
-outside them. Anything touching patient safety is handled immediately, at any hour.
+IT support is reachable in #it-support during office hours, and by the on-call number
+outside them. Anything touching production availability is handled immediately, at any
+hour.

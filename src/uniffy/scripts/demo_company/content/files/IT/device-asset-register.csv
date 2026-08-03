@@ -1,13 +1,13 @@
-asset_tag,type,model,assigned_to_role,location,encrypted,warranty_until,notes
-VH-LT-0142,Laptop,ThinkPad T14,Clinical,Sofia HQ floor 2,Yes,2027-04-30,
-VH-LT-0143,Laptop,ThinkPad T14,Clinical,Sofia HQ floor 2,Yes,2027-04-30,
-VH-LT-0187,Laptop,MacBook Air 15,Engineering,Remote,Yes,2028-01-15,
-VH-LT-0188,Laptop,MacBook Air 15,Engineering,Remote,Yes,2028-01-15,
-VH-WS-0031,Workstation,OptiPlex 7010,Reception,Sofia HQ ground floor,Yes,2027-09-01,"Auto-lock 5 minutes"
-VH-WS-0032,Workstation,OptiPlex 7010,Lab,Sofia HQ floor 1,Yes,2027-09-01,"LIS terminal"
-VH-WS-0044,Workstation,OptiPlex 7010,Reception,Plovdiv clinic,Yes,2027-11-20,
-VH-TB-0009,Tablet,iPad 10,Clinical,Sofia HQ floor 2,Yes,2027-06-30,"Patient consent capture"
-VH-PR-0003,Printer,HP LaserJet M428,Shared,Sofia HQ floor 2,No,2026-12-31,"No patient data spooling"
-VH-NW-0001,Firewall,FortiGate 60F,Infrastructure,Sofia HQ comms room,No,2028-03-01,
-VH-NW-0002,Switch,Catalyst 1000,Infrastructure,Plovdiv comms cabinet,No,2028-03-01,
-VH-CB-0007,Cool box,Validated transport box,Lab,Plovdiv courier route,No,2029-05-01,"Temperature logger fitted"
+asset_tag,type,model,assigned_to,location,encrypted,warranty_until,notes
+UF-LT-0142,Laptop,MacBook Pro 14,alice@uniffy.io,Sofia HQ floor 3,Yes,2027-04-30,
+UF-LT-0143,Laptop,MacBook Pro 14,bob@uniffy.io,Sofia HQ floor 3,Yes,2027-04-30,
+UF-LT-0187,Laptop,ThinkPad T14s,charlie@uniffy.io,Sofia HQ floor 2,Yes,2028-01-15,
+UF-LT-0188,Laptop,ThinkPad T14s,maria@uniffy.io,Sofia HQ floor 2,Yes,2028-01-15,"First-week loaner until imaging done"
+UF-LT-0191,Laptop,MacBook Air 15,diana@uniffy.io,Remote,Yes,2028-03-10,
+UF-LT-0192,Laptop,MacBook Air 15,eve@uniffy.io,Plovdiv office,Yes,2028-03-10,
+UF-MN-0031,Monitor,Dell U2723QE,Shared,Sofia HQ floor 3,No,2027-09-01,"Hot desk row"
+UF-MN-0044,Monitor,Dell U2723QE,Shared,Plovdiv office,No,2027-11-20,
+UF-PH-0009,Test phone,iPhone 15,QA device lab,Plovdiv office,Yes,2027-06-30,"Mobile release smoke tests"
+UF-PH-0010,Test phone,Pixel 8,QA device lab,Plovdiv office,Yes,2027-06-30,"Mobile release smoke tests"
+UF-NW-0001,Firewall,FortiGate 60F,Infrastructure,Sofia HQ comms room,No,2028-03-01,
+UF-NW-0002,Switch,Catalyst 1000,Infrastructure,Plovdiv comms cabinet,No,2028-03-01,

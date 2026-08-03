@@ -1,0 +1,16 @@
+service,slo,target,window,alert_threshold,notes
+api,Availability,99.9%,30 days,99.5% burn over 1 hour,Excludes planned maintenance windows
+api,Request latency p95,250 ms,7 days,400 ms for 15 minutes,Measured at the edge per RPC
+api,Error rate,0.5%,7 days,2% for 10 minutes,5xx and RPC internal errors only
+realtime,Availability,99.9%,30 days,99.5% burn over 1 hour,Stream connect success rate
+realtime,Event delivery latency p95,500 ms,7 days,2 s for 10 minutes,Publish to client receive
+calls,Call setup success,99.5%,30 days,98% over 30 minutes,ICE negotiation completed
+calls,Media quality,MOS 4.0,7 days,MOS 3.5 for 15 minutes,Per-region TURN breakdown in dashboard
+search,Availability,99.5%,30 days,99% burn over 1 hour,Meilisearch health endpoint
+search,Query latency p95,300 ms,7 days,800 ms for 15 minutes,Indexing lag alerts separately at 5 minutes
+mail,Delivery success,99%,7 days,95% over 1 hour,Bounces excluded from denominator
+mail,Send latency p95,60 s,7 days,5 minutes for 30 minutes,Queued to relay acceptance
+storage,Availability,99.9%,30 days,99.5% burn over 1 hour,Upload and download paths measured separately
+storage,Upload latency p95 (10 MB),4 s,7 days,10 s for 15 minutes,Multipart parts counted individually
+workers,Job success rate,99.5%,7 days,98% over 30 minutes,Retries count once at final outcome
+workers,Queue lag p95,30 s,7 days,5 minutes for 10 minutes,Per-queue breakdown in dashboard

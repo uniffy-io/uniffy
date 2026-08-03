@@ -388,7 +388,9 @@ def stack_reset_data():
     sh(["docker", "volume", "rm", *volumes])
     sh(compose("up", "-d", *infra))
     sh(compose("restart", "backend", "worker-core", "worker-egress"))
+    sh(compose("up", "-d", "--no-deps", "seeder"))
     click.echo("Done. Tail migrations with: ./manage.py logs -s backend")
+    click.echo("Demo data reseeds in the background: ./manage.py logs -s seeder")
 
 
 @cli.group()

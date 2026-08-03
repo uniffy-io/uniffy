@@ -1,42 +1,41 @@
 ---
 title: Mission and Values
-slug: vitalis-mission-and-values
+slug: uniffy-mission-and-values
 folder: Handbook
 tags:
   - handbook
-  - brand
 ---
 
 # Mission and Values
 
 ## Mission
 
-Give every patient in Bulgaria unhurried, evidence-based care, and make the paperwork
-around it invisible.
+Give every team one calm place to work, and make the friction between tools invisible.
+Teamwork. Simplified, amplified, unified.
 
 ## Values
 
-**Patient first, always.** When a clinical judgement and a commercial one collide, the
-clinical one wins. Nobody has ever been reprimanded here for spending longer with a
-patient than the schedule allowed.
+**Customer first, always.** When a product judgement and a commercial one collide, the
+product one wins. Nobody has ever been reprimanded here for spending longer on a
+support ticket than the queue allowed.
 
-**Say the hard thing early.** A delayed result, a missed follow-up or a near miss gets
+**Say the hard thing early.** A failed deploy, a missed alert or a near miss gets
 reported the same day. Reporting is rewarded, not punished. The process is in
-[Adverse Event Reporting](adverse-event-reporting-sop.md).
+[Incident Response Runbook](incident-response-runbook.md).
 
-**Privacy is care.** Patient data is part of the patient. We collect what we need,
-keep it as long as the law requires, and never a day longer.
+**Privacy is the product.** Customer data belongs to the customer. We collect what we
+need, keep it as long as the contract requires, and never a day longer.
 
-**Explain, do not impress.** Test results, invoices and consent forms are written so a
-worried person can understand them on the first read. See
+**Explain, do not impress.** Release notes, invoices and incident updates are written so
+a busy person can understand them on the first read. See
 [Voice and Tone](voice-and-tone.md).
 
-**Fix the system, not the person.** Most mistakes are process failures wearing a name
+**Fix the system, not the person.** Most outages are process failures wearing a name
 badge. Post-incident reviews name causes, not culprits.
 
 ## How we measure ourselves
 
-- Time from lab sample to published result, by panel.
-- Share of appointments starting within 10 minutes of the booked time.
-- Patient-reported clarity of results, collected in MyVitalis.
+- Time from a merged change to running in production, by service.
+- Share of support tickets getting a first response inside the target.
+- Customer-reported clarity of release notes, collected in the changelog survey.
 - Number of near misses reported. A drop is treated as a warning sign, not a win.

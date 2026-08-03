@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def starter_content_enabled() -> bool:
-    """Gate for the docs notes, Welcome canvas and the dev provider keys, agents and rooms."""
+    """Gate for the docs notes and the Welcome canvas."""
     raw = os.getenv("SEED_STARTER_CONTENT", "").strip().lower()
     if not raw:
         return True
@@ -141,20 +141,6 @@ async def _seed_initial_data_locked() -> None:
                 )
             else:
                 logger.info("SEED_STARTER_CONTENT off: skipping docs notes and canvas")
-
-            environment = os.getenv("ENVIRONMENT", "production")
-            if environment == "development":
-                from uniffy.db.seed_dev import seed_development_data
-
-                logger.info("Development environment detected. Adding test data...")
-                await seed_development_data(
-                    session,
-                    default_org,
-                    admin_user,
-                    admin_password,
-                    search_indexer,
-                )
-                logger.info("Development test data seeding completed")
 
             await _seed_vapid_keys(session, admin_email)
 

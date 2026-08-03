@@ -1,0 +1,154 @@
+[
+  {
+    "name": "Plovdiv Office Expansion",
+    "slug": "PLV",
+    "description": "Second floor at the Plovdiv office: fit-out, desks, device lab and staffing for the support and QA pod.",
+    "color": "#0ea5e9",
+    "icon": "folder",
+    "tags": ["plovdiv-office"],
+    "tasks": [
+      {
+        "title": "Sign fit-out contract for the second floor",
+        "status": "status_done",
+        "priority": "priority_high",
+        "type": "task",
+        "due_in_days": -14,
+        "assignees": ["diana@uniffy.io"]
+      },
+      {
+        "title": "Order eight desks and the test-device rack",
+        "status": "status_done",
+        "priority": "priority_medium",
+        "type": "task",
+        "due_in_days": -5,
+        "assignees": ["eve@uniffy.io"]
+      },
+      {
+        "title": "Recruit one QA engineer and one support engineer",
+        "description": "Offer letters out by end of month; onboarding follows the First Week Checklist.",
+        "status": "status_in_progress",
+        "priority": "priority_high",
+        "type": "task",
+        "due_in_days": 10,
+        "assignees": ["diana@uniffy.io", "maria@uniffy.io"]
+      },
+      {
+        "title": "Set up the device lab rack with power and network",
+        "status": "status_in_progress",
+        "priority": "priority_medium",
+        "type": "task",
+        "due_in_days": 4,
+        "assignees": ["charlie@uniffy.io", "vasil@uniffy.io"]
+      },
+      {
+        "title": "Update the Plovdiv Office Guide note with the new floor map",
+        "status": "status_todo",
+        "priority": "priority_low",
+        "type": "task",
+        "due_in_days": 21,
+        "assignees": ["maria@uniffy.io"]
+      },
+      {
+        "title": "Fire inspection for the second floor",
+        "status": "status_todo",
+        "priority": "priority_high",
+        "type": "task",
+        "due_in_days": 7,
+        "assignees": ["eve@uniffy.io"]
+      }
+    ]
+  },
+  {
+    "name": "Calls Platform",
+    "slug": "CALL",
+    "description": "Everything that keeps calls running: booths, media quality, escalation paths.",
+    "color": "#10b981",
+    "icon": "folder",
+    "tags": ["engineering"],
+    "tasks": [
+      {
+        "title": "Replace headsets in Call Booth 2",
+        "status": "status_done",
+        "priority": "priority_medium",
+        "type": "task",
+        "due_in_days": -2,
+        "assignees": ["charlie@uniffy.io"]
+      },
+      {
+        "title": "Draft the after-hours on-call escalation flow",
+        "description": "Covers who support pages when a sev1 lands outside business hours.",
+        "status": "status_in_progress",
+        "priority": "priority_high",
+        "type": "task",
+        "due_in_days": 3,
+        "assignees": ["alice@uniffy.io", "bob@uniffy.io", "georgi@uniffy.io"]
+      },
+      {
+        "title": "Pilot AI call summaries",
+        "status": "status_in_progress",
+        "priority": "priority_medium",
+        "type": "feature",
+        "due_in_days": 14,
+        "assignees": ["bob@uniffy.io", "teodora@uniffy.io"]
+      },
+      {
+        "title": "Fix dropped calls when switching booth networks",
+        "status": "status_todo",
+        "priority": "priority_high",
+        "type": "bug",
+        "due_in_days": 2,
+        "assignees": ["alice@uniffy.io"]
+      },
+      {
+        "title": "Quarterly review of call quality metrics",
+        "status": "status_todo",
+        "priority": "priority_low",
+        "type": "task",
+        "due_in_days": 30,
+        "assignees": ["georgi@uniffy.io", "kaloyan@uniffy.io"]
+      }
+    ]
+  },
+  {
+    "name": "Onboarding Revamp",
+    "slug": "ONB",
+    "description": "Reduce a new hire's first week to guided steps inside the workspace.",
+    "color": "#eab308",
+    "icon": "folder",
+    "tags": ["onboarding", "people"],
+    "tasks": [
+      {
+        "title": "Rewrite the First Week Checklist as day-by-day steps",
+        "status": "status_done",
+        "priority": "priority_medium",
+        "type": "task",
+        "due_in_days": -7,
+        "assignees": ["diana@uniffy.io"]
+      },
+      {
+        "title": "Record a 10-minute systems-and-access walkthrough",
+        "status": "status_in_progress",
+        "priority": "priority_medium",
+        "type": "task",
+        "due_in_days": 5,
+        "assignees": ["eve@uniffy.io"]
+      },
+      {
+        "title": "Pair every new hire with a buddy from another office",
+        "status": "status_todo",
+        "priority": "priority_medium",
+        "type": "task",
+        "due_in_days": 12,
+        "assignees": ["diana@uniffy.io"]
+      },
+      {
+        "title": "Collect feedback from the last three onboarding cohorts",
+        "status": "status_todo",
+        "priority": "priority_low",
+        "type": "task",
+        "due_in_days": 18,
+        "assignees": ["maria@uniffy.io"]
+      }
+    ]
+  }
+]

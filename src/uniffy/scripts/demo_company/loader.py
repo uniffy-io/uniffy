@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 from loguru import logger
@@ -16,6 +17,8 @@ CONTENT_DIR = Path(__file__).parent / "content"
 
 MIME_BY_SUFFIX: dict[str, str] = {
     ".csv": "text/csv",
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
     ".json": "application/json",
     ".md": "text/markdown",
     ".pdf": "application/pdf",
@@ -40,6 +43,55 @@ class DemoUser:
     full_name: str
     password: str
     title: str
+
+
+@dataclass(frozen=True)
+class PersonSpec:
+    """One member of the company: the login plus their org-scoped profile facts."""
+
+    email: str
+    # Empty when the identity is created elsewhere (the demo persona); such an
+    # entry only carries profile facts and is skipped when the user is missing.
+    username: str
+    full_name: str
+    password: str
+    job_title: str
+    department: str
+    office_location: str
+    start_date: date | None
+    manager: str
+
+
+@dataclass(frozen=True)
+class TeamSpec:
+    """A node of the org chart: nests under a parent team and carries a lead."""
+
+    name: str
+    description: str
+    parent: str
+    lead: str
+    members: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class GroupMemberSpec:
+    email: str
+    role: str
+
+
+@dataclass(frozen=True)
+class GroupSpec:
+    name: str
+    description: str
+    is_private: bool
+    members: tuple[GroupMemberSpec, ...]
+
+
+@dataclass(frozen=True)
+class PeopleContent:
+    people: tuple[PersonSpec, ...]
+    teams: tuple[TeamSpec, ...]
+    access_groups: tuple[GroupSpec, ...]
 
 
 @dataclass(frozen=True)
@@ -155,13 +207,55 @@ class ChatContent:
 
 
 @dataclass(frozen=True)
+class AgentSpec:
+    provider: str
+    env_var: str
+    key_label: str
+    name: str
+    model: str
+    emoji: str
+    color: str
+
+
+@dataclass(frozen=True)
+class AgentsContent:
+    soul_prompt: str
+    agents: tuple[AgentSpec, ...]
+
+
+@dataclass(frozen=True)
+class TaskSpec:
+    title: str
+    description: str
+    status: str
+    priority: str
+    task_type: str
+    due_in_days: int | None
+    assignees: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ProjectSpec:
+    name: str
+    slug: str
+    description: str
+    color: str
+    icon: str
+    tags: tuple[str, ...]
+    tasks: tuple[TaskSpec, ...]
+
+
+@dataclass(frozen=True)
 class DemoContent:
     manifest: Manifest
+    people: PeopleContent
     notes: tuple[NoteSpec, ...]
     rooms: tuple[RoomSpec, ...]
     events: tuple[EventSpec, ...]
     files: tuple[FileSpec, ...]
     chat: ChatContent
+    agents: AgentsContent
+    projects: tuple[ProjectSpec, ...]
 
 
 class ContentError(ValueError):
@@ -175,23 +269,47 @@ def load_demo_content(directory: Path | None = None) -> DemoContent:
         raise ContentError(f"Content directory not found: {root}")
 
     manifest = _load_manifest(root / "manifest.json")
+    files = _load_files(root / "files", root / "files.json")
+    if root == CONTENT_DIR:
+        files = _merge_generated(files)
+
     content = DemoContent(
         manifest=manifest,
+        people=_load_people(root / "people.json", manifest.demo_user),
         notes=_load_notes(root / "notes"),
         rooms=_load_rooms(root / "rooms.json"),
         events=_load_events(root / "events.json"),
-        files=_load_files(root / "files", root / "files.json"),
+        files=files,
         chat=_load_chat(root / "chat.json", root / "chat_series.json"),
+        agents=_load_agents(root / "agents.json"),
+        projects=_load_projects(root / "projects.json"),
     )
     logger.info(
         f"Loaded {manifest.company} content from {root}: "
+        f"{len(content.people.people)} people, {len(content.people.teams)} teams, "
+        f"{len(content.people.access_groups)} access groups, "
         f"{len(content.notes)} notes, {len(content.files)} files, "
         f"{len(content.rooms)} rooms, {len(content.events)} events, "
+        f"{len(content.projects)} projects, {len(content.agents.agents)} agents, "
         f"{len(content.chat.channels)} channels, "
         f"{len(content.chat.direct_messages)} direct conversations, "
         f"{len(content.chat.series)} recurring series"
     )
     return content
+
+
+def _merge_generated(files: tuple[FileSpec, ...]) -> tuple[FileSpec, ...]:
+    """Rendered PDFs and images are authored for the bundled company only."""
+    # Imported here: generated.py builds FileSpec instances from this module.
+    from uniffy.scripts.demo_company.generated import generated_file_specs
+
+    on_disk = {(spec.folder, spec.filename) for spec in files}
+    rendered = tuple(
+        spec
+        for spec in generated_file_specs()
+        if (spec.folder, spec.filename) not in on_disk
+    )
+    return files + rendered
 
 
 def _read_json(path: Path) -> object:
@@ -239,6 +357,134 @@ def _load_manifest(path: Path) -> Manifest:
         tags=tags,
         demo_user=demo_user,
     )
+
+
+def _load_people(path: Path, demo_user: DemoUser | None) -> PeopleContent:
+    if not path.is_file():
+        return PeopleContent(people=(), teams=(), access_groups=())
+
+    raw = _read_json(path)
+    if not isinstance(raw, dict):
+        raise ContentError(f"{path.name} must hold a JSON object")
+
+    people = _load_roster(path, raw.get("people", []))
+    known = {person.email for person in people}
+    if demo_user:
+        known.add(demo_user.email)
+
+    for person in people:
+        if person.manager and person.manager not in known:
+            raise ContentError(f"{path.name}: {person.email} reports to unknown {person.manager}")
+
+    teams = _load_teams(path, raw.get("teams", []), known)
+    names = {team.name.lower() for team in teams}
+
+    access_groups: list[GroupSpec] = []
+    for entry in raw.get("access_groups", []):
+        if not entry.get("name"):
+            raise ContentError(f"{path.name}: every access group needs a 'name'")
+        # Teams and access groups share one per-org name namespace.
+        if entry["name"].lower() in names:
+            raise ContentError(f"{path.name}: {entry['name']!r} is already used by a team")
+        names.add(entry["name"].lower())
+
+        members = []
+        for member in entry.get("members", []):
+            if not member.get("email"):
+                raise ContentError(f"{path.name}: every group member needs an 'email'")
+            if member["email"] not in known:
+                raise ContentError(
+                    f"{path.name}: {entry['name']!r} lists unknown {member['email']}"
+                )
+            members.append(
+                GroupMemberSpec(email=member["email"], role=member.get("role", "MEMBER"))
+            )
+        access_groups.append(
+            GroupSpec(
+                name=entry["name"],
+                description=entry.get("description", ""),
+                is_private=bool(entry.get("private", False)),
+                members=tuple(members),
+            )
+        )
+
+    return PeopleContent(
+        people=people,
+        teams=teams,
+        access_groups=tuple(access_groups),
+    )
+
+
+def _load_roster(path: Path, entries: list[dict]) -> tuple[PersonSpec, ...]:
+    people: list[PersonSpec] = []
+    seen: set[str] = set()
+    for entry in entries:
+        email = entry.get("email")
+        if not email:
+            raise ContentError(f"{path.name}: every person needs an 'email'")
+        if email in seen:
+            raise ContentError(f"{path.name}: duplicate person {email}")
+        seen.add(email)
+
+        username = entry.get("username", "")
+        if username and not entry.get("full_name"):
+            raise ContentError(f"{path.name}: {email} needs a 'full_name' next to its username")
+        for key in ("job_title", "department"):
+            if not entry.get(key):
+                raise ContentError(f"{path.name}: {email} needs '{key}'")
+
+        start = entry.get("start_date")
+        people.append(
+            PersonSpec(
+                email=email,
+                username=username,
+                full_name=entry.get("full_name", ""),
+                password=entry.get("password", "admin"),
+                job_title=entry["job_title"],
+                department=entry["department"],
+                office_location=entry.get("office_location", ""),
+                start_date=date.fromisoformat(start) if start else None,
+                manager=entry.get("manager", ""),
+            )
+        )
+    return tuple(people)
+
+
+def _load_teams(path: Path, entries: list[dict], known: set[str]) -> tuple[TeamSpec, ...]:
+    """Declaration order is seeding order: a parent has to come before its children."""
+    teams: list[TeamSpec] = []
+    declared: set[str] = set()
+    for entry in entries:
+        name = entry.get("name")
+        if not name:
+            raise ContentError(f"{path.name}: every team needs a 'name'")
+        if name.lower() in {team.name.lower() for team in teams}:
+            raise ContentError(f"{path.name}: duplicate team {name!r}")
+
+        parent = entry.get("parent", "")
+        if parent and parent not in declared:
+            raise ContentError(f"{path.name}: team {name!r} nests under undeclared {parent!r}")
+
+        members = tuple(entry.get("members", []))
+        for email in members:
+            if email not in known:
+                raise ContentError(f"{path.name}: team {name!r} lists unknown {email}")
+
+        lead = entry.get("lead", "")
+        if lead and lead not in members:
+            raise ContentError(f"{path.name}: the lead of {name!r} must be one of its members")
+
+        declared.add(name)
+        teams.append(
+            TeamSpec(
+                name=name,
+                description=entry.get("description", ""),
+                parent=parent,
+                lead=lead,
+                members=members,
+            )
+        )
+    return tuple(teams)
 
 
 def _load_notes(directory: Path) -> tuple[NoteSpec, ...]:
@@ -452,6 +698,79 @@ def _message_specs(
             )
         )
     return tuple(messages)
+
+
+def _load_agents(path: Path) -> AgentsContent:
+    """Agent NAMES and models are content; the credentials come from env vars."""
+    if not path.is_file():
+        return AgentsContent(soul_prompt="", agents=())
+
+    raw = _read_json(path)
+    if not isinstance(raw, dict):
+        raise ContentError(f"{path.name} must hold a JSON object")
+
+    soul_prompt = raw.get("soul_prompt", "")
+    agents: list[AgentSpec] = []
+    for entry in raw.get("agents", []):
+        for key in ("provider", "env_var", "key_label", "name", "model"):
+            if not entry.get(key):
+                raise ContentError(f"{path.name}: every agent needs '{key}'")
+        agents.append(
+            AgentSpec(
+                provider=entry["provider"],
+                env_var=entry["env_var"],
+                key_label=entry["key_label"],
+                name=entry["name"],
+                model=entry["model"],
+                emoji=entry.get("emoji", ""),
+                color=entry.get("color", ""),
+            )
+        )
+    return AgentsContent(soul_prompt=soul_prompt, agents=tuple(agents))
+
+
+def _load_projects(path: Path) -> tuple[ProjectSpec, ...]:
+    if not path.is_file():
+        return ()
+
+    raw = _read_json(path)
+    if not isinstance(raw, list):
+        raise ContentError(f"{path.name} must hold a JSON array")
+
+    projects: list[ProjectSpec] = []
+    for entry in raw:
+        for key in ("name", "slug"):
+            if not entry.get(key):
+                raise ContentError(f"{path.name}: every project needs '{key}'")
+
+        tasks: list[TaskSpec] = []
+        for task in entry.get("tasks", []):
+            if not task.get("title"):
+                raise ContentError(f"{path.name}: every task needs a 'title'")
+            tasks.append(
+                TaskSpec(
+                    title=task["title"],
+                    description=task.get("description", ""),
+                    status=task.get("status", "status_todo"),
+                    priority=task.get("priority", "priority_medium"),
+                    task_type=task.get("type", "task"),
+                    due_in_days=task.get("due_in_days"),
+                    assignees=tuple(task.get("assignees", [])),
+                )
+            )
+
+        projects.append(
+            ProjectSpec(
+                name=entry["name"],
+                slug=entry["slug"],
+                description=entry.get("description", ""),
+                color=entry.get("color", "#0d9488"),
+                icon=entry.get("icon", "folder"),
+                tags=tuple(entry.get("tags", [])),
+                tasks=tuple(tasks),
+            )
+        )
+    return tuple(projects)
 
 
 def _load_files(directory: Path, metadata_path: Path) -> tuple[FileSpec, ...]:

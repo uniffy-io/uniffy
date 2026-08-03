@@ -8,6 +8,7 @@ from pathlib import Path
 from loguru import logger
 
 from uniffy.db.session import open_session
+from uniffy.scripts.demo_company.agents import seed_agents
 from uniffy.scripts.demo_company.chat import seed_chat
 from uniffy.scripts.demo_company.context import (
     DemoContext,
@@ -23,12 +24,17 @@ from uniffy.scripts.demo_company.files import seed_files
 from uniffy.scripts.demo_company.loader import DemoContent, load_demo_content
 from uniffy.scripts.demo_company.mentions import MentionRegistry
 from uniffy.scripts.demo_company.notes import apply_note_mentions, seed_notes
-from uniffy.scripts.demo_company.people import ensure_demo_user, register_user_mentions
+from uniffy.scripts.demo_company.people import (
+    ensure_demo_user,
+    register_user_mentions,
+    seed_people,
+)
+from uniffy.scripts.demo_company.projects import seed_projects
 from uniffy.scripts.demo_company.rooms import seed_rooms
 
 logger = logger.bind(component="scripts.demo_company.seeder")
 
-DOMAINS = ("notes", "files", "rooms", "events", "chat")
+DOMAINS = ("users", "agents", "notes", "files", "rooms", "events", "projects", "chat")
 
 
 async def seed_demo_company(
@@ -79,12 +85,19 @@ async def _run_domains(
     root_folder = content.manifest.root_folder
     registry = MentionRegistry()
 
-    # The persona and the user mentions come first: notes, events and chat can
-    # all point at people, and chat adds the persona to every open channel.
-    people = DomainResult()
-    demo_user_id = await ensure_demo_user(ctx, content.manifest.demo_user, people)
+    # People come first: notes, events, projects and chat all point at them,
+    # and chat adds the persona to every open channel.
+    persona = DomainResult()
+    demo_user_id = await ensure_demo_user(ctx, content.manifest.demo_user, persona)
+    report.results["persona"] = persona
+
+    if "users" in only:
+        await seed_people(ctx, content.people, report)
+
     await register_user_mentions(ctx, registry)
-    report.results["people"] = people
+
+    if "agents" in only:
+        report.results["agents"] = await seed_agents(ctx, content.agents)
 
     if "notes" in only:
         report.results["notes"] = await seed_notes(
@@ -108,6 +121,9 @@ async def _run_domains(
             registry,
             known_rooms=frozenset(room.name for room in content.rooms),
         )
+
+    if "projects" in only:
+        report.results["projects"] = await seed_projects(ctx, content.projects, tag_ids)
 
     # Mentions resolve once every id exists: a note can point at a room, file or
     # event created in this same run. Ahead of chat, which is the long stretch -
