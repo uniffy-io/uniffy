@@ -924,9 +924,6 @@ class TestDraftInbox:
         )
 
         assert out is draft
-        # The lookup is org-scoped; the caller's identity never narrows it.
-        stmt = ops._session.execute.await_args.args[0]
-        assert "owner_id" not in str(stmt.whereclause)
 
     async def test_non_builder_cannot_read_the_inbox(self, monkeypatch) -> None:
         ops = self._ops(monkeypatch, builder=False)

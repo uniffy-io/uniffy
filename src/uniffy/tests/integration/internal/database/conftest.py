@@ -16,7 +16,7 @@ from types import SimpleNamespace as NS
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.crypto import OrgCipher
@@ -90,6 +90,8 @@ async def teardown_env(db_session: AsyncSession, env: NS) -> None:
             IntegrationConnection.organization_id == env.org_id
         )
     )
+    # audit_events is append-only; teardown is maintenance, so it opts out.
+    await db_session.execute(text("SET LOCAL uniffy.audit_maintenance = 'on'"))
     await db_session.execute(delete(AuditEvent).where(AuditEvent.organization_id == env.org_id))
     await db_session.execute(
         delete(OrgEncryptionKey).where(OrgEncryptionKey.organization_id == env.org_id)

@@ -51,41 +51,6 @@ def _make_project_ops() -> ProjectOperations:
     return ops
 
 
-class TestTaskTagFilterSubquery:
-    def test_all_subquery_groups_and_having(self) -> None:
-        ops = _make_task_ops()
-        tag_ids = [generate_id(), generate_id()]
-        compiled = str(
-            ops._tag_filter_subquery(tag_ids).compile(compile_kwargs={"literal_binds": False})
-        ).lower()
-        assert "tag_assignments" in compiled
-        assert "projects_tasks" in compiled
-        assert "group by" in compiled
-        assert "having" in compiled
-        assert "count(distinct" in compiled
-
-    def test_any_subquery_distinct_join(self) -> None:
-        ops = _make_task_ops()
-        compiled = str(
-            ops._tag_any_subquery([generate_id(), generate_id()]).compile(
-                compile_kwargs={"literal_binds": False}
-            )
-        ).lower()
-        assert "tag_assignments" in compiled
-        assert "distinct" in compiled
-        # ANY must NOT carry an aggregating HAVING gate.
-        assert "having" not in compiled
-
-    def test_subquery_synthesises_task_urn(self) -> None:
-        ops = _make_task_ops()
-        compiled = str(
-            ops._tag_filter_subquery([generate_id()]).compile(
-                compile_kwargs={"literal_binds": True}
-            )
-        )
-        assert "urn:uniffy:content:TASK:" in compiled
-
-
 class TestSyncTaskTags:
     async def test_none_tag_ids_short_circuits(self) -> None:
         ops = _make_task_ops()

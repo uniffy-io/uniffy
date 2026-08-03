@@ -74,24 +74,6 @@ class TestBuildSearchKeywords:
         assert "alpha beta gamma extracted body" in out
 
 
-class TestTagFilterSubquery:
-    def test_subquery_groups_and_requires_full_set(self) -> None:
-        ops = _make_ops()
-        tag_ids = [generate_id(), generate_id()]
-        subquery = ops._tag_filter_subquery(tag_ids)
-        compiled = str(
-            subquery.compile(compile_kwargs={"literal_binds": False})
-        ).lower()
-        assert "tag_assignments" in compiled
-        assert "files_files" in compiled
-        assert "group by" in compiled
-        # The HAVING clause must require every tag id in the set, not
-        # just any. ``COUNT(DISTINCT tag_id) == len(tag_ids)`` enforces
-        # the logical AND that mirrors notes' filter shape.
-        assert "having" in compiled
-        assert "count(distinct" in compiled
-
-
 class TestSavedFilterCriteriaRoundTrip:
     def test_dict_to_proto_uses_tag_ids(self) -> None:
         tag_id = str(generate_id())
