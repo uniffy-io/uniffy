@@ -5,122 +5,87 @@ sidebar:
   order: 1
 ---
 
-The Members page is where the people in your organization live. It is the list of who has access to your tenant, what role they hold, and which invitations are still in flight.
+The Members page decides who reaches your organization and what they can do once they are in. Owners and admins can open it. Members cannot.
 
-## Where to find it
+![Members page showing the three counter cards, the search and role filter, and the roster with a role dropdown on every row](/docs/admin/members.png)
 
-In the admin pages, under the **Access** group, on the **Members** page.
+Search and the role filter both run as server queries, so they cover every member in the org rather than the rows already loaded.
 
-## Who can use it
+## Limits that hold even for admins
 
-Anyone with the org role owner or admin. Regular members see their own profile in their account settings, but they cannot reach this page.
+You cannot change your own role. Have another admin make the change.
 
-A few things are off limits even to admins.
+You cannot remove the owner, and the owner badge is read only. Ownership moves through **Transfer ownership** on the Authentication page, never through the role dropdown.
 
-The **owner** badge is read only. You transfer ownership from the Security pages, under Authentication. You do not do it by editing a role.
+## Roles
 
-You cannot change your own role. The dropdown is disabled on your own row.
+Admin and Member are the only roles you assign here. A change applies immediately, with no confirmation step.
 
-You cannot remove the owner. The remove icon never shows on the owner row.
+Promoting someone to admin gives them everything you have. There is no limited admin tier. When you want to hand out a narrower scope, use [domain admins](/docs/administration/access/domain-admins/) instead.
 
-## What it looks like
+## Removing someone
 
-![Members page showing the roster, role dropdowns, and the invitations table below](/docs/admin/members.png)
+Removal takes away their access to this organization and nothing else. They keep their Uniffy account.
 
-## The header strip
+Content they created stays with the organization. Ownership does not fall back to anyone, so nothing is orphaned and nothing is deleted.
 
-Three counters sit above the table. They reflect the whole org, not the filtered view, so they stay put while you search.
+## Inactive accounts
 
-| Card | Counts |
-|------|--------|
-| Total Members | Every active membership, whatever the role |
-| Administrators | Owners and admins together |
-| Regular Members | Members only |
+An account reads Inactive when a platform operator deactivates it. That is a different thing from removing a member, and you do not trigger it from this page.
 
-## Filtering the roster
+The row stays in the roster either way, so the audit trail stays intact.
 
-Two controls sit above the table.
+## Agent spend quotas
 
-Search by name or email matches on display name and primary email. It runs on the server, a moment after you stop typing.
+Each member can carry a monthly cap on agent spend, counted across every agent in the organization rather than per agent.
 
-The role filter offers All roles, Owners, Admins, or Members. It runs as a server query, not a slice of what is already loaded.
+The cap is enforced on the server, so it holds no matter which client they use. Quotas need agents enabled for the org first.
 
-Filters compose. When filters are active and nothing matches, the table says "No members match your filters" instead of showing the empty state.
+## Invalidating a member's caches
 
-## The roster table
+This forces that member's app to drop everything it has cached and reload from the server on its next request. Reach for it when someone reports stale data after a large change.
 
-| Column | Shown when | Meaning |
-|--------|-----------|---------|
-| Member | Always | Avatar, display name, email. A `(you)` tag on your own row. |
-| Role | Always | A dropdown, Admin or Member, on normal rows. A static Owner badge on the owner. |
-| Status | Tablet and up | Active in green, or Inactive. An account goes inactive when a platform operator deactivates it. The row stays so the audit trail stays intact. |
-| Actions | Always | Three icons, described below. |
+## Inviting
 
-### Per row actions
+An invitation carries an email address and the role the person joins with.
 
-On desktop these show when you hover a row. On touch devices they are always visible. All three are hidden on the owner row and on your own row.
+It goes out through whatever mail configuration is active. Yours if you set one up, the deployment default otherwise. See [Email](/docs/administration/workspace/email/) for how that resolves.
 
-| Icon | Action | What happens |
-|------|--------|--------------|
-| Wallet | Set agent spend quota | Opens a dialog to cap how much the member can spend on agents each month, across every agent in the org. The cap is enforced on the server. |
-| Hard drives | Invalidate local caches | Forces the member's app to drop what it has cached and reload everything from the server on the next request. Use it when a member reports stale data after a big change, or when you suspect their cache is out of date. |
-| Trash | Remove from organization | Asks you to confirm, then removes the membership. The person keeps their Uniffy account, but they lose access to everything in this org. Content they created stays with the org. Ownership does not fall back to anyone. |
+When no mail is configured at all, the invitation is still created. You copy the link and deliver it yourself.
 
-### Changing a role
+Invitations expire on a window the deployment sets. The default is 7 days.
 
-Pick Admin or Member from the dropdown. The change applies right away, with no extra confirmation. To make someone an owner, the current owner uses **Transfer ownership** in the Security pages. Not this dropdown.
+## Invitations after they go out
 
-Promoting someone to admin gives them everything the admin pages expose. The same access you have. There is no limited admin tier. If you want to hand out a narrower scope, use **domain admins** instead.
+Every invitation is pending, accepted, expired, or revoked.
 
-## Inviting a new member
+**Revoke** kills a pending invitation immediately. **Resend** issues a fresh link with a new expiry and sends it again, and it works on expired invitations as well as pending ones.
 
-Click **Invite member** at the top right. It asks for two things.
-
-The email is the address that receives the invitation link. The role is Admin or Member, and the person joins with that role when they accept.
-
-The invitation goes out through whatever mail configuration is active. Your own if you set one up, the deployment default otherwise. See [Email](/docs/administration/workspace/email/) for how that resolves. If no mail is configured at all, the dialog still creates the invitation. You can copy the link from the Invitations table below.
-
-Invitations expire after a window the deployment sets. The default is 7 days.
-
-## The Invitations table
-
-It sits below the roster. It lists every invitation, whether it is **pending**, **accepted**, **expired**, or **revoked**. Filter by status with the dropdown at the top right.
-
-| Column | Meaning |
-|--------|---------|
-| Recipient | The invited email. |
-| Role | The role they receive when they accept. |
-| Expires | An absolute timestamp. After it, the link says "expired" and you need a new invitation. |
-| Status | Pending, Accepted, Expired, or Revoked. |
-| Actions | **Revoke** kills a pending invitation right away. **Resend** makes a fresh link with a new expiry and sends a new email. It works on pending and expired rows. |
-
-Accepted invitations stay in the table for the record. You cannot resend or revoke them.
+Accepted invitations stay for the record. You cannot revoke one to undo a membership. Remove the member instead.
 
 ## What lands in the audit log
 
-Every change on this page writes an audit row. Search the Audit Log by action name.
+Every change here writes an audit row. Search the Audit Log by action name.
 
 | Action | When it fires |
 |--------|---------------|
 | `organization.member_added` | A direct add, which is rare. Invitations are the normal path. |
 | `organization.member_added_via_invite` | An invitation is accepted and the membership is created |
-| `organization.member_role_changed` | The role dropdown changes |
-| `organization.member_removed` | The remove icon is confirmed |
+| `organization.member_role_changed` | A role changes |
+| `organization.member_removed` | A removal is confirmed |
 | `organization.member_invited` | A new invitation is created |
 | `organization.invitation_revoked` | A pending invitation is cancelled |
 | `organization.invitation_resent` | A new link is generated and the email is sent again |
 
-Each row records who did it, which is you, the target user or email, the old and new role where it applies, and the timestamp.
+Each row records who acted, the target user or email, the old and new role where that applies, and the timestamp.
 
 ## Troubleshooting
 
-The invitation email never arrived. Open the Email page and look at **Deliveries**. If the row shows bounced or complained, that address is suppressed and Uniffy will not retry it. Fix the problem at the source, remove the suppression, then resend.
+**The invitation email never arrived.** Open the Email page and look at Deliveries. If the row shows bounced or complained, that address is suppressed and Uniffy will not retry it. Fix the problem at the source, clear the suppression, then resend.
 
-You cannot change your own role. The dropdown is disabled on purpose. Have another admin make the change, or transfer ownership first.
+**A removed member still shows up in @ mentions or shares.** Caches lag for a few seconds. If it sticks, invalidate caches on any device still seeing them.
 
-A removed member still shows up in @ mentions or shares. Caches lag for a few seconds. If it sticks, use **Invalidate local caches** on any device still seeing them. The index refreshes.
-
-The quota dialog will not open. Quotas need agents turned on for the org. Open the Agents page first.
+**The quota dialog will not open.** Quotas need agents turned on for the org. Open the Agents page first.
 
 ## See also
 
